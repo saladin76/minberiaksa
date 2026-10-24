@@ -71,7 +71,7 @@ function recommendationFor(row: JsonMap): Recommendation {
   const platform = text(row.platform) || "منصة";
   const campaign = text(row.campaignName) || text(row.campaignId) || platform;
   const metrics = baseMetrics(row);
-  const { spend, platformConversions, siteDonations, siteRevenue, siteRoas, platformRoas, donationGap } = metrics;
+  const { spend, platformConversions, siteDonations, siteRoas, platformRoas, donationGap } = metrics;
   const qualityScore = (metrics.dataQuality as { score: number }).score;
 
   if (platformRoas >= 2 && siteDonations === 0 && spend > 0) {

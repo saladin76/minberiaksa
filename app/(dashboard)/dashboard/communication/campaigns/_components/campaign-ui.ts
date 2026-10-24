@@ -78,12 +78,17 @@ export const STATUS_META: Record<string, { label: string; tone: string }> = {
   SCHEDULED: { get label() { return dt("مجدولة"); }, tone: "border-amber-200 bg-amber-50 text-amber-700" },
   SENDING: { get label() { return dt("جاري الإرسال"); }, tone: "border-amber-200 bg-amber-50 text-amber-700" },
   SENT: { get label() { return dt("تم الإرسال"); }, tone: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  SENT_WITH_ISSUES: { get label() { return dt("تم الإرسال مع إخفاقات"); }, tone: "border-amber-200 bg-amber-50 text-amber-800" },
+  BLOCKED: { get label() { return dt("تعذّر استكمال الإرسال"); }, tone: "border-rose-200 bg-rose-50 text-rose-700" },
   CANCELLED: { get label() { return dt("ملغاة"); }, tone: "border-slate-200 bg-slate-100 text-slate-500" },
   FAILED: { get label() { return dt("فشلت"); }, tone: "border-rose-200 bg-rose-50 text-rose-700" },
   ARCHIVED: { get label() { return dt("مؤرشفة"); }, tone: "border-slate-200 bg-slate-100 text-slate-500" },
 };
 
-export const statusMeta = (s: string) => STATUS_META[s] ?? STATUS_META.DRAFT;
+export const statusMeta = (s: string) => STATUS_META[s] ?? {
+  get label() { return dt("حالة غير معروفة"); },
+  tone: "border-slate-200 bg-slate-50 text-slate-600",
+};
 export const channelMeta = (c: string) => CHANNEL_META[c] ?? CHANNEL_META.EMAIL;
 
 /** Campaigns that have not gone out yet  the ones still safe to edit or delete. */

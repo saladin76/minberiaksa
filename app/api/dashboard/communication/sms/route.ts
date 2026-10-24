@@ -9,7 +9,7 @@ import {
   getActiveBrevoSmsRuntimeConfig,
   type ActiveRuntimeConfig,
 } from "@/lib/communication/runtime-config";
-import { RETRYABLE_STATUSES } from "@/lib/communication/communication-runtime-types";
+import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { summarizeSmsSegments } from "@/lib/communication/sms-segments";
 
 export const runtime = "nodejs";
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     const [
       total, byStatus, byProvider, deliveredCount, failedCount, allTimeTotal,
-      rows, listTotal, bucketRows, netgsm, brevoSms, retryableCount,
+      rows, listTotal, bucketRows, netgsm, brevoSms, retryPreflightResult,
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
@@ -109,14 +109,7 @@ export async function GET(request: NextRequest) {
       }),
       getActiveNetgsmRuntimeConfig(),
       getActiveBrevoSmsRuntimeConfig(),
-      prisma.communicationDelivery.count({
-        where: {
-          ...rangeWhere,
-          status: { in: [...RETRYABLE_STATUSES] },
-          // See the email route: on MongoDB `null` misses documents written before the field existed.
-          OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }],
-        },
-      }),
+      retryPreflight({ channel: "SMS", campaignId: campaignId || undefined, ...(campaignId ? {} : { from, to }) }),
     ]);
 
     const statusCounts: Record<string, number> = {};
@@ -169,7 +162,7 @@ export async function GET(request: NextRequest) {
       },
       /** Carrier delivery receipts. Until one arrives, "وصلت" is unknown rather than zero. */
       trackingLive: deliveredCount > 0 || (statusCounts.DELIVERED ?? 0) > 0,
-      retryableCount,
+      retryableCount: retryPreflightResult.eligible,
       /**
        * Both routes, separately. `anyConfigured` is what decides whether SMS can send at all;
        * the per-route flags are what say *where* it can send.

@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { findAttributedDonations, type AttributedDonation, type ConciergeRange } from "./analytics";
 
 /**

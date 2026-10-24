@@ -20,6 +20,9 @@ export async function GET(
     });
     if (!badge) return NextResponse.json({ error: "Badge not found" }, { status: 404 });
     const userIds = await getUserIdsMatchingBadge(badge.criteria);
+    if (request.nextUrl.searchParams.get("countOnly") === "true") {
+      return NextResponse.json({ count: userIds.length });
+    }
     return NextResponse.json({ userIds });
   } catch (error) {
     console.error("Error fetching badge users:", error);

@@ -2475,5 +2475,10 @@
       "title": "Rond je donatie hier af",
       "description": "Een veilig betaalformulier, los van de poging die niet lukte. Vul je kaartgegevens in en rond je donatie in één stap af."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "zojuist",
+    "donated": "heeft gedoneerd",
+    "for": "voor"
   }
 }

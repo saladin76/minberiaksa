@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Plus, Pencil, Trash2, Loader2, GripVertical, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, GripVertical, Eye, EyeOff, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,6 +17,8 @@ import { toast } from 'react-hot-toast';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Slide {
@@ -181,23 +183,29 @@ export default function SlidesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{dt("شرائح الهيرو")}</h1>
-          <p className="text-muted-foreground mt-1">{dt("إدارة شرائح العرض الرئيسية")}</p>
-        </div>
-        <div className="flex items-center gap-3">
+      <PageHeader
+        eyebrow={dt("استوديو المحتوى")}
+        title={dt("شرائح الواجهة")}
+        description={dt("رتّب الشرائح التي تظهر أعلى الصفحة الرئيسية، وراجع اللغة والصورة والرابط قبل التفعيل.")}
+        icon={ImageIcon}
+        actions={<div className="flex flex-wrap items-center gap-2">
           <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-10 w-[190px]" />
           {savingOrder && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{dt("جاري حفظ الترتيب...")}</span>
+              <span>{dt("يُحفظ الترتيب")}</span>
             </div>
           )}
-          <Button onClick={() => router.push('/dashboard/slides/new')} size="lg" className="gap-2">
-            <Plus className="w-5 h-5" /> {dt(" إضافة شريحة")}</Button>
-        </div>
-      </div>
+          <Button onClick={() => router.push('/dashboard/slides/new')} className="gap-2">
+            <Plus className="w-4 h-4" /> {dt("شريحة جديدة")}</Button>
+        </div>}
+      />
+
+      <ContentMetricStrip items={[
+        { label: dt("كل الشرائح"), value: slides.length, detail: dt("للغة المحددة"), icon: ImageIcon, tone: "brand" },
+        { label: dt("مفعّلة"), value: slides.filter((slide) => slide.isActive).length, detail: dt("تظهر في الواجهة"), icon: CheckCircle2, tone: "green" },
+        { label: dt("مخفية"), value: slides.filter((slide) => !slide.isActive).length, detail: dt("محفوظة دون عرض"), icon: EyeOff, tone: "slate" },
+      ]} />
 
       <ContentLocalizationAuditCard section="slides" />
 
@@ -309,10 +317,6 @@ export default function SlidesPage() {
             icon={ImageIcon}
             title={dt("لا توجد شرائح")}
             description={dt("الشرائح تتحكم في السلايدر الظاهر على الصفحة الرئيسية للموقع. أضف أول شريحة للبدء.")}
-            action={
-              <Button onClick={() => router.push('/dashboard/slides/new')} className="gap-2 bg-brand hover:bg-brand-dark">
-                <Plus className="w-4 h-4" /> {dt(" إضافة شريحة")}</Button>
-            }
           />
         )}
       </Card>

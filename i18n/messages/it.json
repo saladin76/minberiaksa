@@ -2475,5 +2475,10 @@
       "title": "Completa qui la tua donazione",
       "description": "Un modulo di pagamento sicuro, separato dal tentativo non andato a buon fine. Inserisci la carta e completa la donazione in un solo passaggio."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "ora",
+    "donated": "ha donato",
+    "for": "per"
   }
 }

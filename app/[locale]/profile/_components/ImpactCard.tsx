@@ -58,13 +58,6 @@ export default function ImpactCard(props: ImpactCardProps) {
     convertToCurrency
   );
 
-  const lastDonationLabel = props.lastDonationAt
-    ? new Date(props.lastDonationAt).toLocaleDateString(
-        props.locale === "ar" ? "ar-EG" : undefined,
-        { day: "numeric", month: "short", year: "numeric" }
-      )
-    : "—";
-
   const cards: {
     Icon: typeof HandHeart;
     accent: string;

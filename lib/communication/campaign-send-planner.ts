@@ -27,7 +27,7 @@ export type SendPlan = {
   nextCursor: string | null;
   exhausted: boolean;
   recipients: CampaignRecipient[];
-  skippedList: { cursorId: string; userId: string; locale: string; reason: string }[];
+  skippedList: { cursorId: string; userId: string; name: string | null; email: string | null; phone: string | null; locale: string; reason: string }[];
 };
 
 /** Build one page. The executor persists its cursor, including all-skipped pages. */

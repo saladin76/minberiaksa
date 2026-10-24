@@ -6,6 +6,10 @@ import { fetchAdsDonations } from "@/lib/admin/ads-fetch";
 import { buildDiagnosticRows } from "@/lib/attribution/aggregate";
 import type { AttributionStatus } from "@/lib/tracking/tracking-event-contract";
 
+// This authenticated report needs request-time session and database data. Keeping it dynamic
+// prevents Next from evaluating auth configuration while collecting production page data.
+export const dynamic = "force-dynamic";
+
 const ALL_STATUSES: AttributionStatus[] = [
   "verified",
   "strong",

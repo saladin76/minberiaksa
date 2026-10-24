@@ -22,6 +22,7 @@ import {
 import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
 import { CampaignControlsDialog } from "./CampaignControlsDialog";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { isCampaignControlTerminalStatus } from "@/lib/communication/communication-runtime-types";
 
 /**
  * Campaign lifecycle actions, in the list row.
@@ -73,7 +74,7 @@ export function CampaignRowActions({
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
   const canSend = campaign.status === "APPROVED";
   const canCancel = isPreSend(campaign.status);
-  const canControl = campaign.channel === "WHATSAPP" && !["SENT", "FAILED", "CANCELLED", "ARCHIVED"].includes(campaign.status);
+  const canControl = campaign.channel === "WHATSAPP" && !isCampaignControlTerminalStatus(campaign.status);
   const canArchive = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED", "CANCELLED"].includes(campaign.status);
   if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive) return null;
 

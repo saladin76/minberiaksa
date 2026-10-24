@@ -4,7 +4,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { writeAuditLog } from "@/lib/audit-log";
-import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
+import { pickTranslation } from "@/lib/i18n/translation-fallback";
+import { isValidLocale } from "@/lib/locales";
+import type { Prisma } from "@prisma/client";
+import { normalizeBadgeCriteria } from "@/lib/badge-criteria-core";
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,11 +18,7 @@ export async function GET(request: NextRequest) {
     const badges = await prisma.badge.findMany({
       orderBy: { order: "asc" },
       include: {
-        translations: {
-          where: translationLocaleWhere(locale),
-          take: 2,
-          select: { locale: true, name: true },
-        },
+        translations: { select: { locale: true, name: true } },
       },
     });
     const items = badges.map((b) => ({
@@ -29,7 +28,11 @@ export async function GET(request: NextRequest) {
       criteria: b.criteria,
       order: b.order,
       createdAt: b.createdAt,
-      translatedName: pickTranslation(b.translations, locale)?.name ?? b.name,
+      translationCount: b.translations.filter((translation) => translation.name.trim().length > 0).length,
+      translatedName: pickTranslation(
+        b.translations.filter((translation) => translation.name.trim().length > 0),
+        locale,
+      )?.name ?? b.name,
     }));
     return NextResponse.json({ badges: items });
   } catch (error) {
@@ -44,26 +47,27 @@ export async function POST(request: NextRequest) {
     const denied = requireAdminOrDashboardPermission(session, "badges");
     if (denied) return denied;
     const body = await request.json();
-    const { name, color, criteria, order, translations } = body;
-    if (!name || !criteria?.type) {
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const color = body.color ?? "#3b82f6";
+    const criteria = normalizeBadgeCriteria(body.criteria);
+    const order = body.order ?? 0;
+    const translations = normalizeTranslations(body.translations);
+    if (!name || name.length > 80 || !criteria || !/^#[0-9a-f]{6}$/i.test(color) || !Number.isInteger(order) || order < 0 || !translations) {
       return NextResponse.json(
-        { error: "Name and criteria.type are required" },
+        { error: "Enter a name, valid color, valid criteria, and supported translations" },
         { status: 400 }
       );
     }
     const badge = await prisma.badge.create({
       data: {
-        name: name,
-        color: color || "#3b82f6",
-        criteria: criteria,
-        order: order ?? 0,
+        name,
+        color,
+        criteria: criteria as unknown as Prisma.InputJsonValue,
+        order,
         translations:
-          translations && Object.keys(translations).length > 0
+          Object.keys(translations).length > 0
             ? {
-                create: Object.entries(translations).map(([locale, n]) => ({
-                  locale,
-                  name: (n as string) || name,
-                })),
+                create: Object.entries(translations).map(([locale, translatedName]) => ({ locale, name: translatedName })),
               }
             : undefined,
       },
@@ -86,4 +90,15 @@ export async function POST(request: NextRequest) {
     console.error("Error creating badge:", error);
     return NextResponse.json({ error: "Failed to create badge" }, { status: 500 });
   }
+}
+
+function normalizeTranslations(value: unknown): Record<string, string> | null {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result: Record<string, string> = {};
+  for (const [locale, name] of Object.entries(value)) {
+    if (!isValidLocale(locale) || typeof name !== "string" || name.trim().length > 80) return null;
+    if (name.trim()) result[locale] = name.trim();
+  }
+  return result;
 }

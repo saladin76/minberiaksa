@@ -954,7 +954,6 @@ const ProfilePage = () => {
   const renderSubscriptionDialog = () => {
     const sub = subscriptionSettingsDonation;
     if (!sub) return null;
-    const isActive = sub.status === "ACTIVE";
     return (
       <Dialog
         open={!!sub}

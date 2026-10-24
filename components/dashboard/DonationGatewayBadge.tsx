@@ -10,12 +10,15 @@ export const GATEWAY_LOGOS: Record<string, { src: string; alt: string }> = {
   ALBARAKA: { src: "/albaraka.jpg", alt: "Albaraka Türk" },
   PAYFOR: { src: "/ziraat-katilim.jpg", alt: "Ziraat Katılım" },
   PAYPAL: { src: "/paypal.webp", alt: "PayPal" },
+  CHARITY_GIVING: { src: "/charity-giving.png", alt: "Charity Giving" },
 };
 
 export const GATEWAY_NAMES: Record<string, string> = {
+  BANK: "Bank account",
   ALBARAKA: "Albaraka Türk",
   PAYFOR: "Ziraat Katılım (PayFor)",
   PAYPAL: "PayPal",
+  CHARITY_GIVING: "Charity Giving",
   STRIPE: "Stripe",
   BANK_TRANSFER: "Bank transfer",
   MANUAL: "Manual",
@@ -74,6 +77,14 @@ export function DonationGatewayBadge({ donation, onOpen }: Props) {
           <Landmark className="w-3 h-3" />
           {dt("تحويل بنكي")}
         </span>
+      </button>
+    );
+  }
+
+  if (provider === "BANK") {
+    return (
+      <button type="button" onClick={onOpen} className={BUTTON} title={dt("حساب بنكي")} aria-label={dt("حساب بنكي")}>
+        <Landmark className="h-5 w-5 text-slate-600" aria-hidden="true" />
       </button>
     );
   }

@@ -15,11 +15,10 @@ export type SubNavItem = {
 /**
  * Secondary navigation for a route cluster whose pages share one sidebar entry.
  *
- * Three competing, section-private patterns existed before this: `MarketingQuickNav` (a
- * hardcoded pill row), `MarketingWorkflowHeader` (its own 3-level breadcrumb) and the nav
- * embedded in `ArchiveConsole`. The first two turned out to render only on routes that
- * `next.config.ts` redirects away, so this replaces the one that is actually reachable and
- * gives future clusters a single shape to reuse.
+ * The dashboard used to duplicate section navigation in several private components.
+ * Marketing's old variants pointed mostly to redirects, while the archive UI that also used
+ * this primitive has since been retired. Keep one reusable implementation for live and future
+ * route clusters, including the AI concierge tabs.
  *
  * Active state uses longest-prefix matching so a detail route keeps its parent tab lit.
  */

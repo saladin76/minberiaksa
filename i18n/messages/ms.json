@@ -2475,5 +2475,10 @@
       "title": "Lengkapkan derma anda di sini",
       "description": "Borang pembayaran selamat, berasingan daripada percubaan yang tidak berjaya. Masukkan butiran kad anda dan lengkapkan derma dalam satu langkah."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "baru sahaja",
+    "donated": "menderma",
+    "for": "untuk"
   }
 }

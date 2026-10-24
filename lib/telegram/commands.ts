@@ -314,7 +314,7 @@ export async function dispatchTelegramCommand(input: {
   entities?: Array<{ type?: string; offset?: number; length?: number }> | null;
   messageId?: number;
 }): Promise<void> {
-  const cfg = getTelegramConfig();
+  const cfg = await getTelegramConfig();
   if (!cfg) return;
 
   // Allowlist: only respond in approved chats. Otherwise stay silent.

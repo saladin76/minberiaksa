@@ -15,6 +15,7 @@ import {
   parseTranslations,
   str,
 } from "./translation-write";
+import { normalizeVideoSource } from "./video-platform";
 
 export const VIDEO_TYPES = ["ACHIEVEMENT", "ENDORSEMENT", "FIELD", "EVENT"] as const;
 export type VideoTypeValue = (typeof VIDEO_TYPES)[number];
@@ -46,13 +47,20 @@ export function parseVideoTranslations(translations: unknown) {
 }
 
 export function buildVideoScalars(body: Record<string, unknown>) {
+  const startSeconds = optionalInt(body.startSeconds);
+  const source = normalizeVideoSource({
+    mediaUrl: body.mediaUrl,
+    youtubeId: body.youtubeId,
+    url: body.url,
+    startSeconds,
+  });
   return {
     slug: str(body.slug),
     type: (isVideoType(body.type) ? body.type : "ACHIEVEMENT") as VideoTypeValue,
     title: str(body.title),
-    youtubeId: optionalStr(body.youtubeId),
-    url: optionalStr(body.url),
-    startSeconds: optionalInt(body.startSeconds),
+    youtubeId: source.youtubeId,
+    url: source.url,
+    startSeconds,
     thumbnail: optionalStr(body.thumbnail),
     regionKey: optionalStr(body.regionKey),
     localeFilter: localeList(body.localeFilter),
@@ -64,11 +72,19 @@ export function buildVideoScalars(body: Record<string, unknown>) {
 
 export function buildVideoScalarPatch(body: Record<string, unknown>) {
   const patch: Record<string, unknown> = {};
+  if (body.mediaUrl !== undefined || body.youtubeId !== undefined || body.url !== undefined) {
+    const source = normalizeVideoSource({
+      mediaUrl: body.mediaUrl,
+      youtubeId: body.youtubeId,
+      url: body.url,
+      startSeconds: body.startSeconds === undefined ? null : optionalInt(body.startSeconds),
+    });
+    patch.youtubeId = source.youtubeId;
+    patch.url = source.url;
+  }
   if (body.slug !== undefined) patch.slug = str(body.slug);
   if (body.type !== undefined && isVideoType(body.type)) patch.type = body.type;
   if (body.title !== undefined) patch.title = str(body.title);
-  if (body.youtubeId !== undefined) patch.youtubeId = optionalStr(body.youtubeId) ?? null;
-  if (body.url !== undefined) patch.url = optionalStr(body.url) ?? null;
   if (body.startSeconds !== undefined) patch.startSeconds = optionalInt(body.startSeconds) ?? null;
   if (body.thumbnail !== undefined) patch.thumbnail = optionalStr(body.thumbnail) ?? null;
   if (body.regionKey !== undefined) patch.regionKey = optionalStr(body.regionKey) ?? null;

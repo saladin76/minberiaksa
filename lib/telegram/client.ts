@@ -1,4 +1,5 @@
 import { adoptMigratedChat, getTelegramConfig } from "./config";
+export { htmlEscape } from "./html";
 
 interface TelegramApiResponse<T> {
   ok: boolean;
@@ -9,7 +10,7 @@ interface TelegramApiResponse<T> {
 }
 
 async function call<T>(method: string, payload: Record<string, unknown>): Promise<TelegramApiResponse<T>> {
-  const cfg = getTelegramConfig();
+  const cfg = await getTelegramConfig();
   if (!cfg) {
     return { ok: false, description: "Telegram not configured (missing TELEGRAM_BOT_TOKEN / chat id / secret)" };
   }
@@ -26,7 +27,7 @@ async function call<T>(method: string, payload: Record<string, unknown>): Promis
     // The group was upgraded to a supergroup: switch to its new id and resend.
     const migratedTo = data.parameters?.migrate_to_chat_id;
     if (!data.ok && migratedTo != null && payload.chat_id != null && String(payload.chat_id) !== String(migratedTo)) {
-      adoptMigratedChat(String(payload.chat_id), String(migratedTo));
+      await adoptMigratedChat(String(payload.chat_id), String(migratedTo));
       return call<T>(method, { ...payload, chat_id: migratedTo });
     }
     if (!data.ok) {
@@ -70,20 +71,27 @@ export async function tgSendMessage(
 
 /** Send a message to the configured notifications chat. */
 export async function tgNotify(text: string, opts: SendMessageOptions = {}): Promise<boolean> {
-  const cfg = getTelegramConfig();
+  const cfg = await getTelegramConfig();
   if (!cfg || !cfg.notificationsEnabled) return false;
   return tgSendMessage(cfg.notificationsChatId, text, opts);
 }
 
+/** Read the connected bot identity without sending a message to any chat. */
+export async function tgGetMe() {
+  return call<{ id: number; is_bot: boolean; first_name: string; username?: string }>("getMe", {});
+}
+
 /** Register the webhook with Telegram. Returns the API response. */
 export async function tgSetWebhook(url: string): Promise<TelegramApiResponse<unknown>> {
-  const cfg = getTelegramConfig();
+  const cfg = await getTelegramConfig();
   if (!cfg) return { ok: false, description: "Telegram not configured" };
   return call("setWebhook", {
     url,
     secret_token: cfg.webhookSecret,
     allowed_updates: ["message"],
-    drop_pending_updates: true,
+    // Retain queued updates when re-registering; admins should not lose commands
+    // that arrived while the webhook was temporarily unavailable.
+    drop_pending_updates: false,
   });
 }
 
@@ -93,13 +101,4 @@ export async function tgGetWebhookInfo(): Promise<TelegramApiResponse<unknown>> 
 
 export async function tgDeleteWebhook(): Promise<TelegramApiResponse<unknown>> {
   return call("deleteWebhook", { drop_pending_updates: false });
-}
-
-/** Escape a string for Telegram HTML (`parse_mode=HTML`). */
-export function htmlEscape(input: string | number | null | undefined): string {
-  if (input == null) return "";
-  return String(input)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

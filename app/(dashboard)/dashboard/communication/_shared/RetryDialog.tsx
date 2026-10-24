@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import type { CommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 /**
  * Re-sending messages that never went out.
@@ -37,6 +38,8 @@ type Summary = { total: number; sent: number; failed: number; byCode: Record<str
 
 type Preflight = {
   eligible: number;
+  candidateIds: string[];
+  missingContent: number;
   alreadyRetried: number;
   bounced: number;
   cap: number;
@@ -69,12 +72,16 @@ type Props = {
   /** Explicit ids for a targeted retry; null runs the backlog for the current period. */
   ids: string[] | null;
   days: number;
+  /** Optional strict scope for retries launched from a campaign report. */
+  campaignId?: string | null;
+  campaignName?: string | null;
+  purposeGroup?: CommunicationPurposeGroup;
   onOpenChange: (open: boolean) => void;
   /** Fired once after a run that sent at least one message, so the table can refresh. */
   onFinished: () => void;
 };
 
-export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished }: Props) {
+export function RetryDialog({ open, channel, ids, days, campaignId, campaignName, purposeGroup, onOpenChange, onFinished }: Props) {
   const [phase, setPhase] = useState<Phase>("confirm");
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [loadingPreflight, setLoadingPreflight] = useState(false);
@@ -107,7 +114,11 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
       return;
     }
     setLoadingPreflight(true);
-    fetch(`/api/dashboard/communication/deliveries/retry?channel=${channel}&days=${days}`, { cache: "no-store" })
+    const params = new URLSearchParams({ channel });
+    if (campaignId) params.set("campaign", campaignId);
+    else params.set("days", String(days));
+    if (purposeGroup) params.set("purposeGroup", purposeGroup);
+    fetch(`/api/dashboard/communication/deliveries/retry?${params}`, { cache: "no-store" })
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر حساب الرسائل"));
@@ -115,7 +126,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
       })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoadingPreflight(false));
-  }, [open, channel, days, isBulk]);
+  }, [open, channel, days, campaignId, purposeGroup, isBulk]);
 
   const run = useCallback(async () => {
     setPhase("running");
@@ -136,7 +147,9 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
           body: JSON.stringify({
             channel,
             ids: ids ?? undefined,
-            days: isBulk ? days : undefined,
+            days: isBulk && !campaignId ? days : undefined,
+            campaignId: campaignId || undefined,
+            purposeGroup,
             range: isBulk ? preflight?.range : undefined,
             ...(cursor ? { after: cursor } : {}),
           }),
@@ -220,7 +233,7 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
       setSummary(aggregate.total > 0 ? { ...aggregate, byCode: { ...aggregate.byCode } } : null);
       setPhase("report");
     }
-  }, [channel, ids, days, isBulk, preflight]);
+  }, [channel, ids, days, campaignId, purposeGroup, isBulk, preflight]);
 
   const close = useCallback(() => {
     if (phase === "running") return; // a send in flight must not be orphaned by a stray click
@@ -250,6 +263,9 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
               isBulk={isBulk}
               count={willSend}
               channel={channel}
+              campaignId={campaignId}
+              campaignName={campaignName}
+              purposeGroup={purposeGroup}
               preflight={preflight}
               loading={loadingPreflight}
               error={error}
@@ -298,11 +314,14 @@ export function RetryDialog({ open, channel, ids, days, onOpenChange, onFinished
 }
 
 function ConfirmStep({
-  isBulk, count, channel, preflight, loading, error,
+  isBulk, count, channel, campaignId, campaignName, purposeGroup, preflight, loading, error,
 }: {
   isBulk: boolean;
   count: number;
   channel: string;
+  campaignId?: string | null;
+  campaignName?: string | null;
+  purposeGroup?: CommunicationPurposeGroup;
   preflight: Preflight | null;
   loading: boolean;
   error: string | null;
@@ -333,8 +352,11 @@ function ConfirmStep({
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center">
         <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-        <p className="text-sm font-semibold text-slate-800">{dt("لا توجد رسائل بحاجة لإعادة إرسال")}</p>
-        <p className="text-xs text-slate-500">{dt("كل رسائل هذه الفترة إمّا أُرسلت أو أُعيد إرسالها من قبل.")}</p>
+        <p className="text-sm font-semibold text-slate-800">{dt("لا توجد رسائل محفوظة المحتوى وجاهزة لإعادة الإرسال")}</p>
+        <p className="text-xs text-slate-500">
+          {(preflight?.missingContent ?? 0) > 0
+            ? dtx("استُبعدت {0} محاولة لأن سجلها لا يحتوي نسخة محتوى أو متغيرات تكفي لإعادة تشغيل الرسالة نفسها.", [(preflight?.missingContent ?? 0).toLocaleString("en-US")])
+            : dt("كل المحاولات المؤهلة أُرسلت أو أُعيدت من قبل.")}</p>
       </div>
     );
   }
@@ -344,6 +366,16 @@ function ConfirmStep({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+        {campaignId && (
+          <p className="mb-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-[11px] font-medium text-brand-800">
+            {dtx("النطاق: حملة {0}، دون حد زمني.", [campaignName || campaignId])}
+          </p>
+        )}
+        {purposeGroup && (
+          <p className="mb-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-600">
+            {dtx("نوع الرسائل: {0}.", [dt(purposeGroup === "MARKETING" ? "الرسائل التسويقية" : "الرسائل التلقائية")])}
+          </p>
+        )}
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold tabular-nums text-slate-900">{count.toLocaleString("en-US")}</span>
           <span className="text-sm text-slate-600">
@@ -385,6 +417,11 @@ function ConfirmStep({
             <>{dtx("مستثنى: {0} رسالة مرتدّة (إعادة الإرسال لعنوان مرتدّ تضرّ بسمعة النطاق). ", [preflight.bounced])}</>
           )}
           {preflight.alreadyRetried > 0 && <>{dtx("{0} رسالة أُعيد إرسالها من قبل.", [preflight.alreadyRetried])}</>}
+        </p>
+      )}
+      {preflight.missingContent > 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
+          {dtx("لم تدخل {0} محاولة في الدفعة؛ لا توجد نسخة محفوظة تكفي لإعادة إرسال المحتوى نفسه.", [preflight.missingContent.toLocaleString("en-US")])}
         </p>
       )}
     </div>

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { fetchAdsDonations } from "@/lib/admin/ads-fetch";
 import {
   aggregateBreakdown,
   type BreakdownDimension,
 } from "@/lib/attribution/aggregate";
+
+export const dynamic = "force-dynamic";
 
 const VALID_DIMENSIONS: BreakdownDimension[] = [
   "platform",

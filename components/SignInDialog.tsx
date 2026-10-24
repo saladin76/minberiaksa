@@ -24,9 +24,6 @@ import {
   Inbox,
   Calendar,
   Zap,
-  UserRoundCheck,
-  UserX,
-  UserCheck,
   UserCheck2,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";

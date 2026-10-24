@@ -2475,5 +2475,10 @@
       "title": "Fullfør donasjonen her",
       "description": "Et sikkert betalingsskjema, atskilt fra forsøket som ikke gikk gjennom. Skriv inn kortopplysningene og fullfør donasjonen i ett steg."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "nettopp",
+    "donated": "har donert",
+    "for": "til"
   }
 }

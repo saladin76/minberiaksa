@@ -12,7 +12,6 @@ import {
   Repeat,
   Receipt,
   HandCoins,
-  Percent,
   Loader2,
   ArrowRight,
   BarChart3,
@@ -185,20 +184,6 @@ const CHART_COLORS = {
   secondary: "#234a60",
   grid: "#dde4e8",
   text: "#3e4c55",
-};
-
-const DASHBOARD_CURRENCY_SYMBOL: Record<string, string> = {
-  USD: "$",
-  EUR: "€",
-  GBP: "£",
-  TRY: "₺",
-  SAR: "﷼",
-  get AED() { return dt("د.إ"); },
-  get KWD() { return dt("د.ك"); },
-  EGP: "EGP ",
-  QAR: "﷼",
-  get BHD() { return dt("ب.د"); },
-  get OMR() { return dt("ر.ع.‏"); },
 };
 
 const PAGE_SIZE = 10;

@@ -1,32 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
-const read = (path: string) => readFileSync(path, "utf8");
-
-/**
- * Was operations-archive-structure.test.ts. Every operations assertion in it described pages that
- * no longer exist  the التشغيل nav group, the five approved operations pages, their legacy
- * redirect targets, and the donor-reactivation masking page. Those tests could only fail, and a
- * test that pins removed behaviour is worse than no test. What remains is the archive half, which
- * is untouched by that removal.
- */
-
-test("archive is protected before nested page reads", () => {
-  const source = read("app/(dashboard)/dashboard/archive/layout.tsx");
-  assert.match(source, /getServerSession/);
-  assert.match(source, /resolveDashboardPageAccess/);
-  assert.match(source, /redirect\(access\.redirectTo\)/);
+test("archive dashboard pages are retired and old paths redirect safely", () => {
+  const route = "app/(dashboard)/dashboard/archive/[[...archivePath]]/page.tsx";
+  assert.ok(existsSync(route));
+  assert.match(readFileSync(route, "utf8"), /redirect\("\/dashboard"\)/);
+  for (const page of [
+    "app/(dashboard)/dashboard/archive/page.tsx",
+    "app/(dashboard)/dashboard/archive/layout.tsx",
+    "app/(dashboard)/dashboard/archive/collections/page.tsx",
+    "app/(dashboard)/dashboard/archive/assets/page.tsx",
+  ]) assert.equal(existsSync(page), false, page + " should not remain a dashboard destination");
 });
 
-test("archive root and duplicate upload routes redirect to canonical pages", () => {
-  const redirects: Record<string, string> = {
-    "app/(dashboard)/dashboard/archive/page.tsx": "/dashboard/archive/collections",
-    "app/(dashboard)/dashboard/archive/marketing-files/page.tsx": "/dashboard/archive/assets?category=MARKETING",
-    "app/(dashboard)/dashboard/archive/documents/page.tsx": "/dashboard/archive/assets?category=DOCUMENTS",
-  };
-
-  for (const [path, destination] of Object.entries(redirects)) {
-    assert.ok(read(path).includes(`redirect("${destination}")`));
-  }
+test("archive APIs remain protected and the retired dashboard UI is removed", () => {
+  const api = readFileSync("app/api/admin/archive/uploaded-files/route.ts", "utf8");
+  assert.match(api, /requireArchiveUploadedFileListAccess/);
+  assert.match(api, /requireArchiveActionAccess\("archiveUpload"\)/);
+  assert.deepEqual(readdirSync("app/(dashboard)/dashboard/archive/_components"), []);
 });

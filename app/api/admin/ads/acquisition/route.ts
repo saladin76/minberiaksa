@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { fetchAdsDonations } from "@/lib/admin/ads-fetch";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,8 @@ import {
   PLATFORM_LABEL_AR,
   type AdPlatform,
 } from "@/lib/attribution/detect-source";
+
+export const dynamic = "force-dynamic";
 
 interface PlatformRow {
   platform: AdPlatform;

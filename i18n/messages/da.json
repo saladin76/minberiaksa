@@ -2475,5 +2475,10 @@
       "title": "Gennemfør din donation her",
       "description": "En sikker betalingsformular, adskilt fra forsøget, der ikke lykkedes. Indtast dine kortoplysninger og gennemfør donationen i ét trin."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "lige nu",
+    "donated": "har doneret",
+    "for": "til"
   }
 }

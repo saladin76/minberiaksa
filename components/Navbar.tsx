@@ -4,7 +4,6 @@ import {
   Menu,
   X,
   ShoppingCart,
-  Search,
   LogOut,
   LayoutDashboard,
   ChevronDown,
@@ -17,6 +16,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import Image from "next/image";
+import NextLink from "next/link";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -68,7 +68,6 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -143,20 +142,6 @@ const Navbar = () => {
   const onOpenDonationDialog = () => {
     setIsCartOpen(false);
     setIsCartPaymentDialogOpen(true);
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(
-        appendCurrencyQuery(
-          `/campaigns?search=${encodeURIComponent(searchQuery.trim())}`,
-          getCurrencyCodeForLinks()
-        )
-      );
-      setSearchQuery("");
-      setIsMobileMenuOpen(false);
-    }
   };
 
   const openCart = () => {
@@ -346,14 +331,14 @@ const Navbar = () => {
                         <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
                       </div>
                            {(session.user.role === "ADMIN" || session.user.role === "STAFF") && (
-                        <a
+                        <NextLink
                           href="/dashboard"
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                           <LayoutDashboard className="w-4 h-4 text-burgundy" />
                           {isRTL ? "لوحة التحكم" : "Dashboard"}
-                        </a>
+                        </NextLink>
                       )}
                       <Link
                         href="/profile"

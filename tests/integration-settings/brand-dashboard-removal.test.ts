@@ -35,8 +35,8 @@ test("active navigation resolves one longest matching route", () => {
 
 test("legacy brand asset and framework routes redirect directly", () => {
   const directRedirects: Record<string, string> = {
-    "app/(dashboard)/dashboard/brand/assets/page.tsx": "/dashboard/archive/assets?source=legacy-brand",
-    "app/(dashboard)/dashboard/brand/downloads/page.tsx": "/dashboard/archive/assets?source=legacy-brand",
+    "app/(dashboard)/dashboard/brand/assets/page.tsx": "/dashboard",
+    "app/(dashboard)/dashboard/brand/downloads/page.tsx": "/dashboard",
     // Both used to land on the operations communication templates page. That page went with
     // التشغيل, so they now redirect to the surviving template editor.
     "app/(dashboard)/dashboard/brand/frameworks/page.tsx": "/dashboard/templates",
@@ -87,12 +87,6 @@ test("brand management interfaces and exclusive APIs are removed", () => {
   }
 });
 
-test("legacy assets are exposed read-only in their new home", () => {
-  const assets = read("app/(dashboard)/dashboard/archive/assets/page.tsx");
-  assert.match(assets, /linkedLegacyAssets/);
-  assert.match(assets, /Boolean\(asset\.fileUrl\)/);
-  assert.match(assets, /LEGACY_BRAND/);
-
-  // The frameworks half read the operations communication templates page, which no longer
-  // exists  readFileSync on it throws rather than failing an assertion.
+test("retired archive routes cannot receive legacy brand links", () => {
+  assert.match(read("app/(dashboard)/dashboard/archive/[[...archivePath]]/page.tsx"), /redirect\("\/dashboard"\)/);
 });

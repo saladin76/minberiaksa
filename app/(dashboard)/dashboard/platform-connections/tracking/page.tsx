@@ -70,12 +70,14 @@ export default async function TrackingPage() {
         </div>
       </Card>
 
-      {canManage || canTest ? (
-        <TrackingSettingsManager canManage={canManage} canTest={canTest} />
-      ) : (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          {dt("لديك صلاحية عرض حالة الربط فقط. تعديل البكسلات والمفاتيح يحتاج صلاحية «ربط المنصات: حفظ وتفعيل الإعدادات».")}</div>
-      )}
+      <div id="ga4-settings">
+        {canManage || canTest ? (
+          <TrackingSettingsManager canManage={canManage} canTest={canTest} />
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            {dt("لديك صلاحية عرض حالة الربط فقط. تعديل البكسلات والمفاتيح يحتاج صلاحية «ربط المنصات: حفظ وتفعيل الإعدادات».")}</div>
+        )}
+      </div>
     </main>
   );
 }

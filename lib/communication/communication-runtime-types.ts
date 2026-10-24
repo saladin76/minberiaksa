@@ -61,6 +61,20 @@ export const CAMPAIGN_STATUSES = [
 ] as const;
 export type CampaignStatusId = (typeof CAMPAIGN_STATUSES)[number];
 
+/** Campaigns in these states have finished their send lifecycle and cannot be paused or resumed. */
+export const CAMPAIGN_CONTROL_TERMINAL_STATUSES = [
+  "SENT",
+  "SENT_WITH_ISSUES",
+  "BLOCKED",
+  "CANCELLED",
+  "FAILED",
+  "ARCHIVED",
+] as const satisfies readonly CampaignStatusId[];
+
+export function isCampaignControlTerminalStatus(status: string): boolean {
+  return (CAMPAIGN_CONTROL_TERMINAL_STATUSES as readonly string[]).includes(status);
+}
+
 export const DELIVERY_ORIGINS = ["MANUAL", "CAMPAIGN", "TRIGGER", "TEST", "REACTIVATION", "SYSTEM"] as const;
 export type DeliveryOriginId = (typeof DELIVERY_ORIGINS)[number];
 

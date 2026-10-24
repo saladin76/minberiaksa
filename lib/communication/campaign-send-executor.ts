@@ -336,7 +336,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
     }
     for (const skipped of plan.skippedList) {
       if (alreadyDone.has(skipped.userId)) { recoverOutcome(skipped.userId, tally); continue; }
-      await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: skipped.userId, locale: skipped.locale, purpose, origin, createdBy: actor?.actorId ?? null }, skipped.reason);
+      await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: skipped.userId, recipientName: skipped.name, recipientEmail: channel === "EMAIL" ? skipped.email : null, recipientPhone: channel !== "EMAIL" ? skipped.phone : null, locale: skipped.locale, purpose, origin, createdBy: actor?.actorId ?? null }, skipped.reason);
       tally.skipped++; bump(tally.reasons, skipped.reason);
     }
     const contexts = await loadContextsForUserIds(plan.recipients.map((recipient) => recipient.userId));
@@ -346,7 +346,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
       if (alreadyDone.has(recipient.userId)) { recoverOutcome(recipient.userId, outcome); return outcome; }
       const contactKey = normalizeRecipientContact(channel, recipient.email, recipient.phone);
       if (contactKey && (alreadyDoneContacts.has(contactKey) || claimedBatchContacts.has(contactKey))) {
-        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin, createdBy: actor?.actorId ?? null }, "DUPLICATE_RECIPIENT_CONTACT");
+        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin, createdBy: actor?.actorId ?? null }, "DUPLICATE_RECIPIENT_CONTACT");
         outcome.skipped++; bump(outcome.reasons, "DUPLICATE_RECIPIENT_CONTACT"); return outcome;
       }
       // Claim synchronously before the first await, then check live controls
@@ -356,16 +356,16 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
       const loadedCtx = contexts.get(recipient.userId) ?? null;
       const recipientCtx = loadedCtx && updateSource ? { ...loadedCtx, update: updateContextFor(updateSource, recipient.locale, campaignId) } : loadedCtx;
       if (!recipientCtx) {
-        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "CONTEXT_LOAD_FAILED");
+        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin }, "CONTEXT_LOAD_FAILED");
         outcome.skipped++; bump(outcome.reasons, "CONTEXT_LOAD_FAILED"); return outcome;
       }
       const rendered = await renderChannelTemplate(channel, templateId, recipient.locale, recipientCtx, fallbackLocale, "CAMPAIGN");
       if (!rendered) {
-        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin }, "TEMPLATE_RENDER_FAILED");
+        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin }, "TEMPLATE_RENDER_FAILED");
         outcome.skipped++; bump(outcome.reasons, "TEMPLATE_RENDER_FAILED"); return outcome;
       }
       if (rendered.usedFallback && decisions[recipient.locale] === "EXCLUDE") {
-        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, locale: recipient.locale, purpose, origin, templateName: rendered.templateName }, "LANGUAGE_EXCLUDED");
+        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin, templateName: rendered.templateName }, "LANGUAGE_EXCLUDED");
         outcome.skipped++; bump(outcome.reasons, "LANGUAGE_EXCLUDED"); return outcome;
       }
       const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose });

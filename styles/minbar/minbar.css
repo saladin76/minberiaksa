@@ -32,7 +32,7 @@
   --sand: #F7F2EA;          /* Soft Sand  quiet section separation */
   --white: #ffffff;
   --ink: #10212B;
-  --muted: #52616B;         /* Muted text  secondary copy */
+  --muted: #40515B;         /* Secondary copy remains clearly readable on ivory/white */
   --gray: #666666;
   --gray-2: #888888;
   --border: rgba(16, 33, 43, .12);
@@ -53,7 +53,7 @@
 
   /* ── Type families ────────────────────────────────────────────────────────── */
   --font-ar: var(--font-cairo), Cairo, Almarai, Tajawal, system-ui, sans-serif;
-  --font-latin: var(--font-montserrat), Montserrat, Poppins, system-ui, sans-serif;
+  --font-latin: var(--font-poppins), Poppins, var(--font-montserrat), Montserrat, system-ui, sans-serif;
   --font-quran: var(--font-amiri), Amiri, "Scheherazade New", serif;
   --font-sans: var(--font-latin);
   --font-arabic: var(--font-ar);
@@ -1524,6 +1524,16 @@
   .mia-scope:has(.mia-qb-sec) { padding-bottom: 84px; }
 }
 
+/* Respect the dashboard's per-device dock settings. */
+@media (min-width: 961px) {
+  .mia-scope .mia-qb-sec[data-dock-desktop="false"] { display: none; }
+  .mia-scope:has(.mia-qb-sec[data-dock-desktop="false"]) { padding-bottom: 0; }
+}
+@media (max-width: 960px) {
+  .mia-scope .mia-qb-sec[data-dock-mobile="false"] { display: none; }
+  .mia-scope:has(.mia-qb-sec[data-dock-mobile="false"]) { padding-bottom: 0; }
+}
+
 /* Destination  one listbox (Radix Select): the intentions, then the projects
    under a group heading. The trigger matches the other inputs; the list is
    portaled to <body> and carries `mia-scope` itself, so its rules sit at the
@@ -1883,6 +1893,7 @@
 
 .mia-scope .pd-tab[data-tab="1"] { color: var(--deep) !important; border-bottom-color: var(--red) !important; }
 .mia-scope .pd-tab:hover { color: var(--deep); }
+.mia-scope .pd-donation-amount::placeholder { color: var(--muted); opacity: 1; font-weight: 500; }
 .mia-scope .pd-cross--zakat:hover { filter: brightness(1.06); }
 .mia-scope .mia-share-btn:hover { border-color: var(--gold); background: var(--sand); }
 .mia-scope button[data-pick="1"] { background: var(--deep) !important; border-color: var(--deep) !important; color: #fff !important; font-weight: 900 !important; }
@@ -2387,8 +2398,6 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 
   .mia-scope #upsell-rail > div { padding: 13px 12px !important; gap: 10px !important; }
   .mia-scope #upsell-rail > div > b { font-size: 13px !important; line-height: 1.55 !important; flex-basis: 100% !important; }
-  .mia-scope #upsell-rail > div button { height: 32px !important; font-size: 11.5px !important; padding: 0 7px !important; }
-  .mia-scope #upsell-rail > div input { height: 32px !important; font-size: 11.5px !important; padding: 0 8px !important; }
 }
 
 @media (max-width: 560px) {
@@ -2445,8 +2454,6 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 
 @media (max-width: 900px) {
   .mia-scope #pay-grid { grid-template-columns: minmax(0,1fr) !important; }
-  /* Full width means it can no longer be pinned without covering the form. */
-  .mia-scope #pay-summary { position: static !important; }
 }
 @media (max-width: 560px) {
   .mia-scope #pay-steps { overflow-x: auto; }
@@ -4210,15 +4217,6 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
     min-width: 44px !important;
     width: 44px !important;
   }
-  .mia-scope #upsell-rail > div > div {
-    max-width: 100%;
-    flex-wrap: wrap !important;
-  }
-  .mia-scope #upsell-rail .upsell-custom-input {
-    flex: 1 1 110px !important;
-    width: auto !important;
-    min-width: 90px !important;
-  }
   .mia-scope #cart-summary,
   .mia-scope .cart-row,
   .mia-scope #upsell-rail {
@@ -4333,14 +4331,6 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-scope #rc-grid .rc-builder { order: 1; }
   .mia-scope #rc-grid .rc-video { order: 2; }
 
-  /* Checkout: show the donation summary before asking for donor/payment data.
-     Desktop keeps the original side-by-side sticky summary. */
-  .mia-scope #pay-grid #pay-summary {
-    order: 1;
-    position: static !important;
-    top: auto !important;
-  }
-  .mia-scope #pay-grid .pay-form { order: 2; }
 }
 
 
@@ -5675,4 +5665,88 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
   .mia-scope #cat-donate-actions > b { text-align: center; }
   .mia-scope #cat-donate-actions > div > * { flex: 1 1 0; justify-content: center; min-width: 0; }
   .mia-scope .cat-page .cat-stats { gap: 10px !important; }
+}
+
+/* Cart contribution cards: keep every control inside the card and give the
+   suggested amounts a predictable responsive grid. */
+.mia-scope .upsell-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.mia-scope .upsell-amounts .upsell-amt { flex: 1 1 82px; }
+.mia-scope .upsell-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .mia-scope #upsell-rail .upsell-card { min-width: 0; }
+  .mia-scope #upsell-rail .upsell-amounts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+    gap: 8px;
+  }
+  .mia-scope #upsell-rail .upsell-amounts .upsell-amt {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px !important;
+    height: 44px !important;
+    padding-inline: 7px !important;
+    font-size: 12.5px !important;
+  }
+  .mia-scope #upsell-rail .upsell-actions { max-width: 100%; }
+  .mia-scope #upsell-rail .upsell-actions .upsell-custom-input {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 44px !important;
+    font-size: 14px !important;
+  }
+  .mia-scope #upsell-rail .upsell-actions .upsell-add {
+    flex: 0 0 44px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+  }
+  .mia-scope #cart-team-support .cart-team-options {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+  }
+  .mia-scope #cart-team-support .cart-team-options button {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 7px 8px !important;
+    white-space: normal !important;
+    line-height: 1.35;
+    justify-content: center;
+  }
+  .mia-scope #cart-team-support .cart-team-options input {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 44px !important;
+    font-size: 16px !important;
+  }
+  .mia-scope #cart-team-support .cart-team-recurring-options {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mia-scope #cart-team-support .cart-team-recurring-options button {
+    min-width: 0;
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 7px 8px !important;
+    white-space: normal !important;
+    line-height: 1.35;
+  }
 }

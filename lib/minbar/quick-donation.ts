@@ -31,6 +31,14 @@ export type QuickGenericDestination = (typeof QUICK_GENERIC_DESTINATIONS)[number
 
 export type QuickProjectsMode = "all" | "selected" | "none";
 
+/** Minimal server-rendered project data needed by the homepage destination picker. */
+export interface QuickDonationProjectOption {
+  id: string;
+  slug: string;
+  title: string;
+  regionLabel: string | null;
+}
+
 export interface QuickDonationConfig {
   /** The card is on the homepage at all. */
   enabled: boolean;
@@ -226,21 +234,3 @@ export function validateQuickDonationBody(body: unknown): QuickDonationConfig {
 }
 
 /* ── What the card reads ─────────────────────────────────────────────────── */
-
-/** Presets for the visitor's currency, and the currency they are priced in. */
-export function resolveQuickAmounts(
-  config: QuickDonationConfig,
-  currencyCode: string | null | undefined
-): { amounts: number[]; currency: string } {
-  const code = String(currencyCode || "").trim().toUpperCase();
-  if (code && code !== "DEFAULT" && code !== "USD" && config.byCurrency[code]?.length) {
-    return { amounts: config.byCurrency[code], currency: code };
-  }
-  return { amounts: config.amounts, currency: "USD" };
-}
-
-/** The title for this locale, or null to use the site copy. */
-export function quickTitleFor(config: QuickDonationConfig, locale: string): string | null {
-  const t = config.titles[locale]?.trim();
-  return t || null;
-}

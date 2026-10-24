@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react';
-import { Heart, Gift, Star, Sparkles, ArrowLeft, Check, PartyPopper } from 'lucide-react';
+import { Heart, Star, Sparkles, ArrowLeft, Check } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 
 // Dummy campaign datapixel
@@ -43,12 +43,6 @@ const DonationSuccessPage = () => {
   const locale = useLocale() as string;
   const [showConfetti, setShowConfetti] = useState(false);
   const donation = dummyDonation;
-
-  // Helper function to get locale-specific property
-  const getLocalizedProperty = (obj: any, key: string) => {
-    const localeKey = `${key}${locale.charAt(0).toUpperCase() + locale.slice(1)}`;
-    return obj[localeKey] || obj[key] || '';
-  };
 
   useEffect(() => {
     setShowConfetti(true);

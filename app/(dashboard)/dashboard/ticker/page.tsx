@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,17 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Save, Loader2, RefreshCw, Ticket } from "lucide-react";
+import { Info, Loader2, Plus, RefreshCw, Save, Ticket, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { dt, dtx } from "@/lib/dashboard/i18n";
-
-interface AmountRange {
-  minAmount: number;
-  maxAmount: number;
-  probability: number;
-  label: string;
-}
+import { dt } from "@/lib/dashboard/i18n";
 
 interface TickerConfig {
   id?: string;
@@ -34,135 +27,129 @@ interface TickerConfig {
   maxIntervalSeconds: number;
 }
 
+interface AmountRange {
+  minAmount: number;
+  maxAmount: number;
+  probability: number;
+  label: string;
+}
+
+const DEFAULT_CONFIG: TickerConfig = {
+  isActive: true,
+  donorNames: [],
+  amountRanges: [{ minAmount: 5, maxAmount: 50, probability: 100, label: "small" }],
+  minIntervalSeconds: 3,
+  maxIntervalSeconds: 8,
+};
+
 export default function TickerAdminPanel() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const [config, setConfig] = useState<TickerConfig>({
-    isActive: true,
-    donorNames: [],
-    amountRanges: [],
-    minIntervalSeconds: 3,
-    maxIntervalSeconds: 8,
-  });
-
-  // حالة مؤقتة لإدخال أسماء المتبرعين (مفصولة بفواصل)
+  const [config, setConfig] = useState<TickerConfig>(DEFAULT_CONFIG);
   const [donorNamesInput, setDonorNamesInput] = useState("");
 
-  // جلب الإعدادات الحالية عند تحميل الصفحة
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/live-donation-ticker");
-      if (response.ok) {
-        const data = await response.json();
-        setConfig({
-          id: data.id,
-          isActive: true,
-          donorNames: data.donorNames,
-          amountRanges: data.amountRanges,
-          minIntervalSeconds: data.minIntervalSeconds,
-          maxIntervalSeconds: data.maxIntervalSeconds,
-        });
-
-        // تعبئة حقل الإدخال بالقيم المفصولة بفواصل
-        setDonorNamesInput(data.donorNames.join(", "));
+      const response = await fetch("/api/live-donation-ticker?view=admin", { cache: "no-store" });
+      if (response.status === 404) {
+        setConfig(DEFAULT_CONFIG);
+        setDonorNamesInput("");
+        return;
       }
+      if (!response.ok) throw new Error(dt("فشل في تحميل إعدادات شريط التبرعات"));
+
+      const data = await response.json();
+      setConfig({
+        id: data.id,
+        isActive: data.isActive === true,
+        donorNames: Array.isArray(data.donorNames) ? data.donorNames : [],
+        amountRanges: Array.isArray(data.amountRanges) ? data.amountRanges : [],
+        minIntervalSeconds: Number.isInteger(data.minIntervalSeconds) ? data.minIntervalSeconds : DEFAULT_CONFIG.minIntervalSeconds,
+        maxIntervalSeconds: Number.isInteger(data.maxIntervalSeconds) ? data.maxIntervalSeconds : DEFAULT_CONFIG.maxIntervalSeconds,
+      });
+      setDonorNamesInput((Array.isArray(data.donorNames) ? data.donorNames : []).join("\n"));
     } catch (error) {
-      console.error("خطأ أثناء جلب الإعدادات:", error);
       toast({
-        title: dt("خطأ"),
-        description: dt("فشل في تحميل إعدادات شريط التبرعات"),
+        title: dt("تعذر تحميل الإعدادات"),
+        description: error instanceof Error ? error.message : dt("حاول تحديث الصفحة"),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    void fetchConfig();
+  }, [fetchConfig]);
 
   const handleSave = async () => {
+    const donorNames = donorNamesInput.split(/\r?\n/u).map((name) => name.trim()).filter(Boolean);
+    const probabilityTotal = config.amountRanges.reduce((sum, range) => sum + range.probability, 0);
+    const rangesAreValid = config.amountRanges.length > 0 && config.amountRanges.every((range) =>
+      Number.isFinite(range.minAmount) && range.minAmount >= 0 &&
+      Number.isFinite(range.maxAmount) && range.maxAmount >= range.minAmount &&
+      Number.isFinite(range.probability) && range.probability >= 0 && range.probability <= 100,
+    );
+    if (!donorNames.length) {
+      toast({ title: dt("أدخل أسماء العرض"), description: dt("أضف اسمًا واحدًا على الأقل لاستخدامه في الشريط"), variant: "destructive" });
+      return;
+    }
+    if (donorNames.length > 100 || donorNames.some((name) => name.length > 80)) {
+      toast({ title: dt("راجع قائمة أسماء العرض"), description: dt("استخدم حتى 100 اسم، بحد أقصى 80 حرفًا للاسم الواحد"), variant: "destructive" });
+      return;
+    }
+    if (!rangesAreValid || Math.abs(probabilityTotal - 100) > 0.01) {
+      toast({ title: dt("راجع اقتراحات المبالغ"), description: dt("تأكد من صحة النطاقات وأن مجموع احتمالاتها يساوي 100٪"), variant: "destructive" });
+      return;
+    }
+    if (
+      !Number.isInteger(config.minIntervalSeconds) ||
+      !Number.isInteger(config.maxIntervalSeconds) ||
+      config.minIntervalSeconds < 3 ||
+      config.maxIntervalSeconds < config.minIntervalSeconds ||
+      config.maxIntervalSeconds > 3600
+    ) {
+      toast({
+        title: dt("راجع توقيت العرض"),
+        description: dt("أدخل أعدادًا صحيحة بين 3 و3600 ثانية، واجعل الحد الأدنى أقل من الحد الأقصى"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      // تحويل القيم المفصولة بفواصل إلى مصفوفة
-      const donorNames = donorNamesInput
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      // التحقق من صحة البيانات
-      if (donorNames.length === 0) {
-        toast({
-          title: dt("خطأ في التحقق"),
-          description: dt("يرجى إضافة اسم متبرع واحد على الأقل"),
-          variant: "destructive",
-        });
-        setSaving(false);
-        return;
-      }
-
-      if (config.amountRanges.length === 0) {
-        toast({
-          title: dt("خطأ في التحقق"),
-          description: dt("يرجى إضافة نطاق تبرع واحد على الأقل"),
-          variant: "destructive",
-        });
-        setSaving(false);
-        return;
-      }
-
-      if (config.minIntervalSeconds <= 0 || config.maxIntervalSeconds <= 0) {
-        toast({
-          title: dt("خطأ في التحقق"),
-          description: dt("عدد الثواني يجب أن يكون أكبر من صفر"),
-          variant: "destructive",
-        });
-        setSaving(false);
-        return;
-      }
-
-      if (config.minIntervalSeconds >= config.maxIntervalSeconds) {
-        toast({
-          title: dt("خطأ في التحقق"),
-          description: dt("الحد الأدنى يجب أن يكون أقل من الحد الأقصى"),
-          variant: "destructive",
-        });
-        setSaving(false);
-        return;
-      }
-
-      const payload = {
-        ...config,
-        donorNames,
-      };
-
       const response = await fetch("/api/live-donation-ticker", {
-        method: "POST",
+        method: config.id ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...(config.id ? { id: config.id } : {}),
+          isActive: config.isActive,
+          donorNames,
+          amountRanges: config.amountRanges,
+          minIntervalSeconds: config.minIntervalSeconds,
+          maxIntervalSeconds: config.maxIntervalSeconds,
+        }),
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || dt("فشل في حفظ الإعدادات"));
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || dt("فشل في حفظ الإعدادات"));
-      }
-
-      const saved = await response.json();
-      setConfig({ ...config, id: saved.id });
-
-      toast({
-        title: dt("تم بنجاح"),
-        description: dt("تم حفظ إعدادات شريط التبرعات بنجاح"),
+      setConfig({
+        id: result.id ?? config.id,
+        isActive: result.isActive === true,
+        donorNames: result.donorNames ?? donorNames,
+        amountRanges: result.amountRanges ?? config.amountRanges,
+        minIntervalSeconds: result.minIntervalSeconds,
+        maxIntervalSeconds: result.maxIntervalSeconds,
       });
-    } catch (error: any) {
-      console.error("خطأ أثناء الحفظ:", error);
+      toast({ title: dt("تم الحفظ"), description: dt("تم تحديث إعدادات شريط التبرعات") });
+    } catch (error) {
       toast({
-        title: dt("خطأ"),
-        description: error.message || dt("فشل في حفظ الإعدادات"),
+        title: dt("تعذر حفظ الإعدادات"),
+        description: error instanceof Error ? error.message : dt("حاول مرة أخرى"),
         variant: "destructive",
       });
     } finally {
@@ -170,240 +157,168 @@ export default function TickerAdminPanel() {
     }
   };
 
-  const addAmountRange = () => {
-    setConfig({
-      ...config,
-      amountRanges: [
-        ...config.amountRanges,
-        { minAmount: 10, maxAmount: 50, probability: 50, label: dt("نطاق_جديد") },
-      ],
-    });
+  const addAmountRange = () => setConfig((current) => ({
+    ...current,
+    amountRanges: [...current.amountRanges, { minAmount: 10, maxAmount: 50, probability: 0, label: "" }],
+  }));
+
+  const updateAmountRange = (index: number, field: keyof AmountRange, value: number | string) => {
+    setConfig((current) => ({
+      ...current,
+      amountRanges: current.amountRanges.map((range, i) => i === index ? { ...range, [field]: value } : range),
+    }));
   };
 
-  const removeAmountRange = (index: number) => {
-    setConfig({
-      ...config,
-      amountRanges: config.amountRanges.filter((_, i) => i !== index),
-    });
-  };
-
-  const updateAmountRange = (
-    index: number,
-    field: keyof AmountRange,
-    value: number | string,
-  ) => {
-    const updated = [...config.amountRanges];
-    updated[index] = { ...updated[index], [field]: value };
-    setConfig({ ...config, amountRanges: updated });
-  };
-
-  const calculateTotalProbability = () => {
-    return config.amountRanges.reduce(
-      (sum, range) => sum + range.probability,
-      0,
-    );
-  };
+  const removeAmountRange = (index: number) => setConfig((current) => ({
+    ...current,
+    amountRanges: current.amountRanges.filter((_, i) => i !== index),
+  }));
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" aria-label={dt("جارٍ التحميل")} /></div>;
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        title={dt("إعدادات شريط التبرعات المباشر")}
-        description={dt("إدارة إعدادات عرض التبرعات المباشرة")}
+        title={dt("شريط التبرعات")}
+        description={dt("تحكم في أسماء العرض الافتراضية ونطاقات المبالغ وتوقيت الإشعارات")}
         icon={Ticket}
-        actions={<>
-          <Button variant="outline" onClick={fetchConfig} disabled={loading}>
-            <RefreshCw className="h-4 w-4 ms-2" />
-            {dt("تحديث")}</Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <Loader2 className="h-4 w-4 ms-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 ms-2" />
-            )}
-            {dt("حفظ الإعدادات")}</Button>
-        </>}
+        actions={(
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => void fetchConfig()} disabled={loading || saving}>
+              <RefreshCw className="ms-2 h-4 w-4" />{dt("تحديث")}
+            </Button>
+            <Button onClick={() => void handleSave()} disabled={saving}>
+              {saving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
+              {dt("حفظ الإعدادات")}
+            </Button>
+          </div>
+        )}
       />
 
-      {/* حالة الشريط */}
       <Card>
         <CardHeader>
           <CardTitle>{dt("حالة الشريط")}</CardTitle>
-          <CardDescription>{dt("تفعيل أو إيقاف شريط التبرعات")}</CardDescription>
+          <CardDescription>{dt("عند التفعيل، يعرض الموقع إشعارات باستخدام بيانات العرض التي تضيفها هنا")}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <Label className="text-base">
-              {config.isActive ? dt("الشريط مفعل") : dt("الشريط متوقف")}
-            </Label>
-            <Switch
-              checked={config.isActive}
-              onCheckedChange={(checked) =>
-                setConfig({ ...config, isActive: checked })
-              }
-            />
+        <CardContent className="flex items-center justify-between gap-6">
+          <div>
+            <Label htmlFor="ticker-active" className="text-base">{config.isActive ? dt("الشريط مفعل") : dt("الشريط متوقف")}</Label>
+            <p className="mt-1 text-sm text-muted-foreground">{dt("لا يقرأ الشريط أسماء المتبرعين الحقيقيين؛ يستخدم أسماء العرض الافتراضية أدناه فقط")}</p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* أسماء المتبرعين */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{dt("أسماء المتبرعين")}</CardTitle>
-          <CardDescription>
-            {dt("أدخل الأسماء مفصولة بفواصل، وسيتم اختيارها عشوائيًا للعرض")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder={dt("أحمد، محمد، فاطمة، سارة، عبد الله...")}
-            value={donorNamesInput}
-            onChange={(e) => setDonorNamesInput(e.target.value)}
-            rows={4}
-            className="font-mono text-sm"
+          <Switch
+            id="ticker-active"
+            checked={config.isActive}
+            onCheckedChange={(isActive) => setConfig((current) => ({ ...current, isActive }))}
           />
-          <p className="text-sm text-muted-foreground mt-2">
-            {dtx("العدد الحالي: {0} اسم", [donorNamesInput.split(",").filter(Boolean).length])}</p>
         </CardContent>
       </Card>
 
-      {/* نطاقات التبرعات */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <CardTitle>{dt("أسماء العرض الافتراضية")}</CardTitle>
+          <CardDescription>{dt("اكتب اسمًا في كل سطر. هذه القائمة التي تختارها أنت، ولا ترتبط بسجلات المتبرعين أو حساباتهم")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Textarea
+            aria-label={dt("أسماء العرض الافتراضية")}
+            placeholder={dt("اسم العرض الأول\nاسم العرض الثاني\nاسم العرض الثالث")}
+            value={donorNamesInput}
+            onChange={(event) => setDonorNamesInput(event.target.value)}
+            rows={5}
+            maxLength={8000}
+          />
+          <p className="text-sm text-muted-foreground">
+            {dt("عدد الأسماء")}: {donorNamesInput.split(/\r?\n/u).map((name) => name.trim()).filter(Boolean).length} / 100
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>{dt("نطاقات المبالغ")}</CardTitle>
-              <CardDescription>
-                {dt("تحديد نطاقات التبرع مع نسب احتمالية")}</CardDescription>
+              <CardTitle>{dt("اقتراحات المبالغ")}</CardTitle>
+              <CardDescription>{dt("يختار الشريط نطاقًا حسب النسبة، ثم مبلغًا عشوائيًا داخله. يجب أن يكون مجموع النسب 100٪")}</CardDescription>
             </div>
-            <Button onClick={addAmountRange} size="sm">
-              <Plus className="h-4 w-4 ms-2" />
-              {dt("إضافة نطاق")}</Button>
+            <Button type="button" variant="outline" onClick={addAmountRange}>
+              <Plus className="ms-2 h-4 w-4" />{dt("إضافة نطاق")}
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {config.amountRanges.map((range, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-1 gap-4 p-4 border rounded-lg bg-muted/50 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
-            >
-              <div>
-                <Label>{dt("الحد الأدنى ($)")}</Label>
-                <Input
-                  type="number"
-                  value={range.minAmount}
-                  onChange={(e) =>
-                    updateAmountRange(
-                      index,
-                      "minAmount",
-                      parseFloat(e.target.value) || 0,
-                    )
-                  }
-                />
+            <div key={index} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.5fr_auto]">
+              <div className="space-y-2">
+                <Label htmlFor={`ticker-range-min-${index}`}>{dt("من (USD)")}</Label>
+                <Input id={`ticker-range-min-${index}`} type="number" min={0} step="any" value={range.minAmount}
+                  onChange={(event) => updateAmountRange(index, "minAmount", Number(event.target.value))} />
               </div>
-              <div>
-                <Label>{dt("الحد الأقصى ($)")}</Label>
-                <Input
-                  type="number"
-                  value={range.maxAmount}
-                  onChange={(e) =>
-                    updateAmountRange(
-                      index,
-                      "maxAmount",
-                      parseFloat(e.target.value) || 0,
-                    )
-                  }
-                />
+              <div className="space-y-2">
+                <Label htmlFor={`ticker-range-max-${index}`}>{dt("إلى (USD)")}</Label>
+                <Input id={`ticker-range-max-${index}`} type="number" min={0} step="any" value={range.maxAmount}
+                  onChange={(event) => updateAmountRange(index, "maxAmount", Number(event.target.value))} />
               </div>
-              <div>
-                <Label>{dt("الاحتمالية")}</Label>
-                <Input
-                  type="number"
-                  value={range.probability}
-                  onChange={(e) =>
-                    updateAmountRange(
-                      index,
-                      "probability",
-                      parseFloat(e.target.value) || 0,
-                    )
-                  }
-                />
+              <div className="space-y-2">
+                <Label htmlFor={`ticker-range-weight-${index}`}>{dt("النسبة المئوية")}</Label>
+                <Input id={`ticker-range-weight-${index}`} type="number" min={0} max={100} step="any" value={range.probability}
+                  onChange={(event) => updateAmountRange(index, "probability", Number(event.target.value))} />
               </div>
-              <div className="col-span-2">
-                <Label>{dt("التسمية")}</Label>
-                <Input
-                  value={range.label}
-                  onChange={(e) =>
-                    updateAmountRange(index, "label", e.target.value)
-                  }
-                  placeholder={dt("صغير، متوسط، كبير")}
-                />
+              <div className="space-y-2">
+                <Label htmlFor={`ticker-range-label-${index}`}>{dt("وصف اختياري")}</Label>
+                <Input id={`ticker-range-label-${index}`} maxLength={60} value={range.label}
+                  onChange={(event) => updateAmountRange(index, "label", event.target.value)} />
               </div>
-              <div className="flex items-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeAmountRange(index)}
-                  className="w-full"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button type="button" variant="outline" size="icon" className="self-end text-destructive" aria-label={dt("حذف النطاق")}
+                onClick={() => removeAmountRange(index)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
-
-          {config.amountRanges.length > 0 && (
-            <div className="flex items-center justify-between p-4 bg-brand/8 rounded-lg">
-              <span className="font-medium">{dt("إجمالي الاحتمالات:")}</span>
-              <span className="text-lg font-bold">
-                {calculateTotalProbability()}
-              </span>
-            </div>
-          )}
+          <p className={`text-sm ${Math.abs(config.amountRanges.reduce((sum, range) => sum + range.probability, 0) - 100) > 0.01 ? "text-destructive" : "text-muted-foreground"}`}>
+            {dt("مجموع النسب")}: {config.amountRanges.reduce((sum, range) => sum + range.probability, 0)}%
+          </p>
         </CardContent>
       </Card>
 
-      {/* توقيت العرض */}
       <Card>
         <CardHeader>
-          <CardTitle>{dt("توقيت العرض")}</CardTitle>
-          <CardDescription>{dt("التحكم في عدد الثواني بين كل تبرع")}</CardDescription>
+          <CardTitle>{dt("توقيت الإشعارات")}</CardTitle>
+          <CardDescription>{dt("الفاصل الزمني بين إشعار وآخر. لا يغيّر هذا قيمة التبرع أو وقت اعتماده")}</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-6">
-          <div>
-            <Label>{dt("أقل مدة (ثواني)")}</Label>
+        <CardContent className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="ticker-min-interval">{dt("الحد الأدنى للفاصل (ثوانٍ)")}</Label>
             <Input
+              id="ticker-min-interval"
               type="number"
+              min={3}
+              max={3600}
+              step={1}
               value={config.minIntervalSeconds}
-              onChange={(e) =>
-                setConfig({
-                  ...config,
-                  minIntervalSeconds: parseInt(e.target.value) || 1,
-                })
-              }
+              onChange={(event) => setConfig((current) => ({ ...current, minIntervalSeconds: Number(event.target.value) }))}
             />
           </div>
-          <div>
-            <Label>{dt("أقصى مدة (ثواني)")}</Label>
+          <div className="space-y-2">
+            <Label htmlFor="ticker-max-interval">{dt("الحد الأقصى للفاصل (ثوانٍ)")}</Label>
             <Input
+              id="ticker-max-interval"
               type="number"
+              min={3}
+              max={3600}
+              step={1}
               value={config.maxIntervalSeconds}
-              onChange={(e) =>
-                setConfig({
-                  ...config,
-                  maxIntervalSeconds: parseInt(e.target.value) || 1,
-                })
-              }
+              onChange={(event) => setConfig((current) => ({ ...current, maxIntervalSeconds: Number(event.target.value) }))}
             />
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
+        <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        <p className="leading-6">{dt("الشريط يستخدم الأسماء والنطاقات التي يحددها المسؤول فقط. لا يستعلم عن اسم متبرع حقيقي ولا يخلط سجلات التبرعات الحقيقية مع هذه الإشعارات الافتراضية.")}</p>
+      </div>
     </div>
   );
 }

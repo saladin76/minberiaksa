@@ -139,7 +139,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
 
             <div className="pd-project-summary" style={{ display: "grid", gap: 12 }}>
               <h1 style={{ margin: 0, fontSize: "clamp(27px,3vw,40px)", lineHeight: 1.32, fontWeight: 900, letterSpacing: "-.01em" }}>{project.title}</h1>
-              <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, color: "var(--muted)" }}>{summary}</p>
+              <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, fontWeight: 500, color: "var(--muted)" }}>{summary}</p>
               {project.categories.length ? (
                 <nav aria-label={tExtras("categories")} style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                   {project.categories.map((category) => (
@@ -198,18 +198,18 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
                   block.kind === "h2" ? (
                     <h2 key={index} style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.5, fontWeight: 900 }}>{block.text}</h2>
                   ) : block.kind === "li" ? (
-                    <p key={index} style={{ margin: 0, display: "flex", gap: 10, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>
+                    <p key={index} style={{ margin: 0, display: "flex", gap: 10, fontSize: 16.5, lineHeight: 2, fontWeight: 500, color: "var(--muted)" }}>
                       <span aria-hidden="true" style={{ flex: "0 0 auto", width: 6, height: 6, marginTop: 14, background: "var(--gold)", transform: "rotate(45deg)" }} />
                       <span>{block.text}</span>
                     </p>
                   ) : (
-                    <p key={index} style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{block.text}</p>
+                    <p key={index} style={{ margin: 0, fontSize: 16.5, lineHeight: 2, fontWeight: 500, color: "var(--muted)" }}>{block.text}</p>
                   )
                 )}
                 {/* Two standing paragraphs the handoff shows on every project:
                     how the work is executed, and how it is verified. */}
-                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{t("execParagraph", { region: project.regionLabel ?? tCommon("regionGeneral") })}</p>
-                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, color: "var(--muted)" }}>{t("verifyParagraph")}</p>
+                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, fontWeight: 500, color: "var(--muted)" }}>{t("execParagraph", { region: project.regionLabel ?? tCommon("regionGeneral") })}</p>
+                <p style={{ margin: 0, fontSize: 16.5, lineHeight: 2, fontWeight: 500, color: "var(--muted)" }}>{t("verifyParagraph")}</p>
               </div>
             ) : null}
 
@@ -248,7 +248,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
               ].map((faq) => (
                 <span key={faq.q} style={{ display: "grid", gap: 5, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
                   <b style={{ fontSize: 14, lineHeight: 1.6 }}>{faq.q}</b>
-                  <span style={{ fontSize: 13.5, lineHeight: 1.85, color: "var(--muted)" }}>{faq.a}</span>
+                  <span style={{ fontSize: 13.5, lineHeight: 1.85, fontWeight: 500, color: "var(--muted)" }}>{faq.a}</span>
                 </span>
               ))}
             </div>

@@ -15,6 +15,7 @@ import {
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
 import { LOCALES, SUPPORTED_LOCALES } from '@/lib/locales';
+import { describeVideoSource } from '@/lib/content/video-platform';
 import {
   ContentTranslationTabs,
   emptyTranslations,
@@ -80,11 +81,26 @@ export function VideoForm({
 }) {
   const router = useRouter();
   const [values, setValues] = useState<VideoFormValues>(initial);
+  // Public playback resolves `url` before `youtubeId`; keep the editor's
+  // initial value aligned so saving a legacy row cannot silently replace the
+  // source visitors were already seeing.
+  const [mediaInput, setMediaInput] = useState(initial.url || initial.youtubeId || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const set = <K extends keyof VideoFormValues>(key: K, v: VideoFormValues[K]) =>
     setValues((prev) => ({ ...prev, [key]: v }));
+
+  const media = describeVideoSource({ url: mediaInput, startSeconds: Number(values.startSeconds) || null });
+  const setMedia = (input: string) => {
+    setMediaInput(input);
+    const parsed = describeVideoSource({ url: input, startSeconds: Number(values.startSeconds) || null });
+    setValues((prev) => ({
+      ...prev,
+      youtubeId: parsed.youtubeId ?? '',
+      url: parsed.provider === 'youtube' || parsed.provider === 'invalid' ? '' : parsed.sourceUrl,
+    }));
+  };
 
   const toggleLocale = (locale: string) =>
     setValues((prev) => ({
@@ -123,9 +139,7 @@ export function VideoForm({
     if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
     /* Matches the API rule: a video with neither an id nor a URL renders as an
        empty frame, so catch it here before a round trip. */
-    if (!values.youtubeId.trim() && !values.url.trim()) {
-      return toast.error(dt("أدخل معرّف يوتيوب أو رابط الفيديو"));
-    }
+    if (media.provider === 'invalid') return toast.error(dt("أدخل رابط فيديو صحيحًا يبدأ بـ https:// أو معرّف يوتيوب"));
 
     setSaving(true);
     try {
@@ -135,6 +149,7 @@ export function VideoForm({
         title: values.title.trim(),
         youtubeId: values.youtubeId.trim(),
         url: values.url.trim(),
+        mediaUrl: mediaInput.trim(),
         startSeconds: values.startSeconds.trim() ? Number(values.startSeconds) : null,
         thumbnail: values.thumbnail,
         regionKey: values.regionKey.trim(),
@@ -205,21 +220,12 @@ export function VideoForm({
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">{dt("معرّف يوتيوب")}</span>
+            <span className="text-xs font-semibold text-slate-600">{dt("رابط الفيديو أو معرّف YouTube *")}</span>
             <Input
               dir="ltr"
-              placeholder="dQw4w9WgXcQ"
-              value={values.youtubeId}
-              onChange={(e) => set('youtubeId', e.target.value)}
-            />
-          </label>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold text-slate-600">{dt("رابط الفيديو")}</span>
-            <Input
-              dir="ltr"
-              placeholder="https://youtu.be/..."
-              value={values.url}
-              onChange={(e) => set('url', e.target.value)}
+              placeholder="https://youtu.be/... أو https://vimeo.com/... أو رابط MP4"
+              value={mediaInput}
+              onChange={(e) => setMedia(e.target.value)}
             />
           </label>
           <label className="space-y-1.5">
@@ -235,7 +241,23 @@ export function VideoForm({
         </div>
 
         <p className="text-xs text-slate-500">
-          {dt("أدخل معرّف يوتيوب أو رابطًا  أحدهما مطلوب على الأقل.")}</p>
+          {media.provider === 'invalid'
+            ? dt("ألصق رابطًا عامًا من YouTube أو Vimeo أو ملف فيديو MP4/WebM، أو رابطًا خارجيًا صالحًا.")
+            : dtx("تم التعرف على المصدر: {0}. ستُستخدم معاينة مضمنة عند دعمها، وإلا سيُفتح الرابط الأصلي بأمان.", [media.providerLabel])}
+        </p>
+        {media.embedUrl ? (
+          <div className="max-w-xl overflow-hidden rounded-lg border bg-black" style={{ aspectRatio: '16 / 9' }}>
+            {media.directVideo ? (
+              <video src={media.sourceUrl} controls playsInline className="h-full w-full" />
+            ) : (
+              <iframe src={media.embedUrl} title={values.title || dt("معاينة الفيديو")} className="h-full w-full border-0" loading="lazy" allow="accelerometer; autoplay; encrypted-media; picture-in-picture; web-share" allowFullScreen />
+            )}
+          </div>
+        ) : media.watchUrl ? (
+          <a href={media.watchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-2 text-sm font-medium text-blue-700 underline">
+            {dt("فتح الفيديو على المنصة")}
+          </a>
+        ) : null}
 
         <div className="space-y-1.5">
           <span className="text-xs font-semibold text-slate-600">{dt("صورة مصغّرة")}</span>

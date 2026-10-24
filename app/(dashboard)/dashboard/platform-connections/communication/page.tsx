@@ -12,6 +12,9 @@ import { getSchedulerStatus } from "@/lib/communication/scheduler-status";
 import { IntegrationSettingsManager } from "./_components/IntegrationSettingsManager";
 import { SenderRoutingManager } from "./_components/SenderRoutingManager";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
+import Link from "next/link";
+import { Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { get title() { return dt("مزودو التواصل والإرسال | ربط المنصات والإرسال"); } };
 export const dynamic = "force-dynamic";
@@ -47,6 +50,13 @@ export default async function CommunicationConnectionsPage() {
         eyebrow={dt("ربط المنصات والإرسال / المزودون")}
         title={dt("مزودو التواصل والإرسال")}
         subtitle={dt("إدارة بيانات واتساب والإيميل والرسائل القصيرة من مكان واحد، مع فصل فحص التكوين العامل عن اختبار التغييرات قبل اعتمادها.")}
+        actions={(
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/platform-connections/health">
+              <Activity className="me-2 h-4 w-4" />{dt("فحص صحة الاتصالات")}
+            </Link>
+          </Button>
+        )}
       />
       <IntegrationSettingsManager initialProviders={initialProviders} permissions={permissions} scheduler={scheduler} />
       {/* Senders and routing sit with the providers because they are the same question one level up:

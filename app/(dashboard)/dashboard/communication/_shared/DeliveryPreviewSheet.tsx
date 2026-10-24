@@ -229,7 +229,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
                   </div>
                 )}
                 {!row.recipientName && !row.recipientEmail && !row.recipientPhone && (
-                  <span className="text-slate-400">{dt("لا يوجد عنوان مسجّل  لهذا لم تُرسل.")}</span>
+                  <span className="text-slate-400">{dt("لا توجد بيانات اتصال محفوظة في سجل هذه المحاولة.")}</span>
                 )}
               </div>
             </div>
@@ -268,7 +268,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
               <div className="flex items-center justify-between gap-3 rounded-xl border border-brand/20 bg-brand-50/50 p-4">
                 <div className="min-w-0 text-xs text-slate-700">
                   <b className="block text-slate-900">{dt("هذه الرسالة لم تصل المستلم")}</b>
-                  {dt("يمكن إعادة إرسالها الآن بنفس المحتوى المحفوظ.")}</div>
+                  {dt("سيتحقق النظام من عنوان المستلم والقالب والمحتوى قبل إنشاء محاولة جديدة.")}</div>
                 <Button
                   size="sm"
                   className="shrink-0 gap-1.5"

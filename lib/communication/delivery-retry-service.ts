@@ -1,4 +1,8 @@
 import { donationTemplateValues } from "./template-donation-links";
+import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-failure-link";
+import { retryPayloadBlockReason } from "./retry-readiness";
+import { RETRY_BATCH_CAP } from "./retry-batches";
+import type { CommunicationPurposeGroup } from "./purpose-group";
 import { prisma } from "@/lib/prisma";
 import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service";
 import { sendPreparedDelivery } from "./provider-router";
@@ -157,18 +161,25 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   if (!precheck.ok) return result(deliveryId, precheck.code, { recipientName: row.recipientName });
   recipient = precheck.contact;
   const base = { recipient, recipientName: row.recipientName };
+  const renderedBody = row.renderedBody
+    ? localizeDonationFailureLinks(row.renderedBody, row.locale || "ar")
+    : null;
   const config = opts.config ?? await resolveTriggerSendConfig();
   let payload: Parameters<typeof sendPreparedDelivery>[0];
   let provider: CommunicationProviderId;
   let senderId: string | null = null;
   if (channel === "EMAIL") {
-    if (!row.renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
+    if (!renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
     const routed = resolveTriggerSender(config, "EMAIL", { locale: row.locale, purpose: row.purpose as never });
     if (!routed.ok) return result(deliveryId, "NO_SENDER_IDENTITY", { ...base, detail: routed.reason });
     provider = "ELASTIC_EMAIL";
     senderId = routed.sender.id;
-    payload = { channel, sender: { senderEmail: routed.sender.senderEmail }, to: recipient, subject: row.renderedSubject ?? "", html: row.renderedBody };
+    payload = { channel, sender: { senderEmail: routed.sender.senderEmail }, to: recipient, subject: row.renderedSubject ?? "", html: renderedBody };
   } else if (channel === "WHATSAPP") {
+    // Preflight skips can have no archived variable snapshot. A retry must not claim it can
+    // replay the original message when the original template payload was never rendered.
+    const archivedPayloadBlock = retryPayloadBlockReason(row);
+    if (archivedPayloadBlock) return result(deliveryId, archivedPayloadBlock, base);
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale: row.locale, purpose: row.purpose as never });
     if (!routed.ok) return result(deliveryId, "NO_SENDER_IDENTITY", { ...base, detail: routed.reason });
     if (!routed.sender.phoneNumberId || !routed.sender.businessAccountId) return result(deliveryId, "NO_SENDER_IDENTITY", base);
@@ -187,10 +198,10 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
     senderId = routed.sender.id;
     payload = { channel, sender: { provider, phoneNumberId: routed.sender.phoneNumberId }, to: recipient, templateName: meta.name, languageCode: meta.language, components: built.components };
   } else {
-    if (!row.renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
+    if (!renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
     const route = await resolveSmsProvider(null, recipient);
     provider = route.provider;
-    payload = { channel, to: recipient, html: row.renderedBody };
+    payload = { channel, to: recipient, html: renderedBody };
   }
   // Omitting these fields made marketing retries use transactional transport.
   payload.purpose = row.purpose as CommunicationPurposeId;
@@ -211,7 +222,7 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
     templateName: row.templateName, recipientUserId: row.recipientUserId,
     recipientEmail: channel === "EMAIL" ? recipient : null, recipientPhone: channel === "EMAIL" ? null : recipient,
     recipientName: row.recipientName, locale: row.locale, purpose: row.purpose as CommunicationPurposeId,
-    origin: row.origin as DeliveryOriginId, renderedSubject: row.renderedSubject, renderedBody: row.renderedBody,
+    origin: row.origin as DeliveryOriginId, renderedSubject: row.renderedSubject, renderedBody,
     variables: (row.variables ?? undefined) as Record<string, unknown> | undefined,
     createdBy: opts.actorId ?? null, status: "RENDERED",
   });
@@ -276,12 +287,31 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   return result(deliveryId, "SENT", { ...base, newDeliveryId: newId });
 }
 
-export const RETRY_BATCH_CAP = 25;
-export type RetryCandidateFilter = { channel: CommunicationChannelId; from?: Date; to?: Date; ids?: string[] };
+export { RETRY_BATCH_CAP } from "./retry-batches";
+export type RetryCandidateFilter = {
+  channel: CommunicationChannelId;
+  from?: Date;
+  to?: Date;
+  ids?: string[];
+  /** Keep retries launched from a campaign report inside that campaign. */
+  campaignId?: string;
+  /** Keep a retry batch inside the currently selected automatic/marketing view. */
+  purposeGroup?: CommunicationPurposeGroup;
+};
+type RetryPayloadFields = { channel: string; templateId: string | null; renderedBody: string | null; variables: unknown };
+function hasArchivedRetryPayload(row: RetryPayloadFields): boolean {
+  return retryPayloadBlockReason(row) === null;
+}
 const rootDelivery = { OR: [{ retryOfDeliveryId: null }, { retryOfDeliveryId: { isSet: false } }] };
 function retryScope(filter: RetryCandidateFilter) {
   return {
     channel: filter.channel,
+    ...(filter.purposeGroup === "MARKETING"
+      ? { purpose: "MARKETING" }
+      : filter.purposeGroup === "AUTOMATIC"
+        ? { purpose: { not: "MARKETING" } }
+        : {}),
+    ...(filter.campaignId ? { campaignId: filter.campaignId } : {}),
     ...(filter.ids !== undefined ? { id: { in: [...new Set(filter.ids)] } } : {}),
     ...(filter.from || filter.to ? { createdAt: { ...(filter.from ? { gte: filter.from } : {}), ...(filter.to ? { lte: filter.to } : {}) } } : {}),
     AND: [rootDelivery],
@@ -314,25 +344,49 @@ export async function listRetryCandidatePage(
   take = RETRY_BATCH_CAP,
 ): Promise<RetryCandidateCursor[]> {
   const limit = Number.isFinite(take) ? Math.max(1, Math.min(RETRY_BATCH_CAP, Math.floor(take))) : RETRY_BATCH_CAP;
-  const rows = await prisma.communicationDelivery.findMany({
-    where: retryCandidatePageWhere(filter, after),
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    take: limit,
-    select: { id: true, createdAt: true },
-  });
-  return rows.map((record) => ({ id: record.id, createdAt: record.createdAt }));
+  const selected: RetryCandidateCursor[] = [];
+  let cursor = after;
+  while (selected.length < limit) {
+    const rows = await prisma.communicationDelivery.findMany({
+      where: retryCandidatePageWhere(filter, cursor),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: limit,
+      select: { id: true, createdAt: true, channel: true, templateId: true, renderedBody: true, variables: true },
+    });
+    if (!rows.length) break;
+    for (const row of rows) {
+      if (hasArchivedRetryPayload(row)) selected.push({ id: row.id, createdAt: row.createdAt });
+      if (selected.length === limit) break;
+    }
+    const last = rows.at(-1)!;
+    cursor = { id: last.id, createdAt: last.createdAt };
+    if (rows.length < limit) break;
+  }
+  return selected;
 }
 
 export async function listRetryCandidates(filter: RetryCandidateFilter, take = RETRY_BATCH_CAP): Promise<string[]> {
   const limit = Number.isFinite(take) ? Math.max(1, Math.min(RETRY_BATCH_CAP, Math.floor(take))) : RETRY_BATCH_CAP;
-  const rows = await prisma.communicationDelivery.findMany({
-    where: { ...retryScope(filter), status: { in: [...RETRYABLE_STATUSES] }, OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }] },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: limit, select: { id: true },
-  });
-  return rows.map((record) => record.id);
+  const where = { ...retryScope(filter), status: { in: [...RETRYABLE_STATUSES] }, OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }] };
+  const selected: string[] = [];
+  const pageSize = Math.max(100, limit * 4);
+  for (let skip = 0; selected.length < limit; skip += pageSize) {
+    const rows = await prisma.communicationDelivery.findMany({
+      where,
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip, take: pageSize,
+      select: { id: true, channel: true, templateId: true, renderedBody: true, variables: true },
+    });
+    if (!rows.length) break;
+    for (const row of rows) {
+      if (hasArchivedRetryPayload(row)) selected.push(row.id);
+      if (selected.length >= limit) break;
+    }
+    if (rows.length < pageSize) break;
+  }
+  return selected;
 }
 export type RetryPreflight = {
-  eligible: number; alreadyRetried: number; bounced: number; cap: number;
+  eligible: number; candidateIds: string[]; missingContent: number; alreadyRetried: number; bounced: number; cap: number;
   oldestDays: number | null; byReason: Array<{ reason: string; count: number }>;
 };
 export async function retryPreflight(filter: RetryCandidateFilter): Promise<RetryPreflight> {
@@ -340,19 +394,20 @@ export async function retryPreflight(filter: RetryCandidateFilter): Promise<Retr
   const [eligibleRows, alreadyRetried, bounced] = await Promise.all([
     prisma.communicationDelivery.findMany({
       where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }] },
-      select: { errorMessage: true, createdAt: true }, orderBy: { createdAt: "asc" },
+      select: { id: true, errorMessage: true, createdAt: true, channel: true, templateId: true, renderedBody: true, variables: true }, orderBy: { createdAt: "asc" },
     }),
     prisma.communicationDelivery.count({ where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, retriedAt: { not: null } } }),
     prisma.communicationDelivery.count({ where: { ...scope, status: { in: [...NON_RETRYABLE_TERMINAL] } } }),
   ]);
+  const readyRows = eligibleRows.filter(hasArchivedRetryPayload);
   const counts = new Map<string, number>();
-  for (const record of eligibleRows) {
+  for (const record of readyRows) {
     const reason = (record.errorMessage || "غير محدّد").split("  ")[0];
     counts.set(reason, (counts.get(reason) ?? 0) + 1);
   }
-  const oldest = eligibleRows[0]?.createdAt ?? null;
+  const oldest = readyRows[0]?.createdAt ?? null;
   return {
-    eligible: eligibleRows.length, alreadyRetried, bounced, cap: RETRY_BATCH_CAP,
+    eligible: readyRows.length, candidateIds: readyRows.map((row) => row.id), missingContent: eligibleRows.length - readyRows.length, alreadyRetried, bounced, cap: RETRY_BATCH_CAP,
     oldestDays: oldest ? Math.max(0, Math.floor((Date.now() - oldest.getTime()) / 86_400_000)) : null,
     byReason: [...counts.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count),
   };

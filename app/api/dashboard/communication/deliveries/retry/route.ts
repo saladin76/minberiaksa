@@ -13,6 +13,7 @@ import {
   type RetryResult,
 } from "@/lib/communication/delivery-retry-service";
 import { isCommunicationChannel } from "@/lib/communication/communication-runtime-types";
+import { parseCommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,9 +49,15 @@ export async function GET(request: NextRequest) {
     }
     const daysParam = request.nextUrl.searchParams.get("days");
     const days = daysParam ? parseInt(daysParam) : undefined;
+    const campaignId = request.nextUrl.searchParams.get("campaign")?.trim() || undefined;
+    const rawPurposeGroup = request.nextUrl.searchParams.get("purposeGroup");
+    const purposeGroup = parseCommunicationPurposeGroup(rawPurposeGroup);
+    if (rawPurposeGroup && !purposeGroup) {
+      return NextResponse.json({ ok: false, error: "نوع الرسائل غير معروف" }, { status: 400 });
+    }
 
-    const range = parseRange(days);
-    const preflight = await retryPreflight({ channel, ...range });
+    const range = parseRange(campaignId ? undefined : days);
+    const preflight = await retryPreflight({ channel, purposeGroup, campaignId, ...range });
     return NextResponse.json({
       ok: true,
       ...preflight,
@@ -76,7 +83,7 @@ export async function POST(request: NextRequest) {
   const denied = requireAdminOrDashboardPermission(session, "messages");
   if (denied) return denied;
 
-  let body: { channel?: string; ids?: string[]; days?: number; after?: unknown; range?: unknown };
+  let body: { channel?: string; ids?: string[]; days?: number; campaignId?: string; purposeGroup?: string; after?: unknown; range?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -88,7 +95,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "قناة غير معروفة" }, { status: 400 });
   }
 
-  const range = parsePostedRange(body.range, body.days);
+  const campaignId = typeof body.campaignId === "string" ? body.campaignId.trim() || undefined : undefined;
+  const purposeGroup = parseCommunicationPurposeGroup(body.purposeGroup);
+  if (body.purposeGroup && !purposeGroup) {
+    return NextResponse.json({ ok: false, error: "نوع الرسائل غير معروف" }, { status: 400 });
+  }
+  const range = parsePostedRange(body.range, campaignId ? undefined : body.days);
   if (!range) return NextResponse.json({ ok: false, error: "فترة إعادة الإرسال غير صالحة" }, { status: 400 });
 
   let after: RetryCandidateCursor | null = null;
@@ -105,7 +117,7 @@ export async function POST(request: NextRequest) {
   }
 
   const candidates = await listRetryCandidatePage(
-    { channel, ids: body.ids, ...range },
+    { channel, ids: body.ids, campaignId, purposeGroup, ...range },
     after,
     RETRY_BATCH_CAP,
   );
@@ -163,7 +175,7 @@ export async function POST(request: NextRequest) {
             messageAr: `إعادة إرسال ${results.length} رسالة (${channel})  نجح ${sent}`,
             messageEn: `Retried ${results.length} ${channel} deliveries  ${sent} sent`,
             entityType: "CommunicationDelivery",
-            metadata: { channel, ...summary, ids },
+            metadata: { channel, campaignId: campaignId ?? null, ...summary, ids },
           });
         }
 

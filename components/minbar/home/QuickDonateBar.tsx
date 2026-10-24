@@ -10,12 +10,12 @@ import { miaPath } from "@/lib/minbar/routes";
 import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import { formatMoney } from "@/lib/minbar/money";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
-import type { MinbarProject } from "@/lib/minbar/projects";
 import {
-  resolveQuickAmounts,
   type QuickDonationConfig,
   type QuickGenericDestination,
+  type QuickDonationProjectOption,
 } from "@/lib/minbar/quick-donation";
+import { quickTitleFor, resolveQuickAmounts } from "@/lib/minbar/quick-donation-display";
 
 /**
  * The quick-donation bar under the hero  `#quick` in
@@ -82,7 +82,7 @@ const Chevron = () => (
   </svg>
 );
 
-export default function QuickDonateBar({ config, projects }: { config: QuickDonationConfig; projects: MinbarProject[] }) {
+export default function QuickDonateBar({ config, projects }: { config: QuickDonationConfig; projects: QuickDonationProjectOption[] }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("common");
@@ -109,6 +109,8 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
     const { ns, key } = GENERIC[g];
     return ns === "common" ? t(key) : ns === "navigation" ? tNav(key) : tHome(key);
   };
+
+  const title = quickTitleFor(config, locale) || t("quickDonate");
 
   /** The default destination as an option value: a generic id or a project slug. */
   const initialDestination = useMemo(() => {
@@ -177,7 +179,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
     router.push(miaPath("cart", locale));
   };
 
-  if (!config.enabled) return null;
+  if (!config.enabled || (!config.dockDesktop && !config.dockMobile)) return null;
 
   const hasDestinations = config.genericDestinations.length + shownProjects.length > 1;
   const hasFrequencies = config.frequencies.length > 1;
@@ -290,81 +292,85 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   );
 
   return (
-    // <section id="quick" className="mia-qb-sec" data-open={open ? "true" : "false"}>
-    //   <div className="mia-qb-wrap">
-    //     {/* ── Desktop: one row ─────────────────────────────────────────── */}
-    //     <div className="mia-qb-desk">
-    //       <div aria-hidden="true" data-aqsa-pattern="" className="mia-qb-pattern" />
-    //       <span aria-hidden="true" className="mia-qb-rail" />
-    //       <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--top"><i /><i /></span>
-    //       <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--bottom"><i /><i /></span>
+    <section
+      id="quick"
+      className="mia-qb-sec"
+      data-open={open ? "true" : "false"}
+      data-dock-desktop={config.dockDesktop ? "true" : "false"}
+      data-dock-mobile={config.dockMobile ? "true" : "false"}
+      aria-label={title}
+    >
+      <div className="mia-qb-wrap">
+        <div className="mia-qb-desk">
+          <div aria-hidden="true" data-aqsa-pattern="" className="mia-qb-pattern" />
+          <span aria-hidden="true" className="mia-qb-rail" />
+          <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--top"><i /><i /></span>
+          <span aria-hidden="true" className="mia-qb-gems mia-qb-gems--bottom"><i /><i /></span>
 
-    //       {hasDestinations ? (
-    //         <>
-    //           {destinationSelect("qb")}
-    //           <span aria-hidden="true" className="mia-qb-div" />
-    //         </>
-    //       ) : null}
-    //       {hasFrequencies ? (
-    //         <>
-    //           {frequencyChips("qb")}
-    //           <span aria-hidden="true" className="mia-qb-div" />
-    //         </>
-    //       ) : null}
-    //       {amountChips("qb")}
+          {hasDestinations ? (
+            <>
+              {destinationSelect("qb")}
+              <span aria-hidden="true" className="mia-qb-div" />
+            </>
+          ) : null}
+          {hasFrequencies ? (
+            <>
+              {frequencyChips("qb")}
+              <span aria-hidden="true" className="mia-qb-div" />
+            </>
+          ) : null}
+          {amountChips("qb")}
 
-    //       <div className="mia-qb-end">
-    //         <span aria-hidden="true" className="mia-qb-div" />
-    //         <b className="mia-qb-total" dir="ltr">{totalText}</b>
-    //         <button type="button" className="mia-qb-cta" onClick={submit} disabled={!canGive}>
-    //           {t("donateNow")}
-    //         </button>
-    //       </div>
-    //     </div>
+          <div className="mia-qb-end">
+            <span aria-hidden="true" className="mia-qb-div" />
+            <b className="mia-qb-total" dir="ltr">{totalText}</b>
+            <button type="button" className="mia-qb-cta" onClick={submit} disabled={!canGive}>
+              {t("donateNow")}
+            </button>
+          </div>
+        </div>
 
-    //     {/* ── Phone: a bottom sheet, collapsed to its last row ─────────── */}
-    //     <div className="mia-qb-sheet">
-    //       <div className="mia-qb-body" id="qbm-body">
-    //         <span aria-hidden="true" className="mia-qb-handle" />
-    //         {hasDestinations ? (
-    //           <div className="mia-qb-group">
-    //             <b>{tHome("projectSelectLabel")}</b>
-    //             {destinationSelect("qbm")}
-    //           </div>
-    //         ) : null}
-    //         {hasFrequencies ? (
-    //           <div className="mia-qb-group">
-    //             <b>{t("frequency")}</b>
-    //             {frequencyChips("qbm")}
-    //           </div>
-    //         ) : null}
-    //         <div className="mia-qb-group">
-    //           <b>{t("amount")}</b>
-    //           {amountChips("qbm")}
-    //         </div>
-    //       </div>
-    //       <div className="mia-qb-bar">
-    //         <button
-    //           type="button"
-    //           className="mia-qb-toggle"
-    //           aria-label={t("quickDonate")}
-    //           aria-expanded={open}
-    //           aria-controls="qbm-body"
-    //           onClick={() => setOpen((v) => !v)}
-    //         >
-    //           <Chevron />
-    //         </button>
-    //         <span className="mia-qb-sum">
-    //           <span>{t("quickDonate")}</span>
-    //           <b dir="ltr">{totalText}</b>
-    //         </span>
-    //         <button type="button" className="mia-qb-cta" onClick={submit} disabled={open && !canGive}>
-    //           {t("donateNow")}
-    //         </button>
-    //       </div>
-    //     </div>
-    //   </div>
-    // </section>
-    <></>
+        <div className="mia-qb-sheet">
+          <div className="mia-qb-body" id="qbm-body">
+            <span aria-hidden="true" className="mia-qb-handle" />
+            {hasDestinations ? (
+              <div className="mia-qb-group">
+                <b>{tHome("projectSelectLabel")}</b>
+                {destinationSelect("qbm")}
+              </div>
+            ) : null}
+            {hasFrequencies ? (
+              <div className="mia-qb-group">
+                <b>{t("frequency")}</b>
+                {frequencyChips("qbm")}
+              </div>
+            ) : null}
+            <div className="mia-qb-group">
+              <b>{t("amount")}</b>
+              {amountChips("qbm")}
+            </div>
+          </div>
+          <div className="mia-qb-bar">
+            <button
+              type="button"
+              className="mia-qb-toggle"
+              aria-label={title}
+              aria-expanded={open}
+              aria-controls="qbm-body"
+              onClick={() => setOpen((v) => !v)}
+            >
+              <Chevron />
+            </button>
+            <span className="mia-qb-sum">
+              <span>{title}</span>
+              <b dir="ltr">{totalText}</b>
+            </span>
+            <button type="button" className="mia-qb-cta" onClick={submit} disabled={open && !canGive}>
+              {t("donateNow")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

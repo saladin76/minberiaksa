@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { SITE_URL, buildPageMetadata, clipSeoDescription } from "@/lib/seo";
 import {
   getProject,
@@ -18,9 +18,11 @@ import { getSuperCategory } from "@/lib/minbar/super-category";
 import PageBanners from "@/components/minbar/banners/PageBanners";
 import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
 import { EditorialFaq } from '@/components/content/EditorialFaq';
+import { withIncomingQuery, type IncomingSearchParams } from '@/lib/minbar/redirect-query';
 
 interface Props {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<IncomingSearchParams>;
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
@@ -77,8 +79,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * Everything is read on the server: this page is indexable, and its copy,
  * figures and breadcrumb all have to be in the first response.
  */
-export default async function ProjectPage({ params }: Props) {
-  const { locale, slug } = await params;
+export default async function ProjectPage({ params, searchParams }: Props) {
+  const [{ locale, slug }, query] = await Promise.all([params, searchParams]);
   const key = decodeURIComponent(slug);
 
   const superCategory = await getSuperCategory(key, locale);
@@ -95,6 +97,12 @@ export default async function ProjectPage({ params }: Props) {
 
   const project = await getProject(key, locale);
   if (!project) notFound();
+  if (project.redirectedFrom) {
+    permanentRedirect(withIncomingQuery(
+      miaPath("projectDetail", locale, encodeURIComponent(project.slug)),
+      query,
+    ));
+  }
 
   const [updates, related, donorCount, comments] = await Promise.all([
     listProjectUpdates(project.id, locale),

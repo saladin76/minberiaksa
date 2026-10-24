@@ -148,9 +148,10 @@ function DashboardContent({
     () => navigation.flatMap((s) => s.items.filter((i) => i.badge).map((i) => i.badge!)),
     [navigation],
   );
-  const wantsInboxBadge = badgeKeys.includes('inboxUnread');
-  const [navCounts, setNavCounts] = useState<Record<string, number>>({});
   const canUseWhatsappInbox = Boolean(session?.user && userHasDashboardPermission(session.user, "messages"));
+  // Inbox links live in the top bar now, so their count must not depend on a sidebar item.
+  const wantsInboxBadge = canUseWhatsappInbox || badgeKeys.includes('inboxUnread');
+  const [navCounts, setNavCounts] = useState<Record<string, number>>({});
   const [whatsappInboxCount, setWhatsappInboxCount] = useState(0);
 
   useEffect(() => {
@@ -297,6 +298,8 @@ function DashboardContent({
           dir={dir}
           showWhatsappInbox={canUseWhatsappInbox}
           whatsappInboxCount={whatsappInboxCount}
+          showGeneralInbox={canUseWhatsappInbox}
+          generalInboxCount={navCounts.inboxUnread ?? 0}
         />
 
         {/* Content well. Pages own their own surfaces (Card, PageHeader, …)  the shell no

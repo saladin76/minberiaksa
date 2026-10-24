@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Plus, Pencil, Trash2, Loader2, GripVertical, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, GripVertical, Image as ImageIcon, CheckCircle2, Clock3, Languages } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface Story {
@@ -200,31 +202,29 @@ export default function StoriesPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold">{dt("شريط القصص")}</h1>
-            <p className="text-xs text-slate-500">
-              {dt("يظهر في أعلى الصفحة الرئيسية ويُفتح كقصص إنستغرام. القصة تختفي تلقائيًا عند انتهاء مدتها.")}</p>
-          </div>
-          <Button onClick={() => router.push('/dashboard/stories/new')}>
-            <Plus className="w-4 h-4 me-1" />
-            {dt("قصة جديدة")}</Button>
-        </div>
+      <div className="space-y-5">
+        <PageHeader
+          eyebrow={dt("المحتوى التحريري")}
+          title={dt("شريط القصص")}
+          description={dt("تظهر القصص أعلى الصفحة الرئيسية وتُفتح كتجربة متتابعة. راقب مواعيد العرض والترجمات قبل التفعيل.")}
+          icon={ImageIcon}
+          actions={<Button onClick={() => router.push('/dashboard/stories/new')}><Plus className="me-1 h-4 w-4" />{dt("قصة جديدة")}</Button>}
+        />
+        <ContentMetricStrip items={[
+          { label: dt("ظاهرة الآن"), value: stories.filter((story) => story.isActive && !story.expired && !story.pending).length, detail: dt("مفعّلة وضمن مدة العرض"), icon: CheckCircle2, tone: "green" },
+          { label: dt("مجدولة"), value: stories.filter((story) => story.pending).length, detail: dt("تبدأ لاحقًا"), icon: Clock3, tone: "brand" },
+          { label: dt("منتهية"), value: stories.filter((story) => story.expired).length, detail: dt("انتهت نافذة عرضها"), icon: ImageIcon, tone: "amber" },
+          { label: dt("تغطية الترجمات"), value: stories.reduce((sum, story) => sum + story.translationCount, 0), detail: dt("ترجمات محفوظة لكل القصص"), icon: Languages, tone: "slate" },
+        ]} />
 
         {stories.length === 0 ? (
           <EmptyState
             icon={ImageIcon}
             title={dt("لا توجد قصص")}
             description={dt("أضف أول قصة لتظهر في أعلى الصفحة الرئيسية.")}
-            action={
-              <Button onClick={() => router.push('/dashboard/stories/new')}>
-                <Plus className="w-4 h-4 me-1" />
-                {dt("قصة جديدة")}</Button>
-            }
           />
         ) : (
-          <Card>
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>

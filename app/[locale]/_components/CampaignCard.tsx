@@ -86,7 +86,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
   const t = useTranslations("CampaignsPage");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const { convertToCurrency } = useCurrency();
+  const { convertToCurrency, exchangeRates } = useCurrency();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -139,7 +139,8 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
   const chipAmounts = takesPlainAmount
     ? resolveSuggestedAmountsForCurrency(
         parseSuggestedDonations(campaign.suggestedDonations),
-        currencyReady ? getCurrencyCodeForLinks() : currencyCodeForUrl(undefined)
+        currencyReady ? getCurrencyCodeForLinks() : currencyCodeForUrl(undefined),
+        exchangeRates,
       ).slice(0, CARD_AMOUNT_CHIPS)
     : [];
   /* Same reason as `chipAmounts`: the symbol is cookie-derived. */

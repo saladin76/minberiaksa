@@ -4,6 +4,7 @@
  *
  *   node scripts/dashboard-i18n.mjs extract   list phrases missing from a catalogue
  *                                              → lib/dashboard/i18n/catalog/missing.json
+ *   node scripts/dashboard-i18n.mjs prune     remove catalogue entries no longer referenced
  *   node scripts/dashboard-i18n.mjs build     compile catalog/{en,tr}.json into generated/
  *   node scripts/dashboard-i18n.mjs check     extract + fail when anything is missing
  *
@@ -186,6 +187,20 @@ function extract() {
   return { phrases, missing };
 }
 
+function prune() {
+  const phrases = collect();
+  for (const locale of LOCALES) {
+    const catalog = readCatalog(locale);
+    const entries = Object.entries(catalog).filter(([ar]) => phrases.has(ar));
+    const removed = Object.keys(catalog).length - entries.length;
+    fs.writeFileSync(
+      path.join(CATALOG_DIR, `${locale}.json`),
+      JSON.stringify(Object.fromEntries(entries), null, 2) + "\n",
+    );
+    console.log(`dashboard-i18n: ${locale} removed ${removed} unused catalogue entries`);
+  }
+}
+
 function build() {
   fs.mkdirSync(GENERATED_DIR, { recursive: true });
   let problems = 0;
@@ -231,11 +246,12 @@ function build() {
 
 const command = process.argv[2];
 if (command === "extract") extract();
+else if (command === "prune") prune();
 else if (command === "build") build();
 else if (command === "check") {
   const { missing } = extract();
   if (missing.length) process.exitCode = 1;
 } else {
-  console.error("usage: node scripts/dashboard-i18n.mjs <extract|build|check>");
+  console.error("usage: node scripts/dashboard-i18n.mjs <extract|prune|build|check>");
   process.exitCode = 2;
 }

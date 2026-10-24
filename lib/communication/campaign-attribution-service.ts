@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { createOrUpdateCampaignLink } from "@/lib/marketing/campaign-links/campaign-link-registry-service";
-import type { CommunicationChannelId } from "./communication-runtime-types";
 import {
   buildUniqueCampaignUtmAliases,
   campaignUtmLinksFromWhatsAppTemplates,

@@ -35,7 +35,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 }
 
 export async function POST(req: NextRequest) {
-  const cfg = getTelegramConfig();
+  const cfg = await getTelegramConfig();
   if (!cfg) {
     // Don't reveal that we're misconfigured  just 200 so Telegram backs off.
     return NextResponse.json({ ok: true });
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   // supergroup: carry the old chat's role over to the new id.
   const migratedFrom = message.migrate_from_chat_id;
   if (chat?.id != null && (typeof migratedFrom === "number" || typeof migratedFrom === "string")) {
-    adoptMigratedChat(String(migratedFrom), String(chat.id));
+    await adoptMigratedChat(String(migratedFrom), String(chat.id));
     return NextResponse.json({ ok: true });
   }
 

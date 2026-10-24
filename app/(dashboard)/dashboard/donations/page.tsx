@@ -23,24 +23,18 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Plus,
   Search,
-  Edit,
   Trash2,
   Eye,
-  ArrowUpDown,
   Download,
-  Loader2,
   MoreVertical,
   Link2,
   HandHeart,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  RefreshCw,
 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { PageHeaderSkeleton, FilterBarSkeleton, TableSkeleton } from '@/components/dashboard/skeletons';
@@ -156,13 +150,32 @@ export default function DonationsPage() {
     }
   };
 
+  const sortableHeader = (label: string, field: keyof Donation) => (
+    <TableHead
+      className="text-start"
+      aria-sort={sortField === field ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => handleSort(field)}
+        className="inline-flex min-h-9 items-center gap-1.5 text-start hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+        aria-label={`${dt("ترتيب حسب")} ${dt(label)}`}
+      >
+        {dt(label)}
+        {sortField === field
+          ? sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+          : <ArrowUpDown className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />}
+      </button>
+    </TableHead>
+  );
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this donation?')) return;
 
     setDeleteLoading(true);
     try {
       await axios.delete(`/api/donations/${id}`);
-      setDonations(donations.filter(donation => donation.id !== id));
+      setDonations((current) => current.filter((donation) => donation.id !== id));
       toast.success('Donation deleted successfully');
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 409) {
@@ -190,7 +203,7 @@ export default function DonationsPage() {
         .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
         .map(r => r.value);
       const refused = results.length - deleted.length;
-      setDonations(donations.filter(donation => !deleted.includes(donation.id)));
+      setDonations((current) => current.filter((donation) => !deleted.includes(donation.id)));
       setSelectedDonations([]);
       if (refused === 0) toast.success('Donations deleted successfully');
       else toast.error(`${deleted.length} deleted, ${refused} kept (paid donations cannot be deleted)`);
@@ -266,7 +279,18 @@ export default function DonationsPage() {
                 className="pe-4 ps-10"
               />
             </div>
-            <Button
+              {selectedDonations.length > 0 && (
+                <Button
+                  variant="destructive"
+                  className="gap-2"
+                  onClick={() => void handleBulkDelete()}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {dt("حذف المحدد")} ({selectedDonations.length})
+                </Button>
+              )}
+              <Button
               variant="outline"
               className="gap-2"
               onClick={exportToCSV}
@@ -285,7 +309,7 @@ export default function DonationsPage() {
               <TableHead className="w-[50px]">
                 <input
                   type="checkbox"
-                  checked={selectedDonations.length === paginatedDonations.length}
+                  checked={paginatedDonations.length > 0 && paginatedDonations.every((donation) => selectedDonations.includes(donation.id))}
                   onChange={(e) => {
                     if (e.target.checked) {
                       setSelectedDonations(paginatedDonations.map(d => d.id));
@@ -300,11 +324,11 @@ export default function DonationsPage() {
               <TableHead className="w-10 px-2 text-center">
                 <span className="sr-only">{dt("دولة المتبرع")}</span>
               </TableHead>
-              <TableHead className="text-start">{dt("المبلغ")}</TableHead>
+              {sortableHeader("المبلغ", "totalAmount")}
               <TableHead className="text-start">{dt("العملة")}</TableHead>
-              <TableHead className="text-start">{dt("النوع")}</TableHead>
-              <TableHead className="text-start">{dt("طريقة الدفع")}</TableHead>
-              <TableHead className="text-start">{dt("التاريخ")}</TableHead>
+              {sortableHeader("النوع", "type")}
+              {sortableHeader("طريقة الدفع", "paymentMethod")}
+              {sortableHeader("التاريخ", "createdAt")}
               <TableHead className="text-start">{dt("المشاريع")}</TableHead>
               <TableHead className="text-center">{dt("الإجراءات")}</TableHead>
             </TableRow>
@@ -382,6 +406,7 @@ export default function DonationsPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600"
+                          disabled={deleteLoading}
                           onClick={() => handleDelete(donation.id)}
                         >
                           <Trash2 className="w-4 h-4 me-2" />

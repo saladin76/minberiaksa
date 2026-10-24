@@ -11,6 +11,9 @@ import { DashboardLocaleSwitcher } from "../_components/DashboardLocaleSwitcher"
 import { useLocale } from "next-intl"
 import { ContentLocalizationAuditCard } from "../_components/ContentLocalizationAuditCard"
 import { BlogHealthCard } from "./_components/BlogHealthCard"
+import { BookOpenCheck, CheckCircle2, FileEdit, FolderOpen } from "lucide-react"
+import { PageHeader } from "@/components/dashboard/PageHeader"
+import { ContentMetricStrip } from "@/components/dashboard/content-editor/ContentMetricStrip"
 import { dt } from "@/lib/dashboard/i18n";
 
 export default function BooksManagement() {
@@ -63,17 +66,35 @@ export default function BooksManagement() {
     [handleDeletePost]
   )
 
+  const publishedCount = blogs.filter((post) => post.published).length
+  const categoryCount = new Set(blogs.map((post) => post.category?.id).filter(Boolean)).size
+
   return (
     <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        eyebrow={dt("استوديو المحتوى")}
+        title={dt("المقالات")}
+        description={dt("راجع المقالات المنشورة والمسودات، وحدّث المحتوى والترجمات من مكان واحد.")}
+        icon={BookOpenCheck}
+        actions={<DashboardLocaleSwitcher value={activeLocale} onChange={setActiveLocale} />}
+      />
+      <ContentMetricStrip items={[
+        { label: dt("كل المقالات"), value: blogs.length, detail: dt("في اللغة المحددة"), icon: BookOpenCheck, tone: "brand" },
+        { label: dt("منشورة"), value: publishedCount, detail: dt("مرئية للزوار"), icon: CheckCircle2, tone: "green" },
+        { label: dt("مسودات"), value: blogs.length - publishedCount, detail: dt("تحتاج مراجعة أو نشرًا"), icon: FileEdit, tone: "amber" },
+        { label: dt("تصنيفات مستخدمة"), value: categoryCount, detail: dt("في المقالات المعروضة"), icon: FolderOpen, tone: "slate" },
+      ]} />
       <TranslationOverview kind="blog" />
       <BlogHealthCard />
       <ContentLocalizationAuditCard section="blog" />
 
-      <Card className="p-8">
+      <Card className="overflow-hidden border-slate-200 shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>{dt("إدارة المقالات")}</CardTitle>
-            <DashboardLocaleSwitcher value={activeLocale} onChange={setActiveLocale} />
+            <div>
+              <CardTitle>{dt("مكتبة المقالات")}</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">{dt("ابحث، رتّب، وافتح المقال للتحرير أو المعاينة.")}</p>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

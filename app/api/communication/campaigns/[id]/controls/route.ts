@@ -8,6 +8,7 @@ import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { getCampaign } from "@/lib/communication/campaign-service";
 import { campaignSendControls, isValidTimeZone, readCampaignGlobalControls, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
 import { mutateCampaignMetadata } from "@/lib/communication/campaign-metadata-store";
+import { isCampaignControlTerminalStatus } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,7 +85,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const campaign = await getCampaign(id);
   if (!campaign) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  if (["SENT", "SENT_WITH_ISSUES", "FAILED", "CANCELLED", "ARCHIVED"].includes(campaign.status)) {
+  if (isCampaignControlTerminalStatus(campaign.status)) {
     return NextResponse.json({ ok: false, error: "لا يمكن تعديل تحكمات حملة منتهية." }, { status: 409 });
   }
 

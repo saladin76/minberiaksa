@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
+import { youtubeThumb } from "@/lib/minbar/content/media";
 import type { CmsVideo } from "@/lib/minbar/cms";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
+import { describeVideoSource } from "@/lib/content/video-platform";
 
 /**
  * The two video index pages  ported from `Minbar/إنجازاتنا بالفيديو.dc.html`
@@ -50,7 +51,8 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
           <div className="vg-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
             {shown.map((video) => {
               const title = video.title;
-              const image = video.thumbnail || (video.youtubeId ? youtubeThumb(video.youtubeId) : null);
+              const media = describeVideoSource({ youtubeId: video.youtubeId, url: video.url, startSeconds: video.startSeconds });
+              const image = video.thumbnail || (media.youtubeId ? youtubeThumb(media.youtubeId) : null);
               const tag = video.regionKey ? (t.has(video.regionKey) ? t(video.regionKey) : video.regionKey) : "";
 
               const card = (
@@ -66,7 +68,7 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
                       {tag}
                     </span>
                   ) : null}
-                  {video.youtubeId ? (
+                  {media.embedUrl || media.watchUrl ? (
                     <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                       <span style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(16,33,43,.55)", display: "grid", placeItems: "center", border: "1.5px solid rgba(255,255,255,.6)", color: "#fff" }}>
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
@@ -91,10 +93,10 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
                 boxShadow: "0 12px 34px rgba(16,33,43,.12)",
               };
 
-              return video.youtubeId ? (
+              return media.embedUrl ? (
                 <a
                   key={video.id}
-                  href={youtubeWatch(video.youtubeId, video.startSeconds ?? undefined)}
+                  href={media.watchUrl ?? media.sourceUrl}
                   className="vg-card"
                   style={{ ...frame, cursor: "pointer" }}
                   onClick={(event) => {
@@ -102,9 +104,18 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
                        the href they land on is the real video. */
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                     event.preventDefault();
-                    open(youtubeEmbed(video.youtubeId, { autoplay: true, start: video.startSeconds ?? undefined }));
+                    const embed = media.directVideo
+                      ? media.sourceUrl
+                      : media.provider === "youtube"
+                        ? `${media.embedUrl ?? ""}${media.embedUrl?.includes("?") ? "&" : "?"}autoplay=1`
+                        : media.embedUrl ?? "";
+                    open(embed);
                   }}
                 >
+                  {card}
+                </a>
+              ) : media.watchUrl ? (
+                <a key={video.id} href={media.watchUrl} target="_blank" rel="noopener noreferrer" className="vg-card" style={{ ...frame, cursor: "pointer" }}>
                   {card}
                 </a>
               ) : (

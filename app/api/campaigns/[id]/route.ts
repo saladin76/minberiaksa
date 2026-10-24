@@ -44,6 +44,7 @@ import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { setCampaignDisplayTotal } from "@/lib/campaign/current-amount";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { RECOMMENDED_FREQUENCY_VALUES, isRecommendedFrequencySetting } from "@/lib/minbar/recommended-frequency";
+import { parseCampaignFaqContent } from "@/lib/campaign/seo-fields";
 
 // This file used to build its own `new PrismaClient()` behind a global that is
 // only assigned when NODE_ENV !== "production". The comment claimed it was a
@@ -110,6 +111,14 @@ export async function GET(
         slug: true,
         title: true,        // Arabic default
         description: true,  // Arabic default
+        seoTitle: true,
+        seoDescription: true,
+        seoKeyword: true,
+        ogTitle: true,
+        ogDescription: true,
+        ogImage: true,
+        seoNoIndex: true,
+        faqContent: true,
         images: true,
         videoUrl: true,
         currentAmount: true,
@@ -373,6 +382,7 @@ export async function PUT(
       where: whereByIdOrLocaleSlug(idOrSlug, "ar"),
       select: {
         id: true,
+        slug: true,
         fundraisingMode: true,
         goalType: true,
         title: true,
@@ -396,6 +406,45 @@ export async function PUT(
     // Main campaign fields (Arabic default)
     if (body.title !== undefined) updateData.title = body.title;
     if (body.description !== undefined) updateData.description = body.description;
+    const baseMetaLimits: Record<string, number> = {
+      seoTitle: 160,
+      seoDescription: 220,
+      seoKeyword: 500,
+      ogTitle: 180,
+      ogDescription: 300,
+    };
+    for (const [field, maxLength] of Object.entries(baseMetaLimits)) {
+      if (body[field] === undefined) continue;
+      if (body[field] === null || body[field] === "") {
+        updateData[field] = null;
+        continue;
+      }
+      if (typeof body[field] !== "string" || body[field].trim().length > maxLength) {
+        return NextResponse.json({ error: `${field} must be text of at most ${maxLength} characters` }, { status: 400 });
+      }
+      updateData[field] = body[field].trim() || null;
+    }
+    if (body.seoNoIndex !== undefined) {
+      if (body.seoNoIndex !== null && body.seoNoIndex !== "" && body.seoNoIndex !== "true" && body.seoNoIndex !== "false") {
+        return NextResponse.json({ error: "seoNoIndex must be true or false" }, { status: 400 });
+      }
+      updateData.seoNoIndex = body.seoNoIndex || null;
+    }
+    if (body.ogImage !== undefined) {
+      if (body.ogImage === null || body.ogImage === "") updateData.ogImage = null;
+      else if (typeof body.ogImage !== "string") return NextResponse.json({ error: "ogImage must be a URL" }, { status: 400 });
+      else {
+        const value = body.ogImage.trim();
+        let valid = value.startsWith("/") && !value.startsWith("//");
+        try { const url = new URL(value); valid ||= url.protocol === "http:" || url.protocol === "https:"; } catch {}
+        if (!valid) return NextResponse.json({ error: "ogImage must use http(s) or a site path" }, { status: 400 });
+        updateData.ogImage = value;
+      }
+    }
+    if (body.faqContent !== undefined) {
+      try { updateData.faqContent = parseCampaignFaqContent(body.faqContent); }
+      catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid FAQ" }, { status: 400 }); }
+    }
     if (body.targetAmount !== undefined) updateData.targetAmount = body.targetAmount;
     // `currentAmount` is applied AFTER the main update via setCampaignDisplayTotal, so the
     // portion not explained by settled donations is recorded as `baselineAmount` (offline /
@@ -599,6 +648,45 @@ export async function PUT(
       }
     }
 
+    const localizedMetaLimits: Record<string, number> = {
+      seoTitle: 160,
+      seoDescription: 220,
+      seoKeyword: 500,
+      ogTitle: 180,
+      ogDescription: 300,
+    };
+    for (const { locale, data } of translationUpdates) {
+      for (const [field, maxLength] of Object.entries(localizedMetaLimits)) {
+        if (data[field] === undefined) continue;
+        if (data[field] === null || data[field] === "") {
+          data[field] = null;
+          continue;
+        }
+        if (typeof data[field] !== "string" || data[field].trim().length > maxLength) {
+          return NextResponse.json({ error: `translations.${locale}.${field} must be text of at most ${maxLength} characters` }, { status: 400 });
+        }
+        data[field] = data[field].trim() || null;
+      }
+      if (data.seoNoIndex !== undefined && data.seoNoIndex !== null && data.seoNoIndex !== "" && data.seoNoIndex !== "true" && data.seoNoIndex !== "false") {
+        return NextResponse.json({ error: `translations.${locale}.seoNoIndex must be true or false` }, { status: 400 });
+      }
+      if (data.ogImage !== undefined && data.ogImage !== null && data.ogImage !== "") {
+        if (typeof data.ogImage !== "string") return NextResponse.json({ error: `translations.${locale}.ogImage must be a URL` }, { status: 400 });
+        const value = data.ogImage.trim();
+        let valid = value.startsWith("/") && !value.startsWith("//");
+        try {
+          const url = new URL(value);
+          valid ||= url.protocol === "http:" || url.protocol === "https:";
+        } catch {}
+        if (!valid) return NextResponse.json({ error: `translations.${locale}.ogImage must use http(s) or a site path` }, { status: 400 });
+        data.ogImage = value;
+      }
+      if (data.faqContent !== undefined) {
+        try { data.faqContent = parseCampaignFaqContent(data.faqContent); }
+        catch (error) { return NextResponse.json({ error: `translations.${locale}.faqContent: ${error instanceof Error ? error.message : "invalid FAQ"}` }, { status: 400 }); }
+      }
+    }
+
     // Read every existing translation ONCE, before the transaction opens.
     // The loop below used to issue a `findUnique` per locale inside the
     // transaction  7 extra sequential round trips (~3.5s here) to fetch rows a
@@ -626,6 +714,18 @@ export async function PUT(
           where: contentWriteWhere({ id: id }, body),
           data: { ...updateData, ...contentVersionPatch() },
         });
+
+        if (existingCampaign.slug && typeof updateData.slug === "string" && existingCampaign.slug !== updateData.slug) {
+          const existingAlias = await tx.campaignSlugRedirect.findUnique({
+            where: { locale_slug: { locale: "ar", slug: existingCampaign.slug } },
+            select: { campaignId: true },
+          });
+          if (!existingAlias) {
+            await tx.campaignSlugRedirect.create({
+              data: { campaignId: id, locale: "ar", slug: existingCampaign.slug },
+            });
+          }
+        }
 
         // Split an admin-entered total into settled donations + offline baseline so a later
         // donation edit can't wipe the offline part. See lib/campaign/current-amount.ts.
@@ -656,6 +756,9 @@ export async function PUT(
               typeof data.videoUrl === "string" && data.videoUrl.trim()
                 ? data.videoUrl.trim()
                 : null;
+          }
+          for (const key of ["seoTitle", "seoDescription", "seoKeyword", "ogTitle", "ogDescription", "ogImage", "seoNoIndex", "faqContent"]) {
+            if (data[key] !== undefined) translationData[key] = data[key] || null;
           }
 
           const mergedTitle =
@@ -702,16 +805,20 @@ export async function PUT(
             );
           }
 
+          const nextSlug = typeof translationData.slug === "string" ? translationData.slug : existingSlug;
+          if (existingSlug && nextSlug && existingSlug !== nextSlug) {
+            const existingAlias = await tx.campaignSlugRedirect.findUnique({
+              where: { locale_slug: { locale, slug: existingSlug } },
+              select: { campaignId: true },
+            });
+            if (!existingAlias) {
+              await tx.campaignSlugRedirect.create({
+                data: { campaignId: id, locale, slug: existingSlug },
+              });
+            }
+          }
+
           if (Object.keys(translationData).length === 0) continue;
-          // Skip only when nothing meaningful was supplied.
-          if (
-            !translationData.title &&
-            !translationData.description &&
-            !translationData.image &&
-            !translationData.videoUrl &&
-            !translationData.slug
-          )
-            continue;
           // upsert.create requires title + description (NOT NULL); fall back to empty strings so
           // an image/video/slug-only update still creates the row.
           const createData = {
@@ -748,6 +855,14 @@ export async function PUT(
         slug: true,
         title: true,
         description: true,
+        seoTitle: true,
+        seoDescription: true,
+        seoKeyword: true,
+        ogTitle: true,
+        ogDescription: true,
+        ogImage: true,
+        seoNoIndex: true,
+        faqContent: true,
         targetAmount: true,
         currentAmount: true,
         images: true,

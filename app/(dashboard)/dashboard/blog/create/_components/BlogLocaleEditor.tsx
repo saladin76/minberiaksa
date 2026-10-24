@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import WysiwygEditor from "@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor";
-import { localeDir, type TranslationLocale } from "../../../_components/locale-form";
+import { type TranslationLocale } from "../../../_components/locale-form";
 import { AutoTranslateButton } from "../../../_components/AutoTranslateButton";
 import { defaultEditorContent } from "@/app/[locale]/blog/_components/wysiwyg/default-content";
 import { SmartSeoAuditCard } from "../../../_components/SmartSeoAuditCard";

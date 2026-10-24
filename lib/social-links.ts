@@ -15,5 +15,6 @@ const LINKS: SocialLinks = {
 };
 
 export function getSocialLinks(_locale?: SupportedLocale | string): SocialLinks {
+  void _locale; // The organization uses one account per network across all locales.
   return LINKS;
 }

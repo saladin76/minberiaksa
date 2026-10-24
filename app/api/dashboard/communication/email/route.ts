@@ -4,8 +4,9 @@ import { Prisma } from "@prisma/client";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { RETRYABLE_STATUSES } from "@/lib/communication/communication-runtime-types";
+import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { getActiveElasticEmailRuntimeConfig } from "@/lib/communication/runtime-config";
+import { communicationPurposeWhere, parseCommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
     const { from, to } = parseRange(sp);
     const status = sp.get("status") || "all";
     const origin = sp.get("origin") || "all";
+    const purposeGroup = parseCommunicationPurposeGroup(sp.get("purposeGroup"));
     const search = sp.get("search")?.trim() || "";
     const page = Math.max(1, parseInt(sp.get("page") || "1"));
     const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") || "25")));
@@ -58,9 +60,10 @@ export async function GET(request: NextRequest) {
     // and drops the date window while doing it. The campaign IS the range; keeping the default
     // 30 days would report zeros for any campaign sent earlier than that.
     const campaignId = sp.get("campaign")?.trim() || "";
+    const purposeWhere = communicationPurposeWhere(purposeGroup);
     const rangeWhere: Prisma.CommunicationDeliveryWhereInput = campaignId
-      ? { channel: CHANNEL, campaignId }
-      : { channel: CHANNEL, createdAt: { gte: from, lte: to } };
+      ? { channel: CHANNEL, campaignId, ...purposeWhere }
+      : { channel: CHANNEL, createdAt: { gte: from, lte: to }, ...purposeWhere };
 
     const listWhere: Prisma.CommunicationDeliveryWhereInput = { ...rangeWhere };
     if (status !== "all") {
@@ -91,7 +94,7 @@ export async function GET(request: NextRequest) {
       rows,
       listTotal,
       byTemplate,
-      retryableCount,
+      retryPreflightResult,
       emailRuntime,
       activeEmailSenderCount,
     ] = await Promise.all([
@@ -104,7 +107,7 @@ export async function GET(request: NextRequest) {
       // Email tracking is live only when an EMAIL provider event has actually arrived.
       // WhatsApp events must never make the email dashboard claim its webhooks are working.
       prisma.communicationProviderEvent.count({ where: { channel: CHANNEL } }),
-      prisma.communicationDelivery.count({ where: { channel: CHANNEL } }),
+      prisma.communicationDelivery.count({ where: { channel: CHANNEL, ...purposeWhere } }),
       prisma.communicationDelivery.findMany({
         where: listWhere,
         orderBy: { createdAt: "desc" },
@@ -122,16 +125,7 @@ export async function GET(request: NextRequest) {
       // it returned ascending), which combined with `take` would silently return the *least* used
       // templates. Sorted in JS below instead; the distinct-template count is tiny.
       prisma.communicationDelivery.groupBy({ by: ["templateName"], where: rangeWhere, _count: { _all: true } }),
-      // Re-sendable backlog. BOUNCED is excluded (a bounce is not fixed by sending again), and rows
-      // already retried are excluded  on MongoDB `null` matches only an explicit null, so documents
-      // written before the field existed need the `isSet: false` arm or none of them would count.
-      prisma.communicationDelivery.count({
-        where: {
-          ...rangeWhere,
-          status: { in: [...RETRYABLE_STATUSES] },
-          OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }],
-        },
-      }),
+      retryPreflight({ channel: "EMAIL", purposeGroup, campaignId: campaignId || undefined, ...(campaignId ? {} : { from, to }) }),
       getActiveElasticEmailRuntimeConfig(),
       prisma.communicationSender.count({
         where: {
@@ -196,7 +190,7 @@ export async function GET(request: NextRequest) {
        * not receiving events" instead of presenting an authoritative-looking 0% open rate.
        */
       trackingLive: providerEventCount > 0,
-      retryableCount,
+      retryableCount: retryPreflightResult.eligible,
       provider: {
         configured: emailRuntime.configured,
         reason: emailRuntime.configured ? null : emailRuntime.reason,

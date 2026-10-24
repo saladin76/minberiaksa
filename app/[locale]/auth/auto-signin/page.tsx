@@ -31,7 +31,7 @@ export default function AutoSignInPage() {
       email,
       autoSignInToken: token,
       redirect: false,
-    }).then((res) => {
+    }).then(() => {
       // Whether sign-in succeeded or not, redirect back with verified=success
       // The user can always sign in manually from the success toast if something went wrong
       finish();

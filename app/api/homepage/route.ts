@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
 import { NOT_SOFT_DELETED, CATEGORY_ACTIVE_OR_UNSET } from "@/lib/campaign/soft-delete-filter";
 

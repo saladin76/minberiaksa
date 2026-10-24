@@ -11,7 +11,9 @@ import { contentToBlocks, type ArticleBlock } from "@/lib/blog/rich-text";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
 import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
+import { mergeProjectPriorityGroups } from "@/lib/minbar/project-order";
 import type { CartFreqKey } from "@/lib/minbar/cart";
+import type { Prisma } from "@prisma/client";
 
 /**
  * Project data for the Minbar pages.
@@ -45,6 +47,8 @@ import type { CartFreqKey } from "@/lib/minbar/cart";
 export interface MinbarProject {
   id: string;
   slug: string;
+  /** Set only when an old saved URL was resolved; the page redirects it. */
+  redirectedFrom?: string;
   title: string;
   /** The description as plain text (it is stored as Tiptap JSON, HTML or text). */
   text: string;
@@ -69,6 +73,8 @@ export interface MinbarProject {
   categories: Array<{ id: string; slug: string | null; label: string }>;
   /** Quick-pick amounts configured per campaign, if any. */
   suggestedAmounts: number[] | null;
+  /** Optional project donation prefill, stored in USD. */
+  defaultDonationAmountUSD: number | null;
   /**
    * Quick-pick amounts per currency code, in that currency (not USD). Used
    * in place of `suggestedAmounts` for a visitor browsing in that currency.
@@ -144,6 +150,69 @@ function selectFor(locale: string) {
       select: { locale: true, title: true, description: true, slug: true, image: true, imageAlt: true, videoUrl: true },
     },
   } as const;
+}
+
+/**
+ * MongoDB sorts nulls first for an ascending nullable `priority`. Query the
+ * ranked and unranked groups separately so every public surface follows the
+ * same rule: explicit priority first, newest unranked projects after it.
+ */
+async function findPublishedCampaignRows(
+  locale: string,
+  options: { categoryId?: string; limit?: number } = {},
+): Promise<CampaignRow[]> {
+  const baseWhere: Prisma.CampaignWhereInput = {
+    AND: [
+      { isActive: true },
+      NOT_SOFT_DELETED,
+      ...(options.categoryId ? [{ categoryIds: { has: options.categoryId } }] : []),
+    ],
+  };
+  const prioritizedWhere: Prisma.CampaignWhereInput = {
+    AND: [baseWhere, { NOT: { priority: null } }],
+  };
+  const unprioritizedWhere: Prisma.CampaignWhereInput = {
+    AND: [baseWhere, { priority: null }],
+  };
+  const limit = Number.isInteger(options.limit) && Number(options.limit) > 0
+    ? Number(options.limit)
+    : undefined;
+  const select = selectFor(locale);
+  const readPrioritized = (take?: number) => prisma.campaign.findMany({
+    where: prioritizedWhere,
+    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+    ...(take ? { take } : {}),
+    select,
+  });
+  const readUnprioritized = (take?: number) => prisma.campaign.findMany({
+    where: unprioritizedWhere,
+    orderBy: { createdAt: "desc" },
+    ...(take ? { take } : {}),
+    select,
+  });
+
+  if (limit === undefined) {
+    const [prioritized, unprioritized] = await Promise.all([
+      readPrioritized(),
+      readUnprioritized(),
+    ]);
+    return mergeProjectPriorityGroups(
+      prioritized as unknown as CampaignRow[],
+      unprioritized as unknown as CampaignRow[],
+    );
+  }
+
+  const prioritized = await readPrioritized(limit);
+  const remaining = Math.max(0, limit - prioritized.length);
+  const unprioritized = remaining === 0
+    ? []
+    : await readUnprioritized(remaining);
+
+  return mergeProjectPriorityGroups(
+    prioritized as unknown as CampaignRow[],
+    unprioritized as unknown as CampaignRow[],
+    limit,
+  );
 }
 
 type CampaignRow = {
@@ -260,6 +329,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
     })),
     suggestedAmountsByCurrency: Object.keys(byCurrency).length ? byCurrency : null,
     cardAmounts: cardDonationAmounts(donationConfig),
+    defaultDonationAmountUSD: donationConfig.defaultAmountUSD,
     region: category?.slug ?? null,
     regionLabel: categoryT?.name || category?.name || null,
     raised: row.currentAmount,
@@ -276,15 +346,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
  * campaigns first (ascending priority), then newest.
  */
 export async function listProjects(locale: string, limit?: number): Promise<MinbarProject[]> {
-  const rows = (await prisma.campaign.findMany({
-    where: { AND: [{ isActive: true }, NOT_SOFT_DELETED] },
-    select: selectFor(locale),
-    // MongoDB sorts nulls first on ascending, so an explicit newest-first
-    // secondary key keeps unprioritised campaigns in a stable, sensible order.
-    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
-    ...(limit ? { take: limit } : {}),
-  })) as unknown as CampaignRow[];
-
+  const rows = await findPublishedCampaignRows(locale, { limit });
   return rows.map((row) => toProject(row, locale));
 }
 
@@ -320,11 +382,7 @@ export async function listProjectsInCategory(
   locale: string,
   limit?: number
 ): Promise<MinbarProject[]> {
-  const rows = (await prisma.campaign.findMany({
-    where: { AND: [{ isActive: true }, NOT_SOFT_DELETED, { categoryIds: { has: categoryId } }] },
-    select: selectFor(locale),
-    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
-  })) as unknown as CampaignRow[];
+  const rows = await findPublishedCampaignRows(locale, { categoryId });
 
   /* The order an admin set for THIS category (`categoryPriorities`, from the
      categories dashboard) comes first; campaigns without one follow in the
@@ -354,14 +412,31 @@ export async function getProject(slug: string, locale: string): Promise<MinbarPr
      throw rather than miss, which turns every unknown project URL into a 500
      instead of a 404. `whereByIdOrAnyLocaleSlug` only matches on `id` when the
      key actually looks like one. */
-  const row = (await prisma.campaign.findFirst({
+  let row = (await prisma.campaign.findFirst({
     where: {
       AND: [{ isActive: true }, NOT_SOFT_DELETED, whereByIdOrAnyLocaleSlug(slug)],
     },
     select: selectFor(locale),
   })) as unknown as CampaignRow | null;
 
-  return row ? toProject(row, locale, true) : null;
+  let redirectedFrom: string | undefined;
+  if (!row) {
+    const alias = await prisma.campaignSlugRedirect.findUnique({
+      where: { locale_slug: { locale, slug } },
+      select: { campaignId: true },
+    });
+    if (alias) {
+      row = (await prisma.campaign.findFirst({
+        where: { AND: [{ id: alias.campaignId }, { isActive: true }, NOT_SOFT_DELETED] },
+        select: selectFor(locale),
+      })) as unknown as CampaignRow | null;
+      if (row) redirectedFrom = slug;
+    }
+  }
+
+  if (!row) return null;
+  const project = toProject(row, locale, true);
+  return redirectedFrom ? { ...project, redirectedFrom } : project;
 }
 
 /**

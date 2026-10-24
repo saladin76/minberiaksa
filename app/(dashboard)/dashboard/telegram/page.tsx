@@ -1,15 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Send, AlertTriangle, CheckCircle2, RefreshCw, XCircle, Copy } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Send, AlertTriangle, CheckCircle2, RefreshCw, XCircle, Copy, PlugZap, Save, ShieldCheck, Info } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
 interface SetupResponse {
   configured: boolean;
+  source?: "dashboard" | "environment";
   missing?: string[];
+  botTokenConfigured?: boolean;
+  botTokenMasked?: string | null;
+  webhookSecretConfigured?: boolean;
+  canSaveSecrets?: boolean;
   notificationsChatId?: string;
   notificationsEnabled?: boolean;
   allowedChatIds?: string[];
@@ -29,7 +38,9 @@ interface SetupResponse {
 export default function TelegramAdminPage() {
   const [status, setStatus] = useState<SetupResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<"register" | "unregister" | null>(null);
+  const [busy, setBusy] = useState<"save" | "test" | "register" | "unregister" | null>(null);
+  const [form, setForm] = useState({ botToken: "", webhookSecret: "", notificationsChatId: "", allowedChatIds: "", notificationsEnabled: true });
+  const [botIdentity, setBotIdentity] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);
 
   const refresh = async () => {
@@ -38,6 +49,12 @@ export default function TelegramAdminPage() {
       const res = await fetch("/api/telegram/setup");
       const data = (await res.json()) as SetupResponse;
       setStatus(data);
+      setForm((current) => ({
+        ...current,
+        notificationsChatId: data.notificationsChatId ?? "",
+        allowedChatIds: data.allowedChatIds?.join(", ") ?? "",
+        notificationsEnabled: data.notificationsEnabled ?? true,
+      }));
     } catch {
       toast.error(dt("تعذّر تحميل حالة البوت"));
     } finally {
@@ -49,6 +66,47 @@ export default function TelegramAdminPage() {
     refresh();
   }, []);
 
+  const saveSettings = async () => {
+    setBusy("save");
+    try {
+      const response = await fetch("/api/telegram/setup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || dt("تعذّر حفظ الإعدادات"));
+      setForm((current) => ({ ...current, botToken: "", webhookSecret: "" }));
+      toast.success(dt("تم حفظ إعدادات تيليجرام المشفّرة"));
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : dt("تعذّر حفظ الإعدادات"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const testConnection = async () => {
+    setBusy("test");
+    setBotIdentity(null);
+    try {
+      const response = await fetch("/api/telegram/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test" }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || dt("فشل اختبار اتصال تيليجرام"));
+      const identity = data.bot?.username ? "@" + data.bot.username : data.bot?.name ?? dt("بوت تيليجرام");
+      setBotIdentity(identity);
+      toast.success(dt("الاتصال يعمل: {0}", [identity]));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : dt("فشل اختبار اتصال تيليجرام"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const register = async () => {
     setBusy("register");
     setLastResponse(null);
@@ -57,7 +115,7 @@ export default function TelegramAdminPage() {
       const data = await res.json();
       setLastResponse(data);
       if (res.ok && data.ok) {
-        toast.success(dt("تم تسجيل الـ webhook  تحقق من مجموعة التيليجرام"));
+        toast.success(dt("تم تسجيل الـ webhook؛ لم تُرسل أي رسالة."));
         await refresh();
       } else {
         toast.error(data.error || data?.telegram?.description || dt("فشل تسجيل الـ webhook"));
@@ -123,13 +181,66 @@ export default function TelegramAdminPage() {
           </div>
         ) : (
           <>
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-brand" />{dt("إعداد وربط تيليجرام")}</CardTitle>
+                <CardDescription>{dt("أدخل بيانات البوت ومجموعة الإشعارات هنا. الرموز السرية تُخزّن مشفّرة، ولا تظهر بعد الحفظ.")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!status?.canSaveSecrets && (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>{dt("الحفظ الآمن للرموز من اللوحة يحتاج إعداد INTEGRATION_SETTINGS_ENCRYPTION_KEY على الخادم. يمكنك الاستمرار باستخدام بيانات البيئة الحالية.")}</p>
+                  </div>
+                )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telegram-bot-token">{dt("رمز البوت")}</Label>
+                    <Input id="telegram-bot-token" type="password" autoComplete="new-password" dir="ltr" value={form.botToken} disabled={!status?.canSaveSecrets || busy !== null} onChange={(event) => setForm({ ...form, botToken: event.target.value })} placeholder={status?.botTokenMasked ?? dt("أدخل رمز BotFather")} />
+                    <p className="text-xs text-slate-500">{status?.botTokenConfigured ? dtx("مخزّن: {0} · اتركه فارغًا للاحتفاظ به", [status.botTokenMasked ?? "••••••••"]) : dt("غير محفوظ")}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telegram-webhook-secret">{dt("سر التحقق من Webhook")}</Label>
+                    <Input id="telegram-webhook-secret" type="password" autoComplete="new-password" dir="ltr" value={form.webhookSecret} disabled={!status?.canSaveSecrets || busy !== null} onChange={(event) => setForm({ ...form, webhookSecret: event.target.value })} placeholder={status?.webhookSecretConfigured ? dt("مخزّن · اتركه فارغًا للاحتفاظ به") : dt("أنشئ سرًا عشوائيًا بطول 16 حرفًا على الأقل")} />
+                    <p className="text-xs text-slate-500">{status?.webhookSecretConfigured ? dt("السر محفوظ") : dt("غير محفوظ")}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telegram-chat-id">{dt("معرّف مجموعة الإشعارات")}</Label>
+                    <Input id="telegram-chat-id" dir="ltr" value={form.notificationsChatId} onChange={(event) => setForm({ ...form, notificationsChatId: event.target.value })} placeholder="-1001234567890" />
+                    <p className="text-xs text-slate-500">{dt("تصل إليها إشعارات نجاح التبرعات وفشلها.")}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telegram-allowed-chats">{dt("معرّفات الدردشات المسموح لها بالأوامر")}</Label>
+                    <Textarea id="telegram-allowed-chats" dir="ltr" rows={2} value={form.allowedChatIds} onChange={(event) => setForm({ ...form, allowedChatIds: event.target.value })} placeholder="-1001234567890, 123456789" />
+                    <p className="text-xs text-slate-500">{dt("افصل الأرقام بفاصلة. مجموعة الإشعارات مسموح لها تلقائيًا.")}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="telegram-notifications">{dt("إشعارات التبرعات")}</Label>
+                    <p className="text-xs text-slate-500">{dt("إيقافها يوقف إشعارات التبرعات الصادرة فقط؛ تبقى أوامر البوت فعالة.")}</p>
+                  </div>
+                  <Switch id="telegram-notifications" checked={form.notificationsEnabled} onCheckedChange={(checked) => setForm({ ...form, notificationsEnabled: checked })} />
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={testConnection} disabled={!status?.configured || busy !== null} className="gap-2">
+                    {busy === "test" ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlugZap className="h-4 w-4" />}{dt("اختبار الاتصال دون إرسال رسالة")}
+                  </Button>
+                  <Button type="button" onClick={saveSettings} disabled={busy !== null || !form.notificationsChatId.trim()} className="gap-2">
+                    {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{dt("حفظ الإعدادات")}
+                  </Button>
+                </div>
+                {botIdentity && <p className="text-end text-xs font-semibold text-emerald-700">{dtx("تم التحقق من البوت: {0}", [botIdentity])}</p>}
+              </CardContent>
+            </Card>
+
             {/* Configuration status */}
             <Card className="border-border shadow-sm">
               <CardHeader className="py-4">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2 justify-end">
                   {status?.configured ? (
                     <>
-                      <span>{dt("مهيأ بمتغيرات البيئة")}</span>
+                      <span>{status?.source === "dashboard" ? dt("مهيأ من لوحة التحكم") : dt("مهيأ من متغيرات البيئة")}</span>
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     </>
                   ) : (
@@ -143,14 +254,13 @@ export default function TelegramAdminPage() {
               <CardContent className="space-y-3 text-sm">
                 {!status?.configured ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800 leading-relaxed">
-                    <p className="font-semibold mb-1">{dt("المتغيرات المفقودة:")}</p>
+                    <p className="font-semibold mb-1">{dt("بيانات الربط الناقصة:")}</p>
                     <ul className="list-disc list-inside space-y-0.5 text-xs font-mono" dir="ltr">
                       {status?.missing?.map((k) => (
                         <li key={k}>{k}</li>
                       ))}
                     </ul>
-                    <p className="text-xs mt-2 text-amber-700">
-                      {dt("أضفها إلى ملف ")}<code>.env</code> {dt(" ثم أعد تشغيل الخادم.")}</p>
+                    <p className="text-xs mt-2 text-amber-700">{dt("أكمل الحقول الناقصة في نموذج إعداد الربط أعلاه ثم احفظ.")}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -252,6 +362,33 @@ export default function TelegramAdminPage() {
                   <p className="text-slate-500 text-xs leading-relaxed">
                     {dt("سيقوم تيليجرام بإرسال الرسائل إلى هذا الخادم بعد التسجيل. اضغط الزر أدناه  تأكد أن التطبيق مرفوع على عنوان HTTPS عام (تيليجرام لا يقبل localhost).")}</p>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-indigo-200 bg-indigo-50/50 shadow-sm">
+              <CardHeader className="py-4">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold"><Info className="h-4 w-4 text-indigo-700" />{dt("ما الذي يصل إلى رسائل البوت؟")}</CardTitle>
+                <CardDescription>{dt("هذه هي البيانات المستخدمة حاليًا في الإشعارات والأوامر، وفق كود البوت.")}</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 text-sm leading-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-slate-900">{dt("إشعار التبرع")}</h3>
+                  <ul className="list-disc space-y-1 ps-5 text-slate-700">
+                    <li>{dt("الحالة والمبلغ والعملة، ووقت التبرع.")}</li>
+                    <li>{dt("اسم المتبرع ورقم هاتفه كرابط واتساب؛ البريد الإلكتروني لا يظهر في بطاقة الإشعار.")}</li>
+                    <li>{dt("الدولة والوجهة وطريقة الدفع أو بوابة الدفع، وهل الاشتراك شهري.")}</li>
+                    <li>{dt("مصدر الإحالة ووسوم الحملة الإعلانية إن توفرت، وسبب الفشل عند تعثر التبرع.")}</li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-slate-900">{dt("أوامر البوت")}</h3>
+                  <ul className="list-disc space-y-1 ps-5 text-slate-700">
+                    <li>{dt("/today و/week و/month و/total تعرض أعداد التبرعات والإجماليات وأعلى المشاريع.")}</li>
+                    <li>{dt("/recent و/failed و/pending تعرض مبلغًا وحالة واسمًا أو بريدًا عند غياب الاسم والوجهة والتاريخ ومعرّف التبرع.")}</li>
+                    <li>{dt("/donor يعرض الاسم والبريد والدولة وإجمالي التبرعات وعددها وآخر تبرع؛ و/donation يعرض تفاصيل التبرع ومرجع البوابة والرسوم عند توفرها.")}</li>
+                    <li>{dt("الأوامر ترد فقط في معرّفات الدردشات المسموح بها؛ مجموعة الإشعارات مسموح لها تلقائيًا.")}</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
 

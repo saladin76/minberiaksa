@@ -34,7 +34,7 @@ export const aiAssistantContexts: AiAssistantContextDefinition[] = [
     capabilities: ["SEARCH_ARCHIVE", "PLAN_CONTENT", "BRAND_GUARDRAILS"],
     allowedSources: ["getArchiveSummary", "getBrandRules"],
     blockedActions: ["No file deletion", "No public publishing", "No external platform calls"],
-    entryHref: "/dashboard/archive/ai",
+    entryHref: "/dashboard/ai-concierge",
   },
 ];
 

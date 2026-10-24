@@ -45,6 +45,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         image: true,
         videoUrl: true,
         slug: true,
+        seoTitle: true,
+        seoDescription: true,
+        seoKeyword: true,
+        ogTitle: true,
+        ogDescription: true,
+        ogImage: true,
+        seoNoIndex: true,
+        faqContent: true,
       },
     });
 

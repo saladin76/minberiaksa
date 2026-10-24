@@ -11,10 +11,88 @@
 # Env: PM2_APP (default: minberiaksa), BRANCH (default: main).
 set -euo pipefail
 
-APP="${PM2_APP:-minberiaksa}"
-BRANCH="${BRANCH:-main}"
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
+
+# SSH commands usually start a non-interactive shell, so NVM is not loaded and
+# `node` may be visible while the matching `npm` is not. Select an installed
+# NVM version that matches package.json, installing the required major if needed.
+ensure_node_toolchain() {
+  local nvm_home candidate version required_engine required_major active_version
+
+  # First load any usable NVM runtime so this still works when a non-interactive
+  # SSH shell exposes neither node nor npm. The loaded version may not match the
+  # project yet; it is only used to read package.json and bootstrap the switch.
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    for candidate in "${NVM_DIR:-}" /root/.nvm; do
+      [[ -n "$candidate" && -s "$candidate/nvm.sh" ]] || continue
+      NVM_DIR="$candidate"
+      export NVM_DIR
+      # shellcheck disable=SC1090
+      . "$NVM_DIR/nvm.sh"
+      if nvm use --silent default >/dev/null 2>&1; then
+        hash -r
+        if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then break; fi
+      fi
+
+      version="$(find "$NVM_DIR/versions/node" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -V | tail -n 1)"
+      if [[ -n "$version" ]] && nvm use --silent "$version" >/dev/null 2>&1; then
+        hash -r
+        if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then break; fi
+      fi
+    done
+  fi
+
+  required_engine="$(node -e 'process.stdout.write(require("./package.json").engines?.node ?? "")' 2>/dev/null || true)"
+  if [[ "$required_engine" =~ ^([0-9]+)\.x$ ]]; then
+    required_major="${BASH_REMATCH[1]}"
+  else
+    echo "✗ Cannot verify the project's Node.js engine requirement: ${required_engine:-missing} (expected an exact major such as 24.x)." >&2
+    return 1
+  fi
+
+  toolchain_matches_project() {
+    command -v node >/dev/null 2>&1 \
+      && command -v npm >/dev/null 2>&1 \
+      && [[ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)" == "$required_major" ]]
+  }
+
+  if toolchain_matches_project; then return 0; fi
+
+  for candidate in "${NVM_DIR:-}" /root/.nvm; do
+    [[ -n "$candidate" && -s "$candidate/nvm.sh" ]] || continue
+    nvm_home="$candidate"
+    export NVM_DIR="$nvm_home"
+    # shellcheck disable=SC1090
+    . "$NVM_DIR/nvm.sh"
+    if nvm use --silent default >/dev/null 2>&1; then
+      hash -r
+      if toolchain_matches_project; then return 0; fi
+    fi
+
+    version="$(find "$NVM_DIR/versions/node" -mindepth 1 -maxdepth 1 -type d -name "v${required_major}.*" -printf '%f\n' 2>/dev/null | sort -V | tail -n 1)"
+    if [[ -z "$version" ]]; then
+      echo "▶ Node.js ${required_engine} is not installed in NVM; installing the required runtime"
+      if nvm install "$required_major" >/dev/null 2>&1; then
+        version="$(nvm version "$required_major" 2>/dev/null || true)"
+        [[ "$version" == "N/A" ]] && version=""
+      fi
+    fi
+    if [[ -n "$version" ]] && nvm use --silent "$version" >/dev/null 2>&1; then
+      hash -r
+      if toolchain_matches_project; then return 0; fi
+    fi
+  done
+
+  active_version="$(node -v 2>/dev/null || printf 'not installed')"
+  echo "✗ This project requires Node.js ${required_engine} with npm; the active version is ${active_version}. Install Node.js ${required_major} (for NVM: nvm install ${required_major}) and rerun the deploy." >&2
+  return 1
+}
+
+ensure_node_toolchain
+
+APP="${PM2_APP:-minberiaksa}"
+BRANCH="${BRANCH:-main}"
 
 lock_before="$(sha1sum package-lock.json | cut -d' ' -f1)"
 git pull --ff-only origin "$BRANCH"

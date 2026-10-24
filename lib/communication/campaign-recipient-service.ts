@@ -94,7 +94,7 @@ export type CampaignRecipient = {
 };
 export type RecipientLoadResult = {
   recipients: CampaignRecipient[];
-  skipped: { cursorId: string; userId: string; locale: string; reason: string }[];
+  skipped: { cursorId: string; userId: string; name: string | null; email: string | null; phone: string | null; locale: string; reason: string }[];
   truncated: boolean; nextCursor: string | null; exhausted: boolean;
 };
 
@@ -166,7 +166,7 @@ export async function loadCampaignRecipients(
     const reason = member.missingDonor ? "RECIPIENT_NOT_FOUND" : recipientExclusionReason(member, channel, byUser.get(member.userId));
     if (reason === null) {
       recipients.push({ cursorId: member.cursorId, userId: member.userId, name: member.name, email: member.email, phone: member.phone, locale: member.locale, country: member.country });
-    } else skipped.push({ cursorId: member.cursorId, userId: member.userId, locale: member.locale, reason });
+    } else skipped.push({ cursorId: member.cursorId, userId: member.userId, name: member.name, email: member.email, phone: member.phone, locale: member.locale, reason });
   }
   return { recipients, skipped, truncated: !exhausted, nextCursor, exhausted };
 }

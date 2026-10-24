@@ -86,7 +86,7 @@ import {
   type FormLocale,
   type TranslationLocale,
 } from '../../../_components/locale-form';
-import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar, UpdateLocaleTabs } from '../../_components/CampaignLocaleTabs';
+import { CampaignArabicSeoFields, CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar, UpdateLocaleTabs } from '../../_components/CampaignLocaleTabs';
 import { UpdateMediaFields } from '../../_components/UpdateMediaFields';
 import { UpdateCard } from '../../_components/UpdateCard';
 import type { TranslatedLocales } from '../../../_components/AutoTranslateButton';
@@ -117,7 +117,7 @@ import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 // ✅ Enhanced schema with translations (limits aligned with DB / real data  not stricter than Prisma)
 /** Fields every translation locale carries on the campaign form, as `field_locale`. */
-const LOCALE_FIELDS = ['title', 'image', 'videoUrl'] as const;
+const LOCALE_FIELDS = ['title', 'image', 'videoUrl', 'slug', 'seoTitle', 'seoDescription', 'seoKeyword', 'ogTitle', 'ogDescription', 'ogImage', 'seoNoIndex', 'faqContent'] as const;
 type LocaleField = (typeof LOCALE_FIELDS)[number];
 /* A mapped type rather than an index signature: zod keeps named keys in its
    inferred output and drops index signatures. */
@@ -136,6 +136,15 @@ const UPDATE_LOCALE_SHAPE = Object.fromEntries(
 const formSchema = z
   .object({
   title: z.string().min(1, dt("العنوان مطلوب")).max(2000, dt("العنوان طويل جداً")),
+  slug: z.string().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  seoKeyword: z.string().optional(),
+  ogTitle: z.string().optional(),
+  ogDescription: z.string().optional(),
+  ogImage: z.string().optional(),
+  seoNoIndex: z.string().optional(),
+  faqContent: z.string().optional(),
   targetAmount: z.coerce.number().min(0).max(1000000),
   goalType: z.enum(['FIXED', 'OPEN']),
   fundraisingMode: z.enum(['AMOUNT', 'SHARES']),
@@ -298,6 +307,15 @@ export default function EditCampaignPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
+      slug: '',
+      seoTitle: '',
+      seoDescription: '',
+      seoKeyword: '',
+      ogTitle: '',
+      ogDescription: '',
+      ogImage: '',
+      seoNoIndex: 'false',
+      faqContent: '[]',
       targetAmount: 0,
       goalType: 'FIXED',
       fundraisingMode: 'AMOUNT',
@@ -365,6 +383,15 @@ export default function EditCampaignPage() {
         const imgs = Array.isArray(campaign.images) ? campaign.images : [];
         form.reset({
           title: campaign.title ?? '',
+          slug: campaign.slug ?? '',
+          seoTitle: campaign.seoTitle ?? '',
+          seoDescription: campaign.seoDescription ?? '',
+          seoKeyword: campaign.seoKeyword ?? '',
+          ogTitle: campaign.ogTitle ?? '',
+          ogDescription: campaign.ogDescription ?? '',
+          ogImage: campaign.ogImage ?? '',
+          seoNoIndex: campaign.seoNoIndex ?? 'false',
+          faqContent: campaign.faqContent ?? '[]',
           targetAmount: Number(campaign.targetAmount) || 0,
           goalType: safeGoal,
           fundraisingMode: safeMode,
@@ -386,12 +413,20 @@ export default function EditCampaignPage() {
           title_en: (en?.title && String(en.title).trim()) || (campaign.title && String(campaign.title).trim()) || '',
           ...Object.fromEntries(
             TRANSLATION_LOCALES.flatMap((l): Array<[string, string]> => {
-              if (l === 'en') return [[localeKey('image', l), en?.image || ''], [localeKey('videoUrl', l), en?.videoUrl || '']];
               const t = getTr(l);
               return [
-                [localeKey('title', l), t?.title || ''],
+                [localeKey('title', l), (t?.title && String(t.title).trim()) || (l === 'en' ? (campaign.title && String(campaign.title).trim()) || '' : '')],
                 [localeKey('image', l), t?.image || ''],
                 [localeKey('videoUrl', l), t?.videoUrl || ''],
+                [localeKey('slug', l), t?.slug || ''],
+                [localeKey('seoTitle', l), t?.seoTitle || ''],
+                [localeKey('seoDescription', l), t?.seoDescription || ''],
+                [localeKey('seoKeyword', l), t?.seoKeyword || ''],
+                [localeKey('ogTitle', l), t?.ogTitle || ''],
+                [localeKey('ogDescription', l), t?.ogDescription || ''],
+                [localeKey('ogImage', l), t?.ogImage || ''],
+                [localeKey('seoNoIndex', l), t?.seoNoIndex || 'false'],
+                [localeKey('faqContent', l), t?.faqContent || '[]'],
               ];
             })
           ),
@@ -411,6 +446,25 @@ export default function EditCampaignPage() {
 
     fetchData();
   }, [params.id, locale, form, router]);
+
+  useEffect(() => {
+    const onSeoDraft = (event: Event) => {
+      const detail = (event as CustomEvent<Record<string, unknown>>).detail;
+      const targetLocale = detail?.locale;
+      if (detail?.type !== 'campaign' || (targetLocale !== 'ar' && !isTranslationLocale(String(targetLocale)))) return;
+      const fields = ['seoTitle', 'seoDescription', 'seoKeyword', 'faqContent'] as const;
+      for (const field of fields) {
+        const value = detail[field];
+        if (typeof value !== 'string') continue;
+        const name = targetLocale === 'ar' ? field : localeKey(field, targetLocale as TranslationLocale);
+        form.setValue(name as keyof FormValues, value as never, { shouldDirty: true, shouldValidate: true });
+      }
+      setActiveTab(targetLocale as FormLocale);
+      toast.success(dt("تم إدراج المسودة في النموذج؛ راجعها ثم احفظ المشروع."));
+    };
+    window.addEventListener('seo-assistant:apply-to-form', onSeoDraft);
+    return () => window.removeEventListener('seo-assistant:apply-to-form', onSeoDraft);
+  }, [form]);
 
   useEffect(() => {
     const fetchUpdates = async () => {
@@ -449,6 +503,15 @@ export default function EditCampaignPage() {
         Number(values.currentAmount) !== Number(originalCurrentAmount);
       const requestData: Record<string, unknown> = {
         title: values.title,
+        slug: values.slug,
+        seoTitle: values.seoTitle,
+        seoDescription: values.seoDescription,
+        seoKeyword: values.seoKeyword,
+        ogTitle: values.ogTitle,
+        ogDescription: values.ogDescription,
+        ogImage: values.ogImage,
+        seoNoIndex: values.seoNoIndex || 'false',
+        faqContent: values.faqContent || '[]',
         description: descriptionAr || '',
         goalType: values.goalType,
         fundraisingMode: values.fundraisingMode,
@@ -471,8 +534,17 @@ export default function EditCampaignPage() {
             const description = descriptions[locale] ?? null;
             const image = values[localeKey('image', locale)] ?? '';
             const videoUrl = values[localeKey('videoUrl', locale)] ?? '';
-            if (locale !== 'en' && !title && isDescEmpty(description) && !image && !videoUrl) return [];
-            return [[locale, { title, description: description ?? EMPTY_TIPTAP_DOC_JSON, image, videoUrl }]];
+            const slug = String(values[localeKey('slug', locale)] ?? '');
+            const seoTitle = String(values[localeKey('seoTitle', locale)] ?? '');
+            const seoDescription = String(values[localeKey('seoDescription', locale)] ?? '');
+            const seoKeyword = String(values[localeKey('seoKeyword', locale)] ?? '');
+            const ogTitle = String(values[localeKey('ogTitle', locale)] ?? '');
+            const ogDescription = String(values[localeKey('ogDescription', locale)] ?? '');
+            const ogImage = String(values[localeKey('ogImage', locale)] ?? '');
+            const seoNoIndex = String(values[localeKey('seoNoIndex', locale)] ?? 'false');
+            const faqContent = String(values[localeKey('faqContent', locale)] ?? '[]');
+            if (locale !== 'en' && !title && isDescEmpty(description) && !image && !videoUrl && !slug && !seoTitle && !seoDescription && !seoKeyword && !ogTitle && !ogDescription && !ogImage && seoNoIndex !== 'true' && faqContent === '[]') return [];
+            return [[locale, { title, description: description ?? EMPTY_TIPTAP_DOC_JSON, image, videoUrl, slug, seoTitle, seoDescription, seoKeyword, ogTitle, ogDescription, ogImage, seoNoIndex, faqContent }]];
           })
         ),
         suggestedDonations:
@@ -1045,6 +1117,7 @@ export default function EditCampaignPage() {
                   arabic={{ title: form.watch('title') ?? '', description: descriptionAr }}
                   onTranslated={applyTranslations}
                 />
+                <CampaignArabicSeoFields form={form} />
               </TabsContent>
 
               <CampaignLocaleTabContents

@@ -539,25 +539,27 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                     <div
                       key={suggestion.id}
                       className="upsell-card"
-                      style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, padding: "14px 16px", background: "#fff", border: "1px solid var(--border)", borderRadius: 10, transition: "all .18s ease" }}
+                      style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", alignItems: "stretch", gap: 10, padding: "14px 16px", background: "#fff", border: "1px solid var(--border)", borderRadius: 10, transition: "all .18s ease" }}
                     >
-                      <b style={{ flex: "1 1 100%", minWidth: 0, display: "inline-flex", alignItems: "flex-start", gap: 9, fontSize: 14, fontWeight: 900, lineHeight: 1.65, color: "var(--deep)", overflowWrap: "anywhere" }}>
+                      <b className="upsell-title" style={{ minWidth: 0, display: "inline-flex", alignItems: "flex-start", gap: 9, fontSize: 14, fontWeight: 900, lineHeight: 1.65, color: "var(--deep)", overflowWrap: "anywhere" }}>
                         <span aria-hidden="true" style={{ flex: "0 0 auto", width: 5, height: 5, background: "var(--gold)", transform: "rotate(45deg)", marginTop: 8 }} />
                         {suggestion.label}
                       </b>
-                      <div style={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 7, minWidth: 0, flex: "0 1 auto" }}>
+                      <div className="upsell-amounts">
                         {suggestion.amounts.map((value) => (
                           <button
                             key={value}
                             type="button"
                             onClick={() => suggestion.add(value)}
                             className="upsell-amt"
-                            style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 34, padding: "0 12px", borderRadius: 999, border: "1px solid var(--border)", background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", transition: "all .18s ease" }}
+                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4, minWidth: 0, height: 44, padding: "0 10px", borderRadius: 999, border: "1px solid var(--border)", background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", transition: "all .18s ease" }}
                           >
                             <span aria-hidden="true" style={{ fontWeight: 900 }}>+</span>
                             <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{suggestion.localAmounts ? formatLocal(value) : format(value)}</span>
                           </button>
                         ))}
+                      </div>
+                      <div className="upsell-actions">
                         <input
                           value={customUpsell[suggestion.id] ?? ""}
                           onChange={(e) => setCustomUpsell((c) => ({ ...c, [suggestion.id]: decimalAmount(e.target.value) }))}
@@ -565,7 +567,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           placeholder={t("suggestedAmount")}
                           aria-label={t("suggestedAmount")}
                           className="upsell-custom-input"
-                          style={{ flex: "0 1 auto", width: "9ch", minWidth: "7ch", height: 34, padding: "0 10px", borderRadius: 999, border: "1px dashed rgba(211,154,39,.65)", background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
+                          style={{ flex: "1 1 auto", width: "auto", minWidth: 0, height: 44, padding: "0 12px", borderRadius: 999, border: "1px dashed rgba(211,154,39,.65)", background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
                         />
                         <button
                           type="button"
@@ -575,7 +577,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           }}
                           aria-label={tCommon("add")}
                           className="upsell-add"
-                          style={{ flex: "0 0 auto", width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 999, border: 0, background: "var(--red)", color: "#fff", cursor: "pointer", transition: "all .18s ease" }}
+                          style={{ flex: "0 0 auto", width: 44, height: 44, display: "grid", placeItems: "center", borderRadius: 999, border: 0, background: "var(--red)", color: "#fff", cursor: "pointer", transition: "all .18s ease" }}
                         >
                           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
                             <path d="M12 5v14M5 12h14" />
@@ -583,7 +585,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         </button>
                       </div>
                       {upsellMinHint === suggestion.id ? (
-                        <span role="alert" style={{ flex: "1 1 100%", fontSize: 12.5, fontWeight: 800, color: "var(--red)" }}>
+                        <span role="alert" style={{ fontSize: 12.5, fontWeight: 800, color: "var(--red)" }}>
                           {tGive("minAmount", { amount: minLabel })}
                         </span>
                       ) : null}
@@ -681,7 +683,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 >
                   <b style={{ fontSize: 15, fontWeight: 900, color: "var(--deep)" }}>{tTeam("title")}</b>
                   <span style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.7 }}>{tTeam("lead")}</span>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  <div className="cart-team-options" style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                     <button
                       type="button"
                       onClick={() => chooseTeamSupport(0)}
@@ -720,13 +722,13 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       dir="ltr"
                       placeholder={tTeam("customAmount")}
                       aria-label={tTeam("customAmount")}
-                      style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 34, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamAmount > 0 && !teamAmounts.includes(teamAmount) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
+                      style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 44, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamAmount > 0 && !teamAmounts.includes(teamAmount) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
                     />
                   </div>
                   {/* A recurring basket lets the donor decide whether the
                       support rides along with each instalment or is paid once. */}
                   {recurringBasket && teamAmount > 0 ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    <div className="cart-team-recurring-options" style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                       <button type="button" onClick={() => chooseTeamRecurring(true)} aria-pressed={teamRecurring} style={teamPill(teamRecurring)}>
                         {tTeam("billWithPlan")}
                       </button>

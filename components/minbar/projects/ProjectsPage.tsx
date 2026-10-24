@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { localeDirection } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
@@ -61,7 +60,6 @@ export interface ProjectsPageProps {
 
 export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
   const locale = useLocale();
-  const dir = localeDirection(locale);
   const t = useTranslations("projects");
   const tCommon = useTranslations("common");
   const tHome = useTranslations("homepage");

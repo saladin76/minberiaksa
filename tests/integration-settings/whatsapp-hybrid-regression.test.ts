@@ -86,7 +86,8 @@ test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-
 });
 test("dashboard topbar makes unanswered WhatsApp conversations visually prominent", () => {
   requires("app/(dashboard)/dashboard/DashboardLayoutClient.tsx", [/filter=needsReply/, /setInterval\(run, 30000\)/]);
-  requires("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx", [/بانتظار رد/, /animate-ping/, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/]);
+  requires("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx", [/href="\/dashboard\/communication\/inbox"/, /WhatsappMark/, /animate-ping/, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/, /href="\/dashboard\/inbox"/]);
+  requires("lib/dashboard/nav-config.ts", [], [/href: "\/dashboard\/communication\/inbox"/, /href: "\/dashboard\/inbox"/]);
 });
 test("campaign wizard never assumes an error response is JSON", () => {
   requires("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx", [/async function readApiJson/, /await response\.text\(\)/, /HTTP \$\{response\.status\}/], [/const listJson = await listRes\.json\(\)/, /const json = await res\.json\(\)/]);

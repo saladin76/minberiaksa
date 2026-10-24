@@ -25,17 +25,11 @@ import { LocaleFormTabs, collectLocaleTranslations, type LocaleFormField } from 
 import {
   CategoryPageSection,
   emptyCategoryPage,
-  emptyCategoryValue,
-  emptyCategoryCard,
   parseAmountList,
   currencyRowsToMap,
   donateTargetPayload,
-  CATEGORY_VALUE_TRANSLATION_FIELDS,
-  CATEGORY_CARD_TRANSLATION_FIELDS,
   type CategoryPageValues,
 } from '../_components/CategoryPageSection';
-import { translationsFromRows } from '../../_components/ContentTranslationTabs';
-import type { ContentOption } from '../../super-categories/_components/ContentPicker';
 import { TRANSLATION_LOCALES, localeDefaults, localeKey, type TranslationLocale } from '../../_components/locale-form';
 import { CategoryIconPicker } from '../_components/CategoryIconPicker';
 import { dt } from "@/lib/dashboard/i18n";

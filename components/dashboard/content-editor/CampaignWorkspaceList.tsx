@@ -10,9 +10,13 @@ import {
   Filter,
   CheckCircle2,
   Languages,
+  FolderKanban,
 } from "lucide-react";
 import { SUPPORTED_LOCALES } from "@/lib/locales";
 import { ContentLocalizationAuditCard } from "@/app/(dashboard)/dashboard/_components/ContentLocalizationAuditCard";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { ContentMetricStrip } from "@/components/dashboard/content-editor/ContentMetricStrip";
+import { dt, dtx } from "@/lib/dashboard/i18n";
 type State = { complete: boolean; seoComplete: boolean; reviewed: boolean };
 type Row = {
   id: string;
@@ -94,15 +98,15 @@ export function CampaignWorkspaceList() {
         all.push(...data.items);
         cursor = data.nextCursor;
         if (cursor && seen.has(cursor))
-          throw new Error("تعذر متابعة تحميل المشاريع");
+          throw new Error(dt("تعذّر متابعة تحميل المشاريع"));
         if (cursor) seen.add(cursor);
         if (seen.size > 500)
-          throw new Error("القائمة أكبر من حد التحميل؛ ضيّق نطاق البيانات");
+          throw new Error(dt("القائمة أكبر من حد التحميل؛ ضيّق نطاق البيانات"));
       } while (cursor);
       setRows(all);
       setSelected([]);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "تعذر التحميل");
+      setMessage(e instanceof Error ? e.message : dt("تعذّر التحميل"));
     } finally {
       setLoading(false);
     }
@@ -178,13 +182,16 @@ export function CampaignWorkspaceList() {
   ) => {
     if (busy || !items.length) return;
     if (items.length > 50) {
-      setMessage("اختر 50 مشروعًا على الأكثر للعملية الواحدة.");
+      setMessage(dt("اختر 50 مشروعًا على الأكثر للعملية الواحدة."));
       return;
     }
     if (
       action !== "order" &&
       !window.confirm(
-        `تأكيد ${action === "archive" ? "أرشفة" : action === "disable" ? "تعطيل" : action === "restore" ? "استعادة ونشر" : "تفعيل"} ${items.length} مشروع؟ لن تتغير التبرعات أو إيصالاتها.`,
+        dt("تأكيد {0} {1} مشروعًا؟ لن تتغير التبرعات أو إيصالاتها.", [
+          action === "archive" ? dt("أرشفة") : action === "disable" ? dt("تعطيل") : action === "restore" ? dt("استعادة ونشر") : dt("تفعيل"),
+          items.length,
+        ]),
       )
     )
       return;
@@ -198,9 +205,9 @@ export function CampaignWorkspaceList() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       await load();
-      setMessage("تم الحفظ وإعادة قراءة القائمة.");
+      setMessage(dt("تم الحفظ وإعادة قراءة القائمة."));
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "تعذر الحفظ");
+      setMessage(e instanceof Error ? e.message : dt("تعذّر الحفظ"));
     } finally {
       setBusy(false);
     }
@@ -213,7 +220,7 @@ export function CampaignWorkspaceList() {
         .map(({ id, revision }) => ({ id, revision })),
     );
   const saveView = () => {
-    const name = window.prompt("اسم العرض المحفوظ");
+    const name = window.prompt(dt("اسم العرض المحفوظ"));
     if (!name?.trim()) return;
     const next = [
       ...views.filter((v) => v.name !== name.trim()),
@@ -223,22 +230,17 @@ export function CampaignWorkspaceList() {
       localStorage.setItem(storageKey, JSON.stringify(next));
       setViews(next);
     } catch {
-      setMessage("تعذر حفظ العرض في هذا المتصفح.");
+      setMessage(dt("تعذّر حفظ العرض في هذا المتصفح."));
     }
   };
   return (
     <div dir="rtl" className="mx-auto max-w-[1500px] space-y-5 text-slate-800">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs text-slate-400">
-            إدارة المحتوى / المشاريع
-          </p>
-          <h1 className="text-3xl font-bold">المشاريع</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            تحرير المحتوى واللغات، ترتيب الظهور ومراجعة جاهزية المشاريع.
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        eyebrow={dt("استوديو المحتوى")}
+        title={dt("المشاريع")}
+        description={dt("حرّر المحتوى والترجمات، رتّب الظهور، وتابع جاهزية كل مشروع للنشر.")}
+        icon={FolderKanban}
+        actions={<div className="flex flex-wrap gap-2">
           <button
             className={btn}
             type="button"
@@ -246,49 +248,30 @@ export function CampaignWorkspaceList() {
             onClick={() => void load()}
           >
             <RefreshCw size={16} />
-            تحديث
+            {dt("تحديث")}
           </button>
           <Link
             href="/dashboard/campaigns/new"
             className={btn + " !bg-brand text-white"}
           >
             <Plus size={16} />
-            مشروع جديد
+            {dt("مشروع جديد")}
           </Link>
-        </div>
-      </header>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["المشاريع المعروضة", filtered.length, rows.length + " في القائمة"],
-          ["ترجمات مكتملة", stats.complete, "من " + stats.total],
-          ["إعدادات البحث", stats.seo, "من " + stats.total],
-          ["مراجعة تحريرية", stats.reviewed, "من " + stats.total],
-        ].map(([label, value, note], i) => (
-          <section key={label} className="rounded-xl border bg-white p-5">
-            <div className="flex justify-between text-sm text-slate-500">
-              <span>{label}</span>
-              {i === 0 ? (
-                <Filter size={17} />
-              ) : i === 1 ? (
-                <Languages size={17} />
-              ) : (
-                <CheckCircle2 size={17} />
-              )}
-            </div>
-            <strong className="my-3 block text-3xl">{value}</strong>
-            <small className="text-slate-400">
-              {note} · وفق الفلاتر الحالية
-            </small>
-          </section>
-        ))}
-      </div>
+        </div>}
+      />
+      <ContentMetricStrip items={[
+        { label: dt("المشاريع المعروضة"), value: filtered.length, detail: dt("من {0} مشروعًا في القائمة", [rows.length]), icon: Filter, tone: "brand" },
+        { label: dt("ترجمات مكتملة"), value: stats.complete, detail: dt("من أصل {0} موضع ترجمة", [stats.total]), icon: Languages, tone: "green" },
+        { label: dt("بيانات SEO مكتملة"), value: stats.seo, detail: dt("من أصل {0} موضع ترجمة", [stats.total]), icon: CheckCircle2, tone: "amber" },
+        { label: dt("مراجعات تحريرية مكتملة"), value: stats.reviewed, detail: dt("من أصل {0} موضع ترجمة", [stats.total]), icon: CheckCircle2, tone: "slate" },
+      ]} />
       <section className="overflow-hidden rounded-xl border bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 pt-3">
-          <nav aria-label="حالة المشاريع" className="flex gap-5">
+          <nav aria-label={dt("حالة المشاريع")} className="flex gap-5">
             {[
-              ["active", "النشطة"],
-              ["inactive", "غير النشطة"],
-              ["archive", "الأرشيف"],
+              ["active", dt("النشطة")],
+              ["inactive", dt("غير النشطة")],
+              ["archive", dt("الأرشيف")],
             ].map(([id, label]) => (
               <button
                 type="button"
@@ -313,7 +296,7 @@ export function CampaignWorkspaceList() {
             ))}
           </nav>
           <button type="button" className={btn + " mb-2"} onClick={saveView}>
-            حفظ هذا العرض
+            {dt("حفظ هذا العرض")}
           </button>
         </div>
         {views.length ? (
@@ -334,7 +317,7 @@ export function CampaignWorkspaceList() {
                 </button>
                 <button
                   type="button"
-                  aria-label={"حذف العرض " + v.name}
+                  aria-label={dt("حذف العرض {0}", [v.name])}
                   className="px-2 text-slate-400"
                   onClick={() => {
                     const next = views.filter((x) => x.name !== v.name);
@@ -342,7 +325,7 @@ export function CampaignWorkspaceList() {
                       localStorage.setItem(storageKey, JSON.stringify(next));
                       setViews(next);
                     } catch {
-                      setMessage("تعذر حذف العرض المحفوظ.");
+                      setMessage(dt("تعذّر حذف العرض المحفوظ."));
                     }
                   }}
                 >
@@ -359,20 +342,20 @@ export function CampaignWorkspaceList() {
               className="absolute right-3 top-3 text-slate-400"
             />
             <input
-              aria-label="البحث في المشاريع"
+              aria-label={dt("البحث في المشاريع")}
               className={input + " w-full pr-9"}
-              placeholder="بحث بكل اللغات أو معرّف المشروع…"
+              placeholder={dt("بحث بكل اللغات أو معرّف المشروع…")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
           <select
-            aria-label="فلترة التصنيف"
+            aria-label={dt("فلترة التصنيف")}
             className={input}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            <option value="all">جميع التصنيفات</option>
+            <option value="all">{dt("جميع التصنيفات")}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -380,26 +363,26 @@ export function CampaignWorkspaceList() {
             ))}
           </select>
           <select
-            aria-label="فلترة الإنجاز"
+            aria-label={dt("فلترة الإنجاز")}
             className={input}
             value={progress}
             onChange={(e) => setProgress(e.target.value)}
           >
-            <option value="all">كل المشاريع</option>
-            <option value="ongoing">قيد الإنجاز / مفتوح</option>
-            <option value="complete">مكتمل الهدف</option>
+            <option value="all">{dt("كل المشاريع")}</option>
+            <option value="ongoing">{dt("قيد الإنجاز / مفتوح")}</option>
+            <option value="complete">{dt("مكتمل الهدف")}</option>
           </select>
           <label className="flex items-center gap-2 text-slate-400">
             <ArrowDownUp size={16} />
             <select
-              aria-label="ترتيب المشاريع"
+              aria-label={dt("ترتيب المشاريع")}
               className={input}
               value={sort}
               onChange={(e) => setSort(e.target.value)}
             >
-              <option value="priority">ترتيب الظهور</option>
-              <option value="title">العنوان</option>
-              <option value="raised">الأكثر تحصيلًا</option>
+              <option value="priority">{dt("ترتيب الظهور")}</option>
+              <option value="title">{dt("العنوان")}</option>
+              <option value="raised">{dt("الأكثر تحصيلًا")}</option>
             </select>
           </label>
         </div>
@@ -413,7 +396,7 @@ export function CampaignWorkspaceList() {
         ) : null}
         {selected.length ? (
           <div className="mx-5 mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-brand/5 p-3">
-            <span className="me-auto text-sm">{selected.length} محدد</span>
+            <span className="me-auto text-sm">{dtx("محدد: {0}", [selected.length])}</span>
             {tab === "archive" ? (
               <button
                 type="button"
@@ -421,7 +404,7 @@ export function CampaignWorkspaceList() {
                 disabled={busy}
                 onClick={() => bulk("restore")}
               >
-                استعادة ونشر
+                {dt("استعادة ونشر")}
               </button>
             ) : (
               <>
@@ -431,7 +414,7 @@ export function CampaignWorkspaceList() {
                   disabled={busy}
                   onClick={() => bulk(tab === "active" ? "disable" : "enable")}
                 >
-                  {tab === "active" ? "تعطيل المحدد" : "تفعيل المحدد"}
+                  {tab === "active" ? dt("تعطيل المحدد") : dt("تفعيل المحدد")}
                 </button>
                 <button
                   type="button"
@@ -439,7 +422,7 @@ export function CampaignWorkspaceList() {
                   disabled={busy}
                   onClick={() => bulk("archive")}
                 >
-                  أرشفة المحدد
+                  {dt("أرشفة المحدد")}
                 </button>
               </>
             )}
@@ -451,7 +434,7 @@ export function CampaignWorkspaceList() {
               <tr>
                 <th className="w-10 p-4">
                   <input
-                    aria-label="تحديد مشاريع الصفحة"
+                    aria-label={dt("تحديد مشاريع الصفحة")}
                     type="checkbox"
                     disabled={loading || busy}
                     checked={
@@ -475,11 +458,11 @@ export function CampaignWorkspaceList() {
                   />
                 </th>
                 {[
-                  "الترتيب",
-                  "المشروع",
-                  "التصنيفات",
-                  "المحصّل / الهدف",
-                  "اللغات والمراجعة",
+                  dt("الترتيب"),
+                  dt("المشروع"),
+                  dt("التصنيفات"),
+                  dt("المحصّل / الهدف"),
+                  dt("اللغات والمراجعة"),
                   "",
                 ].map((h, i) => (
                   <th key={h + i} className="p-4 font-medium">
@@ -492,7 +475,7 @@ export function CampaignWorkspaceList() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-slate-500">
-                    تحميل المشاريع…
+                    {dt("تحميل المشاريع…")}
                   </td>
                 </tr>
               ) : (
@@ -505,7 +488,7 @@ export function CampaignWorkspaceList() {
                       <td className="p-4">
                         <input
                           type="checkbox"
-                          aria-label={"تحديد " + row.title}
+                          aria-label={dt("تحديد {0}", [row.title])}
                           checked={selected.includes(row.id)}
                           disabled={busy}
                           onChange={(e) =>
@@ -522,7 +505,7 @@ export function CampaignWorkspaceList() {
                           type="number"
                           min="0"
                           max="1000000"
-                          aria-label={"ترتيب " + row.title}
+                          aria-label={dt("ترتيب {0}", [row.title])}
                           className="w-16 rounded border p-2 text-center"
                           defaultValue={row.priority}
                           key={row.revision}
@@ -571,7 +554,7 @@ export function CampaignWorkspaceList() {
                         </p>
                         <small className="text-slate-400">
                           {row.goalType === "OPEN"
-                            ? "هدف مفتوح"
+                            ? dt("هدف مفتوح")
                             : `من $${row.targetAmount.toLocaleString("en-US")}`}
                         </small>
                         {row.goalType !== "OPEN" && row.targetAmount > 0 ? (
@@ -587,14 +570,14 @@ export function CampaignWorkspaceList() {
                       </td>
                       <td className="p-4">
                         <span>
-                          {done} / {SUPPORTED_LOCALES.length - 1} ترجمة
+                          {dtx("{0} / {1} ترجمة", [done, SUPPORTED_LOCALES.length - 1])}
                         </span>
                         <div className="mt-2 flex gap-1">
                           {SUPPORTED_LOCALES.filter((l) => l !== "ar").map(
                             (l) => (
                               <span
                                 key={l}
-                                title={`${l.toUpperCase()} · ${row.statuses[l]?.reviewed ? "مراجع" : row.statuses[l]?.complete ? "مكتمل" : "ناقص"}`}
+                                title={`${l.toUpperCase()} · ${row.statuses[l]?.reviewed ? dt("مراجع") : row.statuses[l]?.complete ? dt("مكتمل") : dt("ناقص")}`}
                                 className={`h-1.5 w-1.5 rounded-full ${row.statuses[l]?.reviewed ? "bg-emerald-600" : row.statuses[l]?.complete ? "bg-amber-500" : "bg-slate-200"}`}
                               />
                             ),
@@ -606,7 +589,7 @@ export function CampaignWorkspaceList() {
                           className={btn}
                           href={`/dashboard/campaigns/edit/${row.id}`}
                         >
-                          تحرير
+                          {dt("تحرير")}
                         </Link>
                       </td>
                     </tr>
@@ -616,7 +599,7 @@ export function CampaignWorkspaceList() {
               {!loading && !visible.length ? (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-slate-500">
-                    لا توجد مشاريع تطابق هذا العرض.
+                    {dt("لا توجد مشاريع تطابق هذا العرض.")}
                   </td>
                 </tr>
               ) : null}
@@ -625,7 +608,7 @@ export function CampaignWorkspaceList() {
         </div>
         <footer className="flex items-center justify-between p-4 text-xs text-slate-500">
           <span>
-            {filtered.length} مشروع · الصفحة {Math.min(page, pages)} من {pages}
+            {dtx("{0} مشروع · الصفحة {1} من {2}", [filtered.length, Math.min(page, pages), pages])}
           </span>
           <div className="flex gap-2">
             <button
@@ -634,7 +617,7 @@ export function CampaignWorkspaceList() {
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => p - 1)}
             >
-              السابق
+              {dt("السابق")}
             </button>
             <button
               type="button"
@@ -642,7 +625,7 @@ export function CampaignWorkspaceList() {
               disabled={page >= pages || loading}
               onClick={() => setPage((p) => p + 1)}
             >
-              التالي
+              {dt("التالي")}
             </button>
           </div>
         </footer>

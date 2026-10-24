@@ -6,6 +6,8 @@ import { rawCommand } from "@/lib/prisma-raw-command";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getRawTrackingSettings, TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
+import { encryptIntegrationSecret, integrationEncryptionKeyIsConfigured } from "@/lib/integration-settings/crypto";
+import { parseGa4ServiceAccountJson } from "@/lib/marketing/ga4-reporting";
 
 
 const PLAIN_FIELDS = [
@@ -44,9 +46,12 @@ type SecretField = (typeof SECRET_FIELDS)[number];
 type AnyTrackingField = PlainField | SecretField;
 
 type TrackingRaw = Partial<Record<AnyTrackingField | "id" | "_id" | "updatedBy", unknown>> & {
+  gaServiceAccountEncrypted?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
+
+const GA4_REPORT_CREDENTIAL_CONTEXT = "tracking-settings:ga4-service-account";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -110,6 +115,9 @@ function serializeSettings(raw: TrackingRaw | null) {
     output[`${field}Present`] = typeof secret === "string" && secret.trim().length > 0;
     output[`${field}Masked`] = maskSecret(secret);
   }
+
+  output.gaServiceAccountJsonPresent = typeof raw?.gaServiceAccountEncrypted === "string"
+    && raw.gaServiceAccountEncrypted.trim().length > 0;
 
   output.createdAt = normalizeDate(raw?.createdAt);
   output.updatedAt = normalizeDate(raw?.updatedAt);
@@ -235,6 +243,30 @@ export async function PUT(request: NextRequest) {
       },
       existing
     );
+
+    if (bodyRaw.clearGaServiceAccountJson === true) {
+      update.$unset.gaServiceAccountEncrypted = "";
+      update.changedFields.push("gaServiceAccountEncrypted");
+      update.secretFieldsChanged.gaServiceAccountJson = true;
+    } else if (typeof bodyRaw.gaServiceAccountJson === "string" && bodyRaw.gaServiceAccountJson.trim()) {
+      const rawServiceAccountJson = bodyRaw.gaServiceAccountJson.trim();
+      if (rawServiceAccountJson.length > 50_000) {
+        return NextResponse.json({ error: "INVALID_SERVICE_ACCOUNT_JSON" }, { status: 400 });
+      }
+      const serviceAccount = parseGa4ServiceAccountJson(rawServiceAccountJson);
+      if (!serviceAccount) {
+        return NextResponse.json({ error: "INVALID_SERVICE_ACCOUNT_JSON" }, { status: 400 });
+      }
+      if (!integrationEncryptionKeyIsConfigured()) {
+        return NextResponse.json({ error: "ENCRYPTION_KEY_NOT_CONFIGURED" }, { status: 503 });
+      }
+      update.$set.gaServiceAccountEncrypted = encryptIntegrationSecret(
+        JSON.stringify(serviceAccount),
+        GA4_REPORT_CREDENTIAL_CONTEXT,
+      );
+      update.changedFields.push("gaServiceAccountEncrypted");
+      update.secretFieldsChanged.gaServiceAccountJson = true;
+    }
     update.$set.updatedBy = actor.actorId;
 
     const saved = await persistRawSettings(update, existing);

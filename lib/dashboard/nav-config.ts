@@ -44,6 +44,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     get group() { return dt("الرئيسية"); },
     items: [
       { key: "revenue", get title() { return dt("اللوحة الرئيسية"); }, href: "/dashboard", icon: "layoutDashboard", keywords: ["home", "overview", "الرئيسية"] },
+      { key: "platformConnections", get title() { return dt("تحليلات Google Analytics"); }, href: "/dashboard/google-analytics", icon: "barChart", keywords: ["google analytics", "analytics", "ga4", "visitors", "pages", "traffic", "تحليلات", "زوار", "إحصاءات"] },
       { key: "monthly", get title() { return dt("التبرعات المتكررة"); }, href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "recurring", "daily", "weekly", "subscriptions", "اشتراكات", "شهري", "يومي", "جمعة"] },
       { key: "bankTransfers", get title() { return dt("التحويلات البنكية"); }, href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
       // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
@@ -106,16 +107,14 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "messages", get title() { return dt("البريد الإلكتروني"); }, href: "/dashboard/communication/email", icon: "mail", keywords: ["email", "بريد", "elastic"] },
       { key: "messages", get title() { return dt("واتساب"); }, href: "/dashboard/communication/whatsapp", icon: "messageCircle", keywords: ["whatsapp", "واتساب", "meta"] },
       // Replies were counted by the sidebar badge long before there was a screen to open.
-      { key: "messages", get title() { return dt("محادثات واتساب"); }, href: "/dashboard/communication/inbox", icon: "messageCircle", keywords: ["inbox", "replies", "صندوق", "ردود", "محادثات", "conversations"] },
       { key: "messages", get title() { return dt("الرسائل النصية"); }, href: "/dashboard/communication/sms", icon: "messageSquare", keywords: ["sms", "نصية", "netgsm", "brevo"] },
       { key: "templates", get title() { return dt("قوالب البريد والمحفّزات"); }, href: "/dashboard/templates", icon: "mail", keywords: ["email", "triggers", "محفزات"] },
       // Was the second tab of /dashboard/messages, behind a page that defaults to the outbound
       // log  so visitor mail had no sidebar entry and no command-palette hit. It is inbound
       // human correspondence, not send telemetry, and belongs beside the channels, not inside them.
-      { key: "badges", get title() { return dt("الشارات"); }, href: "/dashboard/badges", icon: "award", keywords: ["badges"] },
+      { key: "badges", get title() { return dt("تصنيفات المتبرعين"); }, href: "/dashboard/badges", icon: "award", keywords: ["donor categories", "donor lists", "badges", "قوائم المتبرعين"] },
       // The flat outbound send log (/dashboard/messages) is gone. Per-channel delivery detail lives
       // in البريد الإلكتروني / واتساب / الرسائل النصية above.
-      { key: "messages", get title() { return dt("الرسائل الواردة"); }, href: "/dashboard/inbox", icon: "inbox", keywords: ["inbox", "inbound", "contact", "واردة", "زوار", "تواصل"], badge: "inboxUnread" },
     ],
   },
   {
@@ -123,10 +122,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     // the AI concludes from those conversations, and its switches. One grant for the group.
     get group() { return dt("مساعد العطاء (AI)"); },
     items: [
-      { key: "aiConcierge", get title() { return dt("أداء المساعد"); }, href: "/dashboard/ai-concierge", icon: "sparkles", keywords: ["ai", "concierge", "assistant", "chat", "مساعد", "العطاء", "ذكاء", "analytics"] },
-      { key: "aiConcierge", get title() { return dt("محادثات المساعد"); }, href: "/dashboard/ai-concierge/conversations", icon: "messagesSquare", keywords: ["ai", "chats", "conversations", "transcripts", "محادثات", "دردشة"] },
-      { key: "aiConcierge", get title() { return dt("استنتاجات الذكاء الاصطناعي"); }, href: "/dashboard/ai-concierge/insights", icon: "lightbulb", keywords: ["ai", "insights", "summary", "تلخيص", "استنتاج", "تحليل"] },
-      { key: "aiConcierge", get title() { return dt("إعدادات المساعد"); }, href: "/dashboard/ai-concierge/settings", icon: "bot", keywords: ["ai", "settings", "concierge", "إعدادات", "مساعد"] },
+      { key: "aiConcierge", get title() { return dt("مساعد العطاء الذكي"); }, href: "/dashboard/ai-concierge", icon: "sparkles", keywords: ["ai", "concierge", "assistant", "chat", "مساعد", "العطاء", "ذكاء", "analytics", "conversations", "insights", "settings"] },
     ],
   },
   {
@@ -135,7 +131,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // The overview, أداء الحملات and التوصيات pages were removed; what is left is the part of
       // التسويق that owns real, first-party data: our own links and our own tracking.
       { key: "referrals", get title() { return dt("الروابط والإسناد"); }, href: "/dashboard/marketing/attribution", icon: "link", keywords: ["attribution", "referrals", "links", "utm"] },
-      { key: "pixels", get title() { return dt("التتبع والتحويلات"); }, href: "/dashboard/marketing/tracking", icon: "target", keywords: ["tracking", "pixels", "conversions", "capi"] },
     ],
   },
   {
@@ -145,7 +140,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // pages left are the ones that configure something: pixels, providers, and the health check.
       { key: "platformConnections", get title() { return dt("بكسلات التتبع"); }, href: "/dashboard/platform-connections/tracking", icon: "radar", keywords: ["pixels", "meta", "tiktok", "snap"] },
       { key: "platformConnections", get title() { return dt("مزودو التواصل والإرسال"); }, href: "/dashboard/platform-connections/communication", icon: "server", keywords: ["providers", "meta", "elastic email", "brevo", "netgsm", "whatsapp", "sms", "email"] },
-      { key: "platformConnections", get title() { return dt("فحص الاتصال"); }, href: "/dashboard/platform-connections/health", icon: "heartPulse", keywords: ["health", "status", "diagnostics"] },
       // No dedicated "telegram" permission key exists, and inventing one would need a matching
       // grant UI. It is an outbound integration, so it sits under platformConnections with the
       // other providers. Donation notifications depend on this page being configurable.
@@ -155,7 +149,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     get group() { return dt("الإدارة"); },
     items: [
-      { key: "archive", get title() { return dt("الأرشيف"); }, href: "/dashboard/archive/collections", icon: "archive", keywords: ["archive", "files", "assets", "أرشيف", "ملفات"] },
       { key: "team", get title() { return dt("الفريق"); }, href: "/dashboard/users/team", icon: "userCog", keywords: ["team", "staff", "permissions", "صلاحيات"] },
       { key: "generalSettings", get title() { return dt("الإعدادات"); }, href: "/dashboard/general/payment-gateways", icon: "settings", keywords: ["settings", "payment", "gateways", "stripe"] },
       { key: "logs", get title() { return dt("سجلات النظام"); }, href: "/dashboard/logs", icon: "scrollText", keywords: ["logs", "audit", "system"] },
@@ -222,7 +215,7 @@ export const DASHBOARD_PERMISSION_ROWS: {
   { key: "templates", get group() { return dt("التواصل"); }, get title() { return dt("قوالب البريد والمحفّزات"); } },
   // The outbound send log page is gone; `messages` now grants the inbox and the per-channel
   // communication pages, which all check the same key.
-  { key: "badges", get group() { return dt("التواصل"); }, get title() { return dt("الشارات"); } },
+  { key: "badges", get group() { return dt("التواصل"); }, get title() { return dt("تصنيفات المتبرعين"); } },
   { key: "messages", get group() { return dt("التواصل"); }, get title() { return dt("الرسائل الواردة والتواصل"); } },
   // No sidebar item carries `ads` any more  the marketing overview, performance and
   // recommendations pages were removed. The key stays grantable because the route guard still
@@ -237,7 +230,7 @@ export const DASHBOARD_PERMISSION_ROWS: {
   // PATH_RULES and every archive API asks for it, but it was in no grant screen  so the archive
   // was admin-only in practice, and granting the المستندات action below could never take effect
   // because its holder could not reach the archive at all.
-  { key: "archive", get group() { return dt("الإدارة"); }, get title() { return dt("الأرشيف (ملفات التسويق والمجموعات)"); } },
+  { key: "archive", get group() { return dt("محتوى الموقع"); }, get title() { return dt("إدارة ملفات المحتوى المرفقة"); } },
   { key: "team", get group() { return dt("الإدارة"); }, get title() { return dt("الفريق"); } },
   // Today this key controls only the payment-gateway page (main gateway, PayFor):
   // where every new donation's money goes. Labelled so it is granted knowingly.
@@ -286,7 +279,7 @@ export const ACTION_PERMISSION_ROWS: {
   // contracts and licences on the other.
   {
     key: "archiveDocuments",
-    get title() { return dt("الأرشيف: المستندات الرسمية"); },
-    get description() { return dt("الوصول إلى ملفات المستندات (العقود، التراخيص، الملفات الرسمية) داخل الأرشيف. تُمنح مع صلاحية «الأرشيف»، ولا تُشتق منها لأن محتواها أكثر حساسية من ملفات التسويق."); },
+    get title() { return dt("ملفات المحتوى: المستندات الحساسة"); },
+    get description() { return dt("السماح بإدارة المستندات الرسمية الحساسة التي تستخدمها نماذج المحتوى، مثل العقود والتراخيص."); },
   },
 ];

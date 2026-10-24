@@ -3,8 +3,7 @@
 import { Suspense, type ReactNode } from "react";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 import { IMG } from "@/lib/minbar/content/media";
-import type { MinbarProject } from "@/lib/minbar/projects";
-import type { QuickDonationConfig } from "@/lib/minbar/quick-donation";
+import type { QuickDonationConfig, QuickDonationProjectOption } from "@/lib/minbar/quick-donation";
 import type { HomeSectionId } from "@/lib/minbar/home-layout";
 import type { HomeLists } from "@/lib/minbar/home-layout-read";
 import { Hero, VerseStrip } from "./TopSections";
@@ -42,7 +41,7 @@ export default function HomePage({
   sections: HomeSectionId[];
   lists: HomeLists;
   /** The quick-donation bar as the dashboard configured it, with every project it may list. */
-  quick: { config: QuickDonationConfig; projects: MinbarProject[] };
+  quick: { config: QuickDonationConfig; projects: QuickDonationProjectOption[] };
   /** Dashboard banners, already rendered on the server, one node per slot. */
   banners: { top: ReactNode; middle: ReactNode; bottom: ReactNode };
   signedIn: boolean;

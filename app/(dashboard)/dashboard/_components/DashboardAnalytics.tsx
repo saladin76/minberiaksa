@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +13,6 @@ import {
   Repeat,
   Calendar,
   Receipt,
-  Target,
-  Layers,
   BarChart3,
   PieChart as PieChartIcon,
   Search,
@@ -34,7 +32,6 @@ import {
   BarChart,
   Bar,
   Line,
-  AreaChart,
   Area,
   PieChart,
   Pie,

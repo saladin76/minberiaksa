@@ -25,6 +25,8 @@ export function createDataToPatch(
   data: IntegrationSettingCreateData
 ): IntegrationSettingPatch {
   const { provider: _provider, key: _key, ...patch } = data;
+  void _provider;
+  void _key;
   return patch;
 }
 

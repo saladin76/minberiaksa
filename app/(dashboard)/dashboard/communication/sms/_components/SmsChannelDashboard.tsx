@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   MessageSquare, Check, TriangleAlert, Search, Loader2, RefreshCw, Inbox, SlashIcon,
-  ChevronLeft, ChevronRight, Send, Globe, Flag, Layers, Zap,
+  ChevronLeft, ChevronRight, Send, Globe, Flag, Layers,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -353,9 +353,11 @@ export function SmsChannelDashboard() {
           <MetricSummaryBand
             icon={MessageSquare}
             eyebrow={dt("الرسائل النصية المرسلة")}
-            badge={dt("آخر {0} يومًا", [days])}
+            badge={campaignId ? dt("إجمالي الحملة") : dt("آخر {0} يومًا", [days])}
             value={summary.attempted.toLocaleString("en-US")}
-            note={dt("عدد الرسائل التي قبلها مزوّد SMS خلال الفترة. الفوترة تتم بالمقاطع  راجع بطاقة المقاطع.")}
+            note={campaignId
+              ? dt("عدد الرسائل التي قبلها مزوّد SMS في هذه الحملة. الفوترة تتم بالمقاطع  راجع بطاقة المقاطع.")
+              : dt("عدد الرسائل التي قبلها مزوّد SMS خلال الفترة. الفوترة تتم بالمقاطع  راجع بطاقة المقاطع.")}
             stats={[
               { label: dt("وصلت"), icon: Check, value: trackingLive ? summary.delivered.toLocaleString("en-US") : "—", hint: trackingLive ? `${summary.deliveredRate}%` : undefined },
               { label: dt("المقاطع"), icon: Layers, value: (data?.segments.segments ?? 0).toLocaleString("en-US") },
@@ -369,7 +371,9 @@ export function SmsChannelDashboard() {
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-[13px] font-semibold text-slate-900">{dt("حركة الإرسال")}</h2>
-              <SegmentedControl options={PERIODS} value={days} onChange={setDays} />
+              {campaignId
+                ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium text-slate-500">{dt("مدة الحملة كاملة")}</span>
+                : <SegmentedControl options={PERIODS} value={days} onChange={setDays} />}
             </div>
 
             {loading && !data ? (
@@ -595,6 +599,8 @@ export function SmsChannelDashboard() {
         channel="SMS"
         ids={retryIds ?? null}
         days={days}
+        campaignId={campaignId || null}
+        campaignName={campaignName}
         onOpenChange={(open) => !open && setRetryIds(undefined)}
         onFinished={() => void load()}
       />

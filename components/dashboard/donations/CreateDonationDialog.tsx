@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { AlertTriangle, Loader2, Plus, Search, X } from "lucide-react";
+import Image from "next/image";
 
 import {
   Dialog,
@@ -23,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { manualDonationRecordFields, type ManualDonationProvider } from "@/lib/donations/manual-donation-provider";
 
 interface CampaignOption {
   id: string;
@@ -56,6 +58,19 @@ interface Props {
 
 const CURRENCIES = ["USD", "EUR", "GBP", "TRY", "SAR", "AED", "EGP", "KWD", "QAR"];
 
+const MANUAL_PROVIDER_OPTIONS: Array<{
+  value: ManualDonationProvider;
+  label: string;
+  logo?: string;
+}> = [
+  { value: "BANK", label: "حساب بنكي" },
+  { value: "PAYFOR", label: "Ziraat Payfor" },
+  { value: "ALBARAKA", label: "Albaraka Türk" },
+  { value: "STRIPE", label: "Stripe" },
+  { value: "PAYPAL", label: "PayPal", logo: "/paypal.webp" },
+  { value: "CHARITY_GIVING", label: "Charity Giving", logo: "/charity-giving.png" },
+];
+
 /**
  * Admin "manually add donation" dialog. The server marks the row PAID + paidAt
  * immediately and increments campaign/category currentAmount, so this is the
@@ -80,10 +95,9 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
   const [newDonorEmail, setNewDonorEmail] = useState("");
 
   const [currency, setCurrency] = useState("USD");
-  // `provider` is the gateway/rail label stored on Donation.provider
-  // ("BANK" / "PAYFOR" / "ALBARAKA" / "STRIPE"). All are card-style rails, so
-  // Donation.paymentMethod is always CARD here.
-  const [provider, setProvider] = useState<"BANK" | "PAYFOR" | "ALBARAKA" | "STRIPE">("BANK");
+  // These values label the external source of a donation already collected.
+  // Saving this form records the donation; it never creates a gateway charge.
+  const [provider, setProvider] = useState<ManualDonationProvider>("BANK");
   const [teamSupport, setTeamSupport] = useState("0");
   const [notes, setNotes] = useState("");
   const [editableItems, setEditableItems] = useState<EditableItem[]>([
@@ -178,6 +192,7 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
     (donorMode === "EXISTING" && donor != null) ||
     (donorMode === "NEW" && newDonorName.trim().length > 0) ||
     donorMode === "UNKNOWN";
+  const selectedProvider = MANUAL_PROVIDER_OPTIONS.find((option) => option.value === provider) ?? MANUAL_PROVIDER_OPTIONS[0];
   const canSave =
     !submitting &&
     donorPickerValid &&
@@ -244,10 +259,9 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
         categoryItems,
         currency,
         teamSupport: teamSupportNumber,
-        // All three rails (BANK / PAYFOR / STRIPE) are card-style for the
-        // donation schema; the `provider` field is what distinguishes them.
-        paymentMethod: "CARD",
-        provider,
+        // This records the source of an already-collected donation. It must
+        // never select or invoke a checkout/payment rail.
+        ...manualDonationRecordFields(provider),
         notes: notes.trim() || null,
       });
       const created = res.data?.donorCreated === true;
@@ -446,19 +460,47 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">{dt("طريقة الدفع")}</label>
+              <label className="text-xs font-medium text-slate-700">{dt("مصدر التبرع")}</label>
               <Select
                 value={provider}
-                onValueChange={(v) => setProvider(v as "BANK" | "PAYFOR" | "ALBARAKA" | "STRIPE")}
+                onValueChange={(v) => setProvider(v as ManualDonationProvider)}
               >
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
+                  <span className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
+                    {selectedProvider.logo ? (
+                      <Image
+                        src={selectedProvider.logo}
+                        alt=""
+                        aria-hidden="true"
+                        width={60}
+                        height={20}
+                        className="h-5 w-[60px] shrink-0 rounded object-contain"
+                      />
+                    ) : null}
+                    <span className="min-w-0 truncate" title={selectedProvider.label}>
+                      {selectedProvider.value === "BANK" ? dt(selectedProvider.label) : selectedProvider.label}
+                    </span>
+                  </span>
+                  <SelectValue className="sr-only" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BANK" className="text-xs">{dt("حساب بنكي")}</SelectItem>
-                  <SelectItem value="PAYFOR" className="text-xs">Ziraat Payfor</SelectItem>
-                  <SelectItem value="ALBARAKA" className="text-xs">Albaraka Türk</SelectItem>
-                  <SelectItem value="STRIPE" className="text-xs">Stripe</SelectItem>
+                  {MANUAL_PROVIDER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="text-xs">
+                      <span className="flex items-center gap-2">
+                        {option.logo ? (
+                          <Image
+                            src={option.logo}
+                            alt=""
+                            aria-hidden="true"
+                            width={76}
+                            height={20}
+                            className="h-5 w-[76px] shrink-0 rounded object-contain"
+                          />
+                        ) : null}
+                        <span>{option.value === "BANK" ? dt(option.label) : option.label}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

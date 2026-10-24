@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tag } from "lucide-react";
 import {
-  SHARE_LABEL_LOCALES,
   buildShareLabelsPayload,
   type ShareLabelLocale,
   type ShareLabelsConfig,

@@ -37,6 +37,12 @@ import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
 const PATH_REDIRECTS: Record<string, string> = {};
 /** Legacy first segment → canonical first segment. */
 const HEAD_REDIRECTS: Record<string, string> = {};
+/** Exact public URLs copied by older Gaza ads; their obsolete nested paths
+ * should land on the live project catalogue rather than a missing route. */
+const ARABIC_EXACT_REDIRECTS: Record<string, string> = {
+  "relief-in-gaza": "bagislar",
+  "bagis/ar/project": "bagislar",
+};
 
 for (const overrides of Object.values(LEGACY_SLUGS)) {
   if (!overrides) continue;
@@ -80,6 +86,12 @@ export function redirectLegacyPath(pathname: string): string | null {
   if (!split) return null;
   const { locale, segments } = split;
   const decoded = segments.map(decode);
+
+  if (locale === "ar") {
+    const exactPath = decoded.filter(Boolean).join("/");
+    const exactTarget = ARABIC_EXACT_REDIRECTS[exactPath];
+    if (exactTarget) return `/${locale}/${exactTarget}`;
+  }
 
   /* Longest whole-path match first, so a two-segment slug wins over its own
      first segment. */

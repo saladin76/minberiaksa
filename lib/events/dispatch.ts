@@ -16,6 +16,7 @@ import type { SupportedLocale } from "@/lib/locales";
 import { donationAttachments, type EmailAttachment } from "@/lib/certificates/generate";
 import { ensureDonationDocuments } from "@/lib/certificates/issue";
 import { getServerBaseUrl } from "@/lib/server-base-url";
+import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-failure-link";
 
 export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_DONATION" | "USER_REGISTERED" | "SUBSCRIPTION_CREATED" | "SUBSCRIPTION_PAYMENT" | "SUBSCRIPTION_CANCELLED" | "DONATION_LAPSED";
 export interface EventDispatchInput { userId?: string; donationId?: string }
@@ -78,7 +79,10 @@ export async function sendTriggerMessage(
     const tpl = await prisma.emailTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
-    const html = await renderEmailHtml(variant.document as TReaderDocument, ctx);
+    const html = localizeDonationFailureLinks(
+      await renderEmailHtml(variant.document as TReaderDocument, ctx),
+      locale,
+    );
     const subject = renderEmailSubject(variant.subject, ctx);
     const routed = resolveTriggerSender(config, "EMAIL", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     /* A routing refusal is the answer, not a prompt to fall back to the default identity. */
@@ -91,7 +95,7 @@ export async function sendTriggerMessage(
     const tpl = await prisma.smsTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = mergeText(variant.body, ctx);
+    const body = localizeDonationFailureLinks(mergeText(variant.body, ctx), locale);
     const response = await sendAutomaticSmsMessage({
       triggerEvent: event,
       templateId: tpl.id,
@@ -113,7 +117,7 @@ export async function sendTriggerMessage(
     const tpl = await prisma.whatsappTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = mergeText(variant.body, ctx);
+    const body = localizeDonationFailureLinks(mergeText(variant.body, ctx), locale);
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
     const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId);

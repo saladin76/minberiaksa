@@ -89,6 +89,7 @@ export function userCanEditDonations(user: UserLike | undefined): boolean { retu
 export function userCanExportReports(user: UserLike | undefined): boolean { return userHasDashboardPermission(user, "reportsExport"); }
 
 const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
+  { prefix: "/dashboard/google-analytics", key: "platformConnections" },
   { prefix: "/dashboard/platform-connections", key: "platformConnections" },
   { prefix: "/dashboard/marketing/attribution", key: "referrals" },
   { prefix: "/dashboard/marketing/tracking", key: "pixels" },

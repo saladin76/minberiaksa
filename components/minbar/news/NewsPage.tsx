@@ -32,8 +32,6 @@ export default function NewsPage({ items }: NewsPageProps) {
   const locale = useLocale();
   const dir = localeDirection(locale);
   const tCommon = useTranslations("common");
-  const tSystem = useTranslations("system");
-
   const heroGradient = `linear-gradient(to ${dir === "rtl" ? "left" : "right"}, #7C2318, #A93428)`;
 
   /* Dates are formatted for the reader's language, so an Arabic page shows an

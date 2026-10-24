@@ -4,7 +4,7 @@ import { TranslationOverview } from "@/components/dashboard/content-editor/Trans
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Plus, Pencil, Trash2, Loader2, AlertTriangle, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, AlertTriangle, MapPin, CheckCircle2, Clock3, Languages } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ import { LOCALES } from '@/lib/locales';
 import { describePlacement, type BannerTone } from '@/lib/minbar/banner-placements';
 import { SortableTable, useReorder, type SortableColumn } from '../_components/SortableTable';
 import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 
 interface BannerRow {
   id: string;
@@ -210,29 +212,27 @@ export default function UrgentBannersPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={dt("الصفحة الرئيسية")}
+        title={dt("البانرات العاجلة")}
+        description={dt("أدر التنبيهات المؤقتة ومواضع ظهورها وجمهورها ومدتها. ترتيب القائمة يحدد أولوية العرض عند اجتماع بانرات في الموضع نفسه.")}
+        icon={AlertTriangle}
+        actions={<Button onClick={() => router.push('/dashboard/urgent-banners/new')}><Plus className="me-1 h-4 w-4" />{dt("بانر جديد")}</Button>}
+      />
+      <ContentMetricStrip items={[
+        { label: dt("ظاهرة الآن"), value: rows.filter((row) => row.isActive && !row.expired && !row.pending && row.placements.length > 0).length, detail: dt("مفعّلة ولها موضع ظهور"), icon: CheckCircle2, tone: "green" },
+        { label: dt("مجدولة"), value: rows.filter((row) => row.pending).length, detail: dt("تبدأ لاحقًا"), icon: Clock3, tone: "brand" },
+        { label: dt("بلا موضع"), value: rows.filter((row) => row.placements.length === 0).length, detail: dt("لن تظهر حتى تحديد موضع"), icon: MapPin, tone: "amber" },
+        { label: dt("ترجمات محفوظة"), value: rows.reduce((sum, row) => sum + row.translationCount, 0), detail: dt("لكل البانرات"), icon: Languages, tone: "slate" },
+      ]} />
       <TranslationOverview kind="urgent-banners" />
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">{dt("البانرات")}</h1>
-          <p className="text-xs text-slate-500">
-            {dt("بانرات مثل «شدّ الرحال» تضعها على أي صفحة وموضع. اسحب الصفوف لترتيبها  الأعلى هنا يظهر أولًا حيثما اجتمع بانران في موضع واحد.")}</p>
-        </div>
-        <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>
-          <Plus className="w-4 h-4 me-1" />
-          {dt("بانر جديد")}</Button>
-      </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={AlertTriangle}
           title={dt("لا توجد بانرات")}
           description={dt("أنشئ بانرًا واختر الصفحات التي يظهر فيها.")}
-          action={
-            <Button onClick={() => router.push('/dashboard/urgent-banners/new')}>
-              <Plus className="w-4 h-4 me-1" />
-              {dt("بانر جديد")}</Button>
-          }
         />
       ) : (
         <SortableTable

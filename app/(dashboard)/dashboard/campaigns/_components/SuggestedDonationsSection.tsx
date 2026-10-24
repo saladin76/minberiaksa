@@ -40,6 +40,7 @@ function makeRow(currency = "USD", amountsStr = ""): Row {
 }
 
 export type SuggestedDonationsPayload = {
+  defaultAmountUSD: number | null;
   amounts: number[];
   byCurrency: Record<string, number[]>;
   /** Up to three of `amounts` for the campaign card; empty = 100 / 500 / 1000. */
@@ -62,6 +63,7 @@ export const SuggestedDonationsSection = forwardRef<
   const [amountsStr, setAmountsStr] = useState(
     () => DEFAULT_SUGGESTED_DONATION_AMOUNTS.join(", ")
   );
+  const [defaultAmountStr, setDefaultAmountStr] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [cardAmounts, setCardAmounts] = useState<number[]>([]);
   /* The list as typed, for picking the card's three. */
@@ -79,6 +81,7 @@ export const SuggestedDonationsSection = forwardRef<
   useEffect(() => {
     const p = parseSuggestedDonations(initialConfig);
     setAmountsStr(p.amounts.join(", "));
+    setDefaultAmountStr(p.defaultAmountUSD == null ? "" : String(p.defaultAmountUSD));
     setCardAmounts(p.cardAmounts);
     setRows(
       Object.entries(p.byCurrency).map(([currency, amounts]) =>
@@ -98,7 +101,13 @@ export const SuggestedDonationsSection = forwardRef<
         const arr = parseAmountsInput(r.amountsStr);
         if (arr.length) byCurrency[code] = arr;
       }
-      return { amounts, byCurrency, cardAmounts: cardAmounts.filter((v) => amounts.includes(v)).slice(0, MAX_CARD_AMOUNTS) };
+      const parsedDefault = Number(defaultAmountStr);
+      return {
+        defaultAmountUSD: defaultAmountStr.trim() && Number.isSafeInteger(parsedDefault) && parsedDefault > 0 ? parsedDefault : null,
+        amounts,
+        byCurrency,
+        cardAmounts: cardAmounts.filter((v) => amounts.includes(v)).slice(0, MAX_CARD_AMOUNTS),
+      };
     },
   }));
 
@@ -117,7 +126,7 @@ export const SuggestedDonationsSection = forwardRef<
     <div className="space-y-4 md:col-span-2" dir={dashDir()}>
       <div>
         <Label htmlFor="suggested-amounts-default">
-          {dt("مبالغ التبرع المقترحة (جميع العملات)")}</Label>
+          {dt("مبالغ التبرع المقترحة بالدولار الأمريكي (USD)")}</Label>
         <Input
           id="suggested-amounts-default"
           className="mt-1.5 font-mono text-left"
@@ -127,7 +136,29 @@ export const SuggestedDonationsSection = forwardRef<
           placeholder={DEFAULT_SUGGESTED_DONATION_AMOUNTS.join(", ")}
         />
         <p className="text-sm text-muted-foreground mt-1.5">
-          {dt("أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تضف استثناءً أدناه. تظهر كلها في صفحة المشروع.")}</p>
+          {dt("هذه هي مبالغ الأساس بالدولار. تُحوّل حسب سعر الصرف عند العرض، ويمكنك تحديد مبالغ محلية بديلة لكل عملة أدناه. تظهر كلها في نموذج التبرع.")}</p>
+      </div>
+
+      <div>
+        <Label htmlFor="suggested-donation-default-amount">{dt("المبلغ الافتراضي عند فتح نموذج التبرع (USD)")}</Label>
+        <div className="mt-1.5 flex items-center gap-2">
+          <Input
+            id="suggested-donation-default-amount"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            className="font-mono text-left"
+            dir="ltr"
+            value={defaultAmountStr}
+            onChange={(event) => setDefaultAmountStr(event.target.value)}
+            placeholder={dt("اختياري")}
+          />
+          <span dir="ltr" className="shrink-0 text-sm font-semibold text-muted-foreground">USD</span>
+        </div>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {dt("أدخل عددًا صحيحًا بالدولار. يُعرض محددًا مسبقًا عند فتح النموذج ويمكن للمتبرع تغييره؛ لا يبدأ الدفع تلقائيًا.")}
+        </p>
       </div>
 
       <div className="space-y-2 rounded-lg border border-border p-4 bg-muted/30">
@@ -168,7 +199,7 @@ export const SuggestedDonationsSection = forwardRef<
         </div>
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            {dt("بدون استثناءات، تُطبّق القيم أعلاه على USD وEUR وجميع العملات الأخرى.")}</p>
+            {dt("تُحوّل مبالغ USD تلقائيًا للعملة المختارة عند توفر سعر صرف صالح. أضف استثناءً إذا أردت تحديد مبالغ مختلفة يدويًا.")}</p>
         ) : (
           <div className="space-y-3">
             {rows.map((row) => (

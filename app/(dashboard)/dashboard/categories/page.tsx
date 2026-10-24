@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 import {useRouter} from 'next/navigation';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Loader2, ArrowUpDown, Search, Crown, Archive, PowerOff, RotateCcw, Globe } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, ArrowUpDown, Search, Crown, Archive, PowerOff, RotateCcw, Globe, CheckCircle2, FolderOpen } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { FilterBar } from '@/components/dashboard/FilterBar';
 import { EmptyState } from '@/components/dashboard/EmptyState';
@@ -49,6 +49,7 @@ import { DashboardLocaleSwitcher } from '../_components/DashboardLocaleSwitcher'
 import { CategoryCampaignPriorityDialog } from './_components/CategoryCampaignPriorityDialog';
 import { ContentLocalizationAuditCard } from '../_components/ContentLocalizationAuditCard';
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 
 interface Category {
   id: string;
@@ -314,10 +315,10 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <TranslationOverview kind="categories" scopeIds={filteredCategories.map(c=>c.id)} />
       <PageHeader
+        eyebrow={dt("المشاريع والتصنيفات")}
         title={dt("التصنيفات")}
-        description={dt("إدارة التصنيفات ومشاريعها")}
+        description={dt("نظّم المشاريع ضمن تصنيفات واضحة، وراجع الظهور والترجمات وترتيب المشاريع داخل كل تصنيف.")}
         icon={Globe}
         actions={
           <>
@@ -354,6 +355,18 @@ export default function CategoriesPage() {
           </>
         }
       />
+
+      <div className="mb-4">
+        <ContentMetricStrip items={[
+          { label: dt("التصنيفات النشطة"), value: categories.filter((category) => category.isActive).length, detail: dt("متاحة في قوائم الموقع"), icon: CheckCircle2, tone: "green" },
+          { label: dt("في الأرشيف"), value: archivedCategories.length, detail: dt("مخفية دون حذف المشاريع"), icon: Archive, tone: "slate" },
+          { label: dt("بها مشاريع"), value: categories.filter((category) => Number(category.campaignCount ?? category.campaigns.length) > 0).length, detail: dt("تصنيفات مرتبطة بمشاريع"), icon: FolderOpen, tone: "brand" },
+          { label: dt("مشاريع مصنّفة"), value: categories.reduce((sum, category) => sum + Number(category.campaignCount ?? category.campaigns.length), 0), detail: dt("إجمالي الارتباطات الحالية"), icon: Globe, tone: "amber" },
+        ]} />
+      </div>
+      <div className="mb-4">
+        <TranslationOverview kind="categories" scopeIds={filteredCategories.map(c=>c.id)} />
+      </div>
 
       <div className="mb-4">
         <ContentLocalizationAuditCard section="categories" />

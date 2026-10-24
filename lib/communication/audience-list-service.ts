@@ -283,11 +283,6 @@ export async function loadListMembers(listId: string): Promise<ResolvedListMembe
     ? await prisma.user.findMany({ where: { id: { in: donorIds } }, select: { id: true, name: true, email: true, phone: true, preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true } }).catch(() => [])
     : [];
   const dMap = new Map(donors.map((d) => [d.id, d]));
-  const profiles = donorIds.length
-    ? await prisma.donorCommunicationProfile.findMany({ where: { userId: { in: donorIds } }, select: { userId: true, emailOptIn: true, smsOptIn: true, doNotContact: true, consentSource: true } }).catch(() => [])
-    : [];
-  const pMap = new Map(profiles.map((p) => [p.userId, p]));
-
   const out: ResolvedListMember[] = [];
   for (const m of rows) {
     if (m.contactType === "DONOR" && m.userId) {

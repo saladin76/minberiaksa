@@ -6,8 +6,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getActiveMetaWhatsappRuntimeConfig } from "@/lib/communication/runtime-config";
-import { RETRYABLE_STATUSES } from "@/lib/communication/communication-runtime-types";
+import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { resolveVariantForLocale } from "@/lib/communication/whatsapp-template-sync";
+import { communicationPurposeWhere, parseCommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
     const from = sp.get("from") ? new Date(sp.get("from")!) : new Date(to.getTime() - days * 86_400_000);
 
     const status = sp.get("status") || "all";
+    const purposeGroup = parseCommunicationPurposeGroup(sp.get("purposeGroup"));
     const search = sp.get("search")?.trim() || "";
     const page = Math.max(1, parseInt(sp.get("page") || "1"));
     const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") || "25")));
@@ -52,9 +54,10 @@ export async function GET(request: NextRequest) {
     // and drops the date window while doing it. The campaign IS the range; keeping the default
     // 30 days would report zeros for any campaign sent earlier than that.
     const campaignId = sp.get("campaign")?.trim() || "";
+    const purposeWhere = communicationPurposeWhere(purposeGroup);
     const rangeWhere: Prisma.CommunicationDeliveryWhereInput = campaignId
-      ? { channel: CHANNEL, campaignId }
-      : { channel: CHANNEL, createdAt: { gte: from, lte: to } };
+      ? { channel: CHANNEL, campaignId, ...purposeWhere }
+      : { channel: CHANNEL, createdAt: { gte: from, lte: to }, ...purposeWhere };
 
     const listWhere: Prisma.CommunicationDeliveryWhereInput = { ...rangeWhere };
     if (status !== "all") {
@@ -74,11 +77,11 @@ export async function GET(request: NextRequest) {
 
     const [
       total, byStatus,
-      allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryableCount, activeSenders,
+      allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryPreflightResult, activeSenders,
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
-      prisma.communicationDelivery.count({ where: { channel: CHANNEL } }),
+      prisma.communicationDelivery.count({ where: { channel: CHANNEL, ...purposeWhere } }),
       prisma.communicationDelivery.findMany({
         where: listWhere,
         orderBy: { createdAt: "desc" },
@@ -109,13 +112,7 @@ export async function GET(request: NextRequest) {
       }),
       getActiveMetaWhatsappRuntimeConfig(),
       // Re-sendable backlog  see the identical note on the email route for the `isSet` arm.
-      prisma.communicationDelivery.count({
-        where: {
-          ...rangeWhere,
-          status: { in: [...RETRYABLE_STATUSES] },
-          OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }],
-        },
-      }),
+      retryPreflight({ channel: "WHATSAPP", purposeGroup, campaignId: campaignId || undefined, ...(campaignId ? {} : { from, to }) }),
       prisma.communicationSender.findMany({
         where: {
           channel: "WHATSAPP",
@@ -238,7 +235,7 @@ export async function GET(request: NextRequest) {
         repliedRate: rate(repliedCount), failedRate: observedAttempts>0 ? Math.round(failedCount/observedAttempts*1000)/10 : 0,
       },
       trackingLive,
-      retryableCount,
+      retryableCount: retryPreflightResult.eligible,
       provider: {
         configured: metaConfig.configured,
         reason: metaConfig.configured ? null : metaConfig.reason,

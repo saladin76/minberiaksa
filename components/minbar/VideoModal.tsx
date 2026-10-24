@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { describeVideoSource } from "@/lib/content/video-platform";
 
 /**
  * In-site YouTube player.
@@ -20,6 +21,7 @@ export function useVideoModal() {
 
 export default function VideoModal({ embed, onClose }: { embed: string | null; onClose: () => void }) {
   const t = useTranslations("common");
+  const media = describeVideoSource({ url: embed });
 
   /* Escape closes, and the page behind is locked so a scroll gesture over the
      overlay does not move the article underneath it. */
@@ -97,14 +99,25 @@ export default function VideoModal({ embed, onClose }: { embed: string | null; o
             boxShadow: "0 30px 80px rgba(0,0,0,.5)",
           }}
         >
-          <iframe
-            src={embed}
-            title={t("watchVideo")}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
+          {media.directVideo ? (
+            <video
+              src={media.sourceUrl}
+              title={t("watchVideo")}
+              controls
+              autoPlay
+              playsInline
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, background: "#000" }}
+            />
+          ) : media.provider === "youtube" || media.provider === "vimeo" ? (
+            <iframe
+              src={embed}
+              title={t("watchVideo")}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          ) : null}
         </div>
       </div>
     </div>

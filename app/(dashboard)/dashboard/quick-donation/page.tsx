@@ -167,6 +167,10 @@ export default function QuickDonationSettingsPage() {
   }, [shownGeneric, config.projectsMode, config.projectIds, campaigns]);
 
   const toggleFrequency = (f: CartFreqKey, on: boolean) => {
+    if (!on && shownFrequencies.length <= 1 && shownFrequencies.includes(f)) {
+      toast({ title: dt("التكرار"), description: dt("يجب إظهار تكرار واحد على الأقل"), variant: "destructive" });
+      return;
+    }
     const next = QUICK_FREQUENCIES.filter((x) => (x === f ? on : shownFrequencies.includes(x)));
     setConfig((prev) => ({
       ...prev,
@@ -242,6 +246,46 @@ export default function QuickDonationSettingsPage() {
           </>
         }
       />
+
+      <Card className="border-brand-200 bg-gradient-to-br from-brand-50/80 to-white">
+        <CardHeader>
+          <CardTitle className="text-base">{dt("معاينة مباشرة")}</CardTitle>
+          <CardDescription>{dt("شكل تقريبي للبطاقة حسب الإعدادات الحالية؛ المعاينة لا تنفّذ دفعًا.")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand">{dt("مؤسسة منبر الأقصى الدولية")}</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">{titleAr.trim() || dt("التبرع السريع")}</h2>
+              </div>
+              <Badge variant={config.enabled ? "default" : "secondary"}>{config.enabled ? dt("مفعّلة") : dt("متوقفة")}</Badge>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {amounts.slice(0, 5).map((amount, index) => (
+                <span key={index} className={"rounded-lg border px-4 py-2 text-sm font-bold tabular-nums " + (index === suggestedIndex ? "border-brand bg-brand text-white" : "border-slate-200 text-slate-700")}>
+                  {"$" + amount}
+                  {index === suggestedIndex && <span className="ms-1 text-[10px] font-medium">{dt("مقترح")}</span>}
+                </span>
+              ))}
+              {amounts.length === 0 && <span className="text-sm text-rose-700">{dt("أدخل المبالغ لعرضها هنا")}</span>}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {shownFrequencies.map((frequency) => (
+                <span key={frequency} className={"rounded-full px-3 py-1 text-xs " + (frequency === config.defaultFrequency ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600")}>{FREQ_LABEL[frequency]}</span>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3">
+              <div>
+                <p className="text-[11px] text-slate-500">{dt("الوجهة الافتراضية")}</p>
+                <p className="text-sm font-semibold">{destinationOptions.find((option) => option.id === config.defaultDestination)?.label ?? destinationOptions[0]?.label ?? dt("اختر مشروعًا أو نية")}</p>
+              </div>
+              <span className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white">{dt("تبرع الآن")}</span>
+            </div>
+            {config.dockMobile || config.dockDesktop ? <p className="mt-3 text-center text-[11px] text-slate-500">{dt("يظهر شريط تبرع سريع أسفل الشاشة حسب خيارات الجهاز.")}</p> : null}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ── Where it shows ─────────────────────────────────────────────── */}
       <Card>

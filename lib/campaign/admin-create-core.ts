@@ -1,4 +1,5 @@
 import { SUPPORTED_LOCALES } from "../locales";
+import { parseCampaignFaqContent } from "./seo-fields";
 
 const OBJECT_ID_RE = /^[a-f0-9]{24}$/i;
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
@@ -37,6 +38,14 @@ export type ParsedCampaignTranslation = {
   description: string;
   image: string | null;
   videoUrl: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoKeyword: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  seoNoIndex: string | null;
+  faqContent: string | null;
   slugBase: string;
 };
 
@@ -54,6 +63,14 @@ export type ParsedCampaignCreatePayload = CampaignCreateExtras & {
   sharePriceUSD: number | null;
   categoryIds: string[];
   slugBase: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoKeyword: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  seoNoIndex: string | null;
+  faqContent: string | null;
   translations: ParsedCampaignTranslation[];
 };
 
@@ -71,6 +88,14 @@ export type CampaignPersistenceData = CampaignCreateExtras & {
   sharePriceUSD: number | null;
   categoryIds: string[];
   slug: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoKeyword: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  seoNoIndex: string | null;
+  faqContent: string | null;
 };
 
 export type CampaignTranslationPersistenceData = {
@@ -81,6 +106,14 @@ export type CampaignTranslationPersistenceData = {
   image: string | null;
   videoUrl: string | null;
   slug: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoKeyword: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+  seoNoIndex: string | null;
+  faqContent: string | null;
 };
 
 export type CampaignCreateTransaction = {
@@ -197,6 +230,14 @@ function optionalLink(value: unknown, field: string): string | null {
   }
 }
 
+function optionalText(value: unknown, field: string, maxLength: number): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") throw new CampaignCreateValidationError(`${field} must be text`, field);
+  const text = value.trim();
+  if (text.length > maxLength) throw new CampaignCreateValidationError(`${field} exceeds ${maxLength} characters`, field);
+  return text || null;
+}
+
 function imageList(value: unknown): string[] {
   if (!Array.isArray(value)) {
     throw new CampaignCreateValidationError("images must be an array", "images");
@@ -280,11 +321,34 @@ function translationsFromBody(body: Record<string, unknown>): ParsedCampaignTran
       rawTranslation.videoUrl,
       `translations.${locale}.videoUrl`,
     );
+    const seoTitle = optionalText(rawTranslation.seoTitle, `translations.${locale}.seoTitle`, 160);
+    const seoDescription = optionalText(rawTranslation.seoDescription, `translations.${locale}.seoDescription`, 220);
+    const seoKeyword = optionalText(rawTranslation.seoKeyword, `translations.${locale}.seoKeyword`, 500);
+    const ogTitle = optionalText(rawTranslation.ogTitle, `translations.${locale}.ogTitle`, 180);
+    const ogDescription = optionalText(rawTranslation.ogDescription, `translations.${locale}.ogDescription`, 300);
+    const ogImage = optionalLink(rawTranslation.ogImage, `translations.${locale}.ogImage`);
+    const rawNoIndex = optionalText(rawTranslation.seoNoIndex, `translations.${locale}.seoNoIndex`, 5);
+    if (rawNoIndex !== null && rawNoIndex !== "true" && rawNoIndex !== "false") {
+      throw new CampaignCreateValidationError(`translations.${locale}.seoNoIndex must be true or false`, `translations.${locale}.seoNoIndex`);
+    }
+    let faqContent: string | null;
+    try {
+      faqContent = parseCampaignFaqContent(rawTranslation.faqContent);
+    } catch (error) {
+      throw new CampaignCreateValidationError(
+        error instanceof Error ? error.message : `translations.${locale}.faqContent is invalid`,
+        `translations.${locale}.faqContent`,
+      );
+    }
     const hasTitle = typeof rawTitle === "string" && Boolean(rawTitle.trim());
     const hasDescription =
       typeof rawDescription === "string" &&
       hasMeaningfulEditorContent(rawDescription);
-    const hasAnyValue = hasTitle || hasDescription || Boolean(image) || Boolean(videoUrl);
+    const explicitSlug =
+      typeof rawTranslation.slug === "string" && rawTranslation.slug.trim()
+        ? rawTranslation.slug.trim()
+        : null;
+    const hasAnyValue = hasTitle || hasDescription || Boolean(image) || Boolean(videoUrl) || Boolean(explicitSlug) || Boolean(seoTitle) || Boolean(seoDescription) || Boolean(seoKeyword) || Boolean(ogTitle) || Boolean(ogDescription) || Boolean(ogImage) || Boolean(faqContent) || rawNoIndex === "true";
 
     if (!hasAnyValue) continue;
     if (!hasTitle || !hasDescription) {
@@ -304,17 +368,20 @@ function translationsFromBody(body: Record<string, unknown>): ParsedCampaignTran
       `translations.${locale}.description`,
       `translations.${locale}.description`,
     );
-    const explicitSlug =
-      typeof rawTranslation.slug === "string" && rawTranslation.slug.trim()
-        ? rawTranslation.slug.trim()
-        : null;
-
     translations.push({
       locale: locale as CampaignTranslationLocale,
       title,
       description,
       image,
       videoUrl,
+      seoTitle,
+      seoDescription,
+      seoKeyword,
+      ogTitle,
+      ogDescription,
+      ogImage,
+      seoNoIndex: rawNoIndex,
+      faqContent,
       slugBase: explicitSlug || title,
     });
   }
@@ -383,6 +450,25 @@ export function parseCampaignCreatePayload(
     typeof rawBody.slug === "string" && rawBody.slug.trim()
       ? rawBody.slug.trim()
       : null;
+  const seoTitle = optionalText(rawBody.seoTitle, "seoTitle", 160);
+  const seoDescription = optionalText(rawBody.seoDescription, "seoDescription", 220);
+  const seoKeyword = optionalText(rawBody.seoKeyword, "seoKeyword", 500);
+  const ogTitle = optionalText(rawBody.ogTitle, "ogTitle", 180);
+  const ogDescription = optionalText(rawBody.ogDescription, "ogDescription", 300);
+  const ogImage = optionalLink(rawBody.ogImage, "ogImage");
+  const rawNoIndex = optionalText(rawBody.seoNoIndex, "seoNoIndex", 5);
+  if (rawNoIndex !== null && rawNoIndex !== "true" && rawNoIndex !== "false") {
+    throw new CampaignCreateValidationError("seoNoIndex must be true or false", "seoNoIndex");
+  }
+  let faqContent: string | null;
+  try {
+    faqContent = parseCampaignFaqContent(rawBody.faqContent);
+  } catch (error) {
+    throw new CampaignCreateValidationError(
+      error instanceof Error ? error.message : "faqContent is invalid",
+      "faqContent",
+    );
+  }
 
   return {
     title,
@@ -398,6 +484,14 @@ export function parseCampaignCreatePayload(
     sharePriceUSD,
     categoryIds: categoryIdsFromBody(rawBody),
     slugBase: explicitSlug || title,
+    seoTitle,
+    seoDescription,
+    seoKeyword,
+    ogTitle,
+    ogDescription,
+    ogImage,
+    seoNoIndex: rawNoIndex,
+    faqContent,
     translations: translationsFromBody(rawBody),
     ...extras,
   };
@@ -455,6 +549,14 @@ export function createCampaignCreator(dependencies: CampaignCreateDependencies) 
         suggestedShareCounts: input.suggestedShareCounts,
         shareLabels: input.shareLabels,
         slug,
+        seoTitle: input.seoTitle,
+        seoDescription: input.seoDescription,
+        seoKeyword: input.seoKeyword,
+        ogTitle: input.ogTitle,
+        ogDescription: input.ogDescription,
+        ogImage: input.ogImage,
+        seoNoIndex: input.seoNoIndex,
+        faqContent: input.faqContent,
       });
 
       for (const translation of input.translations) {
@@ -470,6 +572,14 @@ export function createCampaignCreator(dependencies: CampaignCreateDependencies) 
           image: translation.image,
           videoUrl: translation.videoUrl,
           slug: translationSlug,
+          seoTitle: translation.seoTitle,
+          seoDescription: translation.seoDescription,
+          seoKeyword: translation.seoKeyword,
+          ogTitle: translation.ogTitle,
+          ogDescription: translation.ogDescription,
+          ogImage: translation.ogImage,
+          seoNoIndex: translation.seoNoIndex,
+          faqContent: translation.faqContent,
         });
       }
 

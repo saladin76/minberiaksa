@@ -62,6 +62,14 @@ function campaignCreateData(data: CampaignPersistenceData): Prisma.CampaignCreat
     suggestedShareCounts: asInputJson(data.suggestedShareCounts),
     shareLabels: asInputJson(data.shareLabels),
     slug: data.slug,
+    seoTitle: data.seoTitle,
+    seoDescription: data.seoDescription,
+    seoKeyword: data.seoKeyword,
+    ogTitle: data.ogTitle,
+    ogDescription: data.ogDescription,
+    ogImage: data.ogImage,
+    seoNoIndex: data.seoNoIndex,
+    faqContent: data.faqContent,
     categories: {
       connect: data.categoryIds.map((id) => ({ id })),
     },
@@ -79,6 +87,14 @@ function translationCreateData(
     image: data.image,
     videoUrl: data.videoUrl,
     slug: data.slug,
+    seoTitle: data.seoTitle,
+    seoDescription: data.seoDescription,
+    seoKeyword: data.seoKeyword,
+    ogTitle: data.ogTitle,
+    ogDescription: data.ogDescription,
+    ogImage: data.ogImage,
+    seoNoIndex: data.seoNoIndex,
+    faqContent: data.faqContent,
   };
 }
 

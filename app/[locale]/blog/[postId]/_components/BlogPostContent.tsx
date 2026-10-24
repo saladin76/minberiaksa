@@ -3,7 +3,6 @@
 import React from "react";
 import type { JSONContent } from "@tiptap/react";
 import WysiwygEditor from "../../_components/wysiwyg/wysiwyg-editor";
-import { defaultEditorContent } from "../../_components/wysiwyg/default-content";
 
 interface BlogPostContentProps {
   content: string | null | undefined;

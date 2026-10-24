@@ -2475,5 +2475,10 @@
       "title": "Slutför din gåva här",
       "description": "Ett säkert betalformulär, skilt från försöket som inte gick igenom. Ange dina kortuppgifter och slutför din gåva i ett steg."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "nyss",
+    "donated": "donerade",
+    "for": "för"
   }
 }

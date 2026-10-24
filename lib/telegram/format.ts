@@ -1,5 +1,5 @@
-import { htmlEscape } from "./client";
-import { getCountryDisplayNameFromCode } from "@/lib/dashboard/country-display-name";
+import { htmlEscape } from "./html";
+import { getCountryDisplayNameFromCode } from "../dashboard/country-display-name";
 import { describeFailureInArabic } from "./failure-reason-ar";
 
 /** Shape of a donation row this module knows how to render. Mirrors the
@@ -166,6 +166,7 @@ export function formatDonationNotification(
   const usd = formatMoneyUSD(d.amountUSD);
   const amountLine = usd && d.currency !== "USD" ? `${local} (≈ ${usd})` : local;
   lines.push(`💰 <b>المبلغ:</b> ${htmlEscape(amountLine)}`);
+  lines.push(`🕒 <b>الوقت:</b> ${htmlEscape(formatIstanbulDateTime(d.paidAt ?? d.createdAt))}`);
 
   // ⭐ = first-time donor. Inline on the donor line rather than a second message.
   lines.push(`👤 <b>المتبرع:</b> ${options.isNewDonor ? "⭐ " : ""}${donorLine(d.donor)}`);

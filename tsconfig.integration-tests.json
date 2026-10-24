@@ -52,6 +52,7 @@
     "lib/dashboard/nav-config.ts",
     "lib/dashboard/page-access.ts",
     "lib/dashboard/page-permission.ts",
+    "lib/marketing/ga4-reporting.ts",
     "lib/dashboard/user-demographics.ts",
     "lib/blog/admin-editor-data-core.ts",
     "lib/campaign/admin-create-core.ts",

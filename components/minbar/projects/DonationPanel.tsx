@@ -295,6 +295,7 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
           inputMode={shares ? "numeric" : "decimal"}
           placeholder={shares ? tShares("customCountPh") : tCart("customAmountPh")}
           aria-label={shares ? tShares("customCountPh") : tCart("customAmountPh")}
+          className="pd-donation-amount"
           style={field}
         />
       </div>

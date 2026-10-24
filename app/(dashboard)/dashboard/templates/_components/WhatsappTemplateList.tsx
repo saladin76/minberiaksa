@@ -179,7 +179,7 @@ export function WhatsappTemplateList() {
       setImportStatus(res.data);
       if (res.data.status === "ok") {
         toast.success(res.data.messageAr);
-        fetchAll();
+        await fetchAll();
       } else if (res.data.status === "missing_config") {
         toast(res.data.messageAr, { icon: "⚙️" });
       } else if (res.data.status === "not_implemented") {
@@ -268,6 +268,17 @@ export function WhatsappTemplateList() {
           ) : null}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void handleImport()}
+            disabled={importing}
+            className="gap-2"
+            title={dt("استيراد قوالب WhatsApp من Twilio")}
+          >
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
+            {dt("استيراد من Twilio")}
+          </Button>
           <Button
             size="sm"
             variant="outline"

@@ -71,7 +71,7 @@ test("mobile donor layouts constrain wide content to the viewport", () => {
   assert.match(css, /#zk-hero-grid, #meter-picker, #rc-grid, #cart-grid, #pay-grid, #pd-top, #pd-body/);
   assert.match(css, /max-width: 100%/);
   assert.match(css, /pay-phone-dropdown[\s\S]*max-width: calc\(100vw - 32px\)/);
-  assert.match(css, /upsell-custom-input[\s\S]*min-width: 90px !important/);
+  assert.match(css, /upsell-actions \.upsell-custom-input[\s\S]*min-width: 0 !important/);
 });
 
 test("guest checkout rejects an empty phone that is only a dial code", () => {
@@ -93,12 +93,27 @@ test("recurring donation puts the plan builder before video on phones", () => {
   assert.match(css, /#rc-grid \.rc-video \{ order: 2; \}/);
 });
 
-test("checkout puts the donation summary before the form on phones only", () => {
+test("checkout keeps the summary in the cart and preserves the payment submit controls", () => {
+  const cart = read("components/minbar/cart/CartPage.tsx");
   const page = read("components/minbar/checkout/CheckoutPage.tsx");
   const css = read("styles/minbar/minbar.css");
+  assert.match(cart, /id="cart-summary"/);
+  assert.doesNotMatch(page, /id="pay-summary"/);
+  assert.match(page, /<form ref=\{formRef\} className="pay-form"[\s\S]*onSubmit=\{onSubmit\}/);
+  assert.match(page, /const onSubmit = async \(event: FormEvent\)/);
+  assert.match(page, /const donation = await createDonation\(\{/);
+  for (const rail of ["startPayPalPayment", "chargeWithStripe", "initiateBankPayment"]) {
+    assert.match(page, new RegExp(rail));
+  }
+  assert.equal((page.match(/type="submit"/g) ?? []).length, 2);
+  assert.doesNotMatch(page, /totalLabel/);
+  assert.match(page, /t\("ctaComplete"\)/);
+  assert.match(page, /t\("ctaBankContinue"\)/);
+  assert.match(page, /className="pay-recurring-terms"/);
+  assert.match(page, /belowMinCheckout/);
   assert.match(page, /className="pay-form"/);
-  assert.match(css, /#pay-grid #pay-summary[\s\S]*order: 1/);
-  assert.match(css, /#pay-grid \.pay-form \{ order: 2; \}/);
+  assert.match(css, /#upsell-rail \.upsell-amounts[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(76px, 1fr\)\)/);
+  assert.match(css, /#cart-team-support \.cart-team-options[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 

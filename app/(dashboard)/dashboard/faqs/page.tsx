@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Plus, Pencil, Trash2, Loader2, GripVertical, HelpCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, GripVertical, HelpCircle, Search, CheckCircle2, CircleX } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { dt, dtx } from "@/lib/dashboard/i18n";
+import { PageHeader } from "@/components/dashboard/PageHeader";
 
 interface FaqRow {
   id: string;
@@ -35,17 +37,19 @@ interface FaqRow {
 const FAQ_ROW = 'FAQ_ROW';
 
 function DraggableFaqRow({
-  faq, index, moveRow, commitOrder, children,
+  faq, index, moveRow, commitOrder, children, reorderable,
 }: {
   faq: FaqRow;
   index: number;
   moveRow: (from: number, to: number) => void;
   commitOrder: () => void;
   children: React.ReactNode;
+  reorderable: boolean;
 }) {
   const [{ isDragging }, drag, preview] = useDrag({
     type: FAQ_ROW,
     item: { index },
+    canDrag: reorderable,
     /* Persist once on drop. `hover` fires for every row the pointer crosses, so
        saving there sends one transaction per tick and the responses can land
        out of order. */
@@ -77,7 +81,7 @@ function DraggableFaqRow({
       ref={rowRef}
       className={`${isDragging ? 'opacity-50' : ''} ${!faq.isActive ? 'bg-muted/30' : ''} hover:bg-muted/50 transition-colors`}
     >
-      <TableCell className="w-12 p-2 cursor-grab active:cursor-grabbing" ref={handleRef}>
+      <TableCell className={"w-12 p-2 " + (reorderable ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-40")} ref={handleRef} title={reorderable ? dt("اسحب لإعادة الترتيب") : dt("أوقف البحث لإعادة الترتيب")}>
         <GripVertical className="w-5 h-5 text-muted-foreground mx-auto" />
       </TableCell>
       {children}
@@ -92,6 +96,8 @@ export default function FaqsPage() {
   const [deleteTarget, setDeleteTarget] = useState<FaqRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   const fetchFaqs = useCallback(async () => {
     try {
@@ -166,6 +172,17 @@ export default function FaqsPage() {
     }
   };
 
+  const activeCount = faqs.filter((faq) => faq.isActive).length;
+  const filteredFaqs = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    return faqs.filter((faq) => {
+      const matchesQuery = !term || [faq.question, faq.answer, faq.page].some((value) => value.toLocaleLowerCase().includes(term));
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? faq.isActive : !faq.isActive);
+      return matchesQuery && matchesStatus;
+    });
+  }, [faqs, query, statusFilter]);
+  const canReorder = !query.trim() && statusFilter === "all";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -177,16 +194,35 @@ export default function FaqsPage() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold">{dt("الأسئلة الشائعة")}</h1>
-            <p className="text-xs text-slate-500">
-              {dt("السؤال بلا صفحة محددة يظهر في كل الصفحات التي تعرض الأسئلة الشائعة.")}</p>
-          </div>
-          <Button onClick={() => router.push('/dashboard/faqs/new')}>
-            <Plus className="w-4 h-4 me-1" />
-            {dt("سؤال جديد")}</Button>
+        <PageHeader
+          title={dt("الأسئلة الشائعة")}
+          description={dt("نظّم الإجابات حسب الصفحة، راجع اكتمال الترجمة، وابحث قبل إضافة سؤال مكرر.")}
+          icon={HelpCircle}
+          actions={<Button onClick={() => router.push('/dashboard/faqs/new')}><Plus className="me-1 h-4 w-4" />{dt("سؤال جديد")}</Button>}
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Card className="p-4"><p className="text-xs text-slate-500">{dt("إجمالي الأسئلة")}</p><p className="mt-1 text-2xl font-bold">{faqs.length}</p></Card>
+          <Card className="p-4"><p className="flex items-center gap-1 text-xs text-slate-500"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />{dt("مفعّلة")}</p><p className="mt-1 text-2xl font-bold text-emerald-700">{activeCount}</p></Card>
+          <Card className="p-4"><p className="flex items-center gap-1 text-xs text-slate-500"><CircleX className="h-3.5 w-3.5 text-slate-400" />{dt("متوقفة")}</p><p className="mt-1 text-2xl font-bold text-slate-600">{faqs.length - activeCount}</p></Card>
         </div>
+        <Card className="p-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={dt("ابحث في السؤال أو الإجابة أو الصفحة")} className="pe-9" aria-label={dt("ابحث في الأسئلة الشائعة")} />
+            </div>
+            <div role="group" aria-label={dt("تصفية حسب الحالة")} className="flex gap-1 rounded-lg bg-slate-100 p-1">
+              {([
+                ["all", dt("الكل")],
+                ["active", dt("مفعّلة")],
+                ["inactive", dt("متوقفة")],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={statusFilter === value} onClick={() => setStatusFilter(value)} className={"rounded-md px-3 py-1.5 text-xs font-semibold " + (statusFilter === value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800")}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {!canReorder && <p className="mt-2 text-xs text-amber-700">{dt("أزل البحث واختر «الكل» لإعادة ترتيب الأسئلة بالسحب.")}</p>}
+        </Card>
 
         {faqs.length === 0 ? (
           <EmptyState
@@ -199,6 +235,8 @@ export default function FaqsPage() {
                 {dt("سؤال جديد")}</Button>
             }
           />
+        ) : filteredFaqs.length === 0 ? (
+          <EmptyState variant="inline" icon={Search} title={dt("لا توجد نتائج مطابقة")} description={dt("غيّر عبارة البحث أو مرشح الحالة.")} />
         ) : (
           <Card>
             <Table>
@@ -213,13 +251,14 @@ export default function FaqsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {faqs.map((faq, index) => (
+                {filteredFaqs.map((faq) => (
                   <DraggableFaqRow
                     key={faq.id}
                     faq={faq}
-                    index={index}
+                    index={faqs.findIndex((row) => row.id === faq.id)}
                     moveRow={moveRow}
                     commitOrder={commitOrder}
+                    reorderable={canReorder}
                   >
                     <TableCell className="max-w-[28rem]">
                       <div className="font-semibold">{faq.question}</div>

@@ -8,7 +8,6 @@ import { getServerSession } from "next-auth";
 import Header from "@/components/minbar/shell/Header";
 import MobileBottomNav from "@/components/minbar/shell/MobileBottomNav";
 import MinbarFooter from "@/components/minbar/shell/Footer";
-import QuickDonate from "@/components/minbar/shell/QuickDonate";
 import ConciergeLauncher from "@/components/minbar/concierge/ConciergeLauncher";
 import CartReminder from "@/components/CartReminder";
 import { CurrencyFromUrlSync } from "@/components/CurrencyFromUrlSync";
@@ -41,7 +40,7 @@ const VALID_LOCALES = SUPPORTED_LOCALES;
    update them together. */
 const PATTERN_TILE = "/minbar/assets/patterns/aqsa-white-pattern.webp";
 const RTL_TEXT_FONTS = ["/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2", "/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2"];
-const LTR_TEXT_FONTS = ["/fonts/montserrat/montserrat-100-900-latin-a5ec5492.woff2"];
+const LTR_TEXT_FONTS = ["/fonts/poppins/poppins-400-latin-ac6d71b4.woff2"];
 
 /** The non-Latin faces `styles/minbar/locale-fonts.css` names, one per locale that needs one. */
 const LOCALE_FONT_STYLESHEETS: Partial<Record<string, string>> = {
@@ -171,7 +170,6 @@ export default async function Rootlayout({
               <Suspense fallback={null}>
                 <MinbarFooter tagline={tagline} categories={navCategories} />
               </Suspense>
-              <QuickDonate />
               <ConciergeLauncher />
               <CartReminder />
               <ConfettiProvider />

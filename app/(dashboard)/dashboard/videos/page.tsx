@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Plus, Pencil, Trash2, Loader2, GripVertical, Video as VideoIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, GripVertical, Video as VideoIcon, CheckCircle2, Home, Languages } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 import { LOCALES } from '@/lib/locales';
 import { VIDEO_TYPE_LABELS } from './_components/VideoForm';
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
@@ -218,17 +220,20 @@ export default function VideosPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold">{dt("الفيديوهات")}</h1>
-            <p className="text-xs text-slate-500">
-              {dt("إنجازاتنا وتزكياتنا ومقاطع الميدان. التزكية يمكن قصرها على لغات بعينها.")}</p>
-          </div>
-          <Button onClick={() => router.push('/dashboard/videos/new')}>
-            <Plus className="w-4 h-4 me-1" />
-            {dt("فيديو جديد")}</Button>
-        </div>
+      <div className="space-y-5">
+        <PageHeader
+          eyebrow={dt("المحتوى التحريري")}
+          title={dt("مكتبة الفيديو")}
+          description={dt("أدر روابط الفيديوهات وتصنيفها وترتيبها وظهورها على الصفحة الرئيسية ونطاق اللغات.")}
+          icon={VideoIcon}
+          actions={<Button onClick={() => router.push('/dashboard/videos/new')}><Plus className="me-1 h-4 w-4" />{dt("فيديو جديد")}</Button>}
+        />
+        <ContentMetricStrip items={[
+          { label: dt("كل الفيديوهات"), value: videos.length, detail: dt("في المكتبة"), icon: VideoIcon, tone: "brand" },
+          { label: dt("مفعّلة"), value: videos.filter((video) => video.isActive).length, detail: dt("متاحة للعرض ضمن شروطها"), icon: CheckCircle2, tone: "green" },
+          { label: dt("على الرئيسية"), value: videos.filter((video) => video.showOnHome && video.isActive).length, detail: dt("مفعّلة ومختارة للواجهة"), icon: Home, tone: "amber" },
+          { label: dt("ترجمات الفيديو"), value: videos.reduce((sum, video) => sum + video.translationCount, 0), detail: dt("إجمالي الترجمات المحفوظة"), icon: Languages, tone: "slate" },
+        ]} />
 
         <Tabs value={tab} onValueChange={setTab} dir={dashDir()}>
           <TabsList>
@@ -248,14 +253,9 @@ export default function VideosPage() {
             icon={VideoIcon}
             title={dt("لا توجد فيديوهات")}
             description={dt("أضف أول فيديو ليظهر في قسمه على الموقع.")}
-            action={
-              <Button onClick={() => router.push('/dashboard/videos/new')}>
-                <Plus className="w-4 h-4 me-1" />
-                {dt("فيديو جديد")}</Button>
-            }
           />
         ) : (
-          <Card>
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BarChart3, CheckCircle2, CircleAlert, Layers3, ListChecks, Rocket, TrendingUp } from "lucide-react";
+import { ArrowLeft, BarChart3, CheckCircle2, CircleAlert, ListChecks, Rocket, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";

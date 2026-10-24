@@ -4,6 +4,12 @@ import { PrismaClient } from "@prisma/client";
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
 
 const indexes = [
+  {
+    collection: "CampaignSlugRedirect",
+    key: { locale: 1, slug: 1 },
+    unique: true,
+  },
+  { collection: "CampaignSlugRedirect", key: { campaignId: 1 }, unique: false },
   { collection: "Category", key: { previousSlugs: 1 }, unique: false },
   { collection: "SuperCategory", key: { slug: 1 }, unique: true },
   {

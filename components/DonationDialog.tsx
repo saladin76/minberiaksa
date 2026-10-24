@@ -13,7 +13,6 @@ import { SignInPanel } from "@/components/SignInDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 // useCallback is used for stable onReadyChange callback passed to StripePaymentStep
@@ -31,11 +30,11 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { useConfettiStore } from "@/hooks/use-confetti-store";
 import { getCurrency } from "@/hooks/useCampaignValue";
 import {
   DEFAULT_SUGGESTED_DONATION_AMOUNTS,
   parseSuggestedDonations,
+  resolveDefaultDonationAmountForCurrency,
   resolveSuggestedAmountsForCurrency,
   type SuggestedDonationsConfig,
 } from "@/lib/campaign/suggested-donations";
@@ -213,12 +212,6 @@ const DonationDialog = ({
   );
   const getReferralCode = useReferralCode();
 
-  // Helper function to get locale-specific property
-  const getLocalizedProperty = (obj: any, key: string) => {
-    const localeKey = `${key}${locale.charAt(0).toUpperCase() + locale.slice(1)}`;
-    return obj[localeKey] || obj[key] || "";
-  };
-
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(
     () => getCachedGlobalSettings(),
   );
@@ -272,6 +265,7 @@ const DonationDialog = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [donationType, setDonationType] = useState<DonationType | null>(null);
   const [donationAmount, setDonationAmount] = useState<number>(0);
+  const [donationAmountTouched, setDonationAmountTouched] = useState(false);
   const [teamSupport, setTeamSupport] = useState<number | null>(null);
   const [coverFees, setCoverFees] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CARD");
@@ -372,10 +366,9 @@ const DonationDialog = ({
     !!session?.user?.id && profileLoaded && !currentUser?.birthdate;
   const needsGender =
     !!session?.user?.id && profileLoaded && !currentUser?.gender;
-  const needsProfileCompletion = needsPhone || needsBirthdate || needsGender;
   const { convertToCurrency, exchangeRates } = useCurrency();
   const [shareCount, setShareCount] = useState(1);
-  const { addItem, setItems } = useCart();
+  const { addItem } = useCart();
   const tracking = useTracking();
   const router = useRouter();
 
@@ -573,6 +566,7 @@ const DonationDialog = ({
   useEffect(() => {
     if (isOpen && initialDonationAmount != null && initialDonationAmount > 0) {
       setDonationAmount(initialDonationAmount);
+      setDonationAmountTouched(true);
       setCurrentStep(1); // skip first step (donation amount)
     }
   }, [isOpen, initialDonationAmount]);
@@ -612,8 +606,10 @@ const DonationDialog = ({
           ? resume.donationType
           : donationType;
       if (restoredType) setDonationType(restoredType);
-      if (typeof resume.donationAmount === "number")
+      if (typeof resume.donationAmount === "number") {
         setDonationAmount(resume.donationAmount);
+        setDonationAmountTouched(true);
+      }
       if (typeof resume.teamSupport === "number")
         setTeamSupport(resume.teamSupport);
       if (typeof resume.coverFees === "boolean") setCoverFees(resume.coverFees);
@@ -655,15 +651,27 @@ const DonationDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentStep, session?.user?.id]);
 
-  const confetti = useConfettiStore();
-
   const presetDonationAmounts = useMemo(() => {
     if (!campaignId || isCategoryMode) {
       return DEFAULT_SUGGESTED_DONATION_AMOUNTS;
     }
     const cfg = parseSuggestedDonations(suggestedDonations);
-    return resolveSuggestedAmountsForCurrency(cfg, getCurrency());
-  }, [campaignId, isCategoryMode, suggestedDonations, isOpen]);
+    return resolveSuggestedAmountsForCurrency(cfg, getCurrency(), exchangeRates);
+  }, [campaignId, isCategoryMode, suggestedDonations, isOpen, exchangeRates]);
+
+  const defaultDonationAmount = useMemo(() => {
+    if (!campaignId || isCategoryMode || shareMode) return null;
+    return resolveDefaultDonationAmountForCurrency(
+      parseSuggestedDonations(suggestedDonations),
+      getCurrency(),
+      exchangeRates,
+    );
+  }, [campaignId, isCategoryMode, shareMode, suggestedDonations, exchangeRates]);
+
+  useEffect(() => {
+    if (!isOpen || !donationType || donationAmountTouched || initialDonationAmount != null || defaultDonationAmount == null) return;
+    setDonationAmount(defaultDonationAmount);
+  }, [isOpen, donationType, donationAmountTouched, initialDonationAmount, defaultDonationAmount]);
 
   // Minimum Stripe charge = 1 USD converted to the selected currency, rounded up.
   const stripeMinAmount = (() => {
@@ -701,6 +709,8 @@ const DonationDialog = ({
 
   const handleTypeSelect = (type: DonationType) => {
     setDonationType(type);
+    setDonationAmountTouched(false);
+    setDonationAmount(defaultDonationAmount ?? 0);
     setPaymentMethod("CARD");
     setCardDetails({
       cardNumber: "",
@@ -1122,6 +1132,7 @@ const DonationDialog = ({
                     value={donationAmount || ""}
                     onChange={(e) => {
                       const val = e.target.value.replace(/[^0-9]/g, "");
+                      setDonationAmountTouched(true);
                       setDonationAmount(val ? parseInt(val, 10) : 0);
                     }}
                     onKeyDown={(e) => {
@@ -1135,7 +1146,10 @@ const DonationDialog = ({
                       <Button
                         key={amount}
                         variant="outline"
-                        onClick={() => setDonationAmount(amount)}
+                        onClick={() => {
+                          setDonationAmountTouched(true);
+                          setDonationAmount(amount);
+                        }}
                         className={`${
                           donationAmount === amount
                             ? "border-burgundy bg-burgundy/[0.06] text-burgundy font-semibold"

@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/seo";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
 import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
+import { selectQuickDonationProjectOptions } from "@/lib/minbar/quick-donation-display";
 import { readHomeLayout, resolveHomeLists, visibleSections } from "@/lib/minbar/home-layout-read";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import HomePage from "@/components/minbar/home/HomePage";
@@ -30,13 +31,14 @@ const cachedHomeData = unstable_cache(
   async (locale: string) => {
     const projectsRead = listProjects(locale);
     const layoutRead = readHomeLayout();
-    const [, quick, layout, lists] = await Promise.all([
+    const [projects, quick, layout, lists] = await Promise.all([
       projectsRead,
       readQuickDonation(),
       layoutRead,
       layoutRead.then((l) => resolveHomeLists(locale, l, projectsRead)),
     ]);
-    return { quick, layout, lists };
+    const quickProjects = selectQuickDonationProjectOptions(quick, projects);
+    return { quick, quickProjects, layout, lists };
   },
   ["minbar-home-data"],
   { revalidate: 60, tags: ["minbar-home"] }
@@ -75,7 +77,7 @@ export default async function Home({ params }: Props) {
   // dashboard's homepage layout (`lib/minbar/home-layout.ts`); its defaults are
   // the approved design. The quick-donation select lists whatever its own
   // settings allow, which may be every project.
-  const [{ quick, layout, lists }, session] = await Promise.all([
+  const [{ quick, quickProjects, layout, lists }, session] = await Promise.all([
     cachedHomeData(locale),
     getServerSession(authOptions),
   ]);
@@ -102,11 +104,7 @@ export default async function Home({ params }: Props) {
         <HomePage
           sections={visibleSections(layout)}
           lists={lists}
-          /* QuickDonateBar's markup is commented out, so it renders nothing, yet
-             every project was serialized into the page for it (~90 KB, a third
-             of the inline payload, parsed during hydration). Pass `allProjects`
-             again when the bar is restored. */
-          quick={{ config: quick, projects: [] }}
+          quick={{ config: quick, projects: quickProjects }}
           banners={{
             top: <PageBanners locale={locale} page="home" slot="top" />,
             middle: <PageBanners locale={locale} page="home" slot="middle" />,

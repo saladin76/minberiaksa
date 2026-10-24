@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { Info } from "lucide-react";
+import { Info, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type SummaryStat = {
@@ -91,6 +90,16 @@ export function MetricSummaryBand({
               <p className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">
                 {eyebrow}
               </p>
+              {note && (
+                <button
+                  type="button"
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  title={note}
+                  aria-label={note}
+                >
+                  <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
               {badge && (
                 <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                   {badge}

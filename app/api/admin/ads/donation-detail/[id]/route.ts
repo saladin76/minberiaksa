@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { resolveAttribution } from "@/lib/tracking/attribution-resolver";
@@ -9,6 +10,8 @@ import {
 } from "@/lib/tracking/tracking-event-contract";
 import { PLATFORM_LABEL_AR } from "@/lib/attribution/detect-source";
 import { stableDonateEventId } from "@/lib/tracking/stable-event-id";
+
+export const dynamic = "force-dynamic";
 
 const UTM_FIELDS = [
   "utm_source",

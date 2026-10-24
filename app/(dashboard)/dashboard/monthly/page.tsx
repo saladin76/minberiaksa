@@ -21,7 +21,6 @@ import {
   Percent,
   LayoutList,
   RefreshCw,
-  Star,
   TrendingUp,
 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";

@@ -108,6 +108,7 @@ export default function Button({
   // invalid HTML and React will warn.
   const typeAttr = !href && (as ?? "button") === "button" ? { type: rest.type ?? "button" } : {};
   const { type: _ignored, ...forward } = rest;
+  void _ignored; // `type` is forwarded only on a real button via typeAttr.
 
   return (
     <Tag

@@ -13,6 +13,7 @@ import type { BuiltinEventId } from "@/lib/minbar/home-layout";
 import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
 import { cssImage } from "@/lib/minbar/image-url";
+import { describeVideoSource } from "@/lib/content/video-platform";
 
 /**
  * Homepage media sections  events, the endorsement and achievement reels, the
@@ -172,13 +173,10 @@ function ReelRail({
     >
       {videos.map((video) => {
         const label = video.title;
-        const image = video.thumbnail || (video.youtubeId ? youtubeThumb(video.youtubeId) : null);
-        /* A YouTube id plays in the in-site player. A row with only a URL (a
-           film hosted elsewhere) still has something to watch: it opens that
-           URL in a new tab rather than showing a card with no "Watch" at all
-           (`DEPLOYED_VS_DESIGN_AUDIT.md` § P2.4). */
-        const embeddable = Boolean(video.youtubeId);
-        const external = !embeddable && Boolean(video.url);
+        const media = describeVideoSource({ youtubeId: video.youtubeId, url: video.url, startSeconds: video.startSeconds });
+        const image = video.thumbnail || (media.youtubeId ? youtubeThumb(media.youtubeId) : null);
+        const embeddable = Boolean(media.embedUrl);
+        const external = !embeddable && Boolean(media.watchUrl);
         const playable = embeddable || external;
         const tag = video.regionKey ? (t.has(video.regionKey) ? t(video.regionKey) : video.regionKey) : "";
 
@@ -234,13 +232,15 @@ function ReelRail({
             key={video.id}
             type="button"
             className="mia-reel"
-            onClick={() => onPlay(youtubeEmbed(video.youtubeId, { autoplay: true, start: video.startSeconds ?? undefined }))}
+            onClick={() => onPlay(media.provider === "youtube" && media.embedUrl
+              ? withAutoplay(media.embedUrl)
+              : media.embedUrl!)}
             style={{ ...cardStyle, cursor: "pointer", textAlign: "start" }}
           >
             {content}
           </button>
         ) : external ? (
-          <a key={video.id} href={video.url} target="_blank" rel="noopener noreferrer" className="mia-reel" style={{ ...cardStyle, textDecoration: "none" }}>
+          <a key={video.id} href={media.watchUrl ?? media.sourceUrl} target="_blank" rel="noopener noreferrer" className="mia-reel" style={{ ...cardStyle, textDecoration: "none" }}>
             {content}
           </a>
         ) : (

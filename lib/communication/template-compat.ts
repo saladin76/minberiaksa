@@ -7,6 +7,7 @@ import { resolveEmailVariant, resolveWhatsappBody } from "@/lib/templates/locale
 import { renderEmailHtml, renderEmailSubject } from "@/lib/templates/render";
 import { mergeText, type TemplateContext } from "@/lib/templates/variables";
 import { SAMPLE_TEMPLATE_CONTEXT } from "@/lib/templates/sample-context";
+import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-failure-link";
 import { renderTemplatePreview } from "./template-renderer";
 import type { CommunicationChannelId } from "./communication-runtime-types";
 
@@ -193,7 +194,7 @@ export async function renderChannelTemplate(
         resolvedLocale: variant.resolvedLocale,
         usedFallback: variant.resolvedLocale !== locale,
         subject: null,
-        body: ctx ? mergeText(variant.body, ctx) : preview.rendered,
+        body: localizeDonationFailureLinks(ctx ? mergeText(variant.body, ctx) : preview.rendered, locale),
         variables: preview.variables,
         templateName: tpl.name,
       };
@@ -205,7 +206,10 @@ export async function renderChannelTemplate(
     // Sample context for previews so the body is real HTML either way  an empty-looking preview
     // is what let the placeholder survive unnoticed.
     const renderCtx = ctx ?? SAMPLE_TEMPLATE_CONTEXT;
-    const html = await renderEmailHtml(variant.document as TReaderDocument, renderCtx);
+    const html = localizeDonationFailureLinks(
+      await renderEmailHtml(variant.document as TReaderDocument, renderCtx),
+      locale,
+    );
     return {
       channel,
       locale,

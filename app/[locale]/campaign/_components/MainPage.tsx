@@ -14,8 +14,6 @@ import {
   Loader2,
   MoreHorizontal,
   Play,
-  Twitter,
-  Facebook,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -23,8 +21,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-hot-toast";
 import Modal from "@/app/[locale]/components/Modal";
-import { useCurrency } from "@/context/CurrencyContext";
-import SignInDialog from "@/components/SignInDialog";
 import DonationSidebar from "../_components/DonationSidebar";
 
 // Types
@@ -234,7 +230,6 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [showDescriptionButton, setShowDescriptionButton] = useState(false);
   const descriptionRef = useRef<HTMLDivElement>(null);
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isUpdateExpanded, setIsUpdateExpanded] = useState<{
     [key: string]: boolean;
   }>({});
@@ -288,8 +283,6 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
 
     campaign?.updates?.forEach((update) => {
       if (updateRefs.current[update.id]) {
-        const shouldShowButton =
-          (updateRefs.current[update.id]?.scrollHeight ?? 0) > 150;
         setIsUpdateExpanded((prev) => ({
           ...prev,
           [update.id]: prev[update.id] || false,

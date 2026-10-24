@@ -4,7 +4,7 @@ import { TranslationOverview } from "@/components/dashboard/content-editor/Trans
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Plus, Pencil, Trash2, Loader2, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Layers, CheckCircle2, Blocks, Languages } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 import { SortableTable, useReorder } from '../_components/SortableTable';
 import { dt, dtx } from "@/lib/dashboard/i18n";
 
@@ -99,29 +101,27 @@ export default function SuperCategoriesPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={dt("المشاريع والتصنيفات")}
+        title={dt("الأقسام الكبرى")}
+        description={dt("صفحات برامج تجمع المشاريع والمقالات والوسائط في واجهة واحدة. راجع ترتيب الصفحة ومحتواها وترجماتها قبل إتاحتها.")}
+        icon={Layers}
+        actions={<Button onClick={() => router.push('/dashboard/super-categories/new')}><Plus className="me-1 h-4 w-4" />{dt("قسم جديد")}</Button>}
+      />
+      <ContentMetricStrip items={[
+        { label: dt("كل الصفحات"), value: rows.length, detail: dt("صفحات برامج محفوظة"), icon: Layers, tone: "brand" },
+        { label: dt("منشورة"), value: rows.filter((row) => row.isActive).length, detail: dt("متاحة للزوار"), icon: CheckCircle2, tone: "green" },
+        { label: dt("مكوّنات المحتوى"), value: rows.reduce((sum, row) => sum + row.itemCount, 0), detail: dt("عناصر مرتبطة بالصفحات"), icon: Blocks, tone: "amber" },
+        { label: dt("ترجمات محفوظة"), value: rows.reduce((sum, row) => sum + row.translationCount, 0), detail: dt("على مستوى الصفحات"), icon: Languages, tone: "slate" },
+      ]} />
       <TranslationOverview kind="super-categories" />
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold">{dt("الأقسام الكبرى")}</h1>
-          <p className="text-xs text-slate-500">
-            {dt("صفحات برامج كاملة تجمع المشاريع والمقالات والفيديوهات والدورات والتقارير والكتيبات، بواجهة ومحتوى قابلين للتعديل.")}</p>
-        </div>
-        <Button onClick={() => router.push('/dashboard/super-categories/new')}>
-          <Plus className="me-1 h-4 w-4" />
-          {dt("قسم جديد")}</Button>
-      </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={Layers}
           title={dt("لا توجد أقسام كبرى")}
           description={dt("أنشئ أول قسم: صفحة برنامج بواجهتها ومحتواها.")}
-          action={
-            <Button onClick={() => router.push('/dashboard/super-categories/new')}>
-              <Plus className="me-1 h-4 w-4" />
-              {dt("قسم جديد")}</Button>
-          }
         />
       ) : (
         <SortableTable

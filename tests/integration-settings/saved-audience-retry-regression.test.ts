@@ -232,6 +232,8 @@ function engineHarness(options: EngineOptions = {}) {
     listRetryCandidates: (filter: { channel: string; ids?: string[] }) => Promise<string[]>;
     retryPreflight: (filter: { channel: string; ids?: string[] }) => Promise<unknown>;
   }>("lib/communication/delivery-retry-service.ts", {
+    "./retry-batches": { RETRY_BATCH_CAP: 25 },
+    "./retry-readiness": { retryPayloadBlockReason: () => null },
     "@/lib/prisma": { prisma: {
       communicationDelivery: {
         findUnique: async () => ({ ...stored, retriedAt: held ? new Date() : null }),
@@ -265,6 +267,7 @@ function engineHarness(options: EngineOptions = {}) {
     } },
     "@/lib/events/dispatch": { resolveTriggerSendConfig: async () => ({}), resolveTriggerSender: () => ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
     "./template-donation-links": {donationTemplateValues:async(input:{values:unknown})=>({ok:true,values:input.values})},
+    "@/lib/templates/localize-donation-failure-link": { localizeDonationFailureLinks: (body: string) => body },
     "./automatic-message-dispatcher": {},
     "./providers/meta-whatsapp/parameters": {},
     "./providers/sms/client": {},

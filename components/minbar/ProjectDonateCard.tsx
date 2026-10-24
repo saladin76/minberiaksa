@@ -1,7 +1,7 @@
 "use client";
 
 import { decimalAmount, digitsOnly } from "@/lib/minbar/numeric-input";
-import { useCallback, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -15,6 +15,7 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { shareProgress, useShareWording } from "@/hooks/useShareWording";
 import { useProjectPricing } from "@/hooks/useProjectPricing";
 import { useDonationAmount } from "@/hooks/useDonationAmount";
+import { roundSuggestedDonationAmount } from "@/lib/campaign/suggested-donations";
 import { cssImage } from "@/lib/minbar/image-url";
 
 /**
@@ -57,7 +58,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
   const router = useRouter();
   const t = useTranslations("common");
   const tGive = useTranslations("CardGive");
-  const { format, formatNumber } = useMinbarMoney();
+  const { format, formatNumber, code, rate } = useMinbarMoney();
   const { fromLocal, fromChip, labelOf, tooSmall, minLabel } = useDonationAmount();
   const shares = project.shares;
   const { t: tShares, unitWord, countLabel } = useShareWording(shares);
@@ -75,10 +76,23 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
 
   const [picked, setPicked] = useState<number | null>(null);
   const [custom, setCustom] = useState("");
+  const [amountTouched, setAmountTouched] = useState(false);
   /* Bumped on each attempt without an amount; keys the chip row so the shake
      replays every time. */
   const [nudge, setNudge] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (shares || amountTouched || project.defaultDonationAmountUSD == null) return;
+    const local = code === "USD"
+      ? project.defaultDonationAmountUSD
+      : rate && rate > 0
+        ? roundSuggestedDonationAmount(project.defaultDonationAmountUSD * rate)
+        : null;
+    if (local == null || local <= 0) return;
+    setPicked(null);
+    setCustom(String(local));
+  }, [shares, amountTouched, project.id, project.defaultDonationAmountUSD, code, rate]);
 
   const href = miaPath("projectDetail", locale, project.slug);
   const chosen = custom ? Number(custom) : picked != null ? options[picked]?.value ?? 0 : 0;
@@ -300,6 +314,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
               type="button"
               data-amt={picked === index && !custom ? "card" : ""}
               onClick={() => {
+                setAmountTouched(true);
                 setPicked(index);
                 setCustom("");
               }}
@@ -316,7 +331,10 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           ))}
           <input
             value={custom}
-            onChange={(e) => setCustom(shares ? digitsOnly(e.target.value).replace(/^0+/, "").slice(0, 6) : decimalAmount(e.target.value))}
+            onChange={(e) => {
+              setAmountTouched(true);
+              setCustom(shares ? digitsOnly(e.target.value).replace(/^0+/, "").slice(0, 6) : decimalAmount(e.target.value));
+            }}
             inputMode={shares ? "numeric" : "decimal"}
             /* The card's own short word: the cell is a quarter of the row. */
             placeholder={shares ? tGive("otherCount") : tGive("otherAmount")}

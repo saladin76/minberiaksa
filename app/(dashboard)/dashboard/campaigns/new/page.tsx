@@ -78,7 +78,7 @@ import {
   type FormLocale,
   type TranslationLocale,
 } from '../../_components/locale-form';
-import { CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar } from '../_components/CampaignLocaleTabs';
+import { CampaignArabicSeoFields, CampaignLocaleTabContents, CampaignLocaleTabTriggers, CampaignTranslateBar } from '../_components/CampaignLocaleTabs';
 import type { TranslatedLocales } from '../../_components/AutoTranslateButton';
 import { isEditorContentEmpty } from '@/lib/tiptap-empty-doc';
 import {
@@ -97,7 +97,7 @@ import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 // ✅ Enhanced schema with translations
 /** Fields every translation locale carries on the form, as `field_locale`. */
-const LOCALE_FIELDS = ['title', 'image', 'videoUrl'] as const;
+const LOCALE_FIELDS = ['title', 'image', 'videoUrl', 'slug', 'seoTitle', 'seoDescription', 'seoKeyword', 'ogTitle', 'ogDescription', 'ogImage', 'seoNoIndex', 'faqContent'] as const;
 type LocaleField = (typeof LOCALE_FIELDS)[number];
 /** A mapped type rather than an index signature: zod keeps named keys in its inferred output and drops index signatures. */
 type LocaleShape = { [K in `${LocaleField}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
@@ -111,6 +111,15 @@ const formSchema = z
     .min(1, dt("العنوان مطلوب"))
     .max(100, dt("العنوان طويل جداً")),
   targetAmount: z.number().min(0).max(1000000),
+  slug: z.string().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  seoKeyword: z.string().optional(),
+  ogTitle: z.string().optional(),
+  ogDescription: z.string().optional(),
+  ogImage: z.string().optional(),
+  seoNoIndex: z.string().optional(),
+  faqContent: z.string().optional(),
   goalType: z.enum(['FIXED', 'OPEN']),
   fundraisingMode: z.enum(['AMOUNT', 'SHARES']),
   sharePriceUSD: z.number().min(0).max(1000000).optional(),
@@ -200,6 +209,15 @@ export default function NewCampaignPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
+      slug: '',
+      seoTitle: '',
+      seoDescription: '',
+      seoKeyword: '',
+      ogTitle: '',
+      ogDescription: '',
+      ogImage: '',
+      seoNoIndex: 'false',
+      faqContent: '[]',
       targetAmount: 0,
       goalType: 'FIXED',
       fundraisingMode: 'AMOUNT',
@@ -238,6 +256,25 @@ export default function NewCampaignPage() {
     fetchCategories();
   }, [locale]);
 
+  useEffect(() => {
+    const onSeoDraft = (event: Event) => {
+      const detail = (event as CustomEvent<Record<string, unknown>>).detail;
+      const targetLocale = detail?.locale;
+      if (detail?.type !== 'campaign' || (targetLocale !== 'ar' && !isTranslationLocale(String(targetLocale)))) return;
+      const fields = ['seoTitle', 'seoDescription', 'seoKeyword', 'faqContent'] as const;
+      for (const field of fields) {
+        const value = detail[field];
+        if (typeof value !== 'string') continue;
+        const name = targetLocale === 'ar' ? field : localeKey(field, targetLocale as TranslationLocale);
+        form.setValue(name as keyof FormValues, value as never, { shouldDirty: true, shouldValidate: true });
+      }
+      setActiveTab(targetLocale as FormLocale);
+      toast.success(dt("تم إدراج المسودة في النموذج؛ راجعها ثم احفظ المشروع."));
+    };
+    window.addEventListener('seo-assistant:apply-to-form', onSeoDraft);
+    return () => window.removeEventListener('seo-assistant:apply-to-form', onSeoDraft);
+  }, [form]);
+
   const onSubmit = async (values: FormValues) => {
     if (isDescEmpty(descriptionAr)) {
       toast.error(dt("الوصف العربي مطلوب"));
@@ -254,6 +291,15 @@ export default function NewCampaignPage() {
       // ✅ Prepare request with translations
       const requestData = {
         title: values.title,
+        slug: values.slug,
+        seoTitle: values.seoTitle,
+        seoDescription: values.seoDescription,
+        seoKeyword: values.seoKeyword,
+        ogTitle: values.ogTitle,
+        ogDescription: values.ogDescription,
+        ogImage: values.ogImage,
+        seoNoIndex: values.seoNoIndex || 'false',
+        faqContent: values.faqContent || '[]',
         description: descriptionAr || '',
         goalType: values.goalType,
         fundraisingMode: values.fundraisingMode,
@@ -283,6 +329,15 @@ export default function NewCampaignPage() {
                 description,
                 image: values[localeKey('image', locale)] || null,
                 videoUrl: values[localeKey('videoUrl', locale)] || null,
+                slug: values[localeKey('slug', locale)] || null,
+                seoTitle: values[localeKey('seoTitle', locale)] || null,
+                seoDescription: values[localeKey('seoDescription', locale)] || null,
+                seoKeyword: values[localeKey('seoKeyword', locale)] || null,
+                ogTitle: values[localeKey('ogTitle', locale)] || null,
+                ogDescription: values[localeKey('ogDescription', locale)] || null,
+                ogImage: values[localeKey('ogImage', locale)] || null,
+                seoNoIndex: values[localeKey('seoNoIndex', locale)] || 'false',
+                faqContent: values[localeKey('faqContent', locale)] || '[]',
               },
             ]];
           })
@@ -730,6 +785,7 @@ const getTranslationStatus = () => {
                   arabic={{ title: form.watch('title') ?? '', description: descriptionAr }}
                   onTranslated={applyTranslations}
                 />
+                <CampaignArabicSeoFields form={form} />
               </TabsContent>
 
               <CampaignLocaleTabContents

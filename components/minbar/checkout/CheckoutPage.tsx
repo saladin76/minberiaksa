@@ -25,7 +25,6 @@ import { CheckoutSteps, type CheckoutStep } from "@/components/minbar/cart/Check
 import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useDonationAmount, useHealLegacyRows } from "@/hooks/useDonationAmount";
-import { useShareWording } from "@/hooks/useShareWording";
 import type { MinbarCartItem } from "@/lib/minbar/cart";
 import { formatIban, type MinbarBank } from "@/lib/minbar/banks";
 import {
@@ -101,14 +100,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
-  const tProjects = useTranslations("projects");
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
   const tCert = useTranslations("certificates");
-  const { format, formatNumber, formatLocal } = useMinbarMoney();
-  const { formatLine, lineValue, lineTooSmall, minLabel, inLocal } = useDonationAmount();
+  const { lineTooSmall, minLabel } = useDonationAmount();
   const tGive = useTranslations("CardGive");
-  const { countLabelFor } = useShareWording();
   const { items, hydrated, replace } = useMinbarCart();
   useHealLegacyRows(items, replace, hydrated);
 
@@ -136,7 +132,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const [stripeReady, setStripeReady] = useState(false);
   const onStripeReady = useCallback((ready: boolean) => setStripeReady(ready), []);
   const tRecurring = useTranslations("Recurring");
-  const tTeam = useTranslations("TeamSupport");
 
   /* The "support the team" amount chosen in the basket. Read after mount:
      storage is not known to the server render. Zeroed when the admin has
@@ -193,7 +188,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   }, []);
 
   const titleBySlug = useMemo(() => new Map(projects.map((p) => [p.slug, p.title])), [projects]);
-  const sharesBySlug = useMemo(() => new Map(projects.map((p) => [p.slug, p.shares])), [projects]);
   const categoryTitleById = useMemo(() => new Map(categories.map((c) => [c.id, c.title])), [categories]);
 
   const resolveTitle = (item: MinbarCartItem): string => {
@@ -217,13 +211,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   };
 
   const teamSupportCharged = teamSupportEnabled && teamSupport > 0 ? teamSupport : 0;
-  /* The total as it will be charged, in the donor's currency: a line given in
-     that currency counts as given (1 TL is 1 TL), the rest and the team
-     support are converted from USD  the same rule the server charges by. */
-  const totalUsd = items.reduce((sum, item) => sum + item.amount, 0) + teamSupportCharged;
-  const totalLabel = inLocal
-    ? formatLocal(items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: teamSupportCharged }))
-    : format(totalUsd);
   /* With the $1 floor on, a line under it cannot be paid for; the basket is
      where it is raised. */
   const belowMinimum = items.some(lineTooSmall);
@@ -583,7 +570,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       </section>
 
       <section style={{ padding: "0 0 64px" }}>
-        <div id="pay-grid" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,.85fr)", gap: 40, alignItems: "start" }}>
+        <div id="pay-grid" style={{ maxWidth: 880, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 0, alignItems: "start" }}>
           <form ref={formRef} className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} noValidate>
             {/* ── Donor details ──────────────────────────────────────────── */}
             <div className="pay-card" style={cardBox}>
@@ -912,6 +899,23 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
+            {belowMinimum ? (
+              <div role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>
+                {tGive("belowMinCheckout", { amount: minLabel })}
+                <Link href={miaPath("cart", locale)} style={{ color: "var(--deep)", textDecoration: "underline" }}>
+                  {tGive("editInCart")}
+                </Link>
+              </div>
+            ) : null}
+
+            {planFrequency && nextChargeText ? (
+              <div className="pay-recurring-terms" style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "var(--sand)", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>
+                <b>{tCommon(planFrequency === "DAILY" ? "freqDaily" : planFrequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</b>
+                <span>{tRecurring("firstChargeToday", { cadence: tRecurring(planFrequency === "DAILY" ? "cadenceDaily" : planFrequency === "FRIDAY" ? "cadenceFriday" : "cadenceMonthly") })}</span>
+                <span style={{ color: "var(--muted)" }}>{tRecurring("nextChargeOn", { date: nextChargeText })}</span>
+              </div>
+            ) : null}
+
             {method === "paypal" ? (
               <button
                 type="submit"
@@ -921,7 +925,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               >
                 <b style={{ fontStyle: "italic", fontWeight: 900, color: "#253B80", letterSpacing: "-.02em" }}>PayPal</b>
                 <span aria-hidden="true" style={{ width: 1, height: 20, background: "rgba(16,33,43,.2)" }} />
-                {submitting ? tSystem("processing") : <>{t("ctaComplete")} · <bdi>{totalLabel}</bdi></>}
+                {submitting ? tSystem("processing") : t("ctaComplete")}
               </button>
             ) : (
               <button
@@ -931,11 +935,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >
-                {/* The amount sits on the button: on a phone the summary is above
-                    the form, so this is the last place the donor sees it. */}
                 {submitting
                   ? tSystem("processing")
-                  : <>{method === "bank" ? t("ctaBankContinue") : t("ctaComplete")} · <bdi>{totalLabel}</bdi></>}
+                  : method === "bank" ? t("ctaBankContinue") : t("ctaComplete")}
               </button>
             )}
 
@@ -953,102 +955,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               {t("secureNote")}
             </p>
           </form>
-
-          {/* ── Summary ──────────────────────────────────────────────────── */}
-          <div id="pay-summary" className="pay-card" style={{ display: "grid", gap: 16, padding: 26, background: "var(--sand)", border: "1px solid rgba(211,154,39,.35)", borderRadius: 14, position: "sticky", top: 92 }}>
-            <h2 style={{ ...headingStyle, fontSize: 18 }}>
-              <span aria-hidden="true" style={{ ...headingIcon, width: 30, height: 30, background: "#fff" }}>
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m4 8 2 11h12l2-11H4Z" />
-                  <path d="m9 8 3-4 3 4M9 12v3M15 12v3" />
-                </svg>
-              </span>
-              {t("donationSummary")}
-            </h2>
-
-            {!hydrated ? (
-              <div style={{ minHeight: 90 }} />
-            ) : items.length ? (
-              <>
-                <div style={{ display: "grid", gap: 10, paddingBottom: 14, borderBottom: "1px solid rgba(211,154,39,.3)" }}>
-                  {items.map((item, index) => (
-                    <span key={index} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
-                      <span style={{ color: "var(--muted)", minWidth: 0, display: "grid", gap: 2 }}>
-                        <span>{resolveTitle(item)}</span>
-                        {item.shareCount ? (
-                          <span style={{ fontSize: 12, fontWeight: 700 }}>
-                            {countLabelFor(item.projectId ? sharesBySlug.get(item.projectId) ?? null : null, item.shareCount, formatNumber(item.shareCount))}
-                          </span>
-                        ) : null}
-                        {item.gift?.recipientName ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)" }}>{tTeam("giftedTo", { name: item.gift.recipientName })}</span>
-                        ) : null}
-                      </span>
-                      <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
-                        {formatLine(item)}
-                      </b>
-                    </span>
-                  ))}
-                  {teamSupportCharged > 0 ? (
-                    <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
-                      <span style={{ color: "var(--muted)", minWidth: 0, display: "grid", gap: 2 }}>
-                        <span>{tTeam("title")}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: teamRecurring ? "var(--green)" : "var(--muted)" }}>
-                          {teamRecurring ? tTeam("recurringNote") : tTeam("oneTimeNote")}
-                        </span>
-                      </span>
-                      <b dir="ltr" style={{ flex: "0 0 auto", unicodeBidi: "isolate" }}>
-                        {format(teamSupportCharged)}
-                      </b>
-                    </span>
-                  ) : null}
-                </div>
-                <span style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 16, fontWeight: 900 }}>
-                  {t("total")}
-                  <b dir="ltr" style={{ fontSize: 22, unicodeBidi: "isolate" }}>
-                    {totalLabel}
-                  </b>
-                </span>
-                {belowMinimum ? (
-                  <span role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>
-                    {tGive("belowMinCheckout", { amount: minLabel })}
-                    <Link href={miaPath("cart", locale)} style={{ color: "var(--deep)", textDecoration: "underline" }}>
-                      {tGive("editInCart")}
-                    </Link>
-                  </span>
-                ) : null}
-                {/* What the plan will do, before the donor confirms: this
-                    payment is the first instalment, then the same amount at
-                    the cadence  the same next date the consent snapshot
-                    records. */}
-                {planFrequency && nextChargeText ? (
-                  <span style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "#fff", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>
-                    <b>{tCommon(planFrequency === "DAILY" ? "freqDaily" : planFrequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</b>
-                    <span>{tRecurring("firstChargeToday", { cadence: tRecurring(planFrequency === "DAILY" ? "cadenceDaily" : planFrequency === "FRIDAY" ? "cadenceFriday" : "cadenceMonthly") })}</span>
-                    <span style={{ color: "var(--muted)" }}>{tRecurring("nextChargeOn", { date: nextChargeText })}</span>
-                  </span>
-                ) : null}
-              </>
-            ) : (
-              <p style={{ margin: 0, padding: "10px 0", color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>
-                {t("emptyCart")}{" "}
-                <Link href={miaPath("projects", locale)} style={{ color: "var(--gold)", fontWeight: 800 }}>
-                  {tProjects("allProjects")}
-                </Link>
-              </p>
-            )}
-
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted)", paddingTop: 4, borderTop: "1px solid rgba(211,154,39,.3)" }}>
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 21s-7.5-4.7-7.5-10A4.5 4.5 0 0 1 12 8a4.5 4.5 0 0 1 7.5 3c0 5.3-7.5 10-7.5 10Z" />
-              </svg>
-              {t("receiptNote")}
-            </span>
-
-            <Link href={miaPath("cart", locale)} className="cart-add-another" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
-              {t("backToCart")}
-            </Link>
-          </div>
         </div>
       </section>
     </div>

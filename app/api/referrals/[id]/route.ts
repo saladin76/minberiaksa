@@ -92,7 +92,7 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    let cookieExpiryDays = Math.min(Math.floor(rawExpiry), 3650);
+    const cookieExpiryDays = Math.min(Math.floor(rawExpiry), 3650);
 
     if (cookieExpiryDays > 0) {
       const minDays = getMinCookieExpiryDaysForEdit(referral.createdAt);

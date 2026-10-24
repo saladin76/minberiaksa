@@ -208,14 +208,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  donations     Donation[]
-  subscriptions Subscription[]
-  comments      Comment[]
-  cartItems     CartItem[]
-  messages      Message[]
-  creditCards   CreditCard[]
+  accounts             Account[]
+  sessions             Session[]
+  donations            Donation[]
+  subscriptions        Subscription[]
+  comments             Comment[]
+  cartItems            CartItem[]
+  messages             Message[]
+  creditCards          CreditCard[]
   communicationProfile DonorCommunicationProfile?
 }
 
@@ -431,12 +431,12 @@ model Category {
   /// gateway callback accept  or to one campaign of the category: the one
   /// named here, or the highest priority campaign in it when neither is set.
   /// `donateToCategory` wins over `donateCampaignId` should both be set.
-  donateToCategory Boolean @default(false)
-  donateCampaignId String? @db.ObjectId
-  donateTitle      String?
-  donateNote       String?
+  donateToCategory    Boolean @default(false)
+  donateCampaignId    String? @db.ObjectId
+  donateTitle         String?
+  donateNote          String?
   /// Quick amounts in USD. Empty falls back to the site's defaults.
-  suggestedAmounts Int[]   @default([])
+  suggestedAmounts    Int[]   @default([])
   /// Per-currency exceptions  `{ EUR: [50, 100], ... }`  the same contract as
   /// `Campaign.suggestedDonations.byCurrency`: a visitor in that currency sees
   /// these as they are, and they go to the cart in that currency.
@@ -455,22 +455,21 @@ model Category {
   donationItems             DonationCategoryItem[]
   subscriptionCategoryItems SubscriptionCategoryItem[]
   translations              CategoryTranslation[]
-  editorVersion String?
-  editorReviews Json?
-  imageAlt String?
-  metaTitle String?
-  metaDescription String?
-  previousSlugs String[] @default([])
-  slugChanges Json?
-  seoKeyword String?
-  ogTitle String?
-  ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
-  navigationVisible Boolean? @default(true)
+  editorVersion             String?
+  editorReviews             Json?
+  imageAlt                  String?
+  metaTitle                 String?
+  metaDescription           String?
+  previousSlugs             String[]                   @default([])
+  slugChanges               Json?
+  seoKeyword                String?
+  ogTitle                   String?
+  ogDescription             String?
+  ogImage                   String?
+  seoNoIndex                String?
+  faqContent                String?
+  navigationVisible         Boolean?                   @default(true)
 }
-
 
 /// One cell of the "what this category stands on" strip  a short phrase.
 model CategoryValue {
@@ -548,18 +547,18 @@ model CategoryTranslation {
   /// generateUniqueLocaleSlug  Prisma+MongoDB doesn't model partial unique indexes well.
   slug String?
 
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  imageAlt        String?
+  metaTitle       String?
+  metaDescription String?
+  seoKeyword      String?
+  ogTitle         String?
+  ogDescription   String?
+  ogImage         String?
+  seoNoIndex      String?
+  faqContent      String?
 
   @@unique([categoryId, locale])
-  imageAlt String?
-  metaTitle String?
-  metaDescription String?
-  seoKeyword String?
-  ogTitle String?
-  ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
 }
 
 /**
@@ -633,9 +632,9 @@ model Campaign {
   suggestedTeamSupport Json?
 
   /// FIXED = show goal & progress bar; OPEN = open-ended (no fixed target UI)
-  goalType             String @default("FIXED")
+  goalType             String  @default("FIXED")
   /// AMOUNT = donor enters amount; SHARES = سهوم (share price × number of shares)
-  fundraisingMode      String @default("AMOUNT")
+  fundraisingMode      String  @default("AMOUNT")
   /// Price of one share in USD when fundraisingMode is SHARES
   sharePriceUSD        Float?
   /// { "counts": number[] }  quick-pick share counts for سهوم campaigns
@@ -671,19 +670,19 @@ model Campaign {
   subscriptionItems SubscriptionItem[]
   translations      CampaignTranslation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  editorVersion String?
-  editorReviews Json?
-  imageAlt String?
-  seoTitle String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  editorVersion  String?
+  editorReviews  Json?
+  imageAlt       String?
+  seoTitle       String?
   seoDescription String?
-  seoKeyword String?
-  ogTitle String?
-  ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
+  seoKeyword     String?
+  ogTitle        String?
+  ogDescription  String?
+  ogImage        String?
+  seoNoIndex     String?
+  faqContent     String?
 }
 
 model CampaignTranslation {
@@ -703,18 +702,32 @@ model CampaignTranslation {
   /// for this locale. Uniqueness within a locale is enforced at write time.
   slug String?
 
-  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  imageAlt       String?
+  seoTitle       String?
+  seoDescription String?
+  seoKeyword     String?
+  ogTitle        String?
+  ogDescription  String?
+  ogImage        String?
+  seoNoIndex     String?
+  faqContent     String?
 
   @@unique([campaignId, locale])
-  imageAlt String?
-  seoTitle String?
-  seoDescription String?
-  seoKeyword String?
-  ogTitle String?
-  ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
+}
+
+/// Keeps previously published campaign URLs resolvable after an editor changes
+/// a base or translated slug. Public project pages permanently redirect these
+/// aliases to the current locale-specific URL.
+model CampaignSlugRedirect {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String   @db.ObjectId
+  locale     String
+  slug       String
+  createdAt  DateTime @default(now())
+
+  @@unique([locale, slug])
+  @@index([campaignId])
 }
 
 /**
@@ -803,14 +816,13 @@ model Donation {
   /// PayPal Orders v2: the order created for this donation. Set when the order
   /// is created, before the donor leaves for PayPal; the return route refuses
   /// any other order id. See lib/paypal.ts.
-  paypalOrderId   String?
+  paypalOrderId    String?
   /// The PayPal capture id  PayPal's transaction id for the money received.
-  paypalCaptureId String?
+  paypalCaptureId  String?
   /// What the gateway actually settled, as it reported it (PayPal charges the
   /// donation currency, or USD when PayPal does not support that currency).
-  paidAmount      Float?
-  paidCurrency    String?
-
+  paidAmount       Float?
+  paidCurrency     String?
   donorId          String    @db.ObjectId
   donor            User      @relation(fields: [donorId], references: [id])
   /// ISO 3166-1 alpha-2 snapshot from donor User.countryCode at donation time
@@ -845,9 +857,9 @@ model Donation {
   createdAt DateTime  @default(now())
   paidAt    DateTime?
 
-  items         DonationItem[]
-  categoryItems DonationCategoryItem[]
-  comments      Comment[]
+  items             DonationItem[]
+  categoryItems     DonationCategoryItem[]
+  comments          Comment[]
   /// Set only when `paymentMethod` is BANK_TRANSFER: the receipt the donor
   /// uploaded and where the finance review stands. See `BankTransferClaim`.
   bankTransferClaim BankTransferClaim?
@@ -881,17 +893,17 @@ model Subscription {
   /// for the dashboards. Rows created before this field existed are monthly,
   /// which is the only cadence that was ever actually billed.
   /// See lib/donations/recurring-schedule.ts.
-  frequency RecurringFrequency @default(MONTHLY)
+  frequency            RecurringFrequency @default(MONTHLY)
   /// IANA zone captured at sign-up (`Europe/Istanbul`), never a fixed offset:
   /// "Friday" and "the 15th" are resolved in it, so daylight saving is absorbed.
-  timezone  String?
+  timezone             String?
   /// The rule as structure, never prose (`DONATION_LOGIC_SPEC` § Recurring Time
   /// Contract): `{kind:"daily"}` | `{kind:"weekday",weekday:5,hour:9}` |
   /// `{kind:"monthDay",day:15}`.
-  scheduleRule Json?
+  scheduleRule         Json?
   /// What the donor was shown and agreed to at checkout  frequency, amount,
   /// currency, the next-charge date on screen, locale and time. Written once.
-  consentSnapshot Json?
+  consentSnapshot      Json?
   /// Stripe subscription id. Historically kept in `payforToken` (see the
   /// disabled monthly-billing cron for how that went); both are written and
   /// every lookup accepts either.
@@ -903,25 +915,25 @@ model Subscription {
   /// /Sale as a recurring (merchant-initiated) transaction, at any cadence;
   /// `PAYPAL` = the same scheduler charging the donor's vaulted PayPal wallet.
   /// Null on rows from before rails existed: they are Stripe monthly.
-  provider String?
+  provider              String?
   /// The card the Albaraka scheduler charges  the `CreditCard` row stored at
   /// the plan's first 3D payment. Null on Stripe plans (Stripe holds the card).
-  paymentCardId String?     @db.ObjectId
-  paymentCard   CreditCard? @relation(fields: [paymentCardId], references: [id])
+  paymentCardId         String?     @db.ObjectId
+  paymentCard           CreditCard? @relation(fields: [paymentCardId], references: [id])
   /// Consecutive failed scheduler charges since the last success. Drives the
   /// retry ladder (`RECURRING_RETRY_HOURS`); reset on every paid cycle.
-  chargeAttempts  Int     @default(0)
-  lastChargeError String?
+  chargeAttempts        Int         @default(0)
+  lastChargeError       String?
   /// Unique token held during an institution-initiated reprice across provider
   /// and MongoDB. Fail closed until externally reconciled if a request crashes.
   /// Optional for backwards-compatible MongoDB documents.
-  amountChangeLock String?
+  amountChangeLock      String?
   amountChangeStartedAt DateTime?
   /// `PAYPAL` plans: the PayPal wallet saved (vaulted) at the first
   /// instalment's capture. The scheduler charges later cycles against it
   /// (lib/donations/paypal-recurring.ts). Null on every other rail.
-  paypalVaultId    String?
-  paypalCustomerId String?
+  paypalVaultId         String?
+  paypalCustomerId      String?
 
   donorId    String    @db.ObjectId
   donor      User      @relation(fields: [donorId], references: [id])
@@ -996,9 +1008,9 @@ model DonationItem {
   /// The donor's note to the recipient, carried in the message.
   giftMessage        String?
   /// "EMAIL" | "WHATSAPP"  the channels the recipient is told on.
-  giftChannels       String[] @default([])
+  giftChannels       String[]  @default([])
   /// Whether the message to the recipient mentions the amount.
-  giftShowAmount     Boolean  @default(true)
+  giftShowAmount     Boolean   @default(true)
   /// Set when the recipient was told; a replayed webhook does not tell them twice.
   giftDeliveredAt    DateTime?
 
@@ -1026,7 +1038,6 @@ model DonationCategoryItem {
 
 /**
  * ===================== CERTIFICATES & RECEIPTS =====================
- *
  * `handoff-certificates/DONATION_LOGIC_SPEC.md §2`: every document a donor
  * downloads is a permanent record keyed to its donation, issued by the server
  * only after payment is confirmed. Reloading, re-printing or re-running the
@@ -1070,31 +1081,31 @@ enum CertificateType {
 }
 
 model Certificate {
-  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
   /// Unique serial, e.g. `MIA-THX-2026-000123` or `MIA-WQF-S-076544`.
-  serial        String          @unique
+  serial      String          @unique
   /// The number printed on the face: the waqf certificates carry the bare
   /// per-unit sequence (metres from 9876, shares from 76543), the thank-you
   /// certificate its yearly counter.
-  number        Int
-  type          CertificateType
-  donationId    String          @db.ObjectId
-  donorId       String          @db.ObjectId
+  number      Int
+  type        CertificateType
+  donationId  String          @db.ObjectId
+  donorId     String          @db.ObjectId
   /// Set on a waqf certificate: the line it was issued for. One certificate
   /// per line, enforced by the unique index.
-  waqfItemId    String?         @unique @db.ObjectId
-  count         Int
-  amount        Float
-  currency      String
+  waqfItemId  String?         @unique @db.ObjectId
+  count       Int
+  amount      Float
+  currency    String
   /// The name printed on the certificate. The donor may edit it on the success
   /// page; the edit is stored here so every later download and the emailed
   /// copy say the same thing.
-  donorName     String
+  donorName   String
   /// Waqf: whom the endowment is made on behalf of. Thanks: unused.
-  dedicatedTo   String?
-  issuedAt      DateTime        @default(now())
+  dedicatedTo String?
+  issuedAt    DateTime        @default(now())
   /// The locale the donation was made in  the document renders in it.
-  locale        String
+  locale      String
 
   donation Donation          @relation(fields: [donationId], references: [id], onDelete: Cascade)
   waqfItem DonationWaqfItem? @relation(fields: [waqfItemId], references: [id])
@@ -1223,9 +1234,9 @@ model BankTransferClaim {
   transferReference String?
   donorNote         String?
 
-  receipts BankTransferReceiptFile[]
+  receipts           BankTransferReceiptFile[]
   /// How many times a receipt has been submitted (first upload = 1).
-  submissionCount    Int       @default(0)
+  submissionCount    Int                       @default(0)
   receiptSubmittedAt DateTime?
 
   /// The review. `reviewedBy*` are plain scalars, not a relation, for the same
@@ -1360,16 +1371,16 @@ model Post {
 
   translations PostTranslation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   editorVersion String?
   editorReviews Json?
-  seoKeyword String?
-  ogTitle String?
+  seoKeyword    String?
+  ogTitle       String?
   ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
+  ogImage       String?
+  seoNoIndex    String?
+  faqContent    String?
 }
 
 model PostTranslation {
@@ -1392,15 +1403,15 @@ model PostTranslation {
   /// for this locale. Uniqueness within a locale is enforced at write time.
   slug String?
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post          Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  seoKeyword    String?
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+  seoNoIndex    String?
+  faqContent    String?
 
   @@unique([postId, locale])
-  seoKeyword String?
-  ogTitle String?
-  ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
 }
 
 model LiveDonationTicker {
@@ -1408,15 +1419,10 @@ model LiveDonationTicker {
 
   isActive Boolean @default(true)
 
-  // Donor names pool (will be randomly selected)
+  /// Operator-configured display labels; never loaded from donor records.
   donorNames String[] @default([])
 
-  // Campaign names by locale
-  // campaignNamesAr String[] @default([])
-  // campaignNamesEn String[] @default([])
-  // campaignNamesFr String[] @default([])
-
-  // Amount ranges with probabilities
+  /// Operator-configured display amounts and their selection weights.
   amountRanges AmountRange[]
 
   // Display timing
@@ -1430,8 +1436,8 @@ model LiveDonationTicker {
 type AmountRange {
   minAmount   Float
   maxAmount   Float
-  probability Float // Weight for this range (e.g., 70 for high, 20 for medium, 10 for low)
-  label       String // e.g., "high", "medium", "low"
+  probability Float
+  label       String
 }
 
 /**
@@ -1566,7 +1572,7 @@ model WhatsappTemplate {
   purpose String?
 
   /// Aggregated provider truth kept for backwards compatibility/read-only dashboards.
-  variants WhatsappTemplateVariant[]
+  variants     WhatsappTemplateVariant[]
   /// Exact Meta truth per WABA + language. Runtime sending must use this collection.
   wabaVariants WhatsappTemplateWabaVariant[]
 
@@ -1591,22 +1597,22 @@ model WhatsappTemplate {
 /// model is hand-edited: a field here is what the provider last said, which is what makes it
 /// trustworthy enough to gate a send on.
 model WhatsappTemplateWabaVariant {
-  id                String @id @default(auto()) @map("_id") @db.ObjectId
-  templateId        String @db.ObjectId
-  provider          String @default("META_WHATSAPP")
-  businessAccountId String
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  templateId           String   @db.ObjectId
+  provider             String   @default("META_WHATSAPP")
+  businessAccountId    String
   providerTemplateName String
   providerTemplateId   String?
-  languageCode      String
-  locale            String?
-  approvalStatus    String
-  category          String?
-  rejectionReason   String?
-  qualityRating     String?
-  componentsSchema  Json?
-  lastSyncedAt      DateTime
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  languageCode         String
+  locale               String?
+  approvalStatus       String
+  category             String?
+  rejectionReason      String?
+  qualityRating        String?
+  componentsSchema     Json?
+  lastSyncedAt         DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   template WhatsappTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -1799,17 +1805,19 @@ model SentMessage {
  * ===================== TRACKING PIXELS (dashboard configurable) =====================
  */
 model TrackingSettings {
-  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
-  facebookPixelId          String?
-  facebookAccessToken      String? // Meta CAPI token (never exposed to client)
-  gaMeasurementId          String? // Google Analytics 4: G-XXXXXXXXXX
-  tiktokPixelId            String?
-  tiktokAccessToken        String? // TikTok Events API token (never exposed to client)
-  googleAdsConversionId    String? // AW-XXXXXXXXX (never exposed to client  used server-side for EC)
-  googleAdsConversionLabel String? // Conversion label (e.g. AbCdEfGh1234)
-  xPixelId                 String? // X (Twitter) Pixel ID
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                        String   @id @default(auto()) @map("_id") @db.ObjectId
+  facebookPixelId           String?
+  facebookAccessToken       String? // Meta CAPI token (never exposed to client)
+  gaMeasurementId           String? // Google Analytics 4: G-XXXXXXXXXX
+  gaPropertyId              String? // GA4 Data API property ID used by dashboard reports
+  gaServiceAccountEncrypted String? // AES-256-GCM envelope; never return to client
+  tiktokPixelId             String?
+  tiktokAccessToken         String? // TikTok Events API token (never exposed to client)
+  googleAdsConversionId     String? // AW-XXXXXXXXX (never exposed to client  used server-side for EC)
+  googleAdsConversionLabel  String? // Conversion label (e.g. AbCdEfGh1234)
+  xPixelId                  String? // X (Twitter) Pixel ID
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 }
 
 /// Single-record settings collection for site-wide defaults. Read by clients
@@ -2282,43 +2290,42 @@ model SenderRoutingRule {
 }
 
 model DonorCommunicationProfile {
-  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId              String    @unique @db.ObjectId
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  preferredLocale     String?
-  countryCode         String?
-  timezone            String?
-  phone               String?
-  email               String?
-  whatsappOptIn       Boolean   @default(false) // no explicit WhatsApp consent field on User → stays false until confirmed
-  emailOptIn          Boolean   @default(false)
-  smsOptIn            Boolean   @default(false)
-  doNotContact        Boolean   @default(false)
-  consentSource       String?
-  lastConsentAt       DateTime?
-  lastDonationAt      DateTime?
-  totalDonations      Int       @default(0)
-  lastCommunicationAt DateTime?
-  lastWhatsappAt      DateTime?
+  id                      String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String    @unique @db.ObjectId
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferredLocale         String?
+  countryCode             String?
+  timezone                String?
+  phone                   String?
+  email                   String?
+  whatsappOptIn           Boolean   @default(false) // no explicit WhatsApp consent field on User → stays false until confirmed
+  emailOptIn              Boolean   @default(false)
+  smsOptIn                Boolean   @default(false)
+  doNotContact            Boolean   @default(false)
+  consentSource           String?
+  lastConsentAt           DateTime?
+  lastDonationAt          DateTime?
+  totalDonations          Int       @default(0)
+  lastCommunicationAt     DateTime?
+  lastWhatsappAt          DateTime?
   lastWhatsappMarketingAt DateTime?
-  lastEmailAt         DateTime?
-  lastSmsAt           DateTime?
-  metadata            Json?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  lastEmailAt             DateTime?
+  lastSmsAt               DateTime?
+  metadata                Json?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   @@index([preferredLocale])
   @@index([countryCode])
 }
-
 
 /// Global e-mail suppression truth. Checked by every send path before Elastic Email is called.
 /// UNSUBSCRIBE blocks marketing only; HARD_BOUNCE and COMPLAINT block every e-mail purpose.
 model EmailSuppression {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
-  reason    String   // UNSUBSCRIBE | HARD_BOUNCE | COMPLAINT
-  scope     String   // MARKETING | ALL
+  reason    String // UNSUBSCRIBE | HARD_BOUNCE | COMPLAINT
+  scope     String // MARKETING | ALL
   source    String?
   userId    String?  @db.ObjectId
   createdAt DateTime @default(now())
@@ -2358,15 +2365,14 @@ model CommunicationCampaign {
 }
 
 model CommunicationGlobalControl {
-  id            String   @id @map("_id") @db.ObjectId
-  emergencyStop Boolean  @default(false)
-  whatsappMarketingCooldownDays Int? @default(0)
-  whatsappMarketingCooldownConfigured Boolean @default(false)
-  updatedBy     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                                  String   @id @map("_id") @db.ObjectId
+  emergencyStop                       Boolean  @default(false)
+  whatsappMarketingCooldownDays       Int?     @default(0)
+  whatsappMarketingCooldownConfigured Boolean  @default(false)
+  updatedBy                           String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
 }
-
 
 model CommunicationDelivery {
   id                     String    @id @default(auto()) @map("_id") @db.ObjectId
@@ -2985,13 +2991,13 @@ model UrgentBanner {
 
   translations UrgentBannerTranslation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive, priority])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   editorVersion String?
   editorReviews Json?
-  imageAlt String?
+  imageAlt      String?
+
+  @@index([isActive, priority])
 }
 
 model UrgentBannerTranslation {
@@ -3006,9 +3012,9 @@ model UrgentBannerTranslation {
   amountLabels      String[] @default([])
 
   urgentBanner UrgentBanner @relation(fields: [urgentBannerId], references: [id], onDelete: Cascade)
+  imageAlt     String?
 
   @@unique([urgentBannerId, locale])
-  imageAlt String?
 }
 
 /// Frequently asked questions. `page` scopes an entry to one page; null shows it
@@ -3146,19 +3152,19 @@ model SuperCategory {
   items        SuperCategoryItem[]
   translations SuperCategoryTranslation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive, order])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   editorVersion String?
   editorReviews Json?
-  imageAlt String?
-  seoKeyword String?
-  ogTitle String?
+  imageAlt      String?
+  seoKeyword    String?
+  ogTitle       String?
   ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
+  ogImage       String?
+  seoNoIndex    String?
+  faqContent    String?
+
+  @@index([isActive, order])
 }
 
 model SuperCategoryTranslation {
@@ -3182,15 +3188,15 @@ model SuperCategoryTranslation {
   metaDescription String?
 
   superCategory SuperCategory @relation(fields: [superCategoryId], references: [id], onDelete: Cascade)
+  imageAlt      String?
+  seoKeyword    String?
+  ogTitle       String?
+  ogDescription String?
+  ogImage       String?
+  seoNoIndex    String?
+  faqContent    String?
 
   @@unique([superCategoryId, locale])
-  imageAlt String?
-  seoKeyword String?
-  ogTitle String?
-  ogDescription String?
-  ogImage String?
-  seoNoIndex String?
-  faqContent String?
 }
 
 /// One section of a super category's page, in the order it is rendered.
@@ -3254,4 +3260,45 @@ model SuperCategoryItem {
 
   @@unique([superCategoryId, kind, refId])
   @@index([superCategoryId, kind, order])
+}
+
+/// An administrator-maintained contact list. It is intentionally separate from donor accounts:
+/// importing a contact here never creates a user, changes consent, or triggers a message.
+model DonorContactList {
+  id          String                  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  contacts    DonorContactListEntry[]
+
+  @@index([updatedAt])
+}
+
+model DonorContactListEntry {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  listId          String           @db.ObjectId
+  name            String
+  email           String?
+  phone           String?
+  normalizedEmail String?
+  normalizedPhone String?
+  createdAt       DateTime         @default(now())
+  list            DonorContactList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId, createdAt])
+  @@index([listId, normalizedEmail])
+  @@index([listId, normalizedPhone])
+}
+
+/// Telegram credentials are encrypted before they reach this collection.
+model TelegramBotSetting {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  singletonKey           String   @unique @default("primary")
+  botTokenEncrypted      String?
+  webhookSecretEncrypted String?
+  notificationsChatId    String?
+  allowedChatIds         String[] @default([])
+  notificationsEnabled   Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
 }

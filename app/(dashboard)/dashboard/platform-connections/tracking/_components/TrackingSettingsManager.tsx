@@ -38,6 +38,7 @@ type Settings = {
   xConversionsApiEnabled: boolean;
   facebookAccessTokenPresent: boolean;
   gaApiSecretPresent: boolean;
+  gaServiceAccountJsonPresent: boolean;
   tiktokAccessTokenPresent: boolean;
   xAccessTokenPresent: boolean;
 };
@@ -86,6 +87,7 @@ const defaults: Settings = {
   xConversionsApiEnabled: false,
   facebookAccessTokenPresent: false,
   gaApiSecretPresent: false,
+  gaServiceAccountJsonPresent: false,
   tiktokAccessTokenPresent: false,
   xAccessTokenPresent: false,
 };
@@ -134,6 +136,9 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   const [diagnostics, setDiagnostics] = useState<Diagnostics>({});
   const [secrets, setSecrets] = useState<Record<SecretKey, string>>({ facebookAccessToken: "", gaApiSecret: "", tiktokAccessToken: "", xAccessToken: "" });
   const [clearSecrets, setClearSecrets] = useState<Record<SecretKey, boolean>>({ facebookAccessToken: false, gaApiSecret: false, tiktokAccessToken: false, xAccessToken: false });
+  const [ga4ReportServiceAccountJson, setGa4ReportServiceAccountJson] = useState("");
+  const [clearGa4ReportServiceAccount, setClearGa4ReportServiceAccount] = useState(false);
+  const [savingGa4ReportServiceAccount, setSavingGa4ReportServiceAccount] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<Platform | null>(null);
@@ -197,6 +202,45 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     finally { setSaving(false); }
   }
 
+  async function saveGa4ReportServiceAccount() {
+    if (!ga4ReportServiceAccountJson.trim() && !clearGa4ReportServiceAccount) {
+      toast.error(dt("أدخل ملف حساب الخدمة أو اختر إزالة المفتاح المحفوظ"));
+      return;
+    }
+    setSavingGa4ReportServiceAccount(true);
+    try {
+      const response = await axios.put<Partial<Settings>>("/api/admin/tracking", {
+        gaPropertyId: settings.gaPropertyId,
+        ...(ga4ReportServiceAccountJson.trim() ? { gaServiceAccountJson: ga4ReportServiceAccountJson.trim() } : {}),
+        ...(clearGa4ReportServiceAccount ? { clearGaServiceAccountJson: true } : {}),
+      });
+      const expectedCredentialState = !clearGa4ReportServiceAccount;
+      if (response.data.gaServiceAccountJsonPresent !== expectedCredentialState) {
+        throw new Error("GA4 reporting credential state was not updated");
+      }
+      setSettings((current) => ({
+        ...current,
+        gaPropertyId: response.data.gaPropertyId ?? current.gaPropertyId,
+        gaServiceAccountJsonPresent: response.data.gaServiceAccountJsonPresent === true,
+      }));
+      setGa4ReportServiceAccountJson("");
+      setClearGa4ReportServiceAccount(false);
+      toast.success(dt("تم حفظ مفتاح قراءة تقارير GA4 بشكل آمن"));
+    } catch (error) {
+      const code = axios.isAxiosError(error) && typeof error.response?.data?.error === "string"
+        ? error.response.data.error
+        : "GA4_REPORT_CREDENTIAL_SAVE_FAILED";
+      const message = code === "ENCRYPTION_KEY_NOT_CONFIGURED"
+        ? dt("يلزم ضبط INTEGRATION_SETTINGS_ENCRYPTION_KEY على الخادم لحفظ مفتاح القراءة بأمان.")
+        : code === "INVALID_SERVICE_ACCOUNT_JSON"
+          ? dt("ملف حساب الخدمة غير صالح. الصق JSON الأصلي لحساب خدمة Google.")
+          : dt("تعذر حفظ مفتاح تقارير GA4. تحقق من الإعدادات ثم أعد المحاولة.");
+      toast.error(message);
+    } finally {
+      setSavingGa4ReportServiceAccount(false);
+    }
+  }
+
   async function test(platform: Platform) {
     setTesting(platform);
     try {
@@ -236,7 +280,15 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     <div className="grid gap-3 md:grid-cols-5"><Status label="Meta" status={status.meta} /><Status label="GA4" status={status.ga4} /><Status label="Google Ads" status={status.google_ads} /><Status label="TikTok" status={status.tiktok} /><Status label="X" status={status.x} /></div>
 
     <PlatformCard canTest={canTest} title={dt("فيسبوك / Meta")} desc="Pixel + Conversion API" platform="meta" testing={testing} test={test}><Field disabled={!canManage} label="Pixel ID" value={txt(settings.facebookPixelId)} onChange={(v) => set("facebookPixelId", v || null)} /><Field disabled={!canManage} label={dt("Dataset ID اختياري")} value={txt(settings.metaDatasetId)} onChange={(v) => set("metaDatasetId", v || null)} />{secretField("facebookAccessToken", "Conversion API Access Token")}<Field disabled={!canManage} label="Test Event Code" value={txt(settings.facebookTestEventCode)} onChange={(v) => set("facebookTestEventCode", v || null)} /><Field disabled={!canManage} label="Donate Event Name" value={txt(settings.metaDonateEventName)} onChange={(v) => set("metaDonateEventName", v || "Donate")} /><TestBox platform="meta" /></PlatformCard>
-    <PlatformCard canTest={canTest} title="Google Analytics 4" desc="Measurement Protocol" platform="ga4" testing={testing} test={test}><Field disabled={!canManage} label="Measurement ID" value={txt(settings.gaMeasurementId)} onChange={(v) => set("gaMeasurementId", v || null)} />{secretField("gaApiSecret", "API Secret")}<Field disabled={!canManage} label={dt("Property ID اختياري")} value={txt(settings.gaPropertyId)} onChange={(v) => set("gaPropertyId", v || null)} /><Field disabled={!canManage} label={dt("Stream ID اختياري")} value={txt(settings.gaStreamId)} onChange={(v) => set("gaStreamId", v || null)} /><Toggle disabled={!canManage} label="Debug Mode" checked={settings.gaDebugMode} onChange={(v) => set("gaDebugMode", v)} /><TestBox platform="ga4" /></PlatformCard>
+    <PlatformCard canTest={canTest} title="Google Analytics 4" desc="Measurement Protocol + Data API reports" platform="ga4" testing={testing} test={test}><Field disabled={!canManage} label="Measurement ID" value={txt(settings.gaMeasurementId)} onChange={(v) => set("gaMeasurementId", v || null)} />{secretField("gaApiSecret", "Measurement Protocol API Secret")}<Field disabled={!canManage} label={dt("Property ID (يُستخدم للتقارير أيضًا)")} value={txt(settings.gaPropertyId)} onChange={(v) => set("gaPropertyId", v || null)} /><Field disabled={!canManage} label={dt("Stream ID اختياري")} value={txt(settings.gaStreamId)} onChange={(v) => set("gaStreamId", v || null)} /><Toggle disabled={!canManage} label="Debug Mode" checked={settings.gaDebugMode} onChange={(v) => set("gaDebugMode", v)} />
+      <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3 md:col-span-2">
+        <div><p className="text-sm font-semibold text-slate-800">{dt("صلاحية قراءة تقارير GA4")}</p><p className="mt-1 text-xs leading-5 text-slate-600">{dt("تستخدم التقارير Property ID الموجود أعلاه. أضف حساب خدمة بصلاحية Viewer؛ هذا المفتاح للقراءة فقط ومنفصل عن API Secret المستخدم لإرسال الأحداث.")}</p></div>
+        <label htmlFor="ga4-report-service-account" className="text-xs font-medium text-slate-600">{dt("ملف حساب خدمة Google بصيغة JSON")}</label>
+        <textarea id="ga4-report-service-account" dir="ltr" autoComplete="off" autoCapitalize="off" spellCheck={false} disabled={!canManage} value={ga4ReportServiceAccountJson} onChange={(event) => { setGa4ReportServiceAccountJson(event.target.value); if (event.target.value.trim()) setClearGa4ReportServiceAccount(false); }} rows={4} placeholder={settings.gaServiceAccountJsonPresent ? dt("مفتاح القراءة محفوظ ومشفّر؛ الصق مفتاحًا جديدًا لاستبداله") : "{ \"type\": \"service_account\", ... }"} className="w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-start font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:bg-slate-100" />
+        {settings.gaServiceAccountJsonPresent ? <label className="flex items-center gap-2 text-xs text-rose-700"><input type="checkbox" disabled={!canManage} checked={clearGa4ReportServiceAccount} onChange={(event) => setClearGa4ReportServiceAccount(event.target.checked)} />{dt("إزالة مفتاح قراءة التقارير المحفوظ")}</label> : null}
+        <div className="flex flex-wrap items-center gap-3"><Button type="button" variant="outline" disabled={!canManage || savingGa4ReportServiceAccount} onClick={saveGa4ReportServiceAccount} className="gap-2">{savingGa4ReportServiceAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{dt("حفظ صلاحية تقارير GA4")}</Button><span className="text-xs text-slate-500">{settings.gaServiceAccountJsonPresent ? dt("مفتاح القراءة محفوظ بتشفير الخادم") : dt("لم تتم إضافة مفتاح القراءة بعد")}</span></div>
+      </div>
+      <TestBox platform="ga4" /></PlatformCard>
     <PlatformCard canTest={canTest} title="Google Ads  Enhanced Conversions" desc="Conversions settings" platform="google_ads" testing={testing} test={test}><Field disabled={!canManage} label="Conversion ID" value={txt(settings.googleAdsConversionId)} onChange={(v) => set("googleAdsConversionId", v || null)} /><Field disabled={!canManage} label="Conversion Label" value={txt(settings.googleAdsConversionLabel)} onChange={(v) => set("googleAdsConversionLabel", v || null)} /><Field disabled={!canManage} label={dt("Customer ID اختياري")} value={txt(settings.googleAdsCustomerId)} onChange={(v) => set("googleAdsCustomerId", v || null)} /><Field disabled={!canManage} label={dt("Conversion Action ID اختياري")} value={txt(settings.googleAdsConversionActionId)} onChange={(v) => set("googleAdsConversionActionId", v || null)} /><Toggle disabled={!canManage} label="Enhanced Conversions Enabled" checked={settings.googleAdsEnhancedConversionsEnabled} onChange={(v) => set("googleAdsEnhancedConversionsEnabled", v)} /><TestBox platform="google_ads" /></PlatformCard>
     <PlatformCard canTest={canTest} title="TikTok Pixel + Events API" desc="Pixel and server events" platform="tiktok" testing={testing} test={test}><Field disabled={!canManage} label="Pixel Code" value={txt(settings.tiktokPixelId)} onChange={(v) => set("tiktokPixelId", v || null)} />{secretField("tiktokAccessToken", "Access Token")}<Field disabled={!canManage} label={dt("Advertiser ID اختياري")} value={txt(settings.tiktokAdvertiserId)} onChange={(v) => set("tiktokAdvertiserId", v || null)} /><Field disabled={!canManage} label={dt("Test Event Code اختياري")} value={txt(settings.tiktokTestEventCode)} onChange={(v) => set("tiktokTestEventCode", v || null)} /><Toggle disabled={!canManage} label="Events API Enabled" checked={settings.tiktokEventsApiEnabled} onChange={(v) => set("tiktokEventsApiEnabled", v)} /><TestBox platform="tiktok" /></PlatformCard>
     <PlatformCard canTest={canTest} title="X / Twitter Ads" desc="X Pixel and Conversions API" platform="x" testing={testing} test={test}><Field disabled={!canManage} label="X Pixel ID" value={txt(settings.xPixelId)} onChange={(v) => set("xPixelId", v || null)} /><Field disabled={!canManage} label="X Conversion Event ID" value={txt(settings.xConversionEventId)} onChange={(v) => set("xConversionEventId", v || null)} />{secretField("xAccessToken", "X Access Token")}<Field disabled={!canManage} label="X Ad Account ID" value={txt(settings.xAdAccountId)} onChange={(v) => set("xAdAccountId", v || null)} /><Toggle disabled={!canManage} label="X Conversions API Enabled" checked={settings.xConversionsApiEnabled} onChange={(v) => set("xConversionsApiEnabled", v)} /><TestBox platform="x" /></PlatformCard>

@@ -34,7 +34,6 @@ function CurrencySelectorInner({
   const [selectedCurrency, setSelectedCurrency] = useState(
     showDefaultCurrencyOption ? DEFAULT_CURRENCY_CODE : "USD"
   );
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -108,9 +107,8 @@ function CurrencySelectorInner({
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
-      const { rates, timestamp } = JSON.parse(cached);
+      const { timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp < CACHE_DURATION) {
-        setExchangeRates(rates);
         return;
       }
     }
@@ -119,7 +117,6 @@ function CurrencySelectorInner({
       .then((data) => {
         if (data.result === "success" && (data.conversion_rates || data.rates)) {
           const rates = (data.conversion_rates || data.rates) as Record<string, number>;
-          setExchangeRates(rates);
           const updated = data.time_last_update_utc || data.updatedAt || new Date().toISOString();
           localStorage.setItem(
             CACHE_KEY,

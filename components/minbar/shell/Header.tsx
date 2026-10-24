@@ -133,7 +133,6 @@ export interface HeaderProps {
 
 export default function Header({
   active,
-  whatsappNumber = "905398436050",
   linkOverrides,
   signedIn = false,
   isAdmin = false,
@@ -158,7 +157,6 @@ export default function Header({
   /* The "all pages" menu lists categories and programmes when there are any. */
   const hasCats = categories.length > 0 || hasSupers;
   const [currency, setCurrency] = useState("USD");
-  const [showBack, setShowBack] = useState(false);
   const basket = useMinbarCartCount();
   /* Something just went into the basket (`CART_BUMP_EVENT`): the icon jumps
      and a "+1" rises. Toggled off and on again so a quick second add replays. */
@@ -238,20 +236,6 @@ export default function Header({
     window.addEventListener(CURRENCY_COOKIE_UPDATED_EVENT, sync);
     return () => window.removeEventListener(CURRENCY_COOKIE_UPDATED_EVENT, sync);
   }, []);
-
-  /* The back button appears only once the visitor has actually moved between
-     two pages  not on the first page of a session, and not on a reload of the
-     same page. */
-  useEffect(() => {
-    try {
-      const current = window.location.pathname + window.location.search;
-      const last = window.sessionStorage.getItem("mia_last_page");
-      if (last && last !== current) setShowBack(true);
-      window.sessionStorage.setItem("mia_last_page", current);
-    } catch {
-      // sessionStorage can throw in private mode; the button simply stays hidden.
-    }
-  }, [pathname]);
 
   /* A new page closes every panel, including via back/forward. */
   useEffect(() => {
@@ -768,12 +752,10 @@ export default function Header({
                     {tNav("home")}
                   </Link>
 
-                  {/* Administrators only. A plain <a>: the dashboard lives
-                      outside the localized tree and must not get a /{locale}
-                      prefix. Styled like the home row so it reads as a door
-                      out of the site, not as one more page in a group. */}
+                  {/* Administrators only. Use next/link directly so this path
+                      stays outside the localized route tree. */}
                   {isAdmin ? (
-                    <a
+                    <Link
                       href="/dashboard"
                       onClick={() => setMenuOpen(false)}
                       style={{
@@ -798,7 +780,7 @@ export default function Header({
                         <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
                       </svg>
                       {tNav("dashboard")}
-                    </a>
+                    </Link>
                   ) : null}
 
                   {/* Below 1180px the nav, and with it the categories dropdown,

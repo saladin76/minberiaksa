@@ -2475,5 +2475,10 @@
       "title": "Përfundo dhurimin këtu",
       "description": "Një formular i sigurt pagese, i ndarë nga përpjekja që nuk u krye. Fut të dhënat e kartës dhe përfundo dhurimin me një hap."
     }
+  },
+  "LiveDonationsTicker": {
+    "now": "tani",
+    "donated": "dhuroi",
+    "for": "për"
   }
 }

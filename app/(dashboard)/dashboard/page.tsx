@@ -23,7 +23,9 @@ import {
   HandCoins,
   Landmark,
   LayoutDashboard,
+  RefreshCw,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { CHART_THEME } from "@/lib/dashboard/chart-theme";
 import { MetricSummaryBand } from "@/components/dashboard/MetricSummaryBand";
@@ -279,6 +281,9 @@ export default function DashboardPage() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const statsRequestRef = useRef<AbortController | null>(null);
+  const statsTimeoutRef = useRef<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -511,6 +516,13 @@ export default function DashboardPage() {
 
   // Stats  affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   const fetchStats = useCallback(async () => {
+    statsRequestRef.current?.abort();
+    if (statsTimeoutRef.current !== null) window.clearTimeout(statsTimeoutRef.current);
+    const controller = new AbortController();
+    statsRequestRef.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 20_000);
+    statsTimeoutRef.current = timeout;
     try {
       const params = new URLSearchParams();
       params.set("period", chartPeriod);
@@ -523,24 +535,45 @@ export default function DashboardPage() {
       if (selectedCampaign !== "all") params.set("campaignId", selectedCampaign);
       if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
       if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-      const response = await fetch(`/api/admin/stats?${params}`);
+      const response = await fetch(`/api/admin/stats?${params}`, { signal: controller.signal });
       const data = await response.json();
+      if (statsRequestRef.current !== controller) return;
       if (!response.ok) {
         const message = data?.details || data?.error || dt("فشل في تحميل إحصائيات لوحة التحكم");
+        setStatsError(message);
         toast.error(message);
         return;
       }
       setStats(data);
+      setStatsError(null);
     } catch (error) {
+      if (statsRequestRef.current !== controller) return;
       console.error("Error fetching stats:", error);
-      toast.error(dt("فشل في تحميل إحصائيات لوحة التحكم"));
+      const message = timedOut
+        ? dt("استغرق تحميل الإحصائيات أكثر من 20 ثانية. يمكنك إعادة المحاولة.")
+        : dt("فشل في تحميل إحصائيات لوحة التحكم");
+      setStatsError(message);
+      toast.error(message);
     } finally {
-      setLoading(false);
+      window.clearTimeout(timeout);
+      if (statsTimeoutRef.current === timeout) statsTimeoutRef.current = null;
+      if (statsRequestRef.current === controller) {
+        statsRequestRef.current = null;
+        setLoading(false);
+      }
     }
   }, [chartPeriod, dateFrom, dateTo, selectedCategory, selectedCampaign, donationLocaleFilter, donationCountryFilter]);
 
   useEffect(() => {
     fetchStats();
+    return () => {
+      statsRequestRef.current?.abort();
+      statsRequestRef.current = null;
+      if (statsTimeoutRef.current !== null) {
+        window.clearTimeout(statsTimeoutRef.current);
+        statsTimeoutRef.current = null;
+      }
+    };
   }, [fetchStats]);
 
   // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
@@ -720,6 +753,18 @@ export default function DashboardPage() {
 
   if (loading) {
     return <LoadingSkeleton />;
+  }
+
+  if (!stats) {
+    return (
+      <div className="mx-auto flex min-h-[45vh] max-w-xl flex-col items-center justify-center gap-4 px-5 text-center">
+        <div className="text-base font-semibold text-slate-800">{dt("تعذر تحميل لوحة المعلومات")}</div>
+        <p role="alert" className="text-sm text-slate-600">{statsError || dt("لم تصل استجابة الإحصائيات. تحقق من الاتصال ثم أعد المحاولة.")}</p>
+        <Button onClick={() => { setLoading(true); void fetchStats(); }} className="gap-2">
+          <RefreshCw className="h-4 w-4" />{dt("إعادة المحاولة")}
+        </Button>
+      </div>
+    );
   }
 
   const oneTimeTotal = stats?.oneTimeTotalAmount ?? 0;
