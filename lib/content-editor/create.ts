@@ -10,7 +10,7 @@ export function emptyWorkspace(kind: ContentKind): ContentRecord {
   const shared = { id: "new", translations: [], editorReviews: {}, isActive: false, order: 0 };
   const defaults: Record<ContentKind, ContentRecord> = {
     campaigns: { title: "", description: "", images: [], categoryIds: [], goalType: "OPEN", fundraisingMode: "AMOUNT", targetAmount: 0, currentAmount: 0, baselineAmount: 0, updates: [] },
-    categories: { name: "", campaignIds: [], currentAmount: 0, baselineAmount: 0, navigationVisible: true, heroImage: "", heroVideoUrl: "", statDoneValue: 0, statGoalValue: 0, donateToCategory: false, donateCampaignId: null, suggestedAmounts: [], achievementVideoIds: [], values: [], infoCards: [] },
+    categories: { name: "", campaignIds: [], currentAmount: 0, baselineAmount: 0, navigationVisible: true, pageTemplate: null, suggestedByCurrency: {}, heroImage: "", heroVideoUrl: "", statDoneValue: 0, statGoalValue: 0, donateToCategory: false, donateCampaignId: null, suggestedAmounts: [], achievementVideoIds: [], values: [], infoCards: [] },
     blog: { title: "", content: "", description: "", campaignIds: [], published: false },
     "super-categories": { title: "", heroVideoLocales: [], blocks: [], items: [] },
     "urgent-banners": { title: "", tone: "red", textSide: "start", priority: 0, locales: [], placements: [], suggestedAmounts: [], amountLabels: [] },
@@ -77,7 +77,7 @@ export async function createWorkspace(db: Store, input: {
     const saved = await saveWorkspace(tx, {
       kind, id, revision: fingerprint(row), locale: input.locale, changes: input.locale === "ar" ? source : input.changes,
       localeChanges: { ...input.localeChanges, ar: source },
-      ...(["super-categories", "playlists", "courses"].includes(kind) ? { settings: input.settings } : {}),
+      ...(["super-categories", "playlists", "courses", "categories"].includes(kind) ? { settings: input.settings } : {}),
     });
     await tx.model("contentCreationRequest").create({ data: { id: input.creationKey, kind, contentId: id, fingerprint: requestFingerprint } });
     return saved;

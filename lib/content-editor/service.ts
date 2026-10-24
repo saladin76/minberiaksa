@@ -73,8 +73,8 @@ export function includeFor(kind: ContentKind) {
       : {}),
     ...(kind === "categories"
       ? {
-          values: { include: { translations: true } },
-          infoCards: { include: { translations: true } },
+          values: { include: { translations: true }, orderBy: { order: "asc" } },
+          infoCards: { include: { translations: true }, orderBy: { order: "asc" } },
         }
       : {}),
     ...(kind === "super-categories"
@@ -363,13 +363,13 @@ export async function saveWorkspace(
     let revision = input.revision;
     const locales = { ...input.localeChanges, [input.locale]: input.changes };
     const scalarSettings =
-      ["super-categories", "playlists", "courses"].includes(input.kind) &&
+      ["super-categories", "playlists", "courses", "categories"].includes(input.kind) &&
       input.settings &&
       typeof input.settings === "object" &&
       !Array.isArray(input.settings)
         ? Object.fromEntries(
             Object.entries(input.settings).filter(
-              ([key]) => !["blocks", "items", "videos"].includes(key),
+              ([key]) => !["blocks", "items", "videos", "values", "infoCards"].includes(key),
             ),
           )
         : input.settings;

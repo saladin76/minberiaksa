@@ -251,10 +251,17 @@ export function settingsFor(
       ? row.items.map((i) => ({ kind: i.kind, refId: i.refId, order: i.order }))
       : [];
   }
+  if (kind === "categories") {
+    result.values = Array.isArray(row.values) ? row.values : [];
+    result.infoCards = Array.isArray(row.infoCards) ? row.infoCards : [];
+    result.currencyOverrides = row.suggestedByCurrency && typeof row.suggestedByCurrency === "object" ? Object.entries(row.suggestedByCurrency).map(([currency, amounts]) => ({ currency, amountsStr: Array.isArray(amounts) ? amounts.join(", ") : "" })) : [];
+  }
   if (["playlists", "courses"].includes(kind)) result.videos = Array.isArray(row.videos) ? row.videos : [];
   return result;
 }
 const CATEGORY_PAGE_SETTINGS: SettingField[] = [
+  field("pageTemplate", "قالب الصفحة", "page", "select", [["", "صفحة مستقلة"], ["aqsa", "المسجد الأقصى"], ["zakat", "الزكاة"]]),
+  field("currencyOverrides", "استثناءات العملات", "page", "custom"),
   field("heroImage", "صورة واجهة صفحة التصنيف", "page", "image"),
   field("heroVideoUrl", "فيديو الواجهة (رابط YouTube أو معرّف)", "page"),
   field("statDoneValue", "عدد الإنجازات", "page", "number"),
@@ -286,7 +293,7 @@ export function settingsFields(
   return [
     ...SETTING_FIELDS[kind],
     ...(kind === "categories"
-      ? CATEGORY_PAGE_SETTINGS.filter((f) => f.key in row)
+      ? CATEGORY_PAGE_SETTINGS.filter((f) => f.key === "currencyOverrides" ? "suggestedByCurrency" in row : f.key in row)
       : []),
   ];
 }

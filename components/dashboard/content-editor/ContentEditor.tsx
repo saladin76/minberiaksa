@@ -18,6 +18,7 @@ import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
 import { DocumentUploadField } from "./DocumentUploadField";
+import { CategoryStructureEditor } from "./CategoryStructureEditor";
 import { MediaCollectionEditor } from "./MediaCollectionEditor";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
 import { WorkspacePreview } from "./WorkspacePreview";
@@ -962,6 +963,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 ))}
             </section>
           ) : null}
+          {kind === "categories" && section === "page" ? <CategoryStructureEditor settings={settingsDraft} locale={locale} values={current} onTextChange={edit} onChange={(key, value) => setSettingsDraft((previous) => ({ ...previous, [key]: value }))} /> : null}
           {["playlists", "courses"].includes(kind) && section === "media" ? (
             <MediaCollectionEditor kind={kind as "playlists" | "courses"} values={Array.isArray(settingsDraft.videos) ? settingsDraft.videos as ContentRecord[] : []} onChange={(videos) => setSettingsDraft((previous) => ({ ...previous, videos }))} />
           ) : null}

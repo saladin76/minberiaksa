@@ -1,3 +1,4 @@
+import { saveCategoryStructures } from "./category-structures";
 import { describeVideoSource } from "../content/video-platform";
 import type { Store } from "./service";
 import type { ContentKind, ContentRecord } from "./contracts";
@@ -25,6 +26,7 @@ export async function saveWorkspaceRelations(
   row: ContentRecord,
   input: unknown,
 ) {
+  if (kind === "categories" && input && typeof input === "object") { await saveCategoryStructures(db, id, row, input as ContentRecord); return; }
   if ((kind === "playlists" || kind === "courses") && input && typeof input === "object" && "videos" in input) {
     const videos = (input as ContentRecord).videos;
     if (!Array.isArray(videos) || videos.length > 200) throw new Error("قائمة الحلقات غير صالحة");

@@ -1,4 +1,5 @@
 "use client";
+import { CategoryIconPicker } from "@/app/(dashboard)/dashboard/categories/_components/CategoryIconPicker";
 import { dt } from "@/lib/dashboard/i18n";
 import { useEffect, useState } from "react";
 import { DocumentUploadField } from "./DocumentUploadField";
@@ -124,6 +125,7 @@ export function WorkspaceSettings({
                 title: `${p.label} · ${dt(s.label)}`,
               })),
             );
+          if (kind === "categories" && f.key === "icon") return <section key={f.key} className="space-y-2"><p className="text-sm font-semibold">{dt(f.label)}</p><CategoryIconPicker value={String(value || "")} onChange={(icon) => onChange(f.key, icon)} /></section>;
           if (f.key === "fileUrl")
             return <section key={f.key} className="space-y-2 rounded-xl border bg-white p-5">
               <p className="font-semibold">{dt(f.label)}</p>

@@ -1,3 +1,4 @@
+import { amountsByCurrency } from "../content/category-page-write";
 import { parseSuggestedDonations } from "../campaign/suggested-donations";
 import { parseSuggestedShareCounts } from "../campaign/campaign-modes";
 import { parseShareLabels } from "../campaign/share-labels";
@@ -17,7 +18,22 @@ export function validateWorkspaceSettings(
     throw new Error("إعدادات غير صالحة");
   const result: ContentRecord = {};
   for (const [key, value] of Object.entries(input)) {
+    if (kind === "categories" && ["values", "infoCards"].includes(key)) continue;
     const spec = settingsFields(kind, row).find((f) => f.key === key);
+    if (kind === "categories" && key === "currencyOverrides" && spec) {
+      if (!Array.isArray(value) || value.length > 20) throw new Error("استثناءات العملات غير صالحة");
+      const byCurrency: Record<string, number[]> = {};
+      for (const raw of value) {
+        if (!raw || typeof raw !== "object" || typeof raw.currency !== "string" || typeof raw.amountsStr !== "string") throw new Error("صف عملة غير صالح");
+        if (!raw.amountsStr.trim()) continue;
+        const code = raw.currency.trim().toUpperCase();
+        if (!/^[A-Z]{3}$/.test(code) || code === "USD" || code in byCurrency) throw new Error("عملة غير صالحة أو مكررة");
+        const parts = raw.amountsStr.replace(/[٠-٩]/g, (digit: string) => String(digit.charCodeAt(0) - 1632)).replace(/[۰-۹]/g, (digit: string) => String(digit.charCodeAt(0) - 1776)).split(/[,،;\n]+/).map((part: string) => part.trim()).filter(Boolean);
+        if (!parts.length || parts.length > 12 || parts.some((part: string) => !/^\d+$/.test(part) || Number(part) <= 0 || Number(part) > 1e9)) throw new Error("أدخل مبالغ صحيحة موجبة مفصولة بفواصل");
+        byCurrency[code] = [...new Set(parts.map(Number))] as number[];
+      }
+      result.suggestedByCurrency = amountsByCurrency(byCurrency); continue;
+    }
     if (kind === "campaigns" && ["suggestedDonations", "suggestedShareCounts", "shareLabels"].includes(key)) {
       if (!value || typeof value !== "object" || Array.isArray(value) || JSON.stringify(value).length > 16000) throw new Error("إعدادات المبالغ أو الوحدات غير صالحة");
       result[key] = key === "suggestedDonations" ? parseSuggestedDonations(value) : key === "suggestedShareCounts" ? parseSuggestedShareCounts(value) : parseShareLabels(value) || {};
@@ -142,6 +158,7 @@ export function validateWorkspaceSettings(
         result[key] =
           value ||
           ([
+            "pageTemplate",
             "categoryId",
             "campaignId",
             "donateCampaignId",
