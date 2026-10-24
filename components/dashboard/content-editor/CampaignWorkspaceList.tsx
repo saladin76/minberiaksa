@@ -580,7 +580,7 @@ export function CampaignWorkspaceList() {
                         <small className="text-slate-400">
                           {row.goalType === "OPEN"
                             ? dt("هدف مفتوح")
-                            : `من $${row.targetAmount.toLocaleString("en-US")}`}
+                            : dt("من ${0}", [row.targetAmount.toLocaleString("en-US")])}
                         </small>
                         {row.goalType !== "OPEN" && row.targetAmount > 0 ? (
                           <progress

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { dt, dashDir } from "@/lib/dashboard/i18n";
+import { dt, dashDir, dtMaybe } from "@/lib/dashboard/i18n";
 import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 import { MANAGED_SEO_PAGES, PAGE_SEO_FIELDS, managedPagePath, type PageSeoLocales, type PageSeoValues } from "@/lib/content-editor/page-seo-registry";
@@ -23,7 +23,7 @@ export function PageSeoEditor() {
     const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setProposals({}); setErrors({});
     api<Document>("/api/admin/page-seo/" + key, { signal: controller.signal }).then((result) => {
       if (!controller.signal.aborted) { setDocument(result); setDraft(result.overrides); }
-    }).catch((error) => { if (!controller.signal.aborted) setMessage(error.message); });
+    }).catch((error) => { if (!controller.signal.aborted) setMessage(dtMaybe(error.message)); });
     return () => { controller.abort(); generation.current?.abort(); };
   }, [key]);
   const edit = (field: string, value: string) => {
@@ -38,7 +38,7 @@ export function PageSeoEditor() {
       const read = await api<Document>("/api/admin/page-seo/" + key);
       if (read.revision !== saved.revision) throw new Error(dt("تغيرت النسخة بعد الحفظ. احتفظ بتعديلاتك ثم أعد تحميلها للمراجعة."));
       setDocument(read); setDraft(read.overrides); setProposals({}); setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
-    } catch (error) { setMessage(error instanceof Error ? error.message : dt("تعذر الحفظ")); }
+    } catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر الحفظ")); }
     finally { setBusy(""); }
   };
   const suggest = async (all: boolean) => {
@@ -53,7 +53,7 @@ export function PageSeoEditor() {
           const result = await api<Proposal>("/api/admin/page-seo/" + key, { method: "POST", signal: controller.signal, body: JSON.stringify({ locale: target, revision: document.revision, market }) });
           if (!controller.signal.aborted) setProposals((previous) => ({ ...previous, [target]: result }));
         } catch (error) {
-          if (!controller.signal.aborted) setErrors((previous) => ({ ...previous, [target]: error instanceof Error ? error.message : dt("تعذر إنشاء الاقتراح") }));
+          if (!controller.signal.aborted) setErrors((previous) => ({ ...previous, [target]: error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح") }));
         } finally { done++; if (!controller.signal.aborted) setProgress({ done, total: targets.length }); }
       }
     }));

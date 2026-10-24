@@ -67,13 +67,13 @@ export function WorkspacePreview({
     raised = Number(settings.currentAmount || 0),
     open = settings.goalType === "OPEN" || goal <= 0;
   return (
-    <section className="space-y-3" aria-label="معاينة المحتوى المباشرة">
+    <section className="space-y-3" aria-label={dt("معاينة المحتوى المباشرة")}>
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>
-          {kind === "campaigns" ? "معاينة بطاقة المشروع" : "معاينة الصفحة"} ·{" "}
+          {kind === "campaigns" ? dt("معاينة بطاقة المشروع") : dt("معاينة الصفحة")} ·{" "}
           {locale.toUpperCase()}
         </span>
-        <span className="text-emerald-700">مباشرة</span>
+        <span className="text-emerald-700">{dt("مباشرة")}</span>
       </div>
       {expanded ? (
         <div className="flex gap-2">
@@ -83,7 +83,7 @@ export function WorkspacePreview({
             aria-pressed={!mobile}
             onClick={() => setMobile(false)}
           >
-            الحاسوب
+            {dt("الحاسوب")}
           </button>
           <button
             type="button"
@@ -91,7 +91,7 @@ export function WorkspacePreview({
             aria-pressed={mobile}
             onClick={() => setMobile(true)}
           >
-            الموبايل
+            {dt("الموبايل")}
           </button>
         </div>
       ) : null}
@@ -110,15 +110,15 @@ export function WorkspacePreview({
           />
         ) : (
           <div className="flex h-32 items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-sm text-slate-500">
-            لم تُضف صورة
+            {dt("لم تُضف صورة")}
           </div>
         )}
         <div className="space-y-4 p-5">
-          <h3 className="text-xl font-bold">{title || "عنوان المحتوى"}</h3>
+          <h3 className="text-xl font-bold">{title || dt("عنوان المحتوى")}</h3>
           <p
             className={`${expanded ? "whitespace-pre-wrap" : "line-clamp-4"} text-sm leading-7 text-slate-600`}
           >
-            {body || "أضف وصفًا لهذه اللغة"}
+            {body || dt("أضف وصفًا لهذه اللغة")}
           </p>
           {media.embedUrl ? <iframe title={title || dt("معاينة الفيديو")} src={media.embedUrl} allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full rounded-lg border-0" /> : media.directVideo && media.watchUrl ? <video src={media.watchUrl} controls preload="metadata" className="aspect-video w-full rounded-lg" /> : media.watchUrl ? <a href={media.watchUrl} target="_blank" rel="noopener noreferrer">{dt("معاينة الفيديو")}</a> : null}
           {kind === "campaigns" ? (
@@ -126,7 +126,7 @@ export function WorkspacePreview({
               <div className="flex justify-between gap-2 border-t pt-4">
                 <div>
                   <small className="text-slate-500">
-                    إجمالي المحصّل بالدولار
+                    {dt("إجمالي المحصّل بالدولار")}
                   </small>
                   <p className="text-xl font-bold" dir="ltr">
                     $
@@ -137,8 +137,8 @@ export function WorkspacePreview({
                 </div>
                 <span className="text-xs">
                   {open
-                    ? "هدف مفتوح"
-                    : `الهدف $${goal.toLocaleString("en-US")}`}
+                    ? dt("هدف مفتوح")
+                    : dt("الهدف ${0}", [goal.toLocaleString("en-US")])}
                 </span>
               </div>
               {!open ? (
@@ -166,12 +166,12 @@ export function WorkspacePreview({
                       className="flex-1 rounded border px-2 py-2 text-center text-xs"
                     >
                       {String(v)}{" "}
-                      {settings.fundraisingMode === "SHARES" ? "سهم" : "USD"}
+                      {settings.fundraisingMode === "SHARES" ? dt("سهم") : "USD"}
                     </span>
                   ))}
               </div>
               <span className="block rounded-lg bg-brand px-4 py-3 text-center font-semibold text-white">
-                تبرع الآن
+                {dt("تبرع الآن")}
               </span>
             </>
           ) : null}
@@ -207,13 +207,12 @@ export function WorkspacePreview({
       </article>
       {!values.title && !values.name && locale !== "ar" ? (
         <p className="text-xs text-amber-700">
-          المعاينة تعرض النص البديل؛ لا يُحتسب ترجمة محفوظة.
+          {dt("المعاينة تعرض النص البديل؛ لا يُحتسب ترجمة محفوظة.")}
         </p>
       ) : null}
       {!expanded ? (
         <p className="text-xs leading-6 text-slate-500">
-          كما يظهر المحتوى للزائر. تتغير المعاينة مع اللغة والمسودة الحالية.
-          أزرار التبرع هنا للعرض فقط.
+          {dt("كما يظهر المحتوى للزائر. تتغير المعاينة مع اللغة والمسودة الحالية. أزرار التبرع هنا للعرض فقط.")}
         </p>
       ) : null}
     </section>

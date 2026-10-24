@@ -26,13 +26,13 @@ export function CategoryStructureEditor({ settings, locale, values, onChange, on
   };
   return <div className="space-y-5">
     {(["values", "infoCards"] as const).map((group) => <section key={group} className="space-y-3 rounded-xl border bg-white p-5">
-      <h3 className="font-bold">{dt(group === "values" ? "قيم التصنيف" : "البطاقات التعريفية")}</h3>
+      <h3 className="font-bold">{dt(group === "values" ? dt("قيم التصنيف") : dt("البطاقات التعريفية"))}</h3>
       {list(group).map((item, index) => {
         const rowKey = String(item.id || item.draftKey || index);
         const translation: ContentRecord = locale === "ar" ? item : item.id ? {} : (item.translations as Record<string, ContentRecord> || {})[locale] || {};
         return <fieldset key={rowKey} className="space-y-3 rounded border p-4" dir={LOCALES[locale as SupportedLocale]?.direction || "rtl"}>
           <legend className="px-2 text-sm">{index + 1}</legend>
-          {(group === "values" ? ["label"] : ["title", "body"]).map((field) => <label key={field} className="block space-y-1 text-sm"><span>{dt(field === "label" ? "النص" : field === "title" ? "العنوان" : "المحتوى")}</span>
+          {(group === "values" ? ["label"] : ["title", "body"]).map((field) => <label key={field} className="block space-y-1 text-sm"><span>{dt(field === "label" ? dt("النص") : field === "title" ? dt("العنوان") : dt("المحتوى"))}</span>
             <textarea maxLength={field === "body" ? 5000 : 500} value={item.id ? values[group + "." + item.id + "." + field] || "" : String(translation[field] || "")} onChange={(event) => setText(group, index, field, event.target.value)} className="w-full rounded border p-2" />
           </label>)}
           {group === "infoCards" ? <div><button type="button" className="rounded border px-3 py-2 text-sm" onClick={() => setIconEditor(iconEditor === rowKey ? "" : rowKey)}>{dt("تغيير الأيقونة")}</button>{iconEditor === rowKey ? <CategoryIconPicker value={String(item.icon || "")} onChange={(icon) => setItem(group, index, { icon })} /> : null}</div> : null}
@@ -43,7 +43,7 @@ export function CategoryStructureEditor({ settings, locale, values, onChange, on
           </div>
         </fieldset>;
       })}
-      <button type="button" className="rounded border px-3 py-2 text-sm" onClick={() => onChange(group, [...list(group), { draftKey: crypto.randomUUID(), ...(group === "values" ? { label: "" } : { title: "", body: "", icon: "alert" }), translations: {} }])}>{dt(group === "values" ? "إضافة قيمة" : "إضافة بطاقة")}</button>
+      <button type="button" className="rounded border px-3 py-2 text-sm" onClick={() => onChange(group, [...list(group), { draftKey: crypto.randomUUID(), ...(group === "values" ? { label: "" } : { title: "", body: "", icon: "alert" }), translations: {} }])}>{dt(group === "values" ? dt("إضافة قيمة") : dt("إضافة بطاقة"))}</button>
       <p className="text-xs text-slate-500">{dt("احفظ العناصر الجديدة أولًا لتضمينها في أدوات الترجمة.")}</p>
     </section>)}
     <section className="space-y-3 rounded-xl border bg-white p-5"><h3 className="font-bold">{dt("استثناءات حسب العملة (اختياري)")}</h3>

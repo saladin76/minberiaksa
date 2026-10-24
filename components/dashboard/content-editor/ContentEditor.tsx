@@ -1,6 +1,6 @@
 "use client";
 import { toast } from "react-hot-toast";
-import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { dashDir, dt, dtMaybe } from "@/lib/dashboard/i18n";
 import { SuggestedDonationsSection, type SuggestedDonationsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/SuggestedDonationsSection";
 import { SuggestedShareCountsSection, type SuggestedShareCountsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/SuggestedShareCountsSection";
 import { ShareLabelsSection, type ShareLabelsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/ShareLabelsSection";
@@ -163,7 +163,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setMessage("");
     } catch (error) {
       if (number === requestRef.current)
-        setMessage(error instanceof Error ? error.message : dt("تعذر التحميل"));
+        setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر التحميل"));
     }
   }, [url, kind]);
   const invalidateRequests = useCallback(() => {
@@ -301,7 +301,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             Object.assign(combined.proposals, result.proposals);
             Object.assign(combined.errors, result.errors);
           } catch (error) {
-            if (!controller.signal.aborted) combined.errors[target] = error instanceof Error ? error.message : dt("تعذر إعداد الاقتراح");
+            if (!controller.signal.aborted) combined.errors[target] = error instanceof Error ? dtMaybe(error.message) : dt("تعذر إعداد الاقتراح");
           } finally {
             done++;
             setGenerationProgress({ done, total: targets.length });
@@ -313,7 +313,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
       if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : dt("تعذر إعداد الاقتراح"));
+      setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر إعداد الاقتراح"));
     } finally {
       if (generationAbort.current === controller) {
         generationAbort.current = null;
@@ -378,7 +378,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setProposal(null);
       setMessage(dt("تم تغيير الرابط وحفظ الرابط السابق في السجل"));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : dt("تعذر تغيير الرابط"));
+      setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تغيير الرابط"));
     } finally {
       setBusy("");
     }
@@ -772,13 +772,13 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
               </aside> : null}
               {item.warnings.map((warning, i) => (
                 <p key={i} className="text-amber-800 text-sm">
-                  {warning}
+                  {dtMaybe(warning)}
                 </p>
               ))}
               {Object.entries(item.values).map(([key, value]) => (
                 <article key={key} className="rounded-lg border bg-white p-3">
                   <b className="text-sm">
-                    {document.fields.find((f) => f.key === key)?.label || key}
+                    {dtMaybe(document.fields.find((f) => f.key === key)?.label || key)}
                   </b>
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     <div className="whitespace-pre-wrap break-words text-sm text-slate-500">
@@ -834,7 +834,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 onClick={() => setSection(item.id)}
               >
                 <Icon size={17} />
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1">{dtMaybe(item.label)}</span>
                 <small className="text-[10px] opacity-50">
                   {String(index + 1).padStart(2, "0")}
                 </small>
@@ -847,7 +847,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         </nav>
         <div className="min-w-0 space-y-5">
           <h2 className="text-lg font-bold">
-            {EDITOR_SECTIONS[kind].find((s) => s.id === section)?.label}{" "}
+            {dtMaybe(EDITOR_SECTIONS[kind].find((s) => s.id === section)?.label || "")}{" "}
             <small className="font-normal text-slate-400">
               · {LOCALES[locale as keyof typeof LOCALES]?.nativeLabel}
             </small>
@@ -1049,7 +1049,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                 .filter((f) => f.required)
                 .map((f) => (
                   <p key={f.key} className="flex justify-between border-b pb-3">
-                    <span>{f.label}</span>
+                    <span>{dtMaybe(f.label)}</span>
                     <span
                       className={
                         current[f.key] ? "text-emerald-700" : "text-amber-700"
@@ -1080,7 +1080,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             <p className="mt-2 text-sm">
               {status.complete
                 ? dt("المحتوى مكتمل")
-                : `حقول ناقصة: ${status.missing.length}`}{" "}
+                : dt("حقول ناقصة: {0}", [status.missing.length])}{" "}
               ·{" "}
               {status.seoComplete
                 ? dt("إعدادات البحث مكتملة")

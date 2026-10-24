@@ -168,7 +168,7 @@ export function WorkspaceSettings({
                     <div key={url + i} className="space-y-2 rounded border p-3">
                       <ImageUploadField
                         onUploadingChange={onUploadingChange}
-                        label={i === 0 ? dt("الصورة الرئيسية") : `الصورة ${i + 1}`}
+                        label={i === 0 ? dt("الصورة الرئيسية") : dt("الصورة {0}", [i + 1])}
                         value={url}
                         onChange={(next) =>
                           onChange(

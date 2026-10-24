@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { dt, dashDir } from "@/lib/dashboard/i18n";
+import { dt, dashDir, dtMaybe } from "@/lib/dashboard/i18n";
 import { LOCALES, type SupportedLocale } from "@/lib/locales";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 import { EditorModal } from "./EditorModal";
@@ -36,7 +36,7 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
   }, [filter, cursor]);
   useEffect(() => {
     let active = true;
-    void refresh().catch((error) => { if (active) setMessage(error.message); });
+    void refresh().catch((error) => { if (active) setMessage(dtMaybe(error.message)); });
     const timer = setInterval(() => { void refresh().catch(() => {}); }, 10000);
     return () => { active = false; clearInterval(timer); };
   }, [refresh]);
@@ -47,7 +47,7 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
       const result = await api<{ created?: boolean }>("/api/admin/editorial-jobs", { method: "POST", body: JSON.stringify({ action: name, ...extra }) });
       setMessage(result.created === false ? dt("المهمة موجودة بالفعل.") : dt("تم تنفيذ الطلب. راجع حالة المهام أدناه."));
       await refresh();
-    } catch (error) { setMessage(error instanceof Error ? error.message : dt("تعذر تنفيذ العملية")); }
+    } catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تنفيذ العملية")); }
     finally { setBusy(""); }
   };
   const enqueueTranslations = async () => {
@@ -59,13 +59,13 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
         total += result.created; setQueued(total); next = result.nextCursor; await refresh();
       } while (next && !controller.signal.aborted);
       setMessage(dt("تم تجهيز قائمة مهام الترجمة للمراجعة."));
-    } catch (error) { setMessage(controller.signal.aborted ? dt("توقف تجهيز القائمة. المهام التي أضيفت محفوظة وتظهر أدناه.") : error instanceof Error ? error.message : dt("تعذر تنفيذ العملية")); }
+    } catch (error) { setMessage(controller.signal.aborted ? dt("توقف تجهيز القائمة. المهام التي أضيفت محفوظة وتظهر أدناه.") : error instanceof Error ? dtMaybe(error.message) : dt("تعذر تنفيذ العملية")); }
     finally { setBusy(""); await refresh(); }
   };
   const openReview = async (id: string) => {
     setReviewLoading(true); setMessage("");
     try { const job = await api<Job>("/api/admin/editorial-jobs/" + id); setReview(job); setValues(job.result?.values || {}); }
-    catch (error) { setMessage(error instanceof Error ? error.message : dt("تعذر تحميل المراجعة")); }
+    catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تحميل المراجعة")); }
     finally { setReviewLoading(false); }
   };
   const closeReview = () => { if (busy === "apply") return; if (!dirtyReview || window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) setReview(null); };
@@ -75,13 +75,13 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
       const result = await api<{ contentId: string }>("/api/admin/editorial-jobs/" + review.id, { method: "POST", body: JSON.stringify({ action: "apply", version: review.version, values }) });
       setReview({ ...review, status: "APPLIED", resultContentId: result.contentId, result: { ...review.result, values } });
       setMessage(dt("تم اعتماد المراجعة وحفظ المحتوى. افتحه للتحقق من النتيجة.")); await refresh();
-    } catch (error) { setMessage(error instanceof Error ? error.message : dt("تعذر تأكيد الحفظ. احتفظ بالمراجعة وأعد المحاولة.")); }
+    } catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تأكيد الحفظ. احتفظ بالمراجعة وأعد المحاولة.")); }
     finally { setBusy(""); }
   };
   const changeJob = async (job: Job, name: string) => {
     setBusy(job.id); setMessage("");
     try { await api("/api/admin/editorial-jobs/" + job.id, { method: "POST", body: JSON.stringify({ action: name, version: job.version }) }); await refresh(); }
-    catch (error) { setMessage(error instanceof Error ? error.message : dt("تعذر تنفيذ العملية")); }
+    catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تنفيذ العملية")); }
     finally { setBusy(""); }
   };
   return <div dir={dashDir()} className="mx-auto max-w-7xl space-y-5 pb-12">
@@ -95,7 +95,7 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
       <button type="button" disabled={Boolean(busy) || !dirtySettings} className="rounded border px-3 py-2" onClick={async () => {
         setBusy("settings");
         try { const saved = await api<Settings>("/api/admin/editorial-jobs", { method: "PUT", body: JSON.stringify({ weeklyEnabled: settings.weeklyEnabled, market: settings.market }) }); setSettings(saved); await refresh(); setMessage(dt("تم حفظ الإعدادات")); }
-        catch (error) { setMessage(error instanceof Error ? error.message : dt("تعذر الحفظ")); } finally { setBusy(""); }
+        catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر الحفظ")); } finally { setBusy(""); }
       }}>{dt("حفظ الإعدادات")}</button>
       {!settings.configured ? <p role="status" className="text-sm text-amber-700">{dt("خدمة بحث المحتوى غير مهيأة. تبقى المهام في الانتظار حتى استكمال الإعداد.")}</p> : null}
     </section> : null}
