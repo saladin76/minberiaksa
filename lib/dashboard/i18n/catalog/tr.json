@@ -7413,5 +7413,8 @@
   "النص واللغات": "Metin ve diller",
   "الأزرار والوجهات": "Düğmeler ve hedefler",
   "الشكل والمبالغ": "Görünüm ve tutarlar",
-  "الظهور والجدولة": "Görünürlük ve zamanlama"
+  "الظهور والجدولة": "Görünürlük ve zamanlama",
+  "الشريط مفعل لكن قائمة أسماء العرض فارغة. أضف أسماء العرض واحفظها ليظهر الشريط.": "Şerit etkin ancak görünen ad listesi boş. Şeridi göstermek için görünen adları ekleyip kaydedin.",
+  "الرسائل التلقائية تدعم البريد وواتساب. يمكنك إعداد حملة SMS من صفحة الحملات التسويقية بعد استكمال إعداد المزود.": "Otomatik mesajlar e-posta ve WhatsApp'ı destekler. Sağlayıcı ayarlarını tamamladıktan sonra pazarlama kampanyaları sayfasından SMS kampanyası oluşturabilirsiniz.",
+  "مراجعة وإعادة محاولة {0} رسالة": "{0} mesajı incele ve yeniden dene"
 }

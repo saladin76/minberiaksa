@@ -35,7 +35,7 @@ import { CategoryIconPicker } from '../_components/CategoryIconPicker';
 import { dt } from "@/lib/dashboard/i18n";
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
-  { name: 'name', get label() { return dt("اسم الحملة"); }, maxLength: 50, requiredIn: ['en'] },
+  { name: 'name', get label() { return dt("اسم التصنيف"); }, maxLength: 50, requiredIn: ['en'] },
   { name: 'description', get label() { return dt("الوصف"); }, multiline: true, maxLength: 500 },
   /* The landing page's own copy. Translated like the rest, so the auto-translate
      button fills the whole page in one press. */
@@ -58,7 +58,7 @@ const LOCALE_SHAPE = Object.fromEntries(
 ) as LocaleShape;
 
 const formSchema = z.object({
-  name: z.string().min(1, dt("اسم الحملة مطلوب")).max(50, dt("اسم الحملة طويل جداً")),
+  name: z.string().min(1, dt("اسم التصنيف مطلوب")).max(50, dt("اسم التصنيف طويل جداً")),
   description: z.string().max(500, dt("الوصف طويل جداً")).optional(),
   image: z.string().optional(),
   icon: z.string().optional(),
@@ -111,11 +111,11 @@ export default function NewCategoryPage() {
         infoCards: page.infoCards.filter((c) => c.title.trim()),
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
-      toast.success(dt("تم إنشاء الحملة بنجاح"));
+      toast.success(dt("تم إنشاء التصنيف بنجاح"));
       router.push('/dashboard/categories');
     } catch (error) {
       console.error('Error creating category:', error);
-      toast.error(dt("فشل في إنشاء الحملة"));
+      toast.error(dt("فشل في إنشاء التصنيف"));
     } finally {
       setSaving(false);
     }
@@ -162,8 +162,8 @@ export default function NewCategoryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إنشاء حملة جديدة")}</h1>
-          <p className="text-gray-600">{dt("قم بإدخال معلومات الحملة")}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إنشاء تصنيف جديد")}</h1>
+          <p className="text-gray-600">{dt("قم بإدخال معلومات التصنيف")}</p>
         </div>
         <Button
           variant="outline"
@@ -184,10 +184,10 @@ export default function NewCategoryPage() {
               <Card className="p-6">
                 <div className="grid gap-6">
                   <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>{dt("اسم الحملة")}</FormLabel><FormControl><Input {...field} placeholder={dt("أدخل اسم الحملة")} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{dt("اسم التصنيف")}</FormLabel><FormControl><Input {...field} placeholder={dt("أدخل اسم التصنيف")} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>{dt("وصف الحملة")}</FormLabel><FormControl><Textarea placeholder={dt("اكتب وصفاً للحملة...")} className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{dt("وصف التصنيف")}</FormLabel><FormControl><Textarea placeholder={dt("اكتب وصفاً للتصنيف...")} className="resize-y" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
               </Card>
@@ -206,7 +206,7 @@ export default function NewCategoryPage() {
                 name="image"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{dt("صورة الحملة")}</FormLabel>
+                    <FormLabel>{dt("صورة التصنيف")}</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
                         {field.value ? (
@@ -253,7 +253,7 @@ export default function NewCategoryPage() {
                       </div>
                     </FormControl>
                     <FormDescription>
-                      {dt("يمكنك رفع صورة واحدة للحملة.")}<br />
+                      {dt("يمكنك رفع صورة واحدة للتصنيف.")}<br />
                       <span className="text-amber-700">
                         {dt("الحجم المُوصى به: ")}<strong>1200×800 px</strong> {dt(" (نسبة 3:2)، صيغة JPG أو PNG، حجم الملف لا يزيد عن 2MB.")}</span>
                     </FormDescription>
@@ -268,7 +268,7 @@ export default function NewCategoryPage() {
                 name="icon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{dt("أيقونة الحملة")}</FormLabel>
+                    <FormLabel>{dt("أيقونة التصنيف")}</FormLabel>
                     <FormControl>
                       <CategoryIconPicker value={field.value} onChange={field.onChange} />
                     </FormControl>
@@ -294,7 +294,7 @@ export default function NewCategoryPage() {
               disabled={saving}
             >
               {saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
-              {dt("إنشاء الحملة")}</Button>
+              {dt("إنشاء التصنيف")}</Button>
           </div>
         </form>
       </Form>

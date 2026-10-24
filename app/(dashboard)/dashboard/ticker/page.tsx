@@ -197,6 +197,11 @@ export default function TickerAdminPanel() {
         )}
       />
 
+      {config.isActive && !donorNamesInput.split("\n").some((name) => name.trim()) ? (
+        <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          {dt("الشريط مفعل لكن قائمة أسماء العرض فارغة. أضف أسماء العرض واحفظها ليظهر الشريط.")}
+        </p>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>{dt("حالة الشريط")}</CardTitle>

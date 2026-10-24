@@ -7421,5 +7421,8 @@
   "النص واللغات": "Text and languages",
   "الأزرار والوجهات": "Buttons and destinations",
   "الشكل والمبالغ": "Appearance and amounts",
-  "الظهور والجدولة": "Visibility and scheduling"
+  "الظهور والجدولة": "Visibility and scheduling",
+  "الشريط مفعل لكن قائمة أسماء العرض فارغة. أضف أسماء العرض واحفظها ليظهر الشريط.": "The ticker is enabled, but its display-name list is empty. Add and save display names to show the ticker.",
+  "الرسائل التلقائية تدعم البريد وواتساب. يمكنك إعداد حملة SMS من صفحة الحملات التسويقية بعد استكمال إعداد المزود.": "Automatic messages support email and WhatsApp. Once the provider is configured, create an SMS campaign from the marketing campaigns page.",
+  "مراجعة وإعادة محاولة {0} رسالة": "Review and retry {0} messages"
 }

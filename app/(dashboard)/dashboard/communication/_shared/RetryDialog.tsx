@@ -296,7 +296,7 @@ export function RetryDialog({ open, channel, ids, days, campaignId, campaignName
                   onClick={() => void run()}
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  {willSend > 0 ? dt("إرسال {0} رسالة", [willSend.toLocaleString("en-US")]) : dt("إرسال")}
+                  {willSend > 0 ? dt("مراجعة وإعادة محاولة {0} رسالة", [willSend.toLocaleString("en-US")]) : dt("إرسال")}
                 </Button>
               </>
             )}
