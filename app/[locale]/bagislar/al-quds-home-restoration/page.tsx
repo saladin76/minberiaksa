@@ -1,6 +1,7 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { slugFor } from "@/lib/minbar/routes";
 import { listProjects } from "@/lib/minbar/projects";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
@@ -31,7 +32,7 @@ const REGIONS = ["repair", "al-quds"];
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "projects" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("restorationProject", locale, {
     title: t("restHeroTitle"),
     description: t("restHeroLead"),
     path: `/${slugFor("restorationProject", locale)}`,

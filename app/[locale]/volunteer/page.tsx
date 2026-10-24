@@ -1,6 +1,7 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import VolunteerPage from "@/components/minbar/volunteer/VolunteerPage";
@@ -15,7 +16,7 @@ const NAMESPACES = ["volunteer", "contact", "partner", "homepage"] as const;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "volunteer" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("volunteer", locale, {
     title: t("heroTitle"),
     description: t("heroSubtitle"),
     path: `/${slugFor("volunteer", locale)}`,

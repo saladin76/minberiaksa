@@ -2,7 +2,7 @@ import "server-only";
 import { isValidLocale } from "@/lib/locales";
 import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
 
-export type SeoContentType = "campaign" | "category" | "blog";
+export type SeoContentType = "campaign" | "category" | "blog" | "page";
 
 export type SeoSuggestion = {
   seoTitle: string;
@@ -50,6 +50,7 @@ function metaDescriptionMax(locale: string) {
 }
 
 const SCHEMA_BY_TYPE: Record<SeoContentType, string> = {
+  page: "WebPage + BreadcrumbList",
   campaign: "DonateAction + BreadcrumbList + FAQPage",
   category: "CollectionPage + BreadcrumbList",
   blog: "Article + BreadcrumbList + FAQPage",

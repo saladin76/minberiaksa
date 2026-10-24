@@ -89,6 +89,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     get group() { return dt("إعدادات المحتوى والتبرعات"); },
     items: [
       { key: "siteContent", get title() { return dt("نصوص الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
+      { key: "siteContent", get title() { return dt("SEO الصفحات العامة"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "metadata", "pages", "فهرسة", "بحث"] },
       { key: "campaigns", get title() { return dt("إعدادات السلة"); }, href: "/dashboard/cart-settings", icon: "shoppingCart", keywords: ["cart", "basket", "السلة", "team", "support", "دعم", "الفريق", "upsell", "suggestions", "مقترحات", "amounts", "مبالغ"] },
       { key: "bankAccounts", get title() { return dt("الحسابات البنكية"); }, href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
     ],

@@ -1,5 +1,6 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
-import { LOCALE_SEO, buildPageMetadata } from "@/lib/seo";
+import { LOCALE_SEO } from "@/lib/seo";
 import type { Locale } from "@/lib/seo";
 import { listProjects, listSlides } from "@/lib/minbar/projects";
 import { slugFor } from "@/lib/minbar/routes";
@@ -18,7 +19,7 @@ const NAMESPACES = ["projects", "homepage", "quran"] as const;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("projects", locale, {
     title: seo.campaigns.title,
     description: seo.campaigns.description,
     path: `/${slugFor("projects", locale)}`,
