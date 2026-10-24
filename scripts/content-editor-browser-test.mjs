@@ -159,7 +159,7 @@ const server = createServer((req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
-let browser;
+let browser, page;
 const errors = [];
 try {
   browser = await chromium.launch({
@@ -168,7 +168,7 @@ try {
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
   });
-  const page = await browser.newPage({
+  page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   });
   page.on("pageerror", (e) => errors.push(e.message));
@@ -281,7 +281,7 @@ try {
       try {
         await view.goto(origin + "/?kind=" + kind);
         await view.getByRole("heading", {level:1}).waitFor();
-        const nav = view.locator("button[aria-current]");
+        const nav = view.locator("nav:has(button[aria-current]) > button");
         for (let i=0; i<EDITOR_SECTIONS[kind].length; i++) {
           await nav.nth(i).click();
           await assert.doesNotReject(() => view.getByRole("heading", {level:1}).waitFor());
@@ -326,6 +326,7 @@ try {
     }),
   );
 } finally {
+  if (page) await page.screenshot({path:path.join(temp,"draft-flow-last-state.png"),fullPage:true}).catch(()=>{});
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
 }
