@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { CONFIG, fieldsFor, hasText, titleKeyFor, validateChanges, type ContentKind, type ContentRecord } from "./contracts";
 import { ContentError, documentFor, fingerprint, generateEditorialSlug, reserveEditorialSlug, readContent, saveWorkspace, type Store } from "./service";
 import { validateWorkspaceSettings } from "./workspace-settings";
-import { parseCampaignCreatePayload } from "../campaign/admin-create-core";
+import { parseCampaignCreatePayload, CampaignCreateValidationError } from "../campaign/admin-create-core";
 import { generateUniqueSlug } from "../slug";
 import { SUPPORTED_LOCALES } from "../locales";
 
@@ -57,10 +57,17 @@ export async function createWorkspace(db: Store, input: {
     if (kind === "campaigns") {
       const relation = settings.categories as { set: { id: string }[] } | undefined;
       const categoryIds = relation?.set.map((entry) => entry.id) || [];
-      const parsed = parseCampaignCreatePayload({ ...data, categoryIds, currentAmount: 0 }, {
+      let parsed: ReturnType<typeof parseCampaignCreatePayload>;
+      try { parsed = parseCampaignCreatePayload({ ...data, categoryIds, currentAmount: 0 }, {
         categoryPriorities: null, suggestedDonations: data.suggestedDonations || null,
         suggestedTeamSupport: null, suggestedShareCounts: data.suggestedShareCounts || null, shareLabels: null,
-      });
+      }); } catch (error) {
+        if (error instanceof CampaignCreateValidationError) {
+          const labels: Record<string, string> = { images: "صور المشروع", categoryIds: "التصنيفات", targetAmount: "الهدف بالدولار", sharePriceUSD: "سعر السهم بالدولار", translations: "الترجمات", title: "العنوان", description: "المحتوى" };
+          throw new ContentError("راجع بيانات المشروع المطلوبة: " + (labels[(error.field || "").split(".")[0]] || "المعلومات الأساسية"));
+        }
+        throw error;
+      }
       const found = await tx.model("category").findMany({ where: { id: { in: parsed.categoryIds } } });
       if (found.length !== parsed.categoryIds.length || found.some((row) => row.isActive === false)) throw new ContentError("اختر تصنيفات نشطة موجودة");
       delete data.categoryIds;

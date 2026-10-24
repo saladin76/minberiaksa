@@ -65,3 +65,14 @@ test("database badge queries apply paid-only and monthly-only filters and never 
   assert.match(source, /frequency: "MONTHLY"/);
   assert.match(source, /BADGE_SCAN_BATCH_SIZE/);
 });
+
+test("a monthly amount range never treats an unknown foreign-currency commitment as zero", () => {
+  const subscriptions: BadgeSubscriptionRow[] = [
+    { donorId: "unknown", amountUSD: null, amount: 500, currency: "EUR", status: "ACTIVE", frequency: "MONTHLY" },
+    { donorId: "partial", amountUSD: 20, amount: 20, currency: "USD", status: "ACTIVE", frequency: "MONTHLY" },
+    { donorId: "partial", amountUSD: null, amount: 500, currency: "EUR", status: "ACTIVE", frequency: "MONTHLY" },
+    { donorId: "known", amountUSD: 40, amount: 40, currency: "EUR", status: "ACTIVE", frequency: "MONTHLY" },
+    { donorId: "usd-fallback", amountUSD: null, amount: 30, currency: "USD", status: "ACTIVE", frequency: "MONTHLY" },
+  ];
+  assert.deepEqual(matchingBadgeUserIds({ type: "MONTHLY_ACTIVE_RANGE", amountMinUSD: 0, amountMaxUSD: 100 }, [], subscriptions), ["known", "usd-fallback"]);
+});
