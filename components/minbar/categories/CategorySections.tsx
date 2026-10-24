@@ -4,6 +4,7 @@ import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { miaPath } from "@/lib/minbar/routes";
+import { describeVideoSource } from "@/lib/content/video-platform";
 import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
 import { addToCart, type CartFreqKey, type CartTypeKey } from "@/lib/minbar/cart";
 import { formatMoney } from "@/lib/minbar/money";
@@ -364,7 +365,7 @@ export function CategoryAchievements({ page }: { page: CategoryPageContent }) {
               key={clip.id}
               type="button"
               className="mia-reel"
-              onClick={() => video.open(youtubeEmbed(clip.youtubeId, { autoplay: true, start: clip.startSeconds ?? undefined }))}
+              onClick={() => video.open(describeVideoSource({ url: clip.url || undefined, youtubeId: clip.youtubeId, startSeconds: clip.startSeconds }).embedUrl || clip.url || youtubeEmbed(clip.youtubeId))}
               style={{ flex: "0 0 232px", position: "relative", display: "block", aspectRatio: "9 / 16", borderRadius: 18, overflow: "hidden", background: "var(--deep)", border: "1px solid var(--border)", padding: 0, cursor: "pointer", textAlign: "start" }}
             >
               {image ? (
