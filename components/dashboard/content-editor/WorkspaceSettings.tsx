@@ -109,7 +109,7 @@ export function WorkspaceSettings({
           if (f.key === "achievementVideoIds")
             options = catalog.linked.VIDEO || [];
           if (f.key === "categoryId") options = catalog.postCategories;
-          if (["locales", "heroVideoLocales"].includes(f.key))
+          if (["locales", "heroVideoLocales", "localeFilter"].includes(f.key))
             options = SUPPORTED_LOCALES.map((id) => ({
               id,
               title: LOCALES[id].nativeLabel,

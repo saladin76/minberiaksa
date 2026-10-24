@@ -43,6 +43,7 @@ export function validateWorkspaceSettings(
         "locales",
         "placements",
         "heroVideoLocales",
+        "localeFilter",
         "achievementVideoIds",
       ].includes(key)
     ) {
@@ -72,7 +73,7 @@ export function validateWorkspaceSettings(
       )
         throw new Error("معرّف غير صالح");
       if (
-        ["locales", "heroVideoLocales"].includes(key) &&
+        ["locales", "heroVideoLocales", "localeFilter"].includes(key) &&
         value.some(
           (v) => !(SUPPORTED_LOCALES as readonly string[]).includes(String(v)),
         )
@@ -102,7 +103,7 @@ export function validateWorkspaceSettings(
         throw new Error("قيمة إعداد غير صالحة");
       if (spec.options && !spec.options.some(([k]) => k === value))
         throw new Error("خيار غير صالح");
-      if (key === "heroVideoId" && value && !/^[A-Za-z0-9_-]{11}$/.test(value))
+      if (["heroVideoId", "youtubeId", "introVideoId"].includes(key) && value && !/^[A-Za-z0-9_-]{11}$/.test(value))
         throw new Error("معرّف فيديو YouTube غير صالح");
       if (
         key === "heroVideoUrl" &&

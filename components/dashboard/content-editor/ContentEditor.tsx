@@ -963,7 +963,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           ) : null}
           {(kind === "campaigns" &&
             ["donation", "history"].includes(section)) ||
-          (kind === "categories" && section === "page") ? (
+          (kind === "categories" && section === "page") || (["videos", "playlists", "courses", "reports", "booklets", "faqs"].includes(kind) && section === "review") ? (
             <details className="rounded-xl border bg-white p-4">
               <summary className="cursor-pointer text-sm font-semibold">
                 {dt("الأدوات المتخصصة والإعدادات المتقدمة")}

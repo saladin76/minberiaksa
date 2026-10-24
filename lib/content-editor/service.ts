@@ -6,6 +6,7 @@ import { pickLocaleSlug, slugify } from "../slug";
 import { HAS_IMPACT_BACKING_CAMPAIGNS } from "./site-capabilities";
 import {
   CONFIG,
+  titleKeyFor,
   fieldsFor,
   hasText,
   rows,
@@ -105,7 +106,7 @@ export function documentFor(kind: ContentKind, row: ContentRecord) {
   return {
     id: text(row.id),
     kind,
-    title: text(row.title || row.name),
+    title: text(row.title || row.name || row.question),
     slug: text(row.slug),
     slugs: Object.fromEntries(
       SUPPORTED_LOCALES.map((locale) => [
@@ -230,7 +231,7 @@ export async function saveContent(
           throw new ContentError("أحد عناصر المحتوى المرتبط غير موجود");
       }
     }
-    const titleKey = kind === "categories" ? "name" : "title";
+    const titleKey = titleKeyFor(kind);
     if (!hasText(next[titleKey]))
       throw new ContentError("العنوان مطلوب قبل الحفظ");
     // Touch the parent in the same transaction as every translation/child write.

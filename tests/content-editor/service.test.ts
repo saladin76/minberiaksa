@@ -771,3 +771,16 @@ test("slug changes reject collisions, missing confirmation and stale revisions",
   await assert.rejects(() => changeEditorialSlug(db.store, input), /فريد|مستخدم/);
   assert.equal(db.read().slug, "stable");
 });
+
+for (const kind of ["videos", "playlists", "courses", "reports", "booklets", "faqs"] as const) {
+  test(kind + ": common editor saves an exact language without overwriting Arabic or media", async () => {
+    const titleKey = kind === "faqs" ? "question" : "title";
+    const initial = { id, [titleKey]: "المحتوى الأصلي", ...(kind === "faqs" ? { answer: "الجواب" } : {}), fileUrl: "https://example.org/original.pdf", translations: [] };
+    const db = memory(kind, initial);
+    const changes = { [titleKey]: "Localized title", ...(kind === "faqs" ? { answer: "Localized answer" } : {}) };
+    const saved = await saveWorkspace(db.store, { kind, id, revision: fingerprint(initial), locale: "en", changes });
+    assert.equal(saved.values.en[titleKey], "Localized title");
+    assert.equal(saved.values.ar[titleKey], "المحتوى الأصلي");
+    assert.equal(db.read().fileUrl, initial.fileUrl);
+  });
+}

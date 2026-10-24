@@ -2697,6 +2697,18 @@ model VideoPlaylist {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, order])
+  editorVersion String?
+  editorReviews Json?
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 model PlaylistTranslation {
@@ -2709,6 +2721,16 @@ model PlaylistTranslation {
   playlist VideoPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
 
   @@unique([playlistId, locale])
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 /// One episode inside a playlist.
@@ -2771,6 +2793,18 @@ model Course {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, isPinned, order])
+  editorVersion String?
+  editorReviews Json?
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 model CourseTranslation {
@@ -2783,6 +2817,16 @@ model CourseTranslation {
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, locale])
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 model CourseVideo {
@@ -2829,6 +2873,18 @@ model Video {
   updatedAt DateTime @updatedAt
 
   @@index([type, isActive, order])
+  editorVersion String?
+  editorReviews Json?
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 model VideoTranslation {
@@ -2840,6 +2896,16 @@ model VideoTranslation {
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@unique([videoId, locale])
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 /// "التقارير"  published PDF reports.
@@ -2860,6 +2926,20 @@ model Report {
   updatedAt DateTime @updatedAt
 
   @@index([isPublished, year, order])
+  editorVersion String?
+  editorReviews Json?
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
+  fileLocale String?
+
 }
 
 model ReportTranslation {
@@ -2872,6 +2952,18 @@ model ReportTranslation {
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@unique([reportId, locale])
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
+  fileUrl String?
+
 }
 
 /// "كتيبات المؤسسة".
@@ -2893,6 +2985,20 @@ model Booklet {
   updatedAt DateTime @updatedAt
 
   @@index([isPublished, order])
+  editorVersion String?
+  editorReviews Json?
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
+  fileLocale String?
+
 }
 
 model BookletTranslation {
@@ -2905,6 +3011,18 @@ model BookletTranslation {
   booklet Booklet @relation(fields: [bookletId], references: [id], onDelete: Cascade)
 
   @@unique([bookletId, locale])
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
+  fileUrl String?
+
 }
 
 /// Bank accounts for the bank-transfer donation path.
@@ -3047,6 +3165,18 @@ model Faq {
   updatedAt DateTime @updatedAt
 
   @@index([page, isActive, order])
+  editorVersion String?
+  editorReviews Json?
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 model FaqTranslation {
@@ -3059,6 +3189,16 @@ model FaqTranslation {
   faq Faq @relation(fields: [faqId], references: [id], onDelete: Cascade)
 
   @@unique([faqId, locale])
+  metaTitle String?
+  metaDescription String?
+  imageAlt String?
+  seoKeyword String?
+  ogTitle String?
+  ogDescription String?
+  ogImage String?
+  seoNoIndex String?
+  faqContent String?
+
 }
 
 /**
