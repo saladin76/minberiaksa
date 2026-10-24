@@ -1,4 +1,7 @@
 "use client";
+import { toast } from "react-hot-toast";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { readFaqDraft } from "@/lib/content-editor/faq";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -54,7 +57,7 @@ type Proposal = {
   kind: ContentKind;
   revision: string;
   action: string;
-  proposals: Record<string, { values: TextValues; warnings: string[] }>;
+  proposals: Record<string, { values: TextValues; warnings: string[]; research?: { summary: string; sources: { title: string; url: string }[]; accessedAt: string; locale: string } }>;
   errors: Record<string, string>;
 };
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
@@ -105,6 +108,8 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [generationProgress, setGenerationProgress] = useState<{ done: number; total: number } | null>(null);
+  const generationAbort = useRef<AbortController | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [reviewed, setReviewed] = useState(false);
   const [slug, setSlug] = useState("");
@@ -141,6 +146,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
     }
   }, [url, kind]);
   const invalidateRequests = useCallback(() => {
+    generationAbort.current?.abort();
     requestRef.current++;
   }, []);
   useEffect(() => {
@@ -174,6 +180,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       ...prev,
       [locale]: { ...prev[locale], [key]: value },
     }));
+    generationAbort.current?.abort();
     setProposal(null);
     setReviewed(false);
   };
@@ -220,7 +227,8 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setSettingsDraft(settingsFor(kind, read.settings));
       setProposal(null);
       setReviewed(false);
-      setMessage("تم الحفظ والتحقق من النسخة المحفوظة");
+      setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
+      toast.success(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -231,50 +239,70 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       setBusy("");
     }
   };
-  const suggest = async (action: "seo" | "translate", all = false) => {
+  const suggest = async (action: "seo" | "translate" | "faq", all = false) => {
     if (!document || dirty) {
-      setMessage("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية");
+      setMessage(dt("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية"));
       return;
     }
-    const snapshot = JSON.stringify(valuesRef.current),
-      revision = document.revision;
+    const targets = action === "translate"
+      ? all ? SUPPORTED_LOCALES.filter((code) => code !== "ar" && !document.statuses[code].complete) : [locale]
+      : all ? [...SUPPORTED_LOCALES] : [locale];
+    if (!targets.length || (action === "translate" && targets.includes("ar"))) {
+      setMessage(dt("اختر لغة أخرى أو لغة تحتاج ترجمة"));
+      return;
+    }
+    const snapshot = JSON.stringify(valuesRef.current), revision = document.revision;
+    const controller = new AbortController();
+    generationAbort.current?.abort();
+    generationAbort.current = controller;
     setBusy(action);
     setMessage("");
     setProposal(null);
+    setGenerationProgress({ done: 0, total: targets.length });
+    const combined: Proposal = { id, kind, revision, action, proposals: {}, errors: {} };
+    let cursor = 0, done = 0;
     try {
-      const targets = all
-        ? SUPPORTED_LOCALES.filter(
-            (l) => l !== "ar" && !document.statuses[l].complete,
-          )
-        : [locale];
-      if (action === "translate" && (targets.includes("ar") || !targets.length))
-        throw new Error("اختر لغة أخرى أو لغة تحتاج ترجمة");
-      const result = await api<Proposal>(url + "/suggest", {
-        method: "POST",
-        body: JSON.stringify({
-          action,
-          locale,
-          locales: targets,
-          keys: selected,
-          revision,
-        }),
-      });
+      await Promise.all(Array.from({ length: Math.min(2, targets.length) }, async () => {
+        while (cursor < targets.length && !controller.signal.aborted) {
+          const target = targets[cursor++];
+          try {
+            const result = await api<Proposal>(url + "/suggest", {
+              method: "POST",
+              signal: controller.signal,
+              body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision }),
+            });
+            if (result.id !== id || result.kind !== kind || result.revision !== revision)
+              throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
+            Object.assign(combined.proposals, result.proposals);
+            Object.assign(combined.errors, result.errors);
+          } catch (error) {
+            if (!controller.signal.aborted) combined.errors[target] = error instanceof Error ? error.message : dt("تعذر إعداد الاقتراح");
+          } finally {
+            done++;
+            setGenerationProgress({ done, total: targets.length });
+          }
+        }
+      }));
       if (snapshot !== JSON.stringify(valuesRef.current))
-        throw new Error("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا.");
-      if (
-        result.id !== id ||
-        result.kind !== kind ||
-        result.revision !== revision
-      )
-        throw new Error("الاقتراح لا يطابق المحتوى الجاري تحريره");
-      setProposal(result);
+        throw new Error(dt("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا."));
+      if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
+      if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "تعذر إعداد الاقتراح",
-      );
+      setMessage(error instanceof Error ? error.message : dt("تعذر إعداد الاقتراح"));
     } finally {
-      setBusy("");
+      if (generationAbort.current === controller) {
+        generationAbort.current = null;
+        setGenerationProgress(null);
+        setBusy("");
+      }
     }
+  };
+  const reviseProposal = (target: string, key: string, value: string) => {
+    setProposal((previous) => previous ? {
+      ...previous, proposals: { ...previous.proposals, [target]: {
+        ...previous.proposals[target], values: { ...previous.proposals[target].values, [key]: value },
+      } },
+    } : null);
   };
   const apply = (target: string, key: string, value: string) => {
     if (
@@ -289,19 +317,17 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       [target]: { ...prev[target], [key]: value },
     }));
     setReviewed(false);
-    setProposal((prev) => {
-      if (!prev) return null;
-      const pending = { ...prev.proposals[target].values };
+    setProposal((previous) => {
+      if (!previous?.proposals[target]) return previous;
+      const pending = { ...previous.proposals[target].values };
       delete pending[key];
-      return {
-        ...prev,
-        proposals: {
-          ...prev.proposals,
-          [target]: { ...prev.proposals[target], values: pending },
-        },
-      };
+      const proposals = { ...previous.proposals };
+      if (Object.keys(pending).length) proposals[target] = { ...proposals[target], values: pending };
+      else delete proposals[target];
+      return Object.keys(proposals).length ? { ...previous, proposals } : null;
     });
-    setMessage("أضيف الاقتراح إلى المسودة. احفظ اللغة بعد المراجعة.");
+    const warning = proposal && Object.keys(proposal.errors).length ? " · " + Object.keys(proposal.errors).join(", ") : "";
+    setMessage(dt("أضيف الاقتراح إلى المسودة. احفظ جميع التغييرات بعد المراجعة.") + warning);
   };
   const changeSlug = async () => {
     if (!document || dirty) {
@@ -507,7 +533,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   );
   return (
     <div
-      dir="rtl"
+      dir={dashDir()}
       className="mx-auto max-w-[1500px] space-y-6 pb-12 text-slate-800"
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -616,6 +642,14 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
         >
           {isBanner ? "اقتراح وصف الصورة" : "اقتراح SEO"}
         </button>
+        {!isBanner ? <>
+          <button type="button" className={button} disabled={Boolean(busy) || dirty} onClick={() => suggest("seo", true)}>
+            {dt("اقتراح SEO لكل اللغات")}
+          </button>
+          <button type="button" className={button} disabled={Boolean(busy) || dirty} onClick={() => suggest("faq")}>
+            {dt("اقتراح أسئلة لهذه اللغة")}
+          </button>
+        </> : null}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -636,6 +670,11 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           </span>
         ) : null}
       </div>
+      {generationProgress ? <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border bg-sky-50 p-4">
+        <span>{dt("اكتمل {0} من {1} لغة", [generationProgress.done, generationProgress.total])}</span>
+        <progress max={generationProgress.total} value={generationProgress.done} aria-label={dt("تقدم الاقتراحات")} />
+        <button type="button" className={button} onClick={() => generationAbort.current?.abort()}>{dt("إيقاف الطلب")}</button>
+      </div> : null}
       {message ? (
         <p
           role="status"
@@ -647,7 +686,11 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
       {proposal ? (
         <section className="space-y-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
           <div className="flex justify-between">
-            <h2 className="font-bold">مراجعة الاقتراحات</h2>
+            <h2 className="font-bold">{dt("مراجعة الاقتراحات")}</h2>
+            <button type="button" className={button} onClick={() => {
+              for (const [target, item] of Object.entries(proposal.proposals))
+                for (const [key, value] of Object.entries(item.values)) apply(target, key, value);
+            }}>{dt("تطبيق جميع الاقتراحات على المسودة")}</button>
             <button
               type="button"
               className={button}
@@ -694,6 +737,11 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                   استخدام اقتراحات هذه اللغة
                 </button>
               </div>
+              {item.research ? <aside className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                <b>{dt("أساس البحث ومصادره")}</b>
+                <p>{item.research.summary}</p>
+                <ul>{item.research.sources.map((source) => <li key={source.url}><a className="text-blue-700 underline" href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ul>
+              </aside> : null}
               {item.warnings.map((warning, i) => (
                 <p key={i} className="text-amber-800 text-sm">
                   {warning}
@@ -708,11 +756,22 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
                     <div className="whitespace-pre-wrap break-words text-sm text-slate-500">
                       {previewText(values[code]?.[key] || "فارغ")}
                     </div>
-                    <div
-                      dir="auto"
-                      className="whitespace-pre-wrap break-words text-sm"
-                    >
-                      {previewText(value)}
+                    <div dir={LOCALES[code as keyof typeof LOCALES]?.direction || "ltr"} className="space-y-3">
+                      {key === "faqContent" ? readFaqDraft(value).map((question, index, questions) => (
+                        <fieldset key={index} className="space-y-2 rounded border p-3">
+                          <input aria-label={dt("السؤال {0}", [index + 1])} className="w-full rounded border p-2" value={question.q} onChange={(event) =>
+                            reviseProposal(code, key, JSON.stringify(questions.map((item, position) => position === index ? { ...item, q: event.target.value } : item)))
+                          } />
+                          <textarea aria-label={dt("الإجابة {0}", [index + 1])} className="w-full rounded border p-2" rows={3} value={question.a} onChange={(event) =>
+                            reviseProposal(code, key, JSON.stringify(questions.map((item, position) => position === index ? { ...item, a: event.target.value } : item)))
+                          } />
+                        </fieldset>
+                      )) : document.fields.find((field) => field.key === key)?.rich ? (
+                        <RichEditor defaultValue={parseRich(value)} onUpdate={(editor) => reviseProposal(code, key, JSON.stringify(editor.getJSON()))}
+                          className="rounded border bg-white [&_.ProseMirror]:min-h-40 [&_.ProseMirror]:p-3" />
+                      ) : (
+                        <textarea aria-label={dt("الاقتراح: {0}", [key])} className="w-full rounded border bg-white p-3" rows={4} value={value} onChange={(event) => reviseProposal(code, key, event.target.value)} />
+                      )}
                     </div>
                   </div>
                   <button
