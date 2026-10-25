@@ -1,3 +1,4 @@
+import { emailDeliveryProgress } from "@/lib/communication/email-delivery-progress";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
@@ -85,9 +86,6 @@ export async function GET(request: NextRequest) {
     const [
       total,
       byStatus,
-      deliveredCount,
-      openedCount,
-      clickedCount,
       failedCount,
       providerEventCount,
       allTimeTotal,
@@ -100,9 +98,6 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, deliveredAt: { not: null } } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, openedAt: { not: null } } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, clickedAt: { not: null } } }),
       prisma.communicationDelivery.count({ where: { ...rangeWhere, status: { in: [...FAILED_STATUSES] } } }),
       // Email tracking is live only when an EMAIL provider event has actually arrived.
       // WhatsApp events must never make the email dashboard claim its webhooks are working.
@@ -140,29 +135,28 @@ export async function GET(request: NextRequest) {
     const statusCounts: Record<string, number> = {};
     for (const row of byStatus) statusCounts[row.status] = row._count._all;
 
-    // "Accepted by the provider"  the denominator every engagement rate is measured against.
-    // Counting against `total` would let SKIPPED rows (no email address, unsubscribed) drag the
-    // open rate down for messages that were never sent to anyone.
-    const sentCount =
-      (statusCounts.SENT ?? 0) + (statusCounts.SENT_TO_PROVIDER ?? 0) + (statusCounts.DELIVERED ?? 0) +
-      (statusCounts.OPENED ?? 0) + (statusCounts.CLICKED ?? 0) + failedCount;
-    const attempted = Math.max(sentCount, 0);
+    // Engagement stages are cumulative even when provider webhooks arrive out of order.
+    // A local send failure without provider evidence is an attempt, not an accepted email.
+    let attempted = 0, observedAttempts = 0, deliveredCount = 0, openedCount = 0, clickedCount = 0;
 
     // Daily buckets for the trend chart, built in JS: MongoDB has no date_trunc through Prisma
     // and the row counts here are small enough that one scan beats N queries.
     const bucketRows = await prisma.communicationDelivery.findMany({
       where: rangeWhere,
-      select: { createdAt: true, status: true, deliveredAt: true, openedAt: true },
+      select: { createdAt: true, status: true, providerMessageId: true, sentAt: true, deliveredAt: true, openedAt: true, clickedAt: true },
       orderBy: { createdAt: "asc" },
     });
     const buckets = new Map<string, Bucket>();
     for (const row of bucketRows) {
       const key = row.createdAt.toISOString().slice(0, 10);
       const bucket = buckets.get(key) ?? { date: key, sent: 0, delivered: 0, opened: 0, failed: 0 };
-      if ((FAILED_STATUSES as readonly string[]).includes(row.status)) bucket.failed++;
-      else if (row.status !== "SKIPPED" && row.status !== "RENDERED" && row.status !== "DRAFT") bucket.sent++;
-      if (row.deliveredAt) bucket.delivered++;
-      if (row.openedAt) bucket.opened++;
+      const progress = emailDeliveryProgress(row);
+      if (progress.accepted) { attempted++; bucket.sent++; }
+      if (progress.attempted) observedAttempts++;
+      if (progress.failed) bucket.failed++;
+      if (progress.delivered) { deliveredCount++; bucket.delivered++; }
+      if (progress.opened) { openedCount++; bucket.opened++; }
+      if (progress.clicked) clickedCount++;
       buckets.set(key, bucket);
     }
 
@@ -183,7 +177,7 @@ export async function GET(request: NextRequest) {
         deliveredRate: rate(deliveredCount),
         openRate: rate(openedCount),
         clickRate: rate(clickedCount),
-        failedRate: rate(failedCount),
+        failedRate: observedAttempts > 0 ? Math.round((failedCount / observedAttempts) * 1000) / 10 : 0,
       },
       /**
        * False until the provider has ever posted an event. The page uses this to say "tracking

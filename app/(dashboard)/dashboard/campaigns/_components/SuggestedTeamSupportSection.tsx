@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useState,
@@ -71,6 +72,7 @@ export const SuggestedTeamSupportSection = forwardRef<
   { initialConfig, label, helpText, defaultPlaceholder, exceptionsLabel, exceptionsEmptyHint },
   ref
 ) {
+  const defaultInputId = useId();
   const [amountsStr, setAmountsStr] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
 
@@ -121,9 +123,9 @@ export const SuggestedTeamSupportSection = forwardRef<
   return (
     <div className="space-y-4 md:col-span-2" dir={dashDir()}>
       <div>
-        <Label htmlFor="suggested-team-support-default">{label}</Label>
+        <Label htmlFor={defaultInputId}>{label}</Label>
         <Input
-          id="suggested-team-support-default"
+          id={defaultInputId}
           className="mt-1.5 font-mono text-left"
           dir="ltr"
           value={amountsStr}

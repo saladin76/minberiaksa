@@ -177,13 +177,13 @@ export default function CoursesPage() {
             {
               header: dt("مثبّتة"),
               cell: (r) => (
-                <Switch checked={r.isPinned} disabled={togglingId === r.id} onCheckedChange={(v) => toggle(r, 'isPinned', v)} />
+                <Switch aria-label={dt("مثبّتة") + ": " + r.title} checked={r.isPinned} disabled={togglingId === r.id} onCheckedChange={(v) => toggle(r, 'isPinned', v)} />
               ),
             },
             {
               header: dt("مفعّلة"),
               cell: (r) => (
-                <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggle(r, 'isActive', v)} />
+                <Switch aria-label={dt("مفعّل") + ": " + r.title} checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggle(r, 'isActive', v)} />
               ),
             },
             {
@@ -191,10 +191,10 @@ export default function CoursesPage() {
               className: 'w-24',
               cell: (r) => (
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/courses/edit/${r.id}`)}>
+                  <Button aria-label={dt("تعديل") + ": " + r.title} title={dt("تعديل")} variant="ghost" size="icon" onClick={() => router.push(`/dashboard/courses/edit/${r.id}`)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
+                  <Button aria-label={dt("حذف") + ": " + r.title} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </Button>
                 </div>
