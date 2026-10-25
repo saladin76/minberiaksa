@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 const exec = promisify(execFile);
 
-for (const mode of ["production", "production-local", "inherited", "missing"] as const) {
+for (const mode of ["production", "production-local", "inherited", "missing", "nvm"] as const) {
   test(`cron loads Next production configuration: ${mode}`, async () => {
     const dir = await mkdtemp(join(tmpdir(), "cron-env-"));
     let requests = 0;
@@ -33,7 +33,15 @@ for (const mode of ["production", "production-local", "inherited", "missing"] as
       const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "test", CRON_TEST_SUFFIX: "fixture", CRON_LOG: join(dir, "cron.log"), CRON_BASE_URL: `http://127.0.0.1:${(server.address() as {port: number}).port}` };
       delete env.CRON_SECRET;
       if (mode === "inherited") env.CRON_SECRET = expected;
-      const run = exec("bash", [script, "/api/cron/fixture-env-" + mode], { env });
+      if (mode === "nvm") {
+        const bin = join(dir, "bin");
+        const nodeDir = join(dir, ".nvm/versions/node/v24.fixture/bin");
+        await mkdir(bin); await mkdir(nodeDir, { recursive: true });
+        await symlink(process.execPath, join(nodeDir, "node"));
+        for (const tool of ["dirname", "date", "stat", "flock", "mktemp", "curl", "rm", "head", "tr", "env"]) await symlink("/usr/bin/" + tool, join(bin, tool));
+        env.PATH = bin; env.HOME = dir;
+      }
+      const run = exec("/bin/bash", [script, "/api/cron/fixture-env-" + mode], { env });
       if (mode === "missing") { await assert.rejects(run); assert.equal(requests, 0); }
       else { const result = await run; assert.equal(requests, 1); assert.doesNotMatch(result.stdout + result.stderr, /production-fixture|local-fixture|inherited-fixture/); }
     } finally {

@@ -38,7 +38,18 @@ SECRET="${CRON_SECRET:-}"
 if [ -z "$SECRET" ]; then
   # Use Next's parser and production precedence, including .env.production.local.
   # Never source dotenv as shell code or print credentials into the cron log.
-  if ! SECRET="$(cd "$APP_DIR" && env -u CRON_SECRET NODE_ENV=production node <<'NODE'
+  NODE_BIN="$(command -v node || true)"
+  # Cron has a minimal PATH and does not load the interactive NVM profile.
+  if [ -z "$NODE_BIN" ]; then
+    for candidate in "$HOME"/.nvm/versions/node/v24.*/bin/node /root/.nvm/versions/node/v24.*/bin/node; do
+      if [ -x "$candidate" ]; then NODE_BIN="$candidate"; fi
+    done
+  fi
+  if [ -z "$NODE_BIN" ]; then
+    log "SKIPPED: Node.js not available for production environment loading"
+    exit 1
+  fi
+  if ! SECRET="$(cd "$APP_DIR" && env -u CRON_SECRET NODE_ENV=production "$NODE_BIN" <<'NODE'
 try {
   const { loadEnvConfig } = require("@next/env");
   loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
