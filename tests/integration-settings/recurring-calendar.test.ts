@@ -46,3 +46,12 @@ test("missing schedules are reported and foreign amounts never silently treated 
   assert.equal(calendarAmountUSD({ amount: 1, totalAmount: 2, currency: "USD" }), 2);
   assert.equal(calendarAmountUSD({ amount: 1, currency: "USD", amountUSD: 0 }), 0);
 });
+
+test("legacy rules without a chosen hour retain the collector wall time and month day", () => {
+  const month = recurringCalendarMonth("2026-11")!;
+  const monthly = calendarOccurrences({ frequency: "MONTHLY", timezone: "Europe/Istanbul", nextBillingDate: "2026-10-15T11:30:00Z", scheduleRule: { kind: "monthDay", day: 15 } }, month)!;
+  assert.deepEqual(monthly.map(date => date.toISOString()), ["2026-11-15T11:30:00.000Z"]);
+  const daily = calendarOccurrences({ frequency: "DAILY", timezone: "Europe/Istanbul", nextBillingDate: "2026-10-26T11:30:00Z", scheduleRule: { kind: "daily" } }, month)!;
+  assert.equal(daily.length, 30);
+  assert.equal(daily[0].toISOString(), "2026-11-01T11:30:00.000Z");
+});

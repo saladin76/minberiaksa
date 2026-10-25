@@ -38,7 +38,7 @@ export function calendarOccurrences(plan: CalendarPlan, month: CalendarMonth): D
   const occurrences: Date[] = [];
   // Stored rules can jump directly; legacy plans must walk the exact engine, including
   // its month-end clamping, rather than invent a different schedule for the report.
-  if (date < month.startDate && planRule(plan)) {
+  if (date < month.startDate && planRule(plan)?.hour !== undefined) {
     date = nextChargeForPlan(plan, new Date(month.startDate.getTime() - 1));
   }
   for (let steps = 0; date <= month.endDate; steps++) {
