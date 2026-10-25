@@ -8257,5 +8257,17 @@
   "الرسوم المشمولة": "Included fees",
   "الإجمالي الجديد شامل دعم الفريق والرسوم": "New total including team support and fees",
   "للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (": "To confirm, enter the new total including team support and fees (",
-  "القيمة المُدخلة لا تطابق الإجمالي الجديد.": "The entered amount does not match the new total."
+  "القيمة المُدخلة لا تطابق الإجمالي الجديد.": "The entered amount does not match the new total.",
+  "المحصّل بتاريخ {0}": "Collected on {0}",
+  "الدفعات المتوقعة بتاريخ {0}": "Expected payments on {0}",
+  "لم تُسدَّد أي دفعة دورية في هذا التاريخ.": "No recurring payment settled on this date.",
+  "الدفعات المحصّلة فعليًا خلال الشهر المحدد بتوقيت إسطنبول": "Payments actually collected in the selected month, Istanbul time",
+  "تجديدات يومية وأسبوعية وشهرية من موعد الاستحقاق القادم": "Daily, weekly and monthly renewals from the next due date",
+  "الشهر": "Month",
+  "التجديدات المتوقعة في الشهر": "Expected renewals this month",
+  "تعذّر تحميل التقويم. غيّر الشهر لإعادة المحاولة.": "Could not load the calendar. Change the month to retry.",
+  "بيانات غير مكتملة: {0} جدول تجديد و{1} مبلغ بالدولار. الإجمالي لا يشملها.": "Incomplete data: {0} renewal schedules and {1} USD amounts. These are excluded from the total.",
+  "{0} دفعة متوقعة": "{0} expected payments",
+  "يشمل المحصّل الدفعة الأولى والتجديدات التي سُدّدت فعلًا في الشهر المحدد.": "Collected includes first payments and renewals actually settled in the selected month.",
+  "تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.": "An estimate from upcoming renewal dates, with no guarantee of successful collection. Excludes first payments."
 }

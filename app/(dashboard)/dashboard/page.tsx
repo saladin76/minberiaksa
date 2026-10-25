@@ -92,6 +92,7 @@ import { useDonationActions } from "@/components/dashboard/donations/useDonation
 import { userCanEditDonations, userCanExportReports } from "@/lib/dashboard/permissions";
 import { useSession } from "next-auth/react";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
+import { donationCadenceLabel } from "@/lib/dashboard/donation-cadence-label";
 
 interface ChartDataPoint {
   date: string;
@@ -136,6 +137,7 @@ interface DonationRow {
   teamSupport: number;
   fees: number;
   type: string;
+  frequency?: string | null;
   /** true when this row is an automatic renewal rather than the signup charge */
   isRecurringCharge?: boolean;
   /** 1-based position within its subscription (1 = signup charge) */
@@ -2133,10 +2135,10 @@ export default function DashboardPage() {
                               }
                             >
                               {d.type === "MONTHLY"
-                                ? d.isRecurringCharge
+                                ? `${donationCadenceLabel(d)} · ${d.isRecurringCharge
                                   ? dt("تجديد تلقائي{0}", [d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""])
-                                  : dt("شهري  أول دفعة")
-                                : dt("مرة واحدة")}
+                                  : dt("أول دفعة")}`
+                                : donationCadenceLabel(d)}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 align-middle">

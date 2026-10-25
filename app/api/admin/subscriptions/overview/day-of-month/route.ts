@@ -3,33 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import { formatIstanbulDateKey } from "@/lib/admin/istanbul-calendar";
-import {
-  activePlanScopeWhere,
-  buildDayOfMonthFilters,
-  subscriptionBillingDay,
-} from "@/lib/dashboard/day-of-month-filters";
-import {
-  parseFrequencyParam,
-  subscriptionFrequencyWhere,
-} from "@/lib/dashboard/recurring-frequency-filter";
+import { buildDayOfMonthFilters } from "@/lib/dashboard/day-of-month-filters";
+import { loadSubscriptionFrequencies, parseFrequencyParam } from "@/lib/dashboard/recurring-frequency-filter";
+import { recurringCalendarMonth, calendarDay, calendarAmountUSD, calendarOccurrences, emptyCalendar } from "@/lib/dashboard/recurring-calendar";
 
-/**
- * GET /api/admin/subscriptions/overview/day-of-month
- *
- * Recurring money by DAY OF THE MONTH (1..31), aggregated across every month rather than
- * within one month. A subscription renews on the same calendar day each month, so this is the
- * shape of the recurring cycle: which days of the month the money actually lands on.
- *
- * Two views, because "the recurring donations for this day in each month" can mean either:
- *   - collected: what has actually settled on that day-of-month, summed over all months
- *   - expected:  what active subscriptions are scheduled to bill on that day-of-month
- * Both are returned so the UI can toggle without a second round trip.
- *
- * `?frequency=` narrows the collected view to one cadence. The expected view is MONTHLY plans
- * only (a daily plan bills every day, a Friday plan on a different date each month), and
- * `unplaced` reports the active daily / Friday plans it therefore leaves out.
- */
+/** Read-only calendar projection. Expected renewals and actual settlements stay separate. */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -37,6 +15,8 @@ export async function GET(request: NextRequest) {
     if (denied) return denied;
 
     const searchParams = request.nextUrl.searchParams;
+    const month = recurringCalendarMonth(searchParams.get("month"));
+    if (!month) return NextResponse.json({ error: "Invalid calendar month" }, { status: 400 });
     const categoryId = searchParams.get("categoryId");
     const campaignId = searchParams.get("campaignId");
     const userId = searchParams.get("userId");
@@ -53,79 +33,46 @@ export async function GET(request: NextRequest) {
       frequency,
     });
 
-    // Active daily / Friday plans in the same scope  shown beside the grid, not in it.
-    const planScope = activePlanScopeWhere({ categoryId, campaignId, userId, referralId });
-    const unplacedFrequencies = (["DAILY", "FRIDAY"] as const).filter((f) => !frequency || frequency === f);
-
-    const [donations, subscriptions, ...unplacedAggs] = await Promise.all([
+    donationWhere.paidAt = { gte: month.startDate, lte: month.endDate };
+    const [donations, subscriptions] = await Promise.all([
       prisma.donation.findMany({
         where: donationWhere,
-        select: { paidAt: true, amountUSD: true, totalAmount: true, amount: true },
+        select: { paidAt: true, amountUSD: true, totalAmount: true, amount: true, currency: true },
       }),
       prisma.subscription.findMany({
         where: subscriptionWhere,
-        select: { nextBillingDate: true, lastBillingDate: true, createdAt: true, amountUSD: true, amount: true },
+        select: { id: true, nextBillingDate: true, timezone: true, scheduleRule: true, amountUSD: true, amount: true, currency: true },
       }),
-      ...unplacedFrequencies.map((f) =>
-        prisma.subscription.aggregate({
-          where: { AND: [planScope, subscriptionFrequencyWhere(f)] },
-          _sum: { amountUSD: true },
-          _count: { id: true },
-        })
-      ),
     ]);
-    const unplaced = unplacedFrequencies.map((f, i) => ({
-      frequency: f,
-      count: unplacedAggs[i]._count?.id ?? 0,
-      /** Per-charge sum (USD) of those plans. */
-      amountUSD: Number((unplacedAggs[i]._sum?.amountUSD ?? 0).toFixed(2)),
-    }));
-
-    const collected = Array.from({ length: 31 }, (_, i) => ({
-      day: i + 1,
-      amountUSD: 0,
-      count: 0,
-      monthsObserved: 0,
-    }));
-    // Distinct YYYY-MM per day, so a day seen in 3 different months can report an average
-    // per month instead of a total that just reflects how long the platform has been running.
-    const monthsSeen: Array<Set<string>> = Array.from({ length: 31 }, () => new Set<string>());
-
-    for (const d of donations) {
-      if (!d.paidAt) continue;
-      const key = formatIstanbulDateKey(d.paidAt);
-      const day = Number(key.slice(8, 10));
-      if (!day || day < 1 || day > 31) continue;
-      const slot = collected[day - 1];
-      slot.amountUSD += Number(d.amountUSD ?? d.totalAmount ?? d.amount ?? 0);
-      slot.count += 1;
-      monthsSeen[day - 1].add(key.slice(0, 7));
+    const frequencyOf = await loadSubscriptionFrequencies(prisma, subscriptions.map((s) => s.id));
+    const collected = emptyCalendar(month);
+    const expected = emptyCalendar(month);
+    let missingSchedules = 0;
+    let missingAmounts = 0;
+    for (const donation of donations) {
+      const day = calendarDay(donation.paidAt, month);
+      const amount = calendarAmountUSD(donation);
+      if (amount === null) { missingAmounts++; continue; }
+      if (day) { collected[day - 1].amountUSD += amount; collected[day - 1].count++; }
     }
-    for (let i = 0; i < 31; i++) {
-      collected[i].monthsObserved = monthsSeen[i].size;
-      collected[i].amountUSD = Number(collected[i].amountUSD.toFixed(2));
+    for (const subscription of subscriptions) {
+      const occurrences = calendarOccurrences({ ...subscription, frequency: frequencyOf(subscription.id) }, month);
+      if (occurrences === null) { missingSchedules++; continue; }
+      const amount = calendarAmountUSD(subscription);
+      if (amount === null) { if (occurrences.length) missingAmounts++; continue; }
+      for (const date of occurrences) {
+        const day = calendarDay(date, month);
+        if (day) { expected[day - 1].amountUSD += amount; expected[day - 1].count++; }
+      }
     }
-
-    const expected = Array.from({ length: 31 }, (_, i) => ({
-      day: i + 1,
-      amountUSD: 0,
-      count: 0,
-    }));
-
-    for (const s of subscriptions) {
-      const day = subscriptionBillingDay(s);
-      if (!day) continue;
-      expected[day - 1].amountUSD += Number(s.amountUSD ?? s.amount ?? 0);
-      expected[day - 1].count += 1;
-    }
-    for (let i = 0; i < 31; i++) {
-      expected[i].amountUSD = Number(expected[i].amountUSD.toFixed(2));
-    }
+    for (const slot of [...collected, ...expected]) slot.amountUSD = Number(slot.amountUSD.toFixed(2));
 
     return NextResponse.json({
       collected,
       expected,
-      unplaced,
+      month: month.month,
+      missingSchedules,
+      missingAmounts,
       totals: {
         collectedUSD: Number(collected.reduce((s, d) => s + d.amountUSD, 0).toFixed(2)),
         collectedCount: collected.reduce((s, d) => s + d.count, 0),
@@ -136,7 +83,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching day-of-month subscription revenue:", error);
     return NextResponse.json(
-      { error: "Failed to fetch day-of-month revenue", details: (error as Error).message },
+      { error: "Failed to fetch day-of-month revenue" },
       { status: 500 }
     );
   }

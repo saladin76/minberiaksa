@@ -14,6 +14,7 @@ import { dashDir, dt } from "@/lib/dashboard/i18n";
 export type DayOfMonthMode = "collected" | "expected";
 
 export interface DayOfMonthDetailFilters {
+  month?: string;
   categoryId?: string;
   campaignId?: string;
   userId?: string;
@@ -36,6 +37,7 @@ interface DetailRow {
   nextBillingDate: string | null;
   lastBillingDate: string | null;
   paidAt: string | null;
+  scheduledAt?: string | null;
   donor: { id: string; name: string | null; email: string | null } | null;
   campaigns: { id: string; title: string }[];
   categories: { id: string; name: string }[];
@@ -115,6 +117,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
     setError(null);
 
     const params = new URLSearchParams({ day: String(day), mode });
+    if (filters?.month) params.set("month", filters.month);
     if (filters?.categoryId && filters.categoryId !== "all") params.set("categoryId", filters.categoryId);
     if (filters?.campaignId && filters.campaignId !== "all") params.set("campaignId", filters.campaignId);
     if (filters?.userId && filters.userId !== "all") params.set("userId", filters.userId);
@@ -142,7 +145,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
     return () => {
       cancelled = true;
     };
-  }, [day, mode, filters?.categoryId, filters?.campaignId, filters?.userId, filters?.referralId, filters?.frequency]);
+  }, [day, mode, filters?.month, filters?.categoryId, filters?.campaignId, filters?.userId, filters?.referralId, filters?.frequency]);
 
   const isCollected = mode === "collected";
 
@@ -158,8 +161,8 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
               <CalendarRange className="h-4 w-4" />
             </span>
             {isCollected
-              ? dt("ما تم تحصيله في اليوم {0} من كل شهر", [day])
-              : dt("الاشتراكات التي تتجدّد في اليوم {0} من كل شهر", [day])}
+              ? dt("المحصّل بتاريخ {0}", [`${filters?.month}-${String(day).padStart(2, "0")}`])
+              : dt("الدفعات المتوقعة بتاريخ {0}", [`${filters?.month}-${String(day).padStart(2, "0")}`])}
           </DialogTitle>
           {totals && !loading ? (
             <div className="flex flex-wrap gap-4 pt-1.5">
@@ -186,7 +189,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
               title={dt("لا توجد بيانات لهذا اليوم")}
               description={
                 isCollected
-                  ? dt("لم تُسدَّد أي دفعة شهرية في هذا اليوم من أي شهر.")
+                  ? dt("لم تُسدَّد أي دفعة دورية في هذا التاريخ.")
                   : dt("لا يوجد اشتراك نشط مجدول للتجديد في هذا اليوم.")
               }
               className="m-5"
@@ -198,7 +201,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
                   <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     {dt("المشترك")}</th>
                   <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                    {isCollected ? dt("المبلغ") : dt("المبلغ الشهري")}
+                    {dt("المبلغ")}
                   </th>
                   <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     {dt("الحالة")}</th>
@@ -264,7 +267,7 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
                     </td>
                     <td className="py-2.5 px-3 text-slate-600 tabular-nums whitespace-nowrap">
                       {(() => {
-                        const dt = formatDateTime(isCollected ? r.paidAt : r.nextBillingDate);
+                        const dt = formatDateTime(isCollected ? r.paidAt : r.scheduledAt ?? r.nextBillingDate);
                         if (!dt) return <span className="text-slate-400">—</span>;
                         return (
                           <div className="flex flex-col leading-tight">

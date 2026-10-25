@@ -8249,5 +8249,17 @@
   "الرسوم المشمولة": "Dahil edilen ücretler",
   "الإجمالي الجديد شامل دعم الفريق والرسوم": "Ekip desteği ve ücretler dahil yeni toplam",
   "للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (": "Onaylamak için ekip desteği ve ücretler dahil yeni toplamı girin (",
-  "القيمة المُدخلة لا تطابق الإجمالي الجديد.": "Girilen tutar yeni toplamla eşleşmiyor."
+  "القيمة المُدخلة لا تطابق الإجمالي الجديد.": "Girilen tutar yeni toplamla eşleşmiyor.",
+  "المحصّل بتاريخ {0}": "{0} tarihinde tahsil edilen",
+  "الدفعات المتوقعة بتاريخ {0}": "{0} tarihinde beklenen ödemeler",
+  "لم تُسدَّد أي دفعة دورية في هذا التاريخ.": "Bu tarihte tahsil edilmiş düzenli ödeme yok.",
+  "الدفعات المحصّلة فعليًا خلال الشهر المحدد بتوقيت إسطنبول": "Seçilen ayda gerçekten tahsil edilen ödemeler, İstanbul saatiyle",
+  "تجديدات يومية وأسبوعية وشهرية من موعد الاستحقاق القادم": "Bir sonraki ödeme tarihinden itibaren günlük, haftalık ve aylık yenilemeler",
+  "الشهر": "Ay",
+  "التجديدات المتوقعة في الشهر": "Bu ay beklenen yenilemeler",
+  "تعذّر تحميل التقويم. غيّر الشهر لإعادة المحاولة.": "Takvim yüklenemedi. Yeniden denemek için ayı değiştirin.",
+  "بيانات غير مكتملة: {0} جدول تجديد و{1} مبلغ بالدولار. الإجمالي لا يشملها.": "Eksik veriler: {0} yenileme planı ve {1} ABD doları tutarı. Bunlar toplama dahil değildir.",
+  "{0} دفعة متوقعة": "{0} beklenen ödeme",
+  "يشمل المحصّل الدفعة الأولى والتجديدات التي سُدّدت فعلًا في الشهر المحدد.": "Tahsil edilen tutar, seçilen ayda gerçekten ödenen ilk ödemeleri ve yenilemeleri içerir.",
+  "تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.": "Yaklaşan yenileme tarihlerine dayalı tahmindir; tahsilat garantisi değildir. İlk ödemeleri içermez."
 }

@@ -54,6 +54,7 @@ import { DonationTableCountryColumn } from "@/components/dashboard/DonationTable
 import { DashboardPieLegendByValue } from "@/components/dashboard/DashboardPieLegend";
 import { useViewUserProfile } from "@/context/ViewUserProfileContext";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
+import { donationCadenceLabel } from "@/lib/dashboard/donation-cadence-label";
 
 interface ChartDataPoint {
   date: string;
@@ -95,6 +96,7 @@ interface DonationRow {
   teamSupport: number;
   fees: number;
   type: string;
+  frequency?: string | null;
   createdAt: string;
   donor: { id: string; name: string | null; email: string };
   donorCountryCode?: string | null;
@@ -1478,7 +1480,7 @@ export default function DashboardPage() {
                                   : "bg-slate-100 text-slate-600"
                               )}
                             >
-                              {d.type === "MONTHLY" ? dt("شهري") : dt("مرة واحدة")}
+                              {donationCadenceLabel(d)}
                             </span>
                           </td>
                           <td className="py-1.5 px-2 text-slate-600 max-w-[160px]">

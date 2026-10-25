@@ -188,8 +188,9 @@ if ! mv "$BUILD_ROOT/.next-build" "$ROOT/.next"; then
   exit 1
 fi
 
-echo "▶ reloading pm2 app '$APP'"
-if ! pm2 reload "$APP" --update-env && ! pm2 restart "$APP" --update-env; then
+NODE_INTERPRETER="$(command -v node)"
+echo "▶ reloading pm2 app '$APP' with $NODE_INTERPRETER"
+if ! pm2 reload "$APP" --interpreter "$NODE_INTERPRETER" --update-env && ! pm2 restart "$APP" --interpreter "$NODE_INTERPRETER" --update-env; then
   echo "✗ PM2 reload failed; restoring the previous build and dependencies"
   rm -rf "$ROOT/.next"
   if [[ -d "$ROOT/.next-previous" ]]; then mv "$ROOT/.next-previous" "$ROOT/.next"; fi
@@ -197,7 +198,7 @@ if ! pm2 reload "$APP" --update-env && ! pm2 restart "$APP" --update-env; then
     rm -rf "$ROOT/node_modules"
     mv "$ROOT/.node_modules-previous" "$ROOT/node_modules"
   fi
-  pm2 restart "$APP" --update-env || true
+  pm2 restart "$APP" --interpreter "$NODE_INTERPRETER" --update-env || true
   exit 1
 fi
 

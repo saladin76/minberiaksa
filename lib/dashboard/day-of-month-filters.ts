@@ -37,7 +37,7 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
   const byCampaign = isSet(campaignId);
   const byCategory = !byCampaign && isSet(categoryId);
 
-  // ---- collected: settled subscription donations, all time ----
+  // Collected settlement dates are narrowed to the selected calendar month by both routes.
   const donationWhere: Prisma.DonationWhereInput = {
     subscriptionId: { not: null },
     status: "PAID",
@@ -64,23 +64,12 @@ export function buildDayOfMonthFilters(input: DayOfMonthFilterInput): {
   // that card disagree by exactly those phantom subscriptions.
   const subscriptionWhere = activePlanScopeWhere(input);
 
-  // A day of the month is only a plan's billing day when the plan is monthly: a daily plan
-  // bills on every day and a Friday plan's date moves every month. So the expected view is
-  // monthly plans only  and empty when the page is narrowed to another cadence.
-  if (frequency && frequency !== "MONTHLY") {
-    subscriptionWhere.id = { in: [] };
-  } else {
-    Object.assign(subscriptionWhere, subscriptionFrequencyWhere("MONTHLY"));
-  }
+  if (frequency) Object.assign(subscriptionWhere, subscriptionFrequencyWhere(frequency));
 
   return { donationWhere, subscriptionWhere };
 }
 
-/**
- * Earning plans (ACTIVE with at least one settled charge) inside the page's scope, any cadence.
- * The expected grid narrows this to monthly plans; the route also uses it to report the daily
- * and Friday plans that grid cannot place on a day of the month.
- */
+/** Active plans with a settled first payment, in the same reporting scope. */
 export function activePlanScopeWhere(input: DayOfMonthFilterInput): Prisma.SubscriptionWhereInput {
   const { categoryId, campaignId, userId, referralId } = input;
   const byCampaign = isSet(campaignId);

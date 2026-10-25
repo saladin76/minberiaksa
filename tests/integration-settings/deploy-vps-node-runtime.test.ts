@@ -5,6 +5,36 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
+for (const failReload of [false, true]) {
+  test(`VPS ${failReload ? "restart fallback" : "reload"} pins the selected Node interpreter`, () => {
+    const script = readFileSync("scripts/deploy-vps.sh", "utf8");
+    const activation = script.slice(script.indexOf('NODE_INTERPRETER='), script.indexOf('# vercel.json crons'));
+    const root = mkdtempSync(join(tmpdir(), "deploy-interpreter-"));
+    try {
+      const bin = join(root, "node bin");
+      mkdirSync(bin);
+      writeFileSync(join(bin, "node"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+      writeFileSync(join(bin, "pm2"), [
+        "#!/bin/sh",
+        'printf "%s\\n" "$@" >> "$PM2_FIXTURE_LOG"',
+        'printf "%s\\n" "--call-end--" >> "$PM2_FIXTURE_LOG"',
+        'if [ "$1" = "reload" ] && [ "$PM2_FIXTURE_FAIL_RELOAD" = "1" ]; then exit 1; fi',
+        "exit 0",
+      ].join("\n"), { mode: 0o755 });
+      const calls = join(root, "calls");
+      const result = spawnSync("/bin/bash", ["-c", `set -euo pipefail\n${activation}`], {
+        env: { PATH: `${bin}:/usr/bin:/bin`, APP: "fixture-app", ROOT: root, NODE_ENV: "test", PM2_FIXTURE_LOG: calls, PM2_FIXTURE_FAIL_RELOAD: failReload ? "1" : "0" },
+        encoding: "utf8",
+      });
+      assert.equal(result.status, 0, result.stderr);
+      const interpreter = join(bin, "node");
+      const expected = ["reload", "fixture-app", "--interpreter", interpreter, "--update-env", "--call-end--"];
+      if (failReload) expected.push("restart", "fixture-app", "--interpreter", interpreter, "--update-env", "--call-end--");
+      assert.deepEqual(readFileSync(calls, "utf8").trim().split("\n"), expected);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+}
+
 test("VPS deploy activates a Node and npm toolchain in a non-interactive shell", () => {
   const script = readFileSync("scripts/deploy-vps.sh", "utf8");
   const resolver = script.slice(script.indexOf("ensure_node_toolchain()"), script.indexOf("APP=\"${PM2_APP"));
