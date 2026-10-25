@@ -44,6 +44,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { toast } from 'react-hot-toast';
 import DonationCountryFlag from '@/components/DonationCountryFlag';
 import { dt } from "@/lib/dashboard/i18n";
+import { donationCadenceLabel } from '@/lib/dashboard/donation-cadence-label';
 import DonationDetailsDialog, { type DonationDetailsTarget } from '@/components/dashboard/DonationDetailsDialog';
 
 /**
@@ -103,16 +104,6 @@ interface Donation {
     amount: number;
     amountUSD: number;
   }[];
-}
-
-function donationTypeLabel(donation: Donation) {
-  if (donation.type === 'ONE_TIME') return dt("مرة واحدة");
-  switch (donation.frequency) {
-    case 'DAILY': return dt("يومي");
-    case 'FRIDAY': return dt("أسبوعياً");
-    case 'MONTHLY': return dt("شهري");
-    default: return dt("تبرع دوري");
-  }
 }
 
 export default function DonationsPage() {
@@ -388,7 +379,7 @@ export default function DonationsPage() {
                 </TableCell>
                 <TableCell>{donation.totalAmount.toLocaleString()}</TableCell>
                 <TableCell>{donation.currency}</TableCell>
-                <TableCell>{donationTypeLabel(donation)}</TableCell>
+                <TableCell>{donationCadenceLabel(donation)}</TableCell>
                 <TableCell>{donation.paymentMethod || '—'}</TableCell>
                 <TableCell>
                   {format(new Date(donation.createdAt), 'PPP', { locale: dashDateLocale() })}
