@@ -135,3 +135,11 @@ test("grounded observations support English and Turkish with original public pat
     assert.match(result.analysis.opportunities[0].action, locale === "en" ? /confirmed donations/ : /doğrulanmış bağış/);
   }
 });
+
+test("repeated proposals for the same area and source become one review item", async () => {
+  const reply = responseFixture("ux");
+  reply.opportunities.push({ ...reply.opportunities[0], title: "مراجعة مكررة" });
+  const { analysis } = await analyze(reply);
+  assert.equal(analysis.opportunities.length, 1);
+  assert.match(analysis.opportunities[0].title, /\/ar/);
+});

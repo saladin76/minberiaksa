@@ -83,11 +83,17 @@ function groundAnalysis(analysis: Ga4Analysis, evidence: Ga4Evidence[], report: 
   const languageIndex = { ar: 0, en: 1, tr: 2 }[language];
   const format = (name: string, value: number) => `${metricNames[name]?.[languageIndex] ?? name}: ${new Intl.NumberFormat(language === "ar" ? "ar-EG" : language, { maximumFractionDigits: 2 }).format(["engagementRate", "bounceRate", "ctr"].includes(name) ? value * 100 : value)}${["engagementRate", "bounceRate", "ctr"].includes(name) ? "%" : ""}`;
   analysis.summary = `${copy.summary}: ${["activeUsers", "newUsers", "sessions", "screenPageViews"].map(name => format(name, report.summary[name as keyof typeof report.summary])).join(" · ")}.`;
-  analysis.opportunities = analysis.opportunities.map(row => {
+  const seen = new Set<string>();
+  analysis.opportunities = analysis.opportunities.filter(row => {
+    const key = `${row.area}:${row.evidenceIds[0]}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(row => {
     const source = evidence.find(item => item.id === row.evidenceIds[0])!;
     const label = source.dataset === "summary" ? copy.summary : source.label;
     const observation = `${copy.observation} «${label}»: ${Object.entries(source.metrics).slice(0, 4).map(([name, value]) => format(name, value)).join(" · ")}.`;
-    return { ...row, title: copy.titles[row.area], finding: (row.area === "ux" ? copy.experiment : "") + observation, action: copy.actions[row.area], confidence: row.area === "ux" || row.area === "ads" ? "low" as const : row.confidence };
+    return { ...row, title: `${copy.titles[row.area]}: ${label}`.slice(0, 180), finding: (row.area === "ux" ? copy.experiment : "") + observation, action: copy.actions[row.area], confidence: row.area === "ux" || row.area === "ads" ? "low" as const : row.confidence };
   });
   analysis.limitations = [copy.scope, ...(report.organicSearch?.status === "ready" ? [] : [copy.organic]), copy.quality];
   return analysis;
