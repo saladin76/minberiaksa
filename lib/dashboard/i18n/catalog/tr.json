@@ -8261,5 +8261,20 @@
   "بيانات غير مكتملة: {0} جدول تجديد و{1} مبلغ بالدولار. الإجمالي لا يشملها.": "Eksik veriler: {0} yenileme planı ve {1} ABD doları tutarı. Bunlar toplama dahil değildir.",
   "{0} دفعة متوقعة": "{0} beklenen ödeme",
   "يشمل المحصّل الدفعة الأولى والتجديدات التي سُدّدت فعلًا في الشهر المحدد.": "Tahsil edilen tutar, seçilen ayda gerçekten ödenen ilk ödemeleri ve yenilemeleri içerir.",
-  "تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.": "Yaklaşan yenileme tarihlerine dayalı tahmindir; tahsilat garantisi değildir. İlk ödemeleri içermez."
+  "تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.": "Yaklaşan yenileme tarihlerine dayalı tahmindir; tahsilat garantisi değildir. İlk ödemeleri içermez.",
+  "تشخيص جودة النصوص": "Metin kalitesi tanılama",
+  "كتيب جديد": "Yeni kitapçık",
+  "محذوفة": "Silinmiş",
+  "حفظ في سجل الحملات": "Kampanya kaydına kaydet",
+  "تقرير جديد": "Yeni rapor",
+  "رفض مزوّد الذكاء الاصطناعي صلاحية الوصول. راجع المفتاح وصلاحيات المشروع.": "Yapay zeka sağlayıcısı erişimi reddetti. Anahtarı ve proje izinlerini kontrol edin.",
+  "النموذج المحدد غير متاح لهذا المشروع. راجع إعداد النموذج على الخادم.": "Seçilen model bu proje için kullanılamıyor. Sunucudaki model ayarını kontrol edin.",
+  "رصيد خدمة الذكاء الاصطناعي أو حد الإنفاق غير كافٍ. راجع فوترة المزوّد.": "Yapay zeka hizmeti kredisi veya harcama limiti yetersiz. Sağlayıcının faturalandırmasını kontrol edin.",
+  "بلغت خدمة الذكاء الاصطناعي حد الطلبات المؤقت. أعد المحاولة لاحقًا.": "Yapay zeka hizmetinin geçici istek sınırına ulaşıldı. Daha sonra yeniden deneyin.",
+  "رفض المزوّد صيغة الطلب أو إحدى أدواته. راجع توافق النموذج وإعدادات الخدمة.": "Sağlayıcı istek biçimini veya bir aracı reddetti. Model uyumluluğunu ve hizmet ayarlarını kontrol edin.",
+  "لم يكتمل رد التحليل. لم تُعتمد نتيجة جزئية؛ أعد المحاولة.": "Analiz yanıtı tamamlanmadı. Kısmi sonuç kabul edilmedi; yeniden deneyin.",
+  "لم يُرجع المزوّد تحليلًا مسموحًا لهذا الطلب. راجع المدخلات.": "Sağlayıcı bu istek için izin verilen bir analiz döndürmedi. Girdiyi gözden geçirin.",
+  "استغرق التحليل وقتًا أطول من المهلة المتاحة. أعد المحاولة.": "Analiz, kullanılabilir süre sınırını aştı. Yeniden deneyin.",
+  "خدمة الذكاء الاصطناعي غير متاحة حاليًا. أعد المحاولة لاحقًا.": "Yapay zeka hizmeti şu anda kullanılamıyor. Daha sonra yeniden deneyin.",
+  "تم حفظ الرابط، لكن تعذّر نسخه. استخدم زر نسخ الرابط أو انسخه يدويًا.": "Bağlantı kaydedildi ancak kopyalanamadı. Bağlantıyı kopyala düğmesini kullanın veya elle kopyalayın."
 }

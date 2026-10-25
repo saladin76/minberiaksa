@@ -8269,5 +8269,20 @@
   "بيانات غير مكتملة: {0} جدول تجديد و{1} مبلغ بالدولار. الإجمالي لا يشملها.": "Incomplete data: {0} renewal schedules and {1} USD amounts. These are excluded from the total.",
   "{0} دفعة متوقعة": "{0} expected payments",
   "يشمل المحصّل الدفعة الأولى والتجديدات التي سُدّدت فعلًا في الشهر المحدد.": "Collected includes first payments and renewals actually settled in the selected month.",
-  "تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.": "An estimate from upcoming renewal dates, with no guarantee of successful collection. Excludes first payments."
+  "تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.": "An estimate from upcoming renewal dates, with no guarantee of successful collection. Excludes first payments.",
+  "تشخيص جودة النصوص": "Text quality diagnostics",
+  "كتيب جديد": "New booklet",
+  "محذوفة": "Deleted",
+  "حفظ في سجل الحملات": "Save to campaign registry",
+  "تقرير جديد": "New report",
+  "رفض مزوّد الذكاء الاصطناعي صلاحية الوصول. راجع المفتاح وصلاحيات المشروع.": "The AI provider denied access. Check the key and project permissions.",
+  "النموذج المحدد غير متاح لهذا المشروع. راجع إعداد النموذج على الخادم.": "The selected model is unavailable for this project. Check the server model setting.",
+  "رصيد خدمة الذكاء الاصطناعي أو حد الإنفاق غير كافٍ. راجع فوترة المزوّد.": "AI service credits or spending limits are insufficient. Check provider billing.",
+  "بلغت خدمة الذكاء الاصطناعي حد الطلبات المؤقت. أعد المحاولة لاحقًا.": "The AI service reached a temporary rate limit. Try again later.",
+  "رفض المزوّد صيغة الطلب أو إحدى أدواته. راجع توافق النموذج وإعدادات الخدمة.": "The provider rejected the request format or a tool. Check model compatibility and service settings.",
+  "لم يكتمل رد التحليل. لم تُعتمد نتيجة جزئية؛ أعد المحاولة.": "The analysis response was incomplete. No partial result was accepted; try again.",
+  "لم يُرجع المزوّد تحليلًا مسموحًا لهذا الطلب. راجع المدخلات.": "The provider did not return an allowed analysis for this request. Review the input.",
+  "استغرق التحليل وقتًا أطول من المهلة المتاحة. أعد المحاولة.": "The analysis exceeded the available time limit. Try again.",
+  "خدمة الذكاء الاصطناعي غير متاحة حاليًا. أعد المحاولة لاحقًا.": "The AI service is currently unavailable. Try again later.",
+  "تم حفظ الرابط، لكن تعذّر نسخه. استخدم زر نسخ الرابط أو انسخه يدويًا.": "The link was saved, but could not be copied. Use Copy link or copy it manually."
 }

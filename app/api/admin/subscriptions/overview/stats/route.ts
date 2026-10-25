@@ -1,3 +1,4 @@
+import { recurringPlanTotals } from "@/lib/dashboard/recurring-plan-totals";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -17,7 +18,6 @@ import {
   donationFrequencyWhere,
   emptyFrequencyRecord,
   loadSubscriptionFrequencies,
-  monthlyEquivalent,
   parseFrequencyParam,
   subscriptionFrequencyWhere,
   type FrequencyFilter,
@@ -231,39 +231,6 @@ function buildDonationCategoryItemWhereSub(
   return { donation: donationWhereAll(scoped, PAID_CONTRIBUTING_FILTER) };
 }
 
-type CadenceTotal = { count: number; amountUSD: number; monthlyUSD: number };
-
-/**
- * Plans matching `where`, split by cadence. `amountUSD` is the per-charge sum as stored;
- * `monthlyUSD` puts it on a monthly scale (× charges per month) so cadences can be added.
- * One aggregate per cadence rather than a groupBy: legacy plans have no `frequency` field,
- * and the cadence filter is what folds them into MONTHLY.
- */
-async function planTotalsByFrequency(
-  where: Prisma.SubscriptionWhereInput
-): Promise<{ total: CadenceTotal; byFrequency: Record<(typeof RECURRING_FREQUENCIES)[number], CadenceTotal> }> {
-  const results = await Promise.all(
-    RECURRING_FREQUENCIES.map((f) =>
-      prisma.subscription.aggregate({
-        where: { AND: [where, subscriptionFrequencyWhere(f)] },
-        _sum: { amountUSD: true },
-        _count: { id: true },
-      })
-    )
-  );
-  const byFrequency = emptyFrequencyRecord<CadenceTotal>(() => ({ count: 0, amountUSD: 0, monthlyUSD: 0 }));
-  const total: CadenceTotal = { count: 0, amountUSD: 0, monthlyUSD: 0 };
-  RECURRING_FREQUENCIES.forEach((f, i) => {
-    const amountUSD = results[i]._sum?.amountUSD ?? 0;
-    const row = { count: results[i]._count?.id ?? 0, amountUSD, monthlyUSD: monthlyEquivalent(amountUSD, f) };
-    byFrequency[f] = row;
-    total.count += row.count;
-    total.amountUSD += row.amountUSD;
-    total.monthlyUSD += row.monthlyUSD;
-  });
-  return { total, byFrequency };
-}
-
 /** Settled charges matching `where`, split by the cadence of the plan that produced them. */
 async function paidTotalsByFrequency(where: Prisma.DonationWhereInput) {
   const out = emptyFrequencyRecord(() => ({ count: 0, amountUSD: 0 }));
@@ -430,10 +397,10 @@ export async function GET(request: NextRequest) {
           categoryItems: { select: { category: { select: { name: true } } } },
         },
       }),
-      planTotalsByFrequency(activeMonthlyWhere),
-      planTotalsByFrequency({ ...subBase, status: "PAUSED" }),
-      planTotalsByFrequency({ ...subBase, status: "CANCELLED" }),
-      planTotalsByFrequency({ ...subBase, status: "PAYMENT_FAILED" }),
+      recurringPlanTotals(prisma, activeMonthlyWhere),
+      recurringPlanTotals(prisma, { ...subBase, status: "PAUSED" }),
+      recurringPlanTotals(prisma, { ...subBase, status: "CANCELLED" }),
+      recurringPlanTotals(prisma, { ...subBase, status: "PAYMENT_FAILED" }),
       paidTotalsByFrequency(donationPaidWhere),
       prisma.subscription.count({
         where: { ...subBase, createdAt: { gte: startDate, lte: endDate } },

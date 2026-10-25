@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
 import { CONFIG, type ContentKind } from "@/lib/content-editor/contracts";
@@ -14,9 +14,11 @@ type Row = { id: string; title: string; statuses: Record<string, Status> };
 export function TranslationOverview({
   kind,
   scopeIds,
+  children,
 }: {
   kind: ContentKind;
   scopeIds?: string[];
+  children?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const loadedKind = useRef<ContentKind | null>(null);
@@ -211,6 +213,7 @@ export function TranslationOverview({
           </details>
         </>
       )}
+      {children}
       </div>
     </details>
   );

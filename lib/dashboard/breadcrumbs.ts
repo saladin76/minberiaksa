@@ -38,6 +38,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   get audiences() { return dt("الجمهور"); },
   get templates() { return dt("القوالب"); },
   get inbox() { return dt("المحادثات"); },
+  get conversations() { return dt("المحادثات"); },
+  get insights() { return dt("استنتاجات الذكاء الاصطناعي"); },
   get collections() { return dt("المجموعات"); },
   get documents() { return dt("المستندات"); },
   get assets() { return dt("الأصول"); },

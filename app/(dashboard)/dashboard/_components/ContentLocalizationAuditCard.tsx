@@ -52,7 +52,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const SECTION_LABELS = {
   get campaigns() { return dt("المشاريع"); },
-  get categories() { return dt("الحملات"); },
+  get categories() { return dt("التصنيفات"); },
   get blog() { return dt("المقالات"); },
   get slides() { return dt("الشرائح"); },
 } as const;
@@ -148,9 +148,9 @@ export function ContentLocalizationAuditCard({ section }: { section: Section }) 
   }
 
   useEffect(() => {
-    void loadAudit();
+    if (detailsOpen) void loadAudit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section]);
+  }, [section, detailsOpen]);
 
   const totals = useMemo(() => {
     const localeSummaries = Object.values(data?.summary.byLocale || {});
@@ -189,7 +189,7 @@ export function ContentLocalizationAuditCard({ section }: { section: Section }) 
                 <Languages className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base sm:text-lg">{dt("مراجعة النصوص والترجمات")}</CardTitle>
+                <CardTitle className="text-base sm:text-lg">{dt("تشخيص جودة النصوص")}</CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {dtx("فحص قراءة فقط لقسم {0} يكشف نقص الترجمات وملاحظات المحتوى.", [SECTION_LABELS[section]])}</p>
               </div>

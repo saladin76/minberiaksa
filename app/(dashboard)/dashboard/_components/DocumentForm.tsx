@@ -68,6 +68,7 @@ export interface DocumentSectionCopy {
   section: string;
   /** Singular, used in headings and toasts, e.g. "التقرير". */
   singular: string;
+  createLabel: string;
   /** API base, e.g. "/api/reports". */
   endpoint: string;
   /** Dashboard base, e.g. "/dashboard/reports". */
@@ -188,7 +189,7 @@ export function DocumentForm({
           <ArrowRight className="w-4 h-4 me-1" />
           {dt("رجوع")}</Button>
         <h1 className="text-lg font-bold">
-          {mode === 'create' ? dt("{0} جديد", [copy.singular]) : dt("تعديل {0}", [copy.singular])}
+          {mode === 'create' ? copy.createLabel : dt("تعديل {0}", [copy.singular])}
         </h1>
       </div>
 

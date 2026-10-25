@@ -204,7 +204,7 @@ export function DocumentListPage({
           </div>
           <Button onClick={() => router.push(`${copy.basePath}/new`)}>
             <Plus className="w-4 h-4 me-1" />
-            {dtx("{0} جديد", [copy.singular])}</Button>
+            {copy.createLabel}</Button>
         </div>
 
         {rows.length === 0 ? (
@@ -215,7 +215,7 @@ export function DocumentListPage({
             action={
               <Button onClick={() => router.push(`${copy.basePath}/new`)}>
                 <Plus className="w-4 h-4 me-1" />
-                {dtx("{0} جديد", [copy.singular])}</Button>
+                {copy.createLabel}</Button>
             }
           />
         ) : (

@@ -4,7 +4,7 @@ import {
   chargesPerMonth,
   isRecurringFrequency,
   type RecurringFrequency,
-} from "@/lib/donations/recurring-schedule";
+} from "../donations/recurring-schedule";
 
 /**
  * The cadence filter shared by every /dashboard/monthly (التبرعات المتكررة) API.

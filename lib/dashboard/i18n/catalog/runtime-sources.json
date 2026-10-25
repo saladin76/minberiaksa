@@ -8,6 +8,7 @@
   "lib/ads/recommendations.ts",
   "lib/ai/concierge/analytics.ts",
   "lib/ai/concierge/insights.ts",
+  "lib/ai/core/provider-error-message.ts",
   "lib/ai/recommendations/recommendation-rules.ts",
   "lib/archive/archive-asset-review-repository.ts",
   "lib/archive/archive-mutation-service.ts",

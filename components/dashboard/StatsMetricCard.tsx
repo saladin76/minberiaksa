@@ -52,7 +52,7 @@ interface StatsMetricCardProps { title: string; value: number; icon: LucideIcon;
 export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", format, subtitle, compact, variant = "default", bankTransfers }: StatsMetricCardProps) {
   const colors = ACCENT_CLASSES[accent] ?? ACCENT_CLASSES.slate;
   const isHero = variant === "hero";
-  const shouldShowBankTransfers = bankTransfers ?? (title.includes("إيرادات ناجحة") && title.includes("كل الوقت"));
+  const shouldShowBankTransfers = bankTransfers ?? false;
   const [bankSummary, setBankSummary] = useState<BankTransfersSummary | null>(null);
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
 
@@ -77,7 +77,6 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
   const shell = cn(
     "group relative overflow-hidden rounded-xl border border-slate-200 bg-white",
     "shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-all duration-200",
-    "hover:shadow-[0_6px_20px_rgba(16,24,40,0.10)] hover:border-slate-300 hover:-translate-y-px",
     compact ? "p-3.5" : "p-4",
     isHero && "ring-2 ring-brand/30 border-brand/40",
   );
@@ -131,7 +130,6 @@ export function StatsMetricCard({ title, value, icon: Icon, accent = "slate", fo
 const CARD_SHELL = cn(
   "group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4",
   "shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-all duration-200",
-  "hover:shadow-[0_6px_20px_rgba(16,24,40,0.10)] hover:border-slate-300 hover:-translate-y-px",
 );
 
 function BankTransfersCardView({ icon: Icon, summary, displayValue, currencyCode }: { icon: LucideIcon; summary: BankTransfersSummary | null; displayValue: number; currencyCode: string }) {
@@ -139,7 +137,7 @@ function BankTransfersCardView({ icon: Icon, summary, displayValue, currencyCode
     <div className={CARD_SHELL}>
       <span className={cn("absolute inset-y-0 start-0 w-1", ACCENT_CLASSES.blue.rail)} aria-hidden />
       <div className="flex items-start justify-between gap-3 min-w-0">
-        <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">{dt("الحوالات البنكية")}</p>
+        <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-slate-600">{dt("الحوالات البنكية")} · {dt("كل الوقت")}</p>
         <span className={cn("shrink-0 rounded-lg p-1.5", ACCENT_CLASSES.blue.tile)}><Icon className="w-[18px] h-[18px]" /></span>
       </div>
       <p className="mt-2 text-2xl font-bold leading-8 tabular-nums tracking-tight text-slate-900">
