@@ -81,6 +81,8 @@ const bundle = await build({
           contents: "export default function Rich(){return null;}",
           loader: "js",
         }));
+        b.onResolve({ filter: /^next-auth\/react$/ }, () => ({ path: "session", namespace: "fixture-session" }));
+        b.onLoad({ filter: /.*/, namespace: "fixture-session" }, () => ({ contents: "export function useSession(){return {data:null,status:'unauthenticated'}}", loader: "js" }));
         b.onResolve({ filter: /^next\/(link|dynamic|image|navigation)$/ }, (args) => ({
           path: args.path,
           namespace: "fixture-next",

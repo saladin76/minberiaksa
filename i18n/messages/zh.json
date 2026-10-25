@@ -694,7 +694,8 @@
     "recipientWhatsapp": "受赠人的WhatsApp号码",
     "itemsUnavailable": "以下项目无法支付：{items}。请将其从捐赠篮中移除或选择具体项目后重试。",
     "bankTransferUploadNote": "在您转账后，您将在下一页上传收据或转账通知。一旦我们的财务团队与账户匹配，您的捐赠将被确认。",
-    "ctaBankContinue": "继续上传转账收据"
+    "ctaBankContinue": "继续上传转账收据",
+    "recurringCardUnavailable": "目前无法使用银行卡进行定期捐赠。请稍后重试。"
   },
   "certificates": {
     "certNoLabel": "证书编号",
@@ -751,6 +752,9 @@
     "landscapeVersion": "正式版本（横向）"
   },
   "common": {
+    "quickDestinationRequired": "请先选择捐赠目标再继续。",
+    "quickDestinationUnavailable": "此捐赠目标暂不可用。请选择其他项目并重试。",
+    "quickDonationChecking": "正在检查…",
     "donate": "捐赠",
     "addToCart": "加入捐赠清单",
     "zakatCalculator": "天课计算器",

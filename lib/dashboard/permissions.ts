@@ -160,6 +160,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
 ];
 export function pathToDashboardPermission(pathname: string): DashboardPermissionKey | null {
   if (!pathname.startsWith("/dashboard")) return null;
+  if (/^\/dashboard\/users\/donors\/[^/]+\/communication(?:\/|$)/.test(pathname)) return "messages";
   for (const rule of [...PATH_RULES].sort((a, b) => b.prefix.length - a.prefix.length)) {
     if (pathname === rule.prefix || pathname.startsWith(rule.prefix + "/")) return rule.key;
   }

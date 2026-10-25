@@ -15,6 +15,7 @@ import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { writeAuditLog } from "@/lib/audit-log";
 import { touchProfileCommunication } from "./donor-communication-profile-service";
+import { smartWhatsappTemplateChoices } from "./smart-whatsapp-templates";
 import { classifyEventTemplates } from "./template-event-classification";
 import { isWhatsappExplicitlyUnsubscribed } from "./campaign-audience-accounting";
 import { retryDefinitelyNotSent } from "./retry-recipient-guard";
@@ -131,38 +132,20 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
       }).catch(() => null)
     : null;
 
-  const [marketingRows, utilityRows] = await Promise.all([
+  const [templates, routing] = await Promise.all([
     prisma.whatsappTemplate.findMany({
-      where: {
-        status: { not: "ARCHIVED" },
-        OR: [{ category: "MARKETING" }, { purpose: "MARKETING" }, { kind: "CAMPAIGN" }],
-        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "MARKETING" } },
-      },
-      select: { id: true, name: true, category: true },
-      orderBy: { updatedAt: "desc" },
-      take: 100,
-    }).catch(() => []),
-    prisma.whatsappTemplate.findMany({
-      where: {
-        status: { not: "ARCHIVED" },
-        OR: [{ category: "UTILITY" }, { purpose: "UTILITY" }, { purpose: "TRANSACTIONAL" }],
-        variants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED", category: "UTILITY" } },
-      },
-      select: { id: true, name: true, category: true },
-      orderBy: { updatedAt: "desc" },
-      take: 100,
-    }).catch(() => []),
+      where: { OR: [{ status: { not: "ARCHIVED" } }, { status: null }, { status: { isSet: false } }], wabaVariants: { some: { provider: "META_WHATSAPP", approvalStatus: "APPROVED" } } },
+      select: { id: true, name: true, category: true, purpose: true, kind: true, wabaVariants: {where: {provider: "META_WHATSAPP"}} },
+      orderBy: { updatedAt: "desc" }, take: 100,
+    }),
+    loadSenderRoutingSnapshot("WHATSAPP"),
   ]);
-  const [classifiedMarketing, classifiedUtility] = await Promise.all([
-    classifyEventTemplates("WHATSAPP", marketingRows),
-    classifyEventTemplates("WHATSAPP", utilityRows),
-  ]);
-  const marketingTemplates = classifiedMarketing
-    .filter((template) => template.kind === "CAMPAIGN")
-    .map(({ id, name, category }) => ({ id, name, category }));
-  const utilityTemplates = classifiedUtility
-    .filter((template) => template.kind === "SYSTEM")
-    .map(({ id, name, category }) => ({ id, name, category }));
+  const classified = await classifyEventTemplates("WHATSAPP", templates);
+  const routedWaba = (purpose: "UTILITY" | "MARKETING") => {
+    const result = resolveSenderFromSnapshot(routing, {locale: d.locale, country: d.country, purpose});
+    return result.ok ? result.sender.businessAccountId : null;
+  };
+  const {marketingTemplates, utilityTemplates} = smartWhatsappTemplateChoices(classified, d.locale, {UTILITY: routedWaba("UTILITY"), MARKETING: routedWaba("MARKETING")});
 
   return {
     userId,
@@ -430,8 +413,9 @@ export async function sendSmartWhatsapp(input: {
   if (mode === "UTILITY") {
     let directFailure: { reason: string; detail?: string | null } | null = null;
 
-    if (ctx.directSendEnabled) {
-      if (!body) return { ok: false, reason: "EMPTY_BODY" };
+    // A selected approved template is independently sendable. Direct Send only
+    // applies when the operator actually entered service text.
+    if (ctx.directSendEnabled && body) {
 
       const created = await createDeliveryRecord({
         channel: "WHATSAPP",

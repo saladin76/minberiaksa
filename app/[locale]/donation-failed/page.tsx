@@ -27,7 +27,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BankAccountsBlock from "../bank-transfer/_components/BankAccountsBlock";
 import { restoreCheckoutAttempt } from "@/lib/minbar/cart";
-import { miaPath } from "@/lib/minbar/routes";
+import { miaPath, slugFor } from "@/lib/minbar/routes";
+import { withDonationToken } from "@/lib/donations/access-token-link";
+import { donationDetailsUrl, rememberGuestDonationAccess, resolveGuestDonationAccess } from "@/lib/donations/guest-access-client";
 import {
   resolvePaymentError,
   type PaymentErrorKey,
@@ -93,28 +95,43 @@ export default function DonationFailedPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const donationId = searchParams?.get("donationId") ?? "";
+  const requestToken = searchParams?.get("t") ?? "";
 
   const [donation, setDonation] = useState<DonationDetails | null>(null);
   const [loading, setLoading] = useState(Boolean(donationId));
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
+    setDonation(null);
+    setLoading(Boolean(donationId));
     if (!donationId) return;
+    const url = donationDetailsUrl(donationId, requestToken);
+    if (!url) { setLoading(false); return; }
     let cancelled = false;
+    const controller = new AbortController();
     (async () => {
       try {
-        const res = await axios.get(`/api/donations/${donationId}`);
-        if (!cancelled) setDonation(res.data as DonationDetails);
-      } catch (err) {
-        console.error("Failed to load donation:", err);
+        const res = await axios.get(url, { signal: controller.signal, timeout: 15_000 });
+        if (cancelled) return;
+        const details = res.data as DonationDetails;
+        if (details.paidAt) {
+          // An old failure link must never invite a second payment for a settled order.
+          window.location.replace(withDonationToken(
+            `${miaPath("donationSuccess", locale)}/${donationId}`,
+            resolveGuestDonationAccess(donationId, requestToken),
+          ));
+          return;
+        }
+        setDonation(details);
+      } catch {
+        // Axios errors can contain the credential-bearing request URL.
+        if (!cancelled) console.error("Could not load donation details");
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [donationId]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [donationId, requestToken, locale]);
 
   const resolved: ResolvedPaymentError = useMemo(
     () =>
@@ -165,7 +182,20 @@ export default function DonationFailedPage() {
 
   const handleRetry = async () => {
     if (!donation || retrying) return;
+    if (donation.paidAt) {
+      window.location.replace(withDonationToken(
+        `${miaPath("donationSuccess", locale)}/${donation.id}`,
+        resolveGuestDonationAccess(donation.id, requestToken),
+      ));
+      return;
+    }
     setRetrying(true);
+
+    // The primary checkout preserves the basket for every online method.
+    if (restoreCheckoutAttempt(donation.id)) {
+      window.location.assign(miaPath("checkout", locale));
+      return;
+    }
 
     /* The 3-D Secure card rails (PayFor, Albaraka) take the card on our own
        checkout, so a retry is the same basket back on that form. Checkout kept
@@ -173,14 +203,10 @@ export default function DonationFailedPage() {
        back sends the donor straight to the card fields, in their own currency.
        No clone is created here: it could never be charged from this page, and
        every one used to be left behind as an abandoned order. */
-    const cardRail = ["PAYFOR", "ALBARAKA"].includes((donation.provider ?? "").toUpperCase());
+    const cardRail = ["PAYFOR", "ALBARAKA", "STRIPE"].includes((donation.provider ?? "").toUpperCase());
     if (cardRail) {
-      if (restoreCheckoutAttempt(donation.id)) {
-        window.location.assign(miaPath("checkout", locale));
-        return;
-      }
       toast.success(t("retry.payforHint"));
-      router.push("/campaigns");
+      router.push(`/${slugFor("projects", locale)}`);
       return;
     }
 
@@ -188,14 +214,17 @@ export default function DonationFailedPage() {
     // campaign page where the regular dialog handles the subscribe flow.
     if (isMonthly) {
       // Fallback to /campaigns since we don't have the campaign id stored
-      router.push("/campaigns");
+      router.push(`/${slugFor("projects", locale)}`);
       return;
     }
 
     try {
-      const res = await axios.post(`/api/donations/${donation.id}/retry`);
+      const res = await axios.post(`/api/donations/${donation.id}/retry`, {
+        t: resolveGuestDonationAccess(donation.id, requestToken),
+      });
       const newId = res.data?.id as string | undefined;
       if (!newId) throw new Error("retry returned no id");
+      rememberGuestDonationAccess(newId, res.data?.accessToken);
 
       // Pick the next-step URL by provider. STRIPE → checkout session URL.
       // The 3D Secure rails (PAYFOR, ALBARAKA) start from a signed form that needs
@@ -223,8 +252,8 @@ export default function DonationFailedPage() {
       const url = checkout.data?.url as string | undefined;
       if (!url) throw new Error("stripe returned no url");
       window.location.href = url;
-    } catch (err) {
-      console.error("retry failed:", err);
+    } catch {
+      console.error("Could not prepare donation retry");
       toast.error(t("retry.failed"));
       setRetrying(false);
     }
@@ -458,7 +487,7 @@ export default function DonationFailedPage() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">{t("noDonation.title")}</h3>
             <p className="text-sm text-gray-600 mb-5">{t("noDonation.description")}</p>
             <Link
-              href="/campaigns"
+              href={`/${slugFor("projects", locale)}`}
               className="inline-flex items-center gap-2 bg-[#A5243D] hover:bg-[#7D1830] text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
             >
               {t("noDonation.cta")}

@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
+import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { parseQuickDonation, validateQuickDonationBody } from "@/lib/minbar/quick-donation";
 
 /**
@@ -51,6 +52,10 @@ export async function PUT(request: NextRequest) {
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid quickDonation" }, { status: 400 });
     }
+
+    const targetIds = [...new Set([...Object.values(config.genericProjectIds ?? {}), ...(config.projectsMode === "selected" ? config.projectIds : [])])];
+    const validCount = await prisma.campaign.count({ where: { id: { in: targetIds }, isActive: true, AND: [NOT_SOFT_DELETED] } });
+    if (validCount !== targetIds.length) return NextResponse.json({ error: "إحدى وجهات التبرع غير نشطة أو محذوفة. اختر مشروعًا صالحًا." }, { status: 400 });
 
     const existing = await getOrCreateSettings();
     const saved = await prisma.globalSettings.update({

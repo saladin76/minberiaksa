@@ -1,3 +1,4 @@
+import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -37,7 +38,7 @@ import {
   scheduleRuleFor,
 } from "@/lib/donations/recurring-schedule";
 import { parseMainGateway } from "@/lib/payment-gateway";
-import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
+import { isAlbarakaRecurringCheckoutReady } from "@/lib/albaraka";
 import { isPayPalConfigured, isPayPalRecurringEnabled } from "@/lib/paypal";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 import { giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
@@ -195,15 +196,15 @@ export async function POST(request: NextRequest) {
     /* Where the donor came from (UTM, click ids, landing page) as the browser
        recorded it, whitelisted the same way as `POST /api/donations`. The
        dashboard's "مصدر التبرع" column and the ad conversion events read it. */
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const clientIp = forwardedFor?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || undefined;
+    const clientIp = getTrackingClientIp(request.headers);
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || undefined;
     const adAttribution = sanitizeDonationAttribution({
       ...(body.attribution && typeof body.attribution === "object" && !Array.isArray(body.attribution)
         ? (body.attribution as Record<string, unknown>)
         : {}),
-      ...(userAgent ? { user_agent: userAgent } : {}),
-      ...(clientIp ? { client_ip: clientIp } : {}),
+      user_agent: userAgent,
+      client_ip: clientIp,
+      client_ip_address: undefined,
     }) as Record<string, unknown> | undefined;
     const donationAttribution = concierge || conciergeTouch || adAttribution
       ? ({
@@ -398,7 +399,7 @@ export async function POST(request: NextRequest) {
         });
         if (me) {
           const typedName = [guest.firstName, guest.lastName].filter(Boolean).join(" ").trim();
-          const typedPhone = typeof guest.phone === "string" && guest.phone.replace(/D/g, "").length >= 7 ? guest.phone : null;
+          const typedPhone = typeof guest.phone === "string" && guest.phone.replace(/\D/g, "").length >= 7 ? guest.phone : null;
           const data = completionData(me, {
             name: typedName || null,
             phone: typedPhone,
@@ -651,9 +652,9 @@ export async function POST(request: NextRequest) {
          vaulted at the first instalment); a card plan's rail follows the
          cadence and the main gateway. */
       const rail = isPayPal ? ("PAYPAL" as const) : railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
-      if (rail === "ALBARAKA" && !(isAlbarakaConfigured() && isAlbarakaRecurringEnabled())) {
+      if (rail === "ALBARAKA" && !isAlbarakaRecurringCheckoutReady()) {
         return NextResponse.json(
-          { error: "Recurring donations at this frequency are not available at the moment" },
+          { error: "Recurring donations at this frequency are not available at the moment", code: "RECURRING_UNAVAILABLE" },
           { status: 400 }
         );
       }
@@ -663,12 +664,14 @@ export async function POST(request: NextRequest) {
          both computed, so the three cannot disagree. `nextBillingDate` is
          re-derived from the same rule when the first instalment settles;
          `consentSnapshot` is never rewritten. */
+      const recurringTotal = totalAmount + planTeamSupport + (coverFees ? (totalAmount + planTeamSupport) * 0.03 : 0);
+      const recurringAmountUSD = planTeamSupport === teamSupport ? donationTotalUsd : await convertAmountInCurrencyToUsd(recurringTotal, currencyNorm);
       const now = new Date();
       const rule = scheduleRuleFor(frequency, now, timezone, scheduleChoice.value);
       const nextBilling = firstChargeAfterCheckout(rule, now, timezone);
       const consent = consentSnapshotFor({
         frequency,
-        amount: finalTotalAmount,
+        amount: recurringTotal,
         currency,
         timezone,
         rail,
@@ -683,7 +686,7 @@ export async function POST(request: NextRequest) {
           data: {
             status: "ACTIVE",
             amount: totalAmount,
-            amountUSD: donationTotalUsd,
+            amountUSD: recurringAmountUSD,
             currency,
             teamSupport: planTeamSupport,
             coverFees,

@@ -361,7 +361,7 @@ export default function CategoriesPage() {
           { label: dt("التصنيفات النشطة"), value: categories.filter((category) => category.isActive).length, detail: dt("متاحة في قوائم الموقع"), icon: CheckCircle2, tone: "green" },
           { label: dt("في الأرشيف"), value: archivedCategories.length, detail: dt("مخفية دون حذف المشاريع"), icon: Archive, tone: "slate" },
           { label: dt("بها مشاريع"), value: categories.filter((category) => Number(category.campaignCount ?? category.campaigns.length) > 0).length, detail: dt("تصنيفات مرتبطة بمشاريع"), icon: FolderOpen, tone: "brand" },
-          { label: dt("مشاريع مصنّفة"), value: categories.reduce((sum, category) => sum + Number(category.campaignCount ?? category.campaigns.length), 0), detail: dt("إجمالي الارتباطات الحالية"), icon: Globe, tone: "amber" },
+          { label: dt("إجمالي الارتباطات الحالية"), value: categories.reduce((sum, category) => sum + Number(category.campaignCount ?? category.campaigns.length), 0), detail: dt("تصنيفات مرتبطة بمشاريع"), icon: Globe, tone: "amber" },
         ]} />
       </div>
       <div className="mb-4">

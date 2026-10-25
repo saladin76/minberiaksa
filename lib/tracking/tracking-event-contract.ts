@@ -118,6 +118,8 @@ export interface ReasonEntry {
 export interface TrackingEventAudit {
   metaBrowserDonate?: boolean | null;
   metaCapiDonate?: boolean | null;
+  metaBrowserPurchase?: boolean | null;
+  metaCapiPurchase?: boolean | null;
   metaCapiDonateFailed?: boolean | null;
   ga4Purchase?: boolean | null;
   googleAdsConversion?: boolean | null;

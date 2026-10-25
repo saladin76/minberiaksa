@@ -1,4 +1,5 @@
 import type { MinbarCartItem } from "./cart";
+import { rememberGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
@@ -145,7 +146,7 @@ export function toOrderItems(
    */
   aliases: Readonly<Record<string, string>> = {}
 ): OrderLines & { unmatched: MinbarCartItem[] } {
-  const bySlug = new Map(projects.map((project) => [project.slug, project.id]));
+  const bySlug = new Map(projects.flatMap((project) => [[project.slug, project.id], [project.id, project.id]]));
   const lines: OrderLines & { unmatched: MinbarCartItem[] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [] };
 
   for (const item of items) {
@@ -313,12 +314,16 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
         subscription?: { id: string };
         bankTransfer?: { accessToken: string };
         error?: string;
+        code?: string;
       }
     | null;
 
   if (!response.ok || !payload?.donation?.id) {
-    throw new OrderRejectedError(payload?.error || "order-failed", response.status);
+    throw new OrderRejectedError(payload?.error || "order-failed", response.status, payload?.code);
   }
+
+  // Preserve the server-issued read credential before a payment redirect.
+  rememberGuestDonationAccess(payload.donation.id, payload.donation.accessToken);
 
   return {
     id: payload.donation.id,
@@ -388,6 +393,9 @@ export async function initiateBankPayment(
  */
 export function submitGatewayForm(form: GatewayForm, browserFields: Record<string, string> = {}): void {
   const element = document.createElement("form");
+  element.setAttribute("data-clarity-mask", "True");
+  element.setAttribute("data-hj-suppress", "");
+  element.setAttribute("data-private", "");
   element.method = "POST";
   element.action = form.actionUrl;
   element.target = "_self";

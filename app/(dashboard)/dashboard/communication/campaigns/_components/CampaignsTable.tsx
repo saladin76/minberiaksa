@@ -113,11 +113,11 @@ export function CampaignsTable({
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Wide content scrolls inside its own container so the page body never scrolls sideways. */}
       <div className="overflow-x-auto">
-        <table className="w-full text-start text-xs">
+        <table className="w-full min-w-[1300px] text-start text-xs">
           <thead>
             {/* Sticky so the numeric columns stay labelled while scrolling a long list. */}
             <tr className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50/90 text-[11px] font-semibold text-slate-500 backdrop-blur">
-              <SortHeader label={dt("الحملة")} sortKey="name" sort={sort} onSort={onSort} className="w-full max-w-0 text-start" />
+              <SortHeader label={dt("الحملة")} sortKey="name" sort={sort} onSort={onSort} className="min-w-[16rem] text-start" />
               <SortHeader label={dt("القناة")} sortKey="channel" sort={sort} onSort={onSort} />
               <SortHeader label={dt("الحالة")} sortKey="status" sort={sort} onSort={onSort} />
               <SortHeader label={dt("أُرسلت")} sortKey="sentCount" sort={sort} onSort={onSort} align="left" className="text-end" />
@@ -153,7 +153,7 @@ export function CampaignsTable({
                   onClick={() => router.push(href)}
                   className="cursor-pointer border-b border-slate-50 transition-colors last:border-0 hover:bg-slate-50/70"
                 >
-                  <td className="max-w-0 px-3 py-2.5 align-middle">
+                  <td className="min-w-[16rem] max-w-[24rem] px-3 py-2.5 align-middle">
                     <div className="flex items-center gap-2.5">
                       <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg", ch.tile)}>
                         <Icon className="h-4 w-4" />

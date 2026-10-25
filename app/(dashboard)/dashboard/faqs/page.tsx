@@ -273,7 +273,7 @@ export default function FaqsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">{faq.translationCount}</TableCell>
                     <TableCell>
-                      <Switch
+                      <Switch aria-label={dt("مفعّل") + ": " + faq.question}
                         checked={faq.isActive}
                         disabled={togglingId === faq.id}
                         onCheckedChange={(v) => toggleActive(faq, v)}
@@ -282,13 +282,14 @@ export default function FaqsPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
+                          aria-label={dt("تعديل") + ": " + faq.question} title={dt("تعديل")}
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/dashboard/faqs/edit/${faq.id}`)}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(faq)}>
+                        <Button aria-label={dt("حذف") + ": " + faq.question} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(faq)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>

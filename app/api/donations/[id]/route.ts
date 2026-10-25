@@ -1,3 +1,4 @@
+import { donationEditTotals } from "@/lib/donations/edit-totals";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from 'next-auth';
@@ -506,6 +507,7 @@ export async function PATCH(
     const body = (await request.json()) as {
       status?: 'PAID' | 'FAILED';
       confirmPaidAt?: boolean;
+      teamSupport?: number;
       items?: { campaignId: string; amount: number }[];
       categoryItems?: { categoryId: string; amount: number }[];
     };
@@ -517,6 +519,12 @@ export async function PATCH(
     if (!existing) {
       return NextResponse.json({ error: 'Donation not found' }, { status: 404 });
     }
+
+    if (body.teamSupport !== undefined &&
+      (typeof body.teamSupport !== "number" || !Number.isFinite(body.teamSupport) || body.teamSupport < 0 || body.teamSupport > 1_000_000_000)) {
+      return NextResponse.json({ error: 'Invalid team support; use a non-negative amount' }, { status: 400 });
+    }
+    const nextTeamSupport = body.teamSupport ?? existing.teamSupport;
 
     const nextStatus = body.status ?? existing.status;
     if (nextStatus !== 'PAID' && nextStatus !== 'FAILED') {
@@ -625,11 +633,11 @@ export async function PATCH(
       + existing.waqfItems.reduce((s, i) => s + i.amount, 0);
 
     const newAmount = (newItems || newCatItems) ? newLineSum : existing.amount;
-    // totalAmount = donation amount + teamSupport + fees(if coverFees). Preserve
-    // teamSupport/fees as-is  the admin is editing the donation portion only.
-    const carriedExtras = existing.teamSupport + (existing.coverFees ? existing.fees : 0);
-    const newTotalAmount = (newItems || newCatItems) ? newAmount + carriedExtras : existing.totalAmount;
-    const newAmountUSD = (newItems || newCatItems)
+    const moneyChanged = !!(newItems || newCatItems) || nextTeamSupport !== existing.teamSupport;
+    const newTotalAmount = moneyChanged
+      ? donationEditTotals(newAmount, nextTeamSupport, existing.fees, existing.coverFees).totalAmount
+      : existing.totalAmount;
+    const newAmountUSD = moneyChanged
       ? await convertAmountInCurrencyToUsd(newTotalAmount, currencyCode)
       : existing.amountUSD;
     // Stamp paidAt when:
@@ -730,6 +738,7 @@ export async function PATCH(
           amount: newAmount,
           amountUSD: newAmountUSD,
           totalAmount: newTotalAmount,
+          teamSupport: nextTeamSupport,
           status: nextStatus,
           ...(shouldStampPaidAt && { paidAt: nextPaidAt }),
           // Self-heal legacy rows: any admin edit stamps paymentMethod=CARD
@@ -777,6 +786,8 @@ export async function PATCH(
       metadata: {
         before: {
           amount: existing.amount,
+          teamSupport: existing.teamSupport,
+          totalAmount: existing.totalAmount,
           amountUSD: existing.amountUSD,
           status: existing.status,
           paidAt: existing.paidAt,
@@ -785,6 +796,8 @@ export async function PATCH(
         },
         after: {
           amount: newAmount,
+          teamSupport: nextTeamSupport,
+          totalAmount: newTotalAmount,
           amountUSD: newAmountUSD,
           status: nextStatus,
           paidAt: nextPaidAt,

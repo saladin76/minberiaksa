@@ -21,12 +21,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
-import { Award, Pencil, Trash2, Plus, Loader2, Users, RotateCw, Info, Languages, ListFilter } from "lucide-react";
+import { Award, Pencil, Trash2, Plus, Loader2, Users, RotateCw, Info, ListFilter } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import type { BadgeCriteriaType } from "@/lib/badge-criteria";
-import { LOCALE_OPTIONS } from "@/lib/locales";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
-import { useLocale } from "next-intl";
 import { DonorListsManager } from "./_components/DonorListsManager";
 
 const CRITERIA_TYPES: { value: BadgeCriteriaType; label: string }[] = [
@@ -45,9 +43,6 @@ const CRITERIA_EXPLANATIONS: Record<BadgeCriteriaType, string> = {
   get DONATION_COUNT_MIN() { return dt("تضم المجموعة من أتم الحد الأدنى من عمليات التبرع المؤكدة، بصرف النظر عن قيمتها."); },
 };
 
-const LOCALES = LOCALE_OPTIONS;
-const emptyTranslations = () => Object.fromEntries(LOCALES.map(({ code }) => [code, ""])) as Record<string, string>;
-
 interface BadgeItem {
   id: string;
   name: string;
@@ -55,8 +50,6 @@ interface BadgeItem {
   criteria: Record<string, unknown>;
   order: number;
   createdAt: string;
-  translatedName?: string;
-  translationCount: number;
 }
 
 interface BadgeForm {
@@ -69,7 +62,6 @@ interface BadgeForm {
     months?: number;
     count?: number;
   };
-  translations: Record<string, string>;
 }
 
 const defaultCriteria = (): BadgeForm["criteria"] => ({
@@ -102,8 +94,7 @@ function criteriaSummary(c: BadgeForm["criteria"]): string {
 }
 
 export default function BadgesPage() {
-  const uiLocale = useLocale();
-  const [activeTab, setActiveTab] = useState<"lists" | "criteria">("lists");
+  const [activeTab, setActiveTab] = useState<"lists" | "criteria">("criteria");
   const [badges, setBadges] = useState<BadgeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -113,18 +104,16 @@ export default function BadgesPage() {
     name: "",
     color: "#35708f",
     criteria: defaultCriteria(),
-    translations: emptyTranslations(),
   });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [activeTranslationLocale, setActiveTranslationLocale] = useState("en");
   const [audienceCounts, setAudienceCounts] = useState<Record<string, number>>({});
   const [audienceLoadingId, setAudienceLoadingId] = useState<string | null>(null);
 
   const loadBadges = useCallback(async () => {
     setLoadError(false);
     try {
-      const res = await axios.get(`/api/admin/badges?locale=${encodeURIComponent(uiLocale)}`);
+      const res = await axios.get("/api/admin/badges");
       setBadges(res.data?.badges ?? []);
     } catch (err) {
       console.error(err);
@@ -133,7 +122,7 @@ export default function BadgesPage() {
     } finally {
       setLoading(false);
     }
-  }, [uiLocale]);
+  }, []);
 
   useEffect(() => { void loadBadges(); }, [loadBadges]);
 
@@ -143,9 +132,7 @@ export default function BadgesPage() {
       name: "",
       color: "#35708f",
       criteria: defaultCriteria(),
-      translations: emptyTranslations(),
-    });
-    setActiveTranslationLocale("en");
+      });
     setDialogOpen(true);
   };
 
@@ -154,11 +141,6 @@ export default function BadgesPage() {
     try {
       const res = await axios.get(`/api/admin/badges/${badge.id}`);
       const b = res.data;
-      const translations = emptyTranslations();
-      (b.translations ?? []).forEach((t: { locale: string; name: string }) => {
-        translations[t.locale] = t.name ?? "";
-      });
-      setActiveTranslationLocale("en");
       setForm({
         name: b.name ?? "",
         color: b.color ?? "#35708f",
@@ -169,7 +151,6 @@ export default function BadgesPage() {
           months: b.criteria?.months,
           count: b.criteria?.count,
         },
-        translations,
       });
       setDialogOpen(true);
     } catch {
@@ -210,7 +191,6 @@ export default function BadgesPage() {
           months: form.criteria.months,
           count: form.criteria.count,
         },
-        translations: form.translations,
       };
       if (editingId) {
         await axios.put(`/api/admin/badges/${editingId}`, payload);
@@ -267,11 +247,11 @@ export default function BadgesPage() {
           ) : undefined}
         />
         <div role="tablist" aria-label={dt("أنواع تصنيفات المتبرعين")} className="flex flex-wrap gap-2 border-b pb-3">
-          <button type="button" role="tab" aria-selected={activeTab === "lists"} onClick={() => setActiveTab("lists")} className={"rounded-lg px-4 py-2 text-sm font-semibold transition-colors " + (activeTab === "lists" ? "bg-brand text-white" : "border bg-white text-slate-600 hover:bg-slate-50")}>
-            <Users className="me-2 inline h-4 w-4" />{dt("قوائم المتبرعين")}
-          </button>
           <button type="button" role="tab" aria-selected={activeTab === "criteria"} onClick={() => setActiveTab("criteria")} className={"rounded-lg px-4 py-2 text-sm font-semibold transition-colors " + (activeTab === "criteria" ? "bg-brand text-white" : "border bg-white text-slate-600 hover:bg-slate-50")}>
             <ListFilter className="me-2 inline h-4 w-4" />{dt("شرائح التبرع")}
+          </button>
+          <button type="button" role="tab" aria-selected={activeTab === "lists"} onClick={() => setActiveTab("lists")} className={"rounded-lg px-4 py-2 text-sm font-semibold transition-colors " + (activeTab === "lists" ? "bg-brand text-white" : "border bg-white text-slate-600 hover:bg-slate-50")}>
+            <Users className="me-2 inline h-4 w-4" />{dt("قوائم المتبرعين")}
           </button>
         </div>
         {activeTab === "lists" ? <DonorListsManager /> : (
@@ -314,12 +294,9 @@ export default function BadgesPage() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold text-foreground">
-                        {badge.translatedName || badge.name}
+                        {badge.name}
                         </p>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          <Languages className="me-1 inline h-3 w-3" aria-hidden="true" />
-                          {dt("ترجمات")}: {badge.translationCount} / {LOCALES.length}
-                        </span>
+
                       </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                         {criteriaSummary(badge.criteria as BadgeForm["criteria"])}
@@ -554,38 +531,7 @@ export default function BadgesPage() {
               </div>
             )}
 
-            <div className="border-t pt-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <Label className="block">{dt("اسم المجموعة حسب اللغة")}</Label>
-                  <p className="mt-1 text-xs text-muted-foreground">{dtx("أدخل الترجمات التي راجعتها. الاسم الافتراضي يستخدم عند ترك لغة فارغة. {0} من {1} لغة مكتملة", [LOCALES.filter(({ code }) => Boolean(form.translations[code]?.trim())).length, LOCALES.length])}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="badge-translation-locale">{dt("اللغة")}</Label>
-                <Select value={activeTranslationLocale} onValueChange={setActiveTranslationLocale}>
-                  <SelectTrigger id="badge-translation-locale"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {LOCALES.map((loc) => (
-                      <SelectItem key={loc.code} value={loc.code}>
-                        {loc.label}{form.translations[loc.code]?.trim() ? " · ✓" : " · —"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={form.translations[activeTranslationLocale] ?? ""}
-                  maxLength={80}
-                  onChange={(event) => setForm((current) => ({
-                    ...current,
-                    translations: { ...current.translations, [activeTranslationLocale]: event.target.value },
-                  }))}
-                  placeholder={form.name || dt("اكتب اسم المجموعة باللغة المختارة")}
-                  aria-label={dt("اسم المجموعة المترجم")}
-                />
-                <p className="text-xs text-muted-foreground">{dt("يمكنك مراجعة جميع اللغات من القائمة. تحفظ التغييرات مع زر الحفظ نفسه.")}</p>
-              </div>
-            </div>
+            <p className="border-t pt-4 text-xs text-muted-foreground">{dt("الشريحة داخلية باسم واحد، وتشمل تبرعات المتبرع بجميع اللغات دون فصل.")}</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>

@@ -694,7 +694,8 @@
     "recipientWhatsapp": "Numero WhatsApp del destinatario",
     "itemsUnavailable": "Non è possibile pagare questi elementi: {items}. Rimuovili dal carrello o scegli un progetto specifico, poi riprova.",
     "bankTransferUploadNote": "Dopo aver trasferito, caricherai la ricevuta o l'avviso di trasferimento nella pagina successiva. La tua donazione è confermata una volta che il nostro team finanziario la abbina all'account.",
-    "ctaBankContinue": "Continua a caricare la ricevuta di trasferimento"
+    "ctaBankContinue": "Continua a caricare la ricevuta di trasferimento",
+    "recurringCardUnavailable": "Le donazioni ricorrenti con carta non sono attualmente disponibili. Riprova più tardi."
   },
   "certificates": {
     "certNoLabel": "N. certificato",
@@ -751,6 +752,9 @@
     "landscapeVersion": "Versione approvata (orizzontale)"
   },
   "common": {
+    "quickDestinationRequired": "Scegli una destinazione per la donazione prima di continuare.",
+    "quickDestinationUnavailable": "Questa destinazione non è disponibile. Scegli un altro progetto e riprova.",
+    "quickDonationChecking": "Verifica…",
     "donate": "Dona Ora",
     "addToCart": "Aggiungi al Carrello",
     "zakatCalculator": "Calcolatore Zakat",

@@ -33,10 +33,17 @@ export async function GET(request: NextRequest) {
   const dryRun = request.nextUrl.searchParams.get("dryRun") === "1";
 
   try {
-    const summary = await chargeDueAlbarakaSubscriptions({ dryRun });
+    let albarakaFailed = false;
+    let paypalFailed = false;
+    const summary = await chargeDueAlbarakaSubscriptions({ dryRun }).catch((error) => {
+      albarakaFailed = true;
+      console.error("albaraka recurring run failed", error);
+      return null;
+    });
     /* PayPal runs after Albaraka and on its own: one rail failing must not
        stop the other from billing. */
     const paypal = await chargeDuePayPalSubscriptions({ dryRun }).catch((error) => {
+      paypalFailed = true;
       console.error("paypal recurring run failed", error);
       return null;
     });
@@ -61,7 +68,10 @@ export async function GET(request: NextRequest) {
       }).catch(() => {});
     }
 
-    return NextResponse.json({ ok: true, ...summary, paypal });
+    const ok = !albarakaFailed && !paypalFailed;
+    return NextResponse.json({ ok, ...(summary ?? {}), paypal,
+      ...(ok ? {} : { error: "One or more recurring providers failed", providerErrors: { albaraka: albarakaFailed, paypal: paypalFailed } }),
+    }, { status: ok ? 200 : 500 });
   } catch (error) {
     console.error("recurring-charges cron failed", error);
     await writeAuditLog({

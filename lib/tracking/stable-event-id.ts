@@ -17,7 +17,7 @@ export function stableDonateEventId(
 /** Reverse-lookup: parse the donation id out of a stable event id. Returns null on bad input. */
 export function parseDonationIdFromEventId(eventId: string): string | null {
   if (!eventId) return null;
-  const success = /^donate_([A-Za-z0-9]+)$/.exec(eventId);
+  const success = /^(?:donate|purchase)_([A-Za-z0-9]+)$/.exec(eventId);
   if (success) return success[1];
   const failed = /^donate_([A-Za-z0-9]+)_failed$/.exec(eventId);
   if (failed) return failed[1];

@@ -17,6 +17,7 @@ import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ContentMetricStrip } from '@/components/dashboard/content-editor/ContentMetricStrip';
 import { SortableTable, useReorder } from '../_components/SortableTable';
+import { miaPath } from "@/lib/minbar/routes";
 import { dt, dtx } from "@/lib/dashboard/i18n";
 
 interface SuperCategoryRow {
@@ -141,15 +142,14 @@ export default function SuperCategoriesPage() {
                     <img src={r.heroImage} alt="" className="h-10 w-16 rounded border object-cover" />
                   ) : (
                     <div
-                      className="grid h-10 w-16 place-items-center rounded border"
-                      style={{ background: r.accentColor || '#7C2318' }}
+                      className="grid h-10 w-16 place-items-center rounded border bg-slate-50"
                     >
-                      <Layers className="h-4 w-4 text-white/80" />
+                      <Layers className="h-4 w-4 text-slate-500" aria-hidden="true" />
                     </div>
                   )}
                   <div>
                     <div className="font-semibold">{r.title}</div>
-                    <div className="text-xs text-slate-500" dir="ltr">/projects/{r.slug}</div>
+                    <a href={`${miaPath("projectDetail", "ar")}/${r.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-slate-500 underline" dir="ltr">{miaPath("projectDetail", "ar")}/{r.slug}</a>
                   </div>
                 </div>
               ),
@@ -160,7 +160,7 @@ export default function SuperCategoriesPage() {
             {
               header: dt("منشور"),
               cell: (r) => (
-                <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
+                <Switch aria-label={`${dt("منشور")} ${r.title}`} checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
               ),
             },
             {
@@ -168,10 +168,10 @@ export default function SuperCategoriesPage() {
               className: 'w-24',
               cell: (r) => (
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/content/super-categories/${r.id}`)}>
+                  <Button variant="ghost" size="icon" aria-label={`${dt("تعديل")} ${r.title}`} onClick={() => router.push(`/dashboard/content/super-categories/${r.id}`)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
+                  <Button variant="ghost" size="icon" aria-label={`${dt("حذف")} ${r.title}`} onClick={() => setDeleteTarget(r)}>
                     <Trash2 className="h-4 w-4 text-red-600" />
                   </Button>
                 </div>

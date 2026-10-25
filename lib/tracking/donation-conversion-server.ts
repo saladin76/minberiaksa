@@ -7,9 +7,9 @@ import {
   type MetaContent,
   type MetaCapiResult,
 } from "@/lib/tracking/meta-capi";
-import { metaDonationEventId } from "@/lib/tracking/canonical";
+import { metaDonationEventId, metaPurchaseEventId } from "@/lib/tracking/canonical";
 import { pickAttributionForAudit, toTurkeyIso, writeConversionAudit } from "@/lib/tracking/conversion-audit";
-import { recordConversionEvent, type ConversionEventStatus } from "@/lib/tracking/conversion-event-log";
+import { recordConversionEvent, getServerConversionState, claimServerConversion, type ConversionEventStatus } from "@/lib/tracking/conversion-event-log";
 import { getGa4ServerCredentialsFromSettings } from "@/lib/tracking/tracking-settings";
 import { donationFieldEmpty } from "@/lib/donations/mongo-null";
 
@@ -32,6 +32,7 @@ async function loadDonationForConversion(donationId: string) {
   return prisma.donation.findUnique({
     where: { id: donationId },
     include: {
+      subscription: { select: { frequency: true } },
       donor: { select: { id: true, email: true, phone: true, name: true, countryCode: true, city: true, region: true, gender: true, birthdate: true } },
       items: { include: { campaign: { select: { id: true, title: true } } } },
       categoryItems: { include: { category: { select: { id: true, name: true } } } },
@@ -90,8 +91,8 @@ function primaryContentName(row: LoadedDonation): string {
   return row.items[0]?.campaign?.title ?? row.categoryItems[0]?.category?.name ?? "Donation";
 }
 
-function auditMetaPayload(row: LoadedDonation, eventId: string, customData: MetaCustomData) {
-  return { event_name: "Donate", event_id: eventId, donation_id: row.id, amount: row.amount, team_support: row.teamSupport, fees: row.fees, amount_usd: row.amountUSD, total_amount: row.totalAmount, currency: row.currency, provider: row.provider, created_at_utc: row.createdAt.toISOString(), created_at_turkey: toTurkeyIso(row.createdAt), paid_at_utc: row.paidAt?.toISOString() ?? null, paid_at_turkey: toTurkeyIso(row.paidAt), reporting_timezone: "Europe/Istanbul", payment_provider_timezone: "America/Toronto", custom_data: customData, attribution: pickAttributionForAudit(row.attribution) };
+function auditMetaPayload(row: LoadedDonation, eventId: string, customData: MetaCustomData, eventName = "Donate") {
+  return { event_name: eventName, event_id: eventId, donation_id: row.id, amount: row.amount, team_support: row.teamSupport, fees: row.fees, amount_usd: row.amountUSD, total_amount: row.totalAmount, currency: row.currency, provider: row.provider, created_at_utc: row.createdAt.toISOString(), created_at_turkey: toTurkeyIso(row.createdAt), paid_at_utc: row.paidAt?.toISOString() ?? null, paid_at_turkey: toTurkeyIso(row.paidAt), reporting_timezone: "Europe/Istanbul", payment_provider_timezone: "America/Toronto", custom_data: customData, attribution: pickAttributionForAudit(row.attribution) };
 }
 
 function metaStatus(result: MetaCapiResult): ConversionEventStatus {
@@ -106,7 +107,10 @@ export async function sendDonationServerConversions(donationId: string, options:
     if (!row) return { ok: false, skipped: true, reason: "donation not found" };
     if (row.status !== "PAID") return { ok: false, skipped: true, reason: `status=${row.status}` };
     if (row.paidAt == null) return { ok: false, skipped: true, reason: "paidAt unset" };
-    if (!options.force && row.conversionEventsSentAt != null) return { ok: false, skipped: true, reason: "already sent" };
+    // A historical Donate marker without a Purchase ledger row belongs to the old contract.
+    // Never turn a success-page refresh or a generic retry into a historical Purchase backfill.
+    const purchaseState = await getServerConversionState("META", metaPurchaseEventId(row.id));
+    if (row.conversionEventsSentAt != null && (!options.force || !purchaseState)) return { ok: false, skipped: true, reason: "already sent" };
 
     const amount = paidDonationValue(row);
     if (!(amount > 0)) return { ok: false, skipped: true, reason: "amount <= 0" };
@@ -115,27 +119,39 @@ export async function sendDonationServerConversions(donationId: string, options:
     const attribution = (row.attribution ?? undefined) as Attribution | undefined;
     const eventSourceUrl = getStr(attribution, "landing_page");
     const eventTime = Math.floor((row.paidAt ?? new Date()).getTime() / 1000);
-    const currency = row.currency || "USD";
+    const currency = (row.currency || "USD").toUpperCase();
     const contentName = primaryContentName(row);
     const { ids, contents } = buildContents(row);
     const eventId = metaDonationEventId(row.id, "success");
-    const custom_data: MetaCustomData = { value: amount, currency, content_type: "donation", content_name: contentName, content_category: row.subscriptionId ? "monthly" : "donation", content_ids: ids, contents, num_items: contents.reduce((s, c) => s + (c.quantity ?? 1), 0), order_id: row.id, transaction_id: row.id, status: "paid", success: true, payment_info_available: 1, donation_type: row.subscriptionId ? "MONTHLY" : "ONE_TIME", recurring: !!row.subscriptionId, payment_method: (row.paymentMethod ?? "CARD").toLowerCase() };
+    const custom_data: MetaCustomData = { value: amount, currency, content_type: "donation", content_name: contentName, content_category: row.subscriptionId ? (row.subscription?.frequency ?? "MONTHLY").toLowerCase() : "donation", content_ids: ids, contents, num_items: contents.reduce((s, c) => s + (c.quantity ?? 1), 0), order_id: row.id, transaction_id: row.id, status: "paid", success: true, payment_info_available: 1, donation_type: row.subscriptionId ? (row.subscription?.frequency ?? "MONTHLY") : "ONE_TIME", recurring: !!row.subscriptionId, payment_method: (row.paymentMethod ?? "CARD").toLowerCase() };
 
-    await writeConversionAudit({ donationId: row.id, eventId, stage: options.force ? "meta_capi_retry_attempt" : "meta_capi_attempt", message: options.force ? "Meta CAPI Donate retry attempted" : "Meta CAPI Donate send attempted", metadata: auditMetaPayload(row, eventId, custom_data) });
-    let metaResult: MetaCapiResult = { ok: false, skipped: true, reason: "no creds" };
-    if (creds) metaResult = await sendMetaCapiEvent({ event_name: "Donate", event_id: eventId, event_time: eventTime, event_source_url: eventSourceUrl, action_source: "website", user_data: buildUserDataFromDonation(row), custom_data }, creds);
-
-    await recordConversionEvent({ donationId: row.id, eventId, eventName: "Donate", platform: "META", channel: "server", status: metaStatus(metaResult), dedupKey: eventId, value: amount, currency, error: metaResult.error ?? metaResult.reason ?? null, request: auditMetaPayload(row, eventId, custom_data), response: metaResult, sentAt: metaResult.ok ? new Date(eventTime * 1000) : null });
-    await writeConversionAudit({ donationId: row.id, eventId, stage: options.force ? "meta_capi_retry_result" : "meta_capi_result", message: metaResult.ok ? "Meta CAPI Donate send succeeded" : "Meta CAPI Donate send did not succeed", metadata: { ...auditMetaPayload(row, eventId, custom_data), meta_result: metaResult } });
-    if (metaResult.ok) {
+    const results: MetaCapiResult[] = [];
+    for (const eventName of ["Donate", "Purchase"] as const) {
+      const id = eventName === "Donate" ? eventId : metaPurchaseEventId(row.id);
+      const state = await getServerConversionState("META", id);
+      if (state === "SENT") { results.push({ ok: true, event_name: eventName, event_id: id }); continue; }
+      if (!await claimServerConversion({ donationId: row.id, platform: "META", eventId: id, eventName })) {
+        results.push({ ok: false, skipped: true, reason: "conversion already sent or in progress", event_name: eventName, event_id: id });
+        continue;
+      }
+      const customData = { ...custom_data, content_type: eventName === "Purchase" ? "product" : custom_data.content_type };
+      const audit = auditMetaPayload(row, id, customData, eventName);
+      await writeConversionAudit({ donationId: row.id, eventId: id, stage: options.force ? "meta_capi_retry_attempt" : "meta_capi_attempt", message: `Meta CAPI ${eventName} send attempted`, metadata: audit });
+      let result: MetaCapiResult;
+      try {
+        result = creds ? await sendMetaCapiEvent({ event_name: eventName, event_id: id, event_time: eventTime, event_source_url: eventSourceUrl, action_source: "website", user_data: buildUserDataFromDonation(row), custom_data: customData }, creds) : { ok: false, skipped: true, reason: "no creds" };
+      } catch (error) { result = { ok: false, error: error instanceof Error ? error.message : "unknown" }; }
+      await recordConversionEvent({ donationId: row.id, eventId: id, eventName, platform: "META", channel: "server", status: metaStatus(result), dedupKey: id, value: amount, currency, error: result.error ?? result.reason ?? null, request: audit, response: result, sentAt: result.ok ? new Date(eventTime * 1000) : null });
+      await writeConversionAudit({ donationId: row.id, eventId: id, stage: options.force ? "meta_capi_retry_result" : "meta_capi_result", message: `Meta CAPI ${eventName} ${result.ok ? "succeeded" : "did not succeed"}`, metadata: { ...audit, meta_result: result } });
+      results.push({ ...result, event_name: eventName, event_id: id });
+    }
+    if (results.every(result => result.ok)) {
       await prisma.donation.update({ where: { id: row.id }, data: { conversionEventsSentAt: new Date() } });
     }
     if (options.includeGa4 !== false) {
       await sendGa4Purchase(row, amount, currency, contentName, eventTime, eventId);
     }
-
-    if (!metaResult.ok && !metaResult.skipped) console.error("[conversion] Donate send failed and donation was not marked sent:", row.id, metaResult.error, metaResult.fbtrace_id);
-    return metaResult;
+    return { ...(results.find(result => !result.ok) ?? results[0]), events: results };
   } catch (e) {
     console.error("[conversion] sendDonationServerConversions", donationId, e);
     return { ok: false, error: e instanceof Error ? e.message : "unknown" };
@@ -168,7 +184,7 @@ export async function sendDonationFailedConversions(donationId: string, options:
     }
 
     const amount = paidDonationValue(row);
-    const currency = row.currency || "USD";
+    const currency = (row.currency || "USD").toUpperCase();
     const failedEventId = metaDonationEventId(row.id, "failed");
     const creds = await getMetaCapiCredentials();
     if (!creds) {
@@ -181,7 +197,7 @@ export async function sendDonationFailedConversions(donationId: string, options:
     const eventTime = Math.floor(((row as { updatedAt?: Date }).updatedAt ?? row.createdAt ?? new Date()).getTime() / 1000);
     const contentName = primaryContentName(row);
     const { ids, contents } = buildContents(row);
-    const custom_data: MetaCustomData = { value: amount, currency, content_type: "product", content_name: contentName, content_category: row.subscriptionId ? "monthly" : "donation", content_ids: ids, contents, num_items: contents.reduce((s, c) => s + (c.quantity ?? 1), 0), order_id: row.id, status: "failed", donation_type: row.subscriptionId ? "MONTHLY" : "ONE_TIME", recurring: !!row.subscriptionId, payment_info_available: 1, failure_reason: row.providerErrorMessage ?? row.providerTxnResult ?? undefined, provider: row.provider ?? undefined };
+    const custom_data: MetaCustomData = { value: amount, currency, content_type: "product", content_name: contentName, content_category: row.subscriptionId ? (row.subscription?.frequency ?? "MONTHLY").toLowerCase() : "donation", content_ids: ids, contents, num_items: contents.reduce((s, c) => s + (c.quantity ?? 1), 0), order_id: row.id, status: "failed", donation_type: row.subscriptionId ? (row.subscription?.frequency ?? "MONTHLY") : "ONE_TIME", recurring: !!row.subscriptionId, payment_info_available: 1, failure_reason: row.providerErrorMessage ?? row.providerTxnResult ?? undefined, provider: row.provider ?? undefined };
 
     const metaResult = await sendMetaCapiEvent({ event_name: "DonateFailed", event_id: failedEventId, event_time: eventTime, event_source_url: eventSourceUrl, user_data: buildUserDataFromDonation(row), custom_data }, creds);
     await recordConversionEvent({ donationId: row.id, eventId: failedEventId, eventName: "DonateFailed", platform: "META", channel: "server", status: metaStatus(metaResult), dedupKey: failedEventId, value: amount, currency, error: metaResult.error ?? metaResult.reason ?? null, request: { event_name: "DonateFailed", event_id: failedEventId, custom_data }, response: metaResult, sentAt: metaResult.ok ? new Date(eventTime * 1000) : null });
@@ -203,6 +219,8 @@ export async function syncDonationConversion(donationId: string, options: Donati
 }
 
 async function sendGa4Purchase(row: LoadedDonation, amount: number, currency: string, contentName: string, eventTime: number, eventId: string): Promise<void> {
+  if (await getServerConversionState("GA4", eventId) === "SENT") return;
+  if (!await claimServerConversion({ donationId: row.id, platform: "GA4", eventId, eventName: "purchase" })) return;
   const { measurementId: gaMeasurementId, apiSecret: gaApiSecret } = await getGa4ServerCredentialsFromSettings();
   if (!gaMeasurementId || !gaApiSecret) {
     await recordConversionEvent({ donationId: row.id, eventId, eventName: "purchase", platform: "GA4", channel: "server", status: "SKIPPED", dedupKey: eventId, value: amount, currency, error: "missing GA4 measurement id or API secret" });

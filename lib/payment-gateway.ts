@@ -8,10 +8,8 @@
  *   - STRIPE    the original main gateway.
  *   - ALBARAKA  Albaraka Türk EPOS 3D Secure, an alternative main gateway.
  *
- * STRIPE and ALBARAKA are interchangeable: whichever the admin picks as the main
- * gateway handles every case the other would have handled, with one exception 
- * monthly subscriptions, which need stored-credential recurring billing that the
- * Albaraka EPOS integration doesn't offer. Those stay on Stripe regardless.
+ * Monthly subscriptions follow the configured main gateway. Daily and Friday
+ * plans use Albaraka's scheduled billing. PayFor handles one-time TRY only.
  */
 
 import { railForFrequency } from "@/lib/donations/recurring-schedule";
@@ -39,9 +37,8 @@ export type GatewayResolutionInput = {
   /** ISO currency the donor is giving in, e.g. "TRY". */
   currency: string;
   /**
-   * Recurring donations  daily, every Friday or monthly  create a
-   * subscription and can only run on Stripe. `ONE_TIME` is the only value
-   * that reaches a bank rail.
+   * Recurring donations create a plan and follow `railForFrequency`.
+   * `ONE_TIME` is the only cadence eligible for PayFor.
    */
   donationType?: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY" | null;
   /**

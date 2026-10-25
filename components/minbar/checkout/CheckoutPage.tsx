@@ -2,7 +2,7 @@
 
 import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { digitsOnly } from "@/lib/minbar/numeric-input";
-import { checkCardFields } from "@/lib/minbar/card-validation";
+import { checkoutFieldIssue, type CheckoutField, type CheckoutFieldIssue } from "@/lib/minbar/checkout-validation";
 
 /** Server refusal codes (`app/api/albaraka/3d/initiate`) → `validation` messages. */
 const CARD_ERROR_KEYS: Record<string, string> = {
@@ -153,6 +153,17 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const readReferralCode = useReferralCode();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalidField, setInvalidField] = useState<CheckoutFieldIssue | null>(null);
+  const fieldProps = (field: CheckoutField) => ({
+    id: `checkout-${field}`,
+    "aria-invalid": invalidField?.field === field || undefined,
+    "aria-describedby": invalidField?.field === field ? `checkout-${field}-error` : undefined,
+  });
+  const fieldFeedback = (field: CheckoutField) => invalidField?.field === field ? (
+    <span id={`checkout-${field}-error`} role="alert" style={{ color: "var(--red)", fontSize: 12, fontWeight: 700 }}>
+      {tValidation(invalidField.message)}
+    </span>
+  ) : null;
 
   /* Which rail this order runs on is the server's decision, not the browser's:
      it follows the currency and the admin switches. Fetched once so the card
@@ -164,6 +175,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     payforEnabled: boolean;
     albarakaUseOOS: boolean;
     albarakaConfigured: boolean;
+    albarakaRecurringReady: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -177,6 +189,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
           payforEnabled: settings.payforEnabled,
           albarakaUseOOS: settings.albarakaUseOOS,
           albarakaConfigured: settings.albarakaConfigured,
+          albarakaRecurringReady: settings.albarakaRecurringReady === true,
         });
       })
       .catch(() => {
@@ -268,8 +281,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   /* Albaraka signs everything with ALBARAKA_ENC_KEY. Without it the initiate
      route refuses, and the donor would only find out after an order had been
      created and failed. Hide the rail instead. */
+  const recurringCardUnavailable = Boolean(planFrequency) && gateway === "ALBARAKA" && gatewayConfig !== null && !gatewayConfig.albarakaRecurringReady;
   const cardRailUnavailable =
-    gateway === "ALBARAKA" && gatewayConfig !== null && !gatewayConfig.albarakaConfigured;
+    gateway === "ALBARAKA" && gatewayConfig !== null &&
+    (!gatewayConfig.albarakaConfigured || (Boolean(planFrequency) && gatewayConfig.albarakaRecurringReady !== true));
 
   /* A card we never collect can't be validated, and the bank rails need one. */
   const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
@@ -322,32 +337,32 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     }
 
     const signedIn = Boolean(session?.user);
-    const phoneDigits = digitsOnly(phone);
-    if (!signedIn && (!firstName.trim() || !email.trim() || phoneDigits.length < 7)) {
-      setError(tValidation("required"));
+    const issue = checkoutFieldIssue({
+      firstName, email, phone, requireName: !signedIn,
+      requireCard: method === "card" && needsOwnCardForm && gateway !== "STRIPE",
+      cardNumber, cardExpiry, cardCvc,
+    });
+    if (issue) {
+      setInvalidField(issue);
+      const label = issue.field === "cardCvc" ? "CVC" : t(issue.field);
+      setError(`${label}: ${tValidation(issue.message)}`);
+      const input = document.getElementById(`checkout-${issue.field}`);
+      input?.focus();
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    setInvalidField(null);
 
     /* Guard the card rail before an order exists. Creating a donation we then
        can't charge leaves a FAILED row behind for no reason. */
     if (method === "card") {
       if (cardRailUnavailable) {
-        setError(tSystem("techErrorLead"));
+        setError(recurringCardUnavailable ? t("recurringCardUnavailable") : t("cardUnavailable"));
         return;
       }
       if (gateway === "STRIPE") {
         if (!stripeReady || !stripeRef.current) {
           setError(tRecurring("stripeNotReady"));
-          return;
-        }
-      } else if (needsOwnCardForm && (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim())) {
-        setError(tValidation("required"));
-        return;
-      } else if (needsOwnCardForm) {
-        // Caught here, before the order exists, so a typo leaves no FAILED row.
-        const cardError = checkCardFields(cardNumber, cardExpiry, cardCvc);
-        if (cardError) {
-          setError(tValidation(cardError));
           return;
         }
       }
@@ -387,6 +402,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         guest: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
       });
       donationId = donation.id;
+      if (method !== "bank") rememberCheckoutAttempt(donation.id);
 
       if (method === "bank") {
         /* Nothing is charged. The basket is cleared because the order exists,
@@ -404,7 +420,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
            the bank rails: the order exists, and a donor coming back from
            PayPal must not find it ready to be paid again. */
         const approveUrl = await startPayPalPayment(donation.id, locale, donation.accessToken);
-        rememberCheckoutAttempt(donation.id);
         clearCart();
         window.location.assign(approveUrl);
         return;
@@ -468,18 +483,19 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
          sitting in their basket ready to be paid twice. */
       /* Kept aside under this order, so a declined donor can retry the same
          basket from the failure page. */
-      rememberCheckoutAttempt(donation.id);
       clearCart();
       submitGatewayForm(form, browserFields);
     } catch (cause) {
       if (donationId) await markDonationFailed(donationId, String(cause));
-      console.error("[checkout] could not complete the donation:", cause);
+      console.error("[checkout] payment could not complete");
       /* Say what actually went wrong. Every failure used to read "we are
          fixing the problem", which hid both a basket the order cannot carry
          and the server's own reason for refusing it. */
       const knownCode = cause instanceof OrderRejectedError ? CARD_ERROR_KEYS[cause.code ?? ""] : undefined;
       if (cause instanceof UnpayableItemsError) {
         setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
+      } else if (cause instanceof OrderRejectedError && cause.code === "RECURRING_UNAVAILABLE") {
+        setError(t("recurringCardUnavailable"));
       } else if (knownCode) {
         // The server's reason, in the donor's language rather than its English text.
         setError(tValidation(knownCode));
@@ -495,14 +511,15 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   /* Confirmation is the page after paying, so stepping to it submits the form
      exactly as the pay button does. It is offered only once nothing the
      submit handler checks would stop it. */
-  const detailsComplete =
-    Boolean(session?.user) || (firstName.trim() !== "" && email.trim() !== "" && digitsOnly(phone).length >= 7);
-  const paymentComplete =
-    method !== "card" ||
-    (!cardRailUnavailable &&
-      (gateway === "STRIPE"
-        ? stripeReady
-        : !needsOwnCardForm || checkCardFields(cardNumber, cardExpiry, cardCvc) === null));
+  const detailsComplete = checkoutFieldIssue({
+    firstName, email, phone, requireName: !session?.user, requireCard: false,
+    cardNumber, cardExpiry, cardCvc,
+  }) === null;
+  const paymentComplete = method !== "card" || (!cardRailUnavailable &&
+    (gateway === "STRIPE" ? stripeReady : checkoutFieldIssue({
+      firstName, email, phone, requireName: !session?.user, requireCard: needsOwnCardForm,
+      cardNumber, cardExpiry, cardCvc,
+    }) === null));
   const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete;
   const steps: CheckoutStep[] = [
     { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: false, enabled: true },
@@ -571,7 +588,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
       <section style={{ padding: "0 0 64px" }}>
         <div id="pay-grid" style={{ maxWidth: 880, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 0, alignItems: "start" }}>
-          <form ref={formRef} className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} noValidate>
+          <form ref={formRef} className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} onChange={() => { setInvalidField(null); setError(null); }} noValidate>
             {/* ── Donor details ──────────────────────────────────────────── */}
             <div className="pay-card" style={cardBox}>
               <h2 style={headingStyle}>
@@ -616,10 +633,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                 </>
               ) : null}
 
-              <div id="pay-donor-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
+              <div id="pay-donor-fields" data-clarity-mask="True" data-hj-suppress="" data-private="" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
                 <label style={{ display: "grid", gap: 7 }}>
-                  <span style={labelStyle}>{t("firstName")}</span>
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" className="pay-field" style={fieldStyle} />
+                  <span style={labelStyle}>{t("firstName")} {!session?.user ? <b aria-hidden="true" style={{ color: "var(--red)" }}>*</b> : null}</span>
+                  <input {...fieldProps("firstName")} required={!session?.user} value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" className="pay-field" style={fieldStyle} />
+                  {fieldFeedback("firstName")}
                 </label>
                 <label style={{ display: "grid", gap: 7 }}>
                   <span style={labelStyle}>{t("lastName")}</span>
@@ -630,7 +648,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                     {t("email")} <b aria-hidden="true" style={{ color: "var(--red)" }}>*</b>
                   </span>
                   {/* Latin-script data: isolated so bidi cannot reorder it. */}
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" dir="ltr" className="pay-field" style={{ ...fieldStyle, unicodeBidi: "isolate" }} />
+                  <input {...fieldProps("email")} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" dir="ltr" className="pay-field" style={{ ...fieldStyle, unicodeBidi: "isolate" }} />
+                  {fieldFeedback("email")}
                 </label>
                 <label style={{ display: "grid", gap: 7 }}>
                   <span style={{ ...labelStyle, display: "inline-flex", alignItems: "center", gap: 5 }}>
@@ -645,12 +664,13 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       value={phone}
                       onChange={(value) => setPhone(value)}
                       forceDialCode
-                      inputProps={{ required: true, autoComplete: "tel", name: "phone" }}
+                      inputProps={{ ...fieldProps("phone"), required: true, autoComplete: "tel", name: "phone" }}
                       className="pay-phone-field"
                       inputClassName="pay-phone-input"
                       countrySelectorStyleProps={{ buttonClassName: "pay-phone-country", dropdownStyleProps: { className: "pay-phone-dropdown" } }}
                     />
                   </div>
+                  {fieldFeedback("phone")}
                 </label>
               </div>
 
@@ -805,7 +825,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               {method === "card" && !needsOwnCardForm ? (
                 <div style={{ display: "grid", gap: 12, justifyItems: "center", padding: "16px 14px", background: "var(--sand)", border: "1px solid var(--border)", borderRadius: 12 }}>
                   <span style={{ fontSize: 13.5, fontWeight: 800, color: cardRailUnavailable ? "var(--red)" : "var(--deep)", textAlign: "center", lineHeight: 1.8 }}>
-                    {cardRailUnavailable ? t("cardUnavailable") : t("cardOnBankPage")}
+                    {recurringCardUnavailable ? t("recurringCardUnavailable") : cardRailUnavailable ? t("cardUnavailable") : t("cardOnBankPage")}
                   </span>
                 </div>
               ) : null}
@@ -825,11 +845,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                   {/* The live card, filling in as the donor types and flipping
                       for the CVC; the brand is detected from the number. Latin-
                       script data: always LTR. */}
-                  <div className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
+                  <div data-clarity-mask="True" data-hj-suppress="" data-private="" className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
                     <Cards
                       number={cardNumber}
                       expiry={cardExpiry.replace("/", "")}
-                      cvc={cardCvc}
+                      cvc={"•".repeat(cardCvc.length)}
                       name={cardName || `${firstName} ${lastName}`.trim()}
                       focused={cardFocus}
                       placeholders={{ name: "" }}
@@ -837,10 +857,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       locale={{ valid: t("cardExpiry") }}
                     />
                   </div>
-                  <div id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
+                  <div data-clarity-mask="True" data-hj-suppress="" data-private="" id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
                     <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardNumber")}</span>
                       <input
+                        {...fieldProps("cardNumber")}
                         value={cardNumber}
                         onChange={(e) => setCardNumber(digitsOnly(e.target.value, 19))}
                         onFocus={() => setCardFocus("number")}
@@ -851,10 +872,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         placeholder="•••• •••• •••• ••••"
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
+                      {fieldFeedback("cardNumber")}
                     </label>
                     <label style={{ display: "grid", gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardExpiry")}</span>
                       <input
+                        {...fieldProps("cardExpiry")}
                         value={cardExpiry}
                         onChange={(e) => {
                           const digits = digitsOnly(e.target.value, 4);
@@ -868,10 +891,13 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         placeholder="MM/YY"
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
+                      {fieldFeedback("cardExpiry")}
                     </label>
                     <label style={{ display: "grid", gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>CVC</span>
                       <input
+                        {...fieldProps("cardCvc")}
+                        type="password"
                         value={cardCvc}
                         onChange={(e) => setCardCvc(digitsOnly(e.target.value, 4))}
                         onFocus={() => setCardFocus("cvc")}
@@ -883,6 +909,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         placeholder="•••"
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
+                      {fieldFeedback("cardCvc")}
                     </label>
                     <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardHolder")}</span>

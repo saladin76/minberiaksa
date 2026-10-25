@@ -9,7 +9,7 @@ import {
 } from "@/lib/campaign/suggested-team-support";
 import { Prisma } from "@prisma/client";
 import { isMainGateway, parseMainGateway } from "@/lib/payment-gateway";
-import { albaraka2DConfig, isAlbarakaConfigured } from "@/lib/albaraka";
+import { albaraka2DConfig, isAlbarakaConfigured, isAlbarakaRecurringCheckoutReady } from "@/lib/albaraka";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { parseCartUpsell, validateCartUpsellBody } from "@/lib/minbar/cart-upsell";
 
@@ -49,6 +49,7 @@ export async function GET() {
       // card itself, so the bank's hosted card page (a 3D feature) is never used.
       albarakaUseOOS: false,
       albarakaConfigured: isAlbarakaConfigured(albaraka),
+      albarakaRecurringReady: isAlbarakaRecurringCheckoutReady(),
     });
   } catch (e) {
     console.error("Error fetching global settings:", e);

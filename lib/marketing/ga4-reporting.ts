@@ -1,4 +1,6 @@
-export type Ga4Range = "7d" | "28d" | "90d";
+import { ga4DateRange, type Ga4Selection } from "./ga4-period";
+import { fetchGa4Extended, type Ga4ExtendedReport } from "./ga4-extended";
+export { isGa4Range, type Ga4Range } from "./ga4-period";
 
 export type Ga4ServiceAccount = {
   type: "service_account";
@@ -6,7 +8,11 @@ export type Ga4ServiceAccount = {
   private_key: string;
 };
 
+import type { SearchConsoleReport } from "./search-console";
 export type Ga4DashboardReport = {
+  organicSearch?: SearchConsoleReport;
+  extended?: Ga4ExtendedReport;
+  quality?: { timezone: string; thresholded: boolean; sampled: boolean; dataLoss: boolean };
   summary: {
     activeUsers: number;
     totalUsers: number;
@@ -62,25 +68,15 @@ export function parseGa4ServiceAccountJson(value: string): Ga4ServiceAccount | n
   }
 }
 
-export function isGa4Range(value: string | null): value is Ga4Range {
-  return value === "7d" || value === "28d" || value === "90d";
-}
-
-function dateRange(range: Ga4Range) {
-  return {
-    startDate: range === "7d" ? "7daysAgo" : range === "28d" ? "28daysAgo" : "90daysAgo",
-    endDate: "yesterday",
-  };
-}
 
 function report(
-  range: Ga4Range,
+  range: Ga4Selection,
   dimensions: string[],
   metrics: Array<{ name: string }>,
   extra: Record<string, unknown> = {},
 ): Ga4BatchReportRequest {
   return {
-    dateRanges: [dateRange(range)],
+    dateRanges: [ga4DateRange(range)],
     ...(dimensions.length ? { dimensions: dimensions.map((name) => ({ name })) } : {}),
     metrics,
     ...extra,
@@ -88,7 +84,7 @@ function report(
 }
 
 /** Ordered requests; the response mapper below intentionally uses the same stable order. */
-export function buildGa4BatchRequests(range: Ga4Range): Ga4BatchReportRequest[] {
+export function buildGa4BatchRequests(range: Ga4Selection): Ga4BatchReportRequest[] {
   return [
     report(range, [], [
       METRICS.activeUsers,
@@ -103,17 +99,17 @@ export function buildGa4BatchRequests(range: Ga4Range): Ga4BatchReportRequest[] 
     report(range, ["date"], [METRICS.activeUsers, METRICS.sessions, METRICS.screenPageViews], {
       orderBys: [{ dimension: { dimensionName: "date" } }],
     }),
-    report(range, ["pagePath", "pageTitle"], [METRICS.screenPageViews, METRICS.activeUsers, METRICS.sessions], {
+    report(range, ["pagePath"], [METRICS.screenPageViews, METRICS.activeUsers, METRICS.sessions], {
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-      limit: "10",
+      limit: "25",
     }),
     report(range, ["sessionDefaultChannelGroup"], [METRICS.activeUsers, METRICS.sessions, METRICS.keyEvents], {
       orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
-      limit: "10",
+      limit: "25",
     }),
     report(range, ["country"], [METRICS.activeUsers, METRICS.sessions], {
       orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
-      limit: "10",
+      limit: "25",
     }),
     report(range, ["deviceCategory"], [METRICS.activeUsers, METRICS.sessions], {
       orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
@@ -127,7 +123,7 @@ export function buildGa4BatchRequests(range: Ga4Range): Ga4BatchReportRequest[] 
         },
       },
       orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
-      limit: "10",
+      limit: "25",
     }),
     report(range, [], [METRICS.eventCount], {
       dimensionFilter: {
@@ -173,7 +169,9 @@ export function parseGa4BatchResponse(value: unknown): Ga4DashboardReport {
   const summaryRows = getRows(response(0));
   const summaryRow = summaryRows[0] ?? {};
 
+  const metadata = reports.map((value) => isRecord(value) && isRecord(value.metadata) ? value.metadata : {});
   return {
+    quality: { timezone: String(metadata[0]?.timeZone ?? ""), thresholded: metadata.some((row) => row.subjectToThresholding === true), sampled: metadata.some((row) => Array.isArray(row.samplingMetadatas) && row.samplingMetadatas.length > 0), dataLoss: metadata.some((row) => row.dataLossFromOtherRow === true) },
     summary: {
       activeUsers: metric(summaryRow, 0),
       totalUsers: metric(summaryRow, 1),
@@ -231,8 +229,9 @@ export class Ga4ApiError extends Error {
 export async function fetchGa4DashboardReport(options: {
   propertyId: string;
   accessToken: string;
-  range: Ga4Range;
+  range: Ga4Selection;
   fetchImpl?: FetchLike;
+  includeExtended?: boolean;
 }): Promise<Ga4DashboardReport> {
   const { propertyId, accessToken, range } = options;
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -251,10 +250,14 @@ export async function fetchGa4DashboardReport(options: {
       signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) throw new Ga4ApiError(response.status);
-    return response.json() as Promise<unknown>;
+    const payload: unknown = await response.json();
+    if (!isRecord(payload) || !Array.isArray(payload.reports) || payload.reports.length !== batch.length) throw new Ga4ApiError(502);
+    return payload;
   }));
   const reports = responses.flatMap((result) =>
     isRecord(result) && Array.isArray(result.reports) ? result.reports : []
   );
-  return parseGa4BatchResponse({ reports });
+  const parsed = parseGa4BatchResponse({ reports });
+  if (options.includeExtended) parsed.extended = await fetchGa4Extended({ propertyId, accessToken, range, fetchImpl });
+  return parsed;
 }

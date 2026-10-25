@@ -8,6 +8,7 @@
  */
 
 import crypto from "crypto";
+import { normalizeTrackingClientIp } from "@/lib/tracking/client-ip";
 import { getMetaCapiCredentialsFromSettings, type MetaCapiCredentials } from "@/lib/tracking/tracking-settings";
 
 const FB_API_VERSION = "v21.0";
@@ -68,6 +69,7 @@ export interface MetaCapiEvent {
 
 export interface MetaCapiResult {
   ok: boolean;
+  events?: MetaCapiResult[];
   events_received?: number;
   fbtrace_id?: string;
   event_name?: string;
@@ -113,13 +115,6 @@ function hashCountry(cc: string | null | undefined): string | undefined {
   return crypto.createHash("sha256").update(norm).digest("hex");
 }
 
-function normalizeClientIp(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const first = String(value).split(",")[0]?.trim();
-  if (!first) return undefined;
-  const clean = first.replace(/[^0-9a-fA-F.:]/g, "").slice(0, 45);
-  return clean || undefined;
-}
 
 export function buildMetaUserData(u: MetaUserData): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -148,7 +143,7 @@ export function buildMetaUserData(u: MetaUserData): Record<string, unknown> {
   if (u.fbp) out.fbp = u.fbp;
   if (u.fbc) out.fbc = u.fbc;
   if (u.user_agent) out.client_user_agent = String(u.user_agent).slice(0, 512);
-  const ip = normalizeClientIp(u.client_ip_address ?? u.client_ip);
+  const ip = normalizeTrackingClientIp(u.client_ip_address ?? u.client_ip);
   if (ip) out.client_ip_address = ip;
   if (u.subscription_id) out.subscription_id = u.subscription_id;
   return out;
@@ -162,6 +157,10 @@ export async function getMetaCapiCredentials(): Promise<MetaCapiCredentials | nu
 function validateEvent(event: MetaCapiEvent): string | null {
   if (!event.event_name) return "missing event_name";
   if (!event.event_id) return "missing event_id";
+  if (event.event_name === "Purchase") {
+    if (!(typeof event.custom_data?.value === "number" && Number.isFinite(event.custom_data.value) && event.custom_data.value > 0)) return "Purchase requires a positive value";
+    if (!/^[A-Z]{3}$/.test(event.custom_data?.currency ?? "")) return "Purchase requires an ISO currency code";
+  }
   const eventTime = event.event_time ?? Math.floor(Date.now() / 1000);
   const ageSeconds = Math.floor(Date.now() / 1000) - eventTime;
   if (ageSeconds > MAX_EVENT_AGE_SECONDS) return `event too old (${Math.floor(ageSeconds / 86400)}d) - Meta rejects > 7d`;
@@ -204,9 +203,9 @@ export async function sendMetaCapiEvent(event: MetaCapiEvent, creds?: MetaCapiCr
       body: JSON.stringify(payload),
     });
     const data = (await res.json().catch(() => ({}))) as { events_received?: number; fbtrace_id?: string; error?: { message?: string; type?: string; code?: number } };
-    if (!res.ok) {
+    if (!res.ok || !(Number(data.events_received) > 0)) {
       console.error("[Meta CAPI]", event.event_name, event.event_id, `status=${res.status}`, "error:", data?.error?.message ?? "unknown", "fbtrace_id:", data?.fbtrace_id);
-      return { ok: false, error: data?.error?.message ?? `HTTP ${res.status}`, fbtrace_id: data?.fbtrace_id, event_name: event.event_name, event_id: event.event_id };
+      return { ok: false, error: data?.error?.message ?? (res.ok ? "Meta did not confirm any accepted events" : `HTTP ${res.status}`), fbtrace_id: data?.fbtrace_id, event_name: event.event_name, event_id: event.event_id };
     }
     return { ok: true, events_received: data.events_received, fbtrace_id: data.fbtrace_id, event_name: event.event_name, event_id: event.event_id };
   } catch (error) {

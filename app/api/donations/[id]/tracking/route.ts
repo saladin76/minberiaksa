@@ -3,7 +3,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { donationAccess } from "@/lib/certificates/http";
 import { DONATION_TOKEN_PARAM } from "@/lib/donations/access-token";
-import { metaDonationEventId } from "@/lib/tracking/canonical";
+import { metaDonationEventId, metaPurchaseEventId } from "@/lib/tracking/canonical";
+import { getServerConversionState } from "@/lib/tracking/conversion-event-log";
 import { buildMetaUserData } from "@/lib/tracking/meta-capi";
 
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
  * an actually-missing include.
  */
 const donationTrackingInclude = {
+  subscription: { select: { frequency: true } },
   donor: {
     select: {
       id: true,
@@ -47,6 +49,7 @@ interface TrackingContent {
 interface TrackingResponseOk {
   ok: true;
   eventName: "Donate";
+  metaEvents: Array<{ eventName: "Donate" | "Purchase"; eventId: string }>;
   eventId: string;
   transactionId: string;
   orderId: string;
@@ -61,7 +64,7 @@ interface TrackingResponseOk {
   status: "paid";
   success: true;
   paymentInfoAvailable: true;
-  donationType: "ONE_TIME" | "MONTHLY";
+  donationType: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY";
   paymentMethod: string;
   browserAdvancedMatching?: Record<string, string>;
 }
@@ -176,32 +179,43 @@ export async function GET(
     contentIds.push("donation");
   }
 
-  const isMonthly = !!row.subscriptionId;
+  const donationType = row.subscriptionId ? (row.subscription?.frequency ?? "MONTHLY") : "ONE_TIME";
 
+  const purchaseId = metaPurchaseEventId(row.id);
+  const purchaseState = await getServerConversionState("META", purchaseId);
+  // Browser/server deduplication has a 48-hour window. Old receipts are not new conversions.
+  const withinBrowserWindow = Date.now() - row.paidAt.getTime() < 48 * 60 * 60 * 1000;
+  const metaEvents: TrackingResponseOk["metaEvents"] = withinBrowserWindow
+    ? [{ eventName: "Donate", eventId: metaDonationEventId(row.id, "success") }]
+    : [];
+  if (withinBrowserWindow && (row.conversionEventsSentAt == null || purchaseState)) {
+    metaEvents.push({ eventName: "Purchase", eventId: purchaseId });
+  }
   const payload: TrackingResponseOk = {
     ok: true,
     eventName: "Donate",
+    metaEvents,
     eventId: metaDonationEventId(row.id, "success"),
     transactionId: row.id,
     orderId: row.id,
     value,
-    currency: row.currency || "USD",
+    currency: (row.currency || "USD").toUpperCase(),
     contentType: "donation",
     contentIds,
     contentName: primaryName ?? "Donation",
-    contentCategory: isMonthly ? "monthly" : "donation",
+    contentCategory: donationType === "ONE_TIME" ? "donation" : donationType.toLowerCase(),
     contents,
     numItems: contents.reduce((s, c) => s + c.quantity, 0),
     status: "paid",
     success: true,
     paymentInfoAvailable: true,
-    donationType: isMonthly ? "MONTHLY" : "ONE_TIME",
+    donationType,
     paymentMethod: (row.paymentMethod ?? "CARD").toLowerCase(),
     browserAdvancedMatching: buildBrowserAdvancedMatching(row),
   };
 
   return NextResponse.json<TrackingResponseOk>(payload, {
     status: 200,
-    headers: { "Cache-Control": "private, max-age=300" },
+    headers: { "Cache-Control": "private, no-store" },
   });
 }

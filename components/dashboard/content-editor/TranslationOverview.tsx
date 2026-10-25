@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
 import { CONFIG, type ContentKind } from "@/lib/content-editor/contracts";
@@ -18,12 +18,16 @@ export function TranslationOverview({
   kind: ContentKind;
   scopeIds?: string[];
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const loadedKind = useRef<ContentKind | null>(null);
+  const generation = useRef(0);
   const [items, setItems] = useState<Row[]>([]),
     [error, setError] = useState(""),
-    [loading, setLoading] = useState(true),
+    [loading, setLoading] = useState(false),
     [filter, setFilter] = useState(""),
     [language, setLanguage] = useState("en");
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
+    const current = ++generation.current;
     setLoading(true);
     setError("");
     try {
@@ -33,7 +37,7 @@ export function TranslationOverview({
       do {
         const res: Response = await fetch(
           `/api/admin/content-editor/${kind}${cursor ? "?cursor=" + encodeURIComponent(cursor) : ""}`,
-          { cache: "no-store" },
+          { cache: "no-store", signal },
         );
         const data: {
           items: Row[];
@@ -41,6 +45,7 @@ export function TranslationOverview({
           error?: string;
         } = await res.json();
         if (!res.ok) throw new Error(data.error || dt("تعذر التحميل"));
+        if (signal?.aborted || current !== generation.current) return;
         all.push(...data.items);
         cursor = data.nextCursor;
         if (cursor) {
@@ -49,16 +54,19 @@ export function TranslationOverview({
           seen.add(cursor);
         }
       } while (cursor);
+      loadedKind.current = kind;
       setItems(all);
     } catch (e) {
-      setError(e instanceof Error ? e.message : dt("تعذر التحميل"));
+      if (!signal?.aborted && current === generation.current) setError(e instanceof Error ? e.message : dt("تعذر التحميل"));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted && current === generation.current) setLoading(false);
     }
   }, [kind]);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!expanded || loadedKind.current === kind) return;
+    const controller = new AbortController(); void load(controller.signal);
+    return () => controller.abort();
+  }, [expanded, kind, load]);
   const normalize = (v: string) =>
     v
       .normalize("NFKD")
@@ -81,16 +89,15 @@ export function TranslationOverview({
   ).length;
   const kindLabel = dt(CONFIG[kind].label);
   return (
-    <section dir={dashDir()} className="space-y-4 rounded-xl border bg-white p-5">
+    <details open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)} dir={dashDir()} className="rounded-xl border bg-white p-5">
+      <summary className="cursor-pointer text-sm font-semibold">{dt("اللغات والمراجعة")} · {kindLabel}</summary>
+      <div className="mt-4 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold">
-          {dt("اللغات والمراجعة")} · {kindLabel}
-        </h2>
         <button
           type="button"
           className="rounded border px-3 py-2 text-sm"
           disabled={loading}
-          onClick={load}
+          onClick={() => void load()}
         >
           {dt("تحديث الإحصاءات")}
         </button>
@@ -204,6 +211,7 @@ export function TranslationOverview({
           </details>
         </>
       )}
-    </section>
+      </div>
+    </details>
   );
 }

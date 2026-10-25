@@ -94,7 +94,7 @@ test("dashboard navigation permissions stay aligned with protected routes", () =
     assert.equal(pathToDashboardPermission(item.href), item.key, item.href);
   }
 
-  const connections = DASHBOARD_NAV_GROUPS.find((group) => group.group === "ربط المنصات والإرسال");
+  const connections = DASHBOARD_NAV_GROUPS.find((group) => group.group === "الإدارة");
   const telegram = connections?.items.find((item) => item.href === "/dashboard/telegram");
   assert.equal(telegram?.key, "platformConnectionsAdmin");
   assert.equal(telegram?.adminOnly, true);

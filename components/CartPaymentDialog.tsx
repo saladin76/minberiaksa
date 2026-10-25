@@ -1,5 +1,7 @@
 "use client";
 
+import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
+
 import Image from "next/image";
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
@@ -551,6 +553,7 @@ const CartPaymentDialog = ({
           if (!res.data?.success) { onClose(); return; }
           targetDonationId = res.data.donation.id as string;
           targetToken = (res.data.donation.accessToken as string | null | undefined) ?? null;
+          rememberGuestDonationAccess(targetDonationId, targetToken);
 
           const intentRes = await axios.post("/api/stripe/charge", { donationId: targetDonationId, locale });
           if (intentRes.data.error) {
@@ -598,6 +601,7 @@ const CartPaymentDialog = ({
         if (!res.data?.success) { onClose(); return; }
         const donationId = res.data.donation.id as string;
         const donationToken = (res.data.donation.accessToken as string | null | undefined) ?? null;
+        rememberGuestDonationAccess(donationId, donationToken);
         const newPan = cardDetails.cardNumber.replace(/\s/g, "");
 
         // Save new card fire-and-forget
@@ -634,6 +638,9 @@ const CartPaymentDialog = ({
         const { actionUrl, fields } = init.data as { actionUrl: string; fields: Record<string, string> };
 
         const form = document.createElement("form");
+          form.setAttribute("data-clarity-mask", "True");
+          form.setAttribute("data-hj-suppress", "");
+          form.setAttribute("data-private", "");
         form.method = "POST";
         form.action = actionUrl;
         Object.entries(fields).forEach(([name, value]) => {
@@ -713,7 +720,7 @@ const CartPaymentDialog = ({
         payforPollRef.current = setInterval(async () => {
           polls++;
           try {
-            const check = await fetch(`/api/donations/${donationId}`);
+            const check = await fetch(withDonationToken(`/api/donations/${donationId}`, donationToken));
             if (!check.ok) return;
             const data = await check.json();
 
@@ -750,7 +757,7 @@ const CartPaymentDialog = ({
         onClose();
       }
     } catch (error) {
-      console.error("Cart payment failed:", error);
+      console.error("Cart payment failed: request did not complete");
       // Send to the explanatory failure page rather than relying on a transient toast.
       isRedirecting = true;
       setRedirecting(true);
@@ -979,7 +986,7 @@ const CartPaymentDialog = ({
                 const selected = selectedCardId === card.id;
                 const brandBadge: Record<string, string> = { visa: "VISA", mastercard: "MC", amex: "AMEX", troy: "TROY" };
                 return (
-                  <button key={card.id} type="button"
+                  <button key={card.id} type="button" data-clarity-mask="True" data-hj-suppress="" data-private=""
                     onClick={() => {
                       if (selected) { setSelectedCardId(null); setCardDetails({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" }); }
                       else { setSelectedCardId(card.id); setCardDetails({ cardNumber: `**** **** **** ${card.last4}`, expiryDate: card.expiryDate, cvv: "", cardholderName: card.cardholderName ?? "" }); }
@@ -1014,7 +1021,7 @@ const CartPaymentDialog = ({
 
         {/* CVC-only when a saved card is selected */}
         {selectedCardId && (
-          <div className="space-y-2" dir="ltr">
+          <div className="space-y-2" dir="ltr" data-clarity-mask="True" data-hj-suppress="" data-private="">
             <label className="block text-sm font-medium text-gray-700 text-start">{t("cvc")}</label>
             <input
               type="password"

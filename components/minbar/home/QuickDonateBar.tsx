@@ -11,6 +11,7 @@ import { addToCart, type CartFreqKey } from "@/lib/minbar/cart";
 import { formatMoney } from "@/lib/minbar/money";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import {
+  quickDonationCampaignId,
   type QuickDonationConfig,
   type QuickGenericDestination,
   type QuickDonationProjectOption,
@@ -115,11 +116,11 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   /** The default destination as an option value: a generic id or a project slug. */
   const initialDestination = useMemo(() => {
     const d = config.defaultDestination;
-    if (d && (config.genericDestinations as string[]).includes(d)) return d;
+    if (d && (config.genericDestinations as string[]).includes(d)) return quickDonationCampaignId(config, d) ? d : "";
     const byId = d ? shownProjects.find((p) => p.id === d) : undefined;
-    if (byId) return byId.slug;
-    return config.genericDestinations[0] ?? shownProjects[0]?.slug ?? "";
-  }, [config.defaultDestination, config.genericDestinations, shownProjects]);
+    if (byId) return byId.id;
+    return config.genericDestinations.find((key) => quickDonationCampaignId(config, key)) ?? shownProjects[0]?.id ?? "";
+  }, [config, shownProjects]);
 
   /* ── State ──────────────────────────────────────────────────────────── */
 
@@ -131,6 +132,8 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   /** The phone sheet: collapsed until the chevron (or a premature "donate") opens it. */
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [destinationError, setDestinationError] = useState("");
 
   /* If the visitor changes currency to one with its own presets, the chosen
      preset may no longer exist; fall back to the suggested one. */
@@ -150,7 +153,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   const isGeneric = (config.genericDestinations as string[]).includes(destination);
   const destinationLabel = useMemo(() => {
     if (isGeneric) return label(destination as QuickGenericDestination);
-    return shownProjects.find((p) => p.slug === destination)?.title ?? "";
+    return shownProjects.find((p) => p.id === destination)?.title ?? "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destination, shownProjects, locale]);
 
@@ -159,24 +162,22 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
   const totalCurrency = custom ? visitorCode : presets.currency;
   const showMoney = (value: number, code: string) => (code === "USD" ? format(value) : formatMoney(value, code, locale));
   const totalText = showMoney(total || 0, totalCurrency);
-  const canGive = total > 0;
+  const canGive = Number.isFinite(total) && total > 0 && !!quickDonationCampaignId(config, destination) && !checking;
 
-  const submit = () => {
-    // Collapsed sheet: show the choice before acting on it.
+  const submit = async () => {
     if (phone && !open) { setOpen(true); return; }
     if (!canGive) return;
-    addToCart(
-      isGeneric
-        ? {
-            titleKey: destination === "where-needed" ? "whereNeedGreatest" : destination,
-            typeKey: "project",
-            freqKey: freq,
-            amount: total,
-            currency: totalCurrency,
-          }
-        : { projectId: destination, typeKey: "project", freqKey: freq, amount: total, currency: totalCurrency }
-    );
-    router.push(miaPath("cart", locale));
+    setChecking(true);
+    setDestinationError("");
+    try {
+      const response = await fetch("/api/quick-donation/resolve", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ destination, locale }) });
+      const resolved = await response.json();
+      if (!response.ok || typeof resolved.projectId !== "string") throw new Error("unavailable");
+      addToCart({ projectId: resolved.projectId, typeKey: "project", freqKey: freq, amount: total, currency: totalCurrency });
+      router.push(miaPath("cart", locale));
+    } catch {
+      setDestinationError(t("quickDestinationUnavailable"));
+    } finally { setChecking(false); }
   };
 
   if (!config.enabled || (!config.dockDesktop && !config.dockMobile)) return null;
@@ -189,9 +190,9 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
      its own overflow) or the sheet. The content carries `mia-scope` so the
      site's tokens and fonts reach it outside the page's own tree. */
   const destinationSelect = (id: string) => (
-    <SelectPrimitive.Root value={destination} onValueChange={setDestination} dir={dir}>
+    <SelectPrimitive.Root value={destination} disabled={checking} onValueChange={(value) => {setDestination(value); setDestinationError("");}} dir={dir}>
       <SelectPrimitive.Trigger id={`${id}-destination`} className="mia-sel-trigger" aria-label={tHome("projectSelectLabel")}>
-        <SelectPrimitive.Value>{destinationLabel}</SelectPrimitive.Value>
+        <SelectPrimitive.Value>{destinationLabel || tHome("projectSelectLabel")}</SelectPrimitive.Value>
         <SelectPrimitive.Icon className="mia-sel-icon">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="m6 9 6 6 6-6" />
@@ -208,7 +209,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
               <SelectPrimitive.Group>
                 <SelectPrimitive.Label className="mia-sel-group">{tHome("projectSelectLabel")}</SelectPrimitive.Label>
                 {config.genericDestinations.map((g) => (
-                  <SelectPrimitive.Item key={g} value={g} className="mia-sel-item">
+                  <SelectPrimitive.Item key={g} value={g} disabled={!quickDonationCampaignId(config, g)} className="mia-sel-item">
                     <SelectPrimitive.ItemText>{label(g)}</SelectPrimitive.ItemText>
                     <SelectPrimitive.ItemIndicator className="mia-sel-check">
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5L20 7" /></svg>
@@ -221,7 +222,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
               <SelectPrimitive.Group>
                 <SelectPrimitive.Label className="mia-sel-group">{tNav("projects")}</SelectPrimitive.Label>
                 {shownProjects.map((p) => (
-                  <SelectPrimitive.Item key={p.slug} value={p.slug} className="mia-sel-item">
+                  <SelectPrimitive.Item key={p.id} value={p.id} className="mia-sel-item">
                     <SelectPrimitive.ItemText>{p.title}</SelectPrimitive.ItemText>
                     {p.regionLabel ? <span className="mia-sel-meta" aria-hidden="true">{p.regionLabel}</span> : null}
                     <SelectPrimitive.ItemIndicator className="mia-sel-check">
@@ -300,6 +301,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
       data-dock-mobile={config.dockMobile ? "true" : "false"}
       aria-label={title}
     >
+      {(!destination || destinationError) && <p role="status" className="mx-auto mb-2 max-w-5xl rounded-lg border border-amber-200 bg-white px-4 py-2 text-center text-sm text-amber-900 shadow">{destinationError || t("quickDestinationRequired")}</p>}
       <div className="mia-qb-wrap">
         <div className="mia-qb-desk">
           <div aria-hidden="true" data-aqsa-pattern="" className="mia-qb-pattern" />
@@ -325,7 +327,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
             <span aria-hidden="true" className="mia-qb-div" />
             <b className="mia-qb-total" dir="ltr">{totalText}</b>
             <button type="button" className="mia-qb-cta" onClick={submit} disabled={!canGive}>
-              {t("donateNow")}
+              {checking ? t("quickDonationChecking") : t("donateNow")}
             </button>
           </div>
         </div>
@@ -366,7 +368,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
               <b dir="ltr">{totalText}</b>
             </span>
             <button type="button" className="mia-qb-cta" onClick={submit} disabled={open && !canGive}>
-              {t("donateNow")}
+              {checking ? t("quickDonationChecking") : t("donateNow")}
             </button>
           </div>
         </div>

@@ -7,7 +7,7 @@ import {
   auditActorFromSiteSession,
   auditStreamForRole,
 } from "@/lib/audit-log";
-import { mintDonationAccessToken } from "@/lib/donations/access-token";
+import { mintDonationAccessToken, donationTokenMatches } from "@/lib/donations/access-token";
 
 /**
  * POST /api/donations/[id]/retry
@@ -37,12 +37,12 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  * the success page uses).
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    if (!id) {
+    if (!id || !/^[a-f0-9]{24}$/i.test(id)) {
       return NextResponse.json({ error: "Donation ID required" }, { status: 400 });
     }
     const session = await getServerSession(authOptions);
@@ -55,10 +55,18 @@ export async function POST(
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
 
-    // Only the donor (or an admin) can retry. Guests with the link are ok too
-    //  the donation id is the only secret.
+    // Preserve owner/admin access. Anonymous callers must prove possession
+    // of the original credential; a donation ID is never sufficient.
     if (session && session.user.id !== source.donorId && session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (!session) {
+      const body = await req.json().catch(() => null) as { t?: unknown } | null;
+      const token = typeof body?.t === "string" ? body.t : new URL(req.url).searchParams.get("t");
+      if (!donationTokenMatches(source.accessToken, token)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     // Refuse to retry an already-paid donation  that would charge twice.
@@ -148,7 +156,7 @@ export async function POST(
       /* A PayPal retry goes straight back to PayPal, and /api/paypal/orders
          wants the clone's key from a guest. Handed to whoever may retry the
          source, who could open the clone's success page anyway. */
-      ...(source.paymentMethod === "PAYPAL" ? { accessToken: clone.accessToken } : {}),
+      accessToken: clone.accessToken,
     });
   } catch (err) {
     console.error("[donation retry] failed:", err);

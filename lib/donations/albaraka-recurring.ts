@@ -148,6 +148,8 @@ export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryR
     where: {
       provider: "ALBARAKA",
       status: "ACTIVE",
+      lastBillingDate: { not: null },
+      donations: { some: { paidAt: { not: null } } },
       paymentCardId: { not: null },
       nextBillingDate: { lte: now },
     },

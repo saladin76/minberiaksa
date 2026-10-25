@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
+import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 
 const FB_API_VERSION = "v21.0";
 
@@ -15,8 +16,6 @@ export async function POST(request: NextRequest) {
       url,
       value,
       currency = "USD",
-      user_agent,
-      client_ip,
       content_ids,
       content_type,
       num_items,
@@ -40,6 +39,10 @@ export async function POST(request: NextRequest) {
     if (!event_name) {
       return NextResponse.json({ error: "event_name required" }, { status: 400 });
     }
+    // Only verified payment settlement may own success/failure conversions.
+    if (["Donate", "Purchase", "DonateFailed"].includes(event_name)) {
+      return NextResponse.json({ ok: false, reason: "payment conversion owned by verified settlement" }, { status: 409 });
+    }
 
     const row = await getRawTrackingSettings();
     const pixelId = trackingString(row, "facebookPixelId") || trackingString(row, "metaPixelId");
@@ -52,8 +55,10 @@ export async function POST(request: NextRequest) {
     const user_data: Record<string, string> = {};
     if (fbp) user_data.fbp = fbp;
     if (fbc) user_data.fbc = fbc;
-    if (client_ip) user_data.client_ip_address = client_ip;
-    if (user_agent) user_data.client_user_agent = user_agent;
+    const clientIp = getTrackingClientIp(request.headers);
+    if (clientIp) user_data.client_ip_address = clientIp;
+    const userAgent = request.headers.get("user-agent");
+    if (userAgent) user_data.client_user_agent = userAgent.slice(0, 512);
 
     const custom_data: Record<string, unknown> = {};
     if (value != null) custom_data.value = Number(value);

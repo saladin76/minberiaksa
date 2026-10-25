@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           /* amount/teamSupport/coverFees are what the recurring price is computed from a few dozen
               lines below; leaving them out of the select made them `undefined` at runtime, so
               `planFees` was NaN and every monthly Stripe plan was priced from a NaN total. */
-          select: { id: true, frequency: true, timezone: true, scheduleRule: true, stripeSubscriptionId: true, payforToken: true, amount: true, teamSupport: true, coverFees: true },
+          select: { id: true, provider: true, frequency: true, timezone: true, scheduleRule: true, stripeSubscriptionId: true, payforToken: true, amount: true, teamSupport: true, coverFees: true, nextBillingDate: true },
         },
         donor: { select: { id: true, email: true, name: true } },
       },
@@ -104,6 +104,9 @@ export async function POST(req: NextRequest) {
 
     // ── A monthly plan: a Stripe Subscription ────────────────────────────
     const plan = donation.subscription;
+    if (plan.provider && plan.provider !== "STRIPE") {
+      return NextResponse.json({ error: "This recurring plan uses another payment provider" }, { status: 400 });
+    }
     const frequency = plan.frequency as RecurringFrequency;
     if (frequency !== "MONTHLY") {
       return NextResponse.json(
@@ -118,9 +121,12 @@ export async function POST(req: NextRequest) {
        reuse the one already attached and hand back its open intent. */
     const existingId = plan.stripeSubscriptionId ?? plan.payforToken;
     if (existingId && existingId.startsWith("sub_")) {
-      const existing = await stripe.subscriptions.retrieve(existingId, { expand: ["latest_invoice.payment_intent"] });
+      const existing = await stripe.subscriptions.retrieve(existingId, { expand: ["latest_invoice.confirmation_secret"] });
       const secret = openPaymentSecretOf(existing);
       if (secret) return NextResponse.json({ clientSecret: secret });
+      // A linked subscription must never be replaced just because its invoice is paid,
+      // void, expired or temporarily lacks a confirmable secret.
+      return NextResponse.json({ error: "This subscription has no pending payment to confirm", code: "SUBSCRIPTION_PAYMENT_UNAVAILABLE" }, { status: 409 });
     }
 
     const customerId = await stripeCustomerFor({
@@ -135,7 +141,7 @@ export async function POST(req: NextRequest) {
     const product = await stripe.products.create({
       name: description,
       metadata: { donationId, subscriptionDbId: plan.id },
-    });
+    }, { idempotencyKey: `recurring-product-${plan.id}` });
 
     /* What every month carries is the plan's amount, not the first payment's:
        the donor may have chosen to give the team support once only, in which
@@ -153,7 +159,7 @@ export async function POST(req: NextRequest) {
        falls on the same day and time. Today's payment  the first month's
        gift, with any once-only team support  is charged now as a one-off
        line on the signup invoice. */
-    const firstScheduledCharge = firstChargeForPlan(plan, now);
+    const firstScheduledCharge = plan.nextBillingDate ?? firstChargeForPlan(plan, donation.createdAt ?? now);
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -171,15 +177,9 @@ export async function POST(req: NextRequest) {
       trial_end: Math.floor(firstScheduledCharge.getTime() / 1000),
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
-      expand: ["latest_invoice.payment_intent"],
+      expand: ["latest_invoice.confirmation_secret"],
       metadata: { donationId, userId: donation.donor.id, subscriptionDbId: plan.id, frequency, timezone },
-    });
-
-    const clientSecret = openPaymentSecretOf(subscription);
-    if (!clientSecret) {
-      console.error("[Stripe Charge] subscription has no confirmable intent:", subscription.id);
-      return NextResponse.json({ error: "Could not get payment intent" }, { status: 500 });
-    }
+    }, { idempotencyKey: `recurring-signup-${plan.id}` });
 
     const firstInvoice = subscription.latest_invoice as Stripe.Invoice | null;
     await prisma.$transaction([
@@ -204,6 +204,12 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
+    const clientSecret = openPaymentSecretOf(subscription);
+    if (!clientSecret) {
+      console.error("[Stripe Charge] subscription has no confirmable intent:", subscription.id);
+      return NextResponse.json({ error: "Could not get payment intent" }, { status: 500 });
+    }
+
     return NextResponse.json({ clientSecret });
   } catch (error) {
     console.error("[Stripe Charge] error:", error);
@@ -213,12 +219,9 @@ export async function POST(req: NextRequest) {
 
 /** The first invoice's PaymentIntent secret while the subscription is still `incomplete`. */
 function openPaymentSecretOf(subscription: Stripe.Subscription): string | null {
-  const invoice = subscription.latest_invoice as (Stripe.Invoice & { payment_intent?: Stripe.PaymentIntent | string | null }) | null;
-  const intent = invoice?.payment_intent;
-  if (intent && typeof intent !== "string" && intent.client_secret && intent.status !== "succeeded") {
-    return intent.client_secret;
-  }
-  return null;
+  const invoice = subscription.latest_invoice;
+  if (!invoice || typeof invoice === "string" || ["paid", "void", "uncollectible"].includes(invoice.status ?? "")) return null;
+  return invoice.confirmation_secret?.client_secret ?? null;
 }
 
 /**
