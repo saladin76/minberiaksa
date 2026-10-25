@@ -39,9 +39,9 @@ test("AI receives aggregated evidence with private paths, emails, phones and tok
   const evidence = ga4AnalysisEvidence(fixture()); const serialized = JSON.stringify(evidence);
   assert.ok(!/person@example|905555555555|token=secret|507f1f77/.test(serialized));
   let payload = "";
-  const result = await analyzeGa4Report({report: fixture(), period: {range: "28d"}, locale: "ar", model: "fixture", baseUrl: "https://model.example/v1", apiKey: "fixture-key", fetchImpl: async (_url, init) => {
+  const result = await analyzeGa4Report({report: fixture(), period: {range: "28d"}, locale: "en", model: "fixture", baseUrl: "https://model.example/v1", apiKey: "fixture-key", fetchImpl: async (_url, init) => {
     payload = String(init?.body);
-    return new Response(JSON.stringify({output: [{content: [{type: "output_text", text: JSON.stringify({summary: "Measured result", opportunities: [{area: "seo", title: "Review home", finding: "Home traffic", action: "Review title", evidenceIds: ["e2"], confidence: "medium"}], limitations: ["Top rows only"]})}]}]}));
+    return new Response(JSON.stringify({output: [{content: [{type: "output_text", text: JSON.stringify({summary: "Measured result", opportunities: [{area: "measurement", title: "Review home", finding: "Home traffic", action: "Review title", evidenceIds: ["e2"], confidence: "medium"}], limitations: ["Top rows only"]})}]}]}));
   }});
   assert.equal(result.analysis.opportunities[0].evidenceIds[0], "e2");
   assert.ok(!payload.includes("token=secret")); assert.ok(payload.includes("NOT confirmed donations"));
