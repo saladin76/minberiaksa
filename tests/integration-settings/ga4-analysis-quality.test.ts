@@ -61,6 +61,7 @@ test("site-search report filters search events and missing terms before ranking"
       const isSearch = request.dimensions[0].name === "searchTerm";
       if (isSearch) {
         searchChecked = true;
+        assert.ok(request.dimensionFilter);
         assert.deepEqual(request.dimensionFilter!.andGroup.expressions[0].filter.inListFilter.values, ["view_search_results", "search"]);
         assert.equal(request.dimensionFilter.andGroup.expressions[1].notExpression.filter.fieldName, "searchTerm");
       } else assert.equal(request.dimensionFilter, undefined);
