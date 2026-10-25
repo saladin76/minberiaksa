@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import Clarity from "@microsoft/clarity";
 import { isMeasurementHost } from "@/lib/tracking/engagement-policy";
 
-// Preserve the existing fallback until the deployed project ID is verified.
-// NEXT_PUBLIC_CLARITY_ID remains authoritative; do not guess it from a CSV.
-const DEFAULT_CLARITY_PROJECT_ID = "u614k028k2";
+// Verified against the live script tag and supplied project exports on 2026-10-25.
+// An explicitly configured project ID remains authoritative.
+const DEFAULT_CLARITY_PROJECT_ID = "u60r8zhrzh";
 
 declare global {
   interface Window {

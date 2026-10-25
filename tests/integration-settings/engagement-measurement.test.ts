@@ -218,6 +218,17 @@ test("actual Clarity loader initializes once and excludes preview/development ho
   }
 });
 
+test("Clarity falls back to the verified Minber project only on an allowed host", () => {
+  const b = browser(), h = hooks(), ids: string[] = [];
+  const loaded = clientModule("components/MicrosoftClarity.tsx", {
+    react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
+    "@/lib/tracking/engagement-policy": policy,
+  }, b.globals);
+  h.render(loaded.default as () => unknown);
+  assert.deepEqual(ids, ["u60r8zhrzh"]);
+  h.unmount();
+});
+
 test("actual route tracker ignores currency cleanup but tracks filters/navigation once with safe URLs", () => {
   const b = browser(), h = hooks(), views: unknown[][] = [];
   const tracking = { trackPageView: (...args: unknown[]) => views.push(args) };

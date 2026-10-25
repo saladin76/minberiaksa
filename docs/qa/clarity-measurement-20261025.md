@@ -20,9 +20,10 @@ Do not describe this change as fixing all reported payment failures.
   `NEXT_PUBLIC_CLARITY_ALLOWED_HOSTS` replaces that list; no wildcards.
   A preview hostname can no longer inherit production collection merely by
   reusing its project ID. This does not disable an independently installed GTM tag.
-- `NEXT_PUBLIC_CLARITY_ID` remains authoritative. The existing fallback is
-  preserved, because the exported project ID differs and the deployed value has
-  not been verified. Verify project ownership/configuration before release.
+- `NEXT_PUBLIC_CLARITY_ID` remains authoritative. The previous fallback is
+  replaced with the verified Minber project, `u60r8zhrzh`: this matches both the
+  supplied recording exports and the live `clarity.ms/tag/u60r8zhrzh?ref=npm`
+  script observed on 25 October. The previous fallback was `u614k028k2`.
 - `is_paid_traffic` requires an explicit paid medium or an ad-specific click ID
   when no medium exists. Email/organic/social UTMs and fbclid alone are tagged
   traffic, not proof of paid ads. `has_campaign_tags`, `traffic_type` and
@@ -81,3 +82,25 @@ Before deployment:
 4. After deployment, compare version 2 cohorts and URL-level performance using
    the same timezone, browser mix and export windows. Keep financial success
    grounded in confirmed server records.
+
+## Read-only production observations
+
+On 25 October, the Arabic homepage and navigation to
+`/ar/pay-zakat-to-palestine` loaded in the cloud desktop browser.
+The application-owned Clarity tag used `u60r8zhrzh`, matching the source exports.
+The DOM also contained multiple Google measurement/Ads script configurations,
+including two script URLs for the same GA4 measurement ID. This requires a GTM
+ownership/trigger audit; script presence alone does not prove duplicate
+conversions or an incorrect account. No tags or account settings were changed.
+The only observed top-level console error in this short run originated in a
+browser extension; it is not recorded as a website defect. The Android WebView
+postMessage error was not reproduced by this desktop run.
+
+## Recorded validation
+
+On commit `e5d706b`, integration tests passed 787/787 (including 13 new
+measurement regressions), the whole-project TypeScript baseline reported zero
+errors, and focused ESLint passed. A follow-up adds the independently verified
+fallback-ID regression. Final-head checks and remaining release-gate outcomes
+are recorded in the PR. No production build, live financial operation, real
+Android in-app journey, private replay or deployment is certified by these tests.
