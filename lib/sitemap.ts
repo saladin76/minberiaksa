@@ -228,7 +228,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
     const now = new Date();
     return rows.flatMap((c) => {
       const availableLocales = Array.from(new Set([
-        "ar",
+        ...(c.seoNoIndex === "true" ? [] : ["ar"]),
         ...c.translations
           .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.name))
           .map((translation) => translation.locale),

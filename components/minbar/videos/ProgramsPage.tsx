@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { describeVideoSource } from "@/lib/content/video-platform";
 import type { CmsPlaylist } from "@/lib/minbar/cms";
-import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
+import { youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 
 /**
@@ -83,8 +84,10 @@ export default function ProgramsPage({ playlists }: { playlists: CmsPlaylist[] }
                     style={{ display: "grid", gap: 8, overflow: "hidden", borderRadius: 8, color: "inherit", textDecoration: "none" }}
                     onClick={(event) => {
                       if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                      const media = describeVideoSource({ url: episode.url || episode.youtubeId });
+                      if (!media.embedUrl && !media.directVideo) return;
                       event.preventDefault();
-                      open(episode.url || youtubeEmbed(episode.youtubeId, { autoplay: true }));
+                      open(media.sourceUrl);
                     }}
                   >
                     <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "var(--navy)" }}>

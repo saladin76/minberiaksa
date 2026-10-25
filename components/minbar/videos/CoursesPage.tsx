@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { describeVideoSource } from "@/lib/content/video-platform";
 import { localeDirection } from "@/lib/locales";
 import { miaPath } from "@/lib/minbar/routes";
 import type { CmsCourse } from "@/lib/minbar/cms";
-import { youtubeEmbed, youtubeThumb } from "@/lib/minbar/content/media";
+import { youtubeThumb } from "@/lib/minbar/content/media";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 
 /**
@@ -44,14 +45,15 @@ export default function CoursesPage({ courses }: { courses: CmsCourse[] }) {
           <div className="crs-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 20 }}>
             {courses.map((course) => {
               const title = course.title;
-              const cover = course.coverImage || (course.introVideoId ? youtubeThumb(course.introVideoId) : "");
+              const media = describeVideoSource({ url: course.introVideoUrl || course.introVideoId });
+              const cover = course.coverImage || (media.youtubeId ? youtubeThumb(media.youtubeId) : "");
               /* A course with its own page links there (the Zengi course is the
                  one built); anything else is a recording that opens in place,
                  on a card that is still a real anchor to the video. */
               const internal = course.hasDetailPage;
               const href = internal
                 ? (course.slug === "zenki" ? miaPath("zenkiCourse", locale) : miaPath("courses", locale))
-                : course.externalUrl || (course.introVideoId ? `https://www.youtube.com/watch?v=${course.introVideoId}` : "");
+                : course.externalUrl || media.watchUrl || "";
               const isSeminar = course.kind === "SEMINAR";
 
               const body = (
@@ -122,15 +124,15 @@ export default function CoursesPage({ courses }: { courses: CmsCourse[] }) {
                 <a
                   key={course.id}
                   href={href}
-                  target={course.externalUrl && !course.introVideoId ? "_blank" : undefined}
+                  target={course.externalUrl && !media.embedUrl && !media.directVideo ? "_blank" : undefined}
                   rel="noopener noreferrer"
                   className="crs-card"
                   style={frame}
                   onClick={(event) => {
-                    if (!course.introVideoId) return;
+                    if (!media.embedUrl && !media.directVideo) return;
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                     event.preventDefault();
-                    open(youtubeEmbed(course.introVideoId, { autoplay: true }));
+                    open(media.sourceUrl);
                   }}
                 >
                   {body}
