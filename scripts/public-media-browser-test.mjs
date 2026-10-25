@@ -22,7 +22,7 @@ const entry = [
   'const courses=sources.map((row,index)=>({id:"course-"+index,slug:"course-"+index,title:row.title,description:"Recording",coverImage:"",kind:"COURSE",introVideoId:"",introVideoUrl:row.url,unitsCount:0,hasDetailPage:false,isExternal:false,externalUrl:"",videos:[]}));',
   'createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>{location.pathname==="/courses"?<CoursesPage courses={courses}/>:<ProgramsPage playlists={playlists}/>}</NextIntlClientProvider>);',
 ].join("\n");
-const result = await build({stdin:{contents:entry,loader:"tsx",resolveDir:process.cwd()},bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"test"'},plugins:[{
+const result = await build({stdin:{contents:entry,loader:"tsx",resolveDir:process.cwd()},bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"test"',"process.env":"{}"},plugins:[{
   name:"fixture-next-link",setup(builder){
     builder.onResolve({filter:new RegExp("^next/link$")},()=>({path:"next-link",namespace:"fixture"}));
     builder.onLoad({filter:/.*/,namespace:"fixture"},()=>({contents:'import React from "react";export default function Link(p){return React.createElement("a",p,p.children)}',loader:"js",resolveDir:process.cwd()}));
@@ -41,12 +41,12 @@ const errors=[];
 let checks=0, page;
 try{
   page=await browser.newPage({viewport:{width:1440,height:1000}});
-  page.on("pageerror",error=>errors.push(error.message));
+  page.on("pageerror",error=>{errors.push(error.message);console.error(error.stack || error.message);});
   // Inspect player DOM without depending on external video/network availability.
   await page.route("https://**/*",route=>route.abort());
   for(const surface of ["/programs","/courses"]){
     await page.goto(origin+surface);
-    await page.getByRole("heading",{level:1}).waitFor();
+    await page.getByRole("heading",{level:1}).waitFor({timeout:10000});
     for(const source of sources){
       const link=surface==="/programs"?page.getByRole("link",{name:source.title,exact:true}):page.getByRole("link").filter({has:page.getByText(source.title,{exact:true})});
       await link.waitFor();
@@ -96,6 +96,7 @@ try{
   await writeFile(path.join(output,"public-media-verification.json"),JSON.stringify({checks,errors,scope:"Real public ProgramsPage, CoursesPage and VideoModal; inspect YouTube/Vimeo/MP4/playlist player URLs and closing; external streams blocked."},null,2));
   console.log(JSON.stringify({checks,passed:true}));
 }finally{
+  if(errors.length) console.error(JSON.stringify({pageErrors:errors}));
   if(page) await page.screenshot({path:path.join(output,"public-media-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
