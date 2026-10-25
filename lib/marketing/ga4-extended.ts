@@ -13,6 +13,12 @@ export type Ga4BreakdownKey = keyof typeof GA4_BREAKDOWNS;
 export type Ga4Breakdown = { rows: { dimensions: string[]; metrics: number[] }[]; rowCount: number; thresholded: boolean; sampled: boolean; error?: string };
 export type Ga4ExtendedReport = Partial<Record<Ga4BreakdownKey, Ga4Breakdown>>;
 
+/** A missing dimension is not a recorded site-search query. */
+export function isRecordedSearchTerm(value: string | undefined): boolean {
+  const term = (value ?? "").trim().toLowerCase();
+  return term !== "" && term !== "(not set)" && term !== "(not provided)";
+}
+
 export async function fetchGa4Extended(options: { propertyId: string; accessToken: string; range: Ga4Selection; fetchImpl: typeof fetch }): Promise<Ga4ExtendedReport> {
   const result: Ga4ExtendedReport = {};
   // Isolate interest/demographic availability from the other reports.
@@ -21,7 +27,12 @@ export async function fetchGa4Extended(options: { propertyId: string; accessToke
     try {
       const requests = keys.map((key) => {
         const spec = GA4_BREAKDOWNS[key];
-        return { dateRanges: [ga4DateRange(options.range)], dimensions: spec.dimensions.map((name) => ({ name })), metrics: spec.metrics.map((name) => ({ name })), orderBys: [{ metric: { metricName: spec.metrics[0] }, desc: true }], limit: "25" };
+        return { dateRanges: [ga4DateRange(options.range)], dimensions: spec.dimensions.map((name) => ({ name })), metrics: spec.metrics.map((name) => ({ name })), orderBys: [{ metric: { metricName: spec.metrics[0] }, desc: true }], limit: "25",
+          ...(key === "siteSearch" ? { dimensionFilter: { andGroup: { expressions: [
+            { filter: { fieldName: "eventName", inListFilter: { values: ["view_search_results", "search"] } } },
+            { notExpression: { filter: { fieldName: "searchTerm", inListFilter: { values: ["", "(not set)", "(not provided)"], caseSensitive: false } } } },
+          ] } } } : {}),
+        };
       });
       const response = await options.fetchImpl(`https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(options.propertyId)}:batchRunReports`, {
         method: "POST", headers: { authorization: `Bearer ${options.accessToken}`, "content-type": "application/json" }, body: JSON.stringify({ requests }), signal: AbortSignal.timeout(15_000),
@@ -31,7 +42,7 @@ export async function fetchGa4Extended(options: { propertyId: string; accessToke
       for (const [index, key] of keys.entries()) {
         const report = payload.reports?.[index];
         if (!report) throw new Error("INCOMPLETE_REPORT");
-        result[key] = { rows: (report.rows ?? []).map((row) => ({ dimensions: (row.dimensionValues ?? []).map((v) => v.value ?? ""), metrics: (row.metricValues ?? []).map((v) => Number.isFinite(Number(v.value)) ? Number(v.value) : 0) })), rowCount: report.rowCount ?? 0, thresholded: report.metadata?.subjectToThresholding === true, sampled: Boolean(report.metadata?.samplingMetadatas?.length) };
+        result[key] = { rows: (report.rows ?? []).map((row) => ({ dimensions: (row.dimensionValues ?? []).map((v) => v.value ?? ""), metrics: (row.metricValues ?? []).map((v) => Number.isFinite(Number(v.value)) ? Number(v.value) : 0) })).filter(row => key !== "siteSearch" || isRecordedSearchTerm(row.dimensions[0])), rowCount: report.rowCount ?? 0, thresholded: report.metadata?.subjectToThresholding === true, sampled: Boolean(report.metadata?.samplingMetadatas?.length) };
       }
     } catch (error) {
       for (const key of keys) result[key] = { rows: [], rowCount: 0, thresholded: false, sampled: false, error: error instanceof Error && /^HTTP_\d+$/.test(error.message) ? error.message : "UNAVAILABLE" };
