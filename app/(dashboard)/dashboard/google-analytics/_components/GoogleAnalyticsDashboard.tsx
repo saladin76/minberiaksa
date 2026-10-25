@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Ga4ExtendedPanels, Ga4InsightPanel, SearchConsolePanel } from "@/components/dashboard/Ga4Insights";
+import { parseGa4Period, ga4PeriodKey, type Ga4Period } from "@/lib/marketing/ga4-period";
 import axios from "axios";
-import { Activity, BarChart3, Eye, Globe2, Loader2, RefreshCw, Users, Wifi } from "lucide-react";
+import { Activity, BarChart3, Eye, Loader2, RefreshCw, Users, Wifi } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,18 +15,25 @@ import type { Ga4DashboardReport, Ga4Range } from "@/lib/marketing/ga4-reporting
 type ReportResponse = {
   propertyId: string;
   range: Ga4Range;
+  period: Ga4Period;
   updatedAt: string;
   cached: boolean;
   report: Ga4DashboardReport;
 };
 
 const RANGE_OPTIONS: Array<{ value: Ga4Range; label: string }> = [
+  {value: "today", label: "اليوم"},
+  {value: "yesterday", label: "أمس"},
   { value: "7d", label: "آخر 7 أيام" },
   { value: "28d", label: "آخر 28 يومًا" },
   { value: "90d", label: "آخر 90 يومًا" },
+  {value: "180d", label: "آخر 180 يومًا"},
+  {value: "365d", label: "آخر 365 يومًا"},
+  {value: "custom", label: "مخصص"},
 ];
 
 const ERROR_MESSAGES: Record<string, string> = {
+  GA4_PERIOD_INVALID: "اختر تاريخ بداية ونهاية صحيحين، بحد أقصى 366 يومًا وحتى اليوم.",
   GA4_PROPERTY_MISSING: "أدخل Property ID في بطاقة Google Analytics الموجودة بإعدادات التتبع.",
   GA4_PROPERTY_INVALID: "رقم Property ID المحفوظ غير صالح. استخدم الرقم من GA4 Admin.",
   GA4_CREDENTIALS_MISSING: "أضف حساب القراءة في بطاقة Google Analytics بإعدادات التتبع، وامنحه دور Viewer على موقع GA4.",
@@ -69,29 +78,30 @@ function EmptyRows({ text }: { text: string }) {
 
 export default function GoogleAnalyticsDashboard() {
   const [range, setRange] = useState<Ga4Range>("28d");
+  const [period, setPeriod] = useState<Ga4Period>({range: "28d"});
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const activeRequest = useRef<AbortController | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
 
-  const loadReport = useCallback(async (selectedRange: Ga4Range, force = false) => {
-    setReport((current) => current?.range === selectedRange ? current : null);
-    setReportLoading(true);
-    setReportError(null);
+  const loadReport = useCallback(async (selectedPeriod: Ga4Period, force = false) => {
+    activeRequest.current?.abort(); const controller = new AbortController(); activeRequest.current = controller;
+    setReport(null); setReportLoading(true); setReportError(null);
     try {
-      const response = await axios.get<ReportResponse>(`/api/admin/google-analytics/report?range=${selectedRange}${force ? `&refresh=${Date.now()}` : ""}`);
-      setReport(response.data);
+      const params = new URLSearchParams({...selectedPeriod, ...(force ? {refresh: String(Date.now())} : {})});
+      const response = await axios.get<ReportResponse>(`/api/admin/google-analytics/report?${params}`, {signal: controller.signal});
+      if (!controller.signal.aborted) setReport(response.data);
     } catch (error) {
-      const code = axios.isAxiosError(error) && typeof error.response?.data?.error === "string"
-        ? error.response.data.error
-        : "GA4_REPORT_FAILED";
-      setReportError(code);
-      setReport(null);
-    } finally {
-      setReportLoading(false);
-    }
+      if (!controller.signal.aborted) setReportError(axios.isAxiosError(error) && typeof error.response?.data?.error === "string" ? error.response.data.error : "GA4_REPORT_FAILED");
+    } finally { if (!controller.signal.aborted) setReportLoading(false); }
   }, []);
-
-  useEffect(() => { void loadReport(range); }, [loadReport, range]);
+  useEffect(() => { void loadReport(period); return () => activeRequest.current?.abort(); }, [loadReport, period]);
+  const applyCustom = () => {
+    try { setPeriod(parseGa4Period({range: "custom", startDate, endDate})); }
+    catch { setReportError("GA4_PERIOD_INVALID"); }
+  };
 
   const reportData = report?.report;
   const exceptionTotal = reportData?.exceptionCount ?? 0;
@@ -112,13 +122,14 @@ export default function GoogleAnalyticsDashboard() {
     <header><p className="text-xs font-bold uppercase tracking-wider text-brand">{dt("تقارير الموقع")}</p><h1 id="ga4-report-heading" className="mt-1 text-xl font-bold tracking-tight text-slate-900">Google Analytics 4</h1><p className="mt-1 text-sm text-slate-600">{dt("تقارير الزيارات والصفحات من ربط GA4 الحالي.")}</p></header>
     <Card className="border-blue-100 bg-blue-50/50">
       <CardContent className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center">
-        <div><p className="font-semibold text-slate-900">{dt("تقارير قراءة فقط")}</p><p className="mt-1 text-sm leading-6 text-slate-600">{dt("هذه الصفحة تقرأ بيانات GA4 ولا ترسل أحداثًا ولا تغيّر إعدادات الدفع أو التحويلات.")}</p><p className="mt-1 text-xs text-slate-500">{dt("الفترات تعرض أيامًا مكتملة حتى أمس؛ وقد تتأخر بيانات GA4 بسبب المعالجة.")}</p><Link className="mt-1 inline-flex text-xs font-semibold text-brand underline" href="/dashboard/platform-connections/tracking#ga4-settings">{dt("إعداد GA4 الحالي")}</Link></div>
+        <div className="space-y-1 text-xs text-slate-500"><p>{dt("قد تتأخر بيانات Google. بيانات اليوم قابلة للتحديث.")}</p><Link className="font-medium text-brand underline" href="/dashboard/platform-connections/tracking#ga4-settings">{dt("إعداد GA4 الحالي")}</Link></div>
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="ga4-range" className="text-xs font-semibold text-slate-600">{dt("الفترة")}</label>
-          <select id="ga4-range" value={range} onChange={(event) => setRange(event.target.value as Ga4Range)} className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm">
+          <select id="ga4-range" value={range} onChange={(event) => {const next = event.target.value as Ga4Range; setRange(next); if (next !== "custom") setPeriod({range: next});}} className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm">
             {RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{dt(option.label)}</option>)}
           </select>
-          <Button variant="outline" onClick={() => void loadReport(range, true)} disabled={reportLoading} className="gap-2">
+          {range === "custom" && <><input type="date" aria-label={dt("من تاريخ")} value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-9 rounded border p-2 text-sm" /><input type="date" aria-label={dt("إلى تاريخ")} value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-9 rounded border p-2 text-sm" /><Button variant="outline" onClick={applyCustom}>{dt("تطبيق الفترة")}</Button></>}
+          <Button variant="outline" onClick={() => void loadReport(period, true)} disabled={reportLoading} className="gap-2">
             {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{dt("تحديث التقارير")}
           </Button>
         </div>
@@ -134,6 +145,9 @@ export default function GoogleAnalyticsDashboard() {
     {reportLoading && !reportData ? <div className="flex min-h-48 items-center justify-center rounded-xl border bg-white text-slate-500"><Loader2 className="me-2 h-5 w-5 animate-spin" />{dt("جارٍ جلب تقارير GA4")}</div> : null}
 
     {reportData ? <>
+      <p className="text-xs text-slate-500">{dt("الفترة المعروضة")}: {period.range === "custom" ? `${period.startDate} — ${period.endDate}` : dt(RANGE_OPTIONS.find((option) => option.value === period.range)?.label ?? period.range)} {reportData.quality?.timezone ? ` · ${reportData.quality.timezone}` : ""}</p>
+      {(reportData.quality?.thresholded || reportData.quality?.sampled || reportData.quality?.dataLoss) && <p role="status" className="rounded border border-amber-200 p-3 text-xs text-amber-800">{dt("توجد حدود إظهار أو عينات أو تجميع في بيانات Google لهذه الفترة. راجعها قبل المقارنة.")}</p>}
+      <Ga4InsightPanel key={ga4PeriodKey(period) + report.updatedAt} period={period} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</div>
 
       <Card>
@@ -175,13 +189,13 @@ export default function GoogleAnalyticsDashboard() {
         </CardContent></Card>
       </div>
 
+      <SearchConsolePanel report={reportData} period={period} />
+      <Ga4ExtendedPanels report={reportData} period={period} />
+
       <p className="text-xs text-slate-500">{dt("آخر تحديث: {0}", [dateTime(report.updatedAt)])}{report.cached ? ` · ${dt("بيانات مخزنة مؤقتًا لمدة قصيرة")}` : ""}</p>
     </> : null}
 
-    <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
-      <Globe2 className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
-      <p>{dt("البيانات المعروضة هي ما جمعه GA4 فقط. قسم الاستثناءات يعرض أحداث exception التي يرسلها الموقع (ومنها فشل الدفع المسجل)، ولا يفحص الشيفرة أو يكتشف كل الأعطال تلقائيًا. تشخيص جميع أخطاء الموقع يحتاج ربط أداة مراقبة أخطاء مثل Sentry أو سجلات الخادم.")}</p>
-    </div>
+    <details className="text-xs text-slate-500"><summary className="cursor-pointer">{dt("حول دقة البيانات")}</summary><p className="mt-2">{dt("يعرض التقرير ما وصل إلى GA4 فقط. غياب أحداث الاستثناء لا يثبت خلو الموقع من الأعطال. الأحداث الرئيسية تعتمد على إعداد GA4 ولا تساوي التبرعات المؤكدة.")}</p></details>
   </section>;
 }
 

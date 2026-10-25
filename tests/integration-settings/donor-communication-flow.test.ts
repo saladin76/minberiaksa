@@ -3,6 +3,7 @@ import test from "node:test";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { smartWhatsappTemplateChoices } from "../../lib/communication/smart-whatsapp-templates";
 import * as history from "../../lib/communication/donor-history";
 
 function load(path: string, dependencies: Record<string, unknown>, append = "") {
@@ -64,4 +65,19 @@ test("history detail refuses a message outside the donor scope and access is che
   const h = historyRoute(); assert.equal((await h.get("messageId=507f1f77bcf86cd799439012&source=delivery")).status, 404);
   assert.equal(h.queries[0].where.recipientUserId, "507f1f77bcf86cd799439011");
   const forbidden = historyRoute(false); assert.equal((await forbidden.get()).status, 403); assert.equal(forbidden.queries.length, 0);
+});
+
+
+test("donor template choices use the routed WABA and Meta approval for the donor language", async () => {
+  const variant = {businessAccountId: "waba-a", languageCode: "ar", locale: "ar", approvalStatus: "APPROVED", category: "UTILITY", providerTemplateName: "receipt", componentsSchema: [], rejectionReason: null, lastSyncedAt: new Date()};
+  const templates = [{id: "eligible", name: "Receipt", kind: "SYSTEM", category: "UTILITY", wabaVariants: [variant]}, {id: "other-account", name: "Other", kind: "SYSTEM", category: "UTILITY", wabaVariants: [{...variant, businessAccountId: "waba-b"}]}];
+  const service = load("lib/communication/smart-whatsapp-service.ts", {
+    "@/lib/prisma": {prisma: {whatsappTemplate: {findMany: async () => templates}}},
+    "./sender-resolution": {loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => ({ok: true, sender: {businessAccountId: "waba-a"}})},
+    "./template-event-classification": {classifyEventTemplates: async (_channel: string, rows: unknown[]) => rows},
+    "./smart-whatsapp-templates": {smartWhatsappTemplateChoices},
+    "fixture": {donor: {phone: null, name: "Fixture", locale: "tr", country: "TR", doNotContact: false, whatsappUnsubscribed: false, consentCheckUnavailable: false}},
+  }, '\ndonor = async () => require("fixture").donor; latestInboundThread = async () => null;');
+  const context = await service.getSmartWhatsappContext("donor");
+  assert.equal(context.utilityTemplates.length, 1); assert.equal(context.utilityTemplates[0].id, "eligible");
 });

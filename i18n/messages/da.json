@@ -751,6 +751,10 @@
     "landscapeVersion": "Godkendt version (liggende)"
   },
   "common": {
+    "quickDestinationRequired": "Vælg et donationsformål, før du fortsætter.",
+    "quickDestinationUnavailable": "Dette donationsformål er ikke tilgængeligt. Vælg et andet projekt, og prøv igen.",
+    "quickDonationChecking": "Kontrollerer…",
+
     "donate": "Donér",
     "addToCart": "Læg i Kurv",
     "zakatCalculator": "Zakat-beregner",

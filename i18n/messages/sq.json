@@ -751,6 +751,10 @@
     "landscapeVersion": "Versioni i miratuar (horizontal)"
   },
   "common": {
+    "quickDestinationRequired": "Zgjidhni një destinacion dhurimi përpara se të vazhdoni.",
+    "quickDestinationUnavailable": "Ky destinacion dhurimi nuk është i disponueshëm. Zgjidhni një projekt tjetër dhe provoni përsëri.",
+    "quickDonationChecking": "Duke kontrolluar…",
+
     "donate": "Dhuro Tani",
     "addToCart": "Shto në Shportë",
     "zakatCalculator": "Kalkulatori i Zekatit",

@@ -751,6 +751,10 @@
     "landscapeVersion": "承認版（横向き）"
   },
   "common": {
+    "quickDestinationRequired": "続行する前に寄付先を選択してください。",
+    "quickDestinationUnavailable": "この寄付先は現在利用できません。別のプロジェクトを選択して再試行してください。",
+    "quickDonationChecking": "確認中…",
+
     "donate": "寄付する",
     "addToCart": "カートに追加",
     "zakatCalculator": "ザカート計算機",

@@ -5,6 +5,10 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { ContentError } from "@/lib/content-editor/service";
 import { pageSeoDefaults, readPageSeoDocument, savePageSeoDocument } from "@/lib/content-editor/page-seo";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
+import { managedPagePath } from "@/lib/content-editor/page-seo-registry";
+import { parseGa4Period } from "@/lib/marketing/ga4-period";
+import { loadGa4DashboardReport, Ga4ReportError } from "@/lib/marketing/ga4-server";
+import { ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
 import { isValidLocale } from "@/lib/locales";
 import { revalidatePath } from "next/cache";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
@@ -13,7 +17,7 @@ export const maxDuration = 120;
 type Context = { params: Promise<{ key: string }> };
 async function access() { const session = await getServerSession(authOptions); return { session, denied: requireAdminOrDashboardPermission(session, "siteContent") }; }
 function failure(error: unknown) {
-  if (error instanceof ContentError || error instanceof SeoResearchError) return NextResponse.json({ error: error.message }, { status: error.status });
+  if (error instanceof ContentError || error instanceof SeoResearchError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error("managed-page-seo operation failed");
   return NextResponse.json({ error: "تعذر تأكيد العملية. احتفظ بالمسودة وأعد المحاولة." }, { status: 500 });
 }
@@ -34,14 +38,22 @@ export async function PUT(request: NextRequest, ctx: Context) {
   } catch (error) { return failure(error); }
 }
 export async function POST(request: NextRequest, ctx: Context) {
-  const { denied } = await access(); if (denied) return denied;
+  const { session, denied } = await access(); if (denied) return denied;
   try {
     const { key } = await ctx.params, body = await request.json();
     if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");
     const document = await readPageSeoDocument(key);
     if (document.revision !== body.revision) throw new ContentError("تغيرت إعدادات الصفحة. أعد تحميلها أولًا.", 409);
     const source = pageSeoDefaults(key, body.locale);
-    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: source.values.metaTitle, description: source.values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
-    return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: result.research });
+    let analyticsEvidence;
+    if (body.analyticsPeriod) {
+      const gaDenied = requireAdminOrDashboardPermission(session, "platformConnections"); if (gaDenied) return gaDenied;
+      let period; try { period = parseGa4Period(body.analyticsPeriod); } catch { throw new ContentError("فترة GA4 غير صالحة"); }
+      const data = await loadGa4DashboardReport(period);
+      analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}${managedPagePath(key, body.locale)}`);
+    }
+
+    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: source.values.metaTitle, analyticsEvidence, description: source.values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
+    return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
 }

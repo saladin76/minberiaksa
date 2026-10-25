@@ -1,4 +1,6 @@
 "use client";
+import type { Ga4Period } from "@/lib/marketing/ga4-period";
+import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { toast } from "react-hot-toast";
 import { dashDir, dt, dtMaybe } from "@/lib/dashboard/i18n";
 import { SuggestedDonationsSection, type SuggestedDonationsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/SuggestedDonationsSection";
@@ -126,6 +128,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
   const [values, setValues] = useState<Record<string, TextValues>>({});
   const [locale, setLocale] = useState("ar");
   const [message, setMessage] = useState("");
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<Ga4Period | null>(null);
   const [busy, setBusy] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [generationProgress, setGenerationProgress] = useState<{ done: number; total: number } | null>(null);
@@ -294,7 +297,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
             const result = await api<Proposal>(url + "/suggest", {
               method: "POST",
               signal: controller.signal,
-              body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision }),
+              body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision, ...(action === "seo" && analyticsPeriod ? {analyticsPeriod} : {}) }),
             });
             if (result.id !== id || result.kind !== kind || result.revision !== revision)
               throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
@@ -967,6 +970,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           {["playlists", "courses"].includes(kind) && section === "media" ? (
             <MediaCollectionEditor kind={kind as "playlists" | "courses"} values={Array.isArray(settingsDraft.videos) ? settingsDraft.videos as ContentRecord[] : []} onChange={(videos) => setSettingsDraft((previous) => ({ ...previous, videos }))} />
           ) : null}
+          {section === "seo" && <Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} />}
           {section === "seo" ? (
             <SeoWorkspace
               onUploadingChange={onUploadingChange}

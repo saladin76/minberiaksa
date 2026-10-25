@@ -1790,6 +1790,10 @@
     "landscapeVersion": "Onaylı sürüm (yatay)"
   },
   "common": {
+    "quickDestinationRequired": "Devam etmeden önce bağış hedefini seçin.",
+    "quickDestinationUnavailable": "Bu bağış hedefi şu anda kullanılamıyor. Başka bir proje seçip tekrar deneyin.",
+    "quickDonationChecking": "Kontrol ediliyor…",
+
     "donate": "Bağış Yap",
     "addToCart": "Sepete Ekle",
     "zakatCalculator": "Zekât Hesaplama",

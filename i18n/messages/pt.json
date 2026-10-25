@@ -1790,6 +1790,10 @@
     "landscapeVersion": "Versão aprovada (paisagem)"
   },
   "common": {
+    "quickDestinationRequired": "Escolha um destino para a doação antes de continuar.",
+    "quickDestinationUnavailable": "Este destino não está disponível. Escolha outro projeto e tente novamente.",
+    "quickDonationChecking": "A verificar…",
+
     "donate": "Doar Agora",
     "addToCart": "Adicionar ao Carrinho",
     "zakatCalculator": "Calculadora de Zakat",

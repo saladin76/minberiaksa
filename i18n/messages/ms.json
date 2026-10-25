@@ -751,6 +751,10 @@
     "landscapeVersion": "Versi diluluskan (landskap)"
   },
   "common": {
+    "quickDestinationRequired": "Pilih destinasi sumbangan sebelum meneruskan.",
+    "quickDestinationUnavailable": "Destinasi sumbangan ini tidak tersedia. Pilih projek lain dan cuba lagi.",
+    "quickDonationChecking": "Sedang menyemak…",
+
     "donate": "Sumbang",
     "addToCart": "Tambah ke Troli",
     "zakatCalculator": "Kalkulator Zakat",

@@ -751,6 +751,10 @@
     "landscapeVersion": "स्वीकृत संस्करण (लैंडस्केप)"
   },
   "common": {
+    "quickDestinationRequired": "आगे बढ़ने से पहले दान का गंतव्य चुनें।",
+    "quickDestinationUnavailable": "यह दान गंतव्य अभी उपलब्ध नहीं है। कोई अन्य परियोजना चुनें और फिर प्रयास करें।",
+    "quickDonationChecking": "जाँच जारी है…",
+
     "donate": "दान करें",
     "addToCart": "सूची में जोड़ें",
     "zakatCalculator": "ज़कात कैलकुलेटर",

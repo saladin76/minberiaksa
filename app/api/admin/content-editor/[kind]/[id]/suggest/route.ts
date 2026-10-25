@@ -1,3 +1,7 @@
+import { parseGa4Period } from "@/lib/marketing/ga4-period";
+import { loadGa4DashboardReport } from "@/lib/marketing/ga4-server";
+import { ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
+import { slugFor } from "@/lib/minbar/routes";
 import { faqTranslationFields, translatedFaq } from "@/lib/content-editor/faq";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
 import { NextRequest, NextResponse } from "next/server";
@@ -12,7 +16,7 @@ import {
   valuesFor,
 } from "@/lib/content-editor/contracts";
 import { contentStore } from "@/lib/content-editor/store";
-import { fingerprint, readContent } from "@/lib/content-editor/service";
+import { documentFor, fingerprint, readContent } from "@/lib/content-editor/service";
 import { translateResearchedItem } from "@/lib/content-localization/research-translate";
 import { isValidLocale } from "@/lib/locales";
 export const maxDuration = 300;
@@ -133,9 +137,19 @@ export async function POST(
       field.group === "seo" && !["seoNoIndex", "ogImage"].includes(field.key) &&
       (body.action !== "faq" || field.key === "faqContent"),
     );
+    let analyticsEvidence;
+    if (body.analyticsPeriod && body.action === "seo") {
+      const gaDenied = requireAdminOrDashboardPermission(session, "platformConnections"); if (gaDenied) return gaDenied;
+      let period; try { period = parseGa4Period(body.analyticsPeriod); } catch { return NextResponse.json({ error: "فترة GA4 غير صالحة" }, { status: 400 }); }
+      const data = await loadGa4DashboardReport(period);
+      const slug = documentFor(kind, row).slugs[body.locale];
+      const prefix = kind === "categories" ? "category" : kind === "blog" ? slugFor("article", body.locale) : kind === "super-categories" ? "" : slugFor("projectDetail", body.locale);
+      analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}/${prefix ? prefix + "/" : ""}${slug}`);
+    }
     const generated = await generateResearchedSeo({
       type: kind === "blog" ? "blog" : kind === "categories" || kind === "super-categories" ? "category" : "campaign",
       locale: body.locale,
+      analyticsEvidence,
       title: values.title || values.name || values.question || "",
       description: context.map((field) => values[field.key]).join("\n"),
       keywords: values.seoKeyword ? [values.seoKeyword] : [],

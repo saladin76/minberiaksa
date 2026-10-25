@@ -1790,6 +1790,10 @@
     "landscapeVersion": "النسخة المعتمدة (عرضية)"
   },
   "common": {
+    "quickDestinationRequired": "اختر وجهة التبرع قبل المتابعة.",
+    "quickDestinationUnavailable": "وجهة التبرع غير متاحة حاليًا. اختر مشروعًا آخر وحاول مجددًا.",
+    "quickDonationChecking": "جارٍ التحقق…",
+
     "donate": "تبرّع الآن",
     "addToCart": "أضف إلى السلة",
     "zakatCalculator": "حاسبة الزكاة",

@@ -751,6 +751,10 @@
     "landscapeVersion": "Godkänd version (liggande)"
   },
   "common": {
+    "quickDestinationRequired": "Välj ett donationsändamål innan du fortsätter.",
+    "quickDestinationUnavailable": "Detta donationsändamål är inte tillgängligt. Välj ett annat projekt och försök igen.",
+    "quickDonationChecking": "Kontrollerar…",
+
     "donate": "Ge en Gåva",
     "addToCart": "Lägg i Kundvagn",
     "zakatCalculator": "Zakat-kalkylator",

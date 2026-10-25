@@ -751,6 +751,10 @@
     "landscapeVersion": "Goedgekeurde versie (liggend)"
   },
   "common": {
+    "quickDestinationRequired": "Kies een donatiedoel voordat u doorgaat.",
+    "quickDestinationUnavailable": "Dit donatiedoel is niet beschikbaar. Kies een ander project en probeer het opnieuw.",
+    "quickDonationChecking": "Controleren…",
+
     "donate": "Doneer nu",
     "addToCart": "Toevoegen Aan Mand",
     "zakatCalculator": "Zakat-calculator",

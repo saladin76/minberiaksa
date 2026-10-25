@@ -76,3 +76,9 @@ test("a monthly amount range never treats an unknown foreign-currency commitment
   ];
   assert.deepEqual(matchingBadgeUserIds({ type: "MONTHLY_ACTIVE_RANGE", amountMinUSD: 0, amountMaxUSD: 100 }, [], subscriptions), ["known", "usd-fallback"]);
 });
+
+
+test("a single donor segment sums settled donations made in all site languages", () => {
+  const rows = [{...donation("multilingual", "2026-10-01T00:00:00Z", 40), locale: "ar"}, {...donation("multilingual", "2026-10-02T00:00:00Z", 35), locale: "tr"}, {...donation("multilingual", "2026-10-03T00:00:00Z", 30), locale: "en"}];
+  assert.deepEqual(matchingBadgeUserIds({type: "TOTAL_LIFETIME", amountMinUSD: 100}, rows), ["multilingual"]);
+});

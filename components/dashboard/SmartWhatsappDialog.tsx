@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -67,23 +66,27 @@ export function SmartWhatsappDialog({
   const [mode, setMode] = React.useState<"FREEFORM" | "UTILITY" | "MARKETING">("UTILITY");
   const [body, setBody] = React.useState("");
   const [templateId, setTemplateId] = React.useState("");
+  const loadSequence = React.useRef(0);
 
   const load = React.useCallback(async () => {
+    const sequence = ++loadSequence.current;
     setLoading(true);
     try {
       const res = await fetch(`/api/dashboard/communication/whatsapp/smart-send?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
+      if (sequence !== loadSequence.current) return;
       const next = data.context as SmartContext;
       setCtx(next);
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
       else setMode(preferred);
     } catch {
+      if (sequence !== loadSequence.current) return;
       toast.error(dt("تعذّر تجهيز إرسال واتساب لهذا المتبرع."));
       setCtx(null);
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
   }, [userId, initialMode]);
 
@@ -92,6 +95,7 @@ export function SmartWhatsappDialog({
     setBody("");
     setTemplateId("");
     void load();
+    return () => { loadSequence.current++; };
   }, [open, load]);
 
   const send = async () => {
@@ -144,7 +148,7 @@ export function SmartWhatsappDialog({
           : transport === "DIRECT_SEND"
             ? dt("تم إرسال رسالة الخدمة عبر Direct Send.")
             : transport === "UTILITY_TEMPLATE_FALLBACK"
-              ? dt("تعذّر Direct Send وتم إرسال قالب Utility المعتمد بنجاح.")
+              ? dt("تم إرسال قالب الخدمة المعتمد بنجاح.")
               : dt("تم إرسال القالب التسويقي المعتمد."),
       );
       setBody("");
@@ -334,9 +338,9 @@ export function SmartWhatsappDialog({
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/dashboard/users/donors/${userId}/communication`}>
+                  <a href={`/dashboard/users/donors/${userId}/communication`}>
                     <History className="me-1.5 h-4 w-4" />
-                    {dt("سجل المحادثة")}</Link>
+                    {dt("سجل المحادثة")}</a>
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>{dt("إلغاء")}</Button>

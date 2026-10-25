@@ -26,8 +26,8 @@ test("GA4 report ranges and requests cover the dashboard reporting set", () => {
     { name: "activeUsers" }, { name: "totalUsers" }, { name: "newUsers" }, { name: "sessions" },
     { name: "screenPageViews" }, { name: "engagementRate" }, { name: "bounceRate" }, { name: "keyEvents" },
   ]);
-  assert.deepEqual(requests[2].dimensions, [{ name: "pagePath" }, { name: "pageTitle" }]);
-  assert.equal(requests[2].limit, "10");
+  assert.deepEqual(requests[2].dimensions, [{ name: "pagePath" }]);
+  assert.equal(requests[2].limit, "25");
   assert.deepEqual(
     (requests[6].dimensionFilter as { filter: { fieldName: string; stringFilter: { value: string } } }).filter,
     { fieldName: "eventName", stringFilter: { matchType: "EXACT", value: "exception" } },
@@ -111,7 +111,7 @@ test("report request uses scoped bearer access and maps provider errors without 
       authorizations.push(new Headers(init?.headers).get("authorization") ?? "");
       const requestedBody = JSON.parse(String(init?.body)) as { requests: unknown[] };
       requestedBodySizes.push(requestedBody.requests.length);
-      return new Response(JSON.stringify({ reports: [] }), { status: 200 });
+      return new Response(JSON.stringify({ reports: requestedBody.requests.map(() => ({})) }), { status: 200 });
     },
   });
   assert.equal(requestedUrls.length, 2);
@@ -156,9 +156,11 @@ test("GA4 reports have a dedicated top-level section and use the existing platfo
   assert.match(trackingSource, /encryptIntegrationSecret\(/);
   assert.match(trackingSource, /gaServiceAccountJsonPresent/);
   assert.doesNotMatch(trackingSource, /output\.gaServiceAccountEncrypted/);
-  assert.match(reportSource, /requireAdminOrDashboardPermission\(session, "platformConnections"\)/);
-  assert.match(reportSource, /getRawTrackingSettings\(\)/);
-  assert.match(reportSource, /analytics\.readonly/);
+  assert.match(reportSource, /requireAdminOrDashboardPermission[\s\S]*"platformConnections"/);
+  const reportService = readFileSync("lib/marketing/ga4-server.ts", "utf8");
+  assert.match(reportSource, /loadGa4DashboardReport/);
+  assert.match(reportService, /getRawTrackingSettings\(\)/);
+  assert.match(reportService, /analytics\.readonly/);
   assert.match(reportSource, /Cache-Control/);
   assert.doesNotMatch(reportSource, /NextResponse\.json\(\{[^}]*private_key/);
   assert.equal(existsSync("app/api/admin/google-analytics/config/route.ts"), false);

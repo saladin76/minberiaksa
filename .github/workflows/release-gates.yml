@@ -114,6 +114,8 @@ jobs:
       - run: npm run test:content-editors:browser
       - name: Public programme and course playback
         run: node --import tsx scripts/public-media-browser-test.mjs
+      - name: Dashboard donation, communication and analytics flows
+        run: node --import tsx scripts/dashboard-followup-browser-test.mjs
       - if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -1790,6 +1790,10 @@
     "landscapeVersion": "Genehmigte Version (Querformat)"
   },
   "common": {
+    "quickDestinationRequired": "Wählen Sie vor dem Fortfahren ein Spendenziel.",
+    "quickDestinationUnavailable": "Dieses Spendenziel ist derzeit nicht verfügbar. Wählen Sie ein anderes Projekt und versuchen Sie es erneut.",
+    "quickDonationChecking": "Wird geprüft…",
+
     "donate": "Jetzt Spenden",
     "addToCart": "In Den Warenkorb",
     "zakatCalculator": "Zakat-Rechner",

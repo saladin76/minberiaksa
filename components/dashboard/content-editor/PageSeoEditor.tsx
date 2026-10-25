@@ -1,4 +1,7 @@
 "use client";
+import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
+import { parseGa4Period, type Ga4Period } from "@/lib/marketing/ga4-period";
+import { isValidLocale } from "@/lib/locales";
 import { useEffect, useRef, useState } from "react";
 import { dt, dashDir, dtMaybe } from "@/lib/dashboard/i18n";
 import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
@@ -17,6 +20,13 @@ export function PageSeoEditor() {
   const [busy, setBusy] = useState(""), [message, setMessage] = useState(""), [market, setMarket] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const generation = useRef<AbortController | null>(null);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<Ga4Period | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const selected = params.get("page"); if (MANAGED_SEO_PAGES.some((page) => page.key === selected)) setKey(selected!);
+    const language = params.get("locale"); if (language && isValidLocale(language)) setLocale(language);
+    if (params.get("ga4") === "1") try { setAnalyticsPeriod(parseGa4Period({range: params.get("range"), startDate: params.get("startDate"), endDate: params.get("endDate")})); } catch { setMessage(dt("فترة التحليلات غير صالحة. اختر فترة جديدة.")); }
+  }, []);
   const dirty = Boolean(document && JSON.stringify(draft) !== JSON.stringify(document.overrides));
   useDashboardUnsavedChanges(dirty);
   useEffect(() => {
@@ -50,7 +60,7 @@ export function PageSeoEditor() {
       while (cursor < targets.length && !controller.signal.aborted) {
         const target = targets[cursor++];
         try {
-          const result = await api<Proposal>("/api/admin/page-seo/" + key, { method: "POST", signal: controller.signal, body: JSON.stringify({ locale: target, revision: document.revision, market }) });
+          const result = await api<Proposal>("/api/admin/page-seo/" + key, { method: "POST", signal: controller.signal, body: JSON.stringify({ locale: target, revision: document.revision, market, ...(analyticsPeriod ? {analyticsPeriod} : {}) }) });
           if (!controller.signal.aborted) setProposals((previous) => ({ ...previous, [target]: result }));
         } catch (error) {
           if (!controller.signal.aborted) setErrors((previous) => ({ ...previous, [target]: error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح") }));
@@ -74,6 +84,7 @@ export function PageSeoEditor() {
     <label className="block space-y-2"><span>{dt("الصفحة")}</span><select value={key} disabled={Boolean(busy)} className="w-full rounded border bg-white p-3" onChange={(event) => { if (!dirty || window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) setKey(event.target.value); }}>{MANAGED_SEO_PAGES.map((page) => <option key={page.key} value={page.key}>{dt(page.label)}</option>)}</select></label>
     {message ? <p role="status" className="rounded border bg-white p-3">{message}</p> : null}
     <div className="flex flex-wrap gap-2">{SUPPORTED_LOCALES.map((code) => <button type="button" key={code} aria-pressed={locale === code} onClick={() => setLocale(code)} className={"rounded border px-3 py-2 text-sm " + (locale === code ? "bg-brand text-white" : "bg-white")}>{LOCALES[code].nativeLabel}</button>)}</div>
+    <Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} />
     <div className="flex flex-wrap gap-3 rounded border bg-white p-4">
       <label className="flex-1 text-sm">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
       <button type="button" disabled={!document || Boolean(busy) || dirty} onClick={() => void suggest(false)} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>

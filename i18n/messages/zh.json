@@ -751,6 +751,10 @@
     "landscapeVersion": "正式版本（横向）"
   },
   "common": {
+    "quickDestinationRequired": "请先选择捐赠目标再继续。",
+    "quickDestinationUnavailable": "此捐赠目标暂不可用。请选择其他项目并重试。",
+    "quickDonationChecking": "正在检查…",
+
     "donate": "捐赠",
     "addToCart": "加入捐赠清单",
     "zakatCalculator": "天课计算器",

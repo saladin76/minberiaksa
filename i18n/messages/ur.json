@@ -751,6 +751,10 @@
     "landscapeVersion": "منظور شدہ نسخہ (افقی)"
   },
   "common": {
+    "quickDestinationRequired": "آگے بڑھنے سے پہلے عطیے کی منزل منتخب کریں۔",
+    "quickDestinationUnavailable": "یہ عطیے کی منزل فی الحال دستیاب نہیں۔ کوئی دوسرا منصوبہ منتخب کر کے دوبارہ کوشش کریں۔",
+    "quickDonationChecking": "جانچ جاری ہے…",
+
     "donate": "ابھی عطیہ دیں",
     "addToCart": "ٹوکری میں شامل کریں",
     "zakatCalculator": "زکوٰۃ کیلکولیٹر",

@@ -1790,6 +1790,10 @@
     "landscapeVersion": "Versi resmi (lanskap)"
   },
   "common": {
+    "quickDestinationRequired": "Pilih tujuan donasi sebelum melanjutkan.",
+    "quickDestinationUnavailable": "Tujuan donasi ini tidak tersedia. Pilih proyek lain dan coba lagi.",
+    "quickDonationChecking": "Memeriksa…",
+
     "donate": "Donasi Sekarang",
     "addToCart": "Tambah ke Keranjang",
     "zakatCalculator": "Kalkulator Zakat",

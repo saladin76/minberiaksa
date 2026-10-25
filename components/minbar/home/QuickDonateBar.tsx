@@ -190,7 +190,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
      its own overflow) or the sheet. The content carries `mia-scope` so the
      site's tokens and fonts reach it outside the page's own tree. */
   const destinationSelect = (id: string) => (
-    <SelectPrimitive.Root value={destination} onValueChange={setDestination} dir={dir}>
+    <SelectPrimitive.Root value={destination} disabled={checking} onValueChange={(value) => {setDestination(value); setDestinationError("");}} dir={dir}>
       <SelectPrimitive.Trigger id={`${id}-destination`} className="mia-sel-trigger" aria-label={tHome("projectSelectLabel")}>
         <SelectPrimitive.Value>{destinationLabel || tHome("projectSelectLabel")}</SelectPrimitive.Value>
         <SelectPrimitive.Icon className="mia-sel-icon">
@@ -301,7 +301,7 @@ export default function QuickDonateBar({ config, projects }: { config: QuickDona
       data-dock-mobile={config.dockMobile ? "true" : "false"}
       aria-label={title}
     >
-      {(!destination || destinationError) && <p role="status" className="px-4 py-2 text-center text-sm">{destinationError || t("quickDestinationRequired")}</p>}
+      {(!destination || destinationError) && <p role="status" className="mx-auto mb-2 max-w-5xl rounded-lg border border-amber-200 bg-white px-4 py-2 text-center text-sm text-amber-900 shadow">{destinationError || t("quickDestinationRequired")}</p>}
       <div className="mia-qb-wrap">
         <div className="mia-qb-desk">
           <div aria-hidden="true" data-aqsa-pattern="" className="mia-qb-pattern" />
