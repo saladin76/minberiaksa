@@ -44,6 +44,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { toast } from 'react-hot-toast';
 import DonationCountryFlag from '@/components/DonationCountryFlag';
 import { dt } from "@/lib/dashboard/i18n";
+import DonationDetailsDialog, { type DonationDetailsTarget } from '@/components/dashboard/DonationDetailsDialog';
 
 /**
  * Sorts by one column, with absent values last in either direction.
@@ -89,6 +90,7 @@ interface Donation {
     image: string;
   };
   type: 'ONE_TIME' | 'MONTHLY';
+  frequency?: 'DAILY' | 'FRIDAY' | 'MONTHLY' | null;
   status: 'ACTIVE' | 'INACTIVE';
   paymentMethod: string | null;
   createdAt: string;
@@ -101,6 +103,16 @@ interface Donation {
     amount: number;
     amountUSD: number;
   }[];
+}
+
+function donationTypeLabel(donation: Donation) {
+  if (donation.type === 'ONE_TIME') return dt("مرة واحدة");
+  switch (donation.frequency) {
+    case 'DAILY': return dt("يومي");
+    case 'FRIDAY': return dt("أسبوعياً");
+    case 'MONTHLY': return dt("شهري");
+    default: return dt("تبرع دوري");
+  }
 }
 
 export default function DonationsPage() {
@@ -116,6 +128,7 @@ export default function DonationsPage() {
   const [itemsPerPage] = useState(10);
   const [selectedDonations, setSelectedDonations] = useState<string[]>([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [viewingDonation, setViewingDonation] = useState<DonationDetailsTarget | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -375,7 +388,7 @@ export default function DonationsPage() {
                 </TableCell>
                 <TableCell>{donation.totalAmount.toLocaleString()}</TableCell>
                 <TableCell>{donation.currency}</TableCell>
-                <TableCell>{donation.type === 'ONE_TIME' ? dt("مرة واحدة") : dt("شهري")}</TableCell>
+                <TableCell>{donationTypeLabel(donation)}</TableCell>
                 <TableCell>{donation.paymentMethod || '—'}</TableCell>
                 <TableCell>
                   {format(new Date(donation.createdAt), 'PPP', { locale: dashDateLocale() })}
@@ -394,13 +407,13 @@ export default function DonationsPage() {
                   <div className="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={dt("إجراءات")}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>{dt("إجراءات")}</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => router.push(`/donations/${donation.id}`)}>
+                        <DropdownMenuItem onClick={() => setViewingDonation(donation)}>
                           <Eye className="w-4 h-4 me-2" />
                           {dt("عرض")}</DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -445,6 +458,12 @@ export default function DonationsPage() {
           </div>
         </div>
       </Card>
+      <DonationDetailsDialog
+        open={viewingDonation !== null}
+        onOpenChange={(open) => { if (!open) setViewingDonation(null); }}
+        mode="payment"
+        donation={viewingDonation}
+      />
     </div>
   );
 }
