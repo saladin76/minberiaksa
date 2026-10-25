@@ -8,6 +8,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 const exec = promisify(execFile);
 
+async function isolatedCronScript(dir: string) {
+  await mkdir(join(dir, "scripts"));
+  const script = join(dir, "scripts/vps-cron-run.sh");
+  await copyFile("scripts/vps-cron-run.sh", script);
+  return script;
+}
+
 test("a maintenance hold prevents requests and removing it restores scheduled execution", async () => {
   const dir = await mkdtemp(join(tmpdir(), "cron-hold-"));
   let requests = 0;
@@ -15,9 +22,7 @@ test("a maintenance hold prevents requests and removing it restores scheduled ex
     requests++; response.writeHead(200); response.end("ok");
   });
   try {
-    await mkdir(join(dir, "scripts"));
-    const script = join(dir, "scripts/vps-cron-run.sh");
-    await copyFile("scripts/vps-cron-run.sh", script);
+    const script = await isolatedCronScript(dir);
     await writeFile(join(dir, ".cron-maintenance-hold"), "");
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const env = { ...process.env, CRON_BASE_URL: `http://127.0.0.1:${(server.address() as { port: number }).port}`, CRON_SECRET: "fixture-secret", CRON_LOG: join(dir, "cron.log") };
@@ -44,9 +49,10 @@ for (const host of ["127.0.0.1", "::1"]) {
       response.writeHead(200); response.end("ok");
     });
     try {
+      const script = await isolatedCronScript(dir);
       await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, host, resolve); });
       const port = (server.address() as { port: number }).port;
-      await exec("bash", ["scripts/vps-cron-run.sh", `/api/cron/fixture-${host.replace(/:/g, "_")}`], {
+      await exec("bash", [script, `/api/cron/fixture-${host.replace(/:/g, "_")}`], {
         env: { ...process.env, PORT: String(port), CRON_BASE_URL: "", CRON_SECRET: "fixture-secret", CRON_LOG: join(dir, "cron.log"), http_proxy: "http://127.0.0.1:1", ALL_PROXY: "http://127.0.0.1:1" },
       });
       assert.equal(requests, 1);
@@ -59,8 +65,9 @@ test("an HTTP error is logged without retrying an accepted cron request", async 
   const dir = await mkdtemp(join(tmpdir(), "cron-failure-")); let requests = 0;
   const server = http.createServer((_request, response) => { requests++; response.writeHead(503); response.end("temporarily unavailable"); });
   try {
+    const script = await isolatedCronScript(dir);
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    await assert.rejects(exec("bash", ["scripts/vps-cron-run.sh", "/api/cron/fixture-error"], { env: {
+    await assert.rejects(exec("bash", [script, "/api/cron/fixture-error"], { env: {
       ...process.env, PORT: String((server.address() as {port: number}).port), CRON_BASE_URL: "", CRON_SECRET: "fixture-secret", CRON_LOG: join(dir, "cron.log"),
     } }));
     assert.equal(requests, 1); assert.match(await readFile(join(dir, "cron.log"), "utf8"), /HTTP 503 temporarily unavailable/);
