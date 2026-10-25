@@ -1,3 +1,4 @@
+import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -195,15 +196,15 @@ export async function POST(request: NextRequest) {
     /* Where the donor came from (UTM, click ids, landing page) as the browser
        recorded it, whitelisted the same way as `POST /api/donations`. The
        dashboard's "مصدر التبرع" column and the ad conversion events read it. */
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const clientIp = forwardedFor?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || undefined;
+    const clientIp = getTrackingClientIp(request.headers);
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || undefined;
     const adAttribution = sanitizeDonationAttribution({
       ...(body.attribution && typeof body.attribution === "object" && !Array.isArray(body.attribution)
         ? (body.attribution as Record<string, unknown>)
         : {}),
-      ...(userAgent ? { user_agent: userAgent } : {}),
-      ...(clientIp ? { client_ip: clientIp } : {}),
+      user_agent: userAgent,
+      client_ip: clientIp,
+      client_ip_address: undefined,
     }) as Record<string, unknown> | undefined;
     const donationAttribution = concierge || conciergeTouch || adAttribution
       ? ({

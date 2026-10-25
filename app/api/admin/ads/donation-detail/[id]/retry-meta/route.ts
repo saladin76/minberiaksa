@@ -23,15 +23,15 @@ export async function POST(
   });
   if (!donation) return NextResponse.json({ ok: false, error: "Donation not found" }, { status: 404 });
   if (donation.status !== "PAID" || donation.paidAt == null) {
-    return NextResponse.json({ ok: false, error: "لا يمكن إرسال Donate قبل تأكيد نجاح التبرع.", code: "DONATION_NOT_PAID" }, { status: 409 });
+    return NextResponse.json({ ok: false, error: "لا يمكن إرسال أحداث التحويل قبل تأكيد نجاح التبرع.", code: "DONATION_NOT_PAID" }, { status: 409 });
   }
   if (donation.conversionEventsSentAt != null) {
-    return NextResponse.json({ ok: false, error: "تم إرسال حدث Donate لهذا التبرع بالفعل.", code: "DONATE_ALREADY_SENT" }, { status: 409 });
+    return NextResponse.json({ ok: false, error: "تم إرسال أحداث التحويل لهذا التبرع بالفعل.", code: "DONATE_ALREADY_SENT" }, { status: 409 });
   }
 
   const result = await sendDonationServerConversions(id, { force: true, includeGa4: false });
   if (!result.ok) {
-    const detail = result.error ?? result.reason ?? "Meta did not accept the Donate event";
+    const detail = result.error ?? result.reason ?? "Meta did not accept all paid conversion events";
     return NextResponse.json(
       { ok: false, error: detail, code: result.skipped ? "META_CAPI_RETRY_SKIPPED" : "META_CAPI_RETRY_FAILED", result },
       { status: result.skipped ? 409 : 502 },
@@ -42,8 +42,8 @@ export async function POST(
   await writeAuditLog({
     ...actor,
     action: "ads.donation.meta-capi-donate.retried",
-    messageAr: `أعاد ${actor.actorName ?? "المشرف"} إرسال حدث Donate إلى Meta للتبرع ${id}`,
-    messageEn: `Meta CAPI Donate retried for donation ${id}`,
+    messageAr: `أعاد ${actor.actorName ?? "المشرف"} إرسال أحداث التحويل الناقصة إلى Meta للتبرع ${id}`,
+    messageEn: `Missing Meta CAPI paid events retried for donation ${id}`,
     entityType: "Donation",
     entityId: id,
     metadata: { eventId: result.event_id ?? null, platform: "META", result: "SENT" },

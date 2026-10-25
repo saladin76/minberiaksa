@@ -9,6 +9,7 @@ import {
   ATTRIBUTION_STATUS_LABEL_AR,
 } from "@/lib/tracking/tracking-event-contract";
 import { PLATFORM_LABEL_AR } from "@/lib/attribution/detect-source";
+import { getDonationConversionTimeline } from "@/lib/tracking/conversion-timeline-service";
 import { stableDonateEventId } from "@/lib/tracking/stable-event-id";
 
 export const dynamic = "force-dynamic";
@@ -170,15 +171,16 @@ export async function GET(
       },
     });
 
-    // Heuristic: infer per-platform event success from the existing flags.
-    // We don't yet have a dedicated ConversionEvent table  when one is added
-    // by the Tracking Control Center phase, this block reads from it.
+    const timeline = await getDonationConversionTimeline(donation.id);
+    const sent = (platform: string, channel: string, eventName: string) => timeline.events.some(event => event.platform === platform && event.channel === channel && event.eventName === eventName && event.status === "SENT");
+    const legacyDonateSent = !timeline.events.some(event => event.platform === "META" && event.eventName === "Donate") && !!donation.conversionEventsSentAt;
     const trackingEvents = {
-      metaBrowserDonate: resolved.platform === "meta" ? null : null,
-      metaCapiDonate: !!donation.conversionEventsSentAt && resolved.platform === "meta",
-      metaCapiDonateFailed:
-        !!donation.conversionFailedEventsSentAt && resolved.platform === "meta",
-      ga4Purchase: !!donation.conversionEventsSentAt,
+      metaBrowserDonate: sent("META", "browser", "Donate"),
+      metaCapiDonate: sent("META", "server", "Donate") || legacyDonateSent,
+      metaBrowserPurchase: sent("META", "browser", "Purchase"),
+      metaCapiPurchase: sent("META", "server", "Purchase"),
+      metaCapiDonateFailed: sent("META", "server", "DonateFailed") || !!donation.conversionFailedEventsSentAt,
+      ga4Purchase: sent("GA4", "server", "purchase"),
       googleAdsConversion: resolved.platform === "google" ? null : null,
       tiktokEvent: resolved.platform === "tiktok" ? null : null,
       xEvent: resolved.platform === "x" ? null : null,

@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as schedule from "../../lib/donations/recurring-schedule";
 import * as albaraka from "../../lib/albaraka";
+import * as clientIp from "../../lib/tracking/client-ip";
 import * as gifts from "../../lib/donations/gift-order";
 import { toStripeMinorUnits } from "../../lib/stripe-amount";
 
@@ -62,6 +63,7 @@ function fixture(mainGateway = "ALBARAKA") {
   };
   prisma.$transaction = async (operation: unknown) => typeof operation === "function" ? operation(prisma) : Promise.all(operation as Promise<unknown>[]);
   const dependencies: Row = {
+    "@/lib/tracking/client-ip": clientIp,
     "server-only": {}, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor", role: "DONOR", name: "Fixture" } }) },
     "@/lib/prisma": { prisma }, "@/lib/locales": { isValidLocale: () => true },
     "@/lib/referral-server": { resolveReferralId: async () => null },

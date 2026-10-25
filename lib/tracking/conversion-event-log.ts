@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ensureConversionEventIndexes } from "@/lib/tracking/conversion-event-indexes";
-import { rawCommand } from "@/lib/prisma-raw-command";
+import { rawCommand, firstBatch } from "@/lib/prisma-raw-command";
 
 export type ConversionPlatform = "META" | "GA4" | "GOOGLE_ADS" | "TIKTOK" | "X" | "VERCEL";
 export type ConversionChannel = "server" | "browser";
@@ -20,6 +20,29 @@ export interface RecordConversionEventInput {
   request?: unknown;
   response?: unknown;
   sentAt?: Date | null;
+}
+
+export async function getServerConversionState(platform: ConversionPlatform, eventId: string) {
+  const reply = await prisma.$runCommandRaw({ find: "ConversionEvent", filter: { platform, eventId, channel: "server" }, projection: { status: 1 }, limit: 1 });
+  return firstBatch(reply)[0]?.status as ConversionEventStatus | undefined;
+}
+
+/** Atomic lease plus the existing unique event index prevent concurrent webhook sends. */
+export async function claimServerConversion(input: Pick<RecordConversionEventInput, "donationId" | "eventId" | "eventName" | "platform">): Promise<boolean> {
+  if (!await ensureConversionEventIndexes()) throw new Error("Conversion event unique index unavailable");
+  try {
+    const reply = await prisma.$runCommandRaw(rawCommand({
+      findAndModify: "ConversionEvent",
+      query: { platform: input.platform, eventId: input.eventId, channel: "server", status: { $ne: "SENT" }, $or: [{ leaseUntilMs: { $exists: false } }, { leaseUntilMs: { $lte: Date.now() } }] },
+      update: { $set: { ...input, channel: "server", status: "PENDING", leaseUntilMs: Date.now() + 120_000, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date(), attempts: 0 } },
+      upsert: true, new: true,
+    }));
+    return !!(reply && typeof reply === "object" && "value" in reply && reply.value);
+  } catch (error) {
+    // An existing SENT/leased record fails the query and collides on the unique key.
+    if (/E11000|duplicate key/i.test(String(error))) return false;
+    throw error;
+  }
 }
 
 function addDefined(target: Record<string, unknown>, key: string, value: unknown) {
@@ -58,7 +81,8 @@ export async function recordConversionEvent(input: RecordConversionEventInput): 
         q: { platform: input.platform, eventId: input.eventId, channel: input.channel },
         u: {
           $set: setDoc,
-          $setOnInsert: { createdAt: now, attempts: 0 },
+          $unset: { leaseUntilMs: "", ...(!input.error ? { error: "" } : {}) },
+          $setOnInsert: { createdAt: now },
           $inc: { attempts: 1 },
         },
         upsert: true,

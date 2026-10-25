@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { donationAccess } from "@/lib/certificates/http";
 import { prisma } from "@/lib/prisma";
-import { metaDonationEventId } from "@/lib/tracking/canonical";
+import { metaDonationEventId, metaPurchaseEventId } from "@/lib/tracking/canonical";
 import { recordConversionEvent, type ConversionEventStatus, type ConversionPlatform } from "@/lib/tracking/conversion-event-log";
 
 export const runtime = "nodejs";
@@ -39,7 +40,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!platform || !PLATFORMS.has(platform)) return NextResponse.json({ ok: false, error: "invalid platform" }, { status: 400 });
   if (!STATUSES.has(status)) return NextResponse.json({ ok: false, error: "invalid status" }, { status: 400 });
 
-  const expectedEventId = metaDonationEventId(id, "success");
+  if (platform === "META" && !["Donate", "Purchase"].includes(eventName)) return NextResponse.json({ ok: false, error: "invalid Meta event" }, { status: 400 });
+  if (platform === "META" && !(await donationAccess(id, request.nextUrl.searchParams.get("t"))).allowed) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  const expectedEventId = platform === "META" && eventName === "Purchase" ? metaPurchaseEventId(id) : metaDonationEventId(id, "success");
   if (eventId !== expectedEventId) {
     return NextResponse.json({ ok: false, error: "event id mismatch", expectedEventId }, { status: 400 });
   }
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const receivedValue = num((body as Record<string, unknown>).value);
   const expectedValue = paidDonationValue(donation);
   const value = expectedValue > 0 ? expectedValue : (receivedValue ?? Number(donation.amountUSD ?? donation.amount ?? 0));
-  const currency = str((body as Record<string, unknown>).currency) ?? donation.currency ?? "USD";
+  const currency = (donation.currency || "USD").toUpperCase();
   const valueWasNormalized = receivedValue != null && Math.abs(receivedValue - value) > 0.01;
 
   if (donation.status !== "PAID" || donation.paidAt == null) {

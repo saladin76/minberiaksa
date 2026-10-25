@@ -1,3 +1,4 @@
+import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { POST as createCartDonation } from "@/app/api/cart/payment/route";
 import { isOrderType, isRecurringFrequency } from "@/lib/donations/recurring-schedule";
 import { NextRequest, NextResponse } from "next/server";
@@ -327,18 +328,15 @@ export async function POST(request: NextRequest) {
       }));
     }
     const session = await getServerSession(authOptions);
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const clientIp =
-      forwardedFor?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      undefined;
+    const clientIp = getTrackingClientIp(request.headers);
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || undefined;
     const attribution = sanitizeDonationAttribution({
       ...((body.attribution && typeof body.attribution === "object" && !Array.isArray(body.attribution)
         ? body.attribution
         : {}) as Record<string, unknown>),
-      ...(userAgent ? { user_agent: userAgent } : {}),
-      ...(clientIp ? { client_ip: clientIp } : {}),
+      user_agent: userAgent,
+      client_ip: clientIp,
+      client_ip_address: undefined,
     });
 
     const {
