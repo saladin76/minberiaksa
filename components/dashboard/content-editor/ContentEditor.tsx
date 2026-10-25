@@ -970,7 +970,7 @@ export function ContentEditor({ kind, id }: { kind: ContentKind; id: string }) {
           {["playlists", "courses"].includes(kind) && section === "media" ? (
             <MediaCollectionEditor kind={kind as "playlists" | "courses"} values={Array.isArray(settingsDraft.videos) ? settingsDraft.videos as ContentRecord[] : []} onChange={(videos) => setSettingsDraft((previous) => ({ ...previous, videos }))} />
           ) : null}
-          {section === "seo" && <Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} />}
+          {section === "seo" && ["campaigns", "categories", "blog", "super-categories"].includes(kind) && <Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} />}
           {section === "seo" ? (
             <SeoWorkspace
               onUploadingChange={onUploadingChange}

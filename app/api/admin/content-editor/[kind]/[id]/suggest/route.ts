@@ -1,7 +1,6 @@
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
 import { loadGa4DashboardReport } from "@/lib/marketing/ga4-server";
-import { ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
-import { slugFor } from "@/lib/minbar/routes";
+import { ga4ContentPagePath, ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
 import { faqTranslationFields, translatedFaq } from "@/lib/content-editor/faq";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
 import { NextRequest, NextResponse } from "next/server";
@@ -143,8 +142,9 @@ export async function POST(
       let period; try { period = parseGa4Period(body.analyticsPeriod); } catch { return NextResponse.json({ error: "فترة GA4 غير صالحة" }, { status: 400 }); }
       const data = await loadGa4DashboardReport(period);
       const slug = documentFor(kind, row).slugs[body.locale];
-      const prefix = kind === "categories" ? "category" : kind === "blog" ? slugFor("article", body.locale) : kind === "super-categories" ? "" : slugFor("projectDetail", body.locale);
-      analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}/${prefix ? prefix + "/" : ""}${slug}`);
+      const pagePath = ga4ContentPagePath(kind, body.locale, slug);
+      if (!pagePath) return NextResponse.json({error: "GA4_PAGE_UNAVAILABLE"}, {status: 400});
+      analyticsEvidence = ga4SeoEvidence(data.report, period, pagePath);
     }
     const generated = await generateResearchedSeo({
       type: kind === "blog" ? "blog" : kind === "categories" || kind === "super-categories" ? "category" : "campaign",

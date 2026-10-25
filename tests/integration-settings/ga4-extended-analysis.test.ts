@@ -4,7 +4,7 @@ import { parseGa4Period, ga4DateRange, ga4PeriodKey } from "../../lib/marketing/
 import { fetchGa4Extended } from "../../lib/marketing/ga4-extended";
 import { analyzeGa4Report, ga4AnalysisEvidence } from "../../lib/marketing/ga4-analysis";
 import { parseGa4BatchResponse } from "../../lib/marketing/ga4-reporting";
-import { ga4ManagedSeoLink, ga4SeoEvidence } from "../../lib/marketing/ga4-seo";
+import { ga4ContentPagePath, ga4ManagedSeoLink, ga4SeoEvidence } from "../../lib/marketing/ga4-seo";
 
 test("today, yesterday and bounded custom periods have stable, distinct cache keys", () => {
   assert.deepEqual(ga4DateRange("today"), {startDate: "today", endDate: "today"});
@@ -55,4 +55,12 @@ test("SEO handoff retains the exact date period and never turns missing top rows
   assert.equal(ga4ManagedSeoLink("https://untrusted.example/ar", period), null);
   const context = ga4SeoEvidence(fixture(), period, "/ar/missing");
   assert.equal(context.pages.length, 0); assert.match(context.availability.note, /not proof of zero traffic/);
+});
+
+
+test("programme SEO evidence uses the same public route as project and programme pages", () => {
+  assert.equal(ga4ContentPagePath("super-categories", "ar", "ibadan-lana"), "/ar/bagislar/ibadan-lana");
+  assert.equal(ga4ContentPagePath("campaigns", "tr", "water"), "/tr/bagislar/water");
+  assert.equal(ga4ContentPagePath("categories", "en", "gaza"), "/en/category/gaza");
+  assert.equal(ga4ContentPagePath("videos", "ar", "clip"), null);
 });

@@ -1,6 +1,7 @@
 import type { Ga4DashboardReport } from "./ga4-reporting";
 import type { Ga4Period } from "./ga4-period";
 import { MANAGED_SEO_PAGES, managedPagePath } from "../content-editor/page-seo-registry";
+import { slugFor } from "../minbar/routes";
 import { SUPPORTED_LOCALES } from "../locales";
 
 export function ga4SeoEvidence(report: Ga4DashboardReport, period: Ga4Period, pagePath: string) {
@@ -20,4 +21,11 @@ export function ga4ManagedSeoLink(path: string, period: Ga4Period) {
     if (normalized === `/${locale}${managedPagePath(page.key, locale)}`) return `/dashboard/seo-pages?${new URLSearchParams({ page: page.key, locale, ga4: "1", ...period })}`;
   }
   return null;
+}
+
+
+/** Only records with a dedicated public page can receive page-scoped evidence. */
+export function ga4ContentPagePath(kind: string, locale: string, slug: string): string | null {
+  const prefix = kind === "categories" ? "category" : kind === "blog" ? slugFor("article", locale) : kind === "campaigns" || kind === "super-categories" ? slugFor("projectDetail", locale) : null;
+  return prefix && slug ? `/${locale}/${prefix}/${slug}` : null;
 }
