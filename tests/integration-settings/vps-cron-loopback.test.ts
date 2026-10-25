@@ -3,10 +3,36 @@ import test from "node:test";
 import http from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 const exec = promisify(execFile);
+
+test("a maintenance hold prevents requests and removing it restores scheduled execution", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "cron-hold-"));
+  let requests = 0;
+  const server = http.createServer((_request, response) => {
+    requests++; response.writeHead(200); response.end("ok");
+  });
+  try {
+    await mkdir(join(dir, "scripts"));
+    const script = join(dir, "scripts/vps-cron-run.sh");
+    await copyFile("scripts/vps-cron-run.sh", script);
+    await writeFile(join(dir, ".cron-maintenance-hold"), "");
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const env = { ...process.env, CRON_BASE_URL: `http://127.0.0.1:${(server.address() as { port: number }).port}`, CRON_SECRET: "fixture-secret", CRON_LOG: join(dir, "cron.log") };
+    const held = await exec("bash", [script, "/api/cron/fixture-hold"], { env });
+    assert.match(held.stdout, /maintenance hold is active/);
+    assert.equal(requests, 0);
+    await rm(join(dir, ".cron-maintenance-hold"));
+    await exec("bash", [script, "/api/cron/fixture-hold"], { env });
+    assert.equal(requests, 1);
+    assert.match(await readFile(join(dir, "cron.log"), "utf8"), /HTTP 200/);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
 for (const host of ["127.0.0.1", "::1"]) {
   test(`cron reaches ${host} exactly once using the default localhost URL`, async () => {

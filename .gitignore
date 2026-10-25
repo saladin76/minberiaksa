@@ -22,6 +22,7 @@
 
 # production
 /build
+/.cron-maintenance-hold
 
 # misc
 .DS_Store

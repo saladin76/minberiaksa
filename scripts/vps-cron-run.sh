@@ -18,6 +18,12 @@ set -uo pipefail
 
 ROUTE="${1:?usage: vps-cron-run.sh /api/cron/<name>}"
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Keep scheduled work paused across code/build swaps during a reviewed release.
+# Removing this local marker resumes the normal schedules; it never runs catch-up.
+if [ -f "$APP_DIR/.cron-maintenance-hold" ]; then
+  printf '%s\n' 'SKIPPED: cron maintenance hold is active'
+  exit 0
+fi
 BASE="${CRON_BASE_URL:-http://localhost:${PORT:-3000}}"
 LOG="${CRON_LOG:-/var/log/minberiaksa-cron.log}"
 
