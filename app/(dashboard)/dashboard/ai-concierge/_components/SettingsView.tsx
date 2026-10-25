@@ -71,7 +71,7 @@ export function SettingsView() {
                 <p className="text-[12px] text-slate-500">{dt("ثوانٍ من فتح الصفحة (0 = فورًا)")}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Input type="number" min={0} max={120} value={form.teaserDelaySeconds} onChange={(e) => set("teaserDelaySeconds", Math.max(0, Math.min(120, Number(e.target.value) || 0)))} className="h-9 w-20 text-center" disabled={!form.enabled || !form.teaserEnabled} />
+                <Input aria-label={dt("تظهر الفقاعة بعد")} type="number" min={0} max={120} value={form.teaserDelaySeconds} onChange={(e) => set("teaserDelaySeconds", Math.max(0, Math.min(120, Number(e.target.value) || 0)))} className="h-9 w-20 text-center" disabled={!form.enabled || !form.teaserEnabled} />
                 <span className="text-[12px] text-slate-500">{dt("ثانية")}</span>
               </div>
             </div>
@@ -86,9 +86,9 @@ export function SettingsView() {
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard title={dt("الذكاء الاصطناعي")} description={dt("النموذج الذي يكتب الردود على الرسائل الحرة")} icon={Bot}>
           <div className={cn("mb-3 rounded-lg px-3 py-2.5 text-[12.5px] leading-6", data.provider.ready ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
-            <b>{data.provider.ready ? dt("متصل  {0}", [data.provider.model]) : dt("غير متصل")}</b>
+            <b>{data.provider.ready ? dt("جاهز") : data.provider.configured ? dt("معطّل") : dt("غير مهيأ")}</b>
             <br />
-            {data.provider.reason}
+            {data.provider.model ? <span dir="ltr">{data.provider.model}</span> : null}
             {!data.provider.ready && <span className="block text-[11.5px] opacity-80">{dt("يُضبط من متغيرات الخادم: OPENAI_API_KEY و AI_CORE_ENABLE_EXTERNAL_CALLS=true (و AI_CORE_OPENAI_MODEL اختياريًا).")}</span>}
           </div>
           <div className="divide-y divide-slate-100">
@@ -107,7 +107,7 @@ export function SettingsView() {
                 <p className="text-[12px] text-slate-500">{dt("تبرع تمّ خلال هذه المدة بعد المحادثة يُحسب «غير مباشر»")}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Input type="number" min={1} max={90} value={form.attributionWindowDays} onChange={(e) => set("attributionWindowDays", Math.max(1, Math.min(90, Number(e.target.value) || 1)))} className="h-9 w-20 text-center" />
+                <Input aria-label={dt("نافذة الإسناد غير المباشر")} type="number" min={1} max={90} value={form.attributionWindowDays} onChange={(e) => set("attributionWindowDays", Math.max(1, Math.min(90, Number(e.target.value) || 1)))} className="h-9 w-20 text-center" />
                 <span className="text-[12px] text-slate-500">{dt("يوم")}</span>
               </div>
             </div>
@@ -123,7 +123,7 @@ export function SettingsView() {
         description={dt("حقائق وتوجيهات يستخدمها المساعد في إجاباته، سطر لكل ملاحظة. مثال: «حملة الشتاء لغزة هي الأولوية هذا الشهر» أو «الإيصال يصل بالبريد خلال 24 ساعة». لا تتجاوز قواعد المساعد الأساسية.")}
         icon={MessageSquareText}
       >
-        <Textarea value={form.teamNotes} onChange={(e) => set("teamNotes", e.target.value.slice(0, TEAM_NOTES_MAX))} rows={8} className="text-[13px] leading-6" placeholder={dt("اكتب هنا… (كل سطر ملاحظة مستقلة)")} />
+        <Textarea aria-label={dt("ملاحظات الفريق للمساعد")} value={form.teamNotes} onChange={(e) => set("teamNotes", e.target.value.slice(0, TEAM_NOTES_MAX))} rows={8} className="text-[13px] leading-6" placeholder={dt("اكتب هنا… (كل سطر ملاحظة مستقلة)")} />
         <p className="mt-1 text-end text-[11px] text-slate-400">
           {num(form.teamNotes.length)} / {num(TEAM_NOTES_MAX)}
         </p>
