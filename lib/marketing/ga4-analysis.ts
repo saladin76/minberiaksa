@@ -81,7 +81,8 @@ export async function analyzeGa4Report(options: { report: Ga4DashboardReport; pe
   // Reject an English response to an Arabic request instead of displaying false success.
   const narratives = [parsed.summary, ...parsed.limitations, ...parsed.opportunities.flatMap(row => [row.title, row.finding, row.action])];
   if (options.locale === "ar" && narratives.some(text => {
-    const letters = [...text].filter(letter => /\p{L}/u.test(letter));
+    const narrative = text.replace(/https?:\/\/\S+|\/\S+/g, "");
+    const letters = [...narrative].filter(letter => /\p{L}/u.test(letter));
     const arabic = letters.filter(letter => /\p{Script=Arabic}/u.test(letter)).length;
     return arabic === 0 || arabic < letters.length * 0.4;
   })) throw new OpenAiResponseError("AI_INVALID_ANALYSIS");

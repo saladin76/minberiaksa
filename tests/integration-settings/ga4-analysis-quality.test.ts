@@ -72,3 +72,10 @@ test("site-search report filters search events and missing terms before ranking"
   assert.equal(searchChecked, true);
   assert.deepEqual(result.siteSearch?.rows.map(row => row.dimensions[0]), ["غزة"]);
 });
+
+test("public paths do not make an Arabic narrative fail the language check", async () => {
+  const reply = responseFixture();
+  reply.opportunities[0].title = "مراجعة /ar/a-long-public-project-name-with-many-english-letters";
+  const result = await analyze(reply);
+  assert.equal(result.analysis.opportunities.length, 1);
+});
