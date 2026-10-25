@@ -1,5 +1,7 @@
 "use client";
 
+import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
+
 import Image from "next/image";
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
@@ -551,6 +553,7 @@ const CartPaymentDialog = ({
           if (!res.data?.success) { onClose(); return; }
           targetDonationId = res.data.donation.id as string;
           targetToken = (res.data.donation.accessToken as string | null | undefined) ?? null;
+          rememberGuestDonationAccess(targetDonationId, targetToken);
 
           const intentRes = await axios.post("/api/stripe/charge", { donationId: targetDonationId, locale });
           if (intentRes.data.error) {
@@ -598,6 +601,7 @@ const CartPaymentDialog = ({
         if (!res.data?.success) { onClose(); return; }
         const donationId = res.data.donation.id as string;
         const donationToken = (res.data.donation.accessToken as string | null | undefined) ?? null;
+        rememberGuestDonationAccess(donationId, donationToken);
         const newPan = cardDetails.cardNumber.replace(/\s/g, "");
 
         // Save new card fire-and-forget
@@ -713,7 +717,7 @@ const CartPaymentDialog = ({
         payforPollRef.current = setInterval(async () => {
           polls++;
           try {
-            const check = await fetch(`/api/donations/${donationId}`);
+            const check = await fetch(withDonationToken(`/api/donations/${donationId}`, donationToken));
             if (!check.ok) return;
             const data = await check.json();
 

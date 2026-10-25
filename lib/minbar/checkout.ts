@@ -1,4 +1,5 @@
 import type { MinbarCartItem } from "./cart";
+import { rememberGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
@@ -319,6 +320,9 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
   if (!response.ok || !payload?.donation?.id) {
     throw new OrderRejectedError(payload?.error || "order-failed", response.status);
   }
+
+  // Preserve the server-issued read credential before a payment redirect.
+  rememberGuestDonationAccess(payload.donation.id, payload.donation.accessToken);
 
   return {
     id: payload.donation.id,

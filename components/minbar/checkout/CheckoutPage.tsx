@@ -387,6 +387,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         guest: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
       });
       donationId = donation.id;
+      if (method !== "bank") rememberCheckoutAttempt(donation.id);
 
       if (method === "bank") {
         /* Nothing is charged. The basket is cleared because the order exists,
@@ -404,7 +405,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
            the bank rails: the order exists, and a donor coming back from
            PayPal must not find it ready to be paid again. */
         const approveUrl = await startPayPalPayment(donation.id, locale, donation.accessToken);
-        rememberCheckoutAttempt(donation.id);
         clearCart();
         window.location.assign(approveUrl);
         return;
@@ -468,7 +468,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
          sitting in their basket ready to be paid twice. */
       /* Kept aside under this order, so a declined donor can retry the same
          basket from the failure page. */
-      rememberCheckoutAttempt(donation.id);
       clearCart();
       submitGatewayForm(form, browserFields);
     } catch (cause) {
