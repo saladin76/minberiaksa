@@ -24,7 +24,7 @@ const entry = [
 ].join("\n");
 const result = await build({stdin:{contents:entry,loader:"tsx",resolveDir:process.cwd()},bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"test"'},plugins:[{
   name:"fixture-next-link",setup(builder){
-    builder.onResolve({filter:/^next\\/link$/},()=>({path:"next-link",namespace:"fixture"}));
+    builder.onResolve({filter:new RegExp("^next/link$")},()=>({path:"next-link",namespace:"fixture"}));
     builder.onLoad({filter:/.*/,namespace:"fixture"},()=>({contents:'import React from "react";export default function Link(p){return React.createElement("a",p,p.children)}',loader:"js",resolveDir:process.cwd()}));
   },
 }]});
