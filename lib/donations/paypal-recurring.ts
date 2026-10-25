@@ -83,6 +83,7 @@ export async function chargeDuePayPalSubscriptions(options: { now?: Date; dryRun
     where: {
       provider: "PAYPAL",
       status: "ACTIVE",
+      lastBillingDate: { not: null },
       paypalVaultId: { not: null },
       nextBillingDate: { lte: now },
     },

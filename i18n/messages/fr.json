@@ -1733,7 +1733,8 @@
     "recipientWhatsapp": "Numéro WhatsApp du destinataire",
     "bankTransferUploadNote": "Après le virement, vous téléverserez le reçu ou l'avis de virement sur la page suivante. Votre don est confirmé une fois que notre équipe financière l'a rapproché du compte.",
     "ctaBankContinue": "Continuer  envoyer le reçu du virement",
-    "itemsUnavailable": "Ces éléments ne peuvent pas être réglés : {items}. Retirez-les de votre panier ou choisissez un projet précis, puis réessayez."
+    "itemsUnavailable": "Ces éléments ne peuvent pas être réglés : {items}. Retirez-les de votre panier ou choisissez un projet précis, puis réessayez.",
+    "recurringCardUnavailable": "Les dons récurrents par carte sont actuellement indisponibles. Veuillez réessayer plus tard."
   },
   "certificates": {
     "certNoLabel": "N° du Certificat",
@@ -1793,7 +1794,6 @@
     "quickDestinationRequired": "Choisissez une destination pour le don avant de continuer.",
     "quickDestinationUnavailable": "Cette destination est indisponible. Choisissez un autre projet et réessayez.",
     "quickDonationChecking": "Vérification…",
-
     "donate": "Faire un Don",
     "addToCart": "Ajouter au Panier",
     "zakatCalculator": "Calculateur de Zakat",

@@ -694,7 +694,8 @@
     "recipientWhatsapp": "Nombor WhatsApp penerima",
     "itemsUnavailable": "Item berikut tidak boleh dibayar: {items}. Buang dari bakul atau pilih projek tertentu, kemudian cuba lagi.",
     "bankTransferUploadNote": "Selepas anda memindahkan, anda akan memuat naik resit atau notis pemindahan di halaman seterusnya. Sumbangan anda disahkan setelah pasukan kewangan kami memadankannya dengan akaun.",
-    "ctaBankContinue": "Teruskan muat naik resit pemindahan"
+    "ctaBankContinue": "Teruskan muat naik resit pemindahan",
+    "recurringCardUnavailable": "Derma berulang melalui kad tidak tersedia buat masa ini. Sila cuba lagi kemudian."
   },
   "certificates": {
     "certNoLabel": "No. sijil",
@@ -754,7 +755,6 @@
     "quickDestinationRequired": "Pilih destinasi sumbangan sebelum meneruskan.",
     "quickDestinationUnavailable": "Destinasi sumbangan ini tidak tersedia. Pilih projek lain dan cuba lagi.",
     "quickDonationChecking": "Sedang menyemak…",
-
     "donate": "Sumbang",
     "addToCart": "Tambah ke Troli",
     "zakatCalculator": "Kalkulator Zakat",

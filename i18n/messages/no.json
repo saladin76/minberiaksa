@@ -694,7 +694,8 @@
     "recipientWhatsapp": "Mottakerens WhatsApp-nummer",
     "itemsUnavailable": "Disse elementene kan ikke betales: {items}. Fjern dem fra kurven eller velg et bestemt prosjekt, og prøv igjen.",
     "bankTransferUploadNote": "Etter at du har overført, vil du laste opp kvitteringen eller overføringsmeldingen på neste side. Donasjonen din er bekreftet når vårt økonomiteam matcher den mot kontoen.",
-    "ctaBankContinue": "Fortsett med å laste opp overføringskvitteringen"
+    "ctaBankContinue": "Fortsett med å laste opp overføringskvitteringen",
+    "recurringCardUnavailable": "Faste donasjoner med kort er for øyeblikket utilgjengelige. Prøv igjen senere."
   },
   "certificates": {
     "certNoLabel": "Sertifikatnr.",
@@ -754,7 +755,6 @@
     "quickDestinationRequired": "Velg et donasjonsformål før du fortsetter.",
     "quickDestinationUnavailable": "Dette donasjonsformålet er ikke tilgjengelig. Velg et annet prosjekt og prøv igjen.",
     "quickDonationChecking": "Kontrollerer…",
-
     "donate": "Gi en Gave",
     "addToCart": "Legg i Kurven",
     "zakatCalculator": "Zakat-kalkulator",

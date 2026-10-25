@@ -8,6 +8,8 @@ import {
   albarakaRecurringOrderId,
   buildAlbarakaRecurringSale,
   isAlbarakaRecurringEnabled,
+  isAlbarakaConfigured,
+  isAlbarakaRecurringCheckoutReady,
   isStoredCardExpired,
   type AlbarakaRecurringConfig,
 } from "../../lib/albaraka";
@@ -102,4 +104,23 @@ test("the scheduler is off unless explicitly enabled AND the terminal is configu
   assert.equal(isAlbarakaRecurringEnabled({ ...cfg, enabled: false }), false);
   assert.equal(isAlbarakaRecurringEnabled({ ...cfg, encKey: "short" }), false);
   assert.equal(isAlbarakaRecurringEnabled({ ...cfg, terminalNo: "" }), false);
+});
+
+
+test("recurring signup checks the 2D terminal actually used instead of requiring unused 3D credentials", () => {
+  const names = ["ALBARAKA_MERCHANT_NO", "ALBARAKA_TERMINAL_NO", "ALBARAKA_POSNET_ID", "ALBARAKA_ENC_KEY", "ALBARAKA_2D_TERMINAL_NO", "ALBARAKA_2D_POSNET_ID", "ALBARAKA_2D_ENC_KEY", "ALBARAKA_RECURRING_TERMINAL_NO", "ALBARAKA_RECURRING_POSNET_ID", "ALBARAKA_RECURRING_ENC_KEY", "ALBARAKA_RECURRING_ENABLED"];
+  const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  try {
+    for (const name of names) delete process.env[name];
+    Object.assign(process.env, { ALBARAKA_MERCHANT_NO: "fixture-merchant", ALBARAKA_2D_TERMINAL_NO: "fixture-terminal", ALBARAKA_2D_POSNET_ID: "fixture-posnet", ALBARAKA_2D_ENC_KEY: "fixture-key-long", ALBARAKA_RECURRING_ENABLED: "1" });
+    assert.equal(isAlbarakaConfigured(), false);
+    assert.equal(isAlbarakaRecurringCheckoutReady(), true);
+    process.env.ALBARAKA_RECURRING_ENABLED = "0";
+    assert.equal(isAlbarakaRecurringCheckoutReady(), false);
+    process.env.ALBARAKA_RECURRING_ENABLED = "1";
+    delete process.env.ALBARAKA_2D_ENC_KEY;
+    assert.equal(isAlbarakaRecurringCheckoutReady(), false);
+  } finally {
+    for (const name of names) if (previous[name] === undefined) delete process.env[name]; else process.env[name] = previous[name];
+  }
 });

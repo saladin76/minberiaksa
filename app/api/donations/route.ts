@@ -1,3 +1,5 @@
+import { POST as createCartDonation } from "@/app/api/cart/payment/route";
+import { isOrderType, isRecurringFrequency } from "@/lib/donations/recurring-schedule";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { donationStatusWhere } from "@/lib/dashboard/donation-usd-revenue";
@@ -313,9 +315,18 @@ export async function GET(request: NextRequest) {
 // POST /api/donations - Create a new donation
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
     const body = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body) || !isOrderType(body.type ?? "ONE_TIME")) {
+      return NextResponse.json({ error: "Unsupported donation type" }, { status: 400 });
+    }
+    // Legacy dialogs and the Minbar checkout must create the same provider-linked
+    // plan. The old monthly path omitted provider/card linkage and could never renew.
+    if (isRecurringFrequency(body.type)) {
+      return createCartDonation(new NextRequest(request.url, {
+        method: "POST", headers: request.headers, body: JSON.stringify(body),
+      }));
+    }
+    const session = await getServerSession(authOptions);
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp =
       forwardedFor?.split(",")[0]?.trim() ||
@@ -336,9 +347,7 @@ export async function POST(request: NextRequest) {
       currency,
       teamSupport = 0,
       coverFees = false,
-      type = "ONE_TIME",
       paymentMethod,
-      cardDetails = null,
       referralCode,
       referralId: bodyReferralId,
       locale: donationLocale,
@@ -510,140 +519,6 @@ export async function POST(request: NextRequest) {
       donationLocale && isValidLocale(String(donationLocale).toLowerCase())
         ? String(donationLocale).toLowerCase()
         : null;
-
-    if (type === "MONTHLY") {
-      // Monthly: create Subscription + first Donation (transaction) linked to it.
-      // The Stripe invoice.payment_succeeded webhook drives nextBillingDate thereafter;
-      // seed it with one month from now so cron filters don't pick the sub up before
-      // Stripe has confirmed the first charge.
-      const subscription = await prisma.$transaction(async (tx) => {
-        const now = new Date();
-        const nextBilling = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate()));
-        nextBilling.setUTCHours(0, 0, 0, 0);
-
-        const sub = await tx.subscription.create({
-          data: {
-            status: "ACTIVE",
-            amount: totalAmount,
-            amountUSD: donationTotalUsd,
-            currency: currencyNorm,
-            teamSupport,
-            coverFees,
-            paymentMethod,
-            cardDetails: paymentMethod === "CARD" ? cardDetails : null,
-            donorId,
-            referralId: referralId ?? undefined,
-            nextBillingDate: nextBilling,
-            lastBillingDate: new Date(),
-            items: hasCampaignItems
-              ? {
-                  create: campaignItemsResolved.map((item) => ({
-                    campaignId: item.campaignId,
-                    amount: item.amount,
-                    amountUSD: item.amountUSD,
-                    ...(item.shareCount != null && item.shareCount > 0
-                      ? { shareCount: item.shareCount }
-                      : {}),
-                  })),
-                }
-              : undefined,
-            categoryItems: hasCategoryItems
-              ? {
-                  create: categoryItemsResolved.map((item) => ({
-                    categoryId: item.categoryId,
-                    amount: item.amount,
-                    amountUSD: item.amountUSD,
-                  })),
-                }
-              : undefined,
-          },
-          include: { items: true, categoryItems: true },
-        });
-
-        const donation = await tx.donation.create({
-          data: {
-            accessToken: mintDonationAccessToken(),
-            amount: totalAmount,
-            amountUSD: donationTotalUsd,
-            teamSupport,
-            coverFees,
-            currency: currencyNorm,
-            fees: coverFees ? fees : 0,
-            totalAmount: finalTotalAmount,
-            status: "PAID",
-            locale: validLocale ?? undefined,
-            attribution: attribution ?? undefined,
-            donorCountryCode: donorCountrySnapshot,
-            donorId,
-            referralId: referralId ?? undefined,
-            subscriptionId: sub.id,
-            paymentMethod,
-            cardDetails: null,
-            items: hasCampaignItems
-              ? {
-                  create: campaignItemsResolved.map((item) => ({
-                    campaignId: item.campaignId,
-                    amount: item.amount,
-                    amountUSD: item.amountUSD,
-                    ...(item.shareCount != null && item.shareCount > 0
-                      ? { shareCount: item.shareCount }
-                      : {}),
-                  })),
-                }
-              : undefined,
-            categoryItems: hasCategoryItems
-              ? {
-                  create: categoryItemsResolved.map((item) => ({
-                    categoryId: item.categoryId,
-                    amount: item.amount,
-                    amountUSD: item.amountUSD,
-                  })),
-                }
-              : undefined,
-          },
-          include: {
-            donor: { select: { name: true, email: true } },
-            items: { include: { campaign: { select: { title: true } } } },
-            categoryItems: { include: { category: { select: { name: true } } } },
-          },
-        });
-
-        if (validLocale) {
-          const donor = await tx.user.findUnique({
-            where: { id: donorId },
-            select: { preferredLang: true },
-          });
-          if (donor && donor.preferredLang == null) {
-            await tx.user.update({
-              where: { id: donorId },
-              data: { preferredLang: validLocale },
-            });
-          }
-        }
-
-        return { subscription: sub, donation };
-      }, { timeout: 15000 });
-
-      const d = subscription.donation;
-      const actorRole = session?.user?.role ?? "DONOR";
-      await writeAuditLog({
-        actorId: donorId,
-        actorName: donorName,
-        actorRole,
-        action: "DONATION_MONTHLY_CHECKOUT_START",
-        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع اشتراك شهري (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
-        entityType: "Donation",
-        entityId: d.id,
-        metadata: { amountUSD: donationTotalUsd, status: "PENDING", provider: "PAYFOR" },
-        stream: auditStreamForRole(actorRole),
-      });
-
-      return NextResponse.json({
-        success: true,
-        subscription: subscription.subscription,
-        donation: subscription.donation,
-      });
-    }
 
     // One-time: create a single Donation (transaction) only
     const donation = await prisma.$transaction(async (tx) => {

@@ -313,11 +313,12 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
         subscription?: { id: string };
         bankTransfer?: { accessToken: string };
         error?: string;
+        code?: string;
       }
     | null;
 
   if (!response.ok || !payload?.donation?.id) {
-    throw new OrderRejectedError(payload?.error || "order-failed", response.status);
+    throw new OrderRejectedError(payload?.error || "order-failed", response.status, payload?.code);
   }
 
   return {

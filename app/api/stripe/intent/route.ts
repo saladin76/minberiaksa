@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
               donorId: session.user.id,
               referralId: referralId ?? undefined,
               nextBillingDate: nextBilling,
-              lastBillingDate: new Date(),
+              lastBillingDate: null,
               items: hasCampaignItems
                 ? {
                     create: campaignItemsResolved.map((i) => ({
@@ -300,21 +300,22 @@ export async function POST(req: NextRequest) {
               .join(", ")
           : "Monthly Donation";
 
+      const product = await stripe.products.create({ name: productName }, { idempotencyKey: `recurring-product-${subscriptionDbId}` });
       const stripeSub = await stripe.subscriptions.create({
         customer: customerId,
         items: [
           {
             price_data: {
               currency: stripeCurrency,
-              product_data: { name: productName },
+              product: product.id,
               unit_amount: stripeAmount,
               recurring: { interval: "month" },
-            } as any,
+            },
           },
         ],
         payment_behavior: "default_incomplete",
         payment_settings: { save_default_payment_method: "on_subscription" },
-        expand: ["latest_invoice.payment_intent"],
+        expand: ["latest_invoice.confirmation_secret"],
         metadata: {
           donationId: donation.id,
           userId: session.user.id,
@@ -322,15 +323,12 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: { providerOrderId: stripeSub.id },
-      });
-
-      const invoice = stripeSub.latest_invoice as Stripe.Invoice & {
-        payment_intent: Stripe.PaymentIntent | null;
-      };
-      const clientSecret = invoice?.payment_intent?.client_secret;
+      const invoice = typeof stripeSub.latest_invoice === "object" ? stripeSub.latest_invoice : null;
+      await prisma.$transaction([
+        prisma.subscription.update({ where: { id: subscriptionDbId }, data: { provider: "STRIPE", stripeSubscriptionId: stripeSub.id, payforToken: stripeSub.id } }),
+        prisma.donation.update({ where: { id: donation.id }, data: { provider: "STRIPE", providerOrderId: invoice?.id ?? stripeSub.id } }),
+      ]);
+      const clientSecret = invoice?.confirmation_secret?.client_secret;
 
       if (!clientSecret) {
         return NextResponse.json({ error: "Could not get payment intent" }, { status: 500 });

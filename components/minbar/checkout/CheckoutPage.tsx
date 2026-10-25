@@ -164,6 +164,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     payforEnabled: boolean;
     albarakaUseOOS: boolean;
     albarakaConfigured: boolean;
+    albarakaRecurringReady: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -177,6 +178,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
           payforEnabled: settings.payforEnabled,
           albarakaUseOOS: settings.albarakaUseOOS,
           albarakaConfigured: settings.albarakaConfigured,
+          albarakaRecurringReady: settings.albarakaRecurringReady === true,
         });
       })
       .catch(() => {
@@ -268,8 +270,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   /* Albaraka signs everything with ALBARAKA_ENC_KEY. Without it the initiate
      route refuses, and the donor would only find out after an order had been
      created and failed. Hide the rail instead. */
+  const recurringCardUnavailable = Boolean(planFrequency) && gateway === "ALBARAKA" && gatewayConfig !== null && !gatewayConfig.albarakaRecurringReady;
   const cardRailUnavailable =
-    gateway === "ALBARAKA" && gatewayConfig !== null && !gatewayConfig.albarakaConfigured;
+    gateway === "ALBARAKA" && gatewayConfig !== null &&
+    (!gatewayConfig.albarakaConfigured || (Boolean(planFrequency) && gatewayConfig.albarakaRecurringReady !== true));
 
   /* A card we never collect can't be validated, and the bank rails need one. */
   const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
@@ -332,7 +336,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
        can't charge leaves a FAILED row behind for no reason. */
     if (method === "card") {
       if (cardRailUnavailable) {
-        setError(tSystem("techErrorLead"));
+        setError(recurringCardUnavailable ? t("recurringCardUnavailable") : t("cardUnavailable"));
         return;
       }
       if (gateway === "STRIPE") {
@@ -480,6 +484,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       const knownCode = cause instanceof OrderRejectedError ? CARD_ERROR_KEYS[cause.code ?? ""] : undefined;
       if (cause instanceof UnpayableItemsError) {
         setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
+      } else if (cause instanceof OrderRejectedError && cause.code === "RECURRING_UNAVAILABLE") {
+        setError(t("recurringCardUnavailable"));
       } else if (knownCode) {
         // The server's reason, in the donor's language rather than its English text.
         setError(tValidation(knownCode));
@@ -805,7 +811,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               {method === "card" && !needsOwnCardForm ? (
                 <div style={{ display: "grid", gap: 12, justifyItems: "center", padding: "16px 14px", background: "var(--sand)", border: "1px solid var(--border)", borderRadius: 12 }}>
                   <span style={{ fontSize: 13.5, fontWeight: 800, color: cardRailUnavailable ? "var(--red)" : "var(--deep)", textAlign: "center", lineHeight: 1.8 }}>
-                    {cardRailUnavailable ? t("cardUnavailable") : t("cardOnBankPage")}
+                    {recurringCardUnavailable ? t("recurringCardUnavailable") : cardRailUnavailable ? t("cardUnavailable") : t("cardOnBankPage")}
                   </span>
                 </div>
               ) : null}

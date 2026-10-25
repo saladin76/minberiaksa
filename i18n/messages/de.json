@@ -1733,7 +1733,8 @@
     "recipientWhatsapp": "WhatsApp-Nummer des Beschenkten",
     "itemsUnavailable": "Für diese Posten ist keine Zahlung möglich: {items}. Entfernen Sie sie aus dem Warenkorb oder wählen Sie ein bestimmtes Projekt und versuchen Sie es erneut.",
     "bankTransferUploadNote": "Nachdem Sie überwiesen haben, laden Sie den Beleg oder die Überweisungsbestätigung auf der nächsten Seite hoch. Ihre Spende ist bestätigt, sobald unser Finanzteam sie mit dem Konto abgleicht.",
-    "ctaBankContinue": "Fortfahren, um den Überweisungsbeleg hochzuladen"
+    "ctaBankContinue": "Fortfahren, um den Überweisungsbeleg hochzuladen",
+    "recurringCardUnavailable": "Wiederkehrende Kartenspenden sind derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
   },
   "certificates": {
     "certNoLabel": "Zertifikat-Nr.",
@@ -1793,7 +1794,6 @@
     "quickDestinationRequired": "Wählen Sie vor dem Fortfahren ein Spendenziel.",
     "quickDestinationUnavailable": "Dieses Spendenziel ist derzeit nicht verfügbar. Wählen Sie ein anderes Projekt und versuchen Sie es erneut.",
     "quickDonationChecking": "Wird geprüft…",
-
     "donate": "Jetzt Spenden",
     "addToCart": "In Den Warenkorb",
     "zakatCalculator": "Zakat-Rechner",

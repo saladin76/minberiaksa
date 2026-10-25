@@ -37,7 +37,7 @@ import {
   scheduleRuleFor,
 } from "@/lib/donations/recurring-schedule";
 import { parseMainGateway } from "@/lib/payment-gateway";
-import { isAlbarakaConfigured, isAlbarakaRecurringEnabled } from "@/lib/albaraka";
+import { isAlbarakaRecurringCheckoutReady } from "@/lib/albaraka";
 import { isPayPalConfigured, isPayPalRecurringEnabled } from "@/lib/paypal";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 import { giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
@@ -651,9 +651,9 @@ export async function POST(request: NextRequest) {
          vaulted at the first instalment); a card plan's rail follows the
          cadence and the main gateway. */
       const rail = isPayPal ? ("PAYPAL" as const) : railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
-      if (rail === "ALBARAKA" && !(isAlbarakaConfigured() && isAlbarakaRecurringEnabled())) {
+      if (rail === "ALBARAKA" && !isAlbarakaRecurringCheckoutReady()) {
         return NextResponse.json(
-          { error: "Recurring donations at this frequency are not available at the moment" },
+          { error: "Recurring donations at this frequency are not available at the moment", code: "RECURRING_UNAVAILABLE" },
           { status: 400 }
         );
       }
@@ -663,12 +663,14 @@ export async function POST(request: NextRequest) {
          both computed, so the three cannot disagree. `nextBillingDate` is
          re-derived from the same rule when the first instalment settles;
          `consentSnapshot` is never rewritten. */
+      const recurringTotal = totalAmount + planTeamSupport + (coverFees ? (totalAmount + planTeamSupport) * 0.03 : 0);
+      const recurringAmountUSD = planTeamSupport === teamSupport ? donationTotalUsd : await convertAmountInCurrencyToUsd(recurringTotal, currencyNorm);
       const now = new Date();
       const rule = scheduleRuleFor(frequency, now, timezone, scheduleChoice.value);
       const nextBilling = firstChargeAfterCheckout(rule, now, timezone);
       const consent = consentSnapshotFor({
         frequency,
-        amount: finalTotalAmount,
+        amount: recurringTotal,
         currency,
         timezone,
         rail,
@@ -683,7 +685,7 @@ export async function POST(request: NextRequest) {
           data: {
             status: "ACTIVE",
             amount: totalAmount,
-            amountUSD: donationTotalUsd,
+            amountUSD: recurringAmountUSD,
             currency,
             teamSupport: planTeamSupport,
             coverFees,

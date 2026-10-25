@@ -694,7 +694,8 @@
     "recipientWhatsapp": "WhatsApp-nummer van de ontvanger",
     "itemsUnavailable": "Deze items kunnen niet worden betaald: {items}. Verwijder ze uit je mandje of kies een specifiek project en probeer het opnieuw.",
     "bankTransferUploadNote": "Nadat je hebt overgemaakt, upload je de ontvangst of overboekingsmelding op de volgende pagina. Je donatie is bevestigd zodra ons financiële team deze heeft gematcht met de rekening.",
-    "ctaBankContinue": "Ga door met het uploaden van de overboekingsontvangst"
+    "ctaBankContinue": "Ga door met het uploaden van de overboekingsontvangst",
+    "recurringCardUnavailable": "Terugkerende kaartdonaties zijn momenteel niet beschikbaar. Probeer het later opnieuw."
   },
   "certificates": {
     "certNoLabel": "Certificaatnr.",
@@ -754,7 +755,6 @@
     "quickDestinationRequired": "Kies een donatiedoel voordat u doorgaat.",
     "quickDestinationUnavailable": "Dit donatiedoel is niet beschikbaar. Kies een ander project en probeer het opnieuw.",
     "quickDonationChecking": "Controleren…",
-
     "donate": "Doneer nu",
     "addToCart": "Toevoegen Aan Mand",
     "zakatCalculator": "Zakat-calculator",
