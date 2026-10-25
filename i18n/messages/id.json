@@ -1733,7 +1733,8 @@
     "recipientWhatsapp": "Nomor WhatsApp penerima",
     "itemsUnavailable": "Item berikut tidak dapat dibayar: {items}. Hapus dari keranjang atau pilih proyek tertentu, lalu coba lagi.",
     "bankTransferUploadNote": "Setelah Anda mentransfer, Anda akan mengunggah tanda terima atau pemberitahuan transfer di halaman berikutnya. Donasi Anda dikonfirmasi setelah tim keuangan kami mencocokkannya dengan akun.",
-    "ctaBankContinue": "Lanjutkan unggah tanda terima transfer"
+    "ctaBankContinue": "Lanjutkan unggah tanda terima transfer",
+    "recurringCardUnavailable": "Donasi rutin dengan kartu saat ini tidak tersedia. Silakan coba lagi nanti."
   },
   "certificates": {
     "certNoLabel": "No. sertifikat",
@@ -1790,6 +1791,9 @@
     "landscapeVersion": "Versi resmi (lanskap)"
   },
   "common": {
+    "quickDestinationRequired": "Pilih tujuan donasi sebelum melanjutkan.",
+    "quickDestinationUnavailable": "Tujuan donasi ini tidak tersedia. Pilih proyek lain dan coba lagi.",
+    "quickDonationChecking": "Memeriksa…",
     "donate": "Donasi Sekarang",
     "addToCart": "Tambah ke Keranjang",
     "zakatCalculator": "Kalkulator Zakat",

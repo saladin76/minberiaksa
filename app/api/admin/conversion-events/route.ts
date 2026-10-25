@@ -143,7 +143,7 @@ function auditToEvent(row: AuditFallbackRow): ConversionEventLike {
   return {
     _id: row.id,
     eventId,
-    eventName: stage.includes("ga4") ? "purchase" : "Donate",
+    eventName: metaString(metadata, "event_name") ?? (stage.includes("ga4") ? "purchase" : "Donate"),
     platform: stage.includes("ga4") ? "GA4" : "META",
     channel: "server",
     status,

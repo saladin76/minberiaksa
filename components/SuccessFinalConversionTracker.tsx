@@ -12,6 +12,7 @@ import {
 type DonateTrackingPayload = {
   ok: true;
   eventId: string;
+  metaEvents?: Array<{ eventName: "Donate" | "Purchase"; eventId: string }>;
   transactionId: string;
   value: number;
   currency: string;
@@ -20,7 +21,7 @@ type DonateTrackingPayload = {
   contentCategory?: string;
   contents?: Array<{ id: string; quantity: number; item_price: number }>;
   numItems?: number;
-  donationType?: "ONE_TIME" | "MONTHLY";
+  donationType?: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY";
   paymentMethod?: string;
 };
 
@@ -45,16 +46,17 @@ function donationIdFromPath(pathname: string | null) {
   return index >= 0 ? parts[index + 1] ?? null : null;
 }
 
-async function logMetaBrowser(payload: DonateTrackingPayload, status: "SENT" | "FAILED" | "SKIPPED", error?: string) {
+async function logMetaBrowser(payload: DonateTrackingPayload, status: "SENT" | "FAILED" | "SKIPPED", eventName: "Donate" | "Purchase", eventId: string, error?: string) {
   try {
-    await fetch(`/api/donations/${encodeURIComponent(payload.transactionId)}/track-browser-conversion`, {
+    const token = new URLSearchParams(window.location.search).get("t");
+    await fetch(`/api/donations/${encodeURIComponent(payload.transactionId)}/track-browser-conversion${token ? `?t=${encodeURIComponent(token)}` : ""}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       keepalive: true,
       body: JSON.stringify({
         platform: "META",
-        eventName: "Donate",
-        eventId: payload.eventId,
+        eventName,
+        eventId,
         value: payload.value,
         currency: payload.currency,
         status,
@@ -64,16 +66,16 @@ async function logMetaBrowser(payload: DonateTrackingPayload, status: "SENT" | "
   } catch {}
 }
 
-function fireMetaBrowserDonate(payload: DonateTrackingPayload): { ok: boolean; error?: string } {
+function fireMetaBrowserDonate(payload: DonateTrackingPayload, eventName: "Donate" | "Purchase", eventId: string): { ok: boolean; error?: string } {
   if (typeof window === "undefined") return { ok: false, error: "window unavailable" };
   if (typeof window.fbq !== "function") return { ok: false, error: "fbq unavailable" };
   try {
-    window.fbq("track", "Donate", {
+    window.fbq("track", eventName, {
       value: payload.value,
       currency: payload.currency,
-      content_type: "donation",
+      content_type: eventName === "Purchase" ? "product" : "donation",
       content_name: payload.contentName,
-      content_category: payload.contentCategory ?? (payload.donationType === "MONTHLY" ? "monthly" : "donation"),
+      content_category: payload.contentCategory ?? (payload.donationType && payload.donationType !== "ONE_TIME" ? payload.donationType.toLowerCase() : "donation"),
       content_ids: payload.contentIds,
       contents: payload.contents,
       num_items: payload.numItems,
@@ -82,19 +84,21 @@ function fireMetaBrowserDonate(payload: DonateTrackingPayload): { ok: boolean; e
       status: "paid",
       success: true,
       payment_info_available: true,
-      donation_type: payload.donationType === "MONTHLY" ? "monthly" : "one_time",
+      donation_type: (payload.donationType ?? "ONE_TIME").toLowerCase(),
+      recurring: !!payload.donationType && payload.donationType !== "ONE_TIME",
       payment_method: (payload.paymentMethod ?? "card").toLowerCase(),
-    }, { eventID: payload.eventId });
+    }, { eventID: eventId });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "fbq failed" };
   }
 }
 
-async function waitAndFireMetaBrowserDonate(payload: DonateTrackingPayload) {
+async function waitAndFireMetaBrowserDonate(payload: DonateTrackingPayload, eventName: "Donate" | "Purchase", eventId: string, isCancelled: () => boolean) {
   let lastError = "fbq unavailable";
   for (let attempt = 1; attempt <= META_BROWSER_MAX_ATTEMPTS; attempt += 1) {
-    const result = fireMetaBrowserDonate(payload);
+    if (isCancelled()) return { ok: false, error: "cancelled" };
+    const result = fireMetaBrowserDonate(payload, eventName, eventId);
     if (result.ok) return result;
     lastError = result.error || lastError;
     if (attempt < META_BROWSER_MAX_ATTEMPTS) await sleep(META_BROWSER_RETRY_MS);
@@ -102,8 +106,9 @@ async function waitAndFireMetaBrowserDonate(payload: DonateTrackingPayload) {
   return { ok: false, error: lastError };
 }
 
-function markMetaBrowserDone(payload: DonateTrackingPayload) {
-  try { window.localStorage.setItem(`marketing_final_browser:${payload.eventId}`, "1"); } catch {}
+function markMetaBrowserDone(payload: DonateTrackingPayload, eventName: "Donate" | "Purchase", eventId: string) {
+  try { window.localStorage.setItem(`marketing_final_browser:${eventId}`, "1"); } catch {}
+  if (eventName !== "Donate") return;
   try { window.localStorage.setItem(`donate_fired:${payload.transactionId}`, "1"); } catch {}
   try { window.sessionStorage.setItem(`meta_donate_${payload.eventId}`, "1"); } catch {}
 }
@@ -151,36 +156,37 @@ export function SuccessFinalConversionTracker() {
       }
       if (cancelled || !payload) return;
 
-      const finalKey = `marketing_final_browser:${payload.eventId}`;
-      const attemptingKey = `marketing_final_browser_attempting:${payload.eventId}`;
-      try {
-        if (window.localStorage.getItem(finalKey)) return;
-        if (window.sessionStorage.getItem(attemptingKey)) return;
-      } catch {}
-
-      markMetaBrowserAttempting(payload);
-      try {
-        const cfgRes = await fetch("/api/tracking/config", { cache: "no-store" });
-        const config = (await cfgRes.json().catch(() => ({}))) as PublicTrackingConfig;
-
-        const metaResult = await waitAndFireMetaBrowserDonate(payload);
-        await logMetaBrowser(payload, metaResult.ok ? "SENT" : "SKIPPED", metaResult.error);
-
+      const config = await fetch("/api/tracking/config", { cache: "no-store" }).then(res => res.json()).catch(() => ({})) as PublicTrackingConfig;
+      // Each Meta event has its own guard: a prior Donate never suppresses Purchase.
+      for (const event of payload.metaEvents ?? [{ eventName: "Donate" as const, eventId: payload.eventId }]) {
+        if (cancelled) return;
+        const eventPayload = { ...payload, eventId: event.eventId };
+        try {
+          if (window.localStorage.getItem(`marketing_final_browser:${event.eventId}`)) continue;
+          if (window.sessionStorage.getItem(`marketing_final_browser_attempting:${event.eventId}`)) continue;
+        } catch {}
+        markMetaBrowserAttempting(eventPayload);
+        try {
+          const result = await waitAndFireMetaBrowserDonate(payload, event.eventName, event.eventId, () => cancelled);
+          if (cancelled) return;
+          await logMetaBrowser(payload, result.ok ? "SENT" : "SKIPPED", event.eventName, event.eventId, result.error);
+          if (result.ok) markMetaBrowserDone(payload, event.eventName, event.eventId);
+        } finally { clearMetaBrowserAttempting(eventPayload); }
+      }
+      const otherKey = `marketing_final_other:${payload.eventId}`;
+      let otherDone = false;
+      try { otherDone = !!window.localStorage.getItem(otherKey); } catch {}
+      if (!otherDone) {
         await Promise.allSettled([
           fireGoogleAdsDonationConversion(config, payload),
           fireTikTokDonationConversion(config, payload),
           fireXDonationConversion(config, payload),
         ]);
-
-        // Do not mark legacy donate_fired unless the real Meta browser pixel fired.
-        // This keeps refresh/retry possible when fbq is blocked or not ready.
-        if (metaResult.ok) markMetaBrowserDone(payload);
-      } finally {
-        clearMetaBrowserAttempting(payload);
+        try { window.localStorage.setItem(otherKey, "1"); } catch {}
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; activeRef.current = null; };
   }, [pathname]);
 
   return null;

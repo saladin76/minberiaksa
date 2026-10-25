@@ -1,3 +1,4 @@
+import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 /**
  * POST /api/track
  *
@@ -112,10 +113,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, reason: "missing event" }, { status: 400 });
     }
 
-    const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      undefined;
+    const clientIp = getTrackingClientIp(req.headers);
 
     const row = await getRawTrackingSettings();
     const facebookPixelId = trackingString(row, "facebookPixelId") || trackingString(row, "metaPixelId");

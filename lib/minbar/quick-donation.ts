@@ -1,5 +1,5 @@
 import type { CartFreqKey } from "@/lib/minbar/cart";
-import { SUPPORTED_LOCALES } from "@/lib/locales";
+import { SUPPORTED_LOCALES } from "../locales";
 
 /**
  * The homepage quick-donation card, as the dashboard configures it.
@@ -58,6 +58,8 @@ export interface QuickDonationConfig {
   defaultFrequency: CartFreqKey;
   /** Which generic intentions to show; canonical order is applied. */
   genericDestinations: QuickGenericDestination[];
+  /** Explicitly approved campaign for each general intention. Missing means unavailable. */
+  genericProjectIds?: Partial<Record<QuickGenericDestination, string>>;
   /** Which projects join the select under the intentions. */
   projectsMode: QuickProjectsMode;
   /** Campaign ids (not slugs  slugs differ per locale) when `projectsMode` is "selected". */
@@ -79,6 +81,7 @@ export const DEFAULT_QUICK_DONATION: QuickDonationConfig = {
   frequencies: [...QUICK_FREQUENCIES],
   defaultFrequency: "once",
   genericDestinations: [...QUICK_GENERIC_DESTINATIONS],
+  genericProjectIds: {},
   projectsMode: "all",
   projectIds: [],
   defaultDestination: "where-needed",
@@ -147,6 +150,21 @@ function idsOf(raw: unknown): string[] {
   return out.slice(0, MAX_PROJECT_IDS);
 }
 
+function genericProjectsOf(raw: unknown): Partial<Record<QuickGenericDestination, string>> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(QUICK_GENERIC_DESTINATIONS.flatMap((key) => {
+    const id = (raw as Record<string, unknown>)[key];
+    return typeof id === "string" && /^[a-f0-9]{24}$/i.test(id) ? [[key, id]] : [];
+  }));
+}
+
+/** Resolve an intention only through its approved mapping. Never guess a target. */
+export function quickDonationCampaignId(config: QuickDonationConfig, destination: string): string | null {
+  if (isGeneric(destination)) return config.genericDestinations.includes(destination) ? config.genericProjectIds?.[destination] ?? null : null;
+  if (!/^[a-f0-9]{24}$/i.test(destination) || config.projectsMode === "none") return null;
+  return config.projectsMode === "all" || config.projectIds.includes(destination) ? destination : null;
+}
+
 /** Coerce DB / API JSON into a config the card can always render. */
 export function parseQuickDonation(raw: unknown): QuickDonationConfig {
   const d = DEFAULT_QUICK_DONATION;
@@ -185,6 +203,7 @@ export function parseQuickDonation(raw: unknown): QuickDonationConfig {
     frequencies: finalFreqs,
     defaultFrequency,
     genericDestinations,
+    genericProjectIds: genericProjectsOf(o.genericProjectIds),
     projectsMode,
     projectIds: idsOf(o.projectIds),
     defaultDestination: typeof o.defaultDestination === "string" ? o.defaultDestination.trim() : d.defaultDestination,
@@ -223,6 +242,8 @@ export function validateQuickDonationBody(body: unknown): QuickDonationConfig {
     Array.isArray(o.genericDestinations) ? o.genericDestinations : [],
     isGeneric
   );
+  const mappings = genericProjectsOf(o.genericProjectIds);
+  if (genericDestinations.some((key) => !mappings[key])) throw new Error("اربط كل نية ظاهرة بمشروع معتمد أو أوقف إظهارها");
   if (!isMode(o.projectsMode)) throw new Error("Invalid projectsMode");
   const projectIds = idsOf(o.projectIds);
   const listEmpty =

@@ -550,6 +550,11 @@ export function isAlbarakaRecurringEnabled(cfg: AlbarakaRecurringConfig = albara
   return cfg.enabled && isAlbarakaConfigured(cfg);
 }
 
+/** The signup sale uses the 2D terminal; renewals also need their enabled terminal. */
+export function isAlbarakaRecurringCheckoutReady(): boolean {
+  return isAlbarakaConfigured(albaraka2DConfig()) && isAlbarakaRecurringEnabled();
+}
+
 /**
  * Non-3D orders are exactly 24 characters. The scheduler derives them from the plan
  * and the cycle it is charging (`albarakaRecurringOrderId`), so a re-run for the same

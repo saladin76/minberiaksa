@@ -13,7 +13,18 @@
  *   3. GTM dataLayer (`window.dataLayer`)  picked up by anything wired into GTM.
  */
 
+import { isMeasurementHost, sanitizeEngagementData } from "./tracking/engagement-policy";
+
 type AnyRecord = Record<string, unknown>;
+
+/** Shared gate for this diagnostic layer; canonical conversion tracking is separate. */
+export function isEngagementEnabled(): boolean {
+  try {
+    return typeof window !== "undefined" && isMeasurementHost(window.location.hostname);
+  } catch {
+    return false;
+  }
+}
 
 declare global {
   interface Window {
@@ -24,7 +35,7 @@ declare global {
 
 /** Tag the current Clarity session with key=value (filterable, smart segments). */
 export function clarityTag(key: string, value: string | string[]): void {
-  if (typeof window === "undefined") return;
+  if (!isEngagementEnabled()) return;
   try {
     window.clarity?.("set", key, value);
   } catch {
@@ -34,7 +45,7 @@ export function clarityTag(key: string, value: string | string[]): void {
 
 /** Fire a custom Clarity event (filterable, alerts, smart segments). */
 export function clarityEvent(name: string): void {
-  if (typeof window === "undefined") return;
+  if (!isEngagementEnabled()) return;
   try {
     window.clarity?.("event", name);
   } catch {
@@ -49,7 +60,7 @@ export function clarityIdentify(
   pageId?: string,
   friendlyName?: string
 ): void {
-  if (typeof window === "undefined") return;
+  if (!isEngagementEnabled()) return;
   try {
     window.clarity?.("identify", userId, sessionId, pageId, friendlyName);
   } catch {
@@ -84,21 +95,18 @@ function isDataLayerBlockedPath(): boolean {
  * leg is suppressed  see `DATALAYER_BLOCKED_PATH_RE` for why.
  */
 export function trackEngagement(name: string, data?: AnyRecord): void {
-  if (typeof window === "undefined") return;
+  if (!isEngagementEnabled()) return;
 
-  // Clarity  emit the event for filtering, and copy any string params as tags.
+  // Sanitize before every destination, including session tags and debug output.
+  const payload = sanitizeEngagementData(data);
+
+  // Clarity custom tags receive only sanitized fields. Its automatic recorder is separate.
   clarityEvent(name);
-  if (data) {
-    for (const [k, v] of Object.entries(data)) {
-      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
-        clarityTag(k, String(v));
-      }
-    }
-  }
+  for (const [key, value] of Object.entries(payload)) clarityTag(key, String(value));
 
   // GA4  passthrough, doesn't throw if gtag is undefined.
   try {
-    window.gtag?.("event", name, data ?? {});
+    window.gtag?.("event", name, payload);
   } catch {
     /* noop */
   }
@@ -110,7 +118,7 @@ export function trackEngagement(name: string, data?: AnyRecord): void {
   if (!isDataLayerBlockedPath()) {
     try {
       if (Array.isArray(window.dataLayer)) {
-        window.dataLayer.push({ event: name, ...(data ?? {}) });
+        window.dataLayer.push({ ...payload, event: name });
       }
     } catch {
       /* noop */
@@ -118,6 +126,6 @@ export function trackEngagement(name: string, data?: AnyRecord): void {
   }
 
   if (process.env.NODE_ENV !== "production") {
-    console.debug("[analytics]", name, data ?? {});
+    console.debug("[analytics]", name, payload);
   }
 }

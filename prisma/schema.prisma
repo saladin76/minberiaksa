@@ -853,7 +853,8 @@ model Donation {
 
   /// UTM/ads/GA/Meta snapshot from client at checkout (JSON). Server conversions use the same donation id as event_id.
   attribution                  Json?
-  /// Set when Meta CAPI + GA4 MP "Donate" success events were sent for this row (idempotent).
+  /// Legacy: Meta Donate sent. New contract: Meta Donate + Purchase accepted.
+  /// Per-event Meta/GA4 truth and retries live in ConversionEvent, independently.
   conversionEventsSentAt       DateTime?
   /// Set when Meta CAPI "DonateFailed" event was sent for this row (idempotent). Feeds lookalike audiences for almost-donors.
   conversionFailedEventsSentAt DateTime?

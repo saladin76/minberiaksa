@@ -1,6 +1,7 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
 import { withDonationToken } from "@/lib/donations/access-token-link";
+import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
 import {
   StripePaymentStep,
   type StripePaymentHandle,
@@ -1713,7 +1714,7 @@ const DonationDialog = ({
 
             {/* CVC-only when a saved card is selected */}
             {selectedCardId && (
-              <div className="space-y-2" dir="ltr">
+              <div className="space-y-2" dir="ltr" data-clarity-mask="True" data-hj-suppress="" data-private="">
                 <label className="block text-sm font-medium text-gray-700 text-start">
                   {t("cvc")}
                 </label>
@@ -2170,6 +2171,7 @@ const DonationDialog = ({
           }
           targetDonationId = response.data.donation.id as string;
           targetToken = (response.data.donation.accessToken as string | null | undefined) ?? null;
+          rememberGuestDonationAccess(targetDonationId, targetToken);
 
           const endpoint =
             donationType === "MONTHLY"
@@ -2238,6 +2240,7 @@ const DonationDialog = ({
       if (response.data.success) {
         const donationId = response.data.donation.id as string;
         const donationToken = (response.data.donation.accessToken as string | null | undefined) ?? null;
+        rememberGuestDonationAccess(donationId, donationToken);
 
         if (paymentMethod === "CARD" && useBank3D) {
           const newPan = cardDetails.cardNumber.replace(/\s/g, "");
@@ -2290,6 +2293,9 @@ const DonationDialog = ({
           };
 
           const form = document.createElement("form");
+          form.setAttribute("data-clarity-mask", "True");
+          form.setAttribute("data-hj-suppress", "");
+          form.setAttribute("data-private", "");
           form.method = "POST";
           form.action = actionUrl;
           Object.entries(fields).forEach(([name, value]) => {
@@ -2365,7 +2371,7 @@ const DonationDialog = ({
           payforPollRef.current = setInterval(async () => {
             polls++;
             try {
-              const res = await fetch(`/api/donations/${donationId}`);
+              const res = await fetch(withDonationToken(`/api/donations/${donationId}`, donationToken));
               if (!res.ok) return;
               const data = await res.json();
 
@@ -2434,7 +2440,7 @@ const DonationDialog = ({
       }
       onClose();
     } catch (error) {
-      console.error("Payment failed:", error);
+      console.error("Payment failed: request did not complete");
       tracking?.trackPaymentFailed({
         value: donationAmount,
         currency: getCurrency(),

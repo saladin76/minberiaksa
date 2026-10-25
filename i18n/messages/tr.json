@@ -1733,7 +1733,8 @@
     "recipientWhatsapp": "Hediye edilenin WhatsApp numarası",
     "bankTransferUploadNote": "Havaleyi yaptıktan sonra dekontu veya havale bildirimini bir sonraki sayfada yükleyeceksiniz. Bağışınız, finans ekibimiz hesapla eşleştirdiğinde onaylanır.",
     "ctaBankContinue": "Devam  havale dekontunu yükle",
-    "itemsUnavailable": "Şu kalemler için ödeme yapılamıyor: {items}. Sepetinizden kaldırın veya belirli bir proje seçin, ardından tekrar deneyin."
+    "itemsUnavailable": "Şu kalemler için ödeme yapılamıyor: {items}. Sepetinizden kaldırın veya belirli bir proje seçin, ardından tekrar deneyin.",
+    "recurringCardUnavailable": "Düzenli kart bağışları şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."
   },
   "certificates": {
     "certNoLabel": "Sertifika no",
@@ -1790,6 +1791,9 @@
     "landscapeVersion": "Onaylı sürüm (yatay)"
   },
   "common": {
+    "quickDestinationRequired": "Devam etmeden önce bağış hedefini seçin.",
+    "quickDestinationUnavailable": "Bu bağış hedefi şu anda kullanılamıyor. Başka bir proje seçip tekrar deneyin.",
+    "quickDonationChecking": "Kontrol ediliyor…",
     "donate": "Bağış Yap",
     "addToCart": "Sepete Ekle",
     "zakatCalculator": "Zekât Hesaplama",

@@ -185,17 +185,17 @@ export default function UrgentBannersPage() {
     },
     {
       header: dt("مفعّل"),
-      cell: (r) => <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />,
+      cell: (r) => <Switch aria-label={dt("مفعّل") + ": " + r.title} checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />,
     },
     {
       header: '',
       className: 'w-24',
       cell: (r) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/content/urgent-banners/${r.id}`)}>
+          <Button aria-label={dt("تعديل") + ": " + r.title} title={dt("تعديل")} variant="ghost" size="icon" onClick={() => router.push(`/dashboard/content/urgent-banners/${r.id}`)}>
             <Pencil className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
+          <Button aria-label={dt("حذف") + ": " + r.title} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
             <Trash2 className="w-4 h-4 text-red-600" />
           </Button>
         </div>

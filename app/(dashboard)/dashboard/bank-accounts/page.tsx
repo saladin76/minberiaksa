@@ -191,7 +191,7 @@ export default function BankAccountsPage() {
             {
               header: dt("مفعّل"),
               cell: (r) => (
-                <Switch checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
+                <Switch aria-label={dt("مفعّل") + ": " + r.name} checked={r.isActive} disabled={togglingId === r.id} onCheckedChange={(v) => toggleActive(r, v)} />
               ),
             },
             {
@@ -199,10 +199,10 @@ export default function BankAccountsPage() {
               className: 'w-24',
               cell: (r) => (
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => router.push(`/dashboard/bank-accounts/edit/${r.id}`)}>
+                  <Button aria-label={dt("تعديل") + ": " + r.name} title={dt("تعديل")} variant="ghost" size="icon" onClick={() => router.push(`/dashboard/bank-accounts/edit/${r.id}`)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
+                  <Button aria-label={dt("حذف") + ": " + r.name} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(r)}>
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </Button>
                 </div>

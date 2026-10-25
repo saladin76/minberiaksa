@@ -44,7 +44,7 @@ export async function getConversionRetryTruthOverview(days = 7): Promise<Convers
     where: { status: "PAID", paidAt: { gte: since } },
     orderBy: { paidAt: "desc" },
     take: 200,
-    select: { id: true, status: true, paidAt: true, totalAmount: true, amount: true, currency: true },
+    select: { id: true, status: true, paidAt: true, totalAmount: true, amount: true, currency: true, conversionEventsSentAt: true },
   });
 
   if (paidDonations.length === 0) {
@@ -59,9 +59,9 @@ export async function getConversionRetryTruthOverview(days = 7): Promise<Convers
   const ids = paidDonations.map((donation) => donation.id);
   const result = await prisma.$runCommandRaw({
     find: "ConversionEvent",
-    filter: { donationId: { $in: ids }, eventName: { $in: ["Donate", "purchase"] } },
+    filter: { donationId: { $in: ids }, eventName: { $in: ["Donate", "Purchase", "purchase"] } },
     projection: { donationId: 1, platform: 1, channel: 1, eventName: 1, status: 1 },
-    limit: 1000,
+    limit: 2000,
   });
 
   const rows: RawConversionEvent[] = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)
@@ -79,12 +79,15 @@ export async function getConversionRetryTruthOverview(days = 7): Promise<Convers
   for (const donation of paidDonations) {
     const events = byDonation.get(donation.id) ?? [];
     const metaServerSent = events.some((event) => event.platform === "META" && event.channel === "server" && event.eventName === "Donate" && event.status === "SENT");
+    const purchaseTracked = events.some(event => event.platform === "META" && event.eventName === "Purchase");
+    const metaPurchaseSent = events.some(event => event.platform === "META" && event.channel === "server" && event.eventName === "Purchase" && event.status === "SENT");
     const ga4ServerSent = events.some((event) => event.platform === "GA4" && event.channel === "server" && event.eventName === "purchase" && event.status === "SENT");
     const failedEvents = events.filter((event) => event.status === "FAILED").length;
     const skippedEvents = events.filter((event) => event.status === "SKIPPED").length;
     const missingPlatforms: string[] = [];
 
     if (!metaServerSent) missingPlatforms.push("META server Donate");
+    if (!metaPurchaseSent && (purchaseTracked || donation.conversionEventsSentAt == null)) missingPlatforms.push("META server Purchase");
     if (!ga4ServerSent) missingPlatforms.push("GA4 server purchase");
 
     if (missingPlatforms.length === 0 && failedEvents === 0) continue;

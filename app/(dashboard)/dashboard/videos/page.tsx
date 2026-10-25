@@ -303,6 +303,7 @@ export default function VideosPage() {
                     <TableCell><LocaleScope localeFilter={video.localeFilter} /></TableCell>
                     <TableCell>
                       <Switch
+                        aria-label={dt("على الرئيسية") + ": " + video.title}
                         checked={video.showOnHome}
                         disabled={togglingId === video.id}
                         onCheckedChange={(v) => toggle(video, 'showOnHome', v)}
@@ -311,6 +312,7 @@ export default function VideosPage() {
                     <TableCell className="text-xs text-slate-600">{video.translationCount}</TableCell>
                     <TableCell>
                       <Switch
+                        aria-label={dt("مفعّل") + ": " + video.title}
                         checked={video.isActive}
                         disabled={togglingId === video.id}
                         onCheckedChange={(v) => toggle(video, 'isActive', v)}

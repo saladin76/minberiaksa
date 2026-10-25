@@ -4,17 +4,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { writeAuditLog } from "@/lib/audit-log";
-import { pickTranslation } from "@/lib/i18n/translation-fallback";
 import { isValidLocale } from "@/lib/locales";
 import type { Prisma } from "@prisma/client";
 import { normalizeBadgeCriteria } from "@/lib/badge-criteria-core";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "badges");
     if (denied) return denied;
-    const locale = request.nextUrl.searchParams.get("locale") || "ar";
     const badges = await prisma.badge.findMany({
       orderBy: { order: "asc" },
       include: {
@@ -29,10 +27,7 @@ export async function GET(request: NextRequest) {
       order: b.order,
       createdAt: b.createdAt,
       translationCount: b.translations.filter((translation) => translation.name.trim().length > 0).length,
-      translatedName: pickTranslation(
-        b.translations.filter((translation) => translation.name.trim().length > 0),
-        locale,
-      )?.name ?? b.name,
+      translatedName: b.name,
     }));
     return NextResponse.json({ badges: items });
   } catch (error) {

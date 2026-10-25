@@ -694,7 +694,8 @@
     "recipientWhatsapp": "Mottagarens WhatsApp-nummer",
     "itemsUnavailable": "Dessa poster kan inte betalas: {items}. Ta bort dem från korgen eller välj ett specifikt projekt och försök igen.",
     "bankTransferUploadNote": "Efter att du har överfört, kommer du att ladda upp kvittot eller överföringsmeddelandet på nästa sida. Din donation bekräftas när vårt ekonomiteam matchar den mot kontot.",
-    "ctaBankContinue": "Fortsätt ladda upp överföringskvittot"
+    "ctaBankContinue": "Fortsätt ladda upp överföringskvittot",
+    "recurringCardUnavailable": "Återkommande kortdonationer är för närvarande inte tillgängliga. Försök igen senare."
   },
   "certificates": {
     "certNoLabel": "Certifikatnr",
@@ -751,6 +752,9 @@
     "landscapeVersion": "Godkänd version (liggande)"
   },
   "common": {
+    "quickDestinationRequired": "Välj ett donationsändamål innan du fortsätter.",
+    "quickDestinationUnavailable": "Detta donationsändamål är inte tillgängligt. Välj ett annat projekt och försök igen.",
+    "quickDonationChecking": "Kontrollerar…",
     "donate": "Ge en Gåva",
     "addToCart": "Lägg i Kundvagn",
     "zakatCalculator": "Zakat-kalkylator",

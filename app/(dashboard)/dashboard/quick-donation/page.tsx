@@ -443,6 +443,20 @@ export default function QuickDonationSettingsPage() {
             </div>
           </div>
 
+          <div className="space-y-3 rounded-lg border p-4">
+            <Label>{dt("وجهات النيات المعتمدة")}</Label>
+            <p className="text-xs text-muted-foreground">{dt("اختر مشروعًا نشطًا لكل نية. لا يمكن تحصيل التبرع دون وجهة معتمدة.")}</p>
+            {shownGeneric.map((key) => <div key={key} className="grid gap-2 sm:grid-cols-2">
+              <Label htmlFor={`quick-target-${key}`}>{GENERIC_LABEL[key]}</Label>
+              <select id={`quick-target-${key}`} value={config.genericProjectIds?.[key] ?? ""}
+                onChange={(event) => set("genericProjectIds", { ...config.genericProjectIds, [key]: event.target.value })}
+                className="rounded-md border bg-background p-2 text-sm">
+                <option value="">{dt("اختر مشروعًا معتمدًا")}</option>
+                {campaigns.filter((campaign) => campaign.isActive).map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.title}</option>)}
+              </select>
+            </div>)}
+          </div>
+
           <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
             <div>
               <Label>{dt("المشاريع")}</Label>

@@ -12,13 +12,13 @@
 # `Authorization: Bearer $CRON_SECRET` read from the app's .env. A run of the
 # same route that is still going is not overlapped (flock).
 #
-# Env: CRON_BASE_URL (default: http://127.0.0.1:${PORT:-3000}),
+# Env: CRON_BASE_URL (default: http://localhost:${PORT:-3000}),
 #      CRON_LOG (default: /var/log/minberiaksa-cron.log)
 set -uo pipefail
 
 ROUTE="${1:?usage: vps-cron-run.sh /api/cron/<name>}"
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BASE="${CRON_BASE_URL:-http://127.0.0.1:${PORT:-3000}}"
+BASE="${CRON_BASE_URL:-http://localhost:${PORT:-3000}}"
 LOG="${CRON_LOG:-/var/log/minberiaksa-cron.log}"
 
 log() { printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$ROUTE" "$*" >> "$LOG"; }
@@ -45,7 +45,9 @@ fi
 
 BODY_FILE="$(mktemp)"
 trap 'rm -f "$BODY_FILE"' EXIT
-CODE="$(curl -sS -m 900 -o "$BODY_FILE" -w '%{http_code}' \
+# localhost lets curl connect to either loopback family before sending. Do not
+# retry cron requests: a financial job may already have been accepted.
+CODE="$(curl -sS --connect-timeout 10 --noproxy "localhost,127.0.0.1,::1" -m 900 -o "$BODY_FILE" -w '%{http_code}' \
   -H "Authorization: Bearer $SECRET" "$BASE$ROUTE" 2>>"$LOG")" || CODE="000"
 
 if [ "${CODE:0:1}" = "2" ]; then

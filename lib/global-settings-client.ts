@@ -33,6 +33,7 @@ export type GlobalSettings = {
   albarakaUseOOS: boolean;
   /** False when ALBARAKA_ENC_KEY is missing, i.e. the gateway can't sign anything. */
   albarakaConfigured: boolean;
+  albarakaRecurringReady?: boolean;
   /**
    * False (default): every donation line is worth at least $1. True: any
    * positive amount in the donor's currency, exactly as given.
@@ -74,6 +75,7 @@ export async function fetchGlobalSettings(
             mainGateway?: unknown;
             albarakaUseOOS?: unknown;
             albarakaConfigured?: unknown;
+            albarakaRecurringReady?: unknown;
             allowAnyAmount?: unknown;
           }
         | null;
@@ -89,6 +91,7 @@ export async function fetchGlobalSettings(
         mainGateway: parseMainGateway(data?.mainGateway),
         albarakaUseOOS: data?.albarakaUseOOS === true,
         albarakaConfigured: data?.albarakaConfigured === true,
+        albarakaRecurringReady: data?.albarakaRecurringReady === true,
         allowAnyAmount: data?.allowAnyAmount === true,
       };
       cached = parsed;

@@ -677,7 +677,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                               {(u.badgeIds ?? []).map((bid) => {
                                 const badge = badges.find((b) => b.id === bid);
                                 if (!badge) return null;
-                                const label = badge.translatedName || badge.name;
+                                const label = badge.name;
                                 return (
                                   <span
                                     key={bid}
@@ -752,6 +752,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" className="min-w-[160px]">
+                              {scope === "donors" && canOpenCommunication && <DropdownMenuItem onClick={() => router.push(`/dashboard/users/donors/${u.id}/communication`)}><MessageCircle className="w-4 h-4 me-2" />{dt("سجل الرسائل")}</DropdownMenuItem>}
                               <DropdownMenuItem onClick={() => openUserProfileCard(u)}>
                                   <UserCircle className="w-4 h-4 me-2" />
                                   {dt("عرض الملف")}</DropdownMenuItem>

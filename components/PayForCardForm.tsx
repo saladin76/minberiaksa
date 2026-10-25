@@ -15,6 +15,8 @@ import Cards from "react-credit-cards-2";
 import "react-credit-cards-2/dist/es/styles-compiled.css";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
+import { useId } from "react";
+import { digitsOnly } from "@/lib/minbar/numeric-input";
 
 export interface PayForCardState {
   cardNumber: string;
@@ -37,14 +39,15 @@ export function PayForCardForm({
   setCardFocus,
 }: Props) {
   const t = useTranslations("DonationDialog");
+  const id = useId();
 
   return (
-    <div className="space-y-4" dir="ltr">
+    <div className="space-y-4" dir="ltr" data-clarity-mask="True" data-hj-suppress="" data-private="">
       <div className="flex justify-center">
         <Cards
           number={cardDetails.cardNumber}
           expiry={cardDetails.expiryDate.replace("/", "")}
-          cvc={cardDetails.cvv}
+          cvc={"•".repeat(cardDetails.cvv.length)}
           name={cardDetails.cardholderName}
           focused={cardFocus as "name" | "number" | "expiry" | "cvc"}
         />
@@ -52,19 +55,20 @@ export function PayForCardForm({
 
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label htmlFor={`${id}-number`} className="block text-xs font-medium text-gray-600 mb-1">
             {t("cardNumber")}
           </label>
           <Input
+            id={`${id}-number`}
             value={cardDetails.cardNumber}
             onChange={(e) => {
-              const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+              const digits = digitsOnly(e.target.value, 19);
               const formatted = digits.replace(/(.{4})/g, "$1 ").trimEnd();
               setCardDetails({ ...cardDetails, cardNumber: formatted });
             }}
             onFocus={() => setCardFocus("number")}
             placeholder="0000 0000 0000 0000"
-            maxLength={19}
+            maxLength={23}
             inputMode="numeric"
             autoComplete="cc-number"
             className="font-mono tracking-widest"
@@ -72,10 +76,11 @@ export function PayForCardForm({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label htmlFor={`${id}-name`} className="block text-xs font-medium text-gray-600 mb-1">
             {t("cardholderName")}
           </label>
           <Input
+            id={`${id}-name`}
             value={cardDetails.cardholderName}
             onChange={(e) =>
               setCardDetails({
@@ -93,13 +98,14 @@ export function PayForCardForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label htmlFor={`${id}-expiry`} className="block text-xs font-medium text-gray-600 mb-1">
               {t("expiryDate")}
             </label>
             <Input
+              id={`${id}-expiry`}
               value={cardDetails.expiryDate}
               onChange={(e) => {
-                let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                let v = digitsOnly(e.target.value, 4);
                 if (v.length >= 3) v = v.slice(0, 2) + "/" + v.slice(2);
                 setCardDetails({ ...cardDetails, expiryDate: v });
               }}
@@ -112,15 +118,17 @@ export function PayForCardForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label htmlFor={`${id}-cvc`} className="block text-xs font-medium text-gray-600 mb-1">
               {t("securityCode")}
             </label>
             <Input
+              id={`${id}-cvc`}
+              type="password"
               value={cardDetails.cvv}
               onChange={(e) =>
                 setCardDetails({
                   ...cardDetails,
-                  cvv: e.target.value.replace(/\D/g, "").slice(0, 4),
+                  cvv: digitsOnly(e.target.value, 4),
                 })
               }
               onFocus={() => setCardFocus("cvc")}

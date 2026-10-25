@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -67,31 +66,37 @@ export function SmartWhatsappDialog({
   const [mode, setMode] = React.useState<"FREEFORM" | "UTILITY" | "MARKETING">("UTILITY");
   const [body, setBody] = React.useState("");
   const [templateId, setTemplateId] = React.useState("");
+  const loadSequence = React.useRef(0);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (signal?: AbortSignal) => {
+    const sequence = ++loadSequence.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/dashboard/communication/whatsapp/smart-send?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
+      const res = await fetch(`/api/dashboard/communication/whatsapp/smart-send?userId=${encodeURIComponent(userId)}`, { cache: "no-store", signal });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
+      if (sequence !== loadSequence.current || signal?.aborted) return;
       const next = data.context as SmartContext;
       setCtx(next);
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
       else setMode(preferred);
     } catch {
+      if (sequence !== loadSequence.current || signal?.aborted) return;
       toast.error(dt("تعذّر تجهيز إرسال واتساب لهذا المتبرع."));
       setCtx(null);
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current && !signal?.aborted) setLoading(false);
     }
   }, [userId, initialMode]);
 
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) { loadSequence.current++; return; }
+    const controller = new AbortController();
     setBody("");
     setTemplateId("");
-    void load();
+    void load(controller.signal);
+    return () => controller.abort();
   }, [open, load]);
 
   const send = async () => {
@@ -108,7 +113,7 @@ export function SmartWhatsappDialog({
       toast.error(dt("اكتب الرسالة أولًا."));
       return;
     }
-    if (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) {
+    if (mode === "UTILITY" && ctx.directSendEnabled && !body.trim() && !templateId) {
       toast.error(dt("اكتب رسالة الخدمة أولًا."));
       return;
     }
@@ -144,11 +149,13 @@ export function SmartWhatsappDialog({
           : transport === "DIRECT_SEND"
             ? dt("تم إرسال رسالة الخدمة عبر Direct Send.")
             : transport === "UTILITY_TEMPLATE_FALLBACK"
-              ? dt("تعذّر Direct Send وتم إرسال قالب Utility المعتمد بنجاح.")
+              ? dt("تم إرسال قالب الخدمة المعتمد بنجاح.")
               : dt("تم إرسال القالب التسويقي المعتمد."),
       );
       setBody("");
       onOpenChange(false);
+    } catch {
+      toast.error(dt("تعذّر الاتصال بخدمة الإرسال. راجع سجل المتبرع قبل إعادة المحاولة."));
     } finally {
       setSending(false);
     }
@@ -296,7 +303,7 @@ export function SmartWhatsappDialog({
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-700">
-                      {dt("قالب Utility الاحتياطي ")}{ctx.directSendEnabled ? dt("(موصى به)") : dt("(مطلوب)")}
+                      {dt("قالب Utility الاحتياطي ")}{ctx.directSendEnabled ? dt("(أو أرسل القالب وحده دون نص حر)") : dt("(مطلوب)")}
                     </label>
                     <select
                       value={templateId}
@@ -332,9 +339,9 @@ export function SmartWhatsappDialog({
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/dashboard/communication/inbox?q=${encodeURIComponent(ctx.phone ?? "")}`}>
+                  <a href={`/dashboard/users/donors/${userId}/communication`}>
                     <History className="me-1.5 h-4 w-4" />
-                    {dt("سجل المحادثة")}</Link>
+                    {dt("سجل المحادثة")}</a>
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>{dt("إلغاء")}</Button>
@@ -342,12 +349,13 @@ export function SmartWhatsappDialog({
                     onClick={send}
                     disabled={
                       sending ||
+                      !ctx.phone ||
                       Boolean(ctx.doNotContact) ||
                       Boolean(ctx.whatsappUnsubscribed) ||
                       Boolean(ctx.consentCheckUnavailable) ||
                       (mode === "FREEFORM" && !body.trim()) ||
                       (mode === "MARKETING" && !templateId) ||
-                      (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||
+                      (mode === "UTILITY" && ctx.directSendEnabled && !body.trim() && !templateId) ||
                       (mode === "UTILITY" && !ctx.directSendEnabled && !templateId)
                     }
                     className="bg-[#25D366] text-white hover:bg-[#20bd5a]"

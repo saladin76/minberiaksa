@@ -271,7 +271,7 @@ export function DocumentListPage({
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">{row.translationCount}</TableCell>
                     <TableCell>
-                      <Switch
+                      <Switch aria-label={dt("منشور") + ": " + row.title}
                         checked={row.isPublished}
                         disabled={togglingId === row.id}
                         onCheckedChange={(v) => togglePublished(row, v)}
@@ -280,13 +280,14 @@ export function DocumentListPage({
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
+                          aria-label={dt("تعديل") + ": " + row.title} title={dt("تعديل")}
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`${copy.basePath}/edit/${row.id}`)}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(row)}>
+                        <Button aria-label={dt("حذف") + ": " + row.title} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(row)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>

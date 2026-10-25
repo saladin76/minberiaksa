@@ -261,7 +261,7 @@ export default function StoriesPage() {
                     <TableCell className="text-xs text-slate-600">{formatWindow(story)}</TableCell>
                     <TableCell className="text-xs text-slate-600">{story.translationCount}</TableCell>
                     <TableCell>
-                      <Switch
+                      <Switch aria-label={dt("مفعّل") + ": " + story.title}
                         checked={story.isActive}
                         disabled={togglingId === story.id}
                         onCheckedChange={(v) => toggleActive(story, v)}
@@ -270,13 +270,14 @@ export default function StoriesPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
+                          aria-label={dt("تعديل") + ": " + story.title} title={dt("تعديل")}
                           variant="ghost"
                           size="icon"
                           onClick={() => router.push(`/dashboard/stories/edit/${story.id}`)}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(story)}>
+                        <Button aria-label={dt("حذف") + ": " + story.title} title={dt("حذف")} variant="ghost" size="icon" onClick={() => setDeleteTarget(story)}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>

@@ -38,7 +38,7 @@ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const origin="http://127.0.0.1:"+server.address().port;
 const output=path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS||".artifacts/content-editor");
 await mkdir(output,{recursive:true});
-const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 const errors=[];
 let checks=0, page;
 try{

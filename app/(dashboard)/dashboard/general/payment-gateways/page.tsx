@@ -23,6 +23,7 @@ type SettingsResponse = {
   payforEnabled?: boolean;
   mainGateway?: string;
   albarakaConfigured?: boolean;
+  albarakaRecurringReady?: boolean;
   albarakaUseOOS?: boolean;
   allowAnyAmount?: boolean;
 };
@@ -57,6 +58,7 @@ export default function PaymentGatewaysPage() {
   const [payforEnabled, setPayforEnabled] = useState(true);
   const [mainGateway, setMainGateway] = useState<MainGateway>("STRIPE");
   const [albarakaConfigured, setAlbarakaConfigured] = useState(true);
+  const [albarakaRecurringReady, setAlbarakaRecurringReady] = useState(false);
   const [albarakaUseOOS, setAlbarakaUseOOS] = useState(false);
   const [allowAnyAmount, setAllowAnyAmount] = useState(false);
   const [savingAnyAmount, setSavingAnyAmount] = useState(false);
@@ -71,6 +73,7 @@ export default function PaymentGatewaysPage() {
         setPayforEnabled(res.data?.payforEnabled !== false);
         setMainGateway(parseMainGateway(res.data?.mainGateway));
         setAlbarakaConfigured(res.data?.albarakaConfigured !== false);
+        setAlbarakaRecurringReady(res.data?.albarakaRecurringReady === true);
         setAlbarakaUseOOS(res.data?.albarakaUseOOS === true);
         setAllowAnyAmount(res.data?.allowAnyAmount === true);
       })
@@ -231,7 +234,7 @@ export default function PaymentGatewaysPage() {
                     ].join(" ")}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
                         <div className={`rounded-full p-2 ${gateway.tone}`}>
                           <Icon className="w-5 h-5" />
                         </div>
@@ -285,7 +288,7 @@ export default function PaymentGatewaysPage() {
             <h2 className="text-sm font-semibold text-gray-900">{dt("مبلغ التبرع")}</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   <div className="rounded-full bg-sky-50 p-2 text-sky-700">
                     <Coins className="w-5 h-5" />
                   </div>
@@ -319,7 +322,7 @@ export default function PaymentGatewaysPage() {
             <h2 className="text-sm font-semibold text-gray-900">{dt("بوابات إضافية")}</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   <div className="rounded-full bg-amber-50 p-2 text-amber-700">
                     <CreditCard className="w-5 h-5" />
                   </div>
@@ -344,8 +347,19 @@ export default function PaymentGatewaysPage() {
             </Card>
           </section>
 
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {dt("التبرعات الشهرية تمرّ دائمًا عبر Stripe لأنها تحتاج إلى تحصيل متكرر لا توفّره بوابتا 3D Secure. كما يبقى Stripe هو المسار الاحتياطي عند فشل أي عملية 3D Secure.")}</p>
+          <Card className="p-5 sm:p-6 space-y-3">
+            <h2 className="text-sm font-semibold">{dt("التكرار")}</h2>
+            <dl className="space-y-3 text-sm">
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt>{dt("يومي")} / {dt("كل جمعة")}</dt>
+                <dd><span dir="ltr">Albaraka Türk (2D)</span> · {albarakaRecurringReady ? dt("جاهز") : dt("غير متاح")}</dd>
+              </div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt>{dt("شهري")}</dt>
+                <dd>{mainGatewayName}{mainGateway === "ALBARAKA" ? <> · {albarakaRecurringReady ? dt("جاهز") : dt("غير متاح")}</> : null}</dd>
+              </div>
+            </dl>
+          </Card>
         </div>
       )}
     </div>
