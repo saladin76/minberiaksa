@@ -145,7 +145,7 @@ export function toOrderItems(
    */
   aliases: Readonly<Record<string, string>> = {}
 ): OrderLines & { unmatched: MinbarCartItem[] } {
-  const bySlug = new Map(projects.map((project) => [project.slug, project.id]));
+  const bySlug = new Map(projects.flatMap((project) => [[project.slug, project.id], [project.id, project.id]]));
   const lines: OrderLines & { unmatched: MinbarCartItem[] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [] };
 
   for (const item of items) {

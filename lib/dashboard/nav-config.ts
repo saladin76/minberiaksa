@@ -28,7 +28,7 @@ export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending";
 export type DashboardNavGroup = { group: string; items: DashboardNavItem[] };
 
 // Sidebar Information Architecture  practical, permission-gated sections in a fixed order.
-// Provider setup and operational sync stay under "ربط المنصات والإرسال".
+// Integration setup and supporting donation tools live under Administration.
 //
 // Every item carries its OWN icon. Icons used to be looked up by `key` (the permission key)
 // in DashboardLayoutClient, which meant the six "التواصل" items and the five operations items
@@ -83,13 +83,11 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "slides", get title() { return dt("الشرائح"); }, href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
       { key: "siteContent", get title() { return dt("البانرات"); }, href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "banners", "emergency", "طوارئ", "بانر", "بانرات", "عاجل", "شد الرحال", "placement"] },
       { key: "ticker", get title() { return dt("شريط التبرعات"); }, href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
-      { key: "siteContent", get title() { return dt("التبرع السريع"); }, href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
     ],
   },
   {
     get group() { return dt("إعدادات المحتوى والتبرعات"); },
     items: [
-      { key: "siteContent", get title() { return dt("نصوص الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
       { key: "siteContent", get title() { return dt("SEO الصفحات العامة"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "metadata", "pages", "فهرسة", "بحث"] },
       { key: "campaigns", get title() { return dt("إعدادات السلة"); }, href: "/dashboard/cart-settings", icon: "shoppingCart", keywords: ["cart", "basket", "السلة", "team", "support", "دعم", "الفريق", "upsell", "suggestions", "مقترحات", "amounts", "مبالغ"] },
       { key: "bankAccounts", get title() { return dt("الحسابات البنكية"); }, href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
@@ -123,14 +121,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     ],
   },
   {
-    // The donation concierge on the public site: how it performs, what visitors ask it, what
-    // the AI concludes from those conversations, and its switches. One grant for the group.
-    get group() { return dt("مساعد العطاء (AI)"); },
-    items: [
-      { key: "aiConcierge", get title() { return dt("مساعد العطاء الذكي"); }, href: "/dashboard/ai-concierge", icon: "sparkles", keywords: ["ai", "concierge", "assistant", "chat", "مساعد", "العطاء", "ذكاء", "analytics", "conversations", "insights", "settings"] },
-    ],
-  },
-  {
     get group() { return dt("التسويق"); },
     items: [
       // The overview, أداء الحملات and التوصيات pages were removed; what is left is the part of
@@ -139,21 +129,14 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     ],
   },
   {
-    get group() { return dt("ربط المنصات والإرسال"); },
-    items: [
-      // The overview, الحسابات الإعلانية, Webhooks and سجلات المنصات pages were removed. The three
-      // pages left are the ones that configure something: pixels, providers, and the health check.
-      { key: "platformConnections", get title() { return dt("بكسلات التتبع"); }, href: "/dashboard/platform-connections/tracking", icon: "radar", keywords: ["pixels", "meta", "tiktok", "snap"] },
-      { key: "platformConnections", get title() { return dt("مزودو التواصل والإرسال"); }, href: "/dashboard/platform-connections/communication", icon: "server", keywords: ["providers", "meta", "elastic email", "brevo", "netgsm", "whatsapp", "sms", "email"] },
-      // No dedicated "telegram" permission key exists, and inventing one would need a matching
-      // grant UI. It is an outbound integration, so it sits under platformConnections with the
-      // other providers. Donation notifications depend on this page being configurable.
-      { key: "platformConnectionsAdmin", get title() { return dt("تيليجرام"); }, href: "/dashboard/telegram", icon: "send", keywords: ["telegram", "bot", "notifications"], adminOnly: true },
-    ],
-  },
-  {
     get group() { return dt("الإدارة"); },
     items: [
+      { key: "aiConcierge", get title() { return dt("مساعد العطاء الذكي"); }, href: "/dashboard/ai-concierge", icon: "sparkles", keywords: ["ai", "concierge", "assistant", "chat", "مساعد", "العطاء", "ذكاء", "analytics", "conversations", "insights", "settings"] },
+      { key: "platformConnections", get title() { return dt("بكسلات التتبع"); }, href: "/dashboard/platform-connections/tracking", icon: "radar", keywords: ["pixels", "meta", "tiktok", "snap"] },
+      { key: "platformConnections", get title() { return dt("مزودو التواصل والإرسال"); }, href: "/dashboard/platform-connections/communication", icon: "server", keywords: ["providers", "meta", "elastic email", "brevo", "netgsm", "whatsapp", "sms", "email"] },
+      { key: "platformConnectionsAdmin", get title() { return dt("تيليجرام"); }, href: "/dashboard/telegram", icon: "send", keywords: ["telegram", "bot", "notifications"], adminOnly: true },
+      { key: "siteContent", get title() { return dt("التبرع السريع"); }, href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
+      { key: "siteContent", get title() { return dt("نصوص الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
       { key: "team", get title() { return dt("الفريق"); }, href: "/dashboard/users/team", icon: "userCog", keywords: ["team", "staff", "permissions", "صلاحيات"] },
       { key: "generalSettings", get title() { return dt("الإعدادات"); }, href: "/dashboard/general/payment-gateways", icon: "settings", keywords: ["settings", "payment", "gateways", "stripe"] },
       { key: "logs", get title() { return dt("سجلات النظام"); }, href: "/dashboard/logs", icon: "scrollText", keywords: ["logs", "audit", "system"] },

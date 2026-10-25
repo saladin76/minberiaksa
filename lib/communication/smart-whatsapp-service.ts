@@ -430,8 +430,9 @@ export async function sendSmartWhatsapp(input: {
   if (mode === "UTILITY") {
     let directFailure: { reason: string; detail?: string | null } | null = null;
 
-    if (ctx.directSendEnabled) {
-      if (!body) return { ok: false, reason: "EMPTY_BODY" };
+    // A selected approved template is independently sendable. Direct Send only
+    // applies when the operator actually entered service text.
+    if (ctx.directSendEnabled && body) {
 
       const created = await createDeliveryRecord({
         channel: "WHATSAPP",

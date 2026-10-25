@@ -108,7 +108,7 @@ export function SmartWhatsappDialog({
       toast.error(dt("اكتب الرسالة أولًا."));
       return;
     }
-    if (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) {
+    if (mode === "UTILITY" && ctx.directSendEnabled && !body.trim() && !templateId) {
       toast.error(dt("اكتب رسالة الخدمة أولًا."));
       return;
     }
@@ -149,6 +149,8 @@ export function SmartWhatsappDialog({
       );
       setBody("");
       onOpenChange(false);
+    } catch {
+      toast.error(dt("تعذّر الاتصال بخدمة الإرسال. راجع سجل المتبرع قبل إعادة المحاولة."));
     } finally {
       setSending(false);
     }
@@ -296,7 +298,7 @@ export function SmartWhatsappDialog({
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-700">
-                      {dt("قالب Utility الاحتياطي ")}{ctx.directSendEnabled ? dt("(موصى به)") : dt("(مطلوب)")}
+                      {dt("قالب Utility الاحتياطي ")}{ctx.directSendEnabled ? dt("(أو أرسل القالب وحده دون نص حر)") : dt("(مطلوب)")}
                     </label>
                     <select
                       value={templateId}
@@ -332,7 +334,7 @@ export function SmartWhatsappDialog({
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/dashboard/communication/inbox?q=${encodeURIComponent(ctx.phone ?? "")}`}>
+                  <Link href={`/dashboard/users/donors/${userId}/communication`}>
                     <History className="me-1.5 h-4 w-4" />
                     {dt("سجل المحادثة")}</Link>
                 </Button>
@@ -342,12 +344,13 @@ export function SmartWhatsappDialog({
                     onClick={send}
                     disabled={
                       sending ||
+                      !ctx.phone ||
                       Boolean(ctx.doNotContact) ||
                       Boolean(ctx.whatsappUnsubscribed) ||
                       Boolean(ctx.consentCheckUnavailable) ||
                       (mode === "FREEFORM" && !body.trim()) ||
                       (mode === "MARKETING" && !templateId) ||
-                      (mode === "UTILITY" && ctx.directSendEnabled && !body.trim()) ||
+                      (mode === "UTILITY" && ctx.directSendEnabled && !body.trim() && !templateId) ||
                       (mode === "UTILITY" && !ctx.directSendEnabled && !templateId)
                     }
                     className="bg-[#25D366] text-white hover:bg-[#20bd5a]"

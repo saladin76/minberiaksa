@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { SmartWhatsappDialog } from "@/components/dashboard/SmartWhatsappDialog";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Dialog, DialogOverlay, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -44,7 +46,19 @@ interface TemplateRow {
   name: string;
 }
 
-export function SendTemplateDialog({ open, onOpenChange, channel, target }: Props) {
+export function SendTemplateDialog(props: Props) {
+  if (props.channel === "whatsapp") {
+    if (props.target.kind === "user") return <SmartWhatsappDialog open={props.open} onOpenChange={props.onOpenChange} userId={props.target.userId} initialMode="UTILITY" />;
+    return <Dialog open={props.open} onOpenChange={props.onOpenChange}><DialogContent dir={dashDir()}>
+      <DialogTitle>{dt("إرسال حملة واتساب")}</DialogTitle>
+      <p>{dt("اختر الجمهور والقالب المعتمد من محرر الحملات لمراجعة الإرسال الجماعي.")}</p>
+      <Button asChild><Link href="/dashboard/communication/campaigns/new">{dt("فتح محرر الحملات")}</Link></Button>
+    </DialogContent></Dialog>;
+  }
+  return <EmailTemplateDialog {...props} />;
+}
+
+function EmailTemplateDialog({ open, onOpenChange, channel, target }: Props) {
   const [templates, setTemplates] = React.useState<TemplateRow[]>([]);
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string>("");
