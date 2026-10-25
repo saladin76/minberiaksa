@@ -234,7 +234,7 @@ export default function PaymentGatewaysPage() {
                     ].join(" ")}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
                         <div className={`rounded-full p-2 ${gateway.tone}`}>
                           <Icon className="w-5 h-5" />
                         </div>
@@ -288,7 +288,7 @@ export default function PaymentGatewaysPage() {
             <h2 className="text-sm font-semibold text-gray-900">{dt("مبلغ التبرع")}</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   <div className="rounded-full bg-sky-50 p-2 text-sky-700">
                     <Coins className="w-5 h-5" />
                   </div>
@@ -322,7 +322,7 @@ export default function PaymentGatewaysPage() {
             <h2 className="text-sm font-semibold text-gray-900">{dt("بوابات إضافية")}</h2>
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   <div className="rounded-full bg-amber-50 p-2 text-amber-700">
                     <CreditCard className="w-5 h-5" />
                   </div>
