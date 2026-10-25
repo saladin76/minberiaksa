@@ -24,6 +24,8 @@ const entry = [
 ].join("\n");
 const result = await build({stdin:{contents:entry,loader:"tsx",resolveDir:process.cwd()},bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"test"',"process.env":"{}"},plugins:[{
   name:"fixture-next-link",setup(builder){
+    builder.onResolve({filter:new RegExp("^next-intl$")},()=>({path:"intl-fixture",namespace:"fixture-intl"}));
+    builder.onLoad({filter:/.*/,namespace:"fixture-intl"},()=>({contents:'export function NextIntlClientProvider({children}){return children;} export function useLocale(){return "en";} export function useTranslations(){const labels={watchFullSeries:"Watch full series",watchVideo:"Watch video",close:"Close"};return (key)=>labels[key]||key;}',loader:"js"}));
     builder.onResolve({filter:new RegExp("^next/link$")},()=>({path:"next-link",namespace:"fixture"}));
     builder.onLoad({filter:/.*/,namespace:"fixture"},()=>({contents:'import React from "react";export default function Link(p){return React.createElement("a",p,p.children)}',loader:"js",resolveDir:process.cwd()}));
   },
@@ -93,7 +95,7 @@ try{
     await page.setViewportSize({width:1440,height:1000});
   }
   assert.deepEqual(errors,[]);
-  await writeFile(path.join(output,"public-media-verification.json"),JSON.stringify({checks,errors,scope:"Real public ProgramsPage, CoursesPage and VideoModal; inspect YouTube/Vimeo/MP4/playlist player URLs and closing; external streams blocked."},null,2));
+  await writeFile(path.join(output,"public-media-verification.json"),JSON.stringify({checks,errors,scope:"Real public ProgramsPage, CoursesPage and VideoModal; inspect YouTube/Vimeo/MP4/playlist player URLs and closing; translation lookup and external streams mocked."},null,2));
   console.log(JSON.stringify({checks,passed:true}));
 }finally{
   if(errors.length) console.error(JSON.stringify({pageErrors:errors}));
