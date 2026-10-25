@@ -237,6 +237,8 @@ const nextConfig: NextConfig = {
       { source: "/page/saglik", destination: "/tr", permanent: true },
       { source: "/page/yardim", destination: "/tr/contact-us", permanent: true },
       { source: "/ar/mshrwa-twrya-alkhbr-wdam-almkhabr", destination: "/ar/bagislar/gaza-bread", permanent: true },
+      { source: "/ar/ghr", destination: "/ar/bagislar", permanent: true },
+      { source: "/ar/monthly-donate", destination: "/ar/recurring-donation", permanent: true },
       { source: "/ar/donates", destination: "/ar/campaigns", permanent: true },
       { source: "/donates", destination: "/en/campaigns", permanent: true },
     ];
