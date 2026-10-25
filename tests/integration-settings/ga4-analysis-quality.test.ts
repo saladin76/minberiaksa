@@ -88,5 +88,50 @@ test("routine events marked as key events constrain conclusions about engagement
     assert.deepEqual(input.engagementKeyEvents.map((row: {event: string}) => row.event), ["page_view", "user_engagement"]);
   });
   assert.match(result.analysis.limitations[0], /مشاهدة الصفحة/);
-  assert.equal(result.analysis.opportunities[0].confidence, "medium");
+  assert.equal(result.analysis.opportunities[0].confidence, "low");
+});
+
+test("a valid citation cannot launder invented totals, page names or a causal UX finding", async () => {
+  const report = reportFixture();
+  report.summary = { ...report.summary, activeUsers: 11118, newUsers: 10463, totalUsers: 11233, sessions: 12677, screenPageViews: 39915 };
+  const reply = responseFixture("ux");
+  reply.summary = "منذ 28 يومًا سجل الموقع 11233 مستخدمًا جديدًا ويعاني من تراجع.";
+  reply.opportunities[0].title = "إصلاح صفحة بادجيسلار";
+  reply.opportunities[0].finding = "صفحة بادجيسلار سجلت 9000 جلسة وارتدادًا مرتفعًا بسبب سوء التصميم.";
+  reply.opportunities[0].action = "غيّر صفحة بادجيسلار لأن الزوار غير راضين.";
+  const { analysis } = await analyze(reply, report);
+  assert.match(analysis.summary, /١٠٬٤٦٣/);
+  assert.doesNotMatch(analysis.summary, /١١٬٢٣٣|11233|تراجع|منذ 28/);
+  assert.match(analysis.opportunities[0].finding, /«\/ar»/);
+  assert.match(analysis.opportunities[0].finding, /الجلسات: ٨/);
+  assert.doesNotMatch(JSON.stringify(analysis), /بادجيسلار|9000|سوء التصميم|غير راضين/);
+});
+
+test("traffic-only ad evidence never becomes a recommendation to increase spending", async () => {
+  const reply = responseFixture("ads");
+  reply.opportunities[0].finding = "الإعلانات ناجحة بسبب كثرة الجلسات.";
+  reply.opportunities[0].action = "قم بزيادة الميزانية وتوسيع الإعلانات فورًا.";
+  const { analysis } = await analyze(reply);
+  assert.doesNotMatch(JSON.stringify(analysis), /الإعلانات ناجحة|قم بزيادة|توسيع الإعلانات فورًا/);
+  assert.match(analysis.opportunities[0].action, /تكلفة الإعلان بالتبرعات المؤكدة/);
+  assert.equal(analysis.opportunities[0].confidence, "low");
+});
+
+test("source bounce rates are rendered as percentages without inventing a high-bounce diagnosis", async () => {
+  const report = reportFixture();
+  report.extended = { landingPages: { rows: [{ dimensions: ["/ar"], metrics: [8, 7, 1, 0.012] }], rowCount: 1, thresholded: false, sampled: false } };
+  const id = ga4AnalysisEvidence(report).find(row => row.dataset === "landingPages")!.id;
+  const reply = responseFixture("ux", [id]);
+  reply.opportunities[0].finding = "الصفحة تعاني من ارتداد مرتفع.";
+  const { analysis } = await analyze(reply, report);
+  assert.match(analysis.opportunities[0].finding, /معدل الارتداد: ١٫٢%/);
+  assert.doesNotMatch(analysis.opportunities[0].finding, /ارتداد مرتفع/);
+});
+
+test("grounded observations support English and Turkish with original public paths", async () => {
+  for (const locale of ["en", "tr"]) {
+    const result = await analyzeGa4Report({ report: reportFixture(), period: {range: "28d"}, locale, model: "fixture", baseUrl: "https://fixture.example/v1", apiKey: "fixture", fetchImpl: async () => new Response(JSON.stringify({ output_text: JSON.stringify(responseFixture("ads")) })) });
+    assert.match(result.analysis.opportunities[0].finding, /«\/ar»/);
+    assert.match(result.analysis.opportunities[0].action, locale === "en" ? /confirmed donations/ : /doğrulanmış bağış/);
+  }
 });

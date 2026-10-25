@@ -13,6 +13,86 @@ export const ga4AnalysisSchema = z.object({
 });
 export type Ga4Analysis = z.infer<typeof ga4AnalysisSchema>;
 
+// Evidence IDs constrain selection, but do not make model-written claims true.
+// Render observations and review actions from the selected source rows instead.
+function groundAnalysis(analysis: Ga4Analysis, evidence: Ga4Evidence[], report: Ga4DashboardReport, locale: string) {
+  const language = locale === "ar" || locale === "tr" ? locale : "en";
+  const copy = {
+    ar: {
+      summary: "إجماليات الفترة المحددة",
+      observation: "الأرقام المسجلة في الدليل المحدد",
+      experiment: "فرضية تحتاج اختبارًا: ",
+      titles: { ads: "مراجعة قياس الإعلانات", seo: "مراجعة بيانات البحث العضوي", ux: "اختبار تجربة المستخدم", measurement: "مراجعة جودة القياس" },
+      actions: {
+        ads: "اربط تكلفة الإعلان بالتبرعات المؤكدة لنفس الفترة والحملة، وتحقق من الإسناد قبل أي قرار بشأن الميزانية. عدد الجلسات وحده لا يثبت نجاح الإعلانات.",
+        seo: "راجع الاستعلام أو الصفحة في Search Console ثم اختبر تعديلًا محدودًا وقارن النقرات والظهور؛ لا تستنتج سببًا من هذه الأرقام وحدها.",
+        ux: "راجع المسار المرتبط بالدليل يدويًا، ثم اختبر تحسينًا واحدًا وقارن إتمام التبرع قبل اعتماده. الأرقام الحالية لا تثبت وجود عيب أو عدم رضا الزوار.",
+        measurement: "تحقق من تعريف الأحداث والأبعاد وإعداد القياس للبيانات المشار إليها. راجع صلاحية Search Console إن كانت بياناته غير متاحة؛ لا تُعامل الأحداث الرئيسية كتَبرعات مؤكدة.",
+      },
+      scope: "الذكاء الاصطناعي يختار أولويات المراجعة؛ الملاحظات والأرقام معروضة من التقرير مباشرة. لا تتوفر مقارنة تاريخية أو تكلفة إعلان أو عائد مؤكد لاتخاذ قرار بزيادة الميزانية.",
+      organic: "بيانات Search Console غير متاحة؛ لا يمكن تقييم أداء البحث العضوي من زيارات GA4 وحدها.",
+      quality: "قد تكون التقارير محدودة بالصفوف المعروضة أو حدود الخصوصية أو العينات؛ راجع دقة البيانات قبل المقارنة.",
+    },
+    en: {
+      summary: "Selected-period totals",
+      observation: "Recorded values in the selected evidence",
+      experiment: "Hypothesis to test: ",
+      titles: { ads: "Review ad measurement", seo: "Review organic-search data", ux: "Test user experience", measurement: "Review measurement quality" },
+      actions: {
+        ads: "Match ad spend to confirmed donations for the same period and campaign, and validate attribution before a budget decision. Sessions alone do not establish ad success.",
+        seo: "Review the query or page in Search Console, then test one limited change and compare clicks and impressions. These figures alone do not establish a cause.",
+        ux: "Review the related journey manually, then test one change and compare donation completion before adopting it. These figures do not establish a defect or dissatisfaction.",
+        measurement: "Verify event definitions, dimensions and measurement configuration for the cited data. Review Search Console access if unavailable; key events are not confirmed donations.",
+      },
+      scope: "AI selects review priorities; observations and numbers come directly from the report. No historical comparison, ad spend or confirmed return is available to justify a budget increase.",
+      organic: "Search Console data is unavailable; GA4 traffic alone cannot evaluate organic-search performance.",
+      quality: "Reports may be limited to displayed rows, privacy thresholds or sampling; review data quality before comparison.",
+    },
+    tr: {
+      summary: "Seçili dönem toplamları",
+      observation: "Seçilen kanıtta kaydedilen değerler",
+      experiment: "Test edilecek hipotez: ",
+      titles: { ads: "Reklam ölçümünü inceleyin", seo: "Organik arama verilerini inceleyin", ux: "Kullanıcı deneyimini test edin", measurement: "Ölçüm kalitesini inceleyin" },
+      actions: {
+        ads: "Bütçe kararı vermeden önce aynı dönem ve kampanyanın reklam maliyetini doğrulanmış bağışlarla eşleştirin ve ilişkilendirmeyi doğrulayın. Oturum sayısı tek başına reklam başarısını göstermez.",
+        seo: "Search Console sorgusunu veya sayfasını inceleyin, sınırlı bir değişiklik test edin ve tıklama ile gösterimleri karşılaştırın. Bu sayılar tek başına nedeni göstermez.",
+        ux: "İlgili akışı elle inceleyin, tek bir değişikliği test edin ve uygulamadan önce bağış tamamlamalarını karşılaştırın. Bu sayılar bir kusur veya memnuniyetsizliği kanıtlamaz.",
+        measurement: "Olay tanımlarını, boyutları ve ölçüm ayarlarını doğrulayın. Verileri yoksa Search Console erişimini inceleyin; önemli etkinlikler doğrulanmış bağış değildir.",
+      },
+      scope: "Yapay zekâ inceleme önceliklerini seçer; gözlem ve sayılar doğrudan rapordan gelir. Bütçe artışını destekleyecek geçmiş karşılaştırması, reklam maliyeti veya doğrulanmış getiri yoktur.",
+      organic: "Search Console verileri kullanılamıyor; yalnızca GA4 trafiği organik arama performansını değerlendiremez.",
+      quality: "Raporlar gösterilen satırlar, gizlilik eşikleri veya örneklemeyle sınırlı olabilir; karşılaştırmadan önce veri kalitesini inceleyin.",
+    },
+  }[language];
+  const metricNames: Record<string, string[]> = {
+    activeUsers: ["الزوار النشطون", "Active users", "Aktif kullanıcılar"],
+    totalUsers: ["إجمالي المستخدمين", "Total users", "Toplam kullanıcılar"],
+    newUsers: ["المستخدمون الجدد", "New users", "Yeni kullanıcılar"],
+    sessions: ["الجلسات", "Sessions", "Oturumlar"],
+    views: ["المشاهدات", "Views", "Görüntülemeler"],
+    screenPageViews: ["مشاهدات الصفحات", "Page views", "Sayfa görüntülemeleri"],
+    keyEvents: ["الأحداث الرئيسية", "Key events", "Önemli etkinlikler"],
+    eventCount: ["عدد الأحداث", "Event count", "Olay sayısı"],
+    engagementRate: ["معدل التفاعل", "Engagement rate", "Etkileşim oranı"],
+    bounceRate: ["معدل الارتداد", "Bounce rate", "Hemen çıkma oranı"],
+    clicks: ["النقرات", "Clicks", "Tıklamalar"],
+    impressions: ["الظهور", "Impressions", "Gösterimler"],
+    ctr: ["نسبة النقر", "CTR", "TO"],
+    position: ["متوسط الترتيب", "Average position", "Ortalama konum"],
+  };
+  const languageIndex = { ar: 0, en: 1, tr: 2 }[language];
+  const format = (name: string, value: number) => `${metricNames[name]?.[languageIndex] ?? name}: ${new Intl.NumberFormat(language === "ar" ? "ar-EG" : language, { maximumFractionDigits: 2 }).format(["engagementRate", "bounceRate", "ctr"].includes(name) ? value * 100 : value)}${["engagementRate", "bounceRate", "ctr"].includes(name) ? "%" : ""}`;
+  analysis.summary = `${copy.summary}: ${["activeUsers", "newUsers", "sessions", "screenPageViews"].map(name => format(name, report.summary[name as keyof typeof report.summary])).join(" · ")}.`;
+  analysis.opportunities = analysis.opportunities.map(row => {
+    const source = evidence.find(item => item.id === row.evidenceIds[0])!;
+    const label = source.dataset === "summary" ? copy.summary : source.label;
+    const observation = `${copy.observation} «${label}»: ${Object.entries(source.metrics).slice(0, 4).map(([name, value]) => format(name, value)).join(" · ")}.`;
+    return { ...row, title: copy.titles[row.area], finding: (row.area === "ux" ? copy.experiment : "") + observation, action: copy.actions[row.area], confidence: row.area === "ux" || row.area === "ads" ? "low" as const : row.confidence };
+  });
+  analysis.limitations = [copy.scope, ...(report.organicSearch?.status === "ready" ? [] : [copy.organic]), copy.quality];
+  return analysis;
+}
+
 function clean(value: string) {
   return value.split("?")[0].replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted]").replace(/[a-f0-9]{24,}/gi, "[id]").replace(/\+?\d[\d\s().-]{7,}\d/g, "[redacted]").slice(0, 180);
 }
@@ -89,8 +169,7 @@ export async function analyzeGa4Report(options: { report: Ga4DashboardReport; pe
     const arabic = letters.filter(letter => /\p{Script=Arabic}/u.test(letter)).length;
     return arabic === 0 || arabic < letters.length * 0.4;
   })) throw new OpenAiResponseError("AI_INVALID_ANALYSIS");
-  const hypothesis = ({ ar: "فرضية تحتاج اختبارًا: ", en: "Hypothesis to test: ", tr: "Test edilecek hipotez: " } as Record<string, string>)[options.locale] ?? "Hypothesis to test: ";
-  parsed.opportunities = parsed.opportunities.map(row => row.area === "ux" ? { ...row, finding: hypothesis + row.finding, confidence: "low" as const } : row);
+  parsed = groundAnalysis(parsed, evidence, options.report, options.locale);
   if (engagementKeyEvents.length) {
     const warning = ({
       ar: "أحداث مشاهدة الصفحة أو التمرير أو التفاعل مسجّلة كأحداث رئيسية؛ لذلك قد تتأثر نسبتا التفاعل والارتداد بإعداد القياس، ولا تثبتان جودة الزيارات أو نجاح التبرعات.",
