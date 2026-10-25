@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { donationEditTotals } from "@/lib/donations/edit-totals";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 interface CampaignOption {
@@ -30,6 +31,9 @@ interface DonationDetail {
   id: string;
   amount: number;
   totalAmount: number;
+  teamSupport: number;
+  fees: number;
+  coverFees: boolean;
   currency: string;
   status: "PAID" | "FAILED";
   paidAt: string | null;
@@ -74,6 +78,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
   // option so admins can either leave it pending or confirm it (stamp paidAt
   // and let the server roll the amount into campaign/category totals).
   const [statusChoice, setStatusChoice] = useState<"PAID" | "PAID_PENDING" | "FAILED">("PAID");
+  const [teamSupport, setTeamSupport] = useState("0");
   const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
 
   // Picker datasets  fetched once when dialog opens.
@@ -94,6 +99,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
         const d = donRes.data as DonationDetail;
         setDonation(d);
+        setTeamSupport(String(d.teamSupport ?? 0));
         // Unconfirmed (paidAt=null) opens as قيد التأكيد for every donation,
         // one-time or recurring: "PAID" is the admin saying the money arrived.
         setStatusChoice(
@@ -170,6 +176,11 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
     [editableItems, waqfSum]
   );
 
+  const supportAmount = Number(teamSupport);
+  const invalidSupport = teamSupport.trim() === "" || !Number.isFinite(supportAmount) || supportAmount < 0 || supportAmount > 1_000_000_000;
+  const invalidPrincipal = !Number.isFinite(newAmountSum) || newAmountSum <= 0 || newAmountSum > 1_000_000_000;
+  const newTotal = invalidSupport || invalidPrincipal || !donation ? 0 : donationEditTotals(newAmountSum, supportAmount, donation.fees ?? 0, donation.coverFees ?? false).totalAmount;
+
   const hasInvalidLine = editableItems.some(
     (it) => !it.refId || !Number.isFinite(Number(it.amount)) || Number(it.amount) <= 0
   );
@@ -185,11 +196,13 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
   const canSave =
     !loading &&
     !submitting &&
-    editableItems.length > 0 &&
+    (editableItems.length > 0 || waqfSum > 0) &&
+    !invalidSupport &&
+    !invalidPrincipal &&
     newAmountSum > 0 &&
     !hasInvalidLine &&
     !hasDuplicateLine;
-  const confirmExpected = formatExpected(newAmountSum);
+  const confirmExpected = formatExpected(newTotal);
   const confirmMatches = normalizeNumericInput(confirmTyped) === confirmExpected;
 
   const dirty = useMemo(() => {
@@ -200,7 +213,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
         : donation.paidAt === null
           ? "PAID_PENDING"
           : "PAID";
-    if (originalChoice !== statusChoice) return true;
+    if (originalChoice !== statusChoice || supportAmount !== (donation.teamSupport ?? 0)) return true;
     const old: EditableItem[] = [
       ...donation.items.map((i) => ({
         key: "",
@@ -224,7 +237,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
         .sort()
         .join("|");
     return sig(old) !== sig(editableItems);
-  }, [donation, editableItems, statusChoice]);
+  }, [donation, editableItems, statusChoice, supportAmount]);
 
   const setLineAmount = (idx: number, val: string) => {
     setEditableItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
@@ -273,8 +286,10 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
       await axios.patch(`/api/donations/${donationId}`, {
         status,
         confirmPaidAt,
-        items,
-        categoryItems,
+        teamSupport: supportAmount,
+        // Preserve the original line USD values when only support/status changes.
+        ...(JSON.stringify(items) !== JSON.stringify(donation.items.map(({ campaignId, amount }) => ({ campaignId, amount }))) ? { items } : {}),
+        ...(JSON.stringify(categoryItems) !== JSON.stringify(donation.categoryItems.map(({ categoryId, amount }) => ({ categoryId, amount }))) ? { categoryItems } : {}),
       });
       toast.success(dt("تم تعديل التبرع وتحديث الإجماليات"));
       onSaved();
@@ -488,6 +503,17 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                 </span>
               </div>
 
+              <div className="space-y-2 rounded-lg border p-3">
+                <label htmlFor="donation-team-support" className="text-xs font-medium">{dt("دعم الفريق")}</label>
+                <input id="donation-team-support" type="number" min="0" max="1000000000" step="0.01" value={teamSupport}
+                  onChange={(event) => setTeamSupport(event.target.value)} dir="ltr" aria-invalid={invalidSupport}
+                  className="w-full rounded border border-slate-300 px-3 py-2" />
+                {invalidSupport && <p className="text-xs text-rose-600">{dt("أدخل مبلغًا صحيحًا لدعم الفريق، صفر أو أكثر.")}</p>}
+                <p className="text-xs text-slate-500">{dt("تعديل السجل لا يخصم مبلغًا إضافيًا من المتبرع ولا يغيّر قيمة الاشتراك القادم.")}</p>
+                <div className="flex justify-between text-xs"><span>{dt("الرسوم المشمولة")}</span><span dir="ltr">{donation.coverFees ? donation.fees : 0} {donation.currency}</span></div>
+                <div className="flex justify-between font-bold"><span>{dt("الإجمالي الجديد شامل دعم الفريق والرسوم")}</span><span dir="ltr">{newTotal} {donation.currency}</span></div>
+              </div>
+
               {hasDuplicateLine && (
                 <p className="text-[11px] text-rose-600">
                   {dt("يوجد سطران للمشروع/الحملة نفسها  ادمجهما في سطر واحد.")}</p>
@@ -527,7 +553,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
               </div>
               <div className="mt-4 space-y-1 text-start">
                 <label className="block text-xs font-medium text-slate-700">
-                  {dt("للتأكيد، اكتب إجمالي عناصر التبرع الجديد تمامًا (")}<span dir="ltr">{confirmExpected}</span>):
+                  {dt("للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (")}<span dir="ltr">{confirmExpected}</span>):
                 </label>
                 <input
                   type="text"
@@ -540,7 +566,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                   disabled={submitting}
                 />
                 {confirmTyped && !confirmMatches && (
-                  <p className="text-[11px] text-rose-600">{dt("القيمة المُدخلة لا تطابق إجمالي عناصر التبرع الجديد.")}</p>
+                  <p className="text-[11px] text-rose-600">{dt("القيمة المُدخلة لا تطابق الإجمالي الجديد.")}</p>
                 )}
               </div>
               <div className="mt-4 flex justify-between gap-2">
