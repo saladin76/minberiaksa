@@ -2,6 +2,8 @@
  * Measurement-only policy. Never use these URLs to navigate, create an order,
  * change a currency cookie, or attribute a server-confirmed donation.
  */
+import { redactAnalyticsPath } from "./private-path";
+
 export const ENGAGEMENT_MEASUREMENT_VERSION = "2";
 
 export function isMeasurementHost(
@@ -57,21 +59,21 @@ export function landingAttribution(params: URLSearchParams): Record<string, stri
   return tags;
 }
 
-/** Cosmetic currency cleanup is not another page. Other query changes still are. */
+const NON_ROUTING_QUERY_KEYS = new Set(["currency", "t", "token", "accesstoken", "access_token", "donationid", "email", "phone"]);
+
+/** Currency/credential cleanup is not another page. Real filter changes still are. */
 export function measurementRouteKey(pathname: string, search: string): string {
   const params = new URLSearchParams(search);
-  params.delete("currency");
+  for (const key of [...params.keys()]) {
+    if (NON_ROUTING_QUERY_KEYS.has(key.toLowerCase())) params.delete(key);
+  }
   params.sort();
   const query = params.toString();
   return (pathname || "/") + (query ? "?" + query : "");
 }
 
 export function measurementPath(pathname: string): string {
-  // Confirmation/access identifiers belong to the application, not custom tags.
-  return pathname.replace(
-    /\/(success|donation-failed|donation-pending|reset-password|verify-email)(?:\/.*)?$/,
-    "/$1",
-  );
+  return redactAnalyticsPath(pathname);
 }
 
 const PUBLIC_QUERY_KEYS = new Set([...CAMPAIGN_KEYS, "page", "category", "sort", "tab", "type"]);

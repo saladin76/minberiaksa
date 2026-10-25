@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Ga4DashboardReport } from "./ga4-reporting";
 import type { Ga4Period } from "./ga4-period";
 import { GA4_BREAKDOWNS } from "./ga4-extended";
+import { isPublicAnalyticsPath } from "../tracking/private-path";
 
 export type Ga4Evidence = { id: string; dataset: string; label: string; metrics: Record<string, number> };
 export const ga4AnalysisSchema = z.object({
@@ -14,7 +15,7 @@ export type Ga4Analysis = z.infer<typeof ga4AnalysisSchema>;
 function clean(value: string) {
   return value.split("?")[0].replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted]").replace(/[a-f0-9]{24,}/gi, "[id]").replace(/\+?\d[\d\s().-]{7,}\d/g, "[redacted]").slice(0, 180);
 }
-function safePath(path: string) { return path.startsWith("/") && !/\/(?:api|checkout|payment|profile|success|failure)(?:\/|$)/i.test(path); }
+function safePath(path: string) { return isPublicAnalyticsPath(path) && !/\/(?:checkout|payment|failure)(?:\/|$)/i.test(path); }
 
 /** Only aggregated measures and public content paths enter the model. */
 export function ga4AnalysisEvidence(report: Ga4DashboardReport): Ga4Evidence[] {

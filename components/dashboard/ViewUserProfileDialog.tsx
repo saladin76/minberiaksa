@@ -92,8 +92,7 @@ const Venus = ({ size, ...props }: LucideProps) => (
 import { DonorAttributionJourney } from "@/components/dashboard/DonorAttributionJourney";
 import { UserDonationsTable } from "@/components/dashboard/UserDonationsTable";
 
-const CLARITY_PROJECT_ID =
-  process.env.NEXT_PUBLIC_CLARITY_ID?.trim() || "u614k028k2";
+import { clarityUserRecordingsUrl as buildClarityUrl } from "@/lib/tracking/clarity-config";
 
 /** Google Maps search URL from a list of optional location parts. */
 function buildGoogleMapsUrl(parts: Array<string | null | undefined>): string | null {
@@ -103,13 +102,6 @@ function buildGoogleMapsUrl(parts: Array<string | null | undefined>): string | n
     .join(", ");
   if (!q) return null;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-}
-
-/** Microsoft Clarity recordings URL filtered by user-id. */
-function buildClarityUrl(clarityId: string): string {
-  return `https://clarity.microsoft.com/projects/view/${encodeURIComponent(
-    CLARITY_PROJECT_ID
-  )}/impressions?CustomFilter=User-id%3DIs%3D${encodeURIComponent(clarityId)}`;
 }
 
 export interface ViewUserBadgeOption {

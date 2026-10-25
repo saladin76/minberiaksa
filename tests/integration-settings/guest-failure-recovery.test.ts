@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { miaPath, slugFor } from "../../lib/minbar/routes";
 import { donationTokenMatches } from "../../lib/donations/access-token";
 import { withDonationToken } from "../../lib/donations/access-token-link";
 import {
@@ -158,13 +159,13 @@ test("existing owner/admin access remains, and a signed-in non-owner remains for
 });
 
 type Node = { type?: unknown; props?: Record<string, unknown> };
-async function failurePage(locale: string, details: Record<string, unknown>, rejects = false) {
+async function failurePage(locale: string, details: Record<string, unknown>, rejects = false, restoreBasket = true) {
   const store = new MemoryStorage();
   rememberGuestDonationAccess(ID, TOKEN, store);
   const guest = guestClient(store), states: unknown[] = [], effects: (() => unknown)[] = [];
   let cursor = 0, effectRegistered = false;
   const posts: unknown[] = [], gets: { url: string; options: { signal: AbortSignal; timeout: number } }[] = [];
-  const assigned: string[] = [], replaced: string[] = [], logs: unknown[][] = [];
+  const assigned: string[] = [], replaced: string[] = [], pushed: string[] = [], logs: unknown[][] = [];
   const Button = () => null, dummy = () => null;
   const icons = new Proxy({}, { get: () => dummy });
   const jsx = (type: unknown, props: Record<string, unknown>) => ({ type, props });
@@ -185,13 +186,13 @@ async function failurePage(locale: string, details: Record<string, unknown>, rej
     },
     "next/navigation": { useSearchParams: () => new URLSearchParams({ donationId: ID }) },
     "next-intl": { useLocale: () => locale, useTranslations: () => (key: string) => key },
-    "@/i18n/routing": { Link: dummy, useRouter: () => ({ push: dummy }) },
+    "@/i18n/routing": { Link: dummy, useRouter: () => ({ push: (path: string) => pushed.push(`/${locale}${path}`) }) },
     "react-hot-toast": { Toaster: dummy, toast: { success: dummy, error: dummy } },
     "lucide-react": icons, "@/components/ui/card": { Card: dummy },
     "@/components/ui/button": { Button }, "@/components/ui/badge": { Badge: dummy },
     "../bank-transfer/_components/BankAccountsBlock": dummy,
-    "@/lib/minbar/cart": { restoreCheckoutAttempt: (id: string) => id === ID },
-    "@/lib/minbar/routes": { miaPath: (route: string, lang: string) => "/" + lang + "/" + (route === "donationSuccess" ? "success" : route) },
+    "@/lib/minbar/cart": { restoreCheckoutAttempt: (id: string) => restoreBasket && id === ID },
+    "@/lib/minbar/routes": { miaPath, slugFor },
     "@/lib/donations/guest-access-client": guest,
     "@/lib/donations/access-token-link": { withDonationToken },
     "@/lib/donations/payment-error-catalog": { resolvePaymentError: () => ({ key: "generic", severity: "soft" }) },
@@ -213,7 +214,7 @@ async function failurePage(locale: string, details: Record<string, unknown>, rej
     Object.values(node.props ?? {}).forEach(walk);
   };
   walk(tree);
-  return { posts, gets, assigned, replaced, logs, buttons, states, cleanups };
+  return { posts, gets, assigned, replaced, pushed, logs, buttons, states, cleanups };
 }
 
 test("actual failure-page requests carry the matching guest credential in Arabic, English and Turkish", async () => {
@@ -234,6 +235,17 @@ test("an already-settled donation goes to its receipt and never offers retry", a
   assert.deepEqual(result.replaced, ["/en/success/" + ID + "?t=" + TOKEN]);
   assert.equal(result.buttons.length, 0);
   assert.equal(result.posts.length, 0);
+});
+
+test("missing saved basket returns each donor to the canonical project list in the same language without a clone", async () => {
+  for (const locale of ["ar", "en", "tr"]) {
+    for (const provider of ["ALBARAKA", "PAYFOR", "STRIPE"]) {
+      const result = await failurePage(locale, { id: ID, amount: 25, totalAmount: 25, currency: "USD", paidAt: null, provider }, false, false);
+      await (result.buttons[0].props!.onClick as () => Promise<void>)();
+      assert.deepEqual(result.pushed, [`/${locale}/bagislar`]);
+      assert.equal(result.posts.length, 0);
+    }
+  }
 });
 test("failed detail loading neither leaks credentials into logs nor creates a retry", async () => {
   const result = await failurePage("ar", {}, true);

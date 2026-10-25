@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { clarityProjectId, clarityUserRecordingsUrl } from "../../lib/tracking/clarity-config";
+import { isPublicAnalyticsPath } from "../../lib/tracking/private-path";
 import {
   createPointerBurstDetector, isMeasurementHost, landingAttribution,
   measurementPath, measurementRouteKey, measurementUrl, referrerOrigin, sanitizeEngagementData,
@@ -19,6 +21,36 @@ test("measurement is limited to exact production hosts, independently of a previ
   assert.equal(isMeasurementHost("minberiaksa.org", "test"), false);
   assert.equal(isMeasurementHost("analytics.example.org", "production", "analytics.example.org"), true);
   assert.equal(isMeasurementHost("preview.example.org", "production", "*.example.org"), false);
+});
+
+test("Clarity recorder and dashboard use the same project, preserving configured overrides and filter encoding", () => {
+  for (const configured of ["", "   ", "configured-project"]) {
+    const project = clarityProjectId(configured);
+    const url = new URL(clarityUserRecordingsUrl("user+id/&", configured));
+    assert.equal(url.pathname, `/projects/view/${project}/impressions`);
+    assert.equal(url.searchParams.get("CustomFilter"), "User-id=Is=user+id/&");
+  }
+  assert.equal(clarityProjectId(""), "u60r8zhrzh");
+});
+
+test("private document, pending and profile paths are redacted from custom measurement and excluded from content evidence", () => {
+  const secret = "600000000000000000000002";
+  for (const suffix of ["payment-pending", "payment-failed", "donation-failed", "receipt", "certificates/thanks", "profile", "account", "auth/complete-profile"]) {
+    const path = `/en/${suffix}/${secret}`;
+    assert.equal(isPublicAnalyticsPath(path), false, path);
+    assert.doesNotMatch(measurementPath(path), new RegExp(secret));
+    assert.doesNotMatch(JSON.stringify(sanitizeEngagementData({ path, href: `https://minberiaksa.org${path}?t=secret` })), /secret|600000/);
+  }
+  assert.equal(isPublicAnalyticsPath("/en/%70rofile/secret"), false);
+  assert.equal(isPublicAnalyticsPath("//untrusted.example/private"), false);
+  assert.equal(isPublicAnalyticsPath("/en/bagislar/gaza-bread"), true);
+  assert.equal(measurementPath("/en/blog/public-article"), "/en/blog/public-article");
+});
+
+test("credential cleanup never creates another diagnostic page while real page filters still do", () => {
+  assert.equal(measurementRouteKey("/en/payment-pending", "donationId=id&t=secret&currency=USD&page=2"), "/en/payment-pending?page=2");
+  assert.equal(measurementRouteKey("/en/bagislar", "AccessToken=private&page=2"), measurementRouteKey("/en/bagislar", "page=2"));
+  assert.notEqual(measurementRouteKey("/en/bagislar", "page=2"), measurementRouteKey("/en/bagislar", "page=3"));
 });
 
 test("email, organic/social UTMs and fbclid alone do not prove paid traffic", () => {
@@ -209,6 +241,7 @@ test("actual Clarity loader initializes once and excludes preview/development ho
     const loaded = clientModule("components/MicrosoftClarity.tsx", {
       react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
       "@/lib/tracking/engagement-policy": policy,
+      "@/lib/tracking/clarity-config": { clarityProjectId: () => clarityProjectId("configured-test-project") },
     }, { ...b.globals, process: { env: { NODE_ENV: "production", NEXT_PUBLIC_CLARITY_ID: "configured-test-project" } } });
     h.render(loaded.default as () => unknown);
     h.replayEffects();
@@ -223,6 +256,7 @@ test("Clarity falls back to the verified Minber project only on an allowed host"
   const loaded = clientModule("components/MicrosoftClarity.tsx", {
     react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
     "@/lib/tracking/engagement-policy": policy,
+    "@/lib/tracking/clarity-config": { clarityProjectId: () => clarityProjectId("") },
   }, b.globals);
   h.render(loaded.default as () => unknown);
   assert.deepEqual(ids, ["u60r8zhrzh"]);

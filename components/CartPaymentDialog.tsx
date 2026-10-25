@@ -986,7 +986,7 @@ const CartPaymentDialog = ({
                 const selected = selectedCardId === card.id;
                 const brandBadge: Record<string, string> = { visa: "VISA", mastercard: "MC", amex: "AMEX", troy: "TROY" };
                 return (
-                  <button key={card.id} type="button"
+                  <button key={card.id} type="button" data-clarity-mask="True" data-hj-suppress="" data-private=""
                     onClick={() => {
                       if (selected) { setSelectedCardId(null); setCardDetails({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" }); }
                       else { setSelectedCardId(card.id); setCardDetails({ cardNumber: `**** **** **** ${card.last4}`, expiryDate: card.expiryDate, cvv: "", cardholderName: card.cardholderName ?? "" }); }

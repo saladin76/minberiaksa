@@ -1601,6 +1601,9 @@ const DonationDialog = ({
                     return (
                       <button
                         key={card.id}
+                        data-clarity-mask="True"
+                        data-hj-suppress=""
+                        data-private=""
                         type="button"
                         onClick={() => {
                           if (selected) {

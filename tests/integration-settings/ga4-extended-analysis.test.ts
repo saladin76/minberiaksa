@@ -48,6 +48,17 @@ test("AI receives aggregated evidence with private paths, emails, phones and tok
   await assert.rejects(() => analyzeGa4Report({report: fixture(), period: {range: "28d"}, locale: "ar", model: "fixture", baseUrl: "https://model.example/v1", apiKey: "fixture", fetchImpl: async () => new Response(JSON.stringify({output_text: JSON.stringify({summary: "Invented", opportunities: [{area: "ads", title: "Bad", finding: "Bad", action: "Bad", evidenceIds: ["unknown"], confidence: "high"}], limitations: []})}))}), /INVALID_EVIDENCE/);
 });
 
+test("AI excludes payment aliases and private documents from pages, landing pages and Search Console evidence", () => {
+  const report = fixture();
+  const paths = ["/ar/donation-failed", "/en/payment-pending/order", "/tr/receipt/order", "/en/certificates/thanks/order", "/ar/auth/complete-profile"];
+  report.pages = paths.map(pagePath => ({pagePath, pageTitle: "Private", screenPageViews: 1, activeUsers: 1, sessions: 1}));
+  report.extended = {landingPages: {rows: paths.map(value => ({dimensions: [value], metrics: [1,1,0,0]})), rowCount: paths.length, thresholded: false, sampled: false}};
+  report.organicSearch = {status: "ready", timezone: "America/Los_Angeles", rows: paths.map(pagePath => ({query: "private-query", pagePath, clicks: 1, impressions: 1, ctr: 1, position: 1}))};
+  const evidence = ga4AnalysisEvidence(report);
+  assert.ok(evidence.every(row => !["pages", "landingPages", "searchConsoleQueries"].includes(row.dataset)));
+  assert.doesNotMatch(JSON.stringify(evidence), /private-query|payment-pending|receipt|certificates|complete-profile/);
+});
+
 test("SEO handoff retains the exact date period and never turns missing top rows into zero traffic", () => {
   const period = {range: "custom" as const, startDate: "2026-10-01", endDate: "2026-10-20"};
   const link = ga4ManagedSeoLink("/ar/", period)!; const query = new URLSearchParams(link.split("?")[1]);

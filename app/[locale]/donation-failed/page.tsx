@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BankAccountsBlock from "../bank-transfer/_components/BankAccountsBlock";
 import { restoreCheckoutAttempt } from "@/lib/minbar/cart";
-import { miaPath } from "@/lib/minbar/routes";
+import { miaPath, slugFor } from "@/lib/minbar/routes";
 import { withDonationToken } from "@/lib/donations/access-token-link";
 import { donationDetailsUrl, rememberGuestDonationAccess, resolveGuestDonationAccess } from "@/lib/donations/guest-access-client";
 import {
@@ -206,7 +206,7 @@ export default function DonationFailedPage() {
     const cardRail = ["PAYFOR", "ALBARAKA", "STRIPE"].includes((donation.provider ?? "").toUpperCase());
     if (cardRail) {
       toast.success(t("retry.payforHint"));
-      router.push("/campaigns");
+      router.push(`/${slugFor("projects", locale)}`);
       return;
     }
 
@@ -214,7 +214,7 @@ export default function DonationFailedPage() {
     // campaign page where the regular dialog handles the subscribe flow.
     if (isMonthly) {
       // Fallback to /campaigns since we don't have the campaign id stored
-      router.push("/campaigns");
+      router.push(`/${slugFor("projects", locale)}`);
       return;
     }
 
@@ -487,7 +487,7 @@ export default function DonationFailedPage() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">{t("noDonation.title")}</h3>
             <p className="text-sm text-gray-600 mb-5">{t("noDonation.description")}</p>
             <Link
-              href="/campaigns"
+              href={`/${slugFor("projects", locale)}`}
               className="inline-flex items-center gap-2 bg-[#A5243D] hover:bg-[#7D1830] text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
             >
               {t("noDonation.cta")}
