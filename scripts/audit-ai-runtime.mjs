@@ -44,7 +44,8 @@ export async function auditAiRuntime(env, { checkGeneration = false, checkResear
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { loadEnvConfig } = await import("@next/env");
+  const nextEnv = await import("@next/env");
+  const { loadEnvConfig } = nextEnv.default ?? nextEnv;
   loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
   const report = await auditAiRuntime(process.env, { checkGeneration: process.argv.includes("--check-generation"), checkResearch: process.argv.includes("--check-research") });
   console.log(JSON.stringify(report, null, 2));

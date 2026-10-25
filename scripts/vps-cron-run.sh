@@ -9,7 +9,7 @@
 # lines that call this script are written by scripts/vps-cron-install.sh.
 #
 # Calls the local server directly (not through nginx), authenticated with
-# `Authorization: Bearer $CRON_SECRET` read from the app's .env. A run of the
+# `Authorization: Bearer $CRON_SECRET` read with the app's production environment-file precedence. A run of the
 # same route that is still going is not overlapped (flock).
 #
 # Env: CRON_BASE_URL (default: http://localhost:${PORT:-3000}),
@@ -35,11 +35,23 @@ if [ -f "$LOG" ] && [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 5242880 ]
 fi
 
 SECRET="${CRON_SECRET:-}"
-if [ -z "$SECRET" ] && [ -f "$APP_DIR/.env" ]; then
-  SECRET="$(grep -E '^CRON_SECRET=' "$APP_DIR/.env" | tail -n 1 | cut -d= -f2- | tr -d '\r' | sed -E 's/^["'\'']//; s/["'\'']$//')"
-fi
 if [ -z "$SECRET" ]; then
-  log "SKIPPED: CRON_SECRET not found in env or $APP_DIR/.env"
+  # Use Next's parser and production precedence, including .env.production.local.
+  # Never source dotenv as shell code or print credentials into the cron log.
+  if ! SECRET="$(cd "$APP_DIR" && env -u CRON_SECRET NODE_ENV=production node <<'NODE'
+try {
+  const { loadEnvConfig } = require("@next/env");
+  loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
+  process.stdout.write(process.env.CRON_SECRET || "");
+} catch { process.exitCode = 1; }
+NODE
+)"; then
+    log "SKIPPED: unable to load production environment"
+    exit 1
+  fi
+fi
+if [ -z "$SECRET" ] || [[ "$SECRET" == *$'\r'* || "$SECRET" == *$'\n'* ]]; then
+  log "SKIPPED: CRON_SECRET missing or invalid in production environment"
   exit 1
 fi
 
