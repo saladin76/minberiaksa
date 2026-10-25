@@ -6,7 +6,7 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import {
   createPointerBurstDetector, isMeasurementHost, landingAttribution,
-  measurementPath, measurementRouteKey, measurementUrl, sanitizeEngagementData,
+  measurementPath, measurementRouteKey, measurementUrl, referrerOrigin, sanitizeEngagementData,
 } from "../../lib/tracking/engagement-policy";
 
 test("measurement is limited to exact production hosts, independently of a preview project ID", () => {
@@ -149,13 +149,13 @@ function clientModule(path: string, imports: Record<string, unknown>, globals: R
   const output = ts.transpileModule(readFileSync(resolve(process.cwd(), path), "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
-  const module = { exports: {} as Record<string, unknown> };
+  const loaded = { exports: {} as Record<string, unknown> };
   runInNewContext(output, {
-    module, exports: module.exports,
+    module: loaded, exports: loaded.exports,
     require: (name: string) => { assert.ok(name in imports, "Unexpected dependency: " + name); return imports[name]; },
     process: { env: { NODE_ENV: "production" } }, console, URL, URLSearchParams, ...globals,
   }, { filename: path });
-  return module.exports;
+  return loaded.exports;
 }
 
 function browser(raw = "https://minberiaksa.org/ar/zakat?currency=USD&utm_medium=email") {
@@ -167,7 +167,7 @@ function browser(raw = "https://minberiaksa.org/ar/zakat?currency=USD&utm_medium
   };
 }
 const policy = {
-  createPointerBurstDetector, landingAttribution, measurementPath, measurementRouteKey, measurementUrl,
+  createPointerBurstDetector, landingAttribution, measurementPath, measurementRouteKey, measurementUrl, referrerOrigin,
   isMeasurementHost: (host: string) => isMeasurementHost(host, "production"),
   sanitizeEngagementData,
 };
@@ -206,11 +206,11 @@ test("actual Clarity loader initializes once and excludes preview/development ho
   for (const [host, expected] of [["minberiaksa.org", 1], ["toplamvakfii.vercel.app", 0]] as const) {
     const b = browser("https://" + host + "/ar");
     const h = hooks(), ids: string[] = [];
-    const module = clientModule("components/MicrosoftClarity.tsx", {
+    const loaded = clientModule("components/MicrosoftClarity.tsx", {
       react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
       "@/lib/tracking/engagement-policy": policy,
     }, { ...b.globals, process: { env: { NODE_ENV: "production", NEXT_PUBLIC_CLARITY_ID: "configured-test-project" } } });
-    h.render(module.default as () => unknown);
+    h.render(loaded.default as () => unknown);
     h.replayEffects();
     assert.equal(ids.length, expected);
     if (expected) assert.equal(ids[0], "configured-test-project");
@@ -221,13 +221,13 @@ test("actual Clarity loader initializes once and excludes preview/development ho
 test("actual route tracker ignores currency cleanup but tracks filters/navigation once with safe URLs", () => {
   const b = browser(), h = hooks(), views: unknown[][] = [];
   const tracking = { trackPageView: (...args: unknown[]) => views.push(args) };
-  const module = clientModule("components/RoutePageViewTracker.tsx", {
+  const loaded = clientModule("components/RoutePageViewTracker.tsx", {
     react: h.react,
     "next/navigation": { usePathname: () => b.win.location.pathname, useSearchParams: () => b.win.location.searchParams },
     "@/components/TrackingPixels": { useTracking: () => tracking },
     "@/lib/tracking/engagement-policy": policy,
   }, b.globals);
-  const render = () => h.render(module.RoutePageViewTracker as () => unknown);
+  const render = () => h.render(loaded.RoutePageViewTracker as () => unknown);
   render(); h.replayEffects();
   b.win.location.searchParams.delete("currency");
   render();
@@ -244,7 +244,7 @@ test("actual route tracker ignores currency cleanup but tracks filters/navigatio
 
 test("actual engagement listeners survive replay, ignore cosmetic updates, clean up and emit diagnostics only", () => {
   const b = browser(), h = hooks(), events: { name: string; data: unknown }[] = [];
-  const module = clientModule("components/EngagementInstrumentation.tsx", {
+  const loaded = clientModule("components/EngagementInstrumentation.tsx", {
     react: h.react,
     "next/navigation": { usePathname: () => b.win.location.pathname, useSearchParams: () => b.win.location.searchParams },
     "@/lib/tracking/engagement-policy": policy,
@@ -254,7 +254,7 @@ test("actual engagement listeners survive replay, ignore cosmetic updates, clean
       trackEngagement: (name: string, data: Record<string, unknown>) => events.push({ name, data: sanitizeEngagementData(data) }),
     },
   }, b.globals);
-  const render = () => h.render(module.default as () => unknown);
+  const render = () => h.render(loaded.default as () => unknown);
   render(); h.replayEffects();
   const count = (name: string) => events.filter((event) => event.name === name).length;
   assert.equal(count("landing_page_view"), 1);
@@ -288,7 +288,7 @@ test("actual engagement listeners survive replay, ignore cosmetic updates, clean
 
 test("preview engagement mounts no listeners and emits nothing", () => {
   const b = browser("https://toplamvakfii.vercel.app/ar"), h = hooks();
-  const module = clientModule("components/EngagementInstrumentation.tsx", {
+  const loaded = clientModule("components/EngagementInstrumentation.tsx", {
     react: h.react,
     "next/navigation": { usePathname: () => b.win.location.pathname, useSearchParams: () => b.win.location.searchParams },
     "@/lib/tracking/engagement-policy": policy,
@@ -298,7 +298,7 @@ test("preview engagement mounts no listeners and emits nothing", () => {
       trackEngagement: () => assert.fail("Preview event emitted"),
     },
   }, b.globals);
-  h.render(module.default as () => unknown);
+  h.render(loaded.default as () => unknown);
   assert.equal(b.win.listenerCount() + b.doc.listenerCount(), 0);
   h.unmount();
 });
