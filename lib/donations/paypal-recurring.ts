@@ -84,6 +84,7 @@ export async function chargeDuePayPalSubscriptions(options: { now?: Date; dryRun
       provider: "PAYPAL",
       status: "ACTIVE",
       lastBillingDate: { not: null },
+      donations: { some: { paidAt: { not: null } } },
       paypalVaultId: { not: null },
       nextBillingDate: { lte: now },
     },

@@ -48,7 +48,10 @@ function fixture(mainGateway = "ALBARAKA") {
       create: async ({ data }: Row) => { const row = { id: id(), chargeAttempts: 0, paymentCardId: null, paypalVaultId: null, ...data, items: data.items?.create ?? [], categoryItems: data.categoryItems?.create ?? [] }; plans.set(row.id, row); return row; },
       update: async ({ where, data }: Row) => Object.assign(plans.get(where.id)!, data),
       findUnique: async ({ where }: Row) => plans.get(where.id),
-      findMany: async ({ where }: Row) => [...plans.values()].filter(row => matches(row, where)),
+      findMany: async ({ where }: Row) => {
+        const { donations: relation, ...fields } = where;
+        return [...plans.values()].filter(row => matches(row, fields) && (!relation?.some || [...donations.values()].some(donation => donation.subscriptionId === row.id && matches(donation, relation.some))));
+      },
     },
     donation: {
       create: async ({ data }: Row) => { const row = { id: id(), paidAt: null, ...data, items: data.items?.create ?? [], categoryItems: data.categoryItems?.create ?? [] }; donations.set(row.id, row); return row; },
@@ -122,6 +125,11 @@ for (const frequency of ["DAILY", "FRIDAY", "MONTHLY"] as const) {
       const dueAt = new Date(plan.nextBillingDate);
       // An abandoned checkout must not be charged just because a card/vault was saved.
       const abandoned = await worker({ now: dueAt }); assert.equal(abandoned.scanned, 0); assert.equal(f.calls(), 0);
+      // The old monthly endpoint stamped this optimistically before payment.
+      // A legacy date is not proof of a settled first donation.
+      plan.lastBillingDate = signupAt;
+      const legacyUnpaid = await worker({ now: dueAt }); assert.equal(legacyUnpaid.scanned, 0); assert.equal(f.calls(), 0);
+      plan.lastBillingDate = null;
       if (rail === "ALBARAKA") await f.settlement.settleAlbarakaDonation(donation.id, { ServiceResponseData: { ResponseCode: "00" } });
       else await f.paypalSettlement.settlePayPalDonation({ donationId: donation.id, orderId: "first", captureId: "first", paidAmount: 120, paidCurrency: "USD", audit: {}, vault: { id: "vault", customerId: null }, paidAt: signupAt });
       assert.equal(plan.status, "ACTIVE"); assert.ok(donation.paidAt); assert.ok(plan.lastBillingDate);

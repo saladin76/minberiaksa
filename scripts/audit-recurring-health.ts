@@ -38,7 +38,7 @@ async function main() {
       if (!row.nextBillingDate) count.missingNextDate++;
       const due = Boolean(row.nextBillingDate && row.nextBillingDate <= now);
       if (due) count.due++;
-      if (due && linked && row.lastBillingDate && (rail === "ALBARAKA" || rail === "PAYPAL")) count.eligibleForScheduler++;
+      if (due && linked && settled && row.lastBillingDate && (rail === "ALBARAKA" || rail === "PAYPAL")) count.eligibleForScheduler++;
     }
     if (rows.length < 500) break;
     cursor = rows[rows.length - 1].id;
