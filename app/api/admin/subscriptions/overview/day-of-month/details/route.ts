@@ -3,32 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
-import {
-  buildDayOfMonthFilters,
-  donationSettlementDay,
-  subscriptionBillingDay,
-} from "@/lib/dashboard/day-of-month-filters";
+import { buildDayOfMonthFilters } from "@/lib/dashboard/day-of-month-filters";
 import {
   loadSubscriptionFrequencies,
   parseFrequencyParam,
 } from "@/lib/dashboard/recurring-frequency-filter";
 
-/**
- * GET /api/admin/subscriptions/overview/day-of-month/details?day=17&mode=collected
- *
- * The rows behind ONE cell of the «الوارد حسب يوم الشهر» grid. Same two views as
- * the grid itself:
- *   - collected: the subscription donations that actually settled on that day-of-month,
- *                across every month (so day 17 lists May 17, June 17, July 17…)
- *   - expected:  the active subscriptions scheduled to bill on that day-of-month
- *
- * Filters and day-bucketing come from the same module the grid uses, so this list
- * always reconciles with the figure on the card that opened it.
- *
- * Why the day filter happens in JS: the bucket is the day in the ISTANBUL calendar,
- * and MongoDB can't express "day-of-month after a timezone shift" in a query. The
- * aggregate endpoint already loads the same rows, so this costs nothing extra.
- */
+import { recurringCalendarMonth, calendarDay, calendarAmountUSD, calendarOccurrences } from "@/lib/dashboard/recurring-calendar";
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -36,9 +18,11 @@ export async function GET(request: NextRequest) {
     if (denied) return denied;
 
     const sp = request.nextUrl.searchParams;
+    const month = recurringCalendarMonth(sp.get("month"));
+    if (!month) return NextResponse.json({ error: "Invalid calendar month" }, { status: 400 });
     const day = Number(sp.get("day"));
-    if (!Number.isInteger(day) || day < 1 || day > 31) {
-      return NextResponse.json({ error: "day must be an integer 1..31" }, { status: 400 });
+    if (!Number.isInteger(day) || day < 1 || day > month.days) {
+      return NextResponse.json({ error: "Invalid day for selected month" }, { status: 400 });
     }
     const mode = sp.get("mode") === "expected" ? "expected" : "collected";
 
@@ -49,6 +33,8 @@ export async function GET(request: NextRequest) {
       referralId: sp.get("referralId"),
       frequency: parseFrequencyParam(sp.get("frequency")),
     });
+
+    donationWhere.paidAt = { gte: month.startDate, lte: month.endDate };
 
     if (mode === "expected") {
       const subs = await prisma.subscription.findMany({
@@ -61,6 +47,8 @@ export async function GET(request: NextRequest) {
           currency: true,
           createdAt: true,
           nextBillingDate: true,
+          timezone: true,
+          scheduleRule: true,
           lastBillingDate: true,
           donor: { select: { id: true, name: true, email: true } },
           items: { select: { campaign: { select: { id: true, title: true } } } },
@@ -70,19 +58,23 @@ export async function GET(request: NextRequest) {
         orderBy: { amountUSD: "desc" },
       });
 
-      const rows = subs
-        .filter((s) => subscriptionBillingDay(s) === day)
-        .map((s) => ({
-          id: s.id,
+      const frequencyOf = await loadSubscriptionFrequencies(prisma, subs.map((s) => s.id));
+      const rows = subs.flatMap((s) => {
+        const frequency = frequencyOf(s.id);
+        const amountUSD = calendarAmountUSD(s);
+        if (amountUSD === null) return [];
+        const occurrences = calendarOccurrences({ ...s, frequency }, month) ?? [];
+        return occurrences.filter((date) => calendarDay(date, month) === day).map((scheduledAt) => ({
+          id: `${s.id}:${scheduledAt.toISOString()}`,
           subscriptionId: s.id,
-          // The expected view is monthly plans only (see buildDayOfMonthFilters).
-          frequency: "MONTHLY" as const,
+          frequency,
           status: s.status,
           amount: s.amount,
-          amountUSD: s.amountUSD,
+          amountUSD,
           currency: s.currency,
           createdAt: s.createdAt,
           nextBillingDate: s.nextBillingDate,
+          scheduledAt,
           lastBillingDate: s.lastBillingDate,
           paidAt: null as Date | null,
           donor: s.donor,
@@ -90,6 +82,7 @@ export async function GET(request: NextRequest) {
           categories: s.categoryItems.map((i) => i.category),
           referral: s.referral,
         }));
+      });
 
       return NextResponse.json({
         day,
@@ -97,7 +90,7 @@ export async function GET(request: NextRequest) {
         rows,
         totals: {
           count: rows.length,
-          amountUSD: Number(rows.reduce((t, r) => t + Number(r.amountUSD ?? r.amount ?? 0), 0).toFixed(2)),
+          amountUSD: Number(rows.reduce((t, r) => t + Number(r.amountUSD ?? 0), 0).toFixed(2)),
         },
       });
     }
@@ -122,7 +115,7 @@ export async function GET(request: NextRequest) {
       orderBy: { paidAt: "desc" },
     });
 
-    const dayDonations = donations.filter((d) => donationSettlementDay(d) === day);
+    const dayDonations = donations.filter((d) => calendarDay(d.paidAt, month) === day && calendarAmountUSD(d) !== null);
     const frequencyOf = await loadSubscriptionFrequencies(
       prisma,
       dayDonations.map((d) => d.subscriptionId).filter((id): id is string => Boolean(id))
@@ -136,7 +129,7 @@ export async function GET(request: NextRequest) {
         // The donation's own money is the truth for a collected row  the
         // subscription's current amount may have been edited since this charge.
         amount: d.totalAmount ?? d.amount,
-        amountUSD: d.amountUSD,
+        amountUSD: calendarAmountUSD(d),
         currency: d.currency,
         createdAt: d.subscription?.createdAt ?? d.createdAt,
         nextBillingDate: d.subscription?.nextBillingDate ?? null,
@@ -154,13 +147,13 @@ export async function GET(request: NextRequest) {
       rows,
       totals: {
         count: rows.length,
-        amountUSD: Number(rows.reduce((t, r) => t + Number(r.amountUSD ?? r.amount ?? 0), 0).toFixed(2)),
+        amountUSD: Number(rows.reduce((t, r) => t + Number(r.amountUSD ?? 0), 0).toFixed(2)),
       },
     });
   } catch (error) {
     console.error("Error fetching day-of-month details:", error);
     return NextResponse.json(
-      { error: "Failed to fetch day details", details: (error as Error).message },
+      { error: "Failed to fetch day details" },
       { status: 500 }
     );
   }

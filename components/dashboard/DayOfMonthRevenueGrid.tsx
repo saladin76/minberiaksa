@@ -13,14 +13,10 @@ export type DayOfMonthPoint = {
   day: number;
   amountUSD: number;
   count: number;
-  /** collected view only  how many distinct months contributed to this day. */
-  monthsObserved?: number;
 };
 
 type Mode = "collected" | "expected";
 
-/** Active daily / Friday plans the expected view cannot place on a day of the month. */
-export type UnplacedPlans = { frequency: "DAILY" | "FRIDAY"; count: number; amountUSD: number };
 
 type Props = {
   collected: DayOfMonthPoint[];
@@ -32,7 +28,11 @@ type Props = {
    * rows it lists are the same population the cells were computed from.
    */
   filters?: DayOfMonthDetailFilters;
-  unplaced?: UnplacedPlans[];
+  month: string;
+  onMonthChange: (month: string) => void;
+  error?: boolean;
+  missingSchedules?: number;
+  missingAmounts?: number;
 };
 
 /**
@@ -60,8 +60,7 @@ function rampStep(amount: number, max: number): number {
   return 5;
 }
 
-export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMoney, filters, unplaced = [] }: Props) {
-  const unplacedWithPlans = unplaced.filter((u) => u.count > 0);
+export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMoney, filters, month, onMonthChange, error, missingSchedules = 0, missingAmounts = 0 }: Props) {
   const [mode, setMode] = useState<Mode>("expected");
   /** Which day's drill-down is open, if any. */
   const [openDay, setOpenDay] = useState<number | null>(null);
@@ -106,13 +105,19 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("الوارد حسب يوم الشهر")}</h2>
             <p className="text-xs text-slate-500">
               {mode === "collected"
-                ? dt("إجمالي ما تم تحصيله فعليًا في كل يوم من الشهر، مجمّعًا عبر كل الشهور")
-                : dt("ما تجدّده الاشتراكات الشهرية النشطة في كل يوم من الشهر (دورة شهرية واحدة)")}
+                ? dt("الدفعات المحصّلة فعليًا خلال الشهر المحدد بتوقيت إسطنبول")
+                : dt("تجديدات يومية وأسبوعية وشهرية من موعد الاستحقاق القادم")}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-xs text-slate-600">
+            {dt("الشهر")}
+            <input type="month" value={month} min="2000-01" max="2099-12"
+              onChange={(event) => { if (/^20\d{2}-(0[1-9]|1[0-2])$/.test(event.target.value)) { setOpenDay(null); onMonthChange(event.target.value); } }}
+              className="ms-2 rounded-lg border border-slate-200 px-2 py-1.5" />
+          </label>
             <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
             {(
               [
@@ -134,26 +139,19 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             ))}
           </div>
           <div className="text-end">
-            <p className="text-[11px] text-slate-500">{mode === "collected" ? dt("إجمالي المحصّل") : dt("المتوقع شهريًا (الاشتراكات الشهرية)")}</p>
-            <p className="text-xl font-bold tabular-nums text-slate-900">{formatMoney(stats.total)}</p>
+            <p className="text-[11px] text-slate-500">{mode === "collected" ? dt("إجمالي المحصّل") : dt("التجديدات المتوقعة في الشهر")}</p>
+            <p className="text-xl font-bold tabular-nums text-slate-900">{error ? "—" : formatMoney(stats.total)}</p>
           </div>
         
         </div>
       </header>
 
       <div className="p-4">
-        {/* Daily plans bill on every day and Friday plans on a different date each month, so
-            neither has a day of the month  say how much sits outside the grid instead of
-            letting the expected total read as the whole recurring book. */}
-        {mode === "expected" && unplacedWithPlans.length > 0 && (
-          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
-            <span className="font-semibold text-slate-700">{dt("غير مشمول في الشبكة:")}</span>
-            {unplacedWithPlans.map((u) => (
-              <span key={u.frequency} className="tabular-nums">
-                {u.frequency === "DAILY" ? dt("يومي") : dt("أسبوعياً")}{dtx(": {0} اشتراك · {1} ", [u.count, formatMoney(u.amountUSD)])}{u.frequency === "DAILY" ? dt("كل يوم") : dt("أسبوعياً")}
-              </span>
-            ))}
-          </div>
+        {error ? <p role="alert" className="mb-3 text-sm text-red-700">{dt("تعذّر تحميل التقويم. غيّر الشهر لإعادة المحاولة.")}</p> : null}
+        {(missingSchedules > 0 || missingAmounts > 0) && (
+          <p role="status" className="mb-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+            {dt("بيانات غير مكتملة: {0} جدول تجديد و{1} مبلغ بالدولار. الإجمالي لا يشملها.", [missingSchedules, missingAmounts])}
+          </p>
         )}
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
           {data.map((d) => {
@@ -161,7 +159,6 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             const step = rampStep(amount, stats.max);
             const tone = RAMP[step];
             const isPeak = stats.peak?.day === d.day && amount > 0;
-            const perMonth = d.monthsObserved && d.monthsObserved > 0 ? amount / d.monthsObserved : null;
 
             return (
               <div key={d.day} className="group relative">
@@ -183,23 +180,20 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
                     {amount > 0 ? formatMoney(amount) : "—"}
                   </span>
                   <span className="text-[10px] tabular-nums opacity-65">
-                    {d.count > 0 ? (mode === "collected" ? dt("{0} تبرع", [d.count]) : dt("{0} اشتراك", [d.count])) : ""}
+                    {d.count > 0 ? (mode === "collected" ? dt("{0} تبرع", [d.count]) : dt("{0} دفعة متوقعة", [d.count])) : ""}
                   </span>
                 </button>
 
                 {amount > 0 && (
                   <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg group-hover:block">
-                    <p className="font-semibold">{dtx("اليوم {0} من كل شهر", [d.day])}</p>
+                    <p className="font-semibold">{`${month}-${String(d.day).padStart(2, "0")}`}</p>
                     <p className="tabular-nums text-slate-200">{formatMoney(amount)}</p>
                     {mode === "collected" ? (
                       <p className="tabular-nums text-slate-400">
-                        {dtx("{0} تبرع", [d.count])}{d.monthsObserved ? dt(" · عبر {0} شهر", [d.monthsObserved]) : ""}
-                        {perMonth !== null && d.monthsObserved && d.monthsObserved > 1
-                          ? dt(" · {0} شهريًا", [formatMoney(perMonth)])
-                          : ""}
+                        {dtx("{0} تبرع", [d.count])}
                       </p>
                     ) : (
-                      <p className="tabular-nums text-slate-400">{dtx("{0} اشتراك نشط", [d.count])}</p>
+                      <p className="tabular-nums text-slate-400">{dtx("{0} دفعة متوقعة", [d.count])}</p>
                     )}
                   </div>
                 )}
@@ -227,8 +221,8 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <Info className="h-3.5 w-3.5 shrink-0" />
             <span>
               {mode === "collected"
-                ? dt("أيام دخول المال فعليًا من كل الاشتراكات المتكررة، مجمّعة عبر الشهور.")
-                : dt("محسوب من تاريخ التجديد القادم للاشتراكات الشهرية النشطة.")}{" "}
+                ? dt("يشمل المحصّل الدفعة الأولى والتجديدات التي سُدّدت فعلًا في الشهر المحدد.")
+                : dt("تقدير من مواعيد التجديد القادمة، وليس ضمانًا لنجاح الخصم. لا يشمل الدفعة الأولى.")}{" "}
               <b className="font-semibold text-slate-600">{dt("اضغط أي يوم لعرض تفاصيله.")}</b>
             </span>
           </p>
@@ -238,7 +232,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
       <DayOfMonthDetailsDialog
         day={openDay}
         mode={mode}
-        filters={filters}
+        filters={{ ...filters, month }}
         formatMoney={formatMoney}
         onClose={() => setOpenDay(null)}
       />

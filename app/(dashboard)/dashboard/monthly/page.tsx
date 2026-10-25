@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
+
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useLocale } from "next-intl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -62,7 +64,6 @@ import { formatIstanbulCalendarMonthLong } from "@/lib/admin/current-calendar-mo
 import {
   DayOfMonthRevenueGrid,
   type DayOfMonthPoint,
-  type UnplacedPlans,
 } from "@/components/dashboard/DayOfMonthRevenueGrid";
 import { StatsMetricCard } from "@/components/dashboard/StatsMetricCard";
 import { getDashboardChartPeriodLabelAr } from "@/lib/dashboard/chart-period-label-ar";
@@ -352,12 +353,17 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [dayOfMonth, setDayOfMonth] = useState<{
     collected: DayOfMonthPoint[];
     expected: DayOfMonthPoint[];
-    unplaced: UnplacedPlans[];
+    missingSchedules: number;
+    missingAmounts: number;
   }>({
     collected: [],
     expected: [],
-    unplaced: [],
+    missingSchedules: 0,
+    missingAmounts: 0,
   });
+  const calendarRequest = useRef(0);
+  const [calendarMonth, setCalendarMonth] = useState(() => recurringCalendarMonth()!.month);
+  const [dayOfMonthError, setDayOfMonthError] = useState(false);
   const [dayOfMonthLoading, setDayOfMonthLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(true);
   const [chartView, setChartView] = useState<ChartViewType>("bar");
@@ -567,10 +573,9 @@ export default function MonthlySubscriptionsDashboardPage() {
     fetchChartData();
   }, [fetchChartData]);
 
-  // Day-of-month recurring revenue. Deliberately NOT scoped to a period: a subscription bills on
-  // the same calendar day every month, so the useful view aggregates across all months to expose
-  // the billing rhythm. It still honours the category/campaign/donor filters.
+  // Calendar month is independent of the other charts' historical period.
   const fetchDayOfMonth = useCallback(async () => {
+    const requestId = ++calendarRequest.current;
     const userIdFromUrl = searchParams.get("userId");
     const effectiveUserId =
       selectedUserId !== "all"
@@ -579,24 +584,29 @@ export default function MonthlySubscriptionsDashboardPage() {
           ? userIdFromUrl
           : "all";
     setDayOfMonthLoading(true);
+    setDayOfMonthError(false);
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ month: calendarMonth });
       if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
       if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
       if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
       if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
       const response = await axios.get(`/api/admin/subscriptions/overview/day-of-month?${params}`);
+      if (requestId !== calendarRequest.current) return;
       setDayOfMonth({
         collected: Array.isArray(response.data?.collected) ? response.data.collected : [],
         expected: Array.isArray(response.data?.expected) ? response.data.expected : [],
-        unplaced: Array.isArray(response.data?.unplaced) ? response.data.unplaced : [],
+        missingSchedules: response.data?.missingSchedules ?? 0,
+        missingAmounts: response.data?.missingAmounts ?? 0,
       });
     } catch {
-      setDayOfMonth({ collected: [], expected: [], unplaced: [] });
+      if (requestId !== calendarRequest.current) return;
+      setDayOfMonth({ collected: [], expected: [], missingSchedules: 0, missingAmounts: 0 });
+      setDayOfMonthError(true);
     } finally {
-      setDayOfMonthLoading(false);
+      if (requestId === calendarRequest.current) setDayOfMonthLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, frequencyFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, frequencyFilter, calendarMonth]);
 
   useEffect(() => {
     fetchDayOfMonth();
@@ -2391,7 +2401,11 @@ export default function MonthlySubscriptionsDashboardPage() {
           loading={dayOfMonthLoading}
           formatMoney={formatMoney}
           filters={dayOfMonthFilters}
-          unplaced={dayOfMonth.unplaced}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          error={dayOfMonthError}
+          missingSchedules={dayOfMonth.missingSchedules}
+          missingAmounts={dayOfMonth.missingAmounts}
         />
 
       {reducePlan && (
