@@ -38,16 +38,18 @@ const output=path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS||".artifacts/cont
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 const errors=[];
-let checks=0;
+let checks=0, page;
 try{
-  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+  page=await browser.newPage({viewport:{width:1440,height:1000}});
   page.on("pageerror",error=>errors.push(error.message));
   // Inspect player DOM without depending on external video/network availability.
   await page.route("https://**/*",route=>route.abort());
   for(const surface of ["/programs","/courses"]){
     await page.goto(origin+surface);
+    await page.getByRole("heading",{level:1}).waitFor();
     for(const source of sources){
       const link=surface==="/programs"?page.getByRole("link",{name:source.title,exact:true}):page.getByRole("link").filter({has:page.getByText(source.title,{exact:true})});
+      await link.waitFor();
       assert.equal(await link.count(),1);
       if(surface==="/programs") assert.equal(await link.getAttribute("href"),source.url);
       await link.click();
@@ -70,6 +72,7 @@ try{
       }
       assert.equal(await page.evaluate(()=>document.body.style.overflow),"hidden");
       await page.keyboard.press("Escape");
+      await page.getByRole("dialog").waitFor({state:"hidden"});
       assert.equal(await page.getByRole("dialog").count(),0);
       assert.equal(await page.evaluate(()=>document.body.style.overflow),"");
       checks++;
@@ -81,6 +84,7 @@ try{
       assert.equal(player.searchParams.get("list"),"PL_fixture_123");
       assert.equal(player.searchParams.get("autoplay"),"1");
       await page.getByRole("button",{name:"Close",exact:true}).click();
+      await page.getByRole("dialog").waitFor({state:"hidden"});
       checks++;
     }
     await page.screenshot({path:path.join(output,"public-media-"+surface.slice(1)+"-desktop.png"),fullPage:true,animations:"disabled"});
@@ -92,6 +96,7 @@ try{
   await writeFile(path.join(output,"public-media-verification.json"),JSON.stringify({checks,errors,scope:"Real public ProgramsPage, CoursesPage and VideoModal; inspect YouTube/Vimeo/MP4/playlist player URLs and closing; external streams blocked."},null,2));
   console.log(JSON.stringify({checks,passed:true}));
 }finally{
+  if(page) await page.screenshot({path:path.join(output,"public-media-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
 }
