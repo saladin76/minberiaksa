@@ -10,10 +10,11 @@ function harness(role = "ADMIN") {
     amountUSD: 56.5, currency: "TRY", status: "PAID", paidAt: new Date("2026-01-01"), paymentMethod: "CARD",
     items: [{ campaignId: "project", amount: 100, amountUSD: 50 }], categoryItems: [], waqfItems: [] };
   const writes: Record<string, unknown>[] = [];
-  const audits: any[] = [];
+  type Audit = {metadata: {before: {teamSupport: number}; after: {teamSupport: number; totalAmount: number}}};
+  const audits: Audit[] = [];
   const totals: string[] = [];
-  const prisma = { donation: { findUnique: async () => before }, $transaction: async (fn: any) => fn({
-    donation: { update: async ({ data }: any) => { writes.push(data); return data; } },
+  const prisma = { donation: { findUnique: async () => before }, $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({
+    donation: { update: async ({ data }: {data: Record<string, unknown>}) => { writes.push(data); return data; } },
   }) };
   const dependencies: Record<string, unknown> = {
     "next/server": { NextResponse: { json: (data: unknown, init?: {status: number}) => ({ data, status: init?.status ?? 200 }) } },
@@ -21,13 +22,13 @@ function harness(role = "ADMIN") {
     "../../auth/[...nextauth]/options": { authOptions: {} }, "@prisma/client": {},
     "@/lib/dashboard/permissions": { userHasDashboardPermission: () => false }, "@/lib/dashboard/api-auth": {},
     "@/lib/exchange/convert-amount-in-currency-to-usd": { normalizeDonationCurrencyCode: (x: string) => x, convertAmountInCurrencyToUsd: async (value: number) => value / 2 },
-    "@/lib/audit-log": { auditActorFromDashboardSession: () => ({ actorName: "Reviewer" }), writeAuditLog: async (entry: unknown) => audits.push(entry) },
+    "@/lib/audit-log": { auditActorFromDashboardSession: () => ({ actorName: "Reviewer" }), writeAuditLog: async (entry: unknown) => audits.push(entry as Audit) },
     "@/lib/donations/edit-totals": { donationEditTotals },
     "@/lib/donations/reconcile-stripe-donation": {}, "@/lib/donations/paypal-donation": {},
     "@/lib/donations/access-token": {}, "@/lib/donations/subscription-provider-control": {},
     "@/lib/campaign/current-amount": { recomputeCampaignCurrentAmount: async (_tx: unknown, id: string) => totals.push(id) },
   };
-  const loaded = { exports: {} as any };
+  const loaded = { exports: {} as {PATCH: (request: {json: () => Promise<unknown>}, context: {params: Promise<{id: string}>}) => Promise<{status: number}>} };
   const code = ts.transpileModule(fs.readFileSync("app/api/donations/[id]/route.ts", "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;

@@ -8,7 +8,7 @@ test("Search Console presets use Pacific calendar days across a UTC midnight", (
 });
 
 test("Search Console discovers the matching readable property and preserves query/page grain", async () => {
-  const requests: any[] = [];
+  const requests: {dataState: string; rowLimit: number; dimensions: string[]}[] = [];
   const report = await fetchSearchConsole({accessToken: "fixture", origin: "https://donor.example", period: {range: "custom", startDate: "2026-10-01", endDate: "2026-10-20"}, fetchImpl: async (_url, init) => {
     if (init?.method === "GET") return new Response(JSON.stringify({siteEntry: [{siteUrl: "sc-domain:other.example"}, {siteUrl: "sc-domain:donor.example"}]}));
     const body = JSON.parse(String(init?.body)); requests.push(body);

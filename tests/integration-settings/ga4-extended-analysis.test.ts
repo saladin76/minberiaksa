@@ -18,10 +18,10 @@ test("today, yesterday and bounded custom periods have stable, distinct cache ke
 test("an unavailable interest report does not erase campaigns, searches or browser data", async () => {
   const sizes: number[] = [];
   const report = await fetchGa4Extended({propertyId: "123456", accessToken: "fixture-token", range: "today", fetchImpl: async (_url, init) => {
-    const {requests} = JSON.parse(String(init?.body)); sizes.push(requests.length);
-    assert.ok(requests.every((row: any) => row.dateRanges[0].startDate === "today"));
+    const {requests} = JSON.parse(String(init?.body)) as {requests: {dateRanges: {startDate: string}[]; dimensions: {name: string}[]; metrics: {name: string}[]}[]}; sizes.push(requests.length);
+    assert.ok(requests.every((row) => row.dateRanges[0].startDate === "today"));
     if (requests[0].dimensions[0].name === "brandingInterest") return new Response("private provider failure", {status: 403});
-    return new Response(JSON.stringify({reports: requests.map((row: any) => ({rowCount: 40, rows: [{dimensionValues: row.dimensions.map((x: any) => ({value: x.name})), metricValues: row.metrics.map(() => ({value: "10"}))}], metadata: {subjectToThresholding: true}}))}));
+    return new Response(JSON.stringify({reports: requests.map((row) => ({rowCount: 40, rows: [{dimensionValues: row.dimensions.map((x) => ({value: x.name})), metricValues: row.metrics.map(() => ({value: "10"}))}], metadata: {subjectToThresholding: true}}))}));
   }});
   assert.ok(sizes.every((size) => size <= 5)); assert.equal(report.interests?.error, "HTTP_403");
   assert.equal(report.campaigns?.rows.length, 1); assert.equal(report.siteSearch?.thresholded, true); assert.equal(report.browsers?.rowCount, 40);

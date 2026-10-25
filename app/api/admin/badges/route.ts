@@ -8,7 +8,7 @@ import { isValidLocale } from "@/lib/locales";
 import type { Prisma } from "@prisma/client";
 import { normalizeBadgeCriteria } from "@/lib/badge-criteria-core";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "badges");

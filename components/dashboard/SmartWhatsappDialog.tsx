@@ -68,34 +68,35 @@ export function SmartWhatsappDialog({
   const [templateId, setTemplateId] = React.useState("");
   const loadSequence = React.useRef(0);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (signal?: AbortSignal) => {
     const sequence = ++loadSequence.current;
     setLoading(true);
     try {
-      const res = await fetch(`/api/dashboard/communication/whatsapp/smart-send?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
+      const res = await fetch(`/api/dashboard/communication/whatsapp/smart-send?userId=${encodeURIComponent(userId)}`, { cache: "no-store", signal });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
-      if (sequence !== loadSequence.current) return;
+      if (sequence !== loadSequence.current || signal?.aborted) return;
       const next = data.context as SmartContext;
       setCtx(next);
       const preferred = initialMode ?? (next.replyWindow.open ? "FREEFORM" : "UTILITY");
       if (preferred === "FREEFORM" && !next.replyWindow.open) setMode("UTILITY");
       else setMode(preferred);
     } catch {
-      if (sequence !== loadSequence.current) return;
+      if (sequence !== loadSequence.current || signal?.aborted) return;
       toast.error(dt("تعذّر تجهيز إرسال واتساب لهذا المتبرع."));
       setCtx(null);
     } finally {
-      if (sequence === loadSequence.current) setLoading(false);
+      if (sequence === loadSequence.current && !signal?.aborted) setLoading(false);
     }
   }, [userId, initialMode]);
 
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) { loadSequence.current++; return; }
+    const controller = new AbortController();
     setBody("");
     setTemplateId("");
-    void load();
-    return () => { loadSequence.current++; };
+    void load(controller.signal);
+    return () => controller.abort();
   }, [open, load]);
 
   const send = async () => {

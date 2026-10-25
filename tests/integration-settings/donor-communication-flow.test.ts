@@ -6,8 +6,10 @@ import ts from "typescript";
 import { smartWhatsappTemplateChoices } from "../../lib/communication/smart-whatsapp-templates";
 import * as history from "../../lib/communication/donor-history";
 
-function load(path: string, dependencies: Record<string, unknown>, append = "") {
-  const loaded = {exports: {} as any};
+type SmartService = {sendSmartWhatsapp: (input: unknown) => Promise<{ok: boolean; reason?: string}>; getSmartWhatsappContext: (id: string) => Promise<{utilityTemplates: {id: string}[]}>};
+type HistoryRoute = {GET: (...args: unknown[]) => Promise<{status: number; data: {items: {source: string}[]}}>};
+function load<T extends object = SmartService>(path: string, dependencies: Record<string, unknown>, append = "") {
+  const loaded = {exports: {} as T};
   const code = ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(code + append).runInNewContext({ module: loaded, exports: loaded.exports, Date, Buffer, Set, Map, URLSearchParams, console, process: {env: {DATABASE_URL: "fixture"}},
     require: (name: string) => dependencies[name] ?? {}, fetch: () => { throw new Error("Unexpected external send"); } });
@@ -27,7 +29,7 @@ for (const stopped of [false, true]) {
     }, '\ngetSmartWhatsappContext = async () => require("fixture").ctx; sendApprovedTemplateForDonor = require("fixture").send;');
     const result = await service.sendSmartWhatsapp({ userId: "donor", mode: "UTILITY", templateId: "approved", body: "" });
     assert.equal(result.ok, !stopped); assert.equal(calls.length, stopped ? 0 : 1);
-    if (!stopped) assert.equal((calls[0] as any).templateId, "approved");
+    if (!stopped) assert.equal((calls[0] as {templateId: string}).templateId, "approved");
     else assert.equal(result.reason, "DO_NOT_CONTACT");
   });
 }
@@ -35,18 +37,19 @@ for (const stopped of [false, true]) {
 function historyRoute(authorized = true) {
   const donorId = "507f1f77bcf86cd799439011";
   const messageId = "507f1f77bcf86cd799439012";
-  const queries: any[] = [];
+  type Query = {where: Record<string, unknown>};
+  const queries: Query[] = [];
   const createdAt = new Date("2026-10-25T01:00:00Z");
   const select = { id: messageId, channel: "SMS", status: "DELIVERED", templateName: "Receipt", createdAt, providerMessageId: "same-provider-message" };
   const prisma = {
     user: { findUnique: async () => ({ id: donorId, name: "Fixture" }) },
     communicationDelivery: {
-      findMany: async (query: any) => { queries.push(query); return query.where.providerMessageId ? [{channel: "SMS", providerMessageId: "same-provider-message"}] : [select]; },
-      findFirst: async (query: any) => { queries.push(query); return null; },
+      findMany: async (query: Query) => { queries.push(query); return query.where.providerMessageId ? [{channel: "SMS", providerMessageId: "same-provider-message"}] : [select]; },
+      findFirst: async (query: Query) => { queries.push(query); return null; },
     },
-    sentMessage: { findMany: async (query: any) => { queries.push(query); return [select]; }, findFirst: async (query: any) => { queries.push(query); return null; } },
+    sentMessage: { findMany: async (query: Query) => { queries.push(query); return [select]; }, findFirst: async (query: Query) => { queries.push(query); return null; } },
   };
-  const route = load("app/api/dashboard/donors/[id]/communication/route.ts", {
+  const route = load<HistoryRoute>("app/api/dashboard/donors/[id]/communication/route.ts", {
     "next/server": {NextResponse: {json: (data: unknown, init?: {status?: number}) => ({data, status: init?.status ?? 200})}},
     "next-auth": {getServerSession: async () => null}, "@/lib/dashboard/api-auth": {requireAdminOrDashboardPermission: () => authorized ? null : {status: 403}},
     "@/lib/prisma": {prisma}, "@/lib/communication/donor-history": history,
