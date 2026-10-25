@@ -1,6 +1,7 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
 import { withDonationToken } from "@/lib/donations/access-token-link";
+import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
 import {
   StripePaymentStep,
   type StripePaymentHandle,
