@@ -1,3 +1,4 @@
+import { recurringPlanTotals } from "@/lib/dashboard/recurring-plan-totals";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentCalendarMonthIstanbulRange } from '@/lib/admin/current-calendar-month-utc';
@@ -262,10 +263,7 @@ export async function GET(request: NextRequest) {
       prisma.subscription.count({
         where: { status: { in: ['PAUSED', 'CANCELLED'] } },
       }),
-      prisma.subscription.aggregate({
-        _sum: { amountUSD: true },
-        where: activeMonthlyWhere,
-      }),
+      recurringPlanTotals(prisma, activeMonthlyWhere),
       prisma.subscription.aggregate({
         _sum: { amountUSD: true },
         where: { status: { in: ['PAUSED', 'CANCELLED'] } },
@@ -366,7 +364,7 @@ export async function GET(request: NextRequest) {
       oneTimeTotalAmount += totalAmount - splitSum;
     }
 
-    const monthlyRecurringRevenue = monthlyRecurringRevenueResult._sum?.amountUSD ?? 0;
+    const monthlyRecurringRevenue = monthlyRecurringRevenueResult.total.monthlyUSD;
     const activeMonthlyAmountUSD = monthlyRecurringRevenue;
     const monthlyStoppedAmountUSD = monthlyStoppedAmountResult._sum?.amountUSD ?? 0;
     let thisMonthRevenue = thisMonthTotalResult._sum?.amountUSD ?? 0;
@@ -486,12 +484,9 @@ export async function GET(request: NextRequest) {
       await Promise.all([
         prisma.donation.count({ where: globalPaidWhere }),
         prisma.subscription.count({ where: globalActiveSubscriptionWhere }),
-        prisma.subscription.aggregate({
-          _sum: { amountUSD: true },
-          where: globalActiveSubscriptionWhere,
-        }),
+        recurringPlanTotals(prisma, globalActiveSubscriptionWhere),
       ]);
-    const monthlyRecurringRevenueUnfiltered = mrrUnfilteredResult._sum?.amountUSD ?? 0;
+    const monthlyRecurringRevenueUnfiltered = mrrUnfilteredResult.total.monthlyUSD;
 
     return NextResponse.json({
       totalCampaigns,

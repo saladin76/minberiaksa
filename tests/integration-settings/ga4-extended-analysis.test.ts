@@ -75,3 +75,21 @@ test("programme SEO evidence uses the same public route as project and programme
   assert.equal(ga4ContentPagePath("categories", "en", "gaza"), "/en/category/gaza");
   assert.equal(ga4ContentPagePath("videos", "ar", "clip"), null);
 });
+
+test("GA4 analysis requests a strict evidence-bound schema and rejects incomplete responses", async () => {
+  const report=fixture();
+  let requested=false;
+  await assert.rejects(analyzeGa4Report({report,period:{range:"28d"},locale:"ar",model:"fixture",baseUrl:"https://model.example/v1",apiKey:"fixture",fetchImpl:async(_url,init)=>{
+    const body=JSON.parse(String(init?.body));
+    assert.equal(body.text.format.type,"json_schema");
+    assert.equal(body.text.format.strict,true);
+    assert.deepEqual(body.text.format.schema.properties.opportunities.items.properties.evidenceIds.items.enum,ga4AnalysisEvidence(report).map(row=>row.id));
+    assert.equal(body.model,"fixture");
+    requested=true;
+    return new Response(JSON.stringify({status:"incomplete",output_text:'{"summary":"unfinished"}'}));
+  }}),/AI_OUTPUT_INCOMPLETE/);
+  assert.ok(requested);
+});
+test("GA4 analysis returns sanitized provider diagnostics instead of a fabricated report", async () => {
+  await assert.rejects(analyzeGa4Report({report:fixture(),period:{range:"28d"},locale:"ar",model:"fixture",baseUrl:"https://model.example/v1",apiKey:"fixture",fetchImpl:async()=>new Response(JSON.stringify({error:{code:"insufficient_quota",message:"private upstream body"}}),{status:429})}),/AI_QUOTA_EXCEEDED/);
+});

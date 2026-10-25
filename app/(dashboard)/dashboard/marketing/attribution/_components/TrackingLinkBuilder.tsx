@@ -405,10 +405,14 @@ export default function TrackingLinkBuilder() {
       });
       const data = await res.json().catch(() => null) as { ok?: boolean; error?: string; upserted?: boolean } | null;
       if (!res.ok || !data?.ok) throw new Error(data?.error || "save failed");
-      if (copyAfter) await navigator.clipboard.writeText(fullUrl).catch(() => null);
+      let copied = false;
+      if (copyAfter) {
+        try { await navigator.clipboard.writeText(fullUrl); copied = true; } catch { /* Saving succeeded; the clipboard is a separate capability. */ }
+      }
       const updated = data.upserted === false;
-      setLastSavedLink({ name: registryName, mode: linkMode, copied: copyAfter, updated });
-      toast.success(updated ? dt("تم تحديث رابط موجود") : dt("تم حفظ الرابط في سجل الحملات"));
+      setLastSavedLink({ name: registryName, mode: linkMode, copied, updated });
+      if (copyAfter && !copied) toast.error(dt("تم حفظ الرابط، لكن تعذّر نسخه. استخدم زر نسخ الرابط أو انسخه يدويًا."));
+      else toast.success(updated ? dt("تم تحديث رابط موجود") : dt("تم حفظ الرابط في سجل الحملات"));
     } catch {
       toast.error(dt("فشل الحفظ"));
     } finally {
@@ -519,7 +523,7 @@ export default function TrackingLinkBuilder() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={copyUrl} disabled={!fullUrl} className="gap-2"><Copy className="h-4 w-4" />{dt("نسخ الرابط")}</Button>
-              <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!fullUrl || saving} variant="outline" className="gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save to Campaign Registry</Button>
+              <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!fullUrl || saving} variant="outline" className="gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{dt("حفظ في سجل الحملات")}</Button>
               <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!fullUrl || saving} className="gap-2 bg-brand-orange hover:bg-[#c6613c]">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{dt("حفظ ونسخ الرابط")}</Button>
               {fullUrl ? <Button asChild type="button" variant="secondary" className="gap-2"><a href={fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{dt("فتح")}</a></Button> : null}
             </div>
@@ -532,7 +536,7 @@ export default function TrackingLinkBuilder() {
                     {lastSavedLink.name} · {lastSavedLink.mode === "marketing" ? dt("رابط حملة") : dt("رابط موقع")}{lastSavedLink.copied ? dt(" · تم نسخه أيضًا") : ""}
                   </span>
                   <Link href="/dashboard/marketing/attribution#links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
-                    Open in Campaign Registry
+                    {dt("سجل الحملات")}
                   </Link>
                 </AlertDescription>
               </Alert>

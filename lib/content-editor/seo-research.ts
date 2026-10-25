@@ -1,3 +1,5 @@
+import { openAiFailure } from "../ai/core/openai-response";
+import { providerErrorMessage } from "../ai/core/provider-error-message";
 import "server-only";
 import { isValidLocale } from "@/lib/locales";
 import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
@@ -183,7 +185,7 @@ export async function generateResearchedSeo(input: {
     }),
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(75000)]) : AbortSignal.timeout(75000),
   });
-  if (!response.ok) throw new SeoResearchError(`تعذّر بحث SEO لدى المزود (${response.status})`);
+  if (!response.ok) throw new SeoResearchError(`${providerErrorMessage((await openAiFailure(response)).code)} (${response.status})`);
   const payload: unknown = await response.json();
   const { text, annotations } = responseOutputText(payload);
   const output = asRecord(payload).output;
@@ -235,7 +237,7 @@ export async function generateResearchedArticle(input: {
       text: { format: { type: "json_object" } },
     }),
   });
-  if (!response.ok) throw new SeoResearchError("تعذر بحث المقال لدى المزود (" + response.status + ")");
+  if (!response.ok) throw new SeoResearchError(`${providerErrorMessage((await openAiFailure(response)).code)} (${response.status})`);
   const payload: unknown = await response.json(), output = asRecord(payload).output;
   if (!Array.isArray(output) || !output.some((item) => asRecord(item).type === "web_search_call" && asRecord(item).status === "completed")) throw new SeoResearchError("لم يكتمل بحث المقال");
   const result = responseOutputText(payload), sources = webSources(payload, result.annotations).filter((source) => /^https?:\/\//.test(source.url));

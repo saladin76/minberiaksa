@@ -1,3 +1,4 @@
+import { OpenAiResponseError } from "@/lib/ai/core/openai-response";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -22,5 +23,5 @@ export async function POST(request: NextRequest) {
     const result = await analyzeGa4Report({ report: data.report, period, locale: isValidLocale(body?.locale) ? body.locale : "ar", model: provider.model, baseUrl: provider.baseUrl, apiKey: process.env.OPENAI_API_KEY });
     queueAuditLog({ ...auditActorFromDashboardSession(session!), action: "GA4_ANALYSIS", entityType: "GoogleAnalytics", entityId: data.propertyId, messageAr: "تحليل بيانات زيارات الموقع", metadata: { period, evidenceCount: result.evidence.length } });
     return NextResponse.json({ ...result, period, reportUpdatedAt: data.updatedAt, generatedAt: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) { return NextResponse.json({ error: error instanceof Ga4ReportError ? error.message : "GA4_ANALYSIS_FAILED" }, { status: error instanceof Ga4ReportError ? error.status : 502 }); }
+  } catch (error) { return NextResponse.json({ error: error instanceof Ga4ReportError ? error.message : "GA4_ANALYSIS_FAILED", reason: error instanceof OpenAiResponseError ? error.code : error instanceof Error && error.name === "TimeoutError" ? "AI_TIMEOUT" : undefined }, { status: error instanceof Ga4ReportError ? error.status : 502 }); }
 }

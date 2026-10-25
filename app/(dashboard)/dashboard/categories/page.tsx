@@ -365,11 +365,13 @@ export default function CategoriesPage() {
         ]} />
       </div>
       <div className="mb-4">
-        <TranslationOverview kind="categories" scopeIds={filteredCategories.map(c=>c.id)} />
+        <TranslationOverview kind="categories" scopeIds={filteredCategories.map(c=>c.id)}>
+          <ContentLocalizationAuditCard section="categories" />
+        </TranslationOverview>
       </div>
 
       <div className="mb-4">
-        <ContentLocalizationAuditCard section="categories" />
+
       </div>
 
       <FilterBar

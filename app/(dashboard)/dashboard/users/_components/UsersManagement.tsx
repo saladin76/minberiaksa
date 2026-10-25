@@ -342,9 +342,9 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
           <CardContent className="pt-0 space-y-4" dir={dashDir()}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2 text-start">
-                <label className="text-[11px] font-medium text-slate-500">{dt("بحث (اسم أو بريد)")}</label>
+                <label htmlFor="directory-search" className="text-[11px] font-medium text-slate-500">{dt("بحث (اسم أو بريد)")}</label>
         <Input
-                  placeholder={dt("بحث...")}
+                  id="directory-search" placeholder={dt("بحث...")}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full h-9 text-xs rounded-lg border-slate-200 bg-slate-50"

@@ -13,7 +13,6 @@ import {
   FolderTree,
   Wallet,
   Repeat,
-  Calendar,
   Receipt,
   BarChart3,
   PieChart as PieChartIcon,
@@ -66,7 +65,6 @@ import {
   donationDisplayTotalLocal,
   DASHBOARD_DISPLAY_SYMBOLS,
 } from "@/lib/dashboard/format-dashboard-money";
-import { formatIstanbulCalendarMonthLong } from "@/lib/admin/current-calendar-month-utc";
 import { BankTransfersCard, StatsMetricCard } from "@/components/dashboard/StatsMetricCard";
 import { getDashboardChartPeriodLabelAr } from "@/lib/dashboard/chart-period-label-ar";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
@@ -248,7 +246,6 @@ function getDonationsDateRange(
 
 export default function DashboardPage() {
   const locale = useLocale() as string;
-  const thisMonthRevenueTitle = dt("إيرادات شهر {0}", [formatIstanbulCalendarMonthLong(new Date(), locale || "ar")]);
   const searchParams = useSearchParams();
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
 
@@ -861,7 +858,7 @@ export default function DashboardPage() {
               // repeated the stat sitting right next to it. In a single-row band every extra
               // word is height the charts below lose.
               {
-                label: dt("التبرعات الشهرية المتكررة"),
+                label: dt("إيرادات شهرية متكررة (MRR)"),
                 icon: Repeat,
                 value: formatInSelectedCurrency(stats?.monthlyRecurringRevenueUnfiltered ?? 0),
               },
@@ -922,19 +919,9 @@ export default function DashboardPage() {
               </TabsList>
             </Tabs>
           </div>
-          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
             {statCardSet === "revenue" && (
               <>
-                <StatsMetricCard
-                  compact
-                  title={thisMonthRevenueTitle}
-                  value={stats?.thisMonthRevenue ?? 0}
-                  icon={Calendar}
-                  accent="emerald"
-                  format="money"
-                  variant="hero"
-                  subtitle={dt("دفعات ناجحة في الشهر الحالي (UTC)")}
-                />
                 <StatsMetricCard
                   compact
                   title={dt("إيرادات ناجحة ({0})", [chartFilterPeriodLabelAr])}
@@ -954,16 +941,6 @@ export default function DashboardPage() {
                   accent="sky"
                   format="money"
                   subtitle={dt("{0} ÷ {1} تبرع ناجح", [formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true), (stats?.paidCount ?? 0).toLocaleString("en-US")])}
-                />
-                <BankTransfersCard icon={DollarSign} />
-                <StatsMetricCard
-                  compact
-                  title={dt("إيرادات شهرية متكررة (MRR)")}
-                  value={stats?.monthlyRecurringRevenue ?? 0}
-                  icon={Repeat}
-                  accent="emerald"
-                  format="money"
-                  subtitle={dt("اشتراكات نشطة  مبالغ مخططة")}
                 />
                 <StatsMetricCard
                   compact
@@ -1003,6 +980,7 @@ export default function DashboardPage() {
             )}
             {statCardSet === "overview" && (
               <>
+                <BankTransfersCard icon={DollarSign} />
                 <StatsMetricCard
                   compact
                   title={dt("المشاريع")}

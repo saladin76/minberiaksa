@@ -1,3 +1,4 @@
+import { openAiResponseText } from "./openai-response";
 import type { AiAssistantContextDefinition, AiProviderStatus } from "./ai-core-types";
 
 type ProviderDraftInput = {
@@ -87,11 +88,11 @@ export async function generateOpenAiDraft(input: ProviderDraftInput): Promise<Pr
       };
     }
 
-    const json = await response.json().catch(() => null) as { output_text?: string } | null;
+    const json = await response.json().catch(() => null) as unknown;
     return {
       mode: "OPENAI",
       status: "COMPLETED",
-      answer: json?.output_text?.trim() || fallbackAnswer(input, "OpenAI response did not include output_text."),
+      answer: openAiResponseText(json),
     };
   } catch {
     return {

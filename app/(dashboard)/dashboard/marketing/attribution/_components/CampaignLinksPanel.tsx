@@ -38,7 +38,7 @@ type ApiResponse = { ok: boolean; status?: LinkStatus; range: { from: string; to
 type EditState = { id: string; name: string; platform: string; campaignId: string; adsetId: string; adId: string; utmCampaign: string; targetCountry: string; objective: string; internalNotes: string };
 
 const PLATFORMS = ["META", "GOOGLE_ADS", "TIKTOK", "X", "EMAIL", "WHATSAPP", "SMS", "ORGANIC"];
-const STATUS_TABS: { value: LinkStatus; label: string }[] = [{ value: "ACTIVE", label: "Active" }, { value: "ARCHIVED", label: "Archived" }, { value: "DELETED", label: "Deleted" }, { value: "ALL", label: "All" }];
+const STATUS_TABS: { value: LinkStatus; label: string }[] = [{ value: "ACTIVE", get label() { return dt("نشطة"); } }, { value: "ARCHIVED", get label() { return dt("مؤرشفة"); } }, { value: "DELETED", get label() { return dt("محذوفة"); } }, { value: "ALL", get label() { return dt("الكل"); } }];
 
 function money(value: number | null | undefined) { return typeof value === "number" && Number.isFinite(value) ? `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"; }
 function firstIdentifier(row: CampaignLinkPerformanceRow) { return row.identifiers.campaignId || row.identifiers.utmCampaign || row.identifiers.utmId || row.identifiers.adId || "—"; }

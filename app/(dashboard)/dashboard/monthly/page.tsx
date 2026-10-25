@@ -60,7 +60,6 @@ import {
   createFormatDashboardMoney,
   donationDisplayTotalLocal,
 } from "@/lib/dashboard/format-dashboard-money";
-import { formatIstanbulCalendarMonthLong } from "@/lib/admin/current-calendar-month-utc";
 import {
   DayOfMonthRevenueGrid,
   type DayOfMonthPoint,
@@ -311,7 +310,6 @@ function getDonationsDateRange(
 
 export default function MonthlySubscriptionsDashboardPage() {
   const locale = useLocale() as string;
-  const thisMonthRevenueTitle = dt("إيرادات شهر {0}", [formatIstanbulCalendarMonthLong(new Date(), locale || "ar")]);
   const searchParams = useSearchParams();
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -1145,16 +1143,6 @@ export default function MonthlySubscriptionsDashboardPage() {
               <>
                 <StatsMetricCard
                   compact
-                  title={thisMonthRevenueTitle}
-                  value={stats?.thisMonthRevenue ?? 0}
-                  icon={Calendar}
-                  accent="emerald"
-                  format="money"
-                  variant="hero"
-                  subtitle={dt("دفعات ناجحة في الشهر الحالي (UTC)")}
-                />
-                <StatsMetricCard
-                  compact
                   title={dt("إيرادات ناجحة ({0})", [chartFilterPeriodLabelAr])}
                   bankTransfers={false}
                   value={stats?.totalAmount ?? 0}
@@ -1162,24 +1150,6 @@ export default function MonthlySubscriptionsDashboardPage() {
                   accent="emerald"
                   format="money"
                   subtitle={dt("دفعات الاشتراك المدفوعة فقط  حسب الفترة والتصفية أعلاه")}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("إيرادات ناجحة (كل الوقت)")}
-                  value={stats?.paidRevenueAllTimeUnfiltered ?? 0}
-                  icon={DollarSign}
-                  accent="emerald"
-                  format="money"
-                  subtitle={dt("كل دفعات الاشتراك الناجحة  دون تصفية الفئة أو المشروع أو الفترة")}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("إيرادات شهرية متكررة (MRR)")}
-                  value={stats?.monthlyRecurringRevenue ?? 0}
-                  icon={Repeat}
-                  accent="emerald"
-                  format="money"
-                  subtitle={dt("اشتراكات نشطة  المكافئ الشهري لكل الدوريات")}
                 />
                 <StatsMetricCard
                   compact

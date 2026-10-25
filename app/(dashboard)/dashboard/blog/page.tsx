@@ -84,9 +84,11 @@ export default function BooksManagement() {
         { label: dt("مسودات"), value: blogs.length - publishedCount, detail: dt("تحتاج مراجعة أو نشرًا"), icon: FileEdit, tone: "amber" },
         { label: dt("تصنيفات مستخدمة"), value: categoryCount, detail: dt("في المقالات المعروضة"), icon: FolderOpen, tone: "slate" },
       ]} />
-      <TranslationOverview kind="blog" />
+      <TranslationOverview kind="blog">
+          <ContentLocalizationAuditCard section="blog" />
+        </TranslationOverview>
       <BlogHealthCard />
-      <ContentLocalizationAuditCard section="blog" />
+
 
       <Card className="overflow-hidden border-slate-200 shadow-sm">
         <CardHeader>

@@ -1,4 +1,6 @@
 "use client";
+
+import { providerErrorMessage } from "@/lib/ai/core/provider-error-message";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -59,9 +61,9 @@ export function Ga4InsightPanel({ period }: { period: Ga4Period }) {
     setLoading(true); setError(""); setResult(null);
     try {
       const response = await fetch("/api/admin/google-analytics/analyze", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({...period, locale: getDashLocale()}), signal: abort.signal});
-      const body = await response.json(); if (!response.ok) throw new Error(body.error);
+      const body = await response.json(); if (!response.ok) throw new Error(body.reason || body.error);
       if (!abort.signal.aborted) setResult(body);
-    } catch (cause) { if (!abort.signal.aborted) setError(cause instanceof Error && cause.message === "GA4_ANALYSIS_NOT_CONFIGURED" ? dt("فعّل مزود الذكاء الاصطناعي الحالي على الخادم لإتاحة التحليل. لم يُنشأ تحليل بديل أو تجريبي.") : dt("تعذّر إعداد تحليل موثق. أعد المحاولة لاحقًا.")); }
+    } catch (cause) { if (!abort.signal.aborted) setError(cause instanceof Error && cause.message === "GA4_ANALYSIS_NOT_CONFIGURED" ? dt("فعّل مزود الذكاء الاصطناعي الحالي على الخادم لإتاحة التحليل. لم يُنشأ تحليل بديل أو تجريبي.") : providerErrorMessage(cause instanceof Error ? cause.message : undefined)); }
     finally { if (!abort.signal.aborted) setLoading(false); }
   }
   return <Card><CardHeader className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>{dt("تحليل بالذكاء الاصطناعي")}</CardTitle><CardDescription>{dt("فرص للإعلانات وSEO وتجربة التبرع، مستندة إلى أرقام الفترة المحددة.")}</CardDescription></div><Button disabled={loading} onClick={() => void analyze()}>{loading ? dt("جارٍ التحليل…") : dt("تحليل هذه الفترة")}</Button></CardHeader>

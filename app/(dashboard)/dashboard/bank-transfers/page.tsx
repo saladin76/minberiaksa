@@ -1,5 +1,7 @@
 "use client";
 
+import { bankOptionName } from "@/lib/dashboard/bank-option";
+
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -77,8 +79,8 @@ export default function BankTransfersPage() {
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
 
-  const activeBanks = useMemo(() => banks.filter((b) => b.isActive), [banks]);
-  const selectedBank = activeBanks.find((b) => b.id === selectedBankId || b.code === selectedBankId) ?? activeBanks[0];
+  const activeBanks = useMemo(() => banks.filter((b) => b.isActive).sort((a, b) => Number(Boolean(bankOptionName(b))) - Number(Boolean(bankOptionName(a)))), [banks]);
+  const selectedBank = activeBanks.find((b) => b.id === selectedBankId || b.code === selectedBankId) ?? activeBanks.find((bank) => bankOptionName(bank));
   const pendingCount = transactions.filter((tx) => tx.status === "PENDING_REVIEW").length;
   const approvedCount = transactions.filter((tx) => tx.status === "APPROVED" || tx.status === "IMPORTED").length;
   const ignoredCount = transactions.filter((tx) => tx.status === "IGNORED").length;
@@ -96,7 +98,7 @@ export default function BankTransfersPage() {
       })
       .catch(() => setCampaigns([]));
   }, []);
-  useEffect(() => { if (!selectedBankId && activeBanks[0]?.id) { setSelectedBankId(activeBanks[0].id); setStatementCurrency(activeBanks[0].currency); } }, [activeBanks, selectedBankId]);
+  useEffect(() => { const first = activeBanks.find((bank) => bankOptionName(bank)); if (!selectedBankId && first?.id) { setSelectedBankId(first.id); setStatementCurrency(first.currency); } }, [activeBanks, selectedBankId]);
   useEffect(() => { setSelectedIds((prev) => new Set([...prev].filter((id) => visibleIds.includes(id)))); }, [transactions.length]);
 
   function buildQuery(values: Filters, targetPage = page) {
@@ -281,11 +283,11 @@ export default function BankTransfersPage() {
                   if (bank) setStatementCurrency(bank.currency);
                 }}
               >
-                <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder={dt("اختر البنك")} /></SelectTrigger>
+                <SelectTrigger aria-label={dt("البنك")} className="h-10 text-[13px]"><SelectValue placeholder={dt("اختر البنك")} /></SelectTrigger>
                 <SelectContent>
                   {activeBanks.map((bank) => (
                     <SelectItem key={bank.id ?? bank.code ?? bank.nameAr} value={bank.id ?? bank.code ?? bank.nameAr}>
-                      {bank.nameAr}
+                      {bankOptionName(bank) ?? `${dt("بيانات ناقصة")} · ${(bank.id ?? bank.code ?? "").slice(-6)}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -293,9 +295,9 @@ export default function BankTransfersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">{dt("العملة")}</Label>
+              <Label htmlFor="statement-currency" className="text-[11px] font-semibold text-slate-600">{dt("العملة")}</Label>
               <Select value={statementCurrency} onValueChange={(v) => setStatementCurrency(v)}>
-                <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="statement-currency" className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {supportedCurrencies.map((c) => <SelectItem key={c} value={c}>{currencyLabels[c] ?? c}</SelectItem>)}
                 </SelectContent>
@@ -303,9 +305,9 @@ export default function BankTransfersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600">{dt("لغة المتبرعين")}</Label>
+              <Label htmlFor="statement-locale" className="text-[11px] font-semibold text-slate-600">{dt("لغة المتبرعين")}</Label>
               <Select value={donorLocale} onValueChange={(v) => setDonorLocale(v)}>
-                <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="statement-locale" className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(localeLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
                 </SelectContent>
@@ -334,10 +336,10 @@ export default function BankTransfersPage() {
           </div>
 
           <div className="flex flex-row gap-2 lg:flex-col lg:justify-end">
-            <Button variant="outline" className="gap-2" onClick={parsePreview} disabled={parsing || !statementFile}>
+            <Button variant="outline" className="gap-2" onClick={parsePreview} disabled={parsing || !statementFile || !selectedBank}>
               {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               {dt("معاينة")}</Button>
-            <Button className="gap-2 bg-brand hover:bg-brand-dark" onClick={importStatement} disabled={importing || !statementFile}>
+            <Button className="gap-2 bg-brand hover:bg-brand-dark" onClick={importStatement} disabled={importing || !statementFile || !selectedBank}>
               {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {dt("إدخال للمراجعة")}</Button>
           </div>
@@ -451,7 +453,7 @@ export default function BankTransfersPage() {
           <div className="flex flex-wrap items-end gap-2">
             <div className="relative min-w-[220px] flex-1">
               <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
+              <Input aria-label={dt("بحث باسم أو وصف أو مرجع")}
                 placeholder={dt("بحث باسم أو وصف أو مرجع")}
                 value={filters.q}
                 onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
@@ -476,7 +478,7 @@ export default function BankTransfersPage() {
               <SelectContent>
                 <SelectItem value="all">{dt("كل البنوك")}</SelectItem>
                 {activeBanks.map((bank) => (
-                  <SelectItem key={bank.id ?? bank.code ?? bank.nameAr} value={bank.id ?? bank.code ?? bank.nameAr}>{bank.nameAr}</SelectItem>
+                  <SelectItem key={bank.id ?? bank.code ?? bank.nameAr} value={bank.id ?? bank.code ?? bank.nameAr}>{bankOptionName(bank) ?? `${dt("بيانات ناقصة")} · ${(bank.id ?? bank.code ?? "").slice(-6)}`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -499,19 +501,19 @@ export default function BankTransfersPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold text-slate-600">{dt("من تاريخ")}</Label>
-                    <Input type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="h-9 text-[13px]" />
+                    <Input aria-label={dt("من تاريخ")} type="date" value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold text-slate-600">{dt("إلى تاريخ")}</Label>
-                    <Input type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="h-9 text-[13px]" />
+                    <Input aria-label={dt("إلى تاريخ")} type="date" value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold text-slate-600">{dt("قيمة من")}</Label>
-                    <Input value={filters.amountMin} onChange={(e) => setFilters((f) => ({ ...f, amountMin: e.target.value }))} className="h-9 text-[13px]" />
+                    <Input aria-label={dt("قيمة من")} type="number" min="0" step="any" value={filters.amountMin} onChange={(e) => setFilters((f) => ({ ...f, amountMin: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold text-slate-600">{dt("قيمة إلى")}</Label>
-                    <Input value={filters.amountMax} onChange={(e) => setFilters((f) => ({ ...f, amountMax: e.target.value }))} className="h-9 text-[13px]" />
+                    <Input aria-label={dt("قيمة إلى")} type="number" min="0" step="any" value={filters.amountMax} onChange={(e) => setFilters((f) => ({ ...f, amountMax: e.target.value }))} className="h-9 text-[13px]" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold text-slate-600">{dt("لكل صفحة")}</Label>
@@ -696,7 +698,7 @@ export default function BankTransfersPage() {
                 <div key={bank.id ?? bank.code ?? bank.nameAr} className="rounded-xl border border-slate-200 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-semibold text-slate-900">{bank.nameAr}</p>
+                      <p className="truncate text-[15px] font-semibold text-slate-900">{bankOptionName(bank) ?? `${dt("بيانات ناقصة")} · ${(bank.id ?? bank.code ?? "").slice(-6)}`}</p>
                       <p className="truncate text-xs text-slate-500">{bank.nameTr || bank.nameEn || bank.code || dt("حساب بنكي")}</p>
                     </div>
                     <span className="rounded-lg bg-brand-50 p-2 text-brand"><Building2 className="h-4 w-4" /></span>
@@ -725,17 +727,17 @@ export default function BankTransfersPage() {
               <h3 className="text-[13px] font-semibold text-slate-800">{dt("إضافة حساب بنكي جديد")}</h3>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <Input placeholder={dt("اسم البنك بالعربية")} value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="h-10 text-[13px]" />
+              <Input aria-label={dt("اسم البنك بالعربية")} placeholder={dt("اسم البنك بالعربية")} value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="h-10 text-[13px]" />
               <Select value={form.currency} onValueChange={(v) => setForm((f) => ({ ...f, currency: v }))}>
                 <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {supportedCurrencies.map((c) => <SelectItem key={c} value={c}>{currencyLabels[c] ?? c}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Input placeholder={dt("الاسم بالتركية")} value={form.nameTr} onChange={(e) => setForm((f) => ({ ...f, nameTr: e.target.value }))} className="h-10 text-[13px]" />
-              <Input placeholder={dt("الاسم بالإنجليزية")} value={form.nameEn} onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))} className="h-10 text-[13px]" />
-              <Input placeholder={dt("اسم الحساب")} value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} className="h-10 text-[13px]" />
-              <Input placeholder={dt("آخر 4 من IBAN")} value={form.ibanLast4} onChange={(e) => setForm((f) => ({ ...f, ibanLast4: e.target.value }))} className="h-10 text-[13px]" />
+              <Input aria-label={dt("الاسم بالتركية")} placeholder={dt("الاسم بالتركية")} value={form.nameTr} onChange={(e) => setForm((f) => ({ ...f, nameTr: e.target.value }))} className="h-10 text-[13px]" />
+              <Input aria-label={dt("الاسم بالإنجليزية")} placeholder={dt("الاسم بالإنجليزية")} value={form.nameEn} onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))} className="h-10 text-[13px]" />
+              <Input aria-label={dt("اسم الحساب")} placeholder={dt("اسم الحساب")} value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} className="h-10 text-[13px]" />
+              <Input aria-label={dt("آخر 4 من IBAN")} placeholder={dt("آخر 4 من IBAN")} value={form.ibanLast4} onChange={(e) => setForm((f) => ({ ...f, ibanLast4: e.target.value }))} className="h-10 text-[13px]" />
             </div>
             <Button className="mt-3 gap-2 bg-brand hover:bg-brand-dark" onClick={addBank} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}

@@ -171,8 +171,8 @@ export default function CertificateCopyPage() {
               ] as Array<[keyof ReceiptOrgData, string]>
             ).map(([key, label]) => (
               <div key={key} className="space-y-1">
-                <Label>{label}</Label>
-                <Input dir="ltr" value={org[key]} disabled={!isAdmin} onChange={(e) => setOrg(key, e.target.value)} placeholder={RECEIPT_ORG_DEFAULTS[key]} />
+                <Label htmlFor={`receipt-org-${key}`}>{label}</Label>
+                <Input id={`receipt-org-${key}`} dir="ltr" value={org[key]} disabled={!isAdmin} onChange={(e) => setOrg(key, e.target.value)} placeholder={RECEIPT_ORG_DEFAULTS[key]} />
               </div>
             ))}
           </CardContent>
@@ -207,14 +207,14 @@ export default function CertificateCopyPage() {
                     const value = valueOf(template, loc, field.name);
                     return (
                       <div key={field.name} className="space-y-1">
-                        <Label className="flex items-center justify-between gap-2">
-                          <span>{field.label}</span>
-                          {value ? <span className="text-[11px] font-normal text-amber-700">{dt("معدّل")}</span> : <span className="text-[11px] font-normal text-muted-foreground">{dt("الافتراضي")}</span>}
+                        <Label htmlFor={`certificate-${template}-${loc}-${field.name}`} className="flex items-center justify-between gap-2">
+                          <span>{dt(field.label)}</span>
+                          {value ? <span aria-hidden="true" className="text-[11px] font-normal text-amber-700">{dt("معدّل")}</span> : <span aria-hidden="true" className="text-[11px] font-normal text-muted-foreground">{dt("الافتراضي")}</span>}
                         </Label>
                         {field.multiline ? (
-                          <Textarea rows={4} value={value} onChange={(e) => setValue(template, loc, field.name, e.target.value)} placeholder={placeholder} />
+                          <Textarea aria-label={dt(field.label)} id={`certificate-${template}-${loc}-${field.name}`} rows={4} value={value} onChange={(e) => setValue(template, loc, field.name, e.target.value)} placeholder={placeholder} />
                         ) : (
-                          <Input value={value} onChange={(e) => setValue(template, loc, field.name, e.target.value)} placeholder={placeholder} />
+                          <Input aria-label={dt(field.label)} id={`certificate-${template}-${loc}-${field.name}`} value={value} onChange={(e) => setValue(template, loc, field.name, e.target.value)} placeholder={placeholder} />
                         )}
                       </div>
                     );
