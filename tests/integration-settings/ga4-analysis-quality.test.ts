@@ -9,7 +9,7 @@ function reportFixture() {
   report.pages = [{ pagePath: "/ar", pageTitle: "Home", screenPageViews: 10, sessions: 8, activeUsers: 7 }];
   return report;
 }
-function responseFixture(area: "measurement" | "seo" | "ux" = "measurement", evidenceIds = ["e2"]) {
+function responseFixture(area: "measurement" | "seo" | "ux" | "ads" = "measurement", evidenceIds = ["e2"]) {
   return { summary: "توجد زيارات مسجلة خلال الفترة.", opportunities: [{ area, title: "مراجعة الصفحة", finding: "الصفحة تستقبل زيارات.", action: "اختبر تحسين الصفحة.", evidenceIds, confidence: "high" }], limitations: ["البيانات لا تثبت أسباب السلوك."] };
 }
 async function analyze(response: ReturnType<typeof responseFixture>, report = reportFixture(), inspect?: (body: {store?: boolean; input: {content: string}[]}) => void) {
@@ -78,4 +78,15 @@ test("public paths do not make an Arabic narrative fail the language check", asy
   reply.opportunities[0].title = "مراجعة /ar/a-long-public-project-name-with-many-english-letters";
   const result = await analyze(reply);
   assert.equal(result.analysis.opportunities.length, 1);
+});
+
+test("routine events marked as key events constrain conclusions about engagement", async () => {
+  const report = reportFixture();
+  report.extended = { events: { rows: [{dimensions: ["page_view"], metrics: [100, 100]}, {dimensions: ["user_engagement"], metrics: [5, 5]}, {dimensions: ["scroll"], metrics: [2, 0]}], rowCount: 3, thresholded: false, sampled: false } };
+  const result = await analyze(responseFixture("ads"), report, body => {
+    const input = JSON.parse(body.input[1].content);
+    assert.deepEqual(input.engagementKeyEvents.map((row: {event: string}) => row.event), ["page_view", "user_engagement"]);
+  });
+  assert.match(result.analysis.limitations[0], /مشاهدة الصفحة/);
+  assert.equal(result.analysis.opportunities[0].confidence, "medium");
 });
