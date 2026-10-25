@@ -69,8 +69,12 @@ export async function GET(request: NextRequest) {
     const listWhere: Prisma.CommunicationDeliveryWhereInput = { ...rangeWhere };
     if (status !== "all") {
       if (status === "failed") listWhere.status = { in: [...FAILED_STATUSES] };
-      else if (status === "opened") listWhere.openedAt = { not: null };
-      else if (status === "clicked") listWhere.clickedAt = { not: null };
+      else if (status === "opened") listWhere.AND = [{ OR: [
+        { openedAt: { not: null } }, { clickedAt: { not: null } }, { status: { in: ["OPENED", "CLICKED"] } },
+      ] }];
+      else if (status === "clicked") listWhere.AND = [{ OR: [
+        { clickedAt: { not: null } }, { status: "CLICKED" },
+      ] }];
       else listWhere.status = status;
     }
     if (origin !== "all") listWhere.origin = origin;
