@@ -236,6 +236,7 @@ const nextConfig: NextConfig = {
       { source: "/page/biz-kimiz", destination: "/tr/about-us", permanent: true },
       { source: "/page/saglik", destination: "/tr", permanent: true },
       { source: "/page/yardim", destination: "/tr/contact-us", permanent: true },
+      { source: "/ar/mshrwa-twrya-alkhbr-wdam-almkhabr", destination: "/ar/bagislar/gaza-bread", permanent: true },
       { source: "/ar/donates", destination: "/ar/campaigns", permanent: true },
       { source: "/donates", destination: "/en/campaigns", permanent: true },
     ];
