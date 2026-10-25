@@ -32,7 +32,7 @@ function youtubeIdFrom(url: URL): string | null {
     if (url.pathname === "/watch") candidate = url.searchParams.get("v") ?? "";
     else if (["embed", "shorts", "live", "v"].includes(parts[0] ?? "")) candidate = parts[1] ?? "";
   }
-  return YOUTUBE_ID.test(candidate) ? candidate : null;
+  return candidate !== "videoseries" && YOUTUBE_ID.test(candidate) ? candidate : null;
 }
 
 export function describeVideoSource(input: {
@@ -44,9 +44,23 @@ export function describeVideoSource(input: {
   const maybeBareId = !raw.includes("://") && YOUTUBE_ID.test(raw) ? raw : null;
   const parsed = raw ? safeHttpUrl(raw) : null;
   const youtubeId = maybeBareId ?? (parsed ? youtubeIdFrom(parsed) : null);
-  const start = Number.isFinite(input.startSeconds) && Number(input.startSeconds) > 0
-    ? Math.floor(Number(input.startSeconds))
-    : null;
+  const explicitStart = Number.isFinite(input.startSeconds) && Number(input.startSeconds) > 0 ? Math.floor(Number(input.startSeconds)) : null;
+  const time = parsed?.searchParams.get("start") || parsed?.searchParams.get("t") || parsed?.hash.match(/^#t=(.+)$/)?.[1] || "";
+  const parts = /^(\d+)h(?:(\d+)m)?(?:(\d+)s)?$|^(?:(\d+)m)?(\d+)s$/.exec(time);
+  const parsedStart = /^\d+$/.test(time) ? Number(time)
+    : parts ? Number(parts[1] || 0) * 3600 + Number(parts[2] || parts[4] || 0) * 60 + Number(parts[3] || parts[5] || 0) : 0;
+  const start = explicitStart || (Number.isSafeInteger(parsedStart) && parsedStart > 0 ? parsedStart : null);
+
+  const playlist = parsed?.searchParams.get("list") || "";
+  if (parsed && ["youtube.com", "m.youtube.com", "youtube-nocookie.com"].includes(parsed.hostname.toLowerCase().replace(/^www\./, "")) &&
+    ["/playlist", "/embed/videoseries"].includes(parsed.pathname) && /^[A-Za-z0-9_-]{2,200}$/.test(playlist)) {
+    const query = new URLSearchParams({ list: playlist });
+    if (start) query.set("start", String(start));
+    return { provider: "youtube", providerLabel: "YouTube", sourceUrl: parsed.toString(),
+      watchUrl: "https://www.youtube.com/playlist?list=" + playlist,
+      embedUrl: "https://www.youtube-nocookie.com/embed/videoseries?" + query.toString(),
+      directVideo: false, youtubeId: null };
+  }
 
   if (youtubeId) {
     const query = start ? `?start=${start}` : "";

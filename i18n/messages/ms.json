@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "Kategori",
-    "loadMore": "Papar Lagi"
+    "loadMore": "Papar Lagi",
+    "unavailableTranslationNotice": "Artikel ini belum tersedia dalam bahasa ini. Teks yang tersedia dipaparkan di bawah."
   },
   "cart": {
     "title": "Troli",
@@ -661,7 +662,7 @@
     "emptyCart": "Troli Anda Kosong",
     "itemsHeading": "Item Derma Anda",
     "recurringNudge": "Ulang derma ini setiap bulan dengan satu klik",
-    "recurringNudgeText": "Sertai derma automatik  boleh berhenti bila-bila masa",
+    "recurringNudgeText": "Menderma secara automatik. Hubungi yayasan untuk mengubah atau menghentikan pelan anda.",
     "recurringNudgeEyebrow": "Jadikan Impak Anda Berterusan",
     "dataAccuracyNote": "Pastikan maklumat anda betul supaya resit dan sijil derma sampai kepada anda",
     "orFillManually": "Atau Isi Sendiri",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "Perpustakaan Dokumen",
     "docsLibraryText": "Resit dan sijil anda sedia dimuat turun.",
     "givingPlans": "Pelan Sumbangan",
-    "givingPlansText": "Lihat dan urus sumbangan berkala anda.",
+    "givingPlansText": "Hubungi yayasan untuk mengubah atau menghentikan derma berkala anda.",
     "faq1Q": "Bagaimana saya tahu sumbangan saya sampai?",
     "faq1A": "Anda menerima resit melalui e-mel, dan kemas kini diterbitkan di halaman projek setelah disahkan.",
     "faq2Q": "Bolehkah saya khususkan sumbangan kepada projek tertentu?",

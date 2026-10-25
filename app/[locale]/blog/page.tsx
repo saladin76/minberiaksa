@@ -1,5 +1,6 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
-import { LOCALE_SEO, buildPageMetadata, type Locale } from "@/lib/seo";
+import { LOCALE_SEO, type Locale } from "@/lib/seo";
 import { slugFor } from "@/lib/minbar/routes";
 import { listArticles, listPostCategories } from "@/lib/minbar/posts";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
      language's blog listing was described to search engines as the organisation rather than as its
      articles. `LOCALE_SEO[locale].blog` is the generated source that exists for exactly this. */
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("blog", locale, {
     title: seo.blog.title,
     description: seo.blog.description,
     path: `/${slugFor("blog", locale)}`,

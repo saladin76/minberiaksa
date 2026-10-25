@@ -52,6 +52,7 @@ export type SuggestedDonationsSectionRef = {
 };
 
 type Props = {
+  onDirty?: () => void;
   /** Parsed config from API, or undefined before load / for new campaign */
   initialConfig?: SuggestedDonationsConfig | null;
 };
@@ -59,7 +60,7 @@ type Props = {
 export const SuggestedDonationsSection = forwardRef<
   SuggestedDonationsSectionRef,
   Props
->(function SuggestedDonationsSection({ initialConfig }, ref) {
+>(function SuggestedDonationsSection({ initialConfig, onDirty }, ref) {
   const [amountsStr, setAmountsStr] = useState(
     () => DEFAULT_SUGGESTED_DONATION_AMOUNTS.join(", ")
   );
@@ -132,7 +133,7 @@ export const SuggestedDonationsSection = forwardRef<
           className="mt-1.5 font-mono text-left"
           dir="ltr"
           value={amountsStr}
-          onChange={(e) => setAmountsStr(e.target.value)}
+          onChange={(e) => {onDirty?.(); return (setAmountsStr(e.target.value));}}
           placeholder={DEFAULT_SUGGESTED_DONATION_AMOUNTS.join(", ")}
         />
         <p className="text-sm text-muted-foreground mt-1.5">
@@ -151,7 +152,7 @@ export const SuggestedDonationsSection = forwardRef<
             className="font-mono text-left"
             dir="ltr"
             value={defaultAmountStr}
-            onChange={(event) => setDefaultAmountStr(event.target.value)}
+            onChange={(event) => {onDirty?.(); return (setDefaultAmountStr(event.target.value));}}
             placeholder={dt("اختياري")}
           />
           <span dir="ltr" className="shrink-0 text-sm font-semibold text-muted-foreground">USD</span>
@@ -171,7 +172,7 @@ export const SuggestedDonationsSection = forwardRef<
               <button
                 key={value}
                 type="button"
-                onClick={() => toggleCard(value)}
+                onClick={() => {onDirty?.(); return (toggleCard(value));}}
                 disabled={full}
                 aria-pressed={on}
                 className={[
@@ -193,7 +194,7 @@ export const SuggestedDonationsSection = forwardRef<
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <Label>{dt("استثناءات حسب العملة (اختياري)")}</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addRow} className="gap-1">
+          <Button type="button" variant="outline" size="sm" onClick={() => { onDirty?.(); addRow(); }} className="gap-1">
             <Plus className="w-4 h-4" />
             {dt("إضافة عملة")}</Button>
         </div>
@@ -211,7 +212,7 @@ export const SuggestedDonationsSection = forwardRef<
                   <Label className="text-xs text-muted-foreground">{dt("العملة")}</Label>
                   <Select
                     value={row.currency}
-                    onValueChange={(v) => updateRow(row.id, { currency: v })}
+                    onValueChange={(v) => {onDirty?.(); return (updateRow(row.id, { currency: v }));}}
                   >
                     <SelectTrigger className="mt-1" dir="ltr">
                       <SelectValue />
@@ -232,7 +233,7 @@ export const SuggestedDonationsSection = forwardRef<
                     dir="ltr"
                     value={row.amountsStr}
                     onChange={(e) =>
-                      updateRow(row.id, { amountsStr: e.target.value })
+                      {onDirty?.(); return (updateRow(row.id, { amountsStr: e.target.value }));}
                     }
                     placeholder={dt("مثال: 50, 100, 200")}
                   />
@@ -242,7 +243,7 @@ export const SuggestedDonationsSection = forwardRef<
                   variant="ghost"
                   size="icon"
                   className="shrink-0 text-destructive"
-                  onClick={() => removeRow(row.id)}
+                  onClick={() => {onDirty?.(); return (removeRow(row.id));}}
                   aria-label={dt("حذف الصف")}
                 >
                   <Trash2 className="w-4 h-4" />

@@ -1,6 +1,7 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { messagesFor } from "@/i18n/locale-messages";
 import { slugFor } from "@/lib/minbar/routes";
 import { verseBlock } from "@/lib/minbar/quran";
@@ -28,7 +29,7 @@ const PROJECT_LIMIT = 8;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "jerusalem" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("jerusalem", locale, {
     title: t("pageTitle"),
     description: t("seoDescription"),
     path: `/${slugFor("jerusalem", locale)}`,

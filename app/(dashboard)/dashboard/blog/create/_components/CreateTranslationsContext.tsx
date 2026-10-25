@@ -1,4 +1,6 @@
 "use client";
+import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
+import { isEditorContentEmpty } from "@/lib/tiptap-empty-doc";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { TranslationLocale } from "../../../_components/locale-form";
@@ -46,6 +48,13 @@ export function CreateTranslationsProvider({ children }: { children: React.React
   const [translations, setTranslations] = useState<TranslationsState>({});
   const [arabic, setArabicState] = useState<ArabicDraft>({ title: "", description: "", content: null });
   const [version, setVersion] = useState(0);
+
+  useDashboardUnsavedChanges(
+    Boolean(arabic.title.trim() || arabic.description.trim() || !isEditorContentEmpty(arabic.content)) ||
+    Object.values(translations).some((value) =>
+      Boolean(value && (value.title.trim() || value.description.trim() || value.image || !isEditorContentEmpty(value.content))),
+    ),
+  );
 
   const updateLocale = useCallback((loc: BufferedLocale, patch: Partial<LocaleTranslation>) => {
     setTranslations((prev) => {

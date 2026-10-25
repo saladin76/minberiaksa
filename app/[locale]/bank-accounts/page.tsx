@@ -1,6 +1,7 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { banksFor } from "@/lib/minbar/banks-server";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
@@ -16,7 +17,7 @@ const NAMESPACES = ["cart"] as const;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "cart" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("bankAccounts", locale, {
     title: t("bankPageTitle"),
     description: t("bankPageLead"),
     path: `/${slugFor("bankAccounts", locale)}`,

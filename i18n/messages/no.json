@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "Kategorier",
-    "loadMore": "Vis Flere"
+    "loadMore": "Vis Flere",
+    "unavailableTranslationNotice": "Denne artikkelen er ennå ikke tilgjengelig på dette språket. Den tilgjengelige teksten vises nedenfor."
   },
   "cart": {
     "title": "Kurv",
@@ -661,7 +662,7 @@
     "emptyCart": "Handlekurven Din er Tom",
     "itemsHeading": "Dine Gaver",
     "recurringNudge": "Gjenta gaven hver måned med ett klikk",
-    "recurringNudgeText": "Aktiver automatisk gave  avslutt når du vil",
+    "recurringNudgeText": "Gi automatisk. Kontakt stiftelsen for å endre eller avslutte avtalen din.",
     "recurringNudgeEyebrow": "La Innsatsen Din Fortsette",
     "dataAccuracyNote": "Sjekk at opplysningene dine stemmer slik at kvittering og gavebevis når deg",
     "orFillManually": "Eller Fyll ut Manuelt",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "Dokumentbibliotek",
     "docsLibraryText": "Kvitteringene og sertifikatene dine klare til nedlasting.",
     "givingPlans": "Gaveplaner",
-    "givingPlansText": "Se og styr de faste gavene dine.",
+    "givingPlansText": "Kontakt stiftelsen for å endre eller avslutte den faste donasjonen din.",
     "faq1Q": "Hvordan vet jeg at gaven min kom fram?",
     "faq1A": "Du får kvittering på e-post, og oppdateringene publiseres på prosjektsiden når de er godkjent.",
     "faq2Q": "Kan jeg øremerke gaven til et bestemt prosjekt?",

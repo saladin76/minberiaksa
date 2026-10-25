@@ -109,12 +109,14 @@ export function whereByIdOrLocaleSlug(
  */
 export function whereByIdOrAnyLocaleSlug(
   key: string,
-  translationsRelationName = "translations"
+  translationsRelationName = "translations",
+  includePreviousSlugs = false,
 ): Record<string, unknown> {
   if (isObjectId(key)) return { id: key };
   return {
     OR: [
       { slug: key },
+      ...(includePreviousSlugs ? [{ previousSlugs: { has: key } }] : []),
       { [translationsRelationName]: { some: { slug: key } } },
     ],
   };

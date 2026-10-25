@@ -233,6 +233,7 @@ export interface CmsDocument {
   title: string;
   description: string;
   fileUrl: string;
+  fileLocale?: string | null;
   coverImage: string;
   year: number | null;
   /** Booklets only; "" elsewhere. */
@@ -244,13 +245,13 @@ export async function listReports(locale: string): Promise<CmsDocument[]> {
     where: { isPublished: true },
     orderBy: [{ year: "desc" }, { order: "asc" }],
     select: {
-      id: true, slug: true, title: true, description: true, fileUrl: true, coverImage: true, year: true,
-      translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true, description: true } },
+      id: true, slug: true, title: true, description: true, fileUrl: true, fileLocale: true, coverImage: true, year: true,
+      translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true, description: true, fileUrl: true } },
     },
   });
   return rows.map((r) => {
     const t = pickTranslation(r.translations, locale);
-    return { id: r.id, slug: r.slug, title: t?.title ?? r.title, description: t?.description || r.description || "", fileUrl: r.fileUrl, coverImage: r.coverImage ?? "", year: r.year ?? null, author: "" };
+    return { id: r.id, slug: r.slug, title: t?.title ?? r.title, description: t?.description || r.description || "", fileUrl: r.translations.find((entry) => entry.locale === locale)?.fileUrl || r.fileUrl, fileLocale: r.translations.find((entry) => entry.locale === locale)?.fileUrl ? locale : r.fileLocale, coverImage: r.coverImage ?? "", year: r.year ?? null, author: "" };
   });
 }
 
@@ -259,12 +260,12 @@ export async function listBooklets(locale: string): Promise<CmsDocument[]> {
     where: { isPublished: true },
     orderBy: { order: "asc" },
     select: {
-      id: true, slug: true, title: true, description: true, author: true, fileUrl: true, coverImage: true,
-      translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true, description: true } },
+      id: true, slug: true, title: true, description: true, author: true, fileUrl: true, fileLocale: true, coverImage: true,
+      translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, title: true, description: true, fileUrl: true } },
     },
   });
   return rows.map((b) => {
     const t = pickTranslation(b.translations, locale);
-    return { id: b.id, slug: b.slug, title: t?.title ?? b.title, description: t?.description || b.description || "", fileUrl: b.fileUrl, coverImage: b.coverImage ?? "", year: null, author: b.author ?? "" };
+    return { id: b.id, slug: b.slug, title: t?.title ?? b.title, description: t?.description || b.description || "", fileUrl: b.translations.find((entry) => entry.locale === locale)?.fileUrl || b.fileUrl, fileLocale: b.translations.find((entry) => entry.locale === locale)?.fileUrl ? locale : b.fileLocale, coverImage: b.coverImage ?? "", year: null, author: b.author ?? "" };
   });
 }

@@ -1,6 +1,7 @@
+import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { buildPageMetadata } from "@/lib/seo";
+
 import { slugFor } from "@/lib/minbar/routes";
 import { getCategoryPageByTemplate } from "@/lib/minbar/category-page";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
@@ -20,7 +21,7 @@ export const revalidate = 60;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "zakat" });
-  return buildPageMetadata(locale, {
+  return buildManagedPageMetadata("zakat", locale, {
     title: t("heroTitle"),
     description: t("whyText"),
     path: `/${slugFor("zakat", locale)}`,

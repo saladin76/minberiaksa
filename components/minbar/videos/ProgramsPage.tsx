@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { describeVideoSource } from "@/lib/content/video-platform";
 import type { CmsPlaylist } from "@/lib/minbar/cms";
-import { youtubeEmbed, youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
+import { youtubeThumb, youtubeWatch } from "@/lib/minbar/content/media";
 import VideoModal, { useVideoModal } from "@/components/minbar/VideoModal";
 
 /**
@@ -74,24 +75,26 @@ export default function ProgramsPage({ playlists }: { playlists: CmsPlaylist[] }
               </div>
 
               <div className="prg-eps" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                {series.episodes.map((episode) => (
+                {series.episodes.map((episode, index) => (
                   <a
-                    key={episode.youtubeId}
+                    key={`${episode.url || episode.youtubeId}-${index}`}
                     href={episode.url || youtubeWatch(episode.youtubeId)}
                     className="prg-ep"
                     aria-label={episode.title || series.title}
                     style={{ display: "grid", gap: 8, overflow: "hidden", borderRadius: 8, color: "inherit", textDecoration: "none" }}
                     onClick={(event) => {
                       if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                      const media = describeVideoSource({ url: episode.url || episode.youtubeId });
+                      if (!media.embedUrl && !media.directVideo) return;
                       event.preventDefault();
-                      open(youtubeEmbed(episode.youtubeId, { autoplay: true }));
+                      open(media.sourceUrl);
                     }}
                   >
                     <span style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "var(--navy)" }}>
                       <span
                         aria-hidden="true"
                         className="prg-thumb"
-                        style={{ position: "absolute", inset: 0, backgroundImage: `url('${episode.thumbnail || youtubeThumb(episode.youtubeId)}')`, backgroundSize: "cover", backgroundPosition: "center" }}
+                        style={{ position: "absolute", inset: 0, backgroundImage: `url('${episode.thumbnail || (episode.youtubeId ? youtubeThumb(episode.youtubeId) : "")}')`, backgroundSize: "cover", backgroundPosition: "center" }}
                       />
                       <span aria-hidden="true" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
                         <span className="prg-play" style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(16,33,43,.55)", display: "grid", placeItems: "center", border: "1.5px solid rgba(255,255,255,.6)" }}>

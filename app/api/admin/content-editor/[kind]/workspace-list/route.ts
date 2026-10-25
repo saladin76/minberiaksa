@@ -52,7 +52,8 @@ export async function GET(req: NextRequest, ctx: Context) {
           title: row.title,
           searchTitles: row.translations.map((t) => t.title),
           image: row.images[0] || "",
-          priority: row.priority || 0,
+          priority: row.priority ?? null,
+          createdAt: row.createdAt.toISOString(),
           isActive: row.isActive,
           archived: row.editorArchived === true,
           targetAmount: row.targetAmount,
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest, ctx: Context) {
       ) ||
       !Array.isArray(body.items) ||
       !body.items.length ||
-      body.items.length > 50
+      body.items.length > (body.action === "order" ? 500 : 50)
     )
       throw new Error("طلب غير صالح");
     const seen = new Set<string>();
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest, ctx: Context) {
         throw new Error("اختيار غير صالح");
       seen.add(item.id);
       if (
-        body.action === "order" &&
+        body.action === "order" && item.order !== null &&
         (!Number.isInteger(item.order) ||
           item.order < 0 ||
           item.order > 1000000)

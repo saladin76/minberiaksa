@@ -1602,7 +1602,8 @@
       }
     },
     "categoriesTitle": "Kategoriler",
-    "loadMore": "Daha Fazla Göster"
+    "loadMore": "Daha Fazla Göster",
+    "unavailableTranslationNotice": "Bu makale henüz bu dilde mevcut değil. Mevcut metin aşağıda gösteriliyor."
   },
   "cart": {
     "title": "Bağış Sepeti",
@@ -1700,7 +1701,7 @@
     "emptyCart": "Sepetiniz Boş",
     "itemsHeading": "Bağış Kalemlerin",
     "recurringNudge": "Bu bağışı tek dokunuşla aylık tekrarla",
-    "recurringNudgeText": "Otomatik bağışa katıl  istediğin an durdurabilirsin",
+    "recurringNudgeText": "Otomatik bağış yapın. Planınızı değiştirmek veya durdurmak için vakıfla iletişime geçin.",
     "recurringNudgeEyebrow": "Etkin Sürekli Olsun",
     "dataAccuracyNote": "Makbuz ve bağış sertifikanın ulaşabilmesi için bilgilerinin doğruluğundan emin ol",
     "orFillManually": "Veya Elle Doldur",
@@ -2227,7 +2228,7 @@
     "docsLibrary": "Belge Kütüphanesi",
     "docsLibraryText": "Makbuz ve sertifikaların indirilmeye hazır.",
     "givingPlans": "Bağış Planları",
-    "givingPlansText": "Düzenli planını dilediğin an değiştir ya da durdur.",
+    "givingPlansText": "Düzenli bağışınızı değiştirmek veya durdurmak için vakıfla iletişime geçin.",
     "faq1Q": "Hesaplayıcı bir fetva mıdır?",
     "faq1A": "Hayır. Hesaplayıcı girdiğiniz değerlere dayalı bir tahmindir. Zekâtın gerekliliği ve miktarı için güvenilir bir dinî mercie başvurun.",
     "faq2Q": "Zekât diğer bağışlardan ayrı mı kalır?",

@@ -1,4 +1,5 @@
 "use client";
+import { dt } from "@/lib/dashboard/i18n";
 import { useState } from "react";
 import type { ContentRecord } from "@/lib/content-editor/contracts";
 import type { EditorCatalog } from "./WorkspaceSettings";
@@ -62,16 +63,15 @@ export function ProgrammeWorkspace({
     return (
       <section className="space-y-5 rounded-xl border bg-white p-5">
         <div>
-          <h3 className="font-bold">مكتبة المحتوى المرتبط</h3>
+          <h3 className="font-bold">{dt("مكتبة المحتوى المرتبط")}</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            اختر من المحتوى الموجود. الربط لا ينشر العناصر غير المنشورة ولا ينشئ
-            بيانات تجريبية.
+            {dt("اختر من المحتوى الموجود. الربط لا ينشر العناصر غير المنشورة ولا ينشئ بيانات تجريبية.")}
           </p>
         </div>
         <input
           className={control + " w-full"}
-          aria-label="البحث في مكتبة المحتوى"
-          placeholder="ابحث بالاسم أو المعرّف"
+          aria-label={dt("البحث في مكتبة المحتوى")}
+          placeholder={dt("ابحث بالاسم أو المعرّف")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -80,7 +80,7 @@ export function ProgrammeWorkspace({
           .map(([kind, options]) => (
             <fieldset key={kind} className="rounded-lg border p-4">
               <legend className="px-2 font-semibold">
-                {labels[kind] || kind}
+                {dt(labels[kind] || kind)}
               </legend>
               <div className="grid max-h-64 gap-2 overflow-auto sm:grid-cols-2">
                 {options
@@ -117,7 +117,7 @@ export function ProgrammeWorkspace({
                         {o.title}
                         {o.live === false ? (
                           <small className="block text-amber-700">
-                            غير منشور
+                            {dt("غير منشور")}
                           </small>
                         ) : null}
                       </span>
@@ -126,7 +126,7 @@ export function ProgrammeWorkspace({
               </div>
             </fieldset>
           ))}
-        <h4 className="font-bold">ترتيب المحتوى المختار ({items.length})</h4>
+        <h4 className="font-bold">{dt("ترتيب المحتوى المختار (")}{items.length})</h4>
         {items.map((item, index) => (
           <div
             key={String(item.kind) + String(item.refId)}
@@ -163,7 +163,7 @@ export function ProgrammeWorkspace({
                 )
               }
             >
-              إزالة الربط
+              {dt("إزالة الربط")}
             </button>
           </div>
         ))}
@@ -181,11 +181,9 @@ export function ProgrammeWorkspace({
   );
   return (
     <section className="space-y-4 rounded-xl border bg-white p-5">
-      <h3 className="font-bold">ترتيب أقسام الصفحة</h3>
+      <h3 className="font-bold">{dt("ترتيب أقسام الصفحة")}</h3>
       <p className="text-sm leading-6 text-slate-500">
-        رتّب الأقسام وحدد ظهورها وروابطها. نصوص الأقسام الحالية أدناه قابلة
-        للتحرير لكل لغة؛ تُضاف الأقسام الجديدة بالعربية ثم تظهر حقول ترجمتها بعد
-        الحفظ.
+        {dt("رتّب الأقسام وحدد ظهورها وروابطها. نصوص الأقسام الحالية أدناه قابلة للتحرير لكل لغة؛ تُضاف الأقسام الجديدة بالعربية ثم تظهر حقول ترجمتها بعد الحفظ.")}
       </p>
       {blocks.map((block, index) => {
         const update = (key: string, value: unknown) =>
@@ -199,7 +197,7 @@ export function ProgrammeWorkspace({
             className="space-y-3 rounded-xl border p-4"
           >
             <legend className="px-2 text-sm font-bold">
-              {index + 1}. {kinds[String(block.kind)] || String(block.kind)}
+              {index + 1}. {dt(kinds[String(block.kind)] || String(block.kind))}
             </legend>
             <div className="flex flex-wrap items-center gap-2">
               <label className="me-auto flex gap-2 text-sm">
@@ -208,7 +206,7 @@ export function ProgrammeWorkspace({
                   checked={block.isActive !== false}
                   onChange={(e) => update("isActive", e.target.checked)}
                 />
-                عرض القسم
+                {dt("عرض القسم")}
               </label>
               <button
                 type="button"
@@ -232,7 +230,7 @@ export function ProgrammeWorkspace({
                 onClick={() => {
                   if (
                     window.confirm(
-                      "إزالة هذا القسم ونصوصه من الصفحة عند الحفظ؟",
+                      dt("إزالة هذا القسم ونصوصه من الصفحة عند الحفظ؟"),
                     )
                   )
                     onChange(
@@ -241,12 +239,12 @@ export function ProgrammeWorkspace({
                     );
                 }}
               >
-                إزالة
+                {dt("إزالة")}
               </button>
             </div>
             {!block.id ? (
               <label className="block space-y-2 text-sm">
-                عنوان القسم الجديد
+                {dt("عنوان القسم الجديد")}
                 <input
                   className={control + " w-full"}
                   value={String(block.title || "")}
@@ -255,7 +253,7 @@ export function ProgrammeWorkspace({
               </label>
             ) : null}
             <label className="block space-y-2 text-sm">
-              معرّف الارتساء (مثل projects)
+              {dt("معرّف الارتساء (مثل projects)")}
               <input
                 dir="ltr"
                 className={control + " w-full"}
@@ -265,7 +263,7 @@ export function ProgrammeWorkspace({
             </label>
             {["TEXT", "PLAYLIST_EPISODES"].includes(String(block.kind)) ? (
               <label className="block space-y-2 text-sm">
-                وجهة رابط القسم
+                {dt("وجهة رابط القسم")}
                 <input
                   dir="ltr"
                   className={control + " w-full"}
@@ -276,7 +274,7 @@ export function ProgrammeWorkspace({
             ) : null}
             {block.kind === "TEXT" ? (
               <label className="block space-y-2 text-sm">
-                رابط الصورة
+                {dt("رابط الصورة")}
                 <input
                   dir="ltr"
                   className={control + " w-full"}
@@ -287,7 +285,7 @@ export function ProgrammeWorkspace({
             ) : null}
             {block.kind === "VIDEO" ? (
               <label className="block space-y-2 text-sm">
-                معرّف YouTube
+                {dt("معرّف YouTube")}
                 <input
                   dir="ltr"
                   className={control + " w-full"}
@@ -298,12 +296,12 @@ export function ProgrammeWorkspace({
             ) : null}
             {block.kind === "PLAYLIST_EPISODES" ? (
               <select
-                aria-label="سلسلة حلقات القسم"
+                aria-label={dt("سلسلة حلقات القسم")}
                 className={control + " w-full"}
                 value={String(block.refId || "")}
                 onChange={(e) => update("refId", e.target.value)}
               >
-                <option value="">اختر سلسلة</option>
+                <option value="">{dt("اختر سلسلة")}</option>
                 {catalog.linked.PLAYLIST?.map((o) => (
                   <option value={o.id} key={o.id}>
                     {o.title}
@@ -315,7 +313,7 @@ export function ProgrammeWorkspace({
               String(block.kind),
             ) ? (
               <label className="block space-y-2 text-sm">
-                الحد الأقصى للعناصر
+                {dt("الحد الأقصى للعناصر")}
                 <input
                   type="number"
                   min="1"
@@ -336,14 +334,14 @@ export function ProgrammeWorkspace({
       })}
       <div className="flex flex-wrap gap-2">
         <select
-          aria-label="نوع القسم الجديد"
+          aria-label={dt("نوع القسم الجديد")}
           className={control}
           value={newKind}
           onChange={(e) => setNewKind(e.target.value)}
         >
           {available.map((k) => (
             <option key={k} value={k}>
-              {kinds[k]}
+              {dt(kinds[k])}
             </option>
           ))}
         </select>
@@ -364,12 +362,12 @@ export function ProgrammeWorkspace({
                 maxItems: null,
                 isActive: true,
                 order: blocks.length,
-                title: "قسم جديد",
+                title: dt("قسم جديد"),
               },
             ])
           }
         >
-          إضافة قسم
+          {dt("إضافة قسم")}
         </button>
       </div>
     </section>

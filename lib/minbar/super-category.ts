@@ -1,3 +1,4 @@
+import { pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
@@ -65,6 +66,9 @@ export interface SuperCategoryBlockContent {
 export interface SuperCategoryContent {
   id: string;
   slug: string;
+  baseSlug?: string;
+  localizations?: { locale: string; slug: string | null }[];
+  availableLocales?: string[];
   title: string;
   subtitle: string;
   intro: string;
@@ -87,6 +91,7 @@ const DEFAULT_ACCENT = "#7C2318";
 
 const PAGE_SELECT = {
   id: true,
+  seoNoIndex: true,
   slug: true,
   title: true,
   subtitle: true,
@@ -206,14 +211,14 @@ export async function getSuperCategory(
   locale: string
 ): Promise<SuperCategoryContent | null> {
   const row = await prisma.superCategory.findFirst({
-    where: { slug, isActive: true },
+    where: { AND: [whereByIdOrAnyLocaleSlug(slug, "translations", true), { isActive: true }] },
     select: {
       ...PAGE_SELECT,
       translations: {
-        where: translationLocaleWhere(locale),
-        take: 2,
         select: {
           locale: true,
+          slug: true,
+          seoNoIndex: true,
           title: true,
           subtitle: true,
           intro: true,
@@ -325,7 +330,10 @@ export async function getSuperCategory(
 
   return {
     id: row.id,
-    slug: row.slug,
+    slug: pickLocaleSlug(row.slug, row.translations, locale) || row.slug,
+    baseSlug: row.slug,
+    localizations: row.translations.map((entry) => ({ locale: entry.locale, slug: entry.slug })),
+    availableLocales: [...(row.seoNoIndex === "true" ? [] : ["ar"]), ...row.translations.filter((entry) => entry.seoNoIndex !== "true" && entry.title.trim() && (!row.intro?.trim() || entry.intro?.trim())).map((entry) => entry.locale)],
     title: t?.title || row.title,
     subtitle: t?.subtitle || row.subtitle || "",
     intro: t?.intro || row.intro || "",

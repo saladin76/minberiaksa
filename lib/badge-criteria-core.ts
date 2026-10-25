@@ -119,12 +119,15 @@ export function matchingBadgeUserIds(
 
   if (criteria.type === "MONTHLY_ACTIVE_RANGE") {
     const monthlyTotals = new Map<string, number>();
+    const unknownUsd = new Set<string>();
     for (const subscription of subscriptions) {
       if (subscription.status !== "ACTIVE" || subscription.frequency !== "MONTHLY") continue;
-      monthlyTotals.set(subscription.donorId, (monthlyTotals.get(subscription.donorId) ?? 0) + paidUsd(subscription));
+      const knownUsd = finiteNumber(subscription.amountUSD) && subscription.amountUSD > 0 ? subscription.amountUSD : subscription.currency === "USD" && finiteNumber(subscription.amount) && subscription.amount >= 0 ? subscription.amount : null;
+      if (knownUsd === null) { unknownUsd.add(subscription.donorId); continue; }
+      monthlyTotals.set(subscription.donorId, (monthlyTotals.get(subscription.donorId) ?? 0) + knownUsd);
     }
     return [...monthlyTotals.entries()]
-      .filter(([, amount]) => amount >= (criteria.amountMinUSD ?? 0) && amount <= (criteria.amountMaxUSD ?? 0))
+      .filter(([id, amount]) => !unknownUsd.has(id) && amount >= (criteria.amountMinUSD ?? 0) && amount <= (criteria.amountMaxUSD ?? 0))
       .map(([userId]) => userId);
   }
 

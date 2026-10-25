@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "Kategoritë",
-    "loadMore": "Shfaq më Shumë"
+    "loadMore": "Shfaq më Shumë",
+    "unavailableTranslationNotice": "Ky artikull nuk është ende i disponueshëm në këtë gjuhë. Teksti i disponueshëm shfaqet më poshtë."
   },
   "cart": {
     "title": "Shporta e Donacioneve",
@@ -661,7 +662,7 @@
     "emptyCart": "Shporta Juaj Është Bosh",
     "itemsHeading": "Dhurimet e Tua",
     "recurringNudge": "Përsërite këtë dhurim çdo muaj me një klikim",
-    "recurringNudgeText": "Bashkohu me dhurimin automatik  anuloje kurdo",
+    "recurringNudgeText": "Dhuroni automatikisht. Kontaktoni fondacionin për të ndryshuar ose ndaluar planin tuaj.",
     "recurringNudgeEyebrow": "Bëje Ndikimin Tënd të Vazhdueshëm",
     "dataAccuracyNote": "Sigurohu që të dhënat e tua janë të sakta që të të mbërrijnë fatura dhe certifikata e dhurimit",
     "orFillManually": "Ose Plotësoji Vetë",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "Biblioteka e Dokumenteve",
     "docsLibraryText": "Faturat dhe certifikatat e tua, gati për shkarkim.",
     "givingPlans": "Planet e Dhurimit",
-    "givingPlansText": "Ndryshoni ose ndaloni planin periodik kurdo.",
+    "givingPlansText": "Kontaktoni fondacionin për të ndryshuar ose ndaluar dhurimin tuaj periodik.",
     "faq1Q": "A është kalkulatori një fetva?",
     "faq1A": "Jo. Është një vlerësim bazuar në vlerat që jepni. Konsultoni një autoritet fetar të besuar për konfirmim.",
     "faq2Q": "A mbetet zekati i ndarë nga dhurimet e tjera?",

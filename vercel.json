@@ -35,6 +35,14 @@
     {
       "path": "/api/cron/resume-dispatches",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/editorial-weekly",
+      "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/editorial-work",
+      "schedule": "*/5 * * * *"
     }
   ],
   "installCommand": "npm ci --prefer-offline --no-audit --no-fund",

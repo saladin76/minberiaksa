@@ -1,4 +1,5 @@
 "use client";
+import { dt } from "@/lib/dashboard/i18n";
 import Image from "next/image";
 import { useState } from "react";
 import type { ContentRecord, TextValues } from "@/lib/content-editor/contracts";
@@ -52,18 +53,18 @@ export function BannerPreview({
     Array.isArray(settings.locales) &&
     settings.locales.length &&
     !settings.locales.includes(locale)
-      ? "مستبعد لهذه اللغة"
+      ? dt("مستبعد لهذه اللغة")
       : settings.isActive === false
-        ? "متوقف"
+        ? dt("متوقف")
         : start && start > now
-          ? "مجدول"
+          ? dt("مجدول")
           : end && end < now
-            ? "انتهت المدة"
-            : "مفعّل";
+            ? dt("انتهت المدة")
+            : dt("مفعّل");
   return (
     <section className="space-y-3 rounded-xl border bg-white p-4">
       <div className="flex flex-wrap justify-between gap-2">
-        <h3 className="font-semibold">معاينة البانر</h3>
+        <h3 className="font-semibold">{dt("معاينة البانر")}</h3>
         <div className="flex gap-2">
           <button
             className="rounded border px-2 text-xs"
@@ -71,7 +72,7 @@ export function BannerPreview({
             aria-pressed={!mobile}
             onClick={() => setMobile(false)}
           >
-            حاسوب
+            {dt("حاسوب")}
           </button>
           <button
             className="rounded border px-2 text-xs"
@@ -79,14 +80,14 @@ export function BannerPreview({
             aria-pressed={mobile}
             onClick={() => setMobile(true)}
           >
-            موبايل
+            {dt("موبايل")}
           </button>
         </div>
       </div>
       {expanded ? (
         <div className="space-y-3 rounded-lg border bg-slate-50 p-4">
           <label className="block space-y-2 text-sm">
-            محاكاة موضع العرض
+            {dt("محاكاة موضع العرض")}
             <select
               className="w-full rounded border p-2"
               value={placement}
@@ -107,16 +108,16 @@ export function BannerPreview({
             }
           >
             {matches
-              ? "هذا الموضع ضمن إعدادات البانر."
-              : "هذا الموضع غير مفعّل للبانر؛ المحاكاة أدناه للمراجعة فقط."}
+              ? dt("هذا الموضع ضمن إعدادات البانر.")
+              : dt("هذا الموضع غير مفعّل للبانر؛ المحاكاة أدناه للمراجعة فقط.")}
           </p>
           <div className="rounded border border-dashed bg-white p-4 text-xs text-slate-400">
             {BANNER_PAGES.find((p) => p.key === page)?.label} ·{" "}
             {slot === "top"
-              ? "ترويسة الصفحة"
+              ? dt("ترويسة الصفحة")
               : slot === "bottom"
-                ? "المحتوى السابق للموضع السفلي"
-                : "بداية محتوى الصفحة"}
+                ? dt("المحتوى السابق للموضع السفلي")
+                : dt("بداية محتوى الصفحة")}
           </div>
         </div>
       ) : null}
@@ -169,31 +170,31 @@ export function BannerPreview({
       </div>
       {expanded ? (
         <div className="rounded border border-dashed bg-slate-50 p-4 text-xs text-slate-400">
-          {slot === "bottom" ? "تذييل الصفحة" : "بقية محتوى الصفحة"}
+          {slot === "bottom" ? dt("تذييل الصفحة") : dt("بقية محتوى الصفحة")}
         </div>
       ) : null}
-      <p className="text-sm">الحالة: {reason}</p>
+      <p className="text-sm">{dt("الحالة:")} {reason}</p>
       <p className="text-xs text-slate-500">
-        الوجهة:{" "}
+        {dt("الوجهة:")}{" "}
         <span dir="ltr" className="break-all">
-          {destination || "لم تُحدد"}
+          {destination || dt("لم تُحدد")}
         </span>
       </p>
       {!values.title && locale !== "ar" ? (
         <p className="text-xs text-amber-800">
-          المعاينة تعرض النص العربي البديل؛ لا يُحتسب ترجمة محفوظة.
+          {dt("المعاينة تعرض النص العربي البديل؛ لا يُحتسب ترجمة محفوظة.")}
         </p>
       ) : null}
       {start || end ? (
         <p className="text-xs text-slate-500">
-          بتوقيت إسطنبول:{" "}
+          {dt("بتوقيت إسطنبول:")}{" "}
           {start
             ? new Intl.DateTimeFormat("ar", {
                 timeZone: "Europe/Istanbul",
                 dateStyle: "short",
                 timeStyle: "short",
               }).format(start)
-            : "بدون بداية"}{" "}
+            : dt("بدون بداية")}{" "}
           –{" "}
           {end
             ? new Intl.DateTimeFormat("ar", {
@@ -201,7 +202,7 @@ export function BannerPreview({
                 dateStyle: "short",
                 timeStyle: "short",
               }).format(end)
-            : "بدون نهاية"}
+            : dt("بدون نهاية")}
         </p>
       ) : null}
     </section>

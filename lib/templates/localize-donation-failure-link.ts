@@ -19,3 +19,20 @@ export function localizeDonationFailureLinks(content: string, locale: string): s
     `${boundary}${origin ?? ""}/${locale as SupportedLocale}/donation-failed`,
   );
 }
+
+/** Normalize authored body and URL buttons together, without touching provider status. */
+export function localizeDonationFailureDraft<T extends {
+  body: string;
+  buttons?: Array<{ url?: string | null }>;
+}>(draft: T, locale: string): T {
+  return {
+    ...draft,
+    body: localizeDonationFailureLinks(draft.body, locale),
+    ...(draft.buttons ? {
+      buttons: draft.buttons.map((button) => ({
+        ...button,
+        ...(typeof button.url === "string" ? { url: localizeDonationFailureLinks(button.url, locale) } : {}),
+      })),
+    } : {}),
+  } as T;
+}

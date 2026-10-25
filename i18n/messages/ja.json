@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "カテゴリー",
-    "loadMore": "もっと見る"
+    "loadMore": "もっと見る",
+    "unavailableTranslationNotice": "この記事は、この言語ではまだご利用いただけません。以下に閲覧可能な本文を表示しています。"
   },
   "cart": {
     "title": "カート",
@@ -661,7 +662,7 @@
     "emptyCart": "カートは空です",
     "itemsHeading": "寄付の内容",
     "recurringNudge": "ワンタップで毎月の寄付に",
-    "recurringNudgeText": "自動寄付に参加  いつでも停止できます",
+    "recurringNudgeText": "自動寄付をご利用いただけます。プランの変更・停止は財団へご連絡ください。",
     "recurringNudgeEyebrow": "支援を継続的に",
     "dataAccuracyNote": "領収書と寄付証明書をお届けするため、入力内容が正しいことをご確認ください",
     "orFillManually": "または手動で入力",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "書類ライブラリ",
     "docsLibraryText": "領収書と証書をいつでもダウンロード。",
     "givingPlans": "寄付プラン",
-    "givingPlansText": "継続寄付の確認と管理。",
+    "givingPlansText": "定期寄付の変更・停止をご希望の場合は、財団へご連絡ください。",
     "faq1Q": "寄付が届いたことはどう分かりますか？",
     "faq1A": "領収書をメールでお送りし、承認された更新をプロジェクトページで公開します。",
     "faq2Q": "特定の事業に指定できますか？",

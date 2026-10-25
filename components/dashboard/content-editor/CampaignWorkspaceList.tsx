@@ -16,13 +16,16 @@ import { SUPPORTED_LOCALES } from "@/lib/locales";
 import { ContentLocalizationAuditCard } from "@/app/(dashboard)/dashboard/_components/ContentLocalizationAuditCard";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { ContentMetricStrip } from "@/components/dashboard/content-editor/ContentMetricStrip";
-import { dt, dtx } from "@/lib/dashboard/i18n";
+import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
+import { compareProjectOrder } from "@/lib/content-editor/project-order";
 type State = { complete: boolean; seoComplete: boolean; reviewed: boolean };
 type Row = {
   id: string;
   title: string;
   searchTitles: string[];
-  priority: number;
+  priority: number | null;
+  createdAt: string;
   image: string;
   isActive: boolean;
   archived: boolean;
@@ -58,6 +61,10 @@ export function CampaignWorkspaceList() {
     [selected, setSelected] = useState<string[]>([]),
     [sort, setSort] = useState("priority"),
     [views, setViews] = useState<View[]>([]);
+  const [orderDraft, setOrderDraft] = useState<Record<string, string>>({});
+  const orderCount = Object.keys(orderDraft).length;
+  const invalidOrder = Object.values(orderDraft).some((value) => value !== "" && (!Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 1000000));
+  useDashboardUnsavedChanges(orderCount > 0);
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
@@ -105,8 +112,10 @@ export function CampaignWorkspaceList() {
       } while (cursor);
       setRows(all);
       setSelected([]);
+      return true;
     } catch (e) {
       setMessage(e instanceof Error ? e.message : dt("تعذّر التحميل"));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -152,7 +161,7 @@ export function CampaignWorkspaceList() {
             ? a.title.localeCompare(b.title)
             : sort === "raised"
               ? b.currentAmount - a.currentAmount
-              : a.priority - b.priority || a.title.localeCompare(b.title),
+              : compareProjectOrder(a, b),
         ),
     [rows, query, category, progress, tab, sort],
   );
@@ -178,10 +187,14 @@ export function CampaignWorkspaceList() {
   }, [filtered]);
   const update = async (
     action: string,
-    items: { id: string; revision: string; order?: number }[],
+    items: { id: string; revision: string; order?: number | null }[],
   ) => {
     if (busy || !items.length) return;
-    if (items.length > 50) {
+    if (action !== "order" && orderCount) {
+      setMessage(dt("احفظ تغييرات الترتيب أو تراجع عنها أولًا."));
+      return;
+    }
+    if (items.length > (action === "order" ? 500 : 50)) {
       setMessage(dt("اختر 50 مشروعًا على الأكثر للعملية الواحدة."));
       return;
     }
@@ -204,7 +217,8 @@ export function CampaignWorkspaceList() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      await load();
+      if (!await load()) throw new Error(dt("تم الحفظ لكن تعذر تحديث القائمة. أعد تحميلها للتحقق."));
+      if (action === "order") setOrderDraft({});
       setMessage(dt("تم الحفظ وإعادة قراءة القائمة."));
     } catch (e) {
       setMessage(e instanceof Error ? e.message : dt("تعذّر الحفظ"));
@@ -233,19 +247,28 @@ export function CampaignWorkspaceList() {
       setMessage(dt("تعذّر حفظ العرض في هذا المتصفح."));
     }
   };
+  const saveOrder = () => void update("order", rows.filter((row) => row.id in orderDraft).map((row) => ({ id: row.id, revision: row.revision, order: orderDraft[row.id] === "" ? null : Number(orderDraft[row.id]) })));
   return (
-    <div dir="rtl" className="mx-auto max-w-[1500px] space-y-5 text-slate-800">
+    <div dir={dashDir()} className="mx-auto max-w-[1500px] space-y-5 text-slate-800">
       <PageHeader
         eyebrow={dt("استوديو المحتوى")}
         title={dt("المشاريع")}
         description={dt("حرّر المحتوى والترجمات، رتّب الظهور، وتابع جاهزية كل مشروع للنشر.")}
         icon={FolderKanban}
         actions={<div className="flex flex-wrap gap-2">
+          <button type="button" className={btn + " !bg-brand text-white"} disabled={!orderCount || invalidOrder || busy || loading} onClick={saveOrder}>
+            {dt("حفظ الترتيب")} {orderCount ? "(" + orderCount + ")" : ""}
+          </button>
+          <button type="button" className={btn} disabled={!orderCount || busy} onClick={() => setOrderDraft({})}>{dt("التراجع")}</button>
           <button
             className={btn}
             type="button"
             disabled={loading || busy}
-            onClick={() => void load()}
+            onClick={() => {
+              if (orderCount && !window.confirm(dt("توجد تغييرات ترتيب غير محفوظة. إلغاؤها وإعادة التحميل؟"))) return;
+              setOrderDraft({});
+              void load();
+            }}
           >
             <RefreshCw size={16} />
             {dt("تحديث")}
@@ -339,11 +362,11 @@ export function CampaignWorkspaceList() {
           <label className="relative min-w-56 flex-1">
             <Search
               size={16}
-              className="absolute right-3 top-3 text-slate-400"
+              className="absolute start-3 top-3 text-slate-400"
             />
             <input
               aria-label={dt("البحث في المشاريع")}
-              className={input + " w-full pr-9"}
+              className={input + " w-full ps-9"}
               placeholder={dt("بحث بكل اللغات أو معرّف المشروع…")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -429,7 +452,7 @@ export function CampaignWorkspaceList() {
           </div>
         ) : null}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-right text-sm">
+          <table className="w-full min-w-[900px] text-start text-sm">
             <thead className="border-y bg-slate-50 text-xs text-slate-500">
               <tr>
                 <th className="w-10 p-4">
@@ -507,15 +530,17 @@ export function CampaignWorkspaceList() {
                           max="1000000"
                           aria-label={dt("ترتيب {0}", [row.title])}
                           className="w-16 rounded border p-2 text-center"
-                          defaultValue={row.priority}
-                          key={row.revision}
+                          value={orderDraft[row.id] ?? (row.priority === null ? "" : String(row.priority))}
+                          placeholder="—"
                           disabled={busy}
-                          onBlur={(e) => {
-                            const order = Number(e.target.value);
-                            if (order !== row.priority)
-                              void update("order", [
-                                { id: row.id, revision: row.revision, order },
-                              ]);
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setOrderDraft((previous) => {
+                              const next = { ...previous };
+                              if (value === (row.priority === null ? "" : String(row.priority))) delete next[row.id];
+                              else next[row.id] = value;
+                              return next;
+                            });
                           }}
                         />
                       </td>
@@ -555,7 +580,7 @@ export function CampaignWorkspaceList() {
                         <small className="text-slate-400">
                           {row.goalType === "OPEN"
                             ? dt("هدف مفتوح")
-                            : `من $${row.targetAmount.toLocaleString("en-US")}`}
+                            : dt("من ${0}", [row.targetAmount.toLocaleString("en-US")])}
                         </small>
                         {row.goalType !== "OPEN" && row.targetAmount > 0 ? (
                           <progress

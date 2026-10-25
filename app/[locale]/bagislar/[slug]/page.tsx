@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { SITE_URL, buildPageMetadata, clipSeoDescription } from "@/lib/seo";
+import { SITE_URL, buildPageMetadata, buildLocalizedAlternates, clipSeoDescription } from "@/lib/seo";
 import {
   getProject,
   getProjectDonorCount,
@@ -16,7 +16,7 @@ import ProjectDetail from "@/components/minbar/projects/ProjectDetail";
 import SuperCategoryPage from "@/components/minbar/projects/SuperCategoryPage";
 import { getSuperCategory } from "@/lib/minbar/super-category";
 import PageBanners from "@/components/minbar/banners/PageBanners";
-import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
+import { applyEditorialSeo,readPublicEditorialSeo,readPublicEditorialUrls } from '@/lib/content-editor/public-seo';
 import { EditorialFaq } from '@/components/content/EditorialFaq';
 import { withIncomingQuery, type IncomingSearchParams } from '@/lib/minbar/redirect-query';
 
@@ -42,6 +42,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       path: `/${slugFor("projectDetail", locale)}/${superCategory.slug}`,
       image: superCategory.heroImage || undefined,
       imageAlt: superCategory.imageAlt,
+      alternates: buildLocalizedAlternates({ basePath: "/" + slugFor("projectDetail", locale), baseSlug: superCategory.baseSlug || superCategory.slug, translations: superCategory.localizations, fallback: superCategory.id, currentLocale: locale, availableLocales: superCategory.availableLocales }),
+      robots: superCategory.availableLocales?.includes(locale) === false ? { index: false, follow: true } : undefined,
     }),await readPublicEditorialSeo('super-categories',key,locale));
   }
 
@@ -54,13 +56,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
      then the localised title, description and cover. A campaign-level OG
      image is the last resort for the picture only  another language's title
      would be wrong here. */
-  const seo = await getProjectSeo(project.id, locale);
+  const [seo, urls] = await Promise.all([getProjectSeo(project.id, locale), readPublicEditorialUrls("campaigns", project.id)]);
   const title = seo.locale.seoTitle || project.title;
   const meta = buildPageMetadata(locale, {
     title,
     imageAlt: project.imageAlt,
     description: seo.locale.seoDescription || project.text,
     path: `/${slugFor("projectDetail", locale)}/${project.slug}`,
+    alternates: urls ? buildLocalizedAlternates({ basePath: "/" + slugFor("projectDetail", locale), ...urls, fallback: project.id, currentLocale: locale }) : undefined,
+    robots: !urls?.availableLocales.includes(locale) ? { index: false, follow: true } : undefined,
     image: seo.locale.ogImage || project.image || seo.campaign.ogImage || undefined,
     type: "article",
   });
@@ -85,6 +89,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
 
   const superCategory = await getSuperCategory(key, locale);
   if (superCategory) {
+    if (key !== superCategory.slug) permanentRedirect(withIncomingQuery(miaPath("projectDetail", locale, encodeURIComponent(superCategory.slug)), query));
     return (
       <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="projectDetail" slot="top" />

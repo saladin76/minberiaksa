@@ -43,6 +43,18 @@ const indexes = [
     key: { urgentBannerId: 1, locale: 1 },
     unique: true,
   },
+  { collection: "Campaign", key: { previousSlugs: 1 }, unique: false },
+  { collection: "Post", key: { previousSlugs: 1 }, unique: false },
+  { collection: "EditorialJob", key: { key: 1 }, unique: true },
+  { collection: "EditorialJob", key: { status: 1, priority: 1, createdAt: 1 }, unique: false },
+  { collection: "EditorialJob", key: { sourceId: 1, locale: 1 }, unique: false },
+  { collection: "SuperCategory", key: { previousSlugs: 1 }, unique: false },
+  // Additive lookup indexes for date/project audiences. Never remove existing indexes.
+  { collection: "Donation", key: { donorId: 1, status: 1, paidAt: 1 }, unique: false },
+  { collection: "Donation", key: { status: 1, paidAt: 1, donorId: 1 }, unique: false },
+  { collection: "DonationItem", key: { donationId: 1, campaignId: 1 }, unique: false },
+  { collection: "DonationItem", key: { campaignId: 1, donationId: 1 }, unique: false },
+  { collection: "Subscription", key: { donorId: 1, status: 1 }, unique: false },
 ];
 
 async function run() {

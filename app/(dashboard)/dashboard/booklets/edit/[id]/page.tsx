@@ -1,10 +1,7 @@
-'use client';
-
-import { use } from 'react';
-import { DocumentEditPage } from '../../../_components/DocumentEditPage';
-import { BOOKLET_COPY } from '../../_components/copy';
-
-export default function EditBookletPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  return <DocumentEditPage id={id} copy={BOOKLET_COPY} />;
+import { ContentEditor } from "@/components/dashboard/content-editor/ContentEditor";
+import { requireDashboardPagePermission } from "@/lib/dashboard/require-page-permission";
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  await requireDashboardPagePermission("siteContent");
+  const { id } = await params;
+  return <ContentEditor kind="booklets" id={id} />;
 }

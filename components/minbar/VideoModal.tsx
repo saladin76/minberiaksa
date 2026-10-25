@@ -22,6 +22,8 @@ export function useVideoModal() {
 export default function VideoModal({ embed, onClose }: { embed: string | null; onClose: () => void }) {
   const t = useTranslations("common");
   const media = describeVideoSource({ url: embed });
+  const player = media.embedUrl && !media.directVideo ? new URL(media.embedUrl) : null;
+  if (player) player.searchParams.set("autoplay", "1");
 
   /* Escape closes, and the page behind is locked so a scroll gesture over the
      overlay does not move the article underneath it. */
@@ -108,9 +110,9 @@ export default function VideoModal({ embed, onClose }: { embed: string | null; o
               playsInline
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, background: "#000" }}
             />
-          ) : media.provider === "youtube" || media.provider === "vimeo" ? (
+          ) : player ? (
             <iframe
-              src={embed}
+              src={player.toString()}
               title={t("watchVideo")}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

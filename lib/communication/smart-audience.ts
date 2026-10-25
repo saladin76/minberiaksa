@@ -249,7 +249,10 @@ export async function previewSmartAudience(
   signal?.throwIfAborted();
   const where = await resolveSmartAudienceUserWhere(definition);
   const last = await prisma.user.findFirst({
-    where, orderBy: { id: "desc" }, select: { id: true },
+    // The snapshot upper bound may include donors outside this audience.
+    // Membership is still evaluated with the complete filters on every page.
+    // Avoid an extra reverse scan with all donation/subscription joins.
+    where: { role: "DONOR" }, orderBy: { id: "desc" }, select: { id: true },
   });
 
   async function* rows(): AsyncGenerator<AudienceAccountingRow> {

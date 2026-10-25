@@ -42,6 +42,7 @@ jobs:
         run: |
           npm run typecheck:communication-runtime
           npm run typecheck:integration-release
+          npm run typecheck:content-editor-service
       - name: Whole-repo typecheck (ratchet)
         # The baseline file is empty, so this is now simply "no type errors at all". It stays a
         # ratchet rather than a bare `tsc` so that a deliberately accepted error, if one is ever
@@ -79,6 +80,8 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - run: npm run test:integration-settings
+      - name: Content editor and audit regressions
+        run: npm run test:content-editors
 
   audits:
     name: i18n and locale audits
@@ -92,6 +95,31 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run i18n:audit:strict
       - run: npm run locale:audit:strict
+
+  content-browser:
+    name: Content editor browser fixtures
+    runs-on: ubuntu-latest
+    env:
+      CONTENT_EDITOR_ARTIFACTS: .artifacts/content-editor
+      DATABASE_URL: mongodb://127.0.0.1:27017/minberiaksa_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:content-editors:browser
+      - name: Public programme and course playback
+        run: node --import tsx scripts/public-media-browser-test.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-editor-browser-fixtures
+          path: .artifacts/content-editor/
+          retention-days: 7
 
   e2e:
     name: Playwright (critical journeys)

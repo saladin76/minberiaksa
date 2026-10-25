@@ -1,3 +1,5 @@
+import { saveCategoryStructures } from "./category-structures";
+import { describeVideoSource } from "../content/video-platform";
 import type { Store } from "./service";
 import type { ContentKind, ContentRecord } from "./contracts";
 import { safeEditorUrl } from "./workspace-settings";
@@ -24,6 +26,39 @@ export async function saveWorkspaceRelations(
   row: ContentRecord,
   input: unknown,
 ) {
+  if (kind === "categories" && input && typeof input === "object") { await saveCategoryStructures(db, id, row, input as ContentRecord); return; }
+  if ((kind === "playlists" || kind === "courses") && input && typeof input === "object" && "videos" in input) {
+    const videos = (input as ContentRecord).videos;
+    if (!Array.isArray(videos) || videos.length > 200) throw new Error("قائمة الحلقات غير صالحة");
+    const previous = Array.isArray(row.videos) ? row.videos as ContentRecord[] : [];
+    const kept = new Set<string>(), model = kind === "playlists" ? "playlistVideo" : "courseVideo", parentKey = kind === "playlists" ? "playlistId" : "courseId";
+    for (const [order, value] of videos.entries()) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("حلقة غير صالحة");
+      const item = value as ContentRecord;
+      if (item.id && (!validId(item.id) || !previous.some((old) => old.id === item.id) || kept.has(String(item.id)))) throw new Error("الحلقة لا تنتمي لهذا المحتوى");
+      const media = describeVideoSource({ url: String(item.url || item.youtubeId || "") });
+      if (!media.watchUrl || media.provider === "invalid") throw new Error("أضف رابط فيديو صالحًا");
+      const title = String(item.title || "");
+      if (title.length > 500) throw new Error("عنوان الحلقة طويل جدًا");
+      const data: ContentRecord = { [parentKey]: id, order, title, url: media.watchUrl, youtubeId: media.youtubeId || "" };
+      if (kind === "playlists") data.isActive = item.isActive !== false;
+      if (item.thumbnail && (!safeEditorUrl(String(item.thumbnail)) || String(item.thumbnail).length > 2048)) throw new Error("صورة الحلقة غير صالحة");
+      if ("thumbnail" in item) data.thumbnail = String(item.thumbnail || "");
+      if (kind === "playlists" && "durationSeconds" in item) {
+        if (item.durationSeconds !== null && (!Number.isInteger(item.durationSeconds) || Number(item.durationSeconds) < 0)) throw new Error("مدة الحلقة غير صالحة");
+        data.durationSeconds = item.durationSeconds;
+      }
+      const saved = item.id ? await db.model(model).update({ where: { id: item.id }, data }) : await db.model(model).create({ data });
+      kept.add(String(saved.id));
+    }
+    const removed = previous.filter((item) => !kept.has(String(item.id))).map((item) => item.id);
+    if (removed.length) {
+      const delegate = db.model(model);
+      if (!delegate.deleteMany) throw new Error("تعذر تحديث الحلقات");
+      await delegate.deleteMany({ where: { id: { in: removed }, [parentKey]: id } });
+    }
+    return;
+  }
   if (kind !== "super-categories" || !input || typeof input !== "object")
     return;
   const settings = input as ContentRecord;

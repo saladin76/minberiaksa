@@ -563,7 +563,8 @@
       }
     },
     "categoriesTitle": "Kategorier",
-    "loadMore": "Visa Fler"
+    "loadMore": "Visa Fler",
+    "unavailableTranslationNotice": "Den här artikeln finns ännu inte på detta språk. Den tillgängliga texten visas nedan."
   },
   "cart": {
     "title": "Donationskorg",
@@ -661,7 +662,7 @@
     "emptyCart": "Din Varukorg är Tom",
     "itemsHeading": "Dina Gåvor",
     "recurringNudge": "Upprepa gåvan varje månad med ett klick",
-    "recurringNudgeText": "Aktivera automatisk gåva  avsluta när du vill",
+    "recurringNudgeText": "Ge automatiskt. Kontakta stiftelsen för att ändra eller avsluta din plan.",
     "recurringNudgeEyebrow": "Låt Din Insats Fortsätta",
     "dataAccuracyNote": "Kontrollera att dina uppgifter stämmer så att kvitto och gåvobevis når dig",
     "orFillManually": "Eller Fyll i Manuellt",
@@ -1188,7 +1189,7 @@
     "docsLibrary": "Dokumentbibliotek",
     "docsLibraryText": "Dina kvitton och certifikat, klara att ladda ner.",
     "givingPlans": "Gåvoplaner",
-    "givingPlansText": "Ändra eller avsluta din återkommande plan när som helst.",
+    "givingPlansText": "Kontakta stiftelsen för att ändra eller avsluta din återkommande gåva.",
     "faq1Q": "Är kalkylatorn ett religiöst utlåtande?",
     "faq1A": "Nej. Det är en uppskattning utifrån dina uppgifter. Rådfråga en betrodd religiös auktoritet för bekräftelse.",
     "faq2Q": "Hålls Zakat separat från andra gåvor?",

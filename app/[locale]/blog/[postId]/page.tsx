@@ -1,7 +1,7 @@
 import { applyEditorialSeo,readPublicEditorialSeo } from '@/lib/content-editor/public-seo';
 import { EditorialFaq } from '@/components/content/EditorialFaq';
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { buildLocalizedAlternates, buildPageMetadata, SITE_URL } from "@/lib/seo";
 import { messagesFor } from "@/i18n/locale-messages";
 import { getArticle } from "@/lib/minbar/posts";
@@ -12,6 +12,7 @@ import PageBanners from "@/components/minbar/banners/PageBanners";
 
 interface Props {
   params: Promise<{ locale: string; postId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
@@ -67,10 +68,18 @@ async function generateBaseMetadata({ params }: Props): Promise<Metadata> {
  * article is a real 404 rather than an empty article shell  a soft 404 is what
  * `PRODUCTION_SEO_CONTRACT.md` forbids.
  */
-export default async function Article({ params }: Props) {
+export default async function Article({ params, searchParams }: Props) {
   const { locale, postId } = await params;
   const article = await getArticle(decodeURIComponent(postId), locale);
   if (!article) notFound();
+  if (decodeURIComponent(postId) !== article.slug) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(await searchParams || {})) {
+      if (Array.isArray(value)) value.forEach((item) => query.append(key, item));
+      else if (value !== undefined) query.set(key, value);
+    }
+    permanentRedirect(`/${locale}/blog/${encodeURIComponent(article.slug)}${query.size ? "?" + query.toString() : ""}`);
+  }
 
   const ctaKey = ctaKeyFor(article.category?.slug, article.category?.name);
 

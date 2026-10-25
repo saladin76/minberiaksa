@@ -55,37 +55,42 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     ],
   },
   {
-    // Everything an editor publishes to the public site  the fundraising catalogue
-    // (projects, categories, blog, hero slides, ticker) and the CMS content behind the
-    // homepage rails. Per-item permissions still apply; a staffer sees the rows they hold.
-    get group() { return dt("محتوى الموقع"); },
+    get group() { return dt("المشاريع والتصنيفات"); },
     items: [
-      // The fundraising entries that used to head their own "الحملات والمحتوى" group. One
-      // content group now: projects, categories and the blog are as much site content as
-      // the stories and videos below them, and splitting fifteen items across two headings
-      // put related things behind different folds.
       { key: "campaigns", get title() { return dt("المشاريع"); }, href: "/dashboard/campaigns", icon: "heart", keywords: ["projects", "campaigns", "مشاريع"] },
       { key: "categories", get title() { return dt("التصنيفات"); }, href: "/dashboard/categories", icon: "globe", keywords: ["categories", "countries", "تصنيفات"] },
-      { key: "blog", get title() { return dt("المدونة"); }, href: "/dashboard/blog", icon: "penLine", keywords: ["blog", "posts", "مقالات"] },
-      { key: "slides", get title() { return dt("الشرائح"); }, href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
-      { key: "ticker", get title() { return dt("شريط التبرعات"); }, href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
-      // ── CMS content (lib/content), all under the one siteContent permission ──
       { key: "siteContent", get title() { return dt("الأقسام الكبرى"); }, href: "/dashboard/super-categories", icon: "layers", keywords: ["super", "category", "programme", "landing", "أقسام", "برنامج", "عبادا لنا"] },
+    ],
+  },
+  {
+    get group() { return dt("المحتوى التحريري"); },
+    items: [
+      { key: "blog", get title() { return dt("خطة المقالات والترجمات"); }, href: "/dashboard/editorial-planner", icon: "lightbulb", keywords: ["editorial", "weekly", "translation", "مقال", "ترجمة", "أسبوعي"] },
+      { key: "blog", get title() { return dt("المدونة"); }, href: "/dashboard/blog", icon: "penLine", keywords: ["blog", "posts", "مقالات"] },
       { key: "siteContent", get title() { return dt("شريط القصص"); }, href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
-      { key: "siteContent", get title() { return dt("البانرات"); }, href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "banners", "emergency", "طوارئ", "بانر", "بانرات", "عاجل", "شد الرحال", "placement"] },
-      // Arranges the homepage: section order and visibility, and which items each rail
-      // picks and how it ranks them. The items themselves are edited in the pages around it.
-      { key: "siteContent", get title() { return dt("ترتيب الصفحة الرئيسية"); }, href: "/dashboard/homepage-layout", icon: "layoutTemplate", keywords: ["homepage", "home", "layout", "order", "sections", "arrange", "الرئيسية", "ترتيب", "أقسام", "فعاليات", "تزكيات", "أولوية", "priority"] },
-      { key: "siteContent", get title() { return dt("التبرع السريع"); }, href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
-      { key: "siteContent", get title() { return dt("نصوص الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
       { key: "siteContent", get title() { return dt("الفيديوهات"); }, href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },
       { key: "siteContent", get title() { return dt("برامجنا المصورة"); }, href: "/dashboard/playlists", icon: "listVideo", keywords: ["playlists", "programs", "series", "برامج", "سلاسل", "youtube"] },
       { key: "siteContent", get title() { return dt("دوراتنا"); }, href: "/dashboard/courses", icon: "graduationCap", keywords: ["courses", "دورات", "training"] },
       { key: "siteContent", get title() { return dt("التقارير"); }, href: "/dashboard/reports", icon: "fileText", keywords: ["reports", "تقارير", "pdf", "annual"] },
       { key: "siteContent", get title() { return dt("الكتيبات"); }, href: "/dashboard/booklets", icon: "bookOpen", keywords: ["booklets", "كتيبات", "pdf", "library"] },
       { key: "siteContent", get title() { return dt("الأسئلة الشائعة"); }, href: "/dashboard/faqs", icon: "helpCircle", keywords: ["faq", "أسئلة", "questions", "help"] },
-      // The basket's own steps: the "support the team" switch and amounts, and the
-      // cross-sell campaigns offered under the rows  none of it per campaign.
+    ],
+  },
+  {
+    get group() { return dt("الصفحة الرئيسية"); },
+    items: [
+      { key: "siteContent", get title() { return dt("ترتيب الصفحة الرئيسية"); }, href: "/dashboard/homepage-layout", icon: "layoutTemplate", keywords: ["homepage", "home", "layout", "order", "sections", "arrange", "الرئيسية", "ترتيب", "أقسام", "فعاليات", "تزكيات", "أولوية", "priority"] },
+      { key: "slides", get title() { return dt("الشرائح"); }, href: "/dashboard/slides", icon: "images", keywords: ["slides", "slider", "hero"] },
+      { key: "siteContent", get title() { return dt("البانرات"); }, href: "/dashboard/urgent-banners", icon: "alertTriangle", keywords: ["urgent", "banner", "banners", "emergency", "طوارئ", "بانر", "بانرات", "عاجل", "شد الرحال", "placement"] },
+      { key: "ticker", get title() { return dt("شريط التبرعات"); }, href: "/dashboard/ticker", icon: "ticket", keywords: ["ticker", "marquee"] },
+      { key: "siteContent", get title() { return dt("التبرع السريع"); }, href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
+    ],
+  },
+  {
+    get group() { return dt("إعدادات المحتوى والتبرعات"); },
+    items: [
+      { key: "siteContent", get title() { return dt("نصوص الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
+      { key: "siteContent", get title() { return dt("SEO الصفحات العامة"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "metadata", "pages", "فهرسة", "بحث"] },
       { key: "campaigns", get title() { return dt("إعدادات السلة"); }, href: "/dashboard/cart-settings", icon: "shoppingCart", keywords: ["cart", "basket", "السلة", "team", "support", "دعم", "الفريق", "upsell", "suggestions", "مقترحات", "amounts", "مبالغ"] },
       { key: "bankAccounts", get title() { return dt("الحسابات البنكية"); }, href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
     ],
