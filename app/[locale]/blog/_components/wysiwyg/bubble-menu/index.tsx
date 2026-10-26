@@ -78,6 +78,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
         setIsNodeSelectorOpen(false);
         setIsColorSelectorOpen(false);
         setIsLinkSelectorOpen(false);
+        setIsImageSelectorOpen(false);
       },
     },
   };
@@ -99,6 +100,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
           setIsNodeSelectorOpen(!isNodeSelectorOpen);
           setIsColorSelectorOpen(false);
           setIsLinkSelectorOpen(false);
+          setIsImageSelectorOpen(false);
         }}
       />
       <LinkSelector
@@ -108,6 +110,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
           setIsLinkSelectorOpen(!isLinkSelectorOpen);
           setIsColorSelectorOpen(false);
           setIsNodeSelectorOpen(false);
+          setIsImageSelectorOpen(false);
         }}
       />
       <ImageSelector
@@ -146,6 +149,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
           setIsColorSelectorOpen(!isColorSelectorOpen);
           setIsNodeSelectorOpen(false);
           setIsLinkSelectorOpen(false);
+          setIsImageSelectorOpen(false);
         }}
       />
     </BubbleMenu>

@@ -206,7 +206,7 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
-let browser, page, richPage;
+let browser, page, richPage, plannerPage;
 const errors = [];
 try {
   browser = await chromium.launch({
@@ -411,9 +411,11 @@ try {
   await richPage.waitForFunction(() => document.querySelector('[role="textbox"][aria-label="المحتوى"]')?.getAttribute("contenteditable") === "true");
   const savedRich = documents.get("blog").values.ar.content;
   assert.match(savedRich, /"heading"/); assert.match(savedRich, /"bulletList"/); assert.match(savedRich, /"bold"/); assert.match(savedRich, /"image"/);
+  await richPage.evaluate(() => window.scrollTo(0,0));
   await richPage.screenshot({path:path.join(temp,"ar-real-rich-editor-desktop.png"),fullPage:true});
   await richPage.setViewportSize({width:390,height:844});
   assert.ok(await richPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), "real rich editor must fit mobile");
+  await richPage.evaluate(() => window.scrollTo(0,0));
   await richPage.screenshot({path:path.join(temp,"ar-real-rich-editor-mobile.png"),fullPage:true});
   await richPage.close();
 
@@ -455,7 +457,7 @@ try {
     }
   }
 
-  const plannerPage = await browser.newPage({viewport:{width:1366,height:1000}});
+  plannerPage = await browser.newPage({viewport:{width:1366,height:1000}});
   plannerPage.on("pageerror",error => errors.push("planner actions: " + error.message));
   await plannerPage.goto(origin+"/?surface=planner");
   await plannerPage.getByRole("tab",{name:"تجهيز محتوى",exact:true}).click();
@@ -492,6 +494,11 @@ try {
     await richPage.screenshot({path:path.join(temp,"rich-editor-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
     const state = await richPage.evaluate(() => ({editors:[...document.querySelectorAll('.ProseMirror,[role="textbox"]')].map(node => ({role:node.getAttribute('role'),label:node.getAttribute('aria-label'),editable:node.getAttribute('contenteditable')})),statuses:[...document.querySelectorAll('[role="alert"],[role="status"]')].map(node => node.textContent),buttons:[...document.querySelectorAll('button')].slice(0,8).map(node => ({label:node.textContent,disabled:node.disabled})),inert:document.querySelectorAll('[inert]').length})).catch(()=>null);
     await writeFile(path.join(temp,"rich-editor-last-state.json"),JSON.stringify({state,errors,saves},null,2));
+  }
+  if (plannerPage && !plannerPage.isClosed()) {
+    await plannerPage.screenshot({path:path.join(temp,"planner-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+    const state = await plannerPage.evaluate(() => ({selectedTabs:[...document.querySelectorAll('[role="tab"][aria-selected="true"]')].map(node=>node.textContent),selectors:[...document.querySelectorAll('select')].map(node=>({label:node.getAttribute('aria-label'),disabled:node.disabled,options:[...node.options].map(option=>({label:option.text,value:option.value}))})),alerts:[...document.querySelectorAll('[role="alert"],[role="status"]')].map(node=>node.textContent)})).catch(()=>null);
+    await writeFile(path.join(temp,"planner-last-state.json"),JSON.stringify({state,errors},null,2));
   }
   if (page) await page.screenshot({path:path.join(temp,"draft-flow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
   if (browser) await browser.close();
