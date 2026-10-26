@@ -4,7 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { flattenGatewayRaw } from "@/lib/donations/gateway-raw";
-import { reconcilePayPalDonation } from "@/lib/donations/paypal-donation";
+import { getPayPalOrder, isPayPalConfigured } from "@/lib/paypal";
+import { gatewayDisplayAmounts, inspectPayPalCheckout } from "@/lib/donations/gateway-diagnostics";
 
 /**
  * What the payment gateway told us about one donation  the references a
@@ -24,9 +25,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { id } = await params;
   if (!/^[a-f0-9]{24}$/i.test(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  // An unconfirmed PayPal row: ask PayPal first, so the popup shows its answer.
-  await reconcilePayPalDonation(id).catch((err) => console.error("[gateway] PayPal reconcile failed:", id, err));
 
   const donation = await prisma.donation.findUnique({
     where: { id },
@@ -61,18 +59,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { entries: raw, truncated: rawTruncated } = flattenGatewayRaw(donation.providerRaw);
 
-  /* PayPal records what it settled; Albaraka does not, but we keep what we asked
-     it to charge  in minor units and its own currency codes (TL, US, EU). */
-  let paidAmount = donation.paidAmount;
-  let paidCurrency = donation.paidCurrency;
-  if (paidAmount == null && donation.provider === "ALBARAKA") {
-    const request = (donation.providerRaw as { albarakaRequest?: { amount?: unknown; currencyCode?: unknown } } | null)?.albarakaRequest;
-    const minor = Number(request?.amount);
-    if (Number.isFinite(minor) && minor > 0) {
-      paidAmount = minor / 100;
-      paidCurrency = ({ TL: "TRY", US: "USD", EU: "EUR" } as Record<string, string>)[String(request?.currencyCode)] ?? String(request?.currencyCode ?? "");
-    }
-  }
+  const amounts = gatewayDisplayAmounts(donation);
+  // Viewing a donation must never capture, settle, fail or notify. Checkout/cron own those actions.
+  const paypalInspection = donation.paymentMethod === "PAYPAL" && !donation.paidAt && donation.status !== "FAILED"
+    ? await inspectPayPalCheckout(donation, { configured: isPayPalConfigured(), readOrder: getPayPalOrder })
+    : null;
 
   return NextResponse.json({
     id: donation.id,
@@ -83,8 +74,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     currency: donation.currency,
     totalAmount: donation.totalAmount,
     amountUSD: donation.amountUSD,
-    paidAmount,
-    paidCurrency,
+    ...amounts,
+    paypalInspection,
     createdAt: donation.createdAt,
     paidAt: donation.paidAt,
     billingReason: donation.billingReason,
@@ -106,5 +97,5 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     },
     raw,
     rawTruncated,
-  });
+  }, { headers: { "Cache-Control": "private, no-store" } });
 }
