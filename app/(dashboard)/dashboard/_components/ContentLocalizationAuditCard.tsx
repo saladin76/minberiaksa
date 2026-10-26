@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
@@ -126,7 +127,7 @@ function completionPercent(total: number, incomplete: number): number {
 export function ContentLocalizationAuditCard({ section }: { section: Section }) {
   const [data, setData] = useState<AuditResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(section === "campaigns");
   const [itemsOpen, setItemsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,7 +230,7 @@ export function ContentLocalizationAuditCard({ section }: { section: Section }) 
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
-              <strong>{dt("التعديل الجماعي المباشر متوقف مؤقتًا.")}</strong> {dt(" المعاينة لا تحفظ أي نص، ولا يوجد Save أوApply حتى اكتمال مسار Preview → Review → Approve → Apply → Rollback.")}</div>
+              {dt("التشخيص لا يغيّر المحتوى. افتح محرر العنصر لترجمة النصوص أو تدقيقها، ثم راجع المقترحات واعتمدها واحفظها معًا.")}</div>
 
             {error ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -317,6 +318,7 @@ export function ContentLocalizationAuditCard({ section }: { section: Section }) 
                               <div className="min-w-0">
                                 <p className="truncate font-medium">{item.label}</p>
                                 <p className="text-xs text-muted-foreground">{item.typeLabel}</p>
+                                <Link href={section === "slides" ? `/dashboard/slides/edit/${item.id}` : `/dashboard/content/${section}/${item.id}`} className="mt-2 inline-flex rounded-md border border-brand/20 bg-white px-3 py-1.5 text-xs font-semibold text-brand">{dt("فتح المحرر والمراجعة")}</Link>
                               </div>
                               <div className="flex flex-wrap gap-1 lg:justify-end">
                                 {incompleteLocales.map(([locale, status]) => (

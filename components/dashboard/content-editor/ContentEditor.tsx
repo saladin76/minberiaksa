@@ -20,6 +20,8 @@ import { slugFor } from "@/lib/minbar/routes";
 import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
 import { DocumentUploadField } from "./DocumentUploadField";
+import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
+import { CampaignUpdatesEditor } from "./CampaignUpdatesEditor";
 import { CategoryStructureEditor } from "./CategoryStructureEditor";
 import { MediaCollectionEditor } from "./MediaCollectionEditor";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
@@ -48,6 +50,7 @@ import {
 import { LOCALES, SUPPORTED_LOCALES } from "@/lib/locales";
 import {
   CONFIG,
+  hasText,
   localeStatus,
   type ContentField,
   type ContentKind,
@@ -138,6 +141,10 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [slug, setSlug] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [slugOpen, setSlugOpen] = useState(false);
+  const [bulkSlugOpen, setBulkSlugOpen] = useState(false);
+  const [bulkSlugs, setBulkSlugs] = useState<Record<string, string>>({});
+  const [bulkSlugLocales, setBulkSlugLocales] = useState<string[]>([]);
+  const [bulkSlugConfirmed, setBulkSlugConfirmed] = useState(false);
   const [section, setSection] = useState(EDITOR_SECTIONS[kind].some(item => item.id === initialSection) ? initialSection : "content");
   const [settingsDraft, setSettingsDraft] = useState<ContentRecord>({});
   const [languageReview, setLanguageReview] = useState(false);
@@ -267,14 +274,14 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       setBusy("");
     }
   };
-  const suggest = async (action: "seo" | "translate" | "faq", all = false) => {
-    if (!document || dirty || id === "new") {
+  const suggest = async (action: "seo" | "translate" | "faq" | "proofread", all = false) => {
+    if (!document || (dirty && action !== "proofread") || id === "new") {
       setMessage(dt("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية"));
       return;
     }
     const targets = action === "translate"
       ? all ? SUPPORTED_LOCALES.filter((code) => code !== "ar" && !document.statuses[code].complete) : [locale]
-      : all ? [...SUPPORTED_LOCALES] : [locale];
+      : all ? SUPPORTED_LOCALES.filter(code => action !== "proofread" || document.fields.some(field => field.group === "content" && !field.locked && (values[code]?.[field.key] || "").trim())) : [locale];
     if (!targets.length || (action === "translate" && targets.includes("ar"))) {
       setMessage(dt("اختر لغة أخرى أو لغة تحتاج ترجمة"));
       return;
@@ -297,7 +304,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
             const result = await api<Proposal>(url + "/suggest", {
               method: "POST",
               signal: controller.signal,
-              body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision, ...(action === "seo" && analyticsPeriod ? {analyticsPeriod} : {}) }),
+              body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision, ...(action === "proofread" ? { draft: valuesRef.current[target] || {} } : {}), ...(action === "seo" && analyticsPeriod ? {analyticsPeriod} : {}) }),
             });
             if (result.id !== id || result.kind !== kind || result.revision !== revision)
               throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
@@ -386,6 +393,23 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       setBusy("");
     }
   };
+  const openBulkSlugs = () => {
+    if (!document || dirty) return;
+    setBulkSlugs({ ...document.slugs });
+    setBulkSlugLocales(SUPPORTED_LOCALES.filter(code => hasText(values[code]?.[kind === "categories" ? "name" : "title"])));
+    setBulkSlugConfirmed(false); setBulkSlugOpen(true);
+  };
+  const saveBulkSlugs = async () => {
+    if (!document || dirty || !bulkSlugConfirmed || !bulkSlugLocales.length) return;
+    setBusy("slug"); setMessage("");
+    try {
+      const saved = await api<Document>(url, { method: "PUT", body: JSON.stringify({ action: "slugs", revision: document.revision, slugs: Object.fromEntries(bulkSlugLocales.map(code => [code, bulkSlugs[code]])), confirmation: "UPDATE_SLUGS" }) });
+      setDocument(saved); setValues(saved.values); setSettingsDraft(settingsFor(kind, saved.settings));
+      setProposal(null); setBulkSlugOpen(false);
+      setMessage(dt("تم تحديث الروابط المحددة وحفظ التحويلات القديمة. اللغات المستثناة احتفظت بروابطها."));
+    } catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تحديث الروابط. لم يُحفظ أي تغيير.")); }
+    finally { setBusy(""); }
+  };
   if (!document)
     return (
       <div dir={dashDir()} className="rounded-xl border p-6" role="status">
@@ -443,16 +467,18 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
     }
   };
   const languageButtons = (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4">
-      <label className="flex min-w-48 flex-1 items-center gap-3 text-sm font-semibold">
-        <Globe2 size={18} aria-hidden="true" />
-        {dt("لغة المحتوى")}
-        <select aria-label={dt("لغة المحتوى")} value={locale} disabled={Boolean(busy)} onChange={(event) => { setLocale(event.target.value); setReviewed(false); }} className="min-w-0 flex-1 rounded-lg border bg-white px-3 py-2 font-normal">
-          {SUPPORTED_LOCALES.map(code => <option key={code} value={code}>{LOCALES[code].nativeLabel} · {document.statuses[code].reviewed ? dt("مراجع") : document.statuses[code].complete ? dt("مكتمل") : dt("ناقص")}</option>)}
-        </select>
-      </label>
-      <span className="text-xs text-slate-500">{status.complete ? dt("المحتوى مكتمل") : dt("حقول ناقصة: {0}", [status.missing.length])} · {status.seoComplete ? dt("إعدادات البحث مكتملة") : dt("إعدادات البحث تحتاج استكمالًا")}</span>
-    </div>
+    <section aria-label={dt("لغة المحتوى")} className="space-y-3 rounded-xl border bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold"><Globe2 size={18} aria-hidden="true" />{dt("لغة المحتوى")}<span className="font-normal text-slate-500">· {LOCALES[locale as keyof typeof LOCALES].nativeLabel}</span></h2>
+        <span className="text-xs text-slate-500">{status.complete ? dt("المحتوى مكتمل") : dt("حقول ناقصة: {0}", [status.missing.length])} · {status.seoComplete ? dt("إعدادات البحث مكتملة") : dt("إعدادات البحث تحتاج استكمالًا")}</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={dt("اختيار لغة المحتوى")}>
+        {SUPPORTED_LOCALES.map(code => {
+          const state = localeStatus(document.fields, source, values[code] || {}, code);
+          return <button key={code} type="button" aria-pressed={locale === code} aria-label={LOCALES[code].nativeLabel} title={`${LOCALES[code].nativeLabel} · ${state.complete ? dt("مكتمل") : dt("ناقص")}`} disabled={Boolean(busy)} onClick={() => { setLocale(code); setReviewed(false); }} className={`flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${locale === code ? "border-brand bg-brand text-white" : "border-slate-200 text-slate-600 hover:border-brand/40 hover:bg-slate-50"}`}><bdi>{code.toUpperCase()}</bdi><span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${locale === code ? "bg-white" : state.complete ? "bg-emerald-600" : "bg-amber-500"}`} /></button>;
+        })}
+      </div>
+    </section>
   );
   const renderField = (field: ContentField) => (
     <section
@@ -486,7 +512,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           <span className="text-xs text-slate-500">{dt("مراجعة يدوية")}</span>
         )}
       </div>
-      {field.key === "fileUrl" && ["reports", "booklets"].includes(kind) ? (
+      {field.key === "image" && locale !== "ar" ? (
+        <ImageUploadField label={dt("غلاف هذه اللغة")} value={current.image || ""} onChange={url => edit("image", url)} onUploadingChange={onUploadingChange} />
+      ) : field.key === "fileUrl" && ["reports", "booklets"].includes(kind) ? (
         <DocumentUploadField value={current[field.key] || ""} onChange={(url) => edit(field.key, url)} onUploadingChange={onUploadingChange} disabled={Boolean(busy)} />
       ) : field.rich ? (
         <div
@@ -631,7 +659,10 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           <div className="flex flex-wrap gap-2">
             <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || locale === "ar" || dirty} onClick={() => suggest("translate")}>{dt("ترجمة الحقول المحددة")}</button>
             <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || dirty} onClick={() => suggest("translate", true)}>{dt("ترجمة اللغات الناقصة")}</button>
+            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || id === "new"} onClick={() => suggest("proofread")}>{dt("تدقيق نص هذه اللغة")}</button>
+            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || id === "new"} onClick={() => suggest("proofread", true)}>{dt("تدقيق نصوص كل اللغات")}</button>
           </div>
+          <p className="text-xs leading-6 text-slate-600">{dt("التدقيق يحافظ على المعنى والتنسيق. راجع المقترحات ثم اعتمدها في المسودة؛ لا تُحفظ تلقائيًا.")}</p>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />{dt("راجعت نص هذه اللغة")}</label>
         </section>
         <section aria-label={dt("SEO والبحث")} className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
@@ -830,8 +861,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               {document.fields
                 .filter((f) => {
                   if (section === "media")
-                    return f.key === "imageAlt" || f.key === "videoUrl";
-                  if (f.group !== "content" || f.key === "videoUrl")
+                    return f.key === "imageAlt" || f.key === "videoUrl" || (f.key === "image" && locale !== "ar");
+                  if (f.group !== "content" || f.key === "videoUrl" || f.key === "image")
                     return false;
                   if (section === "layout")
                     return (
@@ -947,48 +978,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               </p>
             </section>
           ) : null}
-          {(kind === "campaigns" &&
-            ["donation", "history"].includes(section)) ||
-          (kind === "categories" && section === "page") || (["videos", "playlists", "courses", "reports", "booklets", "faqs"].includes(kind) && section === "review") ? (
-            <details className="rounded-xl border bg-white p-4">
-              <summary className="cursor-pointer text-sm font-semibold">
-                {dt("الأدوات المتخصصة والإعدادات المتقدمة")}
-              </summary>
-              <p className="my-3 text-xs leading-6 text-slate-500">
-                {dt("تخصيصات العملات، وإدارة الإنجازات والبطاقات التفصيلية متاحة في الأدوات الأصلية. احفظ مسودة المحرر أولًا قبل الانتقال.")}
-              </p>
-              <Link
-                className={button + " inline-block"}
-                href={`/dashboard/${kind}/settings/${id}`}
-              >
-                {dt("فتح الإعدادات المتقدمة")}
-              </Link>
-            </details>
-          ) : null}
-          {section === "history" ? (
-            <section className="space-y-3 rounded-xl border bg-white p-5">
-              <h3 className="font-bold">{dt("الإنجازات والتحديثات")}</h3>
-              {Array.isArray(document.settings.updates) &&
-              document.settings.updates.length ? (
-                document.settings.updates.map((item: ContentRecord) => (
-                  <article key={String(item.id)} className="rounded border p-4">
-                    <h4 className="font-bold">
-                      {String(item.title || dt("تحديث المشروع"))}
-                    </h4>
-                    <p className="mt-2 text-sm">
-                      {previewText(String(item.description || ""))}
-                    </p>
-                    <time className="text-xs text-slate-400">
-                      {String(item.createdAt || "")}
-                    </time>
-                  </article>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">
-                  {dt("لا توجد تحديثات منشورة لهذا المشروع.")}
-                </p>
-              )}
-            </section>
+          {kind === "campaigns" && section === "history" ? (
+            <CampaignUpdatesEditor campaignId={id} updates={document.settings.updates} disabled={dirty || Boolean(busy)} onSaved={initialLoad} onUploadingChange={onUploadingChange} />
           ) : null}
           {kind === "blog" && section === "review" && id !== "new" ? <Link href={`/dashboard/editorial-planner?improve=${id}`} className={button}>{dt("تجهيز تحسين المقال والبحث عن مصادره")}</Link> : null}
           {section === "review" ? (
@@ -1039,6 +1030,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           {["campaigns", "categories", "blog", "super-categories"].includes(kind) && section === "links" ? (
             <section className="space-y-3 rounded-xl border bg-white p-4">
               <h3 className="font-semibold">{dt("الرابط وسجل التغييرات")}</h3>
+              <p className="text-xs leading-6 text-slate-600">{dt("يمكن تعديل لغة واحدة أو مراجعة روابط كل اللغات معًا. الروابط القديمة تستمر في التحويل للرابط المعتمد.")}</p>
+              <button type="button" className={button + " bg-brand text-white hover:bg-brand-dark"} disabled={Boolean(busy) || dirty || id === "new"} onClick={openBulkSlugs}>{dt("تعديل روابط كل اللغات")}</button>
               <p dir="ltr" className="break-all text-sm">
                 /{locale}/{kind === "categories" ? "category" : slugFor(kind === "blog" ? "article" : "projectDetail", locale)}/{document.slugs[locale]}
               </p>
@@ -1200,6 +1193,27 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           categoryName={document.title}
         />
       ) : null}
+      {bulkSlugOpen ? <EditorModal title={dt("مراجعة روابط اللغات")} onClose={() => { if (!busy) setBulkSlugOpen(false); }}>
+        <div className="max-h-[85vh] w-full max-w-3xl space-y-4 overflow-auto rounded-xl bg-white p-5">
+          <h2 className="text-xl font-bold">{dt("مراجعة روابط اللغات")}</h2>
+          <p className="text-sm leading-7 text-slate-600">{dt("ألغِ تحديد أي لغة لاستثنائها. لن يتغير رابطها حتى لو كانت تستخدم رابط العربية أو الإنجليزية. تُحفظ التغييرات المحددة معًا، وتبقى الروابط السابقة محوّلة.")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={button} disabled={Boolean(busy)} onClick={() => { setBulkSlugs(previous => ({ ...previous, ...Object.fromEntries(bulkSlugLocales.map(code => [code, slugify(values[code]?.[kind === "categories" ? "name" : "title"] || "") || previous[code]])) })); setBulkSlugConfirmed(false); }}>{dt("توليد الروابط من عناوين اللغات")}</button>
+            <button type="button" className={button} disabled={Boolean(busy)} onClick={() => { setBulkSlugs(previous => ({ ...previous, ...Object.fromEntries(bulkSlugLocales.map(code => [code, previous[locale]])) })); setBulkSlugConfirmed(false); }}>{dt("توحيد المحدد على رابط اللغة الحالية")}</button>
+          </div>
+          <div className="space-y-2">
+            {SUPPORTED_LOCALES.map(code => {
+              const available = hasText(values[code]?.[kind === "categories" ? "name" : "title"]), selected = bulkSlugLocales.includes(code);
+              return <div key={code} className={`grid gap-2 rounded-lg border p-3 sm:grid-cols-[150px_minmax(0,1fr)] ${selected ? "border-brand/30 bg-brand/5" : "bg-slate-50"}`}>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!available || Boolean(busy)} checked={selected} onChange={event => { setBulkSlugLocales(previous => event.target.checked ? [...previous, code] : previous.filter(value => value !== code)); setBulkSlugConfirmed(false); }} />{LOCALES[code].nativeLabel}<bdi className="text-xs text-slate-500">{code.toUpperCase()}</bdi></label>
+                <div className="space-y-1"><p className="break-all text-xs text-slate-500" dir="ltr">{document.slugs[code]}</p><input aria-label={dt("الرابط الجديد: {0}", [LOCALES[code].nativeLabel])} dir="ltr" className="w-full rounded border bg-white p-2 text-sm" disabled={!selected || Boolean(busy)} value={bulkSlugs[code] || ""} onChange={event => { setBulkSlugs(previous => ({ ...previous, [code]: event.target.value })); setBulkSlugConfirmed(false); }} />{!available ? <small>{dt("احفظ عنوان هذه اللغة أولًا؛ رابطها الحالي سيبقى كما هو.")}</small> : null}</div>
+              </div>;
+            })}
+          </div>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={bulkSlugConfirmed} disabled={Boolean(busy)} onChange={event => setBulkSlugConfirmed(event.target.checked)} />{dt("راجعت الروابط المحددة وأوافق على تحديثها مع حفظ التحويلات القديمة.")}</label>
+          <div className="flex gap-2"><button type="button" className={button + " bg-brand text-white hover:bg-brand-dark"} disabled={Boolean(busy) || !bulkSlugConfirmed || !bulkSlugLocales.length || bulkSlugLocales.some(code => !bulkSlugs[code]?.trim())} onClick={saveBulkSlugs}>{busy === "slug" ? dt("جار الحفظ…") : dt("حفظ الروابط المحددة")}</button><button type="button" className={button} disabled={Boolean(busy)} onClick={() => setBulkSlugOpen(false)}>{dt("إلغاء")}</button></div>
+        </div>
+      </EditorModal> : null}
       {slugOpen ? (
         <EditorModal
           title={dt("مراجعة تغيير الرابط")}

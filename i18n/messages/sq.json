@@ -695,7 +695,13 @@
     "itemsUnavailable": "Këta artikuj nuk mund të paguhen: {items}. Hiqini nga shporta ose zgjidhni një projekt të caktuar, pastaj provoni përsëri.",
     "bankTransferUploadNote": "Pas transferimit, do të ngarkoni faturën ose njoftimin e transferimit në faqen tjetër. Donacioni juaj konfirmohet sapo ekipi ynë financiar e përputh atë me llogarinë.",
     "ctaBankContinue": "Vazhdoni ngarkoni faturën e transferimit",
-    "recurringCardUnavailable": "Donacionet periodike me kartë nuk janë të disponueshme për momentin. Ju lutemi provoni më vonë."
+    "recurringCardUnavailable": "Donacionet periodike me kartë nuk janë të disponueshme për momentin. Ju lutemi provoni më vonë.",
+    "verificationChoice": "Si dëshironi të paguani?",
+    "verificationDirect": "Pagesë direkte",
+    "verificationDirectHelp": "Pa kod verifikimi",
+    "verificationSecure": "Verifikim bankar",
+    "verificationSecureHelp": "Mund të kërkohet një kod",
+    "verificationRequired": "Zgjidhni një mënyrë pagese për të vazhduar."
   },
   "certificates": {
     "certNoLabel": "Nr. i certifikatës",

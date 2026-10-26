@@ -21,7 +21,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const body = await response.json(); if (!response.ok) throw new Error(body.error || "HTTP " + response.status); return body as T;
 }
 function richValue(value: string) { try { return JSON.parse(value); } catch { return value || { type: "doc", content: [{ type: "paragraph" }] }; } }
-export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?: string }) {
+export function EditorialPlanner({ initialArticleId = "", embedded = false }: { initialArticleId?: string; embedded?: boolean }) {
   const [listing, setListing] = useState<Listing | null>(null), [settings, setSettings] = useState<Settings | null>(null);
   const [view, setView] = useState(initialArticleId ? "create" : "tasks");
   const [articles, setArticles] = useState<{id: string; title: string}[]>([]), [articleSearch, setArticleSearch] = useState("");
@@ -121,7 +121,7 @@ export function EditorialPlanner({ initialArticleId = "" }: { initialArticleId?:
   const countFor = (status: string) => listing?.counts.find(count => count.status === status)?._count ?? 0;
   return <div dir={dashDir()} className="mx-auto max-w-7xl space-y-5 pb-12">
     <header className="flex flex-wrap items-start justify-between gap-4">
-      <div><p className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand"><Sparkles size={15} />{dt("المحتوى التحريري")}</p><h1 className="text-2xl font-bold">{dt("خطة المقالات والترجمات")}</h1><p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">{dt("المهام تجهز اقتراحات قابلة للتحرير والمراجعة. اعتماد مقال جديد يحفظه غير منشور.")}</p></div>
+      <div>{!embedded ? <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand"><Sparkles size={15} />{dt("المحتوى التحريري")}</p> : null}{embedded ? <h2 className="text-lg font-semibold">{dt("خطة المقالات والترجمات")}</h2> : <h1 className="text-2xl font-bold">{dt("خطة المقالات والترجمات")}</h1>}<p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">{dt("المهام تجهز اقتراحات قابلة للتحرير والمراجعة. اعتماد مقال جديد يحفظه غير منشور.")}</p></div>
       <button type="button" disabled={loading || Boolean(busy)} onClick={() => void refresh().catch(error => setMessage(dtMaybe(error.message)))} className="flex items-center gap-2 rounded-lg border bg-white px-4 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} className={loading ? "animate-spin" : ""} />{dt("تحديث")}</button>
     </header>
     <div className="grid gap-3 rounded-2xl border bg-white p-4 text-sm sm:grid-cols-3">

@@ -695,7 +695,13 @@
     "itemsUnavailable": "Disse elementene kan ikke betales: {items}. Fjern dem fra kurven eller velg et bestemt prosjekt, og prøv igjen.",
     "bankTransferUploadNote": "Etter at du har overført, vil du laste opp kvitteringen eller overføringsmeldingen på neste side. Donasjonen din er bekreftet når vårt økonomiteam matcher den mot kontoen.",
     "ctaBankContinue": "Fortsett med å laste opp overføringskvitteringen",
-    "recurringCardUnavailable": "Faste donasjoner med kort er for øyeblikket utilgjengelige. Prøv igjen senere."
+    "recurringCardUnavailable": "Faste donasjoner med kort er for øyeblikket utilgjengelige. Prøv igjen senere.",
+    "verificationChoice": "Hvordan vil du betale?",
+    "verificationDirect": "Direkte betaling",
+    "verificationDirectHelp": "Uten bekreftelseskode",
+    "verificationSecure": "Bankbekreftelse",
+    "verificationSecureHelp": "En kode kan kreves",
+    "verificationRequired": "Velg en betalingsmåte for å fortsette."
   },
   "certificates": {
     "certNoLabel": "Sertifikatnr.",

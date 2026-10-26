@@ -18,6 +18,7 @@ import type { Session } from "next-auth";
 import {
   userCanEnterDashboard,
   userHasDashboardPermission,
+  userCanOpenDashboardPath,
   pathToDashboardPermission,
   getFirstAllowedDashboardHref,
 } from "@/lib/dashboard/permissions";
@@ -100,7 +101,7 @@ function DashboardContent({
     if (status !== "authenticated" || !session?.user) return;
     if (!userCanEnterDashboard(session.user)) { router.replace("/"); return; }
     const required = pathToDashboardPermission(pathname);
-    if (required && !userHasDashboardPermission(session.user, required)) {
+    if (required && !userCanOpenDashboardPath(session.user, pathname)) {
       const fallback = getFirstAllowedDashboardHref(session.user, DASHBOARD_NAV_HREFS_ORDERED, dashboardHrefToPermissionKey);
       router.replace(fallback || "/");
     }
@@ -113,7 +114,7 @@ function DashboardContent({
       .map((section) => ({
         group: section.group,
         items: section.items.filter((item) =>
-          userHasDashboardPermission(u, item.key) && (!item.adminOnly || u.role === "ADMIN")
+          (item.anyPermissions || [item.key]).some(key => userHasDashboardPermission(u, key)) && (!item.adminOnly || u.role === "ADMIN")
         ),
       }))
       .filter((s) => s.items.length > 0);

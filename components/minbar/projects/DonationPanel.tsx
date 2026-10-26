@@ -234,7 +234,6 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
               {tShares("givenSoFar", { count: formatNumber(progress.sold), unit: unitWord(progress.sold) })}
             </b>
           ) : null}
-          <b dir="ltr" style={{ fontSize: 24, color: "var(--deep)" }}>{format(project.raised)}</b>
           {tProjects("noTargetNote")}
           {donorCount > 0 ? <span>{tProjects("donorsCount", { n: formatNumber(donorCount) })}</span> : null}
         </span>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { changeEditorialSlugs } from "@/lib/content-editor/bulk-slugs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -76,6 +77,8 @@ export async function PUT(request: NextRequest, ctx: Context) {
       if (!isValidLocale(body.locale) || (body.localeChanges && (typeof body.localeChanges !== "object" || Array.isArray(body.localeChanges) || Object.keys(body.localeChanges).some((locale) => !isValidLocale(locale))))) throw new ContentError("لغات غير صالحة");
       result = await createWorkspace(contentStore, { kind, creationKey: String(body.creationKey || ""), locale: body.locale, changes: body.changes, localeChanges: body.localeChanges, settings: body.settings });
     }
+    else if (body.action === "slugs")
+      result = await changeEditorialSlugs(contentStore, { kind, id, revision: body.revision, changes: body.slugs, confirmation: String(body.confirmation || ""), actor: String(session?.user?.id || "") });
     else if (body.action === "slug")
       result = await changeEditorialSlug(contentStore, {
         kind,
@@ -110,7 +113,7 @@ export async function PUT(request: NextRequest, ctx: Context) {
     queueAuditLog({
       ...actor,
       action:
-        body.action === "slug" ? "CONTENT_SLUG_CHANGE" : "CONTENT_EDITOR_SAVE",
+        ["slug", "slugs"].includes(body.action) ? "CONTENT_SLUG_CHANGE" : "CONTENT_EDITOR_SAVE",
       entityType: CONFIG[kind].model,
       entityId: result.id,
       messageAr: `حفظ محتوى ${CONFIG[kind].label}`,

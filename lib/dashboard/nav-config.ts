@@ -4,6 +4,7 @@ import { dt } from "./i18n";
 
 export type DashboardNavItem = {
   key: DashboardPermissionKey;
+  anyPermissions?: DashboardPermissionKey[];
   title: string;
   href: string;
   /** Rendered in the sidebar and the command palette. */
@@ -65,7 +66,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     get group() { return dt("المحتوى التحريري"); },
     items: [
-      { key: "blog", get title() { return dt("خطة المقالات والترجمات"); }, href: "/dashboard/editorial-planner", icon: "lightbulb", keywords: ["editorial", "weekly", "translation", "مقال", "ترجمة", "أسبوعي"] },
       { key: "blog", get title() { return dt("المدونة"); }, href: "/dashboard/blog", icon: "penLine", keywords: ["blog", "posts", "مقالات"] },
       { key: "siteContent", get title() { return dt("شريط القصص"); }, href: "/dashboard/stories", icon: "images", keywords: ["stories", "قصص", "rail", "highlights"] },
       { key: "siteContent", get title() { return dt("الفيديوهات"); }, href: "/dashboard/videos", icon: "video", keywords: ["videos", "فيديو", "achievements", "endorsements", "إنجازات", "تزكيات"] },
@@ -88,7 +88,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     get group() { return dt("إعدادات المحتوى والتبرعات"); },
     items: [
-      { key: "siteContent", get title() { return dt("SEO الصفحات العامة"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "metadata", "pages", "فهرسة", "بحث"] },
+      { key: "siteContent", anyPermissions: ["siteContent", "blog"], get title() { return dt("مركز المحتوى وSEO"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "editorial", "weekly", "translation", "metadata", "pages", "مقال", "ترجمة", "فهرسة", "بحث"] },
       { key: "campaigns", get title() { return dt("إعدادات السلة"); }, href: "/dashboard/cart-settings", icon: "shoppingCart", keywords: ["cart", "basket", "السلة", "team", "support", "دعم", "الفريق", "upsell", "suggestions", "مقترحات", "amounts", "مبالغ"] },
       { key: "bankAccounts", get title() { return dt("الحسابات البنكية"); }, href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
     ],
@@ -126,6 +126,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // The overview, أداء الحملات and التوصيات pages were removed; what is left is the part of
       // التسويق that owns real, first-party data: our own links and our own tracking.
       { key: "referrals", get title() { return dt("الروابط والإسناد"); }, href: "/dashboard/marketing/attribution", icon: "link", keywords: ["attribution", "referrals", "links", "utm"] },
+      { key: "referrals", get title() { return dt("صفحات جمع التبرعات والإحالات"); }, href: "/dashboard/referrals", icon: "heartHandshake", keywords: ["fundraisers", "referral pages", "إحالات", "جمع التبرعات"] },
     ],
   },
   {

@@ -112,6 +112,7 @@ async function main() {
     const campaigns = ids.length ? await prisma.campaign.findMany({ where: { id: { in: ids } }, select: { id: true, isActive: true, isDeleted: true } }) : [];
     report.quickDonation = { enabled: quick?.enabled ?? true, destinations: keys.map(key => { const id = quick?.genericProjectIds?.[key]; const campaign = campaigns.find(c => c.id === id); return { intention: key, status: !id ? "approved_mapping_missing" : campaign?.isActive && campaign.isDeleted !== true ? "ready" : "target_unavailable" }; }) };
     const albaraka = await load("lib/albaraka.ts");
+    report.oneTimePayments = { twoDConfigured: albaraka.isAlbarakaConfigured(albaraka.albaraka2DConfig()), threeDConfigured: albaraka.isAlbarakaConfigured(albaraka.albarakaConfig()), verificationCalls: 0 };
     report.recurring = { signupTerminalConfigured: albaraka.isAlbarakaConfigured(albaraka.albaraka2DConfig()), recurringTerminalConfigured: albaraka.isAlbarakaConfigured(albaraka.albarakaRecurringConfig()), recurringEnabled: albaraka.isAlbarakaRecurringEnabled(), cronSecretPresent: !!process.env.CRON_SECRET?.trim() };
     const groups = {}; let cursor;
     for (;;) {

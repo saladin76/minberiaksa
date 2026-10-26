@@ -3,9 +3,13 @@ import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
+import { albarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
 import {
   albaraka2DConfig,
   albaraka2DOrderId,
+  albarakaConfig,
+  albarakaOrderId,
+  buildAlbaraka3DForm,
   albarakaChargeCurrency,
   albarakaCurrencyCode,
   albarakaMinorUnits,
@@ -56,6 +60,7 @@ import { decryptCard, detectCardType, encryptCard } from "@/lib/card-crypto";
 
 type InitiateBody = {
   donationId: string;
+  securityMode?: "2D" | "3D";
   locale?: string;
   savedCardId?: string;
   card?: {
@@ -160,14 +165,6 @@ export async function POST(req: NextRequest) {
   let unsentClaim: string | null = null;
   try {
     const session = await getServerSession(authOptions);
-    const cfg = albaraka2DConfig();
-
-    if (!isAlbarakaConfigured(cfg)) {
-      return NextResponse.json(
-        { error: "Albaraka is not configured on server" },
-        { status: 500 }
-      );
-    }
 
     const body = (await req.json()) as Partial<InitiateBody>;
     const donationId = String(body.donationId || "").trim();
@@ -192,6 +189,11 @@ export async function POST(req: NextRequest) {
       select: { mainGateway: true },
     });
     const plan = donation.subscription;
+    let mode: "2D" | "3D";
+    try { mode = albarakaCheckoutMode(body.securityMode, Boolean(plan)); }
+    catch { return NextResponse.json({ error: "Invalid payment verification mode", code: "INVALID_PAYMENT_MODE" }, { status: 400 }); }
+    const cfg = mode === "3D" ? albarakaConfig() : albaraka2DConfig();
+    if (!isAlbarakaConfigured(cfg)) return NextResponse.json({ error: "Albaraka is not configured on server" }, { status: 503 });
     if (plan) {
       if (plan.provider !== "ALBARAKA" || !isAlbarakaRecurringEnabled()) {
         return NextResponse.json(
@@ -256,7 +258,7 @@ export async function POST(req: NextRequest) {
 
     /* A 2D order is exactly 24 characters, fresh for every attempt (the bank
        refuses an order id it has seen). */
-    const orderId = albaraka2DOrderId();
+    const orderId = mode === "3D" ? albarakaOrderId() : albaraka2DOrderId();
     const transactionType = "Sale";
     /* Where the browser goes next: the success or failure page, by the
        donation's real status. The access token lets a guest see their receipt. */
@@ -355,7 +357,7 @@ export async function POST(req: NextRequest) {
           OR: [
             { providerTxnResult: { isSet: false } },
             { providerTxnResult: null },
-            { providerTxnResult: { not: "Processing" } },
+            { providerTxnResult: { notIn: ["Processing", "Capturing3D", "Rejecting3D"] } },
           ],
         }
       ),
@@ -373,7 +375,7 @@ export async function POST(req: NextRequest) {
             amount,
             currencyCode,
             transactionType,
-            mode: "2D",
+            mode,
             createdAt: new Date().toISOString(),
           },
         } as Prisma.InputJsonValue,
@@ -386,11 +388,20 @@ export async function POST(req: NextRequest) {
       );
     }
     unsentClaim = donation.id;
+    if (mode === "3D") {
+      const fields = buildAlbaraka3DForm({
+        orderId, amount, currencyCode, locale,
+        returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
+        card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
+      }, cfg);
+      // No Sale here: the bank authenticates first, then the callback claims capture.
+      unsentClaim = null;
+      return NextResponse.json({ actionUrl: cfg.tdsUrl, fields }, { headers: { "Cache-Control": "no-store" } });
+    }
 
     /* A plan: keep the card the donor is authorising, so the scheduler can
-       charge the later instalments. Stored the way the account's saved cards
-       are  PAN encrypted at rest, CVC only as a hash that is never sent
-       anywhere  and linked to the plan before the bank is asked for
+       charge the later instalments. PAN is encrypted at rest; no CVC is stored,
+       including hashes. The card is linked before the bank is asked for
        anything, so a plan can never be activated without a card to bill. A
        retry of the same checkout reuses the card already linked. */
     if (plan && !plan.paymentCardId) {

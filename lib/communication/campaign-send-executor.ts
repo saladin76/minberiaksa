@@ -1,4 +1,6 @@
 import { templateLocaleHeader } from "./template-locale-media";
+import { getSmartAudienceDefinitionForSegmentKey } from "./smart-audience";
+import { recentMarketingDeliveryWhere } from "./recent-marketing-filter";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationCampaign } from "@prisma/client";
@@ -231,6 +233,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
   const campaign = await getCampaign(campaignId);
   if (!campaign) return { ...base, blocked: "NOT_FOUND" };
   base.status = campaign.status;
+  const recentMarketingDays = (await getSmartAudienceDefinitionForSegmentKey(campaign.audienceSegmentKey))?.filters.excludeMarketedWithinDays;
   const controlGate = await evaluateCampaignSendControls(campaign);
   if (!controlGate.ok) return { ...base, blocked: controlGate.reason };
   const speed = speedSettings(controlGate.controls.speedMode);
@@ -344,6 +347,12 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
       const outcome: BatchTally = { total: 0, sent: 0, skipped: 0, failed: 0, reasons: {} };
       if (Date.now() + 15_000 >= deadline) throw new Error("RUN_TIME_BUDGET_REACHED");
       if (alreadyDone.has(recipient.userId)) { recoverOutcome(recipient.userId, outcome); return outcome; }
+      if (recentMarketingDays && await prisma.communicationDelivery.findFirst({
+        where: { ...recentMarketingDeliveryWhere(recentMarketingDays), recipientUserId: recipient.userId }, select: { id: true },
+      })) {
+        await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, locale: recipient.locale, purpose, origin, createdBy: actor?.actorId ?? null }, "RECENT_MARKETING_CONTACT");
+        outcome.skipped++; bump(outcome.reasons, "RECENT_MARKETING_CONTACT"); return outcome;
+      }
       const contactKey = normalizeRecipientContact(channel, recipient.email, recipient.phone);
       if (contactKey && (alreadyDoneContacts.has(contactKey) || claimedBatchContacts.has(contactKey))) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin, createdBy: actor?.actorId ?? null }, "DUPLICATE_RECIPIENT_CONTACT");

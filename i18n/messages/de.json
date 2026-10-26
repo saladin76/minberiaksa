@@ -1734,7 +1734,13 @@
     "itemsUnavailable": "Für diese Posten ist keine Zahlung möglich: {items}. Entfernen Sie sie aus dem Warenkorb oder wählen Sie ein bestimmtes Projekt und versuchen Sie es erneut.",
     "bankTransferUploadNote": "Nachdem Sie überwiesen haben, laden Sie den Beleg oder die Überweisungsbestätigung auf der nächsten Seite hoch. Ihre Spende ist bestätigt, sobald unser Finanzteam sie mit dem Konto abgleicht.",
     "ctaBankContinue": "Fortfahren, um den Überweisungsbeleg hochzuladen",
-    "recurringCardUnavailable": "Wiederkehrende Kartenspenden sind derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
+    "recurringCardUnavailable": "Wiederkehrende Kartenspenden sind derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.",
+    "verificationChoice": "Wie möchten Sie bezahlen?",
+    "verificationDirect": "Direkte Zahlung",
+    "verificationDirectHelp": "Ohne Bestätigungscode",
+    "verificationSecure": "Bankbestätigung",
+    "verificationSecureHelp": "Ein Code kann nötig sein",
+    "verificationRequired": "Wählen Sie eine Zahlungsoption, um fortzufahren."
   },
   "certificates": {
     "certNoLabel": "Zertifikat-Nr.",

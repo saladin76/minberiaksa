@@ -695,7 +695,13 @@
     "itemsUnavailable": "Disse poster kan ikke betales: {items}. Fjern dem fra kurven, eller vælg et bestemt projekt, og prøv igen.",
     "bankTransferUploadNote": "Efter du har overført, vil du uploade kvitteringen eller overførselsnotatet på den næste side. Din donation er bekræftet, når vores finanshold matcher den med kontoen.",
     "ctaBankContinue": "Fortsæt med at uploade overførselskvitteringen",
-    "recurringCardUnavailable": "Faste kortdonationer er ikke tilgængelige i øjeblikket. Prøv igen senere."
+    "recurringCardUnavailable": "Faste kortdonationer er ikke tilgængelige i øjeblikket. Prøv igen senere.",
+    "verificationChoice": "Hvordan vil du betale?",
+    "verificationDirect": "Direkte betaling",
+    "verificationDirectHelp": "Uden bekræftelseskode",
+    "verificationSecure": "Bankbekræftelse",
+    "verificationSecureHelp": "En kode kan være nødvendig",
+    "verificationRequired": "Vælg en betalingsmulighed for at fortsætte."
   },
   "certificates": {
     "certNoLabel": "Certifikatnr.",

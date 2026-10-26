@@ -1,3 +1,4 @@
+import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
 /**
  * GET /api/admin/donations/export
  *
@@ -89,6 +90,8 @@ export async function GET(request: NextRequest) {
     }
 
     const filters: Prisma.DonationWhereInput[] = [baseWhere];
+    const providerFilter = donationProviderWhere(sp.get("provider"));
+    if (providerFilter) filters.push(providerFilter);
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
     const statusWhere = donationStatusWhere(status);
     if (statusWhere) filters.push(statusWhere);
@@ -178,6 +181,7 @@ export async function GET(request: NextRequest) {
       status,
       locale,
       country,
+      provider: sp.get("provider"),
       subscriptionOnly,
       sortBy,
       sortOrder,
@@ -223,6 +227,7 @@ function collectFilterDescriptors(args: {
   status: string | null;
   locale: string | null;
   country: string | null;
+  provider: string | null;
   subscriptionOnly: boolean;
   sortBy: string;
   sortOrder: string;
@@ -241,6 +246,7 @@ function collectFilterDescriptors(args: {
   if (args.status && args.status !== "all") out.push({ label: dt("الحالة"), value: args.status });
   if (args.locale && args.locale !== "all") out.push({ label: dt("اللغة"), value: args.locale });
   if (args.country && args.country !== "all") out.push({ label: dt("الدولة"), value: args.country });
+  if (args.provider && args.provider !== "all") out.push({ label: dt("بوابة الدفع"), value: args.provider === "__unset" ? dt("غير محدد") : args.provider });
   if (args.subscriptionOnly) out.push({ label: dt("الاشتراكات فقط"), value: dt("نعم") });
   out.push({ label: dt("الفرز"), value: `${args.sortBy === "amount" ? dt("بالقيمة") : dt("بالتاريخ")} • ${args.sortOrder === "asc" ? dt("تصاعدي") : dt("تنازلي")}` });
   out.push({ label: dt("عدد العمليات"), value: String(args.total) });

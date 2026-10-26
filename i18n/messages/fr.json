@@ -1734,7 +1734,13 @@
     "bankTransferUploadNote": "Après le virement, vous téléverserez le reçu ou l'avis de virement sur la page suivante. Votre don est confirmé une fois que notre équipe financière l'a rapproché du compte.",
     "ctaBankContinue": "Continuer  envoyer le reçu du virement",
     "itemsUnavailable": "Ces éléments ne peuvent pas être réglés : {items}. Retirez-les de votre panier ou choisissez un projet précis, puis réessayez.",
-    "recurringCardUnavailable": "Les dons récurrents par carte sont actuellement indisponibles. Veuillez réessayer plus tard."
+    "recurringCardUnavailable": "Les dons récurrents par carte sont actuellement indisponibles. Veuillez réessayer plus tard.",
+    "verificationChoice": "Comment souhaitez-vous payer ?",
+    "verificationDirect": "Paiement direct",
+    "verificationDirectHelp": "Sans code de vérification",
+    "verificationSecure": "Vérification bancaire",
+    "verificationSecureHelp": "Un code peut être demandé",
+    "verificationRequired": "Choisissez une option de paiement pour continuer."
   },
   "certificates": {
     "certNoLabel": "N° du Certificat",

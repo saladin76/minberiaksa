@@ -55,12 +55,12 @@ let stored = documents.get("categories"),
   failedSave = false,
   saves = 0,
   delay = null;
-let uploadPause = null, savePause = null;
+let uploadPause = null, savePause = null, updateWrites = 0, lastSlugCommand = null;
 const temp = path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS || ".artifacts/content-editor");
 await mkdir(temp, { recursive: true });
 const bundle = await build({
   stdin: {
-    contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {ContentEditor} from "./components/dashboard/content-editor/ContentEditor"; import {PageSeoEditor} from "./components/dashboard/content-editor/PageSeoEditor"; import {EditorialPlanner} from "./components/dashboard/content-editor/EditorialPlanner"; const surface = new URLSearchParams(location.search).get("surface"); createRoot(document.getElementById("root")).render(surface === "seo" ? <PageSeoEditor/> : surface === "planner" ? <EditorialPlanner/> : <ContentEditor kind={new URLSearchParams(location.search).get("kind") || "categories"} id="${id}"/>);`,
+    contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {ContentEditor} from "./components/dashboard/content-editor/ContentEditor"; import {PageSeoEditor} from "./components/dashboard/content-editor/PageSeoEditor"; import {EditorialPlanner} from "./components/dashboard/content-editor/EditorialPlanner"; import {ContentStrategyWorkspace} from "./components/dashboard/content-editor/ContentStrategyWorkspace"; import {GoogleAdsInsights} from "./components/dashboard/GoogleAdsInsights"; const surface = new URLSearchParams(location.search).get("surface"); createRoot(document.getElementById("root")).render(surface === "strategy" ? <ContentStrategyWorkspace canSeo canEditorial/> : surface === "ads" ? <GoogleAdsInsights period={{range:"28d"}}/> : surface === "seo" ? <PageSeoEditor/> : surface === "planner" ? <EditorialPlanner/> : <ContentEditor kind={new URLSearchParams(location.search).get("kind") || "categories"} id="${id}"/>);`,
     resolveDir: process.cwd(),
     loader: "tsx",
   },
@@ -108,6 +108,16 @@ const server = createServer(async (req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.end('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#164e63"/></svg>');
   } else if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
+  } else if (req.url?.startsWith("/api/campaigns/")) {
+    res.setHeader("Content-Type", "application/json");
+    let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
+      const input=body?JSON.parse(body):{}, campaign=documents.get("campaigns");updateWrites++;
+      const result={...input,id:"222222222222222222222222",createdAt:"2026-10-26T08:00:00Z",translations:Object.entries(input.translations||{}).map(([locale,copy])=>({locale,...copy}))};
+      campaign.settings.updates=[result];res.end(JSON.stringify(result));
+    });
+  } else if (req.url?.startsWith("/api/admin/google-analytics/google-ads")) {
+    res.setHeader("Content-Type", "application/json");const row={label:"Donate bread",campaign:"Bread Search",matchType:"EXACT",cost:12,clicks:20,conversions:0,conversionValue:0,impressions:200};
+    res.end(JSON.stringify({customerId:"1234567890",currency:"TRY",timezone:"Europe/Istanbul",period:{startDate:"2026-09-28",endDate:"2026-10-25"},updatedAt:new Date().toISOString(),keywords:[row],campaigns:[row],searchTerms:[row],bounded:false}));
   } else if (req.url?.startsWith("/api/admin/page-seo/")) {
     res.setHeader("Content-Type","application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
@@ -176,6 +186,9 @@ const server = createServer(async (req, res) => {
         );
         return;
       }
+      if (req.method === "POST") {
+        lastSlugCommand=JSON.parse(body);res.end(JSON.stringify(doc));return;
+      }
       if (req.method === "PUT") {
         if (savePause) await savePause;
         saves++;
@@ -200,7 +213,7 @@ const server = createServer(async (req, res) => {
   } else {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.end(
-      '<!doctype html><html dir="rtl"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/test.css"></head><body style="margin:0;background:#f8fafc;padding:16px"><div id="root"></div><script src="/bundle.js"></script></body></html>',
+      '<!doctype html><html dir="rtl"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/test.css"></head><body style="margin:0;background:#f8fafc;padding:80px 16px 16px"><div id="root"></div><script src="/bundle.js"></script></body></html>',
     );
   }
 });
@@ -215,6 +228,8 @@ try {
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
   });
+  const snapshots = [], workflowScreens = [];
+  if (!process.env.A1_WORKFLOWS_ONLY) {
   page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   });
@@ -223,7 +238,7 @@ try {
   await page
     .getByRole("heading", { name: "اختبار التصنيف", exact: true, level: 1 })
     .waitFor();
-  await page.getByLabel("لغة المحتوى", {exact: true}).selectOption("fr");
+  await page.getByRole("button", {name:'Français', exact:true}).click();
   const title = page.getByLabel("اسم التصنيف", { exact: true });
   await title.waitFor();
   assert.equal(await title.inputValue(), "");
@@ -297,8 +312,8 @@ try {
   assert.equal(warned, true);
   assert.equal(await title.inputValue(), "Unsaved edit");
   assert.equal(await page.evaluate(() => !window.dispatchEvent(new Event("dashboard:check-unsaved-draft", {cancelable:true}))), true, "dashboard language reload must detect the draft");
-  await page.getByLabel("لغة المحتوى", {exact: true}).selectOption("en");
-  await page.getByLabel("لغة المحتوى", {exact: true}).selectOption("fr");
+  await page.getByRole("button", {name:'English', exact:true}).click();
+  await page.getByRole("button", {name:'Français', exact:true}).click();
   assert.equal(await title.inputValue(), "Unsaved edit", "switching content languages must preserve the draft");
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(
@@ -320,7 +335,6 @@ try {
   });
 
   // Mount every supported editor and its actual section controls without production data.
-  const snapshots = [];
   for (const locale of ["ar", "en", "tr"]) {
     await page.context().addCookies([{name:"dash-locale", value:locale, url:origin}]);
     for (const kind of CONTENT_KINDS) {
@@ -378,6 +392,10 @@ try {
   const writingTools = richPage.getByRole("toolbar");
   const writing = richPage.getByRole("textbox", {name:"المحتوى",exact:true});
   await writing.waitFor();
+  const initialRichText = documents.get("blog").values.ar.content;
+  assert.ok((await writing.innerText()).trim().length > 0, "published rich content must appear on first load without reloading saved content");
+  assert.equal(await richPage.getByRole("button", {name:"اقتراح SEO",exact:true}).isDisabled(), false, "mounting the editor must not create a false unsaved draft or disable SEO");
+  assert.equal(documents.get("blog").values.ar.content, initialRichText, "mounting must not change the stored content");
   await writing.fill("فقرة أولى للمراجعة");
   await writing.press("End"); await writing.press("Enter"); await writing.pressSequentially("عنوان فرعي واضح");
   await writingTools.getByRole("button", {name:"عنوان فرعي H2",exact:true}).click();
@@ -419,7 +437,6 @@ try {
   await richPage.screenshot({path:path.join(temp,"ar-real-rich-editor-mobile.png"),fullPage:true});
   await richPage.close();
 
-  const workflowScreens = [];
   for (const locale of ["ar","en","tr"]) for (const surface of ["seo","planner"]) {
     const view = await browser.newPage({viewport:{width:1440,height:1000}});
     await view.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
@@ -476,13 +493,58 @@ try {
   await plannerPage.screenshot({path:path.join(temp,"ar-editorial-workspace.png"),fullPage:true});
   await plannerPage.close();
 
+
+  }
+  const additions = await browser.newPage({viewport:{width:1440,height:1000}});
+  additions.on("pageerror", error => errors.push("A1 workflows: " + error.message));
+  await additions.context().addCookies([{name:"dash-locale",value:"ar",url:origin}]);
+  await additions.goto(origin+"/?kind=campaigns");
+  await additions.getByRole("button",{name:/الإنجازات والسجل/}).click();
+  await additions.getByRole("button",{name:"إضافة تحديث",exact:true}).click();
+  let modal=additions.getByRole("dialog");
+  await modal.getByLabel("العنوان",{exact:true}).fill("تحديث ميداني");
+  await modal.getByLabel("المحتوى",{exact:true}).fill("تم توزيع الخبز وفق الخطة.");
+  await modal.getByRole("button",{name:"EN",exact:true}).click();
+  await modal.getByLabel("العنوان",{exact:true}).fill("Field update");
+  await modal.getByLabel("المحتوى",{exact:true}).fill("Bread was distributed according to plan.");
+  assert.equal(updateWrites,0,"editing an update must remain a draft until save");
+  await additions.screenshot({path:path.join(temp,"ar-update-editor-desktop.png"),fullPage:true,animations:"disabled"});
+  await additions.setViewportSize({width:390,height:844});
+  assert.ok(await additions.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await additions.screenshot({path:path.join(temp,"ar-update-editor-mobile.png"),fullPage:true,animations:"disabled"});
+  await modal.getByRole("button",{name:"حفظ التحديث وكل اللغات",exact:true}).click();
+  await modal.waitFor({state:"hidden"});
+  await additions.getByRole("heading",{name:"تحديث ميداني",exact:true}).waitFor();assert.equal(updateWrites,1);
+  assert.equal(documents.get("campaigns").settings.updates[0].translations[0].title,"Field update");
+  await additions.goto(origin+"/?surface=strategy");
+  await additions.getByRole("tab",{name:"SEO الصفحات العامة",exact:true}).waitFor();
+  const seoTitle=additions.getByLabel("عنوان البحث",{exact:true}).first();await seoTitle.fill("مسودة باقية بين الأدوات");
+  await additions.getByRole("tab",{name:"المقالات والترجمات",exact:true}).click();
+  await additions.getByRole("tab",{name:"SEO الصفحات العامة",exact:true}).click();
+  assert.equal(await seoTitle.inputValue(),"مسودة باقية بين الأدوات","switching tools must preserve the draft");
+  await additions.screenshot({path:path.join(temp,"ar-content-strategy-mobile.png"),fullPage:true,animations:"disabled"});
+  await additions.goto(origin+"/?surface=ads");await additions.getByRole("button",{name:"تحميل تقرير الإعلانات",exact:true}).click();
+  await additions.getByText("Donate bread",{exact:true}).first().waitFor();assert.ok(await additions.getByText("Bread Search",{exact:false}).count());
+  await additions.screenshot({path:path.join(temp,"ar-google-ads-mobile.png"),fullPage:true,animations:"disabled"});
+  await additions.setViewportSize({width:1440,height:1000});
+  await additions.screenshot({path:path.join(temp,"ar-google-ads-desktop.png"),fullPage:true,animations:"disabled"});
+  await additions.goto(origin+"/?kind=categories");
+  await additions.getByRole("button",{name:/الرابط وسجل التغييرات/}).click();
+  await additions.getByRole("button",{name:"تعديل روابط كل اللغات",exact:true}).click();modal=additions.getByRole("dialog");
+  assert.equal(await modal.getByRole("button",{name:"حفظ الروابط المحددة",exact:true}).isDisabled(),true);
+  await additions.setViewportSize({width:390,height:844});
+  assert.ok(await additions.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await additions.screenshot({path:path.join(temp,"ar-bulk-slugs-mobile.png"),fullPage:true,animations:"disabled"});
+  await modal.getByRole("button",{name:"إلغاء",exact:true}).click();assert.equal(lastSlugCommand,null);
+  await additions.close();
+
   await writeFile(path.join(temp,"verification.json"),JSON.stringify({snapshots,workflowScreens,errors,saves,editorialWrites,scope:"Real React and Tiptap editors, 11 content kinds × 3 interface languages × desktop/mobile, plus formatting, undo/redo, uploads and save locking. Only HTTP and Next routing are mocked; no production writes."},null,2));
 
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
-      checks: 16,
-      snapshots: (snapshots.length + workflowScreens.length) * 2,
+      checks: process.env.A1_WORKFLOWS_ONLY ? 6 : 22,
+      snapshots: (snapshots.length + workflowScreens.length) * 2 + 6,
       passed: true,
       screenshots: temp,
       scope:

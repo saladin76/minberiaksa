@@ -118,7 +118,7 @@ export async function readAuditBackedBrandMessageFrameworks(): Promise<BrandMess
 function buildBrandMessageFramework(input: BrandMessageFrameworkWriteInput): BrandMessageFramework {
   return {
     id: generatedBrandMessageFrameworkId(),
-    profileId: stringField(input.profileId) ?? "brand_gozbebekleri",
+    profileId: stringField(input.profileId) ?? "brand_minber_aksa",
     name: stringField(input.name) ?? "Message framework to verify",
     type: asFrameworkType(input.type),
     locale: asLocale(input.locale),

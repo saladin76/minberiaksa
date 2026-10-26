@@ -169,6 +169,14 @@ export function pathToDashboardPermission(pathname: string): DashboardPermission
 export function userCanEnterDashboard(user: UserLike | undefined): boolean {
   return user?.role === "ADMIN" || (user?.role === "STAFF" && hasAnyDashboardRoutePermission(user));
 }
+
+/** The shared content workspace contains separately protected SEO/blog tools. */
+export function userCanOpenDashboardPath(user: UserLike | undefined, pathname: string): boolean {
+  if (["/dashboard/seo-pages", "/dashboard/editorial-planner"].includes(pathname.replace(/\/$/, "")))
+    return userHasDashboardPermission(user, "siteContent") || userHasDashboardPermission(user, "blog");
+  const key = pathToDashboardPermission(pathname);
+  return !key || userHasDashboardPermission(user, key);
+}
 export function sessionHasDashboardPermission(session: Session | null, key: DashboardPermissionKey): boolean {
   return userHasDashboardPermission(session?.user as UserLike | undefined, key);
 }
@@ -179,7 +187,7 @@ export function sanitizeDashboardPermissions(raw: unknown): DashboardPermissionK
 export function getFirstAllowedDashboardHref(user: UserLike | undefined, orderedHrefs: string[], hrefToKey: (href: string) => DashboardPermissionKey | null): string | null {
   for (const href of orderedHrefs) {
     const key = hrefToKey(href);
-    if (key && userHasDashboardPermission(user, key)) return href;
+    if (key && userCanOpenDashboardPath(user, href)) return href;
   }
   return null;
 }

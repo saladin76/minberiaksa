@@ -2,6 +2,7 @@ import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { POST as createCartDonation } from "@/app/api/cart/payment/route";
 import { isOrderType, isRecurringFrequency } from "@/lib/donations/recurring-schedule";
 import { NextRequest, NextResponse } from "next/server";
+import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
 import { prisma } from "@/lib/prisma";
 import { donationStatusWhere } from "@/lib/dashboard/donation-usd-revenue";
 import { isValidLocale } from "@/lib/locales";
@@ -219,7 +220,8 @@ export async function GET(request: NextRequest) {
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
     const statusWhere = donationStatusWhere(statusFilter);
 
-    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere].filter(
+    const providerWhere = isAdmin ? donationProviderWhere(searchParams.get("provider")) : null;
+    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere].filter(
       (w) => w != null
     );
     const where: Record<string, unknown> =

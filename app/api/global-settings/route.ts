@@ -45,8 +45,8 @@ export async function GET() {
       // Neither flag is a secret; the checkout dialogs need them to decide whether
       // to render our own card form (Albaraka signs the card fields into the MAC,
       // so with the bank's hosted page turned on we must not collect them).
-      // Albaraka runs 2D (`albaraka2DConfig`): the checkout always collects the
-      // card itself, so the bank's hosted card page (a 3D feature) is never used.
+      // Both selectable modes retain our card form. 3D adds bank verification
+      // after submission; the bank-hosted card-entry (OOS) page is not used.
       albarakaUseOOS: false,
       albarakaConfigured: isAlbarakaConfigured(albaraka),
       albarakaRecurringReady: isAlbarakaRecurringCheckoutReady(),

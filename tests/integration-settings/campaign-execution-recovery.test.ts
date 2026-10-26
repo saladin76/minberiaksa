@@ -1,3 +1,4 @@
+import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
 import { templateLocaleHeader } from "../../lib/communication/template-locale-media";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -23,7 +24,7 @@ type Progress = { cursor: string | null; total: number; sent: number; skipped: n
 type State = { id: string; name: string; status: string; channel: string; purpose: string; templateGroupId: string; audienceSegmentKey: null; scheduledAt: Date; metadata: Dict };
 type Recipient = { cursorId: string; userId: string; name: string; email: string; phone: string; locale: string; country: string };
 type Delivery = Dict & { id: string; status: string; recipientUserId: string; recipientEmail?: string; recipientPhone?: string; providerMessageId?: string; errorMessage?: string };
-type Options = { size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
+type Options = { recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
 type Result = { ok: boolean; status: string; sent: number; skipped: number; failed: number; total: number; hasMore?: boolean; blocked?: string };
 type Engine = {
   executeCampaignSend: (id: string, opts?: { mode?: string; maxBatches?: number; batchSize?: number; timeBudgetMs?: number }) => Promise<Result>;
@@ -57,6 +58,8 @@ function engineHarness(options: Options = {}) {
   const counter = isolated<{ computeFinalStatus: (total: number, sent: number, skipped: number, failed: number) => string }>("lib/communication/campaign-counter-service.ts", { "@/lib/prisma": { prisma: {} } });
   const engine = isolated<Engine>("lib/communication/campaign-send-executor.ts", {
     "./template-locale-media": { templateLocaleHeader },
+    "./smart-audience": { getSmartAudienceDefinitionForSegmentKey: async () => options.recentMarketing ? { filters: { excludeMarketedWithinDays: 7 } } : null },
+    "./recent-marketing-filter": { recentMarketingDeliveryWhere },
     "@/lib/prisma": { prisma: {
       communicationCampaignDeferredRecipient: {
         count: async () => { if (options.failQueueCount) throw new Error("QUEUE_READ_FAILED"); return queue.length; },
@@ -65,7 +68,7 @@ function engineHarness(options: Options = {}) {
         updateMany: async () => ({ count: 0 }),
         deleteMany: async () => { if (options.failQueueDelete) throw new Error("QUEUE_DELETE_FAILED"); const count = queue.length; queue = []; return { count }; },
       },
-      communicationDelivery: { findMany: async () => clone([...deliveries].reverse()) },
+      communicationDelivery: { findMany: async () => clone([...deliveries].reverse()), findFirst: async () => options.recentMarketing ? { id: "another-campaign-send" } : null },
     } },
     "@/lib/audit-log": { writeAuditLog: async () => {} },
     "./campaign-service": { getCampaign: async () => clone(campaign) },
@@ -253,3 +256,9 @@ for (const code of ["DELIVERY_OUTCOME_UNCERTAIN", "SEND_THREW  socket", "NETWORK
     assert.equal(result.code, "DELIVERY_OUTCOME_UNCERTAIN");
   });
 }
+
+test("live marketing exclusion skips contacted recipients before any provider send and retains an audit row", async () => {
+  const h = engineHarness({ recentMarketing: true }); const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(h.state().calls, 0); assert.equal(result.skipped, 2);
+  assert.ok(h.deliveries.every(row => row.status === "SKIPPED" && row.errorMessage === "RECENT_MARKETING_CONTACT"));
+});

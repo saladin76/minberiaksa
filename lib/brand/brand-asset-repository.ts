@@ -128,7 +128,7 @@ export async function readAuditBackedBrandAssets(): Promise<BrandAsset[]> {
 function buildBrandAsset(input: BrandAssetWriteInput, actor?: BrandAssetActor | null): BrandAsset {
   return {
     id: generatedBrandAssetId(),
-    profileId: stringField(input.profileId) ?? "brand_gozbebekleri",
+    profileId: stringField(input.profileId) ?? "brand_minber_aksa",
     title: stringField(input.title) ?? "Brand asset to verify",
     type: asAssetType(input.type),
     format: asAssetFormat(input.format),

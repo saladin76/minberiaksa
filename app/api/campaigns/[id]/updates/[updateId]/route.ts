@@ -18,11 +18,11 @@ type ParamsPromise = { params: Promise<{ id: string; updateId: string }> };
 // ✅ GET - Fetch specific update with translations
 export async function GET(request: NextRequest, { params }: ParamsPromise) {
   try {
-    const { updateId } = await params;
+    const { id, updateId } = await params;
     const locale = request.headers.get("x-locale") || "ar";
 
     const update = await prisma.update.findUnique({
-      where: { id: updateId },
+      where: { id: updateId, campaignId: id },
       select: {
         id: true,
         title: true,        // Arabic default
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest, { params }: ParamsPromise) {
 // ✅ PATCH - Update an update with translations (admin only)
 export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
   try {
-    const { updateId } = await params;
+    const { id, updateId } = await params;
     // ✅ STEP 1: Authentication check
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "campaigns");
@@ -92,7 +92,7 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
 
     // ✅ STEP 2: Validate update exists
     const existingUpdate = await prisma.update.findUnique({
-      where: { id: updateId },
+      where: { id: updateId, campaignId: id },
       select: { id: true, title: true, campaignId: true },
     });
 
@@ -137,7 +137,7 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
     // With 7 locales that is ~9 sequential round trips; Prisma does the same
     // work atomically in one, and `select` hands back the finished row.
     const fullUpdate = await prisma.update.update({
-      where: { id: updateId },
+      where: { id: updateId, campaignId: id },
       data: {
         ...updateData,
         ...(translationUpdates.length
@@ -194,7 +194,7 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
 // ✅ DELETE - Delete update and all its translations (admin only)
 export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
   try {
-    const { updateId } = await params;
+    const { id, updateId } = await params;
     // ✅ STEP 1: Authentication check
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "campaigns");
@@ -205,7 +205,7 @@ export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
     // hands back. A missing row now surfaces as P2025 and is mapped to a 404
     // below. UpdateTranslation rows cascade (onDelete: Cascade).
     const existingUpdate = await prisma.update.delete({
-      where: { id: updateId },
+      where: { id: updateId, campaignId: id },
       select: { id: true, campaignId: true, title: true },
     });
 

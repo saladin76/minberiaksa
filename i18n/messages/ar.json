@@ -1734,7 +1734,13 @@
     "bankTransferUploadNote": "بعد إتمام التحويل سترفع الإيصال أو إشعار التحويل في الصفحة التالية، ويُعتمد تبرعك بعد أن يطابقه فريقنا المالي مع الحساب.",
     "ctaBankContinue": "متابعة  رفع إيصال التحويل",
     "itemsUnavailable": "لا يمكن إتمام التبرع لهذه البنود: {items}. احذفها من السلة أو اختر مشروعًا محددًا، ثم أعد المحاولة.",
-    "recurringCardUnavailable": "التبرعات المتكررة بالبطاقة غير متاحة حاليًا. يرجى المحاولة لاحقًا."
+    "recurringCardUnavailable": "التبرعات المتكررة بالبطاقة غير متاحة حاليًا. يرجى المحاولة لاحقًا.",
+    "verificationChoice": "كيف تفضّل الدفع؟",
+    "verificationDirect": "دفع مباشر",
+    "verificationDirectHelp": "بدون رمز تحقق",
+    "verificationSecure": "تأكيد البنك",
+    "verificationSecureHelp": "قد يُطلب رمز تحقق",
+    "verificationRequired": "اختر إحدى طريقتي الدفع للمتابعة."
   },
   "certificates": {
     "certNoLabel": "رقم الشهادة",
