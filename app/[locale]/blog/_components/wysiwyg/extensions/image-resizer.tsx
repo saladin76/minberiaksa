@@ -3,7 +3,7 @@ import Moveable from "react-moveable";
 
 export const ImageResizer = ({ editor }: { editor: Editor }) => {
   const updateMediaSize = () => {
-    const imageInfo = document.querySelector(
+    const imageInfo = editor.view.dom.querySelector(
       ".ProseMirror-selectednode",
     ) as HTMLImageElement;
     if (imageInfo) {
@@ -17,7 +17,7 @@ export const ImageResizer = ({ editor }: { editor: Editor }) => {
   return (
     <>
       <Moveable
-        target={document.querySelector(".ProseMirror-selectednode") as HTMLElement | null}
+        target={editor.view.dom.querySelector(".ProseMirror-selectednode") as HTMLElement | null}
         container={null}
         origin={false}
         /* Resize event edges */

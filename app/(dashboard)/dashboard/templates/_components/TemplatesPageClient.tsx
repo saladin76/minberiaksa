@@ -28,14 +28,14 @@ export default function TemplatesPageClient() {
           </CardHeader>
           <CardContent className="pt-0">
             <Tabs defaultValue="email" dir={dashDir()}>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="email" className="gap-2">
-                  <Mail className="w-4 h-4" /> {dt(" البريد")}</TabsTrigger>
-                <TabsTrigger value="whatsapp" className="gap-2">
-                  <MessageCircle className="w-4 h-4" /> {dt(" واتساب")}</TabsTrigger>
-                <TabsTrigger value="sms" className="gap-2">
-                  <MessageSquare className="w-4 h-4" /> {dt(" الرسائل النصية")}</TabsTrigger>
-                <TabsTrigger value="triggers" className="gap-2">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4">
+                <TabsTrigger value="email" className="gap-2 whitespace-normal py-3 text-xs sm:text-sm">
+                  <Mail className="w-4 h-4" /> {dt("قوالب البريد")}</TabsTrigger>
+                <TabsTrigger value="whatsapp" className="gap-2 whitespace-normal py-3 text-xs sm:text-sm">
+                  <MessageCircle className="w-4 h-4" /> {dt("قوالب واتساب")}</TabsTrigger>
+                <TabsTrigger value="sms" className="gap-2 whitespace-normal py-3 text-xs sm:text-sm">
+                  <MessageSquare className="w-4 h-4" /> {dt("قوالب الرسائل النصية")}</TabsTrigger>
+                <TabsTrigger value="triggers" className="gap-2 whitespace-normal py-3 text-xs sm:text-sm">
                   <Zap className="w-4 h-4" /> {dt(" الأحداث التلقائية")}</TabsTrigger>
               </TabsList>
               <TabsContent value="email" className="mt-6">

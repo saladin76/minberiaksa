@@ -92,8 +92,8 @@ function labelForSegment(segment: string): string {
  * Builds a full ancestor trail for the current pathname:
  *   لوحة التحكم › التواصل › الجمهور › تفاصيل
  * The group name is included as a non-link (groups have no landing page), the matched nav
- * item is linked, and any deeper segments are linked to their own prefix so the user can
- * step back up one level at a time.
+ * item is linked. Deeper segments are labels: an intermediate route directory need not
+ * have a page (for example /campaigns/edit or /content/blog).
  *
  * `visibleHrefs` should be the hrefs the current user is actually permitted to see, so the
  * trail never links somewhere the permission guard will bounce them out of.
@@ -103,6 +103,18 @@ export function buildBreadcrumbs(pathname: string, visibleHrefs?: readonly strin
   if (pathname === ROOT_HREF) return [root];
 
   const allowed = visibleHrefs ? new Set(visibleHrefs) : null;
+
+  // Unified editors have a technical /content/{kind}/{id} URL; their actual parent
+  // is the corresponding collection in the sidebar, not /content or /content/{kind}.
+  const editor = pathname.match(/^\/dashboard\/content\/([^/]+)\/[^/]+\/?$/);
+  if (editor) {
+    const ownerHref = `/dashboard/${editor[1]}`;
+    for (const group of DASHBOARD_NAV_GROUPS) {
+      const owner = group.items.find((item) => item.href === ownerHref && (!allowed || allowed.has(item.href)));
+      if (owner) return [root, { label: group.group }, { label: owner.title, href: owner.href }, { label: dt("تعديل") }];
+    }
+    return [root, { label: dt("تعديل") }];
+  }
 
   // Deepest nav item that prefixes this path.
   let match: { group: string; title: string; href: string } | null = null;
@@ -125,21 +137,13 @@ export function buildBreadcrumbs(pathname: string, visibleHrefs?: readonly strin
     crumbs.push({ label: match.title, href: isLeaf ? undefined : match.href });
 
     const rest = pathname.slice(match.href.length).split("/").filter(Boolean);
-    rest.forEach((segment, i) => {
-      const href = `${match!.href}/${rest.slice(0, i + 1).join("/")}`;
-      const last = i === rest.length - 1;
-      crumbs.push({ label: labelForSegment(segment), href: last ? undefined : href });
-    });
+    rest.forEach((segment) => crumbs.push({ label: labelForSegment(segment) }));
     return crumbs;
   }
 
   // No nav item owns this path (e.g. the orphaned marketing-intelligence/* and brand/* trees).
-  // Fall back to labelling every segment so the trail is still Arabic and still navigable.
+  // Label unknown ancestors without inventing links to pages that may not exist.
   const segments = pathname.split("/").filter(Boolean).slice(1); // drop "dashboard"
-  segments.forEach((segment, i) => {
-    const href = `/dashboard/${segments.slice(0, i + 1).join("/")}`;
-    const last = i === segments.length - 1;
-    crumbs.push({ label: labelForSegment(segment), href: last ? undefined : href });
-  });
+  segments.forEach((segment) => crumbs.push({ label: labelForSegment(segment) }));
   return crumbs;
 }

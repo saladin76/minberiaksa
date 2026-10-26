@@ -100,7 +100,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       // has been removed along with the whole التشغيل section. What remains below is the part of
       // التواصل that is not operations: the template/trigger editor and the send log.
       // Previously unreachable (no nav entry, no inbound link) despite being fully built with
-      // working APIs. Titled "قوالب البريد والمحفّزات" rather than "القوالب" to distinguish it
+      // working APIs. Titled "القوالب والمحفّزات" rather than "القوالب" to distinguish it
       // from the communication-campaign templates directly above  it is a different page that
       // owns the email/WhatsApp templates AND the message triggers, including the
       // DONATION_LAPSED reminder.
@@ -111,7 +111,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "messages", get title() { return dt("واتساب"); }, href: "/dashboard/communication/whatsapp", icon: "messageCircle", keywords: ["whatsapp", "واتساب", "meta"] },
       // Replies were counted by the sidebar badge long before there was a screen to open.
       { key: "messages", get title() { return dt("الرسائل النصية"); }, href: "/dashboard/communication/sms", icon: "messageSquare", keywords: ["sms", "نصية", "netgsm", "brevo"] },
-      { key: "templates", get title() { return dt("قوالب البريد والمحفّزات"); }, href: "/dashboard/templates", icon: "mail", keywords: ["email", "triggers", "محفزات"] },
+      { key: "templates", get title() { return dt("القوالب والمحفّزات"); }, href: "/dashboard/templates", icon: "mail", keywords: ["email", "whatsapp", "sms", "templates", "triggers", "قوالب", "محفزات"] },
       // Was the second tab of /dashboard/messages, behind a page that defaults to the outbound
       // log  so visitor mail had no sidebar entry and no command-palette hit. It is inbound
       // human correspondence, not send telemetry, and belongs beside the channels, not inside them.
@@ -200,7 +200,7 @@ export const DASHBOARD_PERMISSION_ROWS: {
   // shown in the nav, but absent here  the same P3-2 shape: valid, checked, and ungrantable.
   { key: "siteContent", get group() { return dt("محتوى الموقع"); }, get title() { return dt("محتوى الموقع (قصص، فيديو، تقارير، أسئلة…)"); } },
   // Group was "التشغيل / التواصل"; التشغيل no longer exists, so these two are plain التواصل.
-  { key: "templates", get group() { return dt("التواصل"); }, get title() { return dt("قوالب البريد والمحفّزات"); } },
+  { key: "templates", get group() { return dt("التواصل"); }, get title() { return dt("القوالب والمحفّزات"); } },
   // The outbound send log page is gone; `messages` now grants the inbox and the per-channel
   // communication pages, which all check the same key.
   { key: "badges", get group() { return dt("التواصل"); }, get title() { return dt("تصنيفات المتبرعين"); } },

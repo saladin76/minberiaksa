@@ -747,7 +747,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                           <td className="px-3 py-2.5 text-end">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="outline" className="gap-1 rounded-full">
+                                <Button size="sm" variant="outline" aria-label={dt("الإجراءات")} className="gap-1 rounded-full">
                                   <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>

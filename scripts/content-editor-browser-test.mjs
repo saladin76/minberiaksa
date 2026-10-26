@@ -15,11 +15,12 @@ const en = require("../lib/dashboard/i18n/catalog/en.json"), tr = require("../li
 const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || text);
 const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
 let editorialWrites = 0;
+let lastEditorialCommand = null;
 const seoFixture = {key:"home",revision:"seo-1",overrides:{},defaults:{ar:{metaTitle:"الصفحة الرئيسية",metaDescription:"وصف افتراضي"}}};
 let css = (
   await postcss([
-    tailwindcss({ ...require("../tailwind.config.ts").default, content: ["components/dashboard/content-editor/*.tsx", "app/(dashboard)/dashboard/campaigns/_components/*.tsx", "components/ui/*.tsx"] }),
-  ]).process("@tailwind base; @tailwind components; @tailwind utilities;", {
+    tailwindcss({ ...require("../tailwind.config.ts").default, content: ["app/[locale]/blog/_components/wysiwyg/**/*.tsx", "components/dashboard/content-editor/*.tsx", "app/(dashboard)/dashboard/campaigns/_components/*.tsx", "components/ui/*.tsx"] }),
+  ]).process("@tailwind base; @tailwind components; @tailwind utilities;\n" + await readFile("styles/prosemirror.css", "utf8"), {
     from: undefined,
   })
 ).css;
@@ -54,6 +55,7 @@ let stored = documents.get("categories"),
   failedSave = false,
   saves = 0,
   delay = null;
+let uploadPause = null, savePause = null;
 const temp = path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS || ".artifacts/content-editor");
 await mkdir(temp, { recursive: true });
 const bundle = await build({
@@ -63,6 +65,7 @@ const bundle = await build({
     loader: "tsx",
   },
   bundle: true,
+  loader: { ".css": "empty" },
   platform: "browser",
   format: "iife",
   write: false,
@@ -73,14 +76,6 @@ const bundle = await build({
     {
       name: "next-standalone",
       setup(b) {
-        b.onResolve({ filter: /wysiwyg-editor$/ }, () => ({
-          path: "rich-fixture",
-          namespace: "fixture-rich",
-        }));
-        b.onLoad({ filter: /.*/, namespace: "fixture-rich" }, () => ({
-          contents: "export default function Rich(){return null;}",
-          loader: "js",
-        }));
         b.onResolve({ filter: /^next-auth\/react$/ }, () => ({ path: "session", namespace: "fixture-session" }));
         b.onLoad({ filter: /.*/, namespace: "fixture-session" }, () => ({ contents: "export function useSession(){return {data:null,status:'unauthenticated'}}", loader: "js" }));
         b.onResolve({ filter: /^next\/(link|dynamic|image|navigation)$/ }, (args) => ({
@@ -95,7 +90,7 @@ const bundle = await build({
               ? 'import React from "react"; export default function Image({src,alt,...props}){return React.createElement("img",{src,alt,...props});}'
               : args.path === "next/link"
               ? 'import React from "react"; export default function Link(props){return React.createElement("a",props,props.children);}'
-              : "export default function dynamic(){return function RichFixture(){return null;};}",
+              : 'import React from "react"; export default function dynamic(loader){const Component=React.lazy(async()=>{const mod=await loader();return typeof mod === "function" ? {default:mod} : mod;});return function Dynamic(props){return React.createElement(React.Suspense,{fallback:React.createElement("p",null,"Loading editor")},React.createElement(Component,props));};}',
           resolveDir: process.cwd(),
           loader: "js",
         }));
@@ -103,19 +98,33 @@ const bundle = await build({
     },
   ],
 });
-const server = createServer((req, res) => {
-  if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
+const server = createServer(async (req, res) => {
+  if (req.url === "/api/upload") {
+    req.resume();
+    if (uploadPause) await uploadPause;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({url: origin + "/fixture-image.svg"}));
+  } else if (req.url === "/fixture-image.svg") {
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.end('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#164e63"/></svg>');
+  } else if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
   } else if (req.url?.startsWith("/api/admin/page-seo/")) {
     res.setHeader("Content-Type","application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
       if (req.method === "POST") res.end(JSON.stringify({values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}}));
       else res.end(JSON.stringify(seoFixture));
     });
+  } else if (req.url?.startsWith("/api/admin/editorial-jobs/articles")) {
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({items:[{id,title:"مقال يمكن اختياره بالعنوان"}],hasMore:false}));
   } else if (req.url?.startsWith("/api/admin/editorial-jobs")) {
     res.setHeader("Content-Type","application/json");
-    if (req.method !== "GET") editorialWrites++;
     const detail = req.url.split("?")[0].endsWith("/"+editorialFixture.id);
-    res.end(JSON.stringify(detail ? editorialFixture : {jobs:[editorialFixture],nextCursor:null,counts:[{status:"REVIEW",_count:1}],settings:{weeklyEnabled:true,market:"",configured:true}}));
+    if (req.method !== "GET") {
+      editorialWrites++;
+      let body = ""; req.on("data",chunk => body += chunk);
+      req.on("end",() => {lastEditorialCommand=JSON.parse(body);res.end(JSON.stringify(detail ? {contentId:id} : req.method === "PUT" ? {...lastEditorialCommand,configured:true} : {created:true}));});
+    } else res.end(JSON.stringify(detail ? editorialFixture : {jobs:[editorialFixture],nextCursor:null,counts:[{status:"REVIEW",_count:1}],settings:{weeklyEnabled:true,market:"",configured:true}}));
   } else if (req.url?.startsWith("/api/super-categories/content-options")) {
     res.setHeader("Content-Type","application/json");
     res.end(JSON.stringify({CAMPAIGN:[],POST:[],VIDEO:[],PLAYLIST:[],COURSE:[],REPORT:[],BOOKLET:[]}));
@@ -168,6 +177,7 @@ const server = createServer((req, res) => {
         return;
       }
       if (req.method === "PUT") {
+        if (savePause) await savePause;
         saves++;
         if (failedSave) {
           res.statusCode = 500;
@@ -196,7 +206,7 @@ const server = createServer((req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
-let browser, page;
+let browser, page, richPage, plannerPage;
 const errors = [];
 try {
   browser = await chromium.launch({
@@ -213,7 +223,7 @@ try {
   await page
     .getByRole("heading", { name: "اختبار التصنيف", exact: true, level: 1 })
     .waitFor();
-  await page.getByRole("button", { name: /Français/ }).click();
+  await page.getByLabel("لغة المحتوى", {exact: true}).selectOption("fr");
   const title = page.getByLabel("اسم التصنيف", { exact: true });
   await title.waitFor();
   assert.equal(await title.inputValue(), "");
@@ -287,8 +297,8 @@ try {
   assert.equal(warned, true);
   assert.equal(await title.inputValue(), "Unsaved edit");
   assert.equal(await page.evaluate(() => !window.dispatchEvent(new Event("dashboard:check-unsaved-draft", {cancelable:true}))), true, "dashboard language reload must detect the draft");
-  await page.getByRole("button", {name: /English/}).click();
-  await page.getByRole("button", {name: /Français/}).click();
+  await page.getByLabel("لغة المحتوى", {exact: true}).selectOption("en");
+  await page.getByLabel("لغة المحتوى", {exact: true}).selectOption("fr");
   assert.equal(await title.inputValue(), "Unsaved edit", "switching content languages must preserve the draft");
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(
@@ -320,7 +330,12 @@ try {
       try {
         await view.goto(origin + "/?kind=" + kind);
         await view.getByRole("heading", {level:1}).waitFor();
-        if (kind === "videos") { assert.equal(await view.locator("video").count(),1,"MP4 must use the native video player"); assert.equal(await view.locator("iframe").count(),0); }
+        if (kind === "videos") {
+          await view.getByRole("button",{name:ui(locale,"معاينة الصفحة"),exact:true}).click();
+          await view.getByRole("dialog").locator("video").waitFor();
+          assert.equal(await view.getByRole("dialog").locator("iframe").count(),0,"MP4 preview must use the native video player");
+          await view.getByRole("dialog").getByRole("button",{name:ui(locale,"إغلاق"),exact:true}).click();
+        }
         const nav = view.locator("nav:has(button[aria-current]) > button");
         for (let i=0; i<EDITOR_SECTIONS[kind].length; i++) {
           await nav.nth(i).click();
@@ -346,6 +361,7 @@ try {
         await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
         await view.setViewportSize({width:390,height:844});
         assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), prefix + " mobile layout overflows");
+        assert.ok(await nav.evaluateAll(buttons => buttons.every(button => {const box=button.getBoundingClientRect();return box.left>=0 && box.right<=innerWidth+1;})), prefix + " editor sections must remain visible without a hidden horizontal menu");
         await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
         snapshots.push(prefix);
       } finally {
@@ -354,6 +370,54 @@ try {
       }
     }
   }
+
+  richPage = await browser.newPage({viewport:{width:1366,height:1000}});
+  richPage.on("pageerror", error => errors.push("rich editor: " + error.message));
+  richPage.on("console", message => { if (/Duplicate extension names/.test(message.text())) errors.push(message.text()); });
+  await richPage.goto(origin + "/?kind=blog");
+  const writingTools = richPage.getByRole("toolbar");
+  const writing = richPage.getByRole("textbox", {name:"المحتوى",exact:true});
+  await writing.waitFor();
+  await writing.fill("فقرة أولى للمراجعة");
+  await writing.press("End"); await writing.press("Enter"); await writing.pressSequentially("عنوان فرعي واضح");
+  await writingTools.getByRole("button", {name:"عنوان فرعي H2",exact:true}).click();
+  assert.equal(await writing.locator("h2").innerText(), "عنوان فرعي واضح");
+  await writing.press("End"); await writing.press("Enter");
+  await writingTools.getByRole("button", {name:"فقرة",exact:true}).click();
+  await writing.pressSequentially("عنصر قابل للتنسيق");
+  await writingTools.getByRole("button", {name:"قائمة نقطية",exact:true}).click();
+  await writing.press("Home"); await writing.press("Shift+End");
+  await writingTools.getByRole("button", {name:"عريض",exact:true}).click();
+  assert.equal(await writing.locator("ul li strong").innerText(), "عنصر قابل للتنسيق");
+  await writingTools.getByRole("button", {name:"تراجع",exact:true}).click();
+  assert.equal(await writing.locator("strong").count(),0);
+  await writingTools.getByRole("button", {name:"إعادة",exact:true}).click();
+  assert.equal(await writing.locator("strong").count(),1);
+  await writing.press("ArrowRight"); await writing.press("End");
+  let releaseUpload;
+  uploadPause = new Promise(resolve => {releaseUpload=resolve;});
+  await richPage.getByRole("toolbar").locator('input[type="file"]').setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ZkAAAAASUVORK5CYII=","base64")});
+  await richPage.getByRole("button", {name:"جار رفع الصور…",exact:true}).waitFor();
+  assert.equal(await richPage.getByRole("button", {name:"جار رفع الصور…",exact:true}).isDisabled(), true);
+  releaseUpload(); uploadPause = null;
+  await writing.locator("img").waitFor();
+  await richPage.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent.includes("حفظ التغييرات") && !button.disabled));
+  let releaseSave;
+  savePause = new Promise(resolve => {releaseSave=resolve;});
+  await richPage.getByRole("button", {name:"حفظ التغييرات",exact:true}).click();
+  await richPage.waitForFunction(() => document.querySelector('[role="textbox"][aria-label="المحتوى"]')?.getAttribute("contenteditable") === "false");
+  releaseSave(); savePause = null;
+  await richPage.getByRole("status").filter({hasText:"تم الحفظ والتحقق"}).waitFor();
+  await richPage.waitForFunction(() => document.querySelector('[role="textbox"][aria-label="المحتوى"]')?.getAttribute("contenteditable") === "true");
+  const savedRich = documents.get("blog").values.ar.content;
+  assert.match(savedRich, /"heading"/); assert.match(savedRich, /"bulletList"/); assert.match(savedRich, /"bold"/); assert.match(savedRich, /"image"/);
+  await richPage.evaluate(() => window.scrollTo(0,0));
+  await richPage.screenshot({path:path.join(temp,"ar-real-rich-editor-desktop.png"),fullPage:true});
+  await richPage.setViewportSize({width:390,height:844});
+  assert.ok(await richPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), "real rich editor must fit mobile");
+  await richPage.evaluate(() => window.scrollTo(0,0));
+  await richPage.screenshot({path:path.join(temp,"ar-real-rich-editor-mobile.png"),fullPage:true});
+  await richPage.close();
 
   const workflowScreens = [];
   for (const locale of ["ar","en","tr"]) for (const surface of ["seo","planner"]) {
@@ -393,7 +457,26 @@ try {
     }
   }
 
-  await writeFile(path.join(temp,"verification.json"),JSON.stringify({snapshots,workflowScreens,errors,saves,editorialWrites,scope:"Real React editor, 11 content kinds × 3 interface languages × desktop/mobile. HTTP and Next routing/dynamic rich-editor integrations mocked; no production writes."},null,2));
+  plannerPage = await browser.newPage({viewport:{width:1366,height:1000}});
+  plannerPage.on("pageerror",error => errors.push("planner actions: " + error.message));
+  await plannerPage.goto(origin+"/?surface=planner");
+  await plannerPage.getByRole("tab",{name:"تجهيز محتوى",exact:true}).click();
+  const articlePicker = plannerPage.getByLabel("المقال المطلوب تحسينه",{exact:true});
+  await articlePicker.locator('option[value="'+id+'"]').waitFor({state:"attached"});
+  await articlePicker.selectOption(id);
+  await plannerPage.getByRole("button",{name:"تجهيز تحسين المقال",exact:true}).click();
+  await plannerPage.getByRole("status").filter({hasText:"تم تنفيذ الطلب"}).waitFor();
+  assert.deepEqual(lastEditorialCommand,{action:"improve",id});
+  await plannerPage.getByRole("tab",{name:"المهام والمراجعة",exact:true}).click();
+  await plannerPage.getByRole("button",{name:"فتح المراجعة",exact:true}).click();
+  await plannerPage.getByRole("dialog").waitFor();
+  await plannerPage.getByRole("button",{name:"اعتماد المراجعة وحفظ المحتوى",exact:true}).click();
+  await plannerPage.getByRole("dialog").waitFor({state:"hidden"});
+  assert.equal(await plannerPage.getByRole("link",{name:"فتح المقال المحفوظ",exact:true}).getAttribute("href"),"/dashboard/content/blog/"+id);
+  await plannerPage.screenshot({path:path.join(temp,"ar-editorial-workspace.png"),fullPage:true});
+  await plannerPage.close();
+
+  await writeFile(path.join(temp,"verification.json"),JSON.stringify({snapshots,workflowScreens,errors,saves,editorialWrites,scope:"Real React and Tiptap editors, 11 content kinds × 3 interface languages × desktop/mobile, plus formatting, undo/redo, uploads and save locking. Only HTTP and Next routing are mocked; no production writes."},null,2));
 
   assert.deepEqual(errors, []);
   console.log(
@@ -403,10 +486,20 @@ try {
       passed: true,
       screenshots: temp,
       scope:
-        "real React editor; HTTP, Next routing and dynamic rich editor mocked; no production writes",
+        "real React and Tiptap editors; only HTTP and Next routing mocked; no production writes",
     }),
   );
 } finally {
+  if (richPage && !richPage.isClosed()) {
+    await richPage.screenshot({path:path.join(temp,"rich-editor-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+    const state = await richPage.evaluate(() => ({editors:[...document.querySelectorAll('.ProseMirror,[role="textbox"]')].map(node => ({role:node.getAttribute('role'),label:node.getAttribute('aria-label'),editable:node.getAttribute('contenteditable')})),statuses:[...document.querySelectorAll('[role="alert"],[role="status"]')].map(node => node.textContent),buttons:[...document.querySelectorAll('button')].slice(0,8).map(node => ({label:node.textContent,disabled:node.disabled})),inert:document.querySelectorAll('[inert]').length})).catch(()=>null);
+    await writeFile(path.join(temp,"rich-editor-last-state.json"),JSON.stringify({state,errors,saves},null,2));
+  }
+  if (plannerPage && !plannerPage.isClosed()) {
+    await plannerPage.screenshot({path:path.join(temp,"planner-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+    const state = await plannerPage.evaluate(() => ({selectedTabs:[...document.querySelectorAll('[role="tab"][aria-selected="true"]')].map(node=>node.textContent),selectors:[...document.querySelectorAll('select')].map(node=>({label:node.getAttribute('aria-label'),disabled:node.disabled,options:[...node.options].map(option=>({label:option.text,value:option.value}))})),alerts:[...document.querySelectorAll('[role="alert"],[role="status"]')].map(node=>node.textContent)})).catch(()=>null);
+    await writeFile(path.join(temp,"planner-last-state.json"),JSON.stringify({state,errors},null,2));
+  }
   if (page) await page.screenshot({path:path.join(temp,"draft-flow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));

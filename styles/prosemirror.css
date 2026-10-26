@@ -1,6 +1,24 @@
 .ProseMirror {
     @apply p-12 px-8 sm:px-12;
   }
+
+  .content-writing-surface .ProseMirror {
+    min-height: 22rem;
+    padding: 1.5rem;
+    font-size: 1rem;
+    line-height: 2;
+    overflow-wrap: anywhere;
+  }
+  .content-writing-surface .ProseMirror:focus { outline: none; }
+  .content-writing-surface:focus-within { box-shadow: 0 0 0 2px rgb(14 116 144 / .15); }
+  .content-writing-surface .ProseMirror ul { list-style: disc; padding-inline-start: 1.5rem; }
+  .content-writing-surface .ProseMirror ol { list-style: decimal; padding-inline-start: 1.5rem; }
+  .content-writing-surface .ProseMirror li { margin-block: .4rem; line-height: 1.9; }
+  .content-writing-surface .ProseMirror h1 { font-size: 1.9rem; font-weight: 700; margin-block: 1rem; }
+  .content-writing-surface .ProseMirror h2 { font-size: 1.55rem; font-weight: 700; margin-block: 1rem; }
+  .content-writing-surface .ProseMirror h3 { font-size: 1.25rem; font-weight: 700; margin-block: .75rem; }
+  .content-writing-surface .ProseMirror p { margin-block: .7rem; }
+  @media (max-width: 640px) { .content-writing-surface .ProseMirror { padding: 1rem; } }
   
   .ProseMirror .is-editor-empty:first-child::before {
     content: attr(data-placeholder);

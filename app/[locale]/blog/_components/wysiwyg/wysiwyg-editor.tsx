@@ -18,6 +18,7 @@ import { defaultExtensions } from "./extensions";
 import { ImageResizer } from "./extensions/image-resizer";
 import { defaultEditorProps } from "./props";
 import { EditorToolbar } from "./toolbar";
+import { dt } from "@/lib/dashboard/i18n";
 
 export default function WysiwygEditor({
   isEditable = true,
@@ -28,6 +29,8 @@ export default function WysiwygEditor({
   onUpdate = () => {},
   extensions = [],
   editorProps = {},
+  ariaLabel,
+  onUploadingChange,
 }: {
   isEditable?: boolean;
   className?: string;
@@ -37,17 +40,21 @@ export default function WysiwygEditor({
   onUpdate?: (editor?: EditorClass) => void | Promise<void>;
   onDebouncedUpdate?: (editor?: EditorClass) => void | Promise<void>;
   debounceDuration?: number;
+  ariaLabel?: string;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const debouncedUpdates = useDebouncedCallback(async ({ editor }) => {
     onDebouncedUpdate(editor);
   }, debounceDuration);
 
   const editor = useEditor({
+    immediatelyRender: false,
     editable: isEditable,
     extensions: [...defaultExtensions, ...extensions],
     editorProps: {
       ...defaultEditorProps,
       ...editorProps,
+      attributes: { ...defaultEditorProps.attributes, ...editorProps.attributes, role: "textbox", "aria-multiline": "true", "aria-label": ariaLabel || dt("محرر المحتوى") },
     },
     onUpdate: (e) => {
       onUpdate(e.editor);
@@ -60,6 +67,8 @@ export default function WysiwygEditor({
   // every keystroke (parseEditorContent(state)), so a naïve `setContent` would
   // reset selection to the end after every edit.
   const hydratedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => { editor?.setEditable(isEditable); }, [editor, isEditable]);
 
   useEffect(() => {
     if (!editor) return;
@@ -95,11 +104,15 @@ export default function WysiwygEditor({
   }, [editor, defaultValue]);
 
   return (
-    <div className={isEditable ? className : ""}>
-      {isEditable && editor && <EditorToolbar editor={editor} />}
-      {editor && <EditorBubbleMenu editor={editor} />}
-      {editor?.isActive("image") && <ImageResizer editor={editor} />}
+    <div className={isEditable ? `${className} content-writing-surface overflow-hidden` : ""}>
+      {isEditable && editor && <EditorToolbar editor={editor} onUploadingChange={onUploadingChange} />}
+      {/* The selection plugin moves its DOM into a floating layer. Keep its
+          React host mounted while save locks editing; unmounting the moved node
+          directly causes removeChild errors and clears the whole editor. */}
+      {editor && <div><EditorBubbleMenu editor={editor} /></div>}
+      {isEditable && editor?.isActive("image") && <ImageResizer editor={editor} />}
       <EditorContent editor={editor} />
+      {isEditable && editor ? <p className="border-t bg-slate-50 px-4 py-2 text-xs text-slate-500">{dt("كلمات: {0}", [editor.getText().trim().split(/\s+/).filter(Boolean).length])}</p> : null}
     </div>
   );
 }
