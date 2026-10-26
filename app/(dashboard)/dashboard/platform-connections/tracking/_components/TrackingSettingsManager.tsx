@@ -124,12 +124,12 @@ function Toggle({ label, checked, onChange, disabled = false }: { label: string;
 
 function Status({ label, status }: { label: string; status: string }) {
   const cls = status === "مُعدّ" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : status === "غير مفعّل" ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700";
-  return <Card><CardContent className="p-4"><p className="mb-2 text-xs text-slate-500">{label}</p><span className={`rounded-full border px-2 py-1 text-xs ${cls}`}>{status}</span></CardContent></Card>;
+  return <Card><CardContent className="p-4"><p className="mb-2 text-xs text-slate-500">{label}</p><span className={`rounded-full border px-2 py-1 text-xs ${cls}`}>{dt(status)}</span></CardContent></Card>;
 }
 
 function DiagnosticBadge({ state, label }: { state: string; label: string }) {
   const cls = state === "ok" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : state === "not_required" || state === "disabled" ? "border-slate-200 bg-slate-50 text-slate-600" : "border-amber-200 bg-amber-50 text-amber-700";
-  return <span className={`rounded-full border px-2 py-0.5 ${cls}`}>{label}</span>;
+  return <span className={`rounded-full border px-2 py-0.5 ${cls}`}>{dt(label)}</span>;
 }
 
 export default function TrackingSettingsManager({ canManage, canTest }: { canManage: boolean; canTest: boolean }) {
@@ -155,11 +155,11 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   const status = useMemo(() => {
     const stored = savedSettings ?? defaults;
     return ({
-    meta: !stored.facebookPixelId && !stored.facebookAccessTokenPresent ? "غير مفعّل" : stored.facebookPixelId && stored.facebookAccessTokenPresent ? "مُعدّ" : dt("إعدادات ناقصة"),
-    ga4: !stored.gaMeasurementId && !stored.gaApiSecretPresent ? "غير مفعّل" : stored.gaMeasurementId && stored.gaApiSecretPresent ? "مُعدّ" : dt("إعدادات ناقصة"),
-    google_ads: !stored.googleAdsConversionId && !stored.googleAdsConversionLabel ? "غير مفعّل" : stored.googleAdsConversionId && stored.googleAdsConversionLabel ? "مُعدّ" : dt("إعدادات ناقصة"),
-    tiktok: !stored.tiktokPixelId && !stored.tiktokAccessTokenPresent ? "غير مفعّل" : stored.tiktokPixelId && stored.tiktokAccessTokenPresent ? "مُعدّ" : dt("إعدادات ناقصة"),
-    x: !stored.xPixelId && !stored.xConversionEventId && !stored.xAccessTokenPresent ? "غير مفعّل" : (stored.xPixelId || stored.xConversionEventId) && stored.xAccessTokenPresent && stored.xAdAccountId ? "مُعدّ" : dt("إعدادات ناقصة"),
+    meta: !stored.facebookPixelId && !stored.facebookAccessTokenPresent ? "غير مفعّل" : stored.facebookPixelId && stored.facebookAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
+    ga4: !stored.gaMeasurementId && !stored.gaApiSecretPresent ? "غير مفعّل" : stored.gaMeasurementId && stored.gaApiSecretPresent ? "مُعدّ" : "إعدادات ناقصة",
+    google_ads: !stored.googleAdsConversionId && !stored.googleAdsConversionLabel ? "غير مفعّل" : stored.googleAdsConversionId && stored.googleAdsConversionLabel ? "مُعدّ" : "إعدادات ناقصة",
+    tiktok: !stored.tiktokPixelId && !stored.tiktokAccessTokenPresent ? "غير مفعّل" : stored.tiktokPixelId && stored.tiktokAccessTokenPresent ? "مُعدّ" : "إعدادات ناقصة",
+    x: !stored.xPixelId && !stored.xConversionEventId && !stored.xAccessTokenPresent ? "غير مفعّل" : (stored.xPixelId || stored.xConversionEventId) && stored.xAccessTokenPresent && stored.xAdAccountId ? "مُعدّ" : "إعدادات ناقصة",
   });
   }, [savedSettings]);
 
@@ -268,9 +268,10 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     setTesting(platform);
     try {
       const res = await axios.post<{ message: string; status: string }>("/api/admin/tracking/test", { platform });
-      setLastTest((s) => ({ ...s, [platform]: `${res.data.message}  ${new Date().toLocaleString(dashIntl("ar-EG"))}` }));
-      if (res.data.status === "success" || res.data.status === "ready") toast.success(res.data.message);
-      else toast(res.data.message);
+      const message = dt(res.data.message);
+      setLastTest((s) => ({ ...s, [platform]: `${message}  ${new Date().toLocaleString(dashIntl("ar-EG"))}` }));
+      if (res.data.status === "success" || res.data.status === "ready") toast.success(message);
+      else toast(message);
       await loadDiagnostics();
     } catch (e) {
       const message = axios.isAxiosError(e) && typeof e.response?.data?.message === "string" ? e.response.data.message : dt("فشل اختبار التتبع");

@@ -155,6 +155,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByRole("button",{name:ui(locale,"حفظ الإعدادات"),exact:true}).first().click();
  await readiness.waitFor({state:"visible"});
  await page.waitForFunction(()=>!Array.from(document.querySelectorAll('[role="region"]')).find(node=>node.getAttribute("aria-label")?.includes("Google Ads"))?.querySelector("button")?.disabled);
+ await page.getByText(ui(locale,"مُعدّ"),{exact:true}).waitFor();
  await readiness.click();
  await page.getByText("Fixture saved settings checked",{exact:false}).first().waitFor();
  const trackingSaves=requests.filter(row=>row.path==="/api/admin/tracking"&&row.method==="PUT");
