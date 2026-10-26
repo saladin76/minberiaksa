@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Math.max(Number(sp.get("limit") ?? 50), 1), 200);
   const offset = Math.max(Number(sp.get("offset") ?? 0), 0);
 
-  const [all, senders] = await Promise.all([listConversations({ senderId }), listInboxSenders()]);
+  const loaded = await Promise.all([listConversations({ senderId }), listInboxSenders()]).catch(() => null);
+  if (!loaded) return NextResponse.json({ error: "INBOX_UNAVAILABLE" }, { status: 503 });
+  const [all, senders] = loaded;
 
   let rows = all;
   if (filter === "needsReply") rows = rows.filter((c) => c.needsReply);
