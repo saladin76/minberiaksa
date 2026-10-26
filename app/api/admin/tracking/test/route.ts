@@ -201,12 +201,14 @@ export async function POST(request: NextRequest) {
     await audit(p, "missing_config", cfg.event, eventId, { missingFields: missing });
     return missingConfig(p, missing, cfg.guidance);
   }
-  await audit(p, "not_implemented", cfg.event, eventId, { ready: true });
+  await audit(p, "ready", cfg.event, eventId, { ready: true, validationOnly: true, testEventSent: false });
   return NextResponse.json({
-    ok: false,
+    ok: true,
     platform: p,
-    status: "not_implemented",
+    status: "ready",
+    validationOnly: true,
+    testEventSent: false,
     message: cfg.message,
     eventId,
-  }, { status: 501 });
+  });
 }
