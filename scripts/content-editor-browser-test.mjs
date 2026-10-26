@@ -330,7 +330,12 @@ try {
       try {
         await view.goto(origin + "/?kind=" + kind);
         await view.getByRole("heading", {level:1}).waitFor();
-        if (kind === "videos") { assert.equal(await view.locator("video").count(),1,"MP4 must use the native video player"); assert.equal(await view.locator("iframe").count(),0); }
+        if (kind === "videos") {
+          await view.getByRole("button",{name:ui(locale,"معاينة الصفحة"),exact:true}).click();
+          await view.getByRole("dialog").locator("video").waitFor();
+          assert.equal(await view.getByRole("dialog").locator("iframe").count(),0,"MP4 preview must use the native video player");
+          await view.getByRole("dialog").getByRole("button",{name:ui(locale,"إغلاق"),exact:true}).click();
+        }
         const nav = view.locator("nav:has(button[aria-current]) > button");
         for (let i=0; i<EDITOR_SECTIONS[kind].length; i++) {
           await nav.nth(i).click();
