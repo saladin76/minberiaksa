@@ -861,7 +861,7 @@ export default function DashboardPage() {
                               dataKey="date"
                               tick={{ fill: CHART_COLORS.text, fontSize: 12 }}
                               tickFormatter={(v) =>
-                                formatIstanbulDateKeyLabel(v, "en-US", {
+                                formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                   day: "numeric",
                                   month: "short",
                                 })
@@ -881,7 +881,7 @@ export default function DashboardPage() {
                                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                               }}
                               labelFormatter={(v) =>
-                                formatIstanbulDateKeyLabel(v, "en-US", {
+                                formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                   weekday: "long",
                                   year: "numeric",
                                   month: "long",
@@ -889,9 +889,9 @@ export default function DashboardPage() {
                                 })
                               }
                               formatter={(value: number, name: string) => {
-                                if (name === "amountOneTime") return [formatInSelectedCurrency(Number(value), true), "مبلغ مرة واحدة"];
-                                if (name === "amountMonthly") return [formatInSelectedCurrency(Number(value), true), "مبلغ شهري"];
-                                if (name === "amountFailed") return [formatInSelectedCurrency(Number(value), true), "مبلغ فاشل"];
+                                if (name === "amountOneTime") return [formatInSelectedCurrency(Number(value), true), dt("مبلغ مرة واحدة")];
+                                if (name === "amountMonthly") return [formatInSelectedCurrency(Number(value), true), dt("مبلغ شهري")];
+                                if (name === "amountFailed") return [formatInSelectedCurrency(Number(value), true), dt("مبلغ فاشل")];
                                 return [formatInSelectedCurrency(Number(value), true), name];
                               }}
                               content={({ active, payload, label }) => {
@@ -932,14 +932,14 @@ export default function DashboardPage() {
                               fill="#025EB8"
                               radius={[4, 4, 0, 0]}
                               maxBarSize={32}
-                              name="مبلغ مرة واحدة"
+                              name={dt("مبلغ مرة واحدة")}
                             />
                             <Bar
                               dataKey="amountMonthly"
                               fill="#7C3AED"
                               radius={[4, 4, 0, 0]}
                               maxBarSize={32}
-                              name="مبلغ شهري"
+                              name={dt("مبلغ شهري")}
                             />
                             {showFailed && (
                               <Bar
@@ -947,7 +947,7 @@ export default function DashboardPage() {
                                 fill="#F43F5E"
                                 radius={[4, 4, 0, 0]}
                                 maxBarSize={32}
-                                name="مبلغ فاشل"
+                                name={dt("مبلغ فاشل")}
                               />
                             )}
                           </BarChart>
@@ -964,7 +964,7 @@ export default function DashboardPage() {
                               dataKey="date"
                               tick={{ fill: CHART_COLORS.text, fontSize: 12 }}
                               tickFormatter={(v) =>
-                                formatIstanbulDateKeyLabel(v, "en-US", {
+                                formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                   day: "numeric",
                                   month: "short",
                                 })
@@ -993,7 +993,7 @@ export default function DashboardPage() {
                                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                               }}
                               labelFormatter={(v) =>
-                                formatIstanbulDateKeyLabel(v, "en-US", {
+                                formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                   weekday: "long",
                                   year: "numeric",
                                   month: "long",
@@ -1023,7 +1023,7 @@ export default function DashboardPage() {
                               stroke="#10B981"
                               strokeWidth={2}
                               dot={false}
-                              name="عدد التبرعات"
+                              name={dt("عدد التبرعات")}
                             />
                           </ComposedChart>
                         </ResponsiveContainer>
@@ -1039,7 +1039,7 @@ export default function DashboardPage() {
                             dataKey="date"
                             tick={{ fill: CHART_COLORS.text, fontSize: 12 }}
                             tickFormatter={(v) =>
-                              formatIstanbulDateKeyLabel(v, "en-US", {
+                              formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                 day: "numeric",
                                 month: "short",
                               })
@@ -1067,7 +1067,7 @@ export default function DashboardPage() {
                               boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                             }}
                             labelFormatter={(v) =>
-                              formatIstanbulDateKeyLabel(v, "en-US", {
+                              formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                 weekday: "long",
                                 year: "numeric",
                                 month: "long",
@@ -1111,7 +1111,7 @@ export default function DashboardPage() {
                             stroke="#10B981"
                             strokeWidth={2}
                             dot={false}
-                            name="عدد التبرعات"
+                            name={dt("عدد التبرعات")}
                           />
                         </ComposedChart>
                       </ResponsiveContainer>
@@ -1126,7 +1126,7 @@ export default function DashboardPage() {
                             dataKey="date"
                             tick={{ fill: CHART_COLORS.text, fontSize: 12 }}
                             tickFormatter={(v) =>
-                              formatIstanbulDateKeyLabel(v, "en-US", {
+                              formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                 day: "numeric",
                                 month: "short",
                               })
@@ -1154,7 +1154,7 @@ export default function DashboardPage() {
                               boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                             }}
                             labelFormatter={(v) =>
-                              formatIstanbulDateKeyLabel(v, "en-US", {
+                              formatIstanbulDateKeyLabel(v, dashIntl("ar-EG"), {
                                 weekday: "long",
                                 year: "numeric",
                                 month: "long",
@@ -1205,7 +1205,7 @@ export default function DashboardPage() {
                             stroke="#10B981"
                             strokeWidth={2}
                             dot={false}
-                            name="عدد التبرعات"
+                            name={dt("عدد التبرعات")}
                           />
                         </ComposedChart>
                       </ResponsiveContainer>
@@ -1346,7 +1346,7 @@ export default function DashboardPage() {
                   </Tabs>
                 </TabsContent>
                 <div className="flex items-center gap-4 mt-6 flex-row-reverse flex-wrap">
-                  <TabsList className="bg-slate-100 p-1 rounded-lg flex-row-reverse max-w-max">
+                  <TabsList className="bg-slate-100 p-1 rounded-lg flex-row-reverse h-auto flex-wrap max-w-full">
                     <TabsTrigger
                       value="split"
                       className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
@@ -1847,14 +1847,14 @@ export default function DashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => openDonationDetails("error", d)}
-                                className="inline-block px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
                                 title={dt("عرض رسالة الخطأ من بوابة الدفع")}
                               >
-                                {dt("فاشل")}{d.securityMode ? ` ${d.securityMode}` : ""}</button>
+                                {dt("فاشل")}{d.securityMode ? <bdi dir="ltr">{` ${d.securityMode}`}</bdi> : null}</button>
                             ) : (
                               <span
                                 className={cn(
-                                  "inline-block px-1.5 py-px rounded-full text-[11px] font-medium w-max",
+                                  "inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium w-max",
                                   d.status === "PAID" && d.paidAt
                                     ? "bg-green-100 text-green-700"
                                     : "bg-amber-100 text-amber-700"
@@ -1865,7 +1865,7 @@ export default function DashboardPage() {
                                   ? d.paidAt
                                     ? dt("ناجح")
                                     : dt("قيد التأكيد")
-                                  : dt("معلق")}{d.securityMode ? ` ${d.securityMode}` : ""}
+                                  : dt("معلق")}{d.securityMode ? <bdi dir="ltr">{` ${d.securityMode}`}</bdi> : null}
                               </span>
                             )}
                           </td>
