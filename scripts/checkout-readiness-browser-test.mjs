@@ -142,7 +142,7 @@ try {
    await page.locator('[data-donation-field="firstName"]').waitFor();
    const popupSubmit=page.getByRole("button",{name:translations.confirmDonation,exact:true});
    const popupBefore=requests.length;
-   const checkPopup=async field=>{await popupSubmit.click();await page.locator('[data-donation-field="'+field+'"][aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.getAttribute("data-donation-field")),field);assert.ok(await page.getByRole("alert").textContent());assert.equal(requests.length,popupBefore);checks++;};
+   const checkPopup=async field=>{await popupSubmit.click();await page.locator('[data-donation-field="'+field+'"][aria-invalid="true"]').waitFor();await page.waitForFunction(expected=>document.activeElement?.getAttribute("data-donation-field")===expected,field);assert.equal(await page.evaluate(()=>document.activeElement.getAttribute("data-donation-field")),field);assert.ok(await page.getByRole("alert").textContent());assert.equal(requests.length,popupBefore);checks++;};
    await checkPopup("firstName");await page.locator('[data-donation-field="firstName"]').fill("Fixture");
    await checkPopup("lastName");await page.locator('[data-donation-field="lastName"]').fill("Donor");
    await checkPopup("email");await page.locator('[data-donation-field="email"]').fill("fixture@example.invalid");
