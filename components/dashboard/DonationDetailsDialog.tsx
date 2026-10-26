@@ -41,6 +41,7 @@ import {
 } from "@/lib/attribution/detect-source";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 import { GATEWAY_LOGOS, GATEWAY_NAMES } from "./DonationGatewayBadge";
+import type { PayPalInspection, PayPalInspectionOutcome } from "@/lib/donations/gateway-diagnostics";
 
 type Mode = "attribution" | "payment" | "error";
 
@@ -371,6 +372,9 @@ type GatewayDetails = {
   amountUSD: number | null;
   paidAmount: number | null;
   paidCurrency: string | null;
+  requestedGatewayAmount?: number | null;
+  requestedGatewayCurrency?: string | null;
+  paypalInspection?: PayPalInspection | null;
   createdAt: string;
   paidAt: string | null;
   billingReason: string | null;
@@ -390,6 +394,39 @@ type GatewayDetails = {
 };
 
 type RefRow = { label: string; value: string; hint?: string; href?: string };
+
+function PayPalInspectionNotice({ inspection }: { inspection: PayPalInspection }) {
+  const messages: Record<PayPalInspectionOutcome, string> = {
+    awaiting_buyer_action: dt("بانتظار استكمال المتبرع لخطوات PayPal؛ لا يوجد تحصيل مؤكد."),
+    approved_without_capture: dt("وافق المتبرع لدى PayPal ولم يظهر تحصيل بعد. تُراجع الحالة عبر المطابقة الآلية."),
+    capture_pending: dt("التحصيل معلّق لدى PayPal. راجع سبب الانتظار وحساب التاجر."),
+    completed_needs_reconciliation: dt("أفاد PayPal باكتمال التحصيل، ويحتاج السجل المحلي إلى مطابقة قبل اعتماد الإيراد."),
+    capture_failed: dt("أفاد PayPal بفشل التحصيل؛ تحتاج الحالة المحلية إلى مطابقة."),
+    capture_refunded: dt("أفاد PayPal باسترداد المبلغ كليًا أو جزئيًا؛ راجع السجل المالي."),
+    order_voided: dt("أفاد PayPal بإلغاء الطلب؛ تحتاج الحالة المحلية إلى مطابقة."),
+    order_not_found: dt("لم يعثر PayPal على الطلب. قد يتعلق الأمر بصلاحية الطلب أو مرجعه أو صلاحيات الوصول؛ لا تثبت هذه النتيجة حصول خصم أو فشل الدفع."),
+    provider_unavailable: dt("تعذّر قراءة حالة الطلب من PayPal الآن. بقيت الحالة المحلية كما هي."),
+    not_configured: dt("إعدادات قراءة PayPal غير مكتملة؛ تعذّر فحص الطلب."),
+    order_reference_missing: dt("لا يوجد مرجع طلب PayPal صالح للفحص."),
+    renewal_not_checked: dt("هذه دورة تبرع متكرر؛ تُراجع من مسار الاشتراكات دون إعادة محاولة التحصيل هنا."),
+    integrity_review: dt("بيانات الطلب لدى PayPal تحتاج إلى مراجعة المطابقة مع هذا التبرع."),
+    unknown: dt("أعاد PayPal حالة غير محسومة؛ تحتاج إلى مراجعة."),
+  };
+  return (
+    <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-950 space-y-2">
+      <div className="font-semibold">{dt("حالة PayPal الآن")}</div>
+      <p className="leading-relaxed">{messages[inspection.outcome]}</p>
+      <dl className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {[
+          { label: dt("حالة الطلب لدى PayPal"), value: inspection.orderStatus },
+          { label: dt("حالة التحصيل لدى PayPal"), value: inspection.captureStatus },
+          { label: dt("سبب الانتظار لدى PayPal"), value: inspection.pendingReason },
+        ].filter(row => row.value).map(row => <div key={row.label}><dt className="text-[10px] opacity-75">{row.label}</dt><dd className="font-mono break-all mt-0.5" dir="ltr">{row.value}</dd></div>)}
+      </dl>
+      <p className="text-[10px] leading-relaxed opacity-75">{dt("هذا فحص للقراءة فقط؛ فتح التفاصيل لا ينفذ خصمًا أو تسوية ولا يغيّر حالة التبرع.")}</p>
+    </div>
+  );
+}
 
 /** The references that find this donation in the gateway's own panel, named the way that gateway names them. */
 function gatewayReferences(d: GatewayDetails): RefRow[] {
@@ -522,7 +559,7 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
   const logo = details.provider ? GATEWAY_LOGOS[details.provider] : undefined;
   const providerName = details.provider ? GATEWAY_NAMES[details.provider] ?? details.provider : "—";
   const refs = gatewayReferences(details);
-  const succeeded = details.txn.result === "Success" || Boolean(details.paidAt);
+  const succeeded = Boolean(details.paidAt);
   const failed = details.txn.result === "Failed" || details.status === "FAILED";
   const methodLabel =
     details.paymentMethod === "CARD" ? dt("بطاقة ائتمانية")
@@ -530,6 +567,7 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
         : details.paymentMethod === "BANK_TRANSFER" ? dt("تحويل بنكي")
           : details.paymentMethod ?? "—";
   const charged = money(details.paidAmount, details.paidCurrency);
+  const gatewayRequested = money(details.requestedGatewayAmount ?? null, details.requestedGatewayCurrency ?? null);
   const requested = money(details.totalAmount, details.currency);
 
   return (
@@ -554,6 +592,8 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
         </span>
       </div>
 
+      {details.paypalInspection && <PayPalInspectionNotice inspection={details.paypalInspection} />}
+
       <Section title={dt("معرفات التتبع لدى البوابة")}>
         {refs.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -570,7 +610,7 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
             { label: dt("النتيجة"), value: details.txn.result },
             { label: dt("رمز الاستجابة"), value: details.txn.returnCode },
             { label: dt("نوع العملية"), value: details.txn.type },
-            { label: dt("الحالة لدينا"), value: details.status },
+            { label: dt("الحالة لدينا"), value: succeeded ? dt("تمت العملية") : failed ? dt("فشلت العملية") : dt("قيد التأكيد") },
           ].map((f) => (
             <div key={f.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <div className="text-[10px] font-semibold text-slate-500">{f.label}</div>
@@ -589,7 +629,8 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {[
             { label: dt("المبلغ المطلوب"), value: requested },
-            { label: dt("المبلغ الذي خصمته البوابة"), value: charged },
+            { label: dt("المبلغ المطلوب من البوابة"), value: gatewayRequested },
+            { label: dt("المبلغ المسجل عند تأكيد الدفع"), value: succeeded ? charged : null },
             { label: dt("ما يعادله بالدولار"), value: money(details.amountUSD, "USD") },
             { label: dt("أُنشئ في"), value: formatDateTime(details.createdAt) },
             { label: dt("تأكد الدفع في"), value: formatDateTime(details.paidAt) },
