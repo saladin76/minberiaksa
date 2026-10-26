@@ -8466,5 +8466,10 @@
   "تغير النص أثناء الطلب؛ لم تُطبق الاقتراحات القديمة.": "Text changed during the request; outdated suggestions were not applied.",
   "صورة غلاف هذه اللغة (فارغ = الصورة الافتراضية)": "Cover image for this language (empty = default image)",
   "صفحات جمع التبرعات والإحالات": "Fundraising and referral pages",
-  "تعذر تحميل تقرير Google Ads. راجع الاتصال وإصدار API ثم حاول مجددًا.": "Could not load the Google Ads report. Check the connection and API version, then try again."
+  "تعذر تحميل تقرير Google Ads. راجع الاتصال وإصدار API ثم حاول مجددًا.": "Could not load the Google Ads report. Check the connection and API version, then try again.",
+  "مبلغ المشاريع (قديم)": "Project amount (legacy)",
+  "مبلغ المشاريع": "Project amount",
+  "الرسوم المغطاة": "Covered fees",
+  "الإجمالي مع تفصيل المشاريع والدعم والرسوم وحالة التحصيل": "Total with projects, team support, fees and payment confirmation",
+  "الإجمالي: 55 USD (المشاريع: 50 USD; دعم الفريق: 5 USD)": "Total: 55 USD (Projects: 50 USD; Team support: 5 USD)"
 }

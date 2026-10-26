@@ -1,6 +1,7 @@
 import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
 import { donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
+import { donationMoneyFields } from "./donation-money";
 
 /** ---------------- types ---------------- */
 
@@ -30,6 +31,12 @@ export interface TemplateDonation {
   amountUSD: string;
   currency: string;
   totalAmount: string;
+  /** Explicit receipt values; amount remains the legacy projects-only scalar. */
+  projectsAmount?: string;
+  teamSupport?: string;
+  fees?: string;
+  amountBreakdown?: string;
+  notificationAmount?: string;
   status: string;
   createdAt: string;
   campaignTitle: string;
@@ -109,6 +116,9 @@ const donationSelect = {
   amountUSD: true,
   currency: true,
   totalAmount: true,
+  teamSupport: true,
+  fees: true,
+  paidAt: true,
   status: true,
   createdAt: true,
   items: {
@@ -131,6 +141,9 @@ type RawDonation = DonationProjectSource & {
   amountUSD: number | null;
   currency: string;
   totalAmount: number;
+  teamSupport?: number | null;
+  fees?: number | null;
+  paidAt?: Date | null;
   status: string;
   createdAt: Date;
 };
@@ -146,6 +159,7 @@ function donationToContext(d: RawDonation, locale?: string | null): TemplateDona
   }));
   return {
     id: d.id,
+    ...donationMoneyFields(d, locale || d.locale || "ar"),
     amount: formatTemplateMoney(d.amount, locale || d.locale, d.currency),
     amountUSD: formatTemplateMoney(donationUsdAmount(d), locale || d.locale, "USD"),
     currency: d.currency,

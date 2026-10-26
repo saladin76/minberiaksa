@@ -1,4 +1,5 @@
 import * as projects from "../../lib/templates/donation-projects";
+import * as donationMoney from "../../lib/templates/donation-money";
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
@@ -31,7 +32,7 @@ test("actual context loader supports category-only donations and this site's Pri
       findUnique: async () => donation,
     },
   };
-  const dependencies: Record<string, unknown> = { "@/lib/prisma": { prisma }, "./donation-projects": projects, "./money": { donationUsdAmount, formatTemplateMoney }, "./variable-catalog": {} };
+  const dependencies: Record<string, unknown> = { "@/lib/prisma": { prisma }, "./donation-projects": projects, "./donation-money": donationMoney, "./money": { donationUsdAmount, formatTemplateMoney }, "./variable-catalog": {} };
   const output = ts.transpileModule(fs.readFileSync("lib/templates/variables.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const loaded = { exports: {} };
   new vm.Script(output).runInNewContext({ module: loaded, exports: loaded.exports, Date, Intl, Map, require: (id: string) => { assert.ok(id in dependencies, id); return dependencies[id]; } });
