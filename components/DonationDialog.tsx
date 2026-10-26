@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useId } from "react";
+import { dialogPaymentIssue, type DialogPaymentField } from "@/lib/minbar/dialog-payment-validation";
 // useCallback is used for stable onReadyChange callback passed to StripePaymentStep
 import {
   Calendar,
@@ -173,6 +174,10 @@ const DonationDialog = ({
   }, []);
   const t = useTranslations("DonationDialog");
   const tAuth = useTranslations("SignInDialog");
+  const tValidation = useTranslations("validation");
+  const [paymentIssue, setPaymentIssue] = useState<{ field: DialogPaymentField; text: string } | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const paymentErrorId = useId();
   const locale = useLocale();
   const isRTL = locale === "ar";
   const dir = isRTL ? "rtl" : "ltr";
@@ -425,6 +430,7 @@ const DonationDialog = ({
   // Reset guest fields and saved card selection on close
   useEffect(() => {
     if (!isOpen) {
+      setPaymentIssue(null);
       setGuestFirstName("");
       setGuestLastName("");
       setGuestEmail("");
@@ -1725,6 +1731,7 @@ const DonationDialog = ({
                   type="password"
                   inputMode="numeric"
                   maxLength={4}
+                  data-donation-field="cvv" aria-label={t("securityCode")} aria-invalid={paymentIssue?.field === "cvv" || undefined} aria-describedby={paymentIssue?.field === "cvv" ? paymentErrorId : undefined}
                   value={cardDetails.cvv}
                   onChange={(e) =>
                     setCardDetails((d) => ({
@@ -1765,6 +1772,8 @@ const DonationDialog = ({
                 setCardDetails={setCardDetails}
                 cardFocus={cardFocus}
                 setCardFocus={setCardFocus}
+                invalidField={paymentIssue?.field as keyof PayForCardState | undefined}
+                errorId={paymentErrorId}
               />
             )}
 
@@ -1777,6 +1786,7 @@ const DonationDialog = ({
                     </label>
                     <input
                       type="text"
+                      data-donation-field="firstName" aria-label={t("firstName")} aria-invalid={paymentIssue?.field === "firstName" || undefined} aria-describedby={paymentIssue?.field === "firstName" ? paymentErrorId : undefined}
                       value={guestFirstName}
                       onChange={(e) => setGuestFirstName(e.target.value)}
                       placeholder={t("firstName")}
@@ -1789,6 +1799,7 @@ const DonationDialog = ({
                     </label>
                     <input
                       type="text"
+                      data-donation-field="lastName" aria-label={t("lastName")} aria-invalid={paymentIssue?.field === "lastName" || undefined} aria-describedby={paymentIssue?.field === "lastName" ? paymentErrorId : undefined}
                       value={guestLastName}
                       onChange={(e) => setGuestLastName(e.target.value)}
                       placeholder={t("lastName")}
@@ -1802,6 +1813,7 @@ const DonationDialog = ({
                   </label>
                   <input
                     type="email"
+                    data-donation-field="email" aria-label={t("email")} aria-invalid={paymentIssue?.field === "email" || undefined} aria-describedby={paymentIssue?.field === "email" ? paymentErrorId : undefined}
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     placeholder={t("email")}
@@ -1842,6 +1854,7 @@ const DonationDialog = ({
                 <div className="overflow-visible phone-input-wrapper">
                   <PhoneInput
                     defaultCountry={ipCountry}
+                    inputProps={{ ...{ "data-donation-field": "phone" }, "aria-label": t("contactPhone"), "aria-invalid": paymentIssue?.field === "phone" || undefined, "aria-describedby": paymentIssue?.field === "phone" ? paymentErrorId : undefined }}
                     value={phoneValue}
                     onChange={(phone) => setPhoneValue(phone)}
                     className="w-full overflow-visible"
@@ -1908,6 +1921,8 @@ const DonationDialog = ({
               </div>
             )}
 
+            {paymentIssue ? <p id={paymentErrorId} role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{paymentIssue.text}</p> : null}
+
             <div dir={dir} className="flex justify-between gap-4">
               <Button
                 variant="outline"
@@ -1918,28 +1933,7 @@ const DonationDialog = ({
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={
-                  loading ||
-                  !isPhoneValid() ||
-                  (useGuestCheckout &&
-                    (!guestFirstName.trim() ||
-                      !guestLastName.trim() ||
-                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim()))) ||
-                  (paymentMethod === "CARD" &&
-                    useStripeElements &&
-                    !selectedCardId &&
-                    !stripeReady) ||
-                  (paymentMethod === "CARD" &&
-                    selectedCardId &&
-                    cardDetails.cvv.length < 3) ||
-                  (paymentMethod === "CARD" &&
-                    useOwnCardForm &&
-                    !selectedCardId &&
-                    (cardDetails.cardNumber.length < 13 ||
-                      cardDetails.expiryDate.length < 5 ||
-                      cardDetails.cvv.length < 3 ||
-                      !cardDetails.cardholderName.trim()))
-                }
+                disabled={loading || (paymentMethod === "CARD" && useStripeElements && !selectedCardId && !stripeReady)}
                 className="flex-1 shape-button bg-burgundy hover:bg-burgundyDark text-white shadow-soft inline-flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -1974,6 +1968,17 @@ const DonationDialog = ({
   };
 
   const handleSubmit = async () => {
+    if (loading) return;
+    if (session?.user?.id || useGuestCheckout) {
+      const issue = dialogPaymentIssue({ guest: useGuestCheckout, firstName: guestFirstName, lastName: guestLastName, email: guestEmail, phoneValid: isPhoneValid(), cardRequired: paymentMethod === "CARD" && (useOwnCardForm || Boolean(selectedCardId)), savedCard: Boolean(selectedCardId), card: cardDetails });
+      if (issue) {
+        const labels = { firstName: t("firstName"), lastName: t("lastName"), email: t("email"), phone: t("contactPhone"), cardNumber: t("cardNumber"), expiryDate: t("expiryDate"), cvv: t("securityCode"), cardholderName: t("cardholderName") };
+        setPaymentIssue({ field: issue.field, text: `${labels[issue.field]}: ${tValidation(issue.message)}` });
+        requestAnimationFrame(() => { const field = dialogRef.current?.querySelector<HTMLInputElement>(`[data-donation-field="${issue.field}"]`); field?.focus(); field?.scrollIntoView({ behavior: "smooth", block: "center" }); });
+        return;
+      }
+    }
+    setPaymentIssue(null);
     let isRedirecting = false;
     try {
       if (!session?.user?.id && !useGuestCheckout) {
@@ -2481,6 +2486,8 @@ const DonationDialog = ({
         }}
       >
         <DialogContent
+          ref={dialogRef}
+          onChangeCapture={() => setPaymentIssue(null)}
           dir={isRTL ? "rtl" : "ltr"}
           className="w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] max-h-screen overflow-y-auto overflow-x-hidden p-0 rounded-none sm:rounded-[28px_8px_28px_8px] rtl:sm:rounded-[8px_28px_8px_28px] sm:shadow-lift sm:ring-1 sm:ring-deep/5 top-0 sm:top-[50%] translate-y-0 sm:translate-y-[-50%]"
           closeClassName="text-white hover:text-white/80"

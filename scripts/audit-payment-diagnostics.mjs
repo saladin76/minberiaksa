@@ -81,6 +81,21 @@ function bankComparisons(rows) {
   };
 }
 
+function bankConfiguration(env) {
+  const pick = names => {
+    const source = names.find(name => typeof env[name] === "string" && env[name].length > 0) ?? null;
+    return { source, value: source ? env[source] : "" };
+  };
+  const profile = (terminalKeys, posnetKeys, keyKeys) => {
+    const terminal = pick(terminalKeys), posnet = pick(posnetKeys), key = pick(keyKeys);
+    return { terminal, posnet, key };
+  };
+  const twoD = profile(["ALBARAKA_2D_TERMINAL_NO", "ALBARAKA_RECURRING_TERMINAL_NO", "ALBARAKA_TERMINAL_NO"], ["ALBARAKA_2D_POSNET_ID", "ALBARAKA_RECURRING_POSNET_ID", "ALBARAKA_POSNET_ID"], ["ALBARAKA_2D_ENC_KEY", "ALBARAKA_ENC_KEY"]);
+  const recurring = profile(["ALBARAKA_RECURRING_TERMINAL_NO", "ALBARAKA_2D_TERMINAL_NO", "ALBARAKA_TERMINAL_NO"], ["ALBARAKA_RECURRING_POSNET_ID", "ALBARAKA_2D_POSNET_ID", "ALBARAKA_POSNET_ID"], ["ALBARAKA_RECURRING_ENC_KEY", "ALBARAKA_2D_ENC_KEY", "ALBARAKA_ENC_KEY"]);
+  const publicProfile = cfg => ({ terminalSource: cfg.terminal.source, posnetSource: cfg.posnet.source, keySource: cfg.key.source, present: Boolean(env.ALBARAKA_MERCHANT_NO && cfg.terminal.value && cfg.posnet.value && cfg.key.value.length >= 8), surroundingWhitespace: [cfg.terminal.value, cfg.posnet.value, cfg.key.value].some(value => value !== value.trim()) });
+  return { source: "CLI and current production env files; not a bank permission check or live PM2 memory inspection", twoD: publicProfile(twoD), recurring: publicProfile(recurring), recurringEnabled: env.ALBARAKA_RECURRING_ENABLED === "1", sameTerminalAsCheckout: Boolean(twoD.terminal.value && twoD.terminal.value === recurring.terminal.value), samePosnetAsCheckout: Boolean(twoD.posnet.value && twoD.posnet.value === recurring.posnet.value), sameKeyAsCheckout: Boolean(twoD.key.value && twoD.key.value === recurring.key.value) };
+}
+
 function failureKind(row, code) {
   if (["59", "34", "63", "83"].includes(code)) return "fraud_or_security_decline";
   if (code === "1A") return "additional_authentication_required";
@@ -171,7 +186,10 @@ export async function auditPaymentDiagnostics({ db, env = {}, days, rowLimit, ch
     const code = bankCode(row);
     const kind = failureKind(row, code);
     const key = `${code}/${kind}`;
-    const group = codes.get(key) ?? { code, kind, attempts: 0, donors: new Set(), rowsWithoutDonor: 0, modes: {}, currencyPairs: {} };
+    const group = codes.get(key) ?? { code, kind, attempts: 0, donors: new Set(), rowsWithoutDonor: 0, modes: {}, currencyPairs: {}, firstAt: new Date(row.createdAt).toISOString(), lastAt: new Date(row.createdAt).toISOString() };
+    const at = new Date(row.createdAt).toISOString();
+    if (at < group.firstAt) group.firstAt = at;
+    if (at > group.lastAt) group.lastAt = at;
     group.attempts++;
     if (row.donorId) group.donors.add(row.donorId); else group.rowsWithoutDonor++;
     const { request: snapshot, mode } = bankContext(row);
@@ -193,6 +211,7 @@ export async function auditPaymentDiagnostics({ db, env = {}, days, rowLimit, ch
     albaraka: {
       ...stateCounts(bankRows),
       ...bankComparisons(bankRows),
+      configuration: bankConfiguration(env),
       failureCodes: [...codes.values()].map(({ donors, rowsWithoutDonor, ...group }) => ({ ...group, uniqueDonors: donors.size, rowsWithoutDonor, repeatedAttemptsByKnownDonors: group.attempts - donors.size - rowsWithoutDonor })).sort((a, b) => b.attempts - a.attempts),
       note: "These are attempts and distinct donor accounts, not distinct cards or issuer countries. Request currency is attempted, not proof of a debit. No bank inquiry is made.",
     },

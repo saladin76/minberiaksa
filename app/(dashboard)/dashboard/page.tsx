@@ -7,27 +7,19 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Users,
-  DollarSign,
-  Heart,
-  FolderTree,
-  Wallet,
-  Repeat,
-  Receipt,
   BarChart3,
   PieChart as PieChartIcon,
   Search,
   ChevronDown,
   Loader2,
-  HandCoins,
-  Landmark,
   LayoutDashboard,
   RefreshCw,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { CHART_THEME } from "@/lib/dashboard/chart-theme";
-import { MetricSummaryBand } from "@/components/dashboard/MetricSummaryBand";
+import { HomeDonationSummary } from "@/components/dashboard/HomeDonationSummary";
 import {
   DashboardFilterBar,
   type ActiveFilterChip,
@@ -65,8 +57,6 @@ import {
   donationDisplayTotalLocal,
   DASHBOARD_DISPLAY_SYMBOLS,
 } from "@/lib/dashboard/format-dashboard-money";
-import { BankTransfersCard, StatsMetricCard } from "@/components/dashboard/StatsMetricCard";
-import { getDashboardChartPeriodLabelAr } from "@/lib/dashboard/chart-period-label-ar";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
 import {
   istanbulTodayKey,
@@ -130,6 +120,7 @@ interface UserOption {
 interface DonationRow {
   id: string;
   locale?: string | null;
+  securityMode?: "2D" | "3D" | null;
   totalAmount: number;
   amount: number;
   amountUSD?: number | null;
@@ -360,15 +351,16 @@ export default function DashboardPage() {
   const [searchCampaign, setSearchCampaign] = useState("");
   const [donationDetails, setDonationDetails] = useState<{
     open: boolean;
-    mode: "attribution" | "payment" | "error";
+    mode: "attribution" | "payment" | "error" | "overview";
     donation: DonationDetailsTarget | null;
   }>({ open: false, mode: "attribution", donation: null });
-  const openDonationDetails = (mode: "attribution" | "payment" | "error", d: DonationRow) => {
+  const openDonationDetails = (mode: "attribution" | "payment" | "error" | "overview", d: DonationRow) => {
     setDonationDetails({
       open: true,
       mode,
       donation: {
         id: d.id,
+        donor: d.donor, totalAmount: d.totalAmount, teamSupport: d.teamSupport, currency: d.currency, locale: d.locale, donorCountryCode: d.donorCountryCode, securityMode: d.securityMode, campaigns: d.campaigns, categories: d.categories,
         provider: d.provider ?? null,
         providerOrderId: d.providerOrderId ?? null,
         providerErrorMessage: d.providerErrorMessage ?? null,
@@ -380,11 +372,6 @@ export default function DashboardPage() {
       },
     });
   };
-
-  const chartFilterPeriodLabelAr = useMemo(
-    () => getDashboardChartPeriodLabelAr(chartPeriod, dateFrom, dateTo),
-    [chartPeriod, dateFrom, dateTo]
-  );
 
   // Fetch categories and campaigns
   useEffect(() => {
@@ -845,188 +832,7 @@ export default function DashboardPage() {
 
 
 
-        {/* Summary band. Establishes which number matters before the filtered KPI grid, but
-            stays on the neutral surface the rest of the shell uses  a coloured slab here
-            fights the content instead of framing it. */}
-        {!searchParams.get("userId") && (
-          <MetricSummaryBand
-            icon={Wallet}
-            eyebrow={dt("إجمالي الإيرادات الناجحة")}
-            badge={dt("كل الوقت")}
-            value={formatInSelectedCurrency(
-              stats?.paidRevenueAllTimeUnfiltered ??
-                stats?.allTimeRevenue ??
-                stats?.totalAmount ??
-                0,
-            )}
-            note={dt("لا تتأثر هذه القيمة ولا البطاقات المجاورة بالفترة أو التصفية المختارة أدناه.")}
-            stats={[
-              // No hints here: the badge already says كل الوقت, and "اشتراك نشط" would have
-              // repeated the stat sitting right next to it. In a single-row band every extra
-              // word is height the charts below lose.
-              {
-                label: dt("إيرادات شهرية متكررة (MRR)"),
-                icon: Repeat,
-                value: formatInSelectedCurrency(stats?.monthlyRecurringRevenueUnfiltered ?? 0),
-              },
-              {
-                label: dt("عدد التبرعات الناجحة"),
-                icon: HandCoins,
-                value: (stats?.paidCountAllTimeUnfiltered ?? 0).toLocaleString("en-US"),
-              },
-              {
-                label: dt("اشتراكات نشطة"),
-                icon: Landmark,
-                value: (stats?.activeMonthlyCountUnfiltered ?? 0).toLocaleString("en-US"),
-              },
-              {
-                label: dt("إجمالي المستخدمين"),
-                icon: Users,
-                value: (stats?.totalUsers ?? 0).toLocaleString("en-US"),
-              },
-            ]}
-          />
-        )}
-
-
-        {/* المؤشرات  تختفي عند عرض تبرعات مستخدم معين عبر الرابط */}
-        {!searchParams.get("userId") && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
-                <PieChartIcon className="h-[18px] w-[18px]" />
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-[15px] font-semibold leading-tight text-slate-900">{dt("المؤشرات")}</h2>
-                <p className="text-xs text-slate-500">{dt("محسوبة حسب الفترة والتصفية المختارة")}</p>
-              </div>
-            </div>
-
-          </div>
-          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
-            {(
-              <>
-                <StatsMetricCard
-                  compact
-                  title={dt("إيرادات ناجحة ({0})", [chartFilterPeriodLabelAr])}
-                  bankTransfers={false}
-                  value={stats?.totalAmount ?? 0}
-                  icon={DollarSign}
-                  accent="emerald"
-                  format="money"
-                  subtitle={dt("مجموع التبرعات المدفوعة فقط  حسب الفترة والتصفية أعلاه")}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("دعم الفريق")}
-                  value={stats?.teamSupportTotal ?? 0}
-                  icon={HandCoins}
-                  accent="amber"
-                  format="money"
-                  subtitle={dt("من التبرعات الناجحة ({0})", [chartFilterPeriodLabelAr])}
-                />
-                {/* <StatsMetricCard
-                  compact
-                  title="الرسوم"
-                  value={stats?.feesTotal ?? 0}
-                  icon={Percent}
-                  accent="orange"
-                  format="money"
-                  subtitle={`من التبرعات الناجحة (${chartFilterPeriodLabelAr})`}
-                /> */}
-                <StatsMetricCard
-                  compact
-                  title={dt("تبرعات ناجحة")}
-                  value={stats?.paidCount ?? 0}
-                  icon={Receipt}
-                  accent="teal"
-                  subtitle={dt("إجمالي مبالغ ناجحة: {0}", [formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true)])}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("تبرعات فاشلة")}
-                  value={stats?.failedCount ?? 0}
-                  icon={Receipt}
-                  accent="orange"
-                  subtitle={stats?.failedTotalAmount ? formatMoney(stats.failedTotalAmount, undefined, undefined, true) : "—"}
-                />
-              </>
-            )}
-            {(
-              <>
-                <BankTransfersCard icon={DollarSign} />
-                <StatsMetricCard
-                  compact
-                  title={dt("المشاريع")}
-                  value={stats?.totalCampaigns ?? 0}
-                  icon={Heart}
-                  accent="teal"
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("الفئات")}
-                  value={stats?.totalCategories ?? 0}
-                  icon={FolderTree}
-                  accent="indigo"
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("المستخدمين")}
-                  value={stats?.totalUsers ?? 0}
-                  icon={Users}
-                  accent="amber"
-                />
-                <StatsMetricCard
-                  compact
-                  title="عدد التبرعات"
-                  value={stats?.totalDonations ?? 0}
-                  icon={Receipt}
-                  accent="violet"
-                />
-              </>
-            )}
-            {(
-              <>
-                <StatsMetricCard
-                  compact
-                  title={dt("مرة واحدة (عدد)")}
-                  value={stats?.oneTimeAllCount ?? 0}
-                  icon={Receipt}
-                  accent="blue"
-                  subtitle={dt("ناجح: {0}", [stats?.oneTimeCount ?? 0])}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("شهرية (عدد)")}
-                  value={stats?.monthlyAllCount ?? 0}
-                  icon={Repeat}
-                  accent="violet"
-                  subtitle={dt("ناجح: {0}", [stats?.monthlyCount ?? 0])}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("التبرعات الشهرية الناشطة")}
-                  value={stats?.activeMonthlyAmountUSD ?? 0}
-                  icon={Repeat}
-                  accent="teal"
-                  format="money"
-                  subtitle={dt("عدد: {0}", [stats?.activeMonthlyCount ?? 0])}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("التبرعات الشهرية المتوقفة")}
-                  value={stats?.monthlyStoppedAmountUSD ?? 0}
-                  icon={Repeat}
-                  accent="indigo"
-                  format="money"
-                  subtitle={dt("عدد: {0}", [stats?.monthlyStoppedCount ?? 0])}
-                />
-              </>
-            )}
-          </div>
-        </section>
-        )}
+        {!searchParams.get("userId") && <HomeDonationSummary onRefresh={refreshAfterDonationMutation} />}
 
         {/* التحليلات */}
         <section className="space-y-4">
@@ -1978,14 +1784,13 @@ export default function DashboardPage() {
                         {dt("دعم الفريق")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                         {dt("النوع")}</th>
-                      <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        {dt("الإحالة")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                         {dt("مصدر التبرع")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
                         {dt("المشروع / الفئة")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                         {dt("التاريخ")}</th>
+                      <th className="px-3 py-3 text-start">{dt("عرض")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2045,7 +1850,7 @@ export default function DashboardPage() {
                                 className="inline-block px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
                                 title={dt("عرض رسالة الخطأ من بوابة الدفع")}
                               >
-                                {dt("فاشل")}</button>
+                                {dt("فاشل")}{d.securityMode ? ` ${d.securityMode}` : ""}</button>
                             ) : (
                               <span
                                 className={cn(
@@ -2060,7 +1865,7 @@ export default function DashboardPage() {
                                   ? d.paidAt
                                     ? dt("ناجح")
                                     : dt("قيد التأكيد")
-                                  : dt("معلق")}
+                                  : dt("معلق")}{d.securityMode ? ` ${d.securityMode}` : ""}
                               </span>
                             )}
                           </td>
@@ -2100,6 +1905,7 @@ export default function DashboardPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-3 align-middle">
+                            <div className="flex flex-col items-start gap-1">
                             {d.referral ? (
                               <Link
                                 href={`/dashboard/referrals/${d.referral.id}`}
@@ -2107,11 +1913,7 @@ export default function DashboardPage() {
                               >
                                 {d.referral.code}
                               </Link>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 align-middle">
+                            ) : null}
                             <button
                               type="button"
                               onClick={() => openDonationDetails("attribution", d)}
@@ -2125,6 +1927,7 @@ export default function DashboardPage() {
                                 status={d.status}
                               />
                             </button>
+                            </div>
                           </td>
                           <td className="py-2.5 px-3 text-slate-600 max-w-[110px]">
                             {d.campaigns?.length > 0 ? (
@@ -2197,6 +2000,7 @@ export default function DashboardPage() {
                               </span>
                             </div>
                           </td>
+                          <td className="py-2.5 px-3"><button type="button" onClick={() => openDonationDetails("overview", d)} aria-label={dt("عرض")} title={dt("عرض التفاصيل")} className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"><Eye className="h-4 w-4" /></button></td>
                         </tr>
                       ))
                     )}

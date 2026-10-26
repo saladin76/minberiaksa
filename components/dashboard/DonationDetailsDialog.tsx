@@ -43,7 +43,7 @@ import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 import { GATEWAY_LOGOS, GATEWAY_NAMES } from "./DonationGatewayBadge";
 import type { PayPalInspection, PayPalInspectionOutcome } from "@/lib/donations/gateway-diagnostics";
 
-type Mode = "attribution" | "payment" | "error";
+type Mode = "attribution" | "payment" | "error" | "overview";
 
 export interface DonationDetailsTarget {
   id: string;
@@ -55,6 +55,16 @@ export interface DonationDetailsTarget {
   conversionEventsSentAt?: string | null;
   conversionFailedEventsSentAt?: string | null;
   status?: string | null;
+  donor?: { name: string | null; email: string };
+  amount?: number;
+  totalAmount?: number;
+  teamSupport?: number;
+  currency?: string;
+  locale?: string | null;
+  donorCountryCode?: string | null;
+  securityMode?: string | null;
+  campaigns?: Array<{ title: string }>;
+  categories?: Array<{ name: string }>;
 }
 
 interface Props {
@@ -721,6 +731,10 @@ function ErrorView({ donation }: { donation: DonationDetailsTarget }) {
 }
 
 const TITLES: Record<Mode, { title: string; description: string }> = {
+  overview: {
+    get title() { return dt("عرض التفاصيل"); },
+    get description() { return dt("تفاصيل بوابة الدفع"); },
+  },
   attribution: {
     get title() { return dt("تفاصيل الإعلان"); },
     get description() { return dt("بيانات إسناد الحملة الإعلانية للمتبرع  مخفية المعرفات الفنية"); },
@@ -772,6 +786,24 @@ export default function DonationDetailsDialog({ open, onOpenChange, mode, donati
         <div className="px-5 sm:px-6 py-4 max-h-[70vh] overflow-y-auto bg-slate-50/30">
           {displayDonation == null ? (
             <p className="text-sm text-slate-500 text-center py-8">{dt("لا توجد بيانات")}</p>
+          ) : mode === "overview" ? (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  [dt("المتبرع"), donation?.donor?.name || "—", Users],
+                  [dt("البريد الإلكتروني"), donation?.donor?.email || "—", Users],
+                  [dt("اللغة"), donation?.locale?.toUpperCase() || "—", Languages],
+                  [dt("دولة المتبرع"), donation?.donorCountryCode || "—", Globe],
+                  [dt("الإجمالي"), money(donation?.totalAmount ?? null, donation?.currency ?? null), CreditCard],
+                  [dt("دعم الفريق"), money(donation?.teamSupport ?? null, donation?.currency ?? null), Users],
+                  [dt("المشاريع"), [...(donation?.campaigns?.map(row => row.title) ?? []), ...(donation?.categories?.map(row => row.name) ?? [])].join("، ") || "—", Target],
+                  [dt("طريقة الدفع"), donation?.securityMode || donation?.paymentMethod || "—", CreditCard],
+                  [dt("الجهاز"), typeof donation?.attribution?.device === "string" ? donation.attribution.device : "—", Laptop],
+                  [dt("عنوان IP"), typeof donation?.attribution?.client_ip === "string" ? donation.attribution.client_ip : "—", Network],
+                ].map(([label, value, Icon]) => <FieldCard key={label as string} def={{ label: label as string, Icon: Icon as typeof Users }} value={value as string} />)}
+              </div>
+              <PaymentView donation={displayDonation} />
+            </div>
           ) : mode === "attribution" ? (
             <AttributionView
               donation={displayDonation}

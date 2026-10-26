@@ -3,12 +3,17 @@ import { chromium } from "@playwright/test";
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
+import postcss from "postcss";
+import tailwindcss from "tailwindcss";
+const require = createRequire(import.meta.url);
 import assert from "node:assert/strict";
 
 // Real React checkout, card preview, phone input, cart and order driver.
 // Auth/settings are fixtures; HTTP and the final bank navigation never reach a provider.
 const entry = `import React,{useState} from "react";import {createRoot} from "react-dom/client";
 import {NextIntlClientProvider} from "next-intl";
+import DonationDialog from "./components/DonationDialog";
 import CheckoutPage from "./components/minbar/checkout/CheckoutPage";
 import {PayForCardForm} from "./components/PayForCardForm";
 import {writeCart} from "./lib/minbar/cart";
@@ -17,8 +22,15 @@ const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
 writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:"USD"}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
-createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={null} defaultCountry="tr"/><Legacy/></NextIntlClientProvider>);`;
+createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={null} defaultCountry="tr"/><Legacy/></>}</NextIntlClientProvider>);`;
 const mocks = {
+  "@/components/SignInDialog": 'export function SignInPanel(){return null}',
+  "@/hooks/useIpCountry": 'export function useIpCountry(){return "tr"}',
+  "@/hooks/useCampaignValue": 'export function getCurrency(){return "USD"}',
+  "@/components/TrackingPixels": 'export function useTracking(){return null}',
+  "@/context/CurrencyContext": 'export function useCurrency(){return {exchangeRates:{USD:1,TRY:35},convertToCurrency(value){return {convertedValue:value}},convertToUSD(value){return value},getSelectedCurrency(){return "USD"}}}',
+  "@/i18n/routing": 'export function useRouter(){return {push(){},replace(){}}}',
+
   "next/link": 'import React from "react";export default function Link({children,...p}){return <a {...p}>{children}</a>}',
   "next/navigation": 'export function useParams(){return {locale:new URLSearchParams(location.search).get("lang")||"en"}} export function useRouter(){return {push(url){document.getElementById("navigation").textContent=url}}}',
   "next-auth/react": 'export function useSession(){return {data:new URLSearchParams(location.search).has("signed")?{user:{id:"fixture-user"}}:null}} export function signIn(){}',
@@ -26,7 +38,7 @@ const mocks = {
   "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return {currency:"USD"}}',
   "@/hooks/useDonationAmount": 'export function useDonationAmount(){return {lineTooSmall:()=>false,minLabel:"$1"}} export function useHealLegacyRows(){}',
   "@/hooks/useReferralCode": 'export function useReferralCode(){return ()=>null}',
-  "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:true}}',
+  "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}} export function getCachedGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}}',
   "@/lib/stripe-client": 'export function getStripePromise(){return null}',
   "@stripe/react-stripe-js": 'export function Elements({children}){return children}',
   "@/components/StripePaymentStep": 'import React from "react";export const StripePaymentStep=React.forwardRef(function Step(){return null})',
@@ -39,7 +51,7 @@ const bundle = await build({stdin:{contents:entry,loader:"tsx",resolveDir:proces
 }}]});
 const js = bundle.outputFiles.find(file=>file.path.endsWith(".js")) || bundle.outputFiles[0];
 const css = bundle.outputFiles.find(file=>file.path.endsWith(".css"));
-const layout = await readFile("styles/minbar/minbar.css","utf8");
+const layout = (await postcss([tailwindcss({...require("../tailwind.config.ts").default,content:["components/DonationDialog.tsx","components/PayForCardForm.tsx","components/ui/*.tsx"]})]).process("@tailwind base;@tailwind components;@tailwind utilities;",{from:undefined})).css + await readFile("styles/minbar/minbar.css","utf8");
 const server = createServer((req,res)=>{
   if(req.url==="/bundle.js"){res.setHeader("content-type","text/javascript");res.end(js.text);}
   else if(req.url==="/bundle.css"){res.setHeader("content-type","text/css");res.end((css?.text||"")+layout);}
@@ -120,6 +132,26 @@ try {
    assert.equal(requests.slice(before).find(row=>row.path==="/api/albaraka/3d/initiate").body.securityMode,mode);
    assert.equal(order.body.items[0].campaignId,"600000000000000000000001");assert.equal(order.body.items[0].amount,25);assert.equal(order.body.currency,"USD");
    assert.equal(await page.evaluate(()=>sessionStorage.getItem("mia_guest_donation_access_v1")?.includes("a".repeat(48))||Object.values(sessionStorage).some(value=>value.includes("a".repeat(48)))),true);checks++;
+   const translations=JSON.parse(await readFile("i18n/messages/"+lang+".json","utf8")).DonationDialog;
+   await page.goto(origin+"/?dialog=1&lang="+lang,{waitUntil:"domcontentloaded"});
+   for(let step=0;step<4;step++){
+    if(await page.locator('[data-donation-field="firstName"]').count())break;
+    await page.getByRole("button",{name:translations.next,exact:true}).click();
+    await page.waitForTimeout(250);
+   }
+   await page.locator('[data-donation-field="firstName"]').waitFor();
+   const popupSubmit=page.getByRole("button",{name:translations.confirmDonation,exact:true});
+   const popupBefore=requests.length;
+   const checkPopup=async field=>{await popupSubmit.click();await page.locator('[data-donation-field="'+field+'"][aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.getAttribute("data-donation-field")),field);assert.ok(await page.getByRole("alert").textContent());assert.equal(requests.length,popupBefore);checks++;};
+   await checkPopup("firstName");await page.locator('[data-donation-field="firstName"]').fill("Fixture");
+   await checkPopup("lastName");await page.locator('[data-donation-field="lastName"]').fill("Donor");
+   await checkPopup("email");await page.locator('[data-donation-field="email"]').fill("fixture@example.invalid");
+   await checkPopup("phone");await page.locator('[data-donation-field="phone"]').fill("+90");await page.locator('[data-donation-field="phone"]').press("End");await page.locator('[data-donation-field="phone"]').pressSequentially("5551234567");
+   await checkPopup("cardNumber");await page.locator('[data-donation-field="cardNumber"]').fill("4111111111111111");
+   await checkPopup("cardholderName");await page.locator('[data-donation-field="cardholderName"]').fill("Fixture Donor");
+   await checkPopup("expiryDate");await page.locator('[data-donation-field="expiryDate"]').fill("1230");
+   await checkPopup("cvv");
+   await page.screenshot({path:path.join(out,`popup-${lang}-${width}-required-field.png`),fullPage:true});
    await page.close();
   }
  }

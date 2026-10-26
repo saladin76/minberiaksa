@@ -15,7 +15,8 @@ export function gatewayDisplayAmounts(donation: GatewayAmountInput) {
   let requestedGatewayAmount: number | null = null;
   let requestedGatewayCurrency: string | null = null;
   if (donation.provider === "ALBARAKA") {
-    const request = record(raw.albarakaRequest);
+    const initial = record(raw.albarakaRequest);
+    const request = Object.keys(initial).length ? initial : record(raw.albarakaRecurring);
     const minor = Number(request.amount);
     const code = String(request.currencyCode ?? "");
     if (Number.isFinite(minor) && minor > 0 && ["TL", "US", "EU"].includes(code)) {
