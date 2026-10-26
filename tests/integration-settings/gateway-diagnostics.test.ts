@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { gatewayDisplayAmounts, inspectPayPalCheckout } from "../../lib/donations/gateway-diagnostics";
+import { donationPaymentEvidence } from "../../lib/donations/payment-evidence";
 
 const id = "507f1f77bcf86cd799439011";
 const orderId = "ORDERFIXTURE001";
@@ -85,6 +86,7 @@ function routeHarness({ session = { user: { role: "ADMIN" } } as unknown, allowe
     "@/lib/dashboard/permissions": { sessionHasDashboardPermission: () => allowed },
     "@/lib/donations/gateway-raw": { flattenGatewayRaw: () => ({ entries: [], truncated: false }) },
     "@/lib/donations/gateway-diagnostics": { gatewayDisplayAmounts, inspectPayPalCheckout },
+    "@/lib/donations/payment-evidence": { donationPaymentEvidence },
     "@/lib/paypal": { isPayPalConfigured: () => true, getPayPalOrder: async () => { reads.push("paypal-order-get"); return order("APPROVED"); } },
     "@/lib/prisma": { prisma: { donation: new Proxy({ findUnique: async () => { reads.push("donation-get"); return row; } }, { get(target, key) { assert.equal(key, "findUnique", "Gateway inspection attempted a database mutation"); return target.findUnique; } }) } },
   };

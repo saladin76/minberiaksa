@@ -83,14 +83,15 @@ const server=createServer(async(request,response)=>{const url=new URL(request.ur
  if(url.pathname==="/api/admin/stats")return json({totalAmount:100,paidCount:4,failedCount:1,totalCampaigns:2,totalCategories:1,totalUsers:4,totalDonations:5,oneTimeCount:1,monthlyCount:3,activeMonthlyCount:1,monthlyRecurringRevenue:25,thisMonthRevenue:50,campaignDonationsTotal:100,categoryDonationsTotal:0,recentDonations:[]});
  if(url.pathname==="/api/admin/donations/chart")return json([{date:"2026-10-26",amountUSD:100,count:4,amountOneTime:25,countOneTime:1,amountMonthly:75,countMonthly:3,amountFailed:25,countFailed:1}]);
  if(url.pathname==="/api/admin/donations/countries")return json({countries:[{code:"TR",count:4}],unsetCount:0});
+ if(url.pathname==="/api/admin/dashboard-summary")return json({today:{amountUSD:120,count:2,unpriced:0},month:{amountUSD:600,count:10,unpriced:0},support:{amountUSD:50,count:4,unpriced:0},failed:{amountUSD:150,count:3,unpriced:0},averageUSD:60,todayKey:"2026-10-26",monthKey:"2026-10"});
  if(url.pathname==="/api/admin/bank-transfers/summary")return json({totalUsd:0,totals:{},approvedCount:0,pendingCount:0});
  if(url.pathname==="/api/categories"||url.pathname==="/api/campaigns/all")return json([]);
- if(url.pathname==="/api/donations")return json({donations:["DAILY","FRIDAY","MONTHLY",null].map((frequency,index)=>({id:id.slice(0,-1)+index,locale:"en",provider:"ALBARAKA",campaigns:[],categories:[],referral:null,donorCountryCode:"TR",amount:1,amountUSD:1,currency:"USD",teamSupport:0,fees:0,totalAmount:1,donor:{name:"Fixture "+(frequency||"ONCE"),email:"fixture@example.test",image:null},type:frequency?"MONTHLY":"ONE_TIME",frequency,status:"PAID",paidAt:"2026-10-25T11:49:24Z",paymentMethod:"CARD",createdAt:"2026-10-25T11:49:19Z",items:[]})),pagination:{pages:1,total:4}});
+ if(url.pathname==="/api/donations")return json({donations:["DAILY","FRIDAY","MONTHLY",null].map((frequency,index)=>({id:id.slice(0,-1)+index,locale:"en",provider:"ALBARAKA",securityMode:index===0?"2D":"3D",campaigns:[],categories:[],referral:null,donorCountryCode:"TR",amount:1,amountUSD:1,currency:"USD",teamSupport:0,fees:0,totalAmount:1,donor:{name:"Fixture "+(frequency||"ONCE"),email:"fixture@example.test",image:null},type:frequency?"MONTHLY":"ONE_TIME",frequency,status:"PAID",paidAt:"2026-10-25T11:49:24Z",paymentMethod:"CARD",createdAt:"2026-10-25T11:49:19Z",items:[]})),pagination:{pages:1,total:4}});
  if(/^\/api\/admin\/donations\/[^/]+\/gateway$/.test(url.pathname)&&gatewayScenario!=="paid"){
   const bank=gatewayScenario==="bank-failed";
   return json({id,provider:bank?"ALBARAKA":"PAYPAL",paymentMethod:bank?"CARD":"PAYPAL",status:bank?"FAILED":"PAID",amount:100,currency:"USD",totalAmount:100,amountUSD:100,paidAmount:null,paidCurrency:null,requestedGatewayAmount:bank?14931.09:100,requestedGatewayCurrency:bank?"TRY":"USD",paidAt:null,createdAt:"2026-10-26T01:00:00Z",billingReason:null,refs:{paypalOrderId:bank?null:"FIXTUREORDER001"},txn:{type:bank?"Sale":"Capture",result:bank?"Failed":"Success",returnCode:bank?"59":null,errorMessage:bank?"Fraud Şüphesi":null},paypalInspection:bank?null:{readOnly:true,checkedAt:"2026-10-26T05:00:00Z",outcome:gatewayScenario==="paypal-action"?"awaiting_buyer_action":gatewayScenario==="paypal-404"?"order_not_found":"capture_pending",orderStatus:gatewayScenario==="paypal-action"?"PAYER_ACTION_REQUIRED":gatewayScenario==="paypal-404"?null:"COMPLETED",captureStatus:gatewayScenario==="paypal-hold"?"PENDING":null,pendingReason:gatewayScenario==="paypal-hold"?"ECHECK":null},raw:[],rawTruncated:false});
  }
- if(/^\/api\/admin\/donations\/[^/]+\/gateway$/.test(url.pathname))return json({id,provider:"ALBARAKA",paymentMethod:"CARD",status:"PAID",amount:1,currency:"USD",totalAmount:1,amountUSD:1,paidAmount:49.74,paidCurrency:"TRY",createdAt:"2026-10-25T11:49:19Z",paidAt:"2026-10-25T11:49:24Z",billingReason:"subscription_create",refs:{providerOrderId:"FIXTURE",providerAuthCode:"FIXTURE",providerHostRefNum:"FIXTURE"},txn:{type:"Sale",result:"Success",returnCode:"00",errorMessage:null},raw:[],rawTruncated:false});
+ if(/^\/api\/admin\/donations\/[^/]+\/gateway$/.test(url.pathname))return json({id,provider:"ALBARAKA",securityMode:"2D",paymentMethod:"CARD",status:"PAID",amount:1,currency:"USD",totalAmount:1,amountUSD:1,paidAmount:49.74,paidCurrency:"TRY",createdAt:"2026-10-25T11:49:19Z",paidAt:"2026-10-25T11:49:24Z",billingReason:"subscription_create",refs:{providerOrderId:"FIXTURE",providerAuthCode:"FIXTURE",providerHostRefNum:"FIXTURE"},txn:{type:"Sale",result:"Success",returnCode:"00",errorMessage:null},raw:[],rawTruncated:false});
  if(url.pathname===`/api/donations/${id}`){if(request.method==="PATCH"){savedSupport=body;return json({ok:true})}return json({id,amount:100,totalAmount:113,teamSupport:10,fees:3,coverFees:true,currency:"TRY",status:"PAID",paidAt:"2026-10-01T00:00:00Z",donor:{name:"Fixture donor"},items:[{campaignId:id,amount:100,campaign:{title:"Fixture project"}}],categoryItems:[],waqfItems:[]})}
  if(url.pathname==="/api/campaigns")return json({items:[{id,title:"Fixture project",isActive:true}],hasMore:false});if(url.pathname==="/api/categories")return json({items:[]});
  if(url.pathname==="/api/dashboard/communication/whatsapp/smart-send"){if(request.method==="POST"){sends++;return json({ok:true,result:{transport:"UTILITY_TEMPLATE_FALLBACK"}})}return json({ok:true,context:{userId:id,phone:"+905555555555",name:"Fixture donor",locale:"ar",doNotContact:false,whatsappUnsubscribed:false,consentCheckUnavailable:false,directSendEnabled:true,replyWindow:{open:false,remainingMs:0},utilityTemplates:[{id:"approved",name:"Approved receipt",category:"UTILITY"}],marketingTemplates:[],sender:null}})}
@@ -133,7 +134,19 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.unroute("**/api/dashboard/communication/inbox**");
  await open("summary");
  await page.getByRole("heading",{name:ui(locale,"المؤشرات"),exact:true}).waitFor();
+ const metricSection=page.getByRole("region",{name:ui(locale,"المؤشرات"),exact:true});
+ await metricSection.getByText("$600",{exact:true}).waitFor();
+ assert.equal(await metricSection.locator("div.rounded-xl").count(),6);
+ await metricSection.getByText("$60",{exact:true}).waitFor();
+ assert.equal(await page.getByText(ui(locale,"التبرعات الشهرية الناشطة"),{exact:true}).count(),0);
+ assert.equal(await page.getByText(ui(locale,"إجمالي الإيرادات الناجحة"),{exact:true}).count(),0);checks++;
+
  await page.getByRole("cell",{name:"EN",exact:true}).first().waitFor();
+ await page.getByRole("row").filter({hasText:"Fixture DAILY"}).getByRole("cell",{name:ui(locale,"ناجح")+" 2D",exact:true}).waitFor();
+ await page.getByRole("row").filter({hasText:"Fixture DAILY"}).getByRole("button",{name:ui(locale,"عرض"),exact:true}).click();
+ await page.getByRole("dialog").getByText(ui(locale,"عرض التفاصيل"),{exact:true}).waitFor();
+ await page.getByRole("dialog").getByText("Fixture DAILY",{exact:true}).waitFor();
+ await page.keyboard.press("Escape");checks++;
  const gateway=page.getByRole("combobox",{name:ui(locale,"بوابة الدفع"),exact:true});
  const providerReads=Promise.all(["/api/donations","/api/admin/stats","/api/admin/donations/chart"].map(endpoint=>page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname===endpoint&&url.searchParams.get("provider")==="PAYPAL"})));
  await gateway.click();await page.getByRole("option",{name:"PayPal",exact:true}).click({noWaitAfter:true});
@@ -142,7 +155,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByRole("button",{name:ui(locale,"تصدير التقرير"),exact:true}).click();
  assert.equal(await page.getByRole("dialog").getByRole("combobox",{name:ui(locale,"بوابة الدفع"),exact:true}).textContent(),"PayPal");await page.keyboard.press("Escape");
  await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-revenue-dashboard-desktop.png"),fullPage:true});
- await page.setViewportSize({width:390,height:844});await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-revenue-dashboard-mobile.png"),fullPage:true});await page.setViewportSize({width:1440,height:1000});checks++;
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,"home controls must remain inside the mobile viewport");await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-revenue-dashboard-mobile.png"),fullPage:true});await page.setViewportSize({width:1440,height:1000});checks++;
  await open("calendar");
  const calendarCell=day=>page.getByRole("button",{name:ui(locale,"عرض تفاصيل اليوم {0} من الشهر").replace("{0}",String(day)),exact:true});
  await calendarCell(26).waitFor();assert.equal(await calendarCell(25).isEnabled(),false);assert.equal(await calendarCell(26).isEnabled(),true);checks++;

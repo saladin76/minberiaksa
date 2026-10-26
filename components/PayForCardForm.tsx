@@ -30,6 +30,8 @@ interface Props {
   setCardDetails: (details: PayForCardState) => void;
   cardFocus: string;
   setCardFocus: (focus: string) => void;
+  invalidField?: keyof PayForCardState;
+  errorId?: string;
 }
 
 export function PayForCardForm({
@@ -37,6 +39,8 @@ export function PayForCardForm({
   setCardDetails,
   cardFocus,
   setCardFocus,
+  invalidField,
+  errorId,
 }: Props) {
   const t = useTranslations("DonationDialog");
   const id = useId();
@@ -60,6 +64,9 @@ export function PayForCardForm({
           </label>
           <Input
             id={`${id}-number`}
+            data-donation-field="cardNumber"
+            aria-invalid={invalidField === "cardNumber" || undefined}
+            aria-describedby={invalidField === "cardNumber" ? errorId : undefined}
             value={cardDetails.cardNumber}
             onChange={(e) => {
               const digits = digitsOnly(e.target.value, 19);
@@ -81,6 +88,9 @@ export function PayForCardForm({
           </label>
           <Input
             id={`${id}-name`}
+            data-donation-field="cardholderName"
+            aria-invalid={invalidField === "cardholderName" || undefined}
+            aria-describedby={invalidField === "cardholderName" ? errorId : undefined}
             value={cardDetails.cardholderName}
             onChange={(e) =>
               setCardDetails({
@@ -103,6 +113,9 @@ export function PayForCardForm({
             </label>
             <Input
               id={`${id}-expiry`}
+            data-donation-field="expiryDate"
+            aria-invalid={invalidField === "expiryDate" || undefined}
+            aria-describedby={invalidField === "expiryDate" ? errorId : undefined}
               value={cardDetails.expiryDate}
               onChange={(e) => {
                 let v = digitsOnly(e.target.value, 4);
@@ -123,6 +136,9 @@ export function PayForCardForm({
             </label>
             <Input
               id={`${id}-cvc`}
+            data-donation-field="cvv"
+            aria-invalid={invalidField === "cvv" || undefined}
+            aria-describedby={invalidField === "cvv" ? errorId : undefined}
               type="password"
               value={cardDetails.cvv}
               onChange={(e) =>

@@ -24,9 +24,76 @@ function integerOption(value, fallback, maximum) {
 }
 
 function bankCode(row) {
-  const code = String(row.providerProcReturnCode ?? "").toUpperCase().trim();
+  const raw = object(row.providerRaw);
+  const nested = object(object(raw.albarakaSale).ServiceResponseData).ResponseCode;
+  const code = String(row.providerProcReturnCode || nested || "").toUpperCase().trim();
   if (/^00\d{2}$/.test(code)) return code.slice(2);
   return /^(\d{2}|\d[A-Z]|\d{4})$/.test(code) ? code : "UNKNOWN";
+}
+
+function bankContext(row) {
+  const raw = object(row.providerRaw);
+  const recurring = row.providerTxnType === "RecurringSale" || row.billingReason === "subscription_cycle" || Object.keys(object(raw.albarakaRecurring)).length > 0;
+  const request = recurring ? object(raw.albarakaRecurring) : object(raw.albarakaRequest);
+  const selected = String(request.mode ?? "").toUpperCase();
+  const mode = recurring ? "RECURRING_2D" : ["3D", "3DS"].includes(selected) ? "3D" : selected === "2D" ? "2D" : "UNKNOWN";
+  const md = String(raw.albarakaMdStatus ?? object(raw.albarakaVerification).MdStatus ?? "");
+  const code = bankCode(row);
+  const phase = row.paidAt ? "confirmed" : code !== "UNKNOWN" ? "bank_response" : md && md !== "1" ? "3d_authentication_not_completed" : "unclassified_or_unconfirmed";
+  return { mode, request, phase };
+}
+
+/** Aggregate evidence only: account recovery does not establish same-card recovery. */
+function bankComparisons(rows) {
+  const byMode = new Map();
+  const byDay = new Map();
+  const phases = {};
+  let missingRequestSnapshots = 0;
+  let codesRecoveredFromSale = 0;
+  const fraudByDonor = new Map();
+  for (const row of rows) {
+    const context = bankContext(row);
+    const group = byMode.get(context.mode) ?? { mode: context.mode, rows: [] };
+    group.rows.push(row); byMode.set(context.mode, group);
+    const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(row.createdAt));
+    const daily = byDay.get(day) ?? []; daily.push(row); byDay.set(day, daily);
+    increment(phases, context.phase);
+    if (!Object.keys(context.request).length) missingRequestSnapshots++;
+    if (!row.providerProcReturnCode && bankCode(row) !== "UNKNOWN") codesRecoveredFromSale++;
+    if (!row.paidAt && row.status === "FAILED" && ["59", "34"].includes(bankCode(row)) && row.donorId) {
+      const date = new Date(row.createdAt).getTime();
+      fraudByDonor.set(row.donorId, Math.min(fraudByDonor.get(row.donorId) ?? date, date));
+    }
+  }
+  const recovered = new Set(); const recovered3D = new Set();
+  for (const row of rows) {
+    const failure = fraudByDonor.get(row.donorId);
+    if (row.paidAt && failure !== undefined && new Date(row.createdAt).getTime() > failure) {
+      recovered.add(row.donorId);
+      if (bankContext(row).mode === "3D") recovered3D.add(row.donorId);
+    }
+  }
+  return {
+    byMode: [...byMode.values()].map(({ mode, rows: group }) => ({ mode, ...stateCounts(group), failureCodes: group.filter(row => !row.paidAt && row.status === "FAILED").reduce((counts, row) => { increment(counts, bankCode(row)); return counts; }, {}) })),
+    byIstanbulDay: [...byDay].sort(([a], [b]) => a.localeCompare(b)).map(([day, group]) => ({ day, ...stateCounts(group) })),
+    outcomePhases: phases, missingRequestSnapshots, codesRecoveredFromSale,
+    donorAccountRecovery: { fraudDeclinedAccounts: fraudByDonor.size, laterConfirmedAccounts: recovered.size, later3DConfirmedAccounts: recovered3D.size, sameCardProven: false },
+  };
+}
+
+function bankConfiguration(env) {
+  const pick = names => {
+    const source = names.find(name => typeof env[name] === "string" && env[name].length > 0) ?? null;
+    return { source, value: source ? env[source] : "" };
+  };
+  const profile = (terminalKeys, posnetKeys, keyKeys) => {
+    const terminal = pick(terminalKeys), posnet = pick(posnetKeys), key = pick(keyKeys);
+    return { terminal, posnet, key };
+  };
+  const twoD = profile(["ALBARAKA_2D_TERMINAL_NO", "ALBARAKA_RECURRING_TERMINAL_NO", "ALBARAKA_TERMINAL_NO"], ["ALBARAKA_2D_POSNET_ID", "ALBARAKA_RECURRING_POSNET_ID", "ALBARAKA_POSNET_ID"], ["ALBARAKA_2D_ENC_KEY", "ALBARAKA_ENC_KEY"]);
+  const recurring = profile(["ALBARAKA_RECURRING_TERMINAL_NO", "ALBARAKA_2D_TERMINAL_NO", "ALBARAKA_TERMINAL_NO"], ["ALBARAKA_RECURRING_POSNET_ID", "ALBARAKA_2D_POSNET_ID", "ALBARAKA_POSNET_ID"], ["ALBARAKA_RECURRING_ENC_KEY", "ALBARAKA_2D_ENC_KEY", "ALBARAKA_ENC_KEY"]);
+  const publicProfile = cfg => ({ terminalSource: cfg.terminal.source, posnetSource: cfg.posnet.source, keySource: cfg.key.source, present: Boolean(env.ALBARAKA_MERCHANT_NO && cfg.terminal.value && cfg.posnet.value && cfg.key.value.length >= 8), surroundingWhitespace: [cfg.terminal.value, cfg.posnet.value, cfg.key.value].some(value => value !== value.trim()) });
+  return { source: "CLI and current production env files; not a bank permission check or live PM2 memory inspection", twoD: publicProfile(twoD), recurring: publicProfile(recurring), recurringEnabled: env.ALBARAKA_RECURRING_ENABLED === "1", sameTerminalAsCheckout: Boolean(twoD.terminal.value && twoD.terminal.value === recurring.terminal.value), samePosnetAsCheckout: Boolean(twoD.posnet.value && twoD.posnet.value === recurring.posnet.value), sameKeyAsCheckout: Boolean(twoD.key.value && twoD.key.value === recurring.key.value) };
 }
 
 function failureKind(row, code) {
@@ -108,7 +175,7 @@ export async function auditPaymentDiagnostics({ db, env = {}, days, rowLimit, ch
     select: {
       id: true, donorId: true, createdAt: true, paidAt: true, status: true, provider: true, paymentMethod: true,
       providerOrderId: true, providerProcReturnCode: true, providerErrorMessage: true, providerRaw: true,
-      currency: true, paypalOrderId: true, paypalCaptureId: true, billingReason: true,
+      currency: true, paypalOrderId: true, paypalCaptureId: true, billingReason: true, providerTxnType: true,
     },
   });
   const rows = fetched.slice(0, rowLimit);
@@ -119,11 +186,14 @@ export async function auditPaymentDiagnostics({ db, env = {}, days, rowLimit, ch
     const code = bankCode(row);
     const kind = failureKind(row, code);
     const key = `${code}/${kind}`;
-    const group = codes.get(key) ?? { code, kind, attempts: 0, donors: new Set(), rowsWithoutDonor: 0, modes: {}, currencyPairs: {} };
+    const group = codes.get(key) ?? { code, kind, attempts: 0, donors: new Set(), rowsWithoutDonor: 0, modes: {}, currencyPairs: {}, firstAt: new Date(row.createdAt).toISOString(), lastAt: new Date(row.createdAt).toISOString() };
+    const at = new Date(row.createdAt).toISOString();
+    if (at < group.firstAt) group.firstAt = at;
+    if (at > group.lastAt) group.lastAt = at;
     group.attempts++;
     if (row.donorId) group.donors.add(row.donorId); else group.rowsWithoutDonor++;
-    const snapshot = object(object(row.providerRaw).albarakaRequest);
-    increment(group.modes, allowed(snapshot.mode, ["2D", "3D", "3DS"]));
+    const { request: snapshot, mode } = bankContext(row);
+    increment(group.modes, mode);
     increment(group.currencyPairs, `${currency(row.currency)}->${currency(snapshot.currencyCode)}`);
     codes.set(key, group);
   }
@@ -140,6 +210,8 @@ export async function auditPaymentDiagnostics({ db, env = {}, days, rowLimit, ch
     window: { since: since.toISOString(), until: now.toISOString(), rowsRead: rows.length, rowLimit, truncated: fetched.length > rowLimit, ordering: "newest first" },
     albaraka: {
       ...stateCounts(bankRows),
+      ...bankComparisons(bankRows),
+      configuration: bankConfiguration(env),
       failureCodes: [...codes.values()].map(({ donors, rowsWithoutDonor, ...group }) => ({ ...group, uniqueDonors: donors.size, rowsWithoutDonor, repeatedAttemptsByKnownDonors: group.attempts - donors.size - rowsWithoutDonor })).sort((a, b) => b.attempts - a.attempts),
       note: "These are attempts and distinct donor accounts, not distinct cards or issuer countries. Request currency is attempted, not proof of a debit. No bank inquiry is made.",
     },

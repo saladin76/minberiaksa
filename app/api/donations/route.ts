@@ -1,4 +1,5 @@
 import { getTrackingClientIp } from "@/lib/tracking/client-ip";
+import { donationPaymentEvidence } from "@/lib/donations/payment-evidence";
 import { POST as createCartDonation } from "@/app/api/cart/payment/route";
 import { isOrderType, isRecurringFrequency } from "@/lib/donations/recurring-schedule";
 import { NextRequest, NextResponse } from "next/server";
@@ -283,13 +284,14 @@ export async function GET(request: NextRequest) {
 
     const formattedDonations = donations.map((donation) => ({
       ...donation,
+      securityMode: donationPaymentEvidence(donation).securityMode,
       type: donation.subscriptionId ? ("MONTHLY" as const) : ("ONE_TIME" as const),
       frequency: donation.subscriptionId ? frequencyOf(donation.subscriptionId) : null,
       subscriptionCycle: donation.subscriptionId ? cycleById.get(donation.id) ?? null : null,
       isRecurringCharge: donation.subscriptionId
-        ? donation.billingReason
+        ? donationPaymentEvidence(donation).isRecurringCharge || (donation.billingReason
           ? donation.billingReason !== "subscription_create"
-          : (cycleById.get(donation.id) ?? 1) > 1
+          : (cycleById.get(donation.id) ?? 1) > 1)
         : false,
       fees: donation.fees,
       teamSupport: donation.teamSupport,

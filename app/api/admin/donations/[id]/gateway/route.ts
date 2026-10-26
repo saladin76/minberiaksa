@@ -6,6 +6,7 @@ import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { flattenGatewayRaw } from "@/lib/donations/gateway-raw";
 import { getPayPalOrder, isPayPalConfigured } from "@/lib/paypal";
 import { gatewayDisplayAmounts, inspectPayPalCheckout } from "@/lib/donations/gateway-diagnostics";
+import { donationPaymentEvidence } from "@/lib/donations/payment-evidence";
 
 /**
  * What the payment gateway told us about one donation  the references a
@@ -60,6 +61,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { entries: raw, truncated: rawTruncated } = flattenGatewayRaw(donation.providerRaw);
 
   const amounts = gatewayDisplayAmounts(donation);
+  const evidence = donationPaymentEvidence(donation);
   // Viewing a donation must never capture, settle, fail or notify. Checkout/cron own those actions.
   const paypalInspection = donation.paymentMethod === "PAYPAL" && !donation.paidAt && donation.status !== "FAILED"
     ? await inspectPayPalCheckout(donation, { configured: isPayPalConfigured(), readOrder: getPayPalOrder })
@@ -75,6 +77,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     totalAmount: donation.totalAmount,
     amountUSD: donation.amountUSD,
     ...amounts,
+    securityMode: evidence.securityMode,
     paypalInspection,
     createdAt: donation.createdAt,
     paidAt: donation.paidAt,
@@ -92,7 +95,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     txn: {
       type: donation.providerTxnType,
       result: donation.providerTxnResult,
-      returnCode: donation.providerProcReturnCode,
+      returnCode: evidence.bankResponseCode,
       errorMessage: donation.providerErrorMessage,
     },
     raw,

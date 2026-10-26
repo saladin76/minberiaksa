@@ -11,7 +11,7 @@ type Report = {
   readOnly: boolean; databaseWrites: number; paymentChargeCalls: number;
   paypalOrderReads: number; paypalAuthRequests: number;
   window: { truncated: boolean; rowsRead: number };
-  albaraka: { failureCodes: Array<{ code: string; attempts: number; uniqueDonors: number; repeatedAttemptsByKnownDonors: number; modes: Record<string, number>; currencyPairs: Record<string, number> }> };
+  albaraka: { configuration: { sameTerminalAsCheckout: boolean; sameKeyAsCheckout: boolean; recurringEnabled: boolean }; byMode: Array<{ mode: string; confirmed: number; failed: number }>; codesRecoveredFromSale: number; missingRequestSnapshots: number; donorAccountRecovery: { laterConfirmedAccounts: number; later3DConfirmedAccounts: number; sameCardProven: boolean }; failureCodes: Array<{ code: string; firstAt: string; lastAt: string; attempts: number; uniqueDonors: number; repeatedAttemptsByKnownDonors: number; modes: Record<string, number>; currencyPairs: Record<string, number> }> };
   paypal: { providerCheck: string; confirmed: number; unconfirmed: number; unconfirmedOlderThan24Hours: number; unconfirmedWithoutOrder: number; renewalRowsExcludedFromProbes: number; checks: Array<{ verdict: string; orderStatus?: string; captureStatus?: string; pendingReason?: string; checks?: { currencyMatches: boolean } }> };
 };
 type Options = { db: ReturnType<typeof readOnlyDb>; env?: Record<string, string>; days?: number; rowLimit?: number; checkPayPal?: boolean; paypalLimit?: number; now?: Date; request?: (url: string, init?: RequestInit) => Promise<Response> };
@@ -64,6 +64,43 @@ test("payment audit only reads bounded fields and counts repeated bank attempts 
   assert.equal(report.paypalOrderReads, 0); assert.equal(report.paypalAuthRequests, 0);
   assert.equal(report.databaseWrites, 0); assert.equal(report.paymentChargeCalls, 0);
   assert.doesNotMatch(JSON.stringify(report), /private|4111111111111111|ORDERPRIVATE001|Fraud Şüphesi/);
+});
+
+test("bank audit recovers nested decline codes and separates renewals from first 2D/3D attempts", async () => {
+  const { auditPaymentDiagnostics } = await modulePromise;
+  const rows = [
+    paypalRow("bank-a", null, { provider: "ALBARAKA", paymentMethod: "CARD", status: "FAILED", createdAt: new Date("2026-10-25T20:00:00Z"), providerRaw: { albarakaRequest: { mode: "2D", currencyCode: "TL" }, albarakaSale: { ServiceResponseData: { ResponseCode: "0059" } } } }),
+    paypalRow("bank-b", null, { provider: "ALBARAKA", paymentMethod: "CARD", paidAt: now, providerRaw: { albarakaRequest: { mode: "3D", currencyCode: "TL" } } }),
+    paypalRow("bank-c", null, { provider: "ALBARAKA", paymentMethod: "CARD", status: "FAILED", providerTxnType: "RecurringSale", providerRaw: { albarakaSale: { ServiceResponseData: { ResponseCode: "05", ResponseDescription: "private decline" } } } }),
+  ];
+  const report = await auditPaymentDiagnostics({ db: readOnlyDb(rows), now, request: async () => { throw new Error("No bank calls permitted"); } });
+  assert.equal(report.albaraka.byMode.find(row => row.mode === "RECURRING_2D")?.failed, 1);
+  assert.equal(report.albaraka.byMode.find(row => row.mode === "3D")?.confirmed, 1);
+  assert.equal(report.albaraka.failureCodes.find(row => row.code === "05")?.attempts, 1);
+  assert.equal(report.albaraka.failureCodes.find(row => row.code === "59")?.attempts, 1);
+  assert.equal(report.albaraka.codesRecoveredFromSale, 2);
+  assert.equal(report.albaraka.missingRequestSnapshots, 1);
+  assert.equal(report.albaraka.donorAccountRecovery.laterConfirmedAccounts, 1);
+  assert.equal(report.albaraka.donorAccountRecovery.later3DConfirmedAccounts, 1);
+  assert.equal(report.albaraka.donorAccountRecovery.sameCardProven, false);
+  assert.doesNotMatch(JSON.stringify(report), /donor-private|private decline|bank-a|bank-b|bank-c/);
+});
+
+test("bank audit exposes decline timing and configuration comparisons without terminal values or keys", async () => {
+  const { auditPaymentDiagnostics } = await modulePromise;
+  const rows = ["2026-10-26T01:00:00Z", "2026-10-20T01:00:00Z"].map(createdAt => paypalRow("private-bank", null, { provider: "ALBARAKA", status: "FAILED", providerProcReturnCode: "0148", createdAt: new Date(createdAt) }));
+  const report = await auditPaymentDiagnostics({ db: readOnlyDb(rows), now, env: {
+    ALBARAKA_MERCHANT_NO: "private-merchant", ALBARAKA_TERMINAL_NO: "private-base", ALBARAKA_POSNET_ID: "private-posnet", ALBARAKA_ENC_KEY: "private-base-key",
+    ALBARAKA_2D_TERMINAL_NO: "private-checkout", ALBARAKA_2D_POSNET_ID: "private-checkout-posnet", ALBARAKA_2D_ENC_KEY: "private-checkout-key",
+    ALBARAKA_RECURRING_TERMINAL_NO: "private-renewal", ALBARAKA_RECURRING_POSNET_ID: "private-renewal-posnet", ALBARAKA_RECURRING_ENC_KEY: "private-renewal-key", ALBARAKA_RECURRING_ENABLED: "1",
+  } });
+  const failure = report.albaraka.failureCodes.find(row => row.code === "0148")!;
+  assert.equal(failure.firstAt, "2026-10-20T01:00:00.000Z");
+  assert.equal(failure.lastAt, "2026-10-26T01:00:00.000Z");
+  assert.equal(report.albaraka.configuration.sameTerminalAsCheckout, false);
+  assert.equal(report.albaraka.configuration.sameKeyAsCheckout, false);
+  assert.equal(report.albaraka.configuration.recurringEnabled, true);
+  assert.doesNotMatch(JSON.stringify(report), /private-/);
 });
 
 test("PayPal audit distinguishes buyer approval, missing capture, provider holds and unrecorded completed capture without charging", async () => {

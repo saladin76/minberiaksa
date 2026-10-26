@@ -74,7 +74,7 @@ export function DashboardFilterBar<T extends string>({
         <div
           role="group"
           aria-label={dt("الفترة الزمنية")}
-          className="inline-flex shrink-0 items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-1"
+          className="inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-1"
         >
           {periods.map((option) => {
             const active = option.value === period;
