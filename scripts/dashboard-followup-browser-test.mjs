@@ -185,7 +185,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByRole("button",{name:ui(locale,"تصدير التقرير"),exact:true}).click();
  assert.equal(await page.getByRole("dialog").getByRole("combobox",{name:ui(locale,"بوابة الدفع"),exact:true}).textContent(),"PayPal");await page.keyboard.press("Escape");
  await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-revenue-dashboard-desktop.png"),fullPage:true});
- await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,"home controls must remain inside the mobile viewport");await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-revenue-dashboard-mobile.png"),fullPage:true});await page.setViewportSize({width:1440,height:1000});checks++;
+ await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+1);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,"home controls must remain inside the mobile viewport");await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-revenue-dashboard-mobile.png"),fullPage:true});await page.setViewportSize({width:1440,height:1000});checks++;
  await open("calendar");
  const calendarCell=day=>page.getByRole("button",{name:ui(locale,"عرض تفاصيل اليوم {0} من الشهر").replace("{0}",String(day)),exact:true});
  await calendarCell(26).waitFor();assert.equal(await calendarCell(25).isEnabled(),false);assert.equal(await calendarCell(26).isEnabled(),true);checks++;
