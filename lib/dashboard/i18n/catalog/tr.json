@@ -8457,5 +8457,6 @@
   "المقالات والترجمات": "Makaleler ve çeviriler",
   "تغير النص أثناء الطلب؛ لم تُطبق الاقتراحات القديمة.": "İstek sırasında metin değişti; eski öneriler uygulanmadı.",
   "صورة غلاف هذه اللغة (فارغ = الصورة الافتراضية)": "Bu dilin kapak görseli (boş = varsayılan görsel)",
-  "صفحات جمع التبرعات والإحالات": "Bağış toplama ve yönlendirme sayfaları"
+  "صفحات جمع التبرعات والإحالات": "Bağış toplama ve yönlendirme sayfaları",
+  "تعذر تحميل تقرير Google Ads. راجع الاتصال وإصدار API ثم حاول مجددًا.": "Google Ads raporu yüklenemedi. Bağlantıyı ve API sürümünü kontrol edip yeniden deneyin."
 }

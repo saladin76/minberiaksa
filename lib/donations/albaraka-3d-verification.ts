@@ -7,6 +7,6 @@ export function albaraka3DLinkageError(raw: Record<string, string>, snapshot: Al
   const amount = Number(raw.Amount);
   if (!raw.Amount?.trim() || !Number.isSafeInteger(amount) || amount <= 0 || amount !== snapshot.amount) return "Amount mismatch";
   if (!snapshot.currencyCode || raw.Currency !== snapshot.currencyCode) return "Currency mismatch";
-  if (snapshot.transactionType && snapshot.transactionType !== "Sale") return "Transaction type mismatch";
+  if (raw.TranType !== "Sale" || (snapshot.transactionType && snapshot.transactionType !== "Sale")) return "Transaction type mismatch";
   return null;
 }

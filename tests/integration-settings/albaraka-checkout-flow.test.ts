@@ -88,7 +88,7 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "app
     return (loadedModule.exports as { POST: (request: Request) => Promise<Response> }).POST;
   }
   const raw = (patch: Record<string, string> = {}) => {
-    const values: Record<string, string> = { OrderId: order, MerchantId: cfg.merchantNo, Amount: "125000", Currency: "TL", MdStatus: "1", SecureTransactionId: "test-secure-transaction", CAVV: "test-cavv", ECI: "05", MD: "test-md", ...patch };
+    const values: Record<string, string> = { TranType: "Sale", OrderId: order, MerchantId: cfg.merchantNo, Amount: "125000", Currency: "TL", MdStatus: "1", SecureTransactionId: "test-secure-transaction", CAVV: "test-cavv", ECI: "05", MD: "test-md", ...patch };
     values.MacNew = bank.albarakaResponseMac(values, cfg.encKey); return values;
   };
   const callback = (values = raw()) => load("callback")(new Request(`https://minber.test/api/albaraka/3d/callback?donationId=${id}&locale=ar`, { method: "POST", body: new URLSearchParams(values) }));
@@ -143,7 +143,7 @@ test("two concurrent authentic callbacks can reach Sale only once", async () => 
 });
 
 test("invalid signatures or mismatched signed payment data never mutate, fail, capture, or disclose a token", async () => {
-  for (const patch of ([{ Amount: "1" }, { Currency: "US" }, { MerchantId: "different" }, { OrderId: "" }, { OrderId: "F".repeat(20) }] as Record<string, string>[])) {
+  for (const patch of ([{ TranType: "Auth" }, { Amount: "1" }, { Currency: "US" }, { MerchantId: "different" }, { OrderId: "" }, { OrderId: "F".repeat(20) }] as Record<string, string>[])) {
     const f = fixture(); const response = await f.callback(f.raw(patch));
     assert.equal(f.calls.sales, 0); assert.equal(f.calls.mutations, 0); assert.equal(f.calls.failures, 0);
     assert.ok(!(response.headers.get("location") || "").includes("test-guest-token"));

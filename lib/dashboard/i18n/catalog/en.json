@@ -8465,5 +8465,6 @@
   "المقالات والترجمات": "Articles and translations",
   "تغير النص أثناء الطلب؛ لم تُطبق الاقتراحات القديمة.": "Text changed during the request; outdated suggestions were not applied.",
   "صورة غلاف هذه اللغة (فارغ = الصورة الافتراضية)": "Cover image for this language (empty = default image)",
-  "صفحات جمع التبرعات والإحالات": "Fundraising and referral pages"
+  "صفحات جمع التبرعات والإحالات": "Fundraising and referral pages",
+  "تعذر تحميل تقرير Google Ads. راجع الاتصال وإصدار API ثم حاول مجددًا.": "Could not load the Google Ads report. Check the connection and API version, then try again."
 }
