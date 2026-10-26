@@ -8355,5 +8355,15 @@
   "بحث غير صالح": "Invalid search",
   "تعذر تحميل المقالات": "Could not load articles",
   "لم يكتمل رد البحث؛ لم يُحفظ أي اقتراح.": "The research response was incomplete; no suggestion was saved.",
-  "تعذر قراءة نتيجة البحث؛ أعد المحاولة دون تغيير المحتوى.": "Could not read the research result. Try again; the content is unchanged."
+  "تعذر قراءة نتيجة البحث؛ أعد المحاولة دون تغيير المحتوى.": "Could not read the research result. Try again; the content is unchanged.",
+  "بنفسجي": "Purple",
+  "أصفر": "Yellow",
+  "أزرق": "Blue",
+  "برتقالي": "Orange",
+  "وردي": "Pink",
+  "رمادي": "Gray",
+  "كود": "Code",
+  "إزالة الرابط": "Remove link",
+  "قائمة مهام": "Task list",
+  "تنسيقات متعددة": "Mixed formatting"
 }

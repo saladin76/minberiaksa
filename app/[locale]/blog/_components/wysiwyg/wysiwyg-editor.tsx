@@ -106,7 +106,10 @@ export default function WysiwygEditor({
   return (
     <div className={isEditable ? `${className} content-writing-surface overflow-hidden` : ""}>
       {isEditable && editor && <EditorToolbar editor={editor} onUploadingChange={onUploadingChange} />}
-      {isEditable && editor && <EditorBubbleMenu editor={editor} />}
+      {/* The selection plugin moves its DOM into a floating layer. Keep its
+          React host mounted while save locks editing; unmounting the moved node
+          directly causes removeChild errors and clears the whole editor. */}
+      {editor && <div><EditorBubbleMenu editor={editor} /></div>}
       {isEditable && editor?.isActive("image") && <ImageResizer editor={editor} />}
       <EditorContent editor={editor} />
       {isEditable && editor ? <p className="border-t bg-slate-50 px-4 py-2 text-xs text-slate-500">{dt("كلمات: {0}", [editor.getText().trim().split(/\s+/).filter(Boolean).length])}</p> : null}

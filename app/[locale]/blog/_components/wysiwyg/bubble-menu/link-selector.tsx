@@ -1,6 +1,7 @@
 "use client";
 
 import { cn, getUrlFromString } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 import { Editor } from "@tiptap/core";
 import { Check, LinkIcon, Trash } from "lucide-react";
 import { Dispatch, FC, SetStateAction, useEffect, useRef } from "react";
@@ -21,7 +22,7 @@ export const LinkSelector: FC<LinkSelectorProps> = ({
   // Autofocus on input by default
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [isOpen]);
 
   const handleLinkSubmission = () => {
     const url = getUrlFromString(inputRef.current?.value || "");
@@ -49,15 +50,16 @@ export const LinkSelector: FC<LinkSelectorProps> = ({
             "text-green-500": editor.isActive("link"),
           })}
         >
-          Link
+          {dt("رابط")}
         </p>
       </button>
       {isOpen && (
         <div className="fixed top-full z-[99999] mt-1 flex w-60 overflow-hidden rounded border border-stone-200 bg-white p-1 shadow-xl animate-in fade-in slide-in-from-top-1">
           <input
             ref={inputRef}
+            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleLinkSubmission(); } }}
             type="text"
-            placeholder="Paste a link"
+            placeholder={dt("أدخل الرابط")} aria-label={dt("الرابط")} dir="ltr"
             className="flex-1 bg-white p-1 text-sm outline-none"
             defaultValue={editor.getAttributes("link").href || ""}
           />
@@ -70,7 +72,7 @@ export const LinkSelector: FC<LinkSelectorProps> = ({
                 setIsOpen(false);
               }}
             >
-              <Trash className="h-4 w-4" />
+              <span className="sr-only">{dt("إزالة الرابط")}</span><Trash className="h-4 w-4" />
             </button>
           ) : (
             <button
@@ -78,7 +80,7 @@ export const LinkSelector: FC<LinkSelectorProps> = ({
               type="button"
               className="flex items-center rounded-sm p-1 text-stone-600 transition-all hover:bg-stone-100"
             >
-              <Check className="h-4 w-4" />
+              <span className="sr-only">{dt("تطبيق")}</span><Check className="h-4 w-4" />
             </button>
           )}
         </div>

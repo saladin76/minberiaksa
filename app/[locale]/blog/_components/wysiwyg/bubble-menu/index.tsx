@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { dt } from "@/lib/dashboard/i18n";
 import { BubbleMenu, BubbleMenuProps, isNodeSelection } from "@tiptap/react";
 import {
   BoldIcon,
@@ -25,31 +26,31 @@ type EditorBubbleMenuProps = Omit<BubbleMenuProps, "children">;
 export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
   const items: BubbleMenuItem[] = [
     {
-      name: "bold",
+      name: "عريض",
       isActive: () => props.editor!.isActive("bold"),
       command: () => props.editor!.chain().focus().toggleBold().run(),
       icon: BoldIcon,
     },
     {
-      name: "italic",
+      name: "مائل",
       isActive: () => props.editor!.isActive("italic"),
       command: () => props.editor!.chain().focus().toggleItalic().run(),
       icon: ItalicIcon,
     },
     {
-      name: "underline",
+      name: "تسطير",
       isActive: () => props.editor!.isActive("underline"),
       command: () => props.editor!.chain().focus().toggleUnderline().run(),
       icon: UnderlineIcon,
     },
     {
-      name: "strike",
+      name: "يتوسطه خط",
       isActive: () => props.editor!.isActive("strike"),
       command: () => props.editor!.chain().focus().toggleStrike().run(),
       icon: StrikethroughIcon,
     },
     {
-      name: "code",
+      name: "كود",
       isActive: () => props.editor!.isActive("code"),
       command: () => props.editor!.chain().focus().toggleCode().run(),
       icon: CodeIcon,
@@ -66,7 +67,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
       // - the selected node is an image
       // - the selection is empty
       // - the selection is a node selection (for drag handles)
-      if (editor.isActive("image") || empty || isNodeSelection(selection)) {
+      if (!editor.isEditable || editor.isActive("image") || empty || isNodeSelection(selection)) {
         return false;
       }
       return true;
@@ -89,7 +90,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
   return (
     <BubbleMenu
       {...bubbleMenuProps}
-      className="flex w-fit divide-x divide-stone-200 rounded border border-stone-200 bg-white shadow-xl"
+      className="flex w-fit max-w-[calc(100vw-2rem)] flex-wrap divide-x divide-stone-200 rounded border border-stone-200 bg-white shadow-xl"
     >
       <NodeSelector
         editor={props.editor!}
@@ -126,6 +127,9 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
             onClick={item.command}
             className="p-2 text-stone-600 hover:bg-stone-100 active:bg-stone-200"
             type="button"
+            title={dt(item.name)}
+            aria-label={dt(item.name)}
+            aria-pressed={item.isActive()}
           >
             <item.icon
               className={cn("h-4 w-4", {

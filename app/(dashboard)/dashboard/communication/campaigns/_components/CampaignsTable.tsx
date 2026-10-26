@@ -129,7 +129,7 @@ export function CampaignsTable({
               <SortHeader label={dt("إيراد $")} sortKey="revenue" sort={sort} onSort={onSort} align="left" className="text-end" />
               <SortHeader label={dt("فشلت")} sortKey="failedCount" sort={sort} onSort={onSort} align="left" className="text-end" />
               <SortHeader label={dt("التاريخ")} sortKey="date" sort={sort} onSort={onSort} />
-              <th scope="col" className="w-px px-3 py-2.5">
+              <th scope="col" className="sticky end-0 z-20 w-px bg-slate-50 px-3 py-2.5 shadow-sm">
                 <span className="sr-only">{dt("إجراءات")}</span>
               </th>
             </tr>
@@ -219,7 +219,7 @@ export function CampaignsTable({
                     </div>
                   </td>
 
-                  <td className="w-px whitespace-nowrap px-3 py-2.5 align-middle">
+                  <td className="sticky end-0 z-10 w-px whitespace-nowrap bg-white px-3 py-2.5 align-middle shadow-sm">
                     <div className="flex items-center justify-end gap-1.5">
                       <CampaignRowActions campaign={c} onChanged={onChanged} />
                     </div>

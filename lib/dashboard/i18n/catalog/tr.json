@@ -8347,5 +8347,15 @@
   "بحث غير صالح": "Geçersiz arama",
   "تعذر تحميل المقالات": "Makaleler yüklenemedi",
   "لم يكتمل رد البحث؛ لم يُحفظ أي اقتراح.": "Araştırma yanıtı tamamlanmadı; hiçbir öneri kaydedilmedi.",
-  "تعذر قراءة نتيجة البحث؛ أعد المحاولة دون تغيير المحتوى.": "Araştırma sonucu okunamadı. İçerik değiştirilmeden tekrar deneyin."
+  "تعذر قراءة نتيجة البحث؛ أعد المحاولة دون تغيير المحتوى.": "Araştırma sonucu okunamadı. İçerik değiştirilmeden tekrar deneyin.",
+  "بنفسجي": "Mor",
+  "أصفر": "Sarı",
+  "أزرق": "Mavi",
+  "برتقالي": "Turuncu",
+  "وردي": "Pembe",
+  "رمادي": "Gri",
+  "كود": "Kod",
+  "إزالة الرابط": "Bağlantıyı kaldır",
+  "قائمة مهام": "Görev listesi",
+  "تنسيقات متعددة": "Karma biçimlendirme"
 }

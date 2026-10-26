@@ -51,25 +51,25 @@ const FONT_SIZES = [
 ];
 
 const TEXT_COLORS = [
-  { name: "Default", value: null },
-  { name: "Gray", value: "#78716c" },
-  { name: "Red", value: "#E00000" },
-  { name: "Orange", value: "#FFA500" },
-  { name: "Yellow", value: "#EAB308" },
-  { name: "Green", value: "#008A00" },
-  { name: "Blue", value: "#2563EB" },
-  { name: "Purple", value: "#9333EA" },
-  { name: "Pink", value: "#BA4081" },
+  { name: "افتراضي", value: null },
+  { name: "رمادي", value: "#78716c" },
+  { name: "أحمر", value: "#E00000" },
+  { name: "برتقالي", value: "#FFA500" },
+  { name: "أصفر", value: "#EAB308" },
+  { name: "أخضر", value: "#008A00" },
+  { name: "أزرق", value: "#2563EB" },
+  { name: "بنفسجي", value: "#9333EA" },
+  { name: "وردي", value: "#BA4081" },
 ];
 
 const HIGHLIGHT_COLORS = [
-  { name: "None", value: null },
-  { name: "Yellow", value: "#FEF08A" },
-  { name: "Green", value: "#BBF7D0" },
-  { name: "Blue", value: "#BFDBFE" },
-  { name: "Pink", value: "#FBCFE8" },
-  { name: "Purple", value: "#E9D5FF" },
-  { name: "Orange", value: "#FED7AA" },
+  { name: "بدون", value: null },
+  { name: "أصفر", value: "#FEF08A" },
+  { name: "أخضر", value: "#BBF7D0" },
+  { name: "أزرق", value: "#BFDBFE" },
+  { name: "وردي", value: "#FBCFE8" },
+  { name: "بنفسجي", value: "#E9D5FF" },
+  { name: "برتقالي", value: "#FED7AA" },
 ];
 
 type ToolButtonProps = {
@@ -326,8 +326,8 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor, onUploadingChang
       >
         <option value="">A</option>
         {TEXT_COLORS.map((c) => (
-          <option key={c.name} value={c.value ?? ""}>
-            {c.name}
+          <option key={dt(c.name)} value={c.value ?? ""}>
+            {dt(c.name)}
           </option>
         ))}
       </select>
@@ -348,8 +348,8 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor, onUploadingChang
       >
         <option value="">{dt("تظليل")}</option>
         {HIGHLIGHT_COLORS.map((c) => (
-          <option key={c.name} value={c.value ?? ""}>
-            {c.name}
+          <option key={dt(c.name)} value={c.value ?? ""}>
+            {dt(c.name)}
           </option>
         ))}
       </select>

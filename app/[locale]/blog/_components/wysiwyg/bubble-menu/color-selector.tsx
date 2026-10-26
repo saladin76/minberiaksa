@@ -1,3 +1,4 @@
+import { dt } from "@/lib/dashboard/i18n";
 import * as Popover from "@radix-ui/react-popover";
 import { Editor } from "@tiptap/core";
 import { Check, ChevronDown } from "lucide-react";
@@ -16,78 +17,78 @@ interface ColorSelectorProps {
 
 const TEXT_COLORS: BubbleColorMenuItem[] = [
   {
-    name: "Default",
+    name: "افتراضي",
     color: "var(--editor-black)",
   },
   {
-    name: "Purple",
+    name: "بنفسجي",
     color: "#9333EA",
   },
   {
-    name: "Red",
+    name: "أحمر",
     color: "#E00000",
   },
   {
-    name: "Yellow",
+    name: "أصفر",
     color: "#EAB308",
   },
   {
-    name: "green",
+    name: "أزرق",
     color: "#2563EB",
   },
   {
-    name: "Green",
+    name: "أخضر",
     color: "#008A00",
   },
   {
-    name: "sky",
+    name: "برتقالي",
     color: "#FFA500",
   },
   {
-    name: "Pink",
+    name: "وردي",
     color: "#BA4081",
   },
   {
-    name: "Gray",
+    name: "رمادي",
     color: "#A8A29E",
   },
 ];
 
 const HIGHLIGHT_COLORS: BubbleColorMenuItem[] = [
   {
-    name: "Default",
+    name: "افتراضي",
     color: "var(--editor-highlight-default)",
   },
   {
-    name: "Purple",
+    name: "بنفسجي",
     color: "var(--editor-highlight-purple)",
   },
   {
-    name: "Red",
+    name: "أحمر",
     color: "var(--editor-highlight-red)",
   },
   {
-    name: "Yellow",
+    name: "أصفر",
     color: "var(--editor-highlight-yellow)",
   },
   {
-    name: "green",
+    name: "أزرق",
+    color: "#BFDBFE",
+  },
+  {
+    name: "أخضر",
     color: "var(--editor-highlight-green)",
   },
   {
-    name: "Green",
-    color: "var(--editor-highlight-green)",
-  },
-  {
-    name: "sky",
+    name: "برتقالي",
     color: "var(--editor-highlight-sky)",
   },
   {
-    name: "Pink",
+    name: "وردي",
     color: "var(--editor-highlight-pink)",
   },
   {
-    name: "Gray",
+    name: "رمادي",
     color: "var(--editor-highlight-gray)",
   },
 ];
@@ -109,6 +110,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
     <Popover.Root open={isOpen}>
       <div className="relative h-full">
         <Popover.Trigger
+          aria-label={dt("ألوان النص")}
           className="flex h-full items-center gap-1 p-2 text-sm font-medium text-stone-600 hover:bg-stone-100 active:bg-stone-200"
           onClick={() => setIsOpen(!isOpen)}
         >
@@ -129,13 +131,13 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
           align="start"
           className="z-[99999] my-1 flex max-h-80 w-48 flex-col overflow-hidden overflow-y-auto rounded border border-stone-200 bg-white p-1 shadow-xl animate-in fade-in slide-in-from-top-1"
         >
-          <div className="my-1 px-2 text-sm text-stone-500">Color</div>
+          <div className="my-1 px-2 text-sm text-stone-500">{dt("لون النص")}</div>
           {TEXT_COLORS.map(({ name, color }, index) => (
             <button
               key={index}
               onClick={() => {
                 editor.commands.unsetColor();
-                if (name !== "Default") {
+                if (name !== "افتراضي") {
                   editor
                     .chain()
                     .focus()
@@ -154,7 +156,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
                 >
                   A
                 </div>
-                <span>{name}</span>
+                <span>{dt(name)}</span>
               </div>
               {editor.isActive("textStyle", { color }) && (
                 <Check className="h-4 w-4" />
@@ -163,7 +165,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
           ))}
 
           <div className="mb-1 mt-2 px-2 text-sm text-stone-500">
-            Background
+            {dt("لون التظليل")}
           </div>
 
           {HIGHLIGHT_COLORS.map(({ name, color }, index) => (
@@ -171,7 +173,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
               key={index}
               onClick={() => {
                 editor.commands.unsetHighlight();
-                if (name !== "Default") editor.commands.setHighlight({ color });
+                if (name !== "افتراضي") editor.commands.setHighlight({ color });
                 setIsOpen(false);
               }}
               className="flex items-center justify-between rounded-sm px-2 py-1 text-sm text-stone-600 hover:bg-stone-100"
@@ -184,7 +186,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
                 >
                   A
                 </div>
-                <span>{name}</span>
+                <span>{dt(name)}</span>
               </div>
               {editor.isActive("highlight", { color }) && (
                 <Check className="h-4 w-4" />
