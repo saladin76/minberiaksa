@@ -146,6 +146,8 @@ export function buildMetaComponents(input: {
   };
 
   const lookupNamed = (parameterName: string, scope: string): { ok: true; value: string } | { ok: false; key: string } => {
+    const scoped = input.values[`${scope}.${parameterName}`];
+    if (scoped != null && String(scoped).length) return { ok: true, value: String(scoped) };
     const direct = input.values[parameterName];
     if (direct != null && String(direct).length) return { ok: true, value: String(direct) };
 

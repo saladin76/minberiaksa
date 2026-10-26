@@ -1,5 +1,6 @@
 import { donationTemplateValues } from "./template-donation-links";
 import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-failure-link";
+import { donationNotificationParameters, isDonationMoneyNotificationEvent } from "@/lib/templates/donation-money";
 import { retryPayloadBlockReason } from "./retry-readiness";
 import { RETRY_BATCH_CAP } from "./retry-batches";
 import type { CommunicationPurposeGroup } from "./purpose-group";
@@ -185,8 +186,15 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
     if (!routed.sender.phoneNumberId || !routed.sender.businessAccountId) return result(deliveryId, "NO_SENDER_IDENTITY", base);
     const meta = await resolveMetaTemplate(row, routed.sender.businessAccountId);
     if (!meta) return result(deliveryId, "META_TEMPLATE_REQUIRED", base);
-    const archived=row.variables && typeof row.variables === "object" ? row.variables as {trigger?:{donationId?:string};snapshot?:{donation?:{id?:string}}} : {};
-    const prepared=await donationTemplateValues({componentsSchema:meta.componentsSchema,scopedNames:meta.scopedNames,values:storedTemplateValues(row.variables,meta.positionalNames),donationId:archived.trigger?.donationId || archived.snapshot?.donation?.id,recipientUserId:row.recipientUserId});
+    const archived=row.variables && typeof row.variables === "object" ? row.variables as {trigger?:{donationId?:string;event?:string};snapshot?:{donation?:{id?:string;notificationAmount?:string}}} : {};
+    const values = donationNotificationParameters({
+      values: storedTemplateValues(row.variables, meta.positionalNames),
+      scopedNames: meta.scopedNames, positionalNames: meta.positionalNames,
+      componentsSchema: meta.componentsSchema,
+      notificationAmount: row.origin === "TRIGGER" && archived.trigger?.donationId && isDonationMoneyNotificationEvent(archived.trigger.event ?? "")
+        ? archived.snapshot?.donation?.notificationAmount : undefined,
+    });
+    const prepared=await donationTemplateValues({componentsSchema:meta.componentsSchema,scopedNames:meta.scopedNames,values,donationId:archived.trigger?.donationId || archived.snapshot?.donation?.id,recipientUserId:row.recipientUserId});
     if(!prepared.ok)return result(deliveryId,prepared.reason as RetryOutcomeCode,base);
     const built = buildMetaComponents({
       componentsSchema: meta.componentsSchema, values: prepared.values,

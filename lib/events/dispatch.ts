@@ -17,6 +17,7 @@ import { donationAttachments, type EmailAttachment } from "@/lib/certificates/ge
 import { ensureDonationDocuments } from "@/lib/certificates/issue";
 import { getServerBaseUrl } from "@/lib/server-base-url";
 import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-failure-link";
+import { donationNotificationDocument, donationNotificationText, donationNotificationParameters, isDonationMoneyNotificationEvent } from "@/lib/templates/donation-money";
 
 export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_DONATION" | "USER_REGISTERED" | "SUBSCRIPTION_CREATED" | "SUBSCRIPTION_PAYMENT" | "SUBSCRIPTION_CANCELLED" | "DONATION_LAPSED";
 export interface EventDispatchInput { userId?: string; donationId?: string }
@@ -74,13 +75,16 @@ export async function sendTriggerMessage(
   const { event, locale, config } = opts;
   const variables = ctx as unknown as Record<string, unknown>;
   const donationId = opts.donationId ?? null;
+  // Only donation-scoped transactional notifications upgrade legacy amount
+  // display slots. Marketing/history templates keep their original semantics.
+  const moneyContext: Pick<TemplateContext, "donation"> = donationId && isDonationMoneyNotificationEvent(event) ? ctx : {};
 
   if (trigger.channel === "EMAIL") {
     const tpl = await prisma.emailTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
     const html = localizeDonationFailureLinks(
-      await renderEmailHtml(variant.document as TReaderDocument, ctx),
+      await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext), ctx),
       locale,
     );
     const subject = renderEmailSubject(variant.subject, ctx);
@@ -95,7 +99,7 @@ export async function sendTriggerMessage(
     const tpl = await prisma.smsTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = localizeDonationFailureLinks(mergeText(variant.body, ctx), locale);
+    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, moneyContext), ctx), locale);
     const response = await sendAutomaticSmsMessage({
       triggerEvent: event,
       templateId: tpl.id,
@@ -117,7 +121,7 @@ export async function sendTriggerMessage(
     const tpl = await prisma.whatsappTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = localizeDonationFailureLinks(mergeText(variant.body, ctx), locale);
+    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, moneyContext), ctx), locale);
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
     const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId);
@@ -130,7 +134,8 @@ export async function sendTriggerMessage(
       templateValues[name] = value;
       templateValues[String(index + 1)] = value;
     });
-    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose });
+    const notificationValues = metaTemplate ? donationNotificationParameters({ values: templateValues, scopedNames: metaTemplate.scopedNames, positionalNames: metaTemplate.positionalNames, componentsSchema: metaTemplate.componentsSchema, notificationAmount: moneyContext.donation?.notificationAmount }) : templateValues;
+    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues: notificationValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose });
     return { channel: "WHATSAPP", outcome: response.outcome, reason: response.reason };
   }
 

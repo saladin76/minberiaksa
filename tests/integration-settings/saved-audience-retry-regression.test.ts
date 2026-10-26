@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript";
+import * as donationMoney from "../../lib/templates/donation-money";
+import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
 
 function isolated<T>(file: string, dependencies: Record<string, unknown>): T {
   const source = fs.readFileSync(path.join(process.cwd(), file), "utf8");
@@ -217,7 +219,7 @@ test("saved list reader bounds untrusted page sizes", async () => {
 });
 
 type RetryEngineResult = { code: string; ok: boolean };
-type EngineOptions = { outcome?: "accept" | "throw" | "unknown" | "unconfigured"; failLink?: boolean; failArchive?: boolean; revokeBeforeSend?: boolean; child?: boolean; status?: string };
+type EngineOptions = { outcome?: "accept" | "throw" | "unknown" | "unconfigured"; failLink?: boolean; failArchive?: boolean; revokeBeforeSend?: boolean; child?: boolean; status?: string; whatsappTrigger?: boolean; variables?: unknown };
 function engineHarness(options: EngineOptions = {}) {
   let held = false;
   let sends = 0;
@@ -226,15 +228,17 @@ function engineHarness(options: EngineOptions = {}) {
   let payload: Record<string, unknown> | null = null;
   let lastQuery: Record<string, unknown> | null = null;
   const events: string[] = [];
-  const stored = { id: "original", channel: "EMAIL", status: options.status ?? "FAILED", origin: "CAMPAIGN", purpose: "MARKETING", locale: "en", templateId: "template", templateName: "template", recipientUserId: "user", recipientEmail: "donor@example.test", recipientPhone: null, recipientName: "Donor", renderedSubject: "Subject", renderedBody: "Body", variables: {}, campaignId: "campaign", retriedAt: null, retryOfDeliveryId: options.child ? "parent" : null };
+  const stored = { id: "original", channel: options.whatsappTrigger ? "WHATSAPP" : "EMAIL", status: options.status ?? "FAILED", origin: options.whatsappTrigger ? "TRIGGER" : "CAMPAIGN", purpose: options.whatsappTrigger ? "TRANSACTIONAL" : "MARKETING", locale: "en", templateId: "template", templateName: "template", recipientUserId: "user", recipientEmail: "donor@example.test", recipientPhone: options.whatsappTrigger ? "+15555555555" : null, recipientName: "Donor", renderedSubject: "Subject", renderedBody: "Body", variables: options.variables ?? {}, campaignId: "campaign", retriedAt: null, retryOfDeliveryId: options.child ? "parent" : null };
   const engine = isolated<{
     retryDelivery: (id: string, opts?: { config: Record<string, unknown> }) => Promise<RetryEngineResult>;
     listRetryCandidates: (filter: { channel: string; ids?: string[] }) => Promise<string[]>;
     retryPreflight: (filter: { channel: string; ids?: string[] }) => Promise<unknown>;
   }>("lib/communication/delivery-retry-service.ts", {
+    "@/lib/templates/donation-money": donationMoney,
     "./retry-batches": { RETRY_BATCH_CAP: 25 },
     "./retry-readiness": { retryPayloadBlockReason: () => null },
     "@/lib/prisma": { prisma: {
+      whatsappTemplate: { findUnique: async () => ({ id: "template" }) },
       communicationDelivery: {
         findUnique: async () => ({ ...stored, retriedAt: held ? new Date() : null }),
         updateMany: async (args: { where: { status?: string }; data: { retriedAt: Date | null } }) => {
@@ -265,11 +269,11 @@ function engineHarness(options: EngineOptions = {}) {
       if (options.outcome === "unconfigured") return { ok: false, reason: "EMAIL_NOT_CONFIGURED" };
       return { ok: true, providerMessageId: "provider-id", internalAccepted: false };
     } },
-    "@/lib/events/dispatch": { resolveTriggerSendConfig: async () => ({}), resolveTriggerSender: () => ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
+    "@/lib/events/dispatch": { resolveTriggerSendConfig: async () => ({}), resolveTriggerSender: () => ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test", phoneNumberId: "number", businessAccountId: "waba" } }) },
     "./template-donation-links": {donationTemplateValues:async(input:{values:unknown})=>({ok:true,values:input.values})},
     "@/lib/templates/localize-donation-failure-link": { localizeDonationFailureLinks: (body: string) => body },
-    "./automatic-message-dispatcher": {},
-    "./providers/meta-whatsapp/parameters": {},
+    "./automatic-message-dispatcher": { resolveMetaTemplateMapping: async () => ({ name: "receipt", language: "en", positionalNames: ["donation.amount"], scopedNames: { "body.1": "donation.amount" }, componentsSchema: [{ type: "BODY", text: "Amount {{1}} USD" }] }) },
+    "./providers/meta-whatsapp/parameters": { buildMetaComponents },
     "./providers/sms/client": {},
     "./whatsapp-marketing-frequency": {
       reserveWhatsappMarketingSend: async () => ({ ok: true, reservation: { userId: "donor", reservedAt: new Date(), previousAt: null, reserved: true } }),
@@ -295,6 +299,19 @@ test("retry executor preserves marketing purpose and locale through the actual p
   assert.equal(state.payload?.locale, "en");
   assert.ok(state.events.indexOf("link") < state.events.indexOf("send"));
   assert.ok(state.events.lastIndexOf("guard") < state.events.indexOf("send"));
+});
+test("automatic WhatsApp retries keep the archived corrected total without rewriting historical amounts", async () => {
+  const notificationAmount = "Attempted total — collection not confirmed: 300 (Projects: 250; Team support: 50)";
+  const variables = { trigger: { event: "DONATION_FAILED", donationId: "donation" }, snapshot: { donation: { id: "donation", amount: "250", totalAmount: "300", notificationAmount } } };
+  const harness = engineHarness({ whatsappTrigger: true, variables });
+  assert.equal((await harness.engine.retryDelivery("original")).code, "SENT");
+  const components = harness.state().payload?.components as Array<{ parameters: Array<{ text: string }> }>;
+  assert.equal(components[0].parameters[0].text, notificationAmount);
+  assert.equal(variables.snapshot.donation.amount, "250");
+  const legacy = engineHarness({ whatsappTrigger: true, variables: { snapshot: { donation: { amount: "250" } } } });
+  assert.equal((await legacy.engine.retryDelivery("original")).code, "SENT");
+  const oldComponents = legacy.state().payload?.components as typeof components;
+  assert.equal(oldComponents[0].parameters[0].text, "250");
 });
 test("retry executor rechecks withdrawal immediately before sending", async () => {
   const harness = engineHarness({ revokeBeforeSend: true });

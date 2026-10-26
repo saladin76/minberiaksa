@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import * as donationMoney from "../../lib/templates/donation-money";
 
 type Cursor = { id: string; createdAt: Date };
 type Service = {
@@ -22,6 +23,7 @@ function loadService(includeMissingPayload = false) {
     },
   };
   const dependencies: Record<string, unknown> = {
+    "@/lib/templates/donation-money": donationMoney,
     "./template-donation-links": { donationTemplateValues: async () => ({ ok: true, values: {} }) },
     "@/lib/templates/localize-donation-failure-link": { localizeDonationFailureLinks: (body: string) => body },
     "./retry-batches": { RETRY_BATCH_CAP: 25 },

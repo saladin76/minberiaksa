@@ -45,7 +45,11 @@ export const VARIABLE_CATALOG: VariableGroup[] = [
     group: "التبرّعة الحالية (للأحداث التلقائية فقط)",
     entries: [
       { token: "{{donation.id}}", label: "معرّف التبرّعة", exampleValue: "65f12abc..." },
-      { token: "{{donation.amount}}", label: "المبلغ", exampleValue: "50" },
+      { token: "{{donation.amount}}", label: "مبلغ المشاريع (قديم)", exampleValue: "50" },
+      { token: "{{donation.projectsAmount}}", label: "مبلغ المشاريع", exampleValue: "50" },
+      { token: "{{donation.teamSupport}}", label: "دعم الفريق", exampleValue: "5" },
+      { token: "{{donation.fees}}", label: "الرسوم المغطاة", exampleValue: "0" },
+      { token: "{{donation.amountBreakdown}}", label: "الإجمالي مع تفصيل المشاريع والدعم والرسوم وحالة التحصيل", exampleValue: "الإجمالي: 55 USD (المشاريع: 50 USD; دعم الفريق: 5 USD)" },
       { token: "{{donation.amountUSD}}", label: "المبلغ (USD)", exampleValue: "50" },
       { token: "{{donation.currency}}", label: "العملة", exampleValue: "USD" },
       { token: "{{donation.totalAmount}}", label: "الإجمالي", exampleValue: "55" },
