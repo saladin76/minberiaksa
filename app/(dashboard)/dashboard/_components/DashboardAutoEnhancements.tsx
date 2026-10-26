@@ -8,6 +8,7 @@ import { SmartSeoWorkbenchCard } from "./SmartSeoWorkbenchCard";
 import { SeoTextImproverCard } from "./SeoTextImproverCard";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
 import { dt } from "@/lib/dashboard/i18n";
+import { isUnifiedContentEditorPath } from "@/lib/content-editor/editor-routes";
 
 type LocaleCode = SupportedLocale;
 type SeoContentType = "campaign" | "category" | "blog";
@@ -194,9 +195,10 @@ function readProjectSeoSnapshot() {
 }
 
 function currentPageType(pathname: string): SeoContentType | null {
+  if (isUnifiedContentEditorPath(pathname)) return null;
   if (pathname.includes("/dashboard/campaigns/edit/")) return "campaign";
   if (pathname.includes("/dashboard/categories/edit/")) return "category";
-  if (pathname.includes("/dashboard/blog")) return "blog";
+  if (pathname.includes("/dashboard/blog/settings/")) return "blog";
   return null;
 }
 
@@ -289,9 +291,9 @@ export function DashboardAutoEnhancements() {
   // SEO workbench shows on both new + edit campaign pages. Placement is
   // controlled by the page's <div id="dashboard-project-seo-anchor" /> sentinel.
   const isProjectForm =
-    pathname.includes("/dashboard/campaigns/edit/") ||
+    !isUnifiedContentEditorPath(pathname) && (pathname.includes("/dashboard/campaigns/edit/") ||
     pathname.endsWith("/dashboard/campaigns/new") ||
-    pathname.includes("/dashboard/campaigns/new/");
+    pathname.includes("/dashboard/campaigns/new/"));
   const hasTextImprover = Boolean(currentPageType(pathname));
 
   // This component is mounted by the shell on all 151 dashboard routes, but everything it

@@ -19,8 +19,8 @@ export async function auditAiRuntime(env, { checkGeneration = false, checkResear
       report.generationRequests++;
       const response = await request(`${base}/responses`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({
         model, max_output_tokens: search ? 1500 : 64,
-        ...(search ? { tools: [{ type: "web_search" }], tool_choice: "required" } : { text: { format: { type: "json_object" } } }),
-        input: search ? "Search for the official United Nations homepage and return only its URL." : 'Return JSON only: {"ok":true}',
+        ...(search ? { tools: [{ type: "web_search", search_context_size: "medium" }], tool_choice: "required", include: ["web_search_call.action.sources"] } : { text: { format: { type: "json_object" } } }),
+        input: search ? 'Search for the official United Nations homepage. Return valid JSON only: {"url":"official homepage URL"}.' : 'Return JSON only: {"ok":true}',
         store: false,
       }) });
       const body = await response.json().catch(() => null);
@@ -33,7 +33,15 @@ export async function auditAiRuntime(env, { checkGeneration = false, checkResear
       if (body?.status === "incomplete" || body?.status === "failed") return { model, status: "generation_incomplete", httpStatus: response.status };
       const blocks = (body?.output ?? []).flatMap(row => row.content ?? []);
       const text = body?.output_text || blocks.filter(row => row.type === "output_text").map(row => row.text || "").join("");
-      if (search) return { model, status: text && body?.output?.some(row => row.type === "web_search_call" && row.status === "completed") ? "research_ready" : "research_not_completed", httpStatus: response.status };
+      if (search) {
+        const completed = body?.output?.some(row => row.type === "web_search_call" && row.status === "completed");
+        const sources = (body?.output ?? []).flatMap(row => row.action?.sources ?? []);
+        const annotations = blocks.flatMap(row => row.annotations ?? []);
+        const cited = [...sources, ...annotations].some(row => typeof row.url === "string" && /^https?:\/\//.test(row.url));
+        let validJson = false;
+        try { const result = JSON.parse(text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim()); validJson = typeof result?.url === "string" && /^https?:\/\//.test(result.url); } catch { /* Report readiness only for the actual research JSON contract. */ }
+        return { model, status: completed && cited && validJson ? "research_ready" : "research_not_completed", httpStatus: response.status };
+      }
       let valid = false; try { valid = JSON.parse(text)?.ok === true; } catch {}
       return { model, status: valid ? "generation_ready" : "invalid_generation_output", httpStatus: response.status };
     } catch { return { model, status: "network_or_timeout" }; }

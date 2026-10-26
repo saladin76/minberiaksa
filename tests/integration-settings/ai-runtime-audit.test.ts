@@ -28,3 +28,21 @@ test("AI audit exercises small synthetic generation only and suppresses upstream
   assert.ok(payloads.every(row=>row.store===false));
   assert.equal(payloads[1].tools[0].type,"web_search");
 });
+test("research readiness requires completed search, inspectable citations and usable JSON",async()=>{
+  const audit=auditFunction();
+  async function inspect(validJson:boolean,withSources:boolean) {
+    return audit({OPENAI_API_KEY:"fixture"},{checkResearch:true,request:async(url,init)=>{
+      if(url.includes('/models/'))return new Response("{}");
+      const request=JSON.parse(init?.body as string);
+      assert.equal(request.text,undefined);
+      assert.deepEqual(request.include,["web_search_call.action.sources"]);
+      return Response.json({output:[
+        {type:"web_search_call",status:"completed",action:{sources:withSources?[{url:"https://www.un.org/"}]:[]}},
+        {type:"message",content:[{type:"output_text",text:validJson?JSON.stringify({url:'https://www.un.org/'}):"not JSON"}]}
+      ]});
+    }});
+  }
+  assert.equal((await inspect(true,true)).research.status,"research_ready");
+  assert.equal((await inspect(false,true)).research.status,"research_not_completed");
+  assert.equal((await inspect(true,false)).research.status,"research_not_completed");
+});

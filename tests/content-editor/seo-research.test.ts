@@ -26,7 +26,10 @@ function service(payload: unknown, capture: unknown[] = []) {
       throw new Error("Unexpected dependency: " + name);
     },
   });
-  return loaded.exports as { generateResearchedSeo: (input: Record<string, unknown>) => Promise<{ suggestion: { faq: unknown[] }; research: { sources: unknown[] } }> };
+  return loaded.exports as {
+    generateResearchedSeo: (input: Record<string, unknown>) => Promise<{ suggestion: { faq: unknown[] }; research: { sources: unknown[] } }>;
+    generateResearchedArticle: (input: Record<string, unknown>) => Promise<{ values: { content: string }; research: { sources: unknown[] } }>;
+  };
 }
 const input = { type: "campaign", locale: "en", title: "Water project", description: "Clean water for families." };
 function response(search = true, sources = true) {
@@ -41,10 +44,31 @@ test("SEO suggestions require research and return reviewable source evidence", a
   assert.equal(result.research.sources.length, 1);
   assert.equal(result.suggestion.faq.length, 1);
   assert.equal((capture[0] as { tool_choice: string }).tool_choice, "required");
+  assert.equal((capture[0] as { text?: unknown }).text, undefined, "hosted web search must not be combined with JSON mode");
+  assert.equal((capture[0] as { store: boolean }).store, false);
 });
 test("SEO never returns a researched suggestion when search did not run", async () => {
   await assert.rejects(service(response(false)).generateResearchedSeo(input), /بحث الويب/);
 });
 test("SEO requires inspectable sources instead of inventing research evidence", async () => {
   await assert.rejects(service(response(true, false)).generateResearchedSeo(input), /مصادر/);
+});
+test("invalid or incomplete research never becomes an apparently valid suggestion", async () => {
+  const malformed = response();
+  malformed.output[1] = { type: "message", content: [{ type: "output_text", text: "not JSON" }] };
+  await assert.rejects(service(malformed).generateResearchedSeo(input), /قراءة نتيجة البحث/);
+  await assert.rejects(service({ ...response(), status: "incomplete" }).generateResearchedSeo(input), /لم يكتمل رد البحث/);
+});
+test("article research uses the same compatible tool contract and preserves cited sources in its draft", async () => {
+  const paragraph = "محتوى تجريبي موثّق للمراجعة البشرية دون ادعاءات أو أرقام مختلقة. ".repeat(12);
+  const payload = { output: [
+    { type: "web_search_call", status: "completed", action: { sources: [{ url: "https://example.org/one", title: "First source" }, { url: "https://example.org/two", title: "Second source" }] } },
+    { type: "message", content: [{ type: "output_text", text: JSON.stringify({ title: "مقال للمراجعة", description: "ملخص", blocks: [{ kind: "heading", text: "عنوان" }, { kind: "paragraph", text: paragraph }, { kind: "paragraph", text: paragraph }] }) }] },
+  ] };
+  const capture: unknown[] = [];
+  const result = await service(payload, capture).generateResearchedArticle({ existingTitles: [], sourceContext: "Fixture only" });
+  assert.equal((capture[0] as { text?: unknown }).text, undefined);
+  assert.equal((capture[0] as { tool_choice: string }).tool_choice, "required");
+  assert.equal(result.research.sources.length, 2);
+  assert.match(result.values.content, /https:\/\/example.org\/one/);
 });

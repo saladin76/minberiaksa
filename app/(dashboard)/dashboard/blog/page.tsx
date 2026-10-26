@@ -86,10 +86,8 @@ export default function BooksManagement() {
       ]} />
       <TranslationOverview kind="blog">
           <ContentLocalizationAuditCard section="blog" />
+          <BlogHealthCard />
         </TranslationOverview>
-      <BlogHealthCard />
-
-
       <Card className="overflow-hidden border-slate-200 shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

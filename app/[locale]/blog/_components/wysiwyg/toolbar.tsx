@@ -4,13 +4,15 @@ import { cn } from "@/lib/utils";
 import type { Editor } from "@tiptap/core";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { dt } from "@/lib/dashboard/i18n";
 import {
   Bold as BoldIcon,
   Code as CodeIcon,
   Heading1,
   Heading2,
   Heading3,
-  Highlighter,
+  Pilcrow,
+  RemoveFormatting,
   Image as ImageIcon,
   Italic as ItalicIcon,
   Link as LinkIcon,
@@ -107,9 +109,10 @@ const Divider = () => <span className="mx-1 h-6 w-px bg-stone-200" />;
 
 type EditorToolbarProps = {
   editor: Editor | null;
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
-export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
+export const EditorToolbar: FC<EditorToolbarProps> = ({ editor, onUploadingChange }) => {
   // Subscribe to editor updates so active-state buttons re-render
   const [, force] = useState(0);
   useEffect(() => {
@@ -132,7 +135,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
   const promptForLink = useCallback(() => {
     if (!editor) return;
     const previous = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("Enter URL", previous || "https://");
+    const url = window.prompt(dt("أدخل الرابط"), previous || "https://");
     if (url === null) return; // cancel
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -156,10 +159,11 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
       if (e.target) e.target.value = "";
       if (!file || !editor) return;
       if (!file.type.startsWith("image/")) {
-        toast.error("الملف ليس صورة");
+        toast.error(dt("الملف ليس صورة"));
         return;
       }
       setUploadingImage(true);
+      onUploadingChange?.(true);
       try {
         const formData = new FormData();
         formData.append("file", file);
@@ -167,15 +171,16 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         const url: string | undefined = response.data?.url;
         if (!url) throw new Error("Upload returned no URL");
         editor.chain().focus().setImage({ src: url }).run();
-        toast.success("تم رفع الصورة");
+        toast.success(dt("تم رفع الصورة"));
       } catch (err) {
         console.error("Toolbar image upload error:", err);
-        toast.error("فشل رفع الصورة");
+        toast.error(dt("فشل رفع الصورة"));
       } finally {
         setUploadingImage(false);
+        onUploadingChange?.(false);
       }
     },
-    [editor],
+    [editor, onUploadingChange],
   );
 
   if (!editor) return null;
@@ -185,6 +190,8 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
   return (
     <div
       dir="ltr"
+      role="toolbar"
+      aria-label={dt("أدوات تنسيق المحتوى")}
       className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-md border-b border-stone-200 bg-stone-50 px-2 py-1.5"
       onMouseDown={(e) => {
         // Keep editor selection intact when clicking on empty toolbar space
@@ -192,8 +199,9 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
       }}
     >
       {/* Headings */}
+      <ToolButton title={dt("فقرة")} active={editor.isActive("paragraph")} onClick={() => editor.chain().focus().setParagraph().run()}><Pilcrow className="h-4 w-4" /></ToolButton>
       <ToolButton
-        title="Heading 1"
+        title={dt("عنوان رئيسي H1")}
         active={editor.isActive("heading", { level: 1 })}
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 1 }).run()
@@ -202,7 +210,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         <Heading1 className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Heading 2"
+        title={dt("عنوان فرعي H2")}
         active={editor.isActive("heading", { level: 2 })}
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 2 }).run()
@@ -211,7 +219,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         <Heading2 className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Heading 3"
+        title={dt("عنوان فرعي H3")}
         active={editor.isActive("heading", { level: 3 })}
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 3 }).run()
@@ -224,7 +232,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
 
       {/* Font size */}
       <label className="flex items-center">
-        <span className="sr-only">Font size</span>
+        <span className="sr-only">{dt("حجم الخط")}</span>
         <select
           value={fontSize}
           onMouseDown={(e) => e.stopPropagation()}
@@ -234,10 +242,10 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
             else editor.chain().focus().setFontSize(v).run();
           }}
           className="h-8 rounded border border-stone-200 bg-white px-2 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-stone-300"
-          title="Font size"
-          aria-label="Font size"
+          title={dt("حجم الخط")}
+          aria-label={dt("حجم الخط")}
         >
-          <option value="">Size</option>
+          <option value="">{dt("الحجم")}</option>
           {FONT_SIZES.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -250,35 +258,35 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
 
       {/* Inline marks */}
       <ToolButton
-        title="Bold"
+        title={dt("عريض")}
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
       >
         <BoldIcon className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Italic"
+        title={dt("مائل")}
         active={editor.isActive("italic")}
         onClick={() => editor.chain().focus().toggleItalic().run()}
       >
         <ItalicIcon className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Underline"
+        title={dt("تسطير")}
         active={editor.isActive("underline")}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
       >
         <UnderlineIcon className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Strikethrough"
+        title={dt("شطب")}
         active={editor.isActive("strike")}
         onClick={() => editor.chain().focus().toggleStrike().run()}
       >
         <Strikethrough className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Inline code"
+        title={dt("نص برمجي")}
         active={editor.isActive("code")}
         onClick={() => editor.chain().focus().toggleCode().run()}
       >
@@ -294,8 +302,8 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         </span>
         <input
           type="color"
-          title="Text color"
-          aria-label="Text color"
+          title={dt("لون النص")}
+          aria-label={dt("لون النص")}
           onMouseDown={(e) => e.stopPropagation()}
           onChange={(e) =>
             editor.chain().focus().setColor(e.target.value).run()
@@ -304,8 +312,8 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         />
       </div>
       <select
-        aria-label="Text color preset"
-        title="Text color preset"
+        aria-label={dt("ألوان النص")}
+        title={dt("ألوان النص")}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => {
           const v = e.target.value;
@@ -326,8 +334,8 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
 
       {/* Highlight */}
       <select
-        aria-label="Highlight color"
-        title="Highlight color"
+        aria-label={dt("لون التظليل")}
+        title={dt("لون التظليل")}
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => {
           const v = e.target.value;
@@ -338,9 +346,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         className="h-8 rounded border border-stone-200 bg-white px-1 text-xs text-stone-700"
         defaultValue=""
       >
-        <option value="">
-          <Highlighter className="inline h-3 w-3" />
-        </option>
+        <option value="">{dt("تظليل")}</option>
         {HIGHLIGHT_COLORS.map((c) => (
           <option key={c.name} value={c.value ?? ""}>
             {c.name}
@@ -352,28 +358,28 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
 
       {/* Lists, quote, hr */}
       <ToolButton
-        title="Bullet list"
+        title={dt("قائمة نقطية")}
         active={editor.isActive("bulletList")}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       >
         <List className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Ordered list"
+        title={dt("قائمة مرقمة")}
         active={editor.isActive("orderedList")}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       >
         <ListOrdered className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Blockquote"
+        title={dt("اقتباس")}
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
       >
         <Quote className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Horizontal rule"
+        title={dt("فاصل أفقي")}
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
       >
         <Minus className="h-4 w-4" />
@@ -383,7 +389,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
 
       {/* Link */}
       <ToolButton
-        title="Link"
+        title={dt("رابط")}
         active={editor.isActive("link")}
         onClick={promptForLink}
       >
@@ -399,7 +405,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
         onChange={handleImageFile}
       />
       <ToolButton
-        title={uploadingImage ? "جاري الرفع..." : "إدراج صورة"}
+        title={uploadingImage ? dt("جاري الرفع...") : dt("إدراج صورة")}
         disabled={uploadingImage}
         onClick={() => imageInputRef.current?.click()}
       >
@@ -413,15 +419,16 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({ editor }) => {
       <Divider />
 
       {/* Undo / Redo */}
+      <ToolButton title={dt("إزالة التنسيق")} onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}><RemoveFormatting className="h-4 w-4" /></ToolButton>
       <ToolButton
-        title="Undo"
+        title={dt("تراجع")}
         disabled={!editor.can().undo()}
         onClick={() => editor.chain().focus().undo().run()}
       >
         <Undo2 className="h-4 w-4" />
       </ToolButton>
       <ToolButton
-        title="Redo"
+        title={dt("إعادة")}
         disabled={!editor.can().redo()}
         onClick={() => editor.chain().focus().redo().run()}
       >

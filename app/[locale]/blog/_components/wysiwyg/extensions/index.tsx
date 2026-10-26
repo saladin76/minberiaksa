@@ -2,7 +2,6 @@ import { InputRule } from "@tiptap/core";
 import { Color } from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
-import TiptapImage from "@tiptap/extension-image";
 import TiptapLink from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskItem from "@tiptap/extension-task-item";
@@ -16,6 +15,7 @@ import DragAndDrop from "./drag-and-drop";
 import FontSize from "./font-size";
 import SlashCommand from "./slash-command";
 import UpdatedImage from "./updated-image";
+import { dt } from "@/lib/dashboard/i18n";
 
 export const defaultExtensions = [
   StarterKit.configure({
@@ -91,13 +91,6 @@ export const defaultExtensions = [
         "text-stone-400 underline underline-offset-[3px] hover:text-stone-600 transition-colors cursor-pointer",
     },
   }),
-  TiptapImage.configure({
-    inline: true,
-    allowBase64: true,
-    HTMLAttributes: {
-      class: "rounded-lg border border-stone-200",
-    },
-  }),
   UpdatedImage.configure({
     HTMLAttributes: {
       class: "rounded-lg border border-stone-200",
@@ -106,9 +99,9 @@ export const defaultExtensions = [
   Placeholder.configure({
     placeholder: ({ node }) => {
       if (node.type.name === "heading") {
-        return `Heading ${node.attrs.level}`;
+        return dt("عنوان {0}", [node.attrs.level]);
       }
-      return "Press '/' for commands";
+      return dt("اكتب المحتوى هنا، أو اضغط / لعرض الأدوات");
     },
     includeChildren: true,
   }),

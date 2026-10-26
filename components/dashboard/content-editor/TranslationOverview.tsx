@@ -181,7 +181,7 @@ export function TranslationOverview({
                       <td className="p-2">
                         <Link
                           className="text-blue-800 underline"
-                          href={`/dashboard/content/${kind}/${row.id}`}
+                          href={`/dashboard/content/${kind}/${row.id}?locale=${language}`}
                         >
                           {row.title || dt("دون عنوان")}
                         </Link>
@@ -213,7 +213,7 @@ export function TranslationOverview({
           </details>
         </>
       )}
-      {children}
+      {expanded ? children : null}
       </div>
     </details>
   );
