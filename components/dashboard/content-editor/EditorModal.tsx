@@ -20,6 +20,7 @@ export function EditorModal({
     >
       <DialogContent
         dir={dashDir()}
+        hideCloseButton
         className="max-h-[94vh] w-[95vw] max-w-5xl overflow-auto p-0"
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
