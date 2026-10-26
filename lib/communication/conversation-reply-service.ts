@@ -141,6 +141,7 @@ export async function sendConversationReply(
     await markDeliveryStatus(created.data.id, "FAILED", { errorMessage: sent.detail ? `${sent.reason}  ${sent.detail}` : sent.reason });
     return { ok: false, reason: sent.reason, detail: sent.detail ?? null };
   }
-  await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+  const archived = await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
+  if (!archived.ok) return { ok: false, reason: "ACCEPTED_UNRECORDED" };
   return { ok: true, deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
 }

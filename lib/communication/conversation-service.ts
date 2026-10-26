@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { normalizePhoneE164, phoneDigits, phoneMatchVariants } from "./phone";
 import type { WhatsappRenderedPreview } from "./whatsapp-rendered-preview";
+import { INBOX_ACCEPTED_STATUSES } from "./inbox-timeline";
 
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
@@ -78,6 +79,7 @@ type Bucket = {
   phone: string;
   lastInboundAt: number;
   lastOutboundAt: number;
+  lastReplyAt: number;
   lastInboundText: string | null;
   inboundCount: number;
   outboundCount: number;
@@ -152,7 +154,7 @@ async function matchDonors(phoneDigitsList: string[]): Promise<Map<string, Conve
    key is the stored string and the spellings are folded together here, where E.164 normalisation
    already lives. Nothing is dropped either way: every spelling comes back as its own row. */
 
-type RawGroup = { _id: { senderId?: unknown; phone?: unknown }; count?: unknown; lastAt?: unknown; lastPayload?: unknown };
+type RawGroup = { _id: { senderId?: unknown; phone?: unknown }; count?: unknown; lastAt?: unknown; lastReplyAt?: unknown; lastPayload?: unknown };
 
 function rawDate(value: unknown): number {
   if (value && typeof value === "object" && "$date" in (value as Record<string, unknown>)) {
@@ -188,8 +190,7 @@ async function aggregateInbound(): Promise<RawGroup[]> {
       ],
       allowDiskUse: true,
       cursor: {},
-    })
-    .catch((error: unknown) => { console.error("aggregateInbound failed", error); return null; });
+    });
   return groups(result);
 }
 
@@ -204,13 +205,13 @@ async function aggregateOutbound(): Promise<RawGroup[]> {
             _id: { senderId: "$senderId", phone: "$recipientPhone" },
             count: { $sum: 1 },
             lastAt: { $max: "$createdAt" },
+            lastReplyAt: { $max: { $cond: [{ $in: ["$status", INBOX_ACCEPTED_STATUSES] }, "$createdAt", null] } },
           },
         },
       ],
       allowDiskUse: true,
       cursor: {},
-    })
-    .catch((error: unknown) => { console.error("aggregateOutbound failed", error); return null; });
+    });
   return groups(result);
 }
 
@@ -234,7 +235,7 @@ export async function listConversations(opts: { senderId?: string | null } = {})
     if (!bucket) {
       bucket = {
         id, senderId, phone: normalizePhoneE164(phone) ?? phone,
-        lastInboundAt: 0, lastOutboundAt: 0, lastInboundText: null, inboundCount: 0, outboundCount: 0,
+        lastInboundAt: 0, lastOutboundAt: 0, lastReplyAt: 0, lastInboundText: null, inboundCount: 0, outboundCount: 0,
       };
       buckets.set(id, bucket);
     }
@@ -260,6 +261,7 @@ export async function listConversations(opts: { senderId?: string | null } = {})
     const bucket = ensure(objectIdString(row._id?.senderId), phone);
     bucket.outboundCount += Number(row.count ?? 0);
     bucket.lastOutboundAt = Math.max(bucket.lastOutboundAt, rawDate(row.lastAt));
+    bucket.lastReplyAt = Math.max(bucket.lastReplyAt, rawDate(row.lastReplyAt));
   }
 
   const [donorMap, handledMap, senders] = await Promise.all([
@@ -284,7 +286,7 @@ export async function listConversations(opts: { senderId?: string | null } = {})
       handled,
       lastMessageAt: lastAt ? new Date(lastAt).toISOString() : null,
       lastInboundText: bucket.lastInboundText,
-      needsReply: bucket.lastInboundAt > bucket.lastOutboundAt && !handled,
+      needsReply: bucket.lastInboundAt > bucket.lastReplyAt && !handled,
       inboundCount: bucket.inboundCount,
       outboundCount: bucket.outboundCount,
       sender: bucket.senderId ? senders.get(bucket.senderId) ?? null : null,
@@ -299,6 +301,7 @@ export async function listConversations(opts: { senderId?: string | null } = {})
 }
 
 export type TimelineItem = {
+  id: string;
   kind: "inbound" | "outbound" | "status";
   at: string | null;
   text: string | null;
@@ -348,17 +351,15 @@ export async function getConversation(
         where: { channel: "WHATSAPP", recipient: { in: variants }, ...senderScope, ...(before ? { receivedAt: { lt: before } } : {}) },
         orderBy: { receivedAt: "desc" },
         take: limit + 1,
-        select: { eventType: true, receivedAt: true, status: true, payloadSanitized: true, senderId: true },
-      })
-      .catch(() => []),
+        select: { id: true, eventType: true, receivedAt: true, status: true, payloadSanitized: true, senderId: true },
+      }),
     prisma.communicationDelivery
       .findMany({
         where: { channel: "WHATSAPP", recipientPhone: { in: variants }, ...senderScope, ...(before ? { createdAt: { lt: before } } : {}) },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
-        select: { createdAt: true, renderedBody: true, variables: true, status: true, senderId: true },
-      })
-      .catch(() => []),
+        select: { id: true, createdAt: true, renderedBody: true, variables: true, status: true, senderId: true },
+      }),
     matchDonors([phoneDigits(phone)]),
     senderMap(),
   ]);
@@ -376,6 +377,7 @@ export async function getConversation(
       ? (vars.whatsappPreview as WhatsappRenderedPreview)
       : null;
     timeline.push({
+      id: `delivery:${delivery.id}`,
       kind: "outbound",
       at: delivery.createdAt?.toISOString() ?? null,
       text: preview?.body ?? delivery.renderedBody ?? null,
@@ -388,6 +390,7 @@ export async function getConversation(
     if (event.eventType === "inbound_message") {
       const payload = event.payloadSanitized as { text?: unknown; media?: unknown } | null;
       timeline.push({
+        id: `event:${event.id}`,
         kind: "inbound",
         at: event.receivedAt?.toISOString() ?? null,
         text: payload && typeof payload.text === "string" ? payload.text : null,
@@ -395,7 +398,7 @@ export async function getConversation(
         media: (payload?.media ?? null) as TimelineItem["media"],
       });
     } else {
-      timeline.push({ kind: "status", at: event.receivedAt?.toISOString() ?? null, text: null, status: event.status ?? event.eventType });
+      timeline.push({ id: `event:${event.id}`, kind: "status", at: event.receivedAt?.toISOString() ?? null, text: null, status: event.status ?? event.eventType });
     }
     if (!resolvedSenderId && event.senderId) resolvedSenderId = event.senderId;
   }

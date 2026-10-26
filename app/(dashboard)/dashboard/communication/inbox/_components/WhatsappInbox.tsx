@@ -13,6 +13,7 @@ import { SegmentedControl, fmtDateTime, fmtFull } from "../../_shared/channel-ui
 import { cn } from "@/lib/utils";
 import { SmartWhatsappDialog } from "@/components/dashboard/SmartWhatsappDialog";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { mergeInboxTimeline } from "@/lib/communication/inbox-timeline";
 
 /**
  * The WhatsApp inbox.
@@ -85,6 +86,7 @@ type WhatsappPreview = {
 };
 
 type TimelineItem = {
+  id: string;
   kind: "inbound" | "outbound" | "status";
   at: string | null;
   text: string | null;
@@ -133,6 +135,21 @@ function windowText(window: ReplyWindow): string {
   return hours > 0 ? dt("يمكن الردّ بنص حر خلال {0} ساعة و{1} دقيقة.", [hours, minutes]) : dt("يمكن الردّ بنص حر خلال {0} دقيقة.", [minutes]);
 }
 
+function messageStatus(status: string | null): string {
+  switch (status) {
+    case "SENT": return dt("أُرسلت");
+    case "DELIVERED": return dt("وصلت");
+    case "READ": return dt("قُرئت");
+    case "FAILED": return dt("فشلت");
+    case "RENDERED": return dt("جاهزة");
+    default: return status ?? "";
+  }
+}
+
+function invalidateRequest(request: { current: number }) {
+  request.current++;
+}
+
 export function WhatsappInbox() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
@@ -151,24 +168,47 @@ export function WhatsappInbox() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const [draft, setDraft] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const draft = activeId ? drafts[activeId] ?? "" : "";
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [smartOpen, setSmartOpen] = useState(false);
   const [smartInitialMode, setSmartInitialMode] = useState<"FREEFORM" | "UTILITY" | "MARKETING" | undefined>(undefined);
   const senderSelectionReady = useRef(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  const activeRef = useRef<string | null>(null);
+  const listRequest = useRef(0);
+  const detailRequest = useRef(0);
+  const replyInFlight = useRef(false);
+  const followBottom = useRef(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const selectConversation = useCallback((id: string | null) => {
+    if (activeRef.current === id) return;
+    activeRef.current = id;
+    detailRequest.current++;
+    followBottom.current = true;
+    setActiveId(id);
+    setLoadingDetail(Boolean(id));
+    setDetail(null);
+    setReplyWindow(null);
+    setNotice(null);
+    setDetailError(null);
+    setLoadingOlder(false);
+    setSmartOpen(false);
+  }, []);
 
   const loadList = useCallback(async (silent = false) => {
+    const request = ++listRequest.current;
     if (!silent) setLoadingList(true);
     setListError(null);
     try {
       const params = new URLSearchParams({ filter });
       if (senderId) params.set("senderId", senderId);
       if (query.trim()) params.set("q", query.trim());
-      const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store" });
+      const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
+      if (request !== listRequest.current) return;
+      if (!res.ok || !data.ok) throw new Error(data.error === "INBOX_UNAVAILABLE" ? dt("تعذّر تحميل صندوق واتساب") : data.error ?? "load failed");
       const nextConversations = data.conversations ?? [];
       const nextSenders = data.senders ?? [];
       setConversations(nextConversations);
@@ -188,24 +228,19 @@ export function WhatsappInbox() {
       }
 
       if (nextConversations.length === 0) {
-        setActiveId(null);
-        setDetail(null);
-        setReplyWindow(null);
+        selectConversation(null);
       } else {
-        setActiveId((current) =>
-          current && nextConversations.some((conversation: Conversation) => conversation.id === current)
-            ? current
-            : nextConversations[0].id,
-        );
+        if (!nextConversations.some((conversation: Conversation) => conversation.id === activeRef.current)) selectConversation(nextConversations[0].id);
       }
     } catch (error) {
+      if (request !== listRequest.current) return;
       setListError((error as Error).message || dt("تعذّر تحميل صندوق واتساب"));
     } finally {
-      if (!silent) setLoadingList(false);
+      if (request === listRequest.current) setLoadingList(false);
     }
-  }, [filter, senderId, query]);
+  }, [filter, senderId, query, selectConversation]);
 
-  useEffect(() => { void loadList(); }, [loadList]);
+  useEffect(() => { void loadList(); return () => invalidateRequest(listRequest); }, [loadList]);
 
   // Keep an operational inbox fresh without forcing the team to click «تحديث».
   // Silent polling preserves the current list on transient errors instead of
@@ -218,23 +253,32 @@ export function WhatsappInbox() {
   }, [loadList]);
 
   const loadDetail = useCallback(async (id: string, silent = false) => {
+    if (activeRef.current !== id) return;
+    const request = ++detailRequest.current;
     if (!silent) setLoadingDetail(true);
     if (!silent) setNotice(null);
     setDetailError(null);
     try {
-      const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { cache: "no-store" });
+      const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "load failed");
-      setDetail(data.conversation);
+      if (request !== detailRequest.current || activeRef.current !== id) return;
+      if (!res.ok || !data.ok) throw new Error(data.error === "INBOX_UNAVAILABLE" ? dt("تعذّر تحميل المحادثة") : data.error ?? "load failed");
+      setDetail(previous => previous && silent ? {
+        ...data.conversation,
+        timeline: mergeInboxTimeline(previous.timeline, data.conversation.timeline),
+        hasMore: previous.hasMore,
+        oldestAt: previous.oldestAt,
+      } : data.conversation);
       setReplyWindow(data.replyWindow);
     } catch (error) {
+      if (request !== detailRequest.current || activeRef.current !== id) return;
       setDetailError((error as Error).message || dt("تعذّر تحميل المحادثة"));
     } finally {
-      if (!silent) setLoadingDetail(false);
+      if (request === detailRequest.current) setLoadingDetail(false);
     }
   }, []);
 
-  useEffect(() => { if (activeId) void loadDetail(activeId); }, [activeId, loadDetail]);
+  useEffect(() => { if (activeId) void loadDetail(activeId); return () => invalidateRequest(detailRequest); }, [activeId, loadDetail]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -247,26 +291,35 @@ export function WhatsappInbox() {
   /* Newest message in view when a conversation opens  the reason anyone opened it. */
   useEffect(() => {
     const node = timelineRef.current;
-    if (node) node.scrollTop = node.scrollHeight;
+    if (node && followBottom.current) node.scrollTop = node.scrollHeight;
   }, [detail]);
 
   const act = useCallback(async (action: "handled" | "followup" | "link") => {
     if (!activeId) return;
+    const requestedId = activeId;
+    try {
     const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(activeId)}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action }),
     });
+    if (activeRef.current !== requestedId) return;
     if (res.ok) {
       setNotice({ tone: "ok", text: action === "handled" ? dt("تم وسمها كمُعالَجة.") : action === "followup" ? dt("سُجّل طلب المتابعة.") : dt("سُجّل طلب الربط بمتبرع.") });
       void loadList();
     } else {
       setNotice({ tone: "error", text: dt("تعذّر تنفيذ الإجراء.") });
     }
+    } catch {
+      if (activeRef.current === requestedId) setNotice({ tone: "error", text: dt("تعذّر تنفيذ الإجراء.") });
+    }
   }, [activeId, loadList]);
 
   const sendReply = useCallback(async () => {
-    if (!activeId || !draft.trim()) return;
+    if (!activeId || !draft.trim() || replyInFlight.current) return;
+    const conversationId = activeId;
+    const submittedDraft = draft;
+    replyInFlight.current = true;
     setSending(true);
     setNotice(null);
     try {
@@ -276,22 +329,31 @@ export function WhatsappInbox() {
         body: JSON.stringify({ action: "reply", body: draft.trim() }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (res.ok && data.ok !== true) throw new Error("Unconfirmed send response");
+      if (res.ok && data.ok) setDrafts(previous => previous[conversationId] === submittedDraft ? { ...previous, [conversationId]: "" } : previous);
+      if (activeRef.current !== conversationId) return;
+      if (!res.ok || !data.ok) {
         /* The window closing between load and send is the one failure an operator will actually
            hit, so it is named rather than reported as a generic error. */
         setNotice({
           tone: "error",
           text: data.error === "REPLY_WINDOW_CLOSED"
             ? dt("انتهت نافذة الردّ الحر قبل الإرسال  استخدم قالبًا معتمدًا.")
+            : data.error === "ACCEPTED_UNRECORDED"
+              ? dt("قبل المزوّد الرسالة لكن تعذّر تحديث سجلها؛ لا تُعد إرسالها")
             : dt("تعذّر الإرسال: {0}", [data.error ?? dt("خطأ غير معروف")]),
         });
         return;
       }
-      setDraft("");
+      followBottom.current = true;
       setNotice({ tone: "ok", text: dt("أُرسل الردّ.") });
-      await loadDetail(activeId);
-      void loadList();
+      await loadDetail(conversationId, true);
+      void loadList(true);
+    } catch {
+      if (activeRef.current === conversationId) setNotice({ tone: "error", text: dt("نتيجة المزوّد غير مؤكدة؛ راجعها قبل السماح بمحاولة جديدة") });
+      await loadDetail(conversationId, true);
     } finally {
+      replyInFlight.current = false;
       setSending(false);
     }
   }, [activeId, draft, loadDetail, loadList]);
@@ -311,7 +373,7 @@ export function WhatsappInbox() {
         actions={
           <button
             type="button"
-            onClick={() => void loadList()}
+            onClick={() => { void loadList(); if (activeRef.current) void loadDetail(activeRef.current, true); }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <RefreshCw className={cn("w-4 h-4", loadingList && "animate-spin")} />
@@ -407,7 +469,7 @@ export function WhatsappInbox() {
                   <li key={c.id}>
                     <button
                       type="button"
-                      onClick={() => setActiveId(c.id)}
+                      onClick={() => selectConversation(c.id)}
                       className={cn(
                         "relative w-full px-3 py-3.5 text-start transition-colors hover:bg-slate-50",
                         activeId === c.id && "bg-emerald-50/70",
@@ -441,7 +503,7 @@ export function WhatsappInbox() {
         </div>
 
         {/* ── Thread ─────────────────────────────────────────────── */}
-        <div className="flex min-h-[68vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex h-[76vh] min-h-[32rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {!activeId ? (
             <EmptyState variant="inline" title={dt("اختر محادثة")} description={dt("ستظهر الرسائل وملف المتبرع هنا.")} />
           ) : loadingDetail && !detail ? (
@@ -510,18 +572,32 @@ export function WhatsappInbox() {
                 )}
               </div>
 
-              <div ref={timelineRef} className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white px-4 py-4">
+              <div ref={timelineRef} onScroll={() => { const node = timelineRef.current; if (node) followBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white px-4 py-4">
                 {detail.hasMore && (
                   <button
                     type="button"
+                    disabled={loadingOlder}
                     onClick={() => {
                       if (!detail.oldestAt || !activeId) return;
+                      const requestedId = activeId;
+                      const node = timelineRef.current;
+                      const oldHeight = node?.scrollHeight ?? 0;
+                      const oldTop = node?.scrollTop ?? 0;
+                      followBottom.current = false;
+                      setLoadingOlder(true);
                       void (async () => {
-                        const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(activeId)}?before=${encodeURIComponent(detail.oldestAt!)}`, { cache: "no-store" });
+                        try {
+                        const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(requestedId)}?before=${encodeURIComponent(detail.oldestAt!)}`, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
                         const data = await res.json();
-                        if (res.ok && data.ok) {
+                        if (activeRef.current !== requestedId) return;
+                        if (!res.ok || !data.ok) throw new Error("load failed");
                           /* Older page prepended, so the reader keeps their place in the thread. */
-                          setDetail({ ...data.conversation, timeline: [...data.conversation.timeline, ...detail.timeline], hasMore: data.conversation.hasMore });
+                          setDetail(previous => previous ? { ...previous, timeline: mergeInboxTimeline(data.conversation.timeline, previous.timeline), oldestAt: data.conversation.oldestAt, hasMore: data.conversation.hasMore } : previous);
+                          requestAnimationFrame(() => { if (node && activeRef.current === requestedId) node.scrollTop = oldTop + node.scrollHeight - oldHeight; });
+                        } catch {
+                          if (activeRef.current === requestedId) setDetailError(dt("تعذّر تحميل المحادثة"));
+                        } finally {
+                          if (activeRef.current === requestedId) setLoadingOlder(false);
                         }
                       })();
                     }}
@@ -529,18 +605,18 @@ export function WhatsappInbox() {
                   >
                     {dt("تحميل رسائل أقدم")}</button>
                 )}
-                {detail.timeline.map((item, index) => {
+                {detail.timeline.map((item) => {
                   if (item.kind === "status") {
                     return (
-                      <p key={index} className="text-center text-[11px] text-slate-400">
-                        {item.status} · {fmtFull(item.at)}
+                      <p key={item.id} className="text-center text-[11px] text-slate-400">
+                        {messageStatus(item.status)} · {fmtFull(item.at)}
                       </p>
                     );
                   }
                   const inbound = item.kind === "inbound";
                   const MediaIcon = item.media ? MEDIA_ICONS[item.media.kind] ?? FileText : null;
                   return (
-                    <div key={index} className={cn("flex", inbound ? "justify-start" : "justify-end")}>
+                    <div key={item.id} className={cn("flex", inbound ? "justify-start" : "justify-end")}>
                       <div
                         className={cn(
                           "max-w-[78%] rounded-2xl px-3 py-2.5 text-sm shadow-sm",
@@ -616,7 +692,7 @@ export function WhatsappInbox() {
 
                         <p className="mt-1 text-[10px] text-slate-400">
                           {fmtFull(item.at)}
-                          {!inbound && item.status ? ` · ${item.status}` : ""}
+                          {!inbound && item.status ? ` · ${messageStatus(item.status)}` : ""}
                         </p>
                       </div>
                     </div>
@@ -646,7 +722,7 @@ export function WhatsappInbox() {
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
+                      onChange={(e) => { const value = e.target.value; if (activeId) setDrafts(previous => ({ ...previous, [activeId]: value })); }}
                       disabled={sending}
                       rows={2}
                       placeholder={dt("اكتب ردًّا…")}

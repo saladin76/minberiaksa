@@ -27,10 +27,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const before = sp.get("before");
   const limit = Number(sp.get("limit") ?? 60);
 
-  const [conversation, window] = await Promise.all([
+  const loaded = await Promise.all([
     getConversation(conversationId, { limit, before }),
     replyWindowFor(conversationId),
-  ]);
+  ]).catch(() => null);
+  if (!loaded) return NextResponse.json({ error: "INBOX_UNAVAILABLE" }, { status: 503 });
+  const [conversation, window] = loaded;
   if (!conversation) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true, conversation, replyWindow: window });
 }
@@ -67,9 +69,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const status = sent.reason === "REPLY_WINDOW_CLOSED" ? 409 : 502;
       return NextResponse.json({ error: sent.reason, detail: sent.detail ?? null }, { status });
     }
-    /* A reply IS handling it; the marker keeps the conversation off the queue until the donor writes
-       again, matching how `needsReply` is computed. */
-    await markConversationHandled(conversationId, actor).catch(() => undefined);
+    // The accepted outbound archive resolves the queue. A handled marker written
+    // here could hide a NEW inbound message that arrived while the send was running.
     return NextResponse.json({ ok: true, deliveryId: sent.deliveryId, providerMessageId: sent.providerMessageId });
   }
 
