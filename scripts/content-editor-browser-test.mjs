@@ -206,7 +206,7 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
-let browser, page;
+let browser, page, richPage;
 const errors = [];
 try {
   browser = await chromium.launch({
@@ -361,6 +361,7 @@ try {
         await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
         await view.setViewportSize({width:390,height:844});
         assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), prefix + " mobile layout overflows");
+        assert.ok(await nav.evaluateAll(buttons => buttons.every(button => {const box=button.getBoundingClientRect();return box.left>=0 && box.right<=innerWidth+1;})), prefix + " editor sections must remain visible without a hidden horizontal menu");
         await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
         snapshots.push(prefix);
       } finally {
@@ -370,7 +371,7 @@ try {
     }
   }
 
-  const richPage = await browser.newPage({viewport:{width:1366,height:1000}});
+  richPage = await browser.newPage({viewport:{width:1366,height:1000}});
   richPage.on("pageerror", error => errors.push("rich editor: " + error.message));
   richPage.on("console", message => { if (/Duplicate extension names/.test(message.text())) errors.push(message.text()); });
   await richPage.goto(origin + "/?kind=blog");
@@ -482,10 +483,15 @@ try {
       passed: true,
       screenshots: temp,
       scope:
-        "real React editor; HTTP, Next routing and dynamic rich editor mocked; no production writes",
+        "real React and Tiptap editors; only HTTP and Next routing mocked; no production writes",
     }),
   );
 } finally {
+  if (richPage && !richPage.isClosed()) {
+    await richPage.screenshot({path:path.join(temp,"rich-editor-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+    const state = await richPage.evaluate(() => ({editors:[...document.querySelectorAll('.ProseMirror,[role="textbox"]')].map(node => ({role:node.getAttribute('role'),label:node.getAttribute('aria-label'),editable:node.getAttribute('contenteditable')})),statuses:[...document.querySelectorAll('[role="alert"],[role="status"]')].map(node => node.textContent),buttons:[...document.querySelectorAll('button')].slice(0,8).map(node => ({label:node.textContent,disabled:node.disabled})),inert:document.querySelectorAll('[inert]').length})).catch(()=>null);
+    await writeFile(path.join(temp,"rich-editor-last-state.json"),JSON.stringify({state,errors,saves},null,2));
+  }
   if (page) await page.screenshot({path:path.join(temp,"draft-flow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));

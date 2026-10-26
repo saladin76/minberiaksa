@@ -774,7 +774,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       >
         <nav
           aria-label={dt("أقسام المحرر")}
-          className="flex gap-1 overflow-x-auto rounded-xl border bg-white p-2 xl:sticky xl:top-5 xl:flex-col xl:overflow-visible"
+          className="grid grid-cols-2 gap-1 rounded-xl border bg-white p-2 sm:grid-cols-3 xl:sticky xl:top-56 xl:flex xl:flex-col"
         >
           {EDITOR_SECTIONS[kind].map((item, index) => {
             const Icon = sectionIcons[item.icon as keyof typeof sectionIcons];
@@ -783,10 +783,10 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
                 key={item.id}
                 type="button"
                 aria-current={section === item.id ? "page" : undefined}
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-4 text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex min-w-0 items-center gap-2 rounded-lg px-3 py-4 text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
                 onClick={() => setSection(item.id)}
               >
-                <Icon size={17} />
+                <Icon size={17} className="shrink-0" />
                 <span className="flex-1">{dtMaybe(item.label)}</span>
                 <small className="text-[10px] opacity-50">
                   {String(index + 1).padStart(2, "0")}
