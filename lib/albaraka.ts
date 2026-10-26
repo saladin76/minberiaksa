@@ -205,6 +205,23 @@ export function albarakaFormMac(fields: AlbarakaFormFields, encKey: string): str
   return hmacSha256Base64(message, encKey);
 }
 
+/** The existing bank form contract, used only after an explicit 3D selection. */
+export function buildAlbaraka3DForm(input: {
+  orderId: string; amount: number; currencyCode: AlbarakaCurrencyCode; returnUrl: string; locale: string;
+  card: { number: string; expireDate: string; cvc2: string; holderName: string };
+}, cfg: AlbarakaConfig): Record<string, string> {
+  const fields: AlbarakaFormFields = {
+    PosnetID: cfg.posnetId, MerchantNo: cfg.merchantNo, TerminalNo: cfg.terminalNo,
+    OrderId: input.orderId, TransactionType: "Sale", CardNo: input.card.number,
+    ExpiredDate: input.card.expireDate, Cvv: input.card.cvc2, CardHolderName: input.card.holderName,
+    Amount: String(input.amount), InstallmentCount: "0", MerchantReturnURL: input.returnUrl,
+    Language: albarakaLang(input.locale), CurrencyCode: input.currencyCode,
+    UseJokerVadaa: cfg.useJokerVadaa ? "1" : "0", KOICode: "", OpenNewWindow: "0",
+    UseOOS: "0", TxnState: "INITIAL", VftCode: "", gsmNo: "", packetCode: "",
+  };
+  return { ...fields, MacNew: albarakaFormMac(fields, cfg.encKey) };
+}
+
 /** Parameter order of the MacNew the bank sends back after 3D verification. */
 export const ALBARAKA_RESPONSE_MAC_FIELDS = [
   "CCPrefix",

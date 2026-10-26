@@ -695,7 +695,13 @@
     "itemsUnavailable": "Deze items kunnen niet worden betaald: {items}. Verwijder ze uit je mandje of kies een specifiek project en probeer het opnieuw.",
     "bankTransferUploadNote": "Nadat je hebt overgemaakt, upload je de ontvangst of overboekingsmelding op de volgende pagina. Je donatie is bevestigd zodra ons financiële team deze heeft gematcht met de rekening.",
     "ctaBankContinue": "Ga door met het uploaden van de overboekingsontvangst",
-    "recurringCardUnavailable": "Terugkerende kaartdonaties zijn momenteel niet beschikbaar. Probeer het later opnieuw."
+    "recurringCardUnavailable": "Terugkerende kaartdonaties zijn momenteel niet beschikbaar. Probeer het later opnieuw.",
+    "verificationChoice": "Hoe wilt u betalen?",
+    "verificationDirect": "Direct betalen",
+    "verificationDirectHelp": "Zonder verificatiecode",
+    "verificationSecure": "Bankverificatie",
+    "verificationSecureHelp": "Een code kan nodig zijn",
+    "verificationRequired": "Kies een betaaloptie om door te gaan."
   },
   "certificates": {
     "certNoLabel": "Certificaatnr.",

@@ -1734,7 +1734,13 @@
     "bankTransferUploadNote": "Havaleyi yaptıktan sonra dekontu veya havale bildirimini bir sonraki sayfada yükleyeceksiniz. Bağışınız, finans ekibimiz hesapla eşleştirdiğinde onaylanır.",
     "ctaBankContinue": "Devam  havale dekontunu yükle",
     "itemsUnavailable": "Şu kalemler için ödeme yapılamıyor: {items}. Sepetinizden kaldırın veya belirli bir proje seçin, ardından tekrar deneyin.",
-    "recurringCardUnavailable": "Düzenli kart bağışları şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."
+    "recurringCardUnavailable": "Düzenli kart bağışları şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.",
+    "verificationChoice": "Nasıl ödemek istersiniz?",
+    "verificationDirect": "Doğrudan ödeme",
+    "verificationDirectHelp": "Doğrulama kodu olmadan",
+    "verificationSecure": "Banka doğrulaması",
+    "verificationSecureHelp": "Kod istenebilir",
+    "verificationRequired": "Devam etmek için bir ödeme seçeneği seçin."
   },
   "certificates": {
     "certNoLabel": "Sertifika no",

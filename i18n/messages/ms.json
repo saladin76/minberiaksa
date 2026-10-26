@@ -695,7 +695,13 @@
     "itemsUnavailable": "Item berikut tidak boleh dibayar: {items}. Buang dari bakul atau pilih projek tertentu, kemudian cuba lagi.",
     "bankTransferUploadNote": "Selepas anda memindahkan, anda akan memuat naik resit atau notis pemindahan di halaman seterusnya. Sumbangan anda disahkan setelah pasukan kewangan kami memadankannya dengan akaun.",
     "ctaBankContinue": "Teruskan muat naik resit pemindahan",
-    "recurringCardUnavailable": "Derma berulang melalui kad tidak tersedia buat masa ini. Sila cuba lagi kemudian."
+    "recurringCardUnavailable": "Derma berulang melalui kad tidak tersedia buat masa ini. Sila cuba lagi kemudian.",
+    "verificationChoice": "Bagaimana anda mahu membayar?",
+    "verificationDirect": "Bayaran terus",
+    "verificationDirectHelp": "Tanpa kod pengesahan",
+    "verificationSecure": "Pengesahan bank",
+    "verificationSecureHelp": "Kod mungkin diminta",
+    "verificationRequired": "Pilih satu kaedah pembayaran untuk meneruskan."
   },
   "certificates": {
     "certNoLabel": "No. sijil",

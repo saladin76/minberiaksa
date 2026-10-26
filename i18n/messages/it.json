@@ -695,7 +695,13 @@
     "itemsUnavailable": "Non è possibile pagare questi elementi: {items}. Rimuovili dal carrello o scegli un progetto specifico, poi riprova.",
     "bankTransferUploadNote": "Dopo aver trasferito, caricherai la ricevuta o l'avviso di trasferimento nella pagina successiva. La tua donazione è confermata una volta che il nostro team finanziario la abbina all'account.",
     "ctaBankContinue": "Continua a caricare la ricevuta di trasferimento",
-    "recurringCardUnavailable": "Le donazioni ricorrenti con carta non sono attualmente disponibili. Riprova più tardi."
+    "recurringCardUnavailable": "Le donazioni ricorrenti con carta non sono attualmente disponibili. Riprova più tardi.",
+    "verificationChoice": "Come desideri pagare?",
+    "verificationDirect": "Pagamento diretto",
+    "verificationDirectHelp": "Senza codice di verifica",
+    "verificationSecure": "Verifica bancaria",
+    "verificationSecureHelp": "Potrebbe essere richiesto un codice",
+    "verificationRequired": "Scegli una modalità di pagamento per continuare."
   },
   "certificates": {
     "certNoLabel": "N. certificato",

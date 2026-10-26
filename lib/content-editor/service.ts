@@ -251,6 +251,12 @@ export async function saveContent(
     const parentChanges = Object.fromEntries(
       Object.entries(changes).filter(([key]) => !key.includes(".")),
     );
+    // The campaign's Arabic gallery remains the sole source of its base cover.
+    // `image` is a translation-only override, not a Campaign database column.
+    if (kind === "campaigns" && locale === "ar") {
+      if (parentChanges.image) throw new ContentError("عدّل الغلاف الافتراضي من صور المشروع");
+      delete parentChanges.image;
+    }
     await tx.model(cfg.model).update({
       where: { id },
       data: {

@@ -181,7 +181,7 @@ export function ProjectCard({
         <h3 style={{ margin: 0, fontSize: 24, lineHeight: 1.15, color: "var(--deep)" }}>{title}</h3>
         {text ? <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.5 }}>{text}</p> : null}
 
-        {goal != null ? (
+        {goal != null && goal > 0 ? (
           <>
             <div style={{ height: 9, borderRadius: 999, background: "#f1ded7", overflow: "hidden" }}>
               <span

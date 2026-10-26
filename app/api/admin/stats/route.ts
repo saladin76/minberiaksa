@@ -1,3 +1,4 @@
+import { mergeDonationProviderFilter } from "@/lib/dashboard/donation-provider-filter";
 import { recurringPlanTotals } from "@/lib/dashboard/recurring-plan-totals";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -98,9 +99,10 @@ function mergeCountryFilter(where: Record<string, unknown>, country: string | nu
 function mergeFilters(
   where: Record<string, unknown>,
   locale: string | null,
-  country: string | null
+  country: string | null,
+  provider: string | null = null
 ) {
-  return mergeCountryFilter(mergeLocaleFilter(where, locale), country);
+  return mergeDonationProviderFilter(mergeCountryFilter(mergeLocaleFilter(where, locale), country), provider);
 }
 
 function buildDonationItemWhere(
@@ -109,13 +111,15 @@ function buildDonationItemWhere(
   categoryCampaignIds: string[] | null,
   campaignId: string | null,
   locale: string | null,
-  country: string | null
+  country: string | null,
+  provider: string | null = null
 ) {
   const base: Record<string, unknown> = {
     donation: mergeFilters(
       { createdAt: { gte: startDate, lte: endDate }, ...PAID_DONATION_FILTER },
       locale,
-      country
+      country,
+      provider
     ),
   };
   if (campaignId && campaignId !== 'all') {
@@ -131,13 +135,15 @@ function buildDonationCategoryItemWhere(
   endDate: Date,
   categoryId: string | null,
   locale: string | null,
-  country: string | null
+  country: string | null,
+  provider: string | null = null
 ) {
   const base: Record<string, unknown> = {
     donation: mergeFilters(
       { createdAt: { gte: startDate, lte: endDate }, ...PAID_DONATION_FILTER },
       locale,
-      country
+      country,
+      provider
     ),
   };
   if (categoryId && categoryId !== 'all') {
@@ -160,18 +166,21 @@ export async function GET(request: NextRequest) {
     const campaignId = searchParams.get('campaignId');
     const locale = searchParams.get('locale')?.trim() ?? null;
     const country = searchParams.get('country')?.trim() ?? null;
+    const provider = searchParams.get('provider')?.trim() ?? null;
 
     const { startDate, endDate } = getDateRange(period, startParam, endParam);
     const relationIds = await resolveDonationRelationFilterIds({ campaignId, categoryId });
     const donationWhere = mergeFilters(
       buildDonationWhere(startDate, endDate, categoryId, campaignId, relationIds),
       locale,
-      country
+      country,
+      provider
     );
     const donationWhereAllTime = mergeFilters(
       buildDonationWhereAllTime(categoryId, campaignId, relationIds),
       locale,
-      country
+      country,
+      provider
     );
 
     // Revenue counts settled one-time donations plus subscription rows (PAID_DONATION_FILTER is
@@ -195,7 +204,8 @@ export async function GET(request: NextRequest) {
     const thisMonthDonationWhere = mergeFilters(
       buildDonationWhere(monthStart, monthEnd, categoryId, campaignId, relationIds),
       locale,
-      country
+      country,
+      provider
     );
     const thisMonthPaidWhere = donationWhereAll(thisMonthDonationWhere, PAID_DONATION_FILTER);
 
@@ -297,13 +307,14 @@ export async function GET(request: NextRequest) {
           categoryId && categoryId !== 'all' ? relationIds.categoryCampaignIds : null,
           campaignId,
           locale,
-          country
+          country,
+          provider
         ),
       }),
       prisma.donationCategoryItem.aggregate({
         _sum: { amountUSD: true, amount: true },
         _count: { id: true },
-        where: buildDonationCategoryItemWhere(startDate, endDate, categoryId, locale, country),
+        where: buildDonationCategoryItemWhere(startDate, endDate, categoryId, locale, country, provider),
       }),
       prisma.donation.findMany({
         take: 10,

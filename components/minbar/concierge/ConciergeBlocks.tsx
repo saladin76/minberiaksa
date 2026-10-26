@@ -381,7 +381,7 @@ function CampaignRow({ campaign, onAction, busy }: { campaign: CampaignCard; onA
         {campaign.summary ? <p className="cg-card-text">{campaign.summary}</p> : null}
         {campaign.why ? <p className="cg-card-why">{campaign.why}</p> : null}
         <span className="cg-card-facts">
-          {campaign.goalUSD ? t("raised", { amount: format(campaign.raisedUSD) }) : campaign.raisedUSD > 0 ? t("raised", { amount: format(campaign.raisedUSD) }) : t("openEnded")}
+          {campaign.goalUSD ? t("raised", { amount: format(campaign.raisedUSD) }) : t("openEnded")}
           {campaign.supportsShares && campaign.sharePriceUSD ? ` · ${t("shares", { price: format(campaign.sharePriceUSD) })}` : ""}
         </span>
         <div className="cg-card-actions">

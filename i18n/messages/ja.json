@@ -695,7 +695,13 @@
     "itemsUnavailable": "次の項目はお支払いできません：{items}。カートから削除するか、特定のプロジェクトを選んでもう一度お試しください。",
     "bankTransferUploadNote": "振込後、次のページで領収書または振込通知をアップロードします。私たちの財務チームがアカウントと照合した時点で、あなたの寄付は確認されます。",
     "ctaBankContinue": "振込領収書をアップロードして続行する",
-    "recurringCardUnavailable": "現在、カードによる継続寄付はご利用いただけません。後ほど再度お試しください。"
+    "recurringCardUnavailable": "現在、カードによる継続寄付はご利用いただけません。後ほど再度お試しください。",
+    "verificationChoice": "お支払い方法を選択",
+    "verificationDirect": "直接支払い",
+    "verificationDirectHelp": "認証コードなし",
+    "verificationSecure": "銀行による認証",
+    "verificationSecureHelp": "コードが必要な場合があります",
+    "verificationRequired": "支払い方法を選択して続行してください。"
   },
   "certificates": {
     "certNoLabel": "証明書番号",

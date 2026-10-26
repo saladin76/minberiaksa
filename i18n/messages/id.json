@@ -1734,7 +1734,13 @@
     "itemsUnavailable": "Item berikut tidak dapat dibayar: {items}. Hapus dari keranjang atau pilih proyek tertentu, lalu coba lagi.",
     "bankTransferUploadNote": "Setelah Anda mentransfer, Anda akan mengunggah tanda terima atau pemberitahuan transfer di halaman berikutnya. Donasi Anda dikonfirmasi setelah tim keuangan kami mencocokkannya dengan akun.",
     "ctaBankContinue": "Lanjutkan unggah tanda terima transfer",
-    "recurringCardUnavailable": "Donasi rutin dengan kartu saat ini tidak tersedia. Silakan coba lagi nanti."
+    "recurringCardUnavailable": "Donasi rutin dengan kartu saat ini tidak tersedia. Silakan coba lagi nanti.",
+    "verificationChoice": "Bagaimana Anda ingin membayar?",
+    "verificationDirect": "Pembayaran langsung",
+    "verificationDirectHelp": "Tanpa kode verifikasi",
+    "verificationSecure": "Verifikasi bank",
+    "verificationSecureHelp": "Kode mungkin diminta",
+    "verificationRequired": "Pilih satu opsi pembayaran untuk melanjutkan."
   },
   "certificates": {
     "certNoLabel": "No. sertifikat",

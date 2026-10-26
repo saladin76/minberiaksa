@@ -305,10 +305,6 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
           <span style={{ fontSize: 12.5, fontWeight: 800, color: "rgba(255,255,255,.78)" }}>
             {tShares("givenSoFar", { count: formatNumber(progress.sold), unit: unitWord(progress.sold) })}
           </span>
-        ) : project.raised > 0 ? (
-          <b dir="ltr" style={{ fontSize: 12.5, color: "#fff", unicodeBidi: "isolate" }}>
-            {format(project.raised)}
-          </b>
         ) : null}
 
         <div key={nudge} className={`pdc-amounts${missingAmount ? " pdc-shake" : ""}`}>

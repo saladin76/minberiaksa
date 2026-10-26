@@ -13,6 +13,7 @@ export type SmartAudienceDraft = {
   kind: "SMART";
   channel: "EMAIL" | "WHATSAPP" | "SMS";
   filters: {
+    excludeMarketedWithinDays?: number | null;
     countries?: string[];
     locales?: string[];
     donatedWithinDays?: number | null;
@@ -177,6 +178,14 @@ export function SmartAudienceBuilder({
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <label className="space-y-1 text-xs text-slate-600">
+            <span>{dt("استبعاد من وصلتهم رسائل تسويقية خلال")}</span>
+            <div className="flex items-center gap-2">
+              <Input type="number" min={0} max={3650} step={1} value={value.filters.excludeMarketedWithinDays ?? ""} placeholder="0" aria-label={dt("عدد أيام استبعاد الرسائل التسويقية")} onChange={event => updateFilters({ excludeMarketedWithinDays: event.target.value ? Number(event.target.value) : null })} />
+              <span>{dt("يوم")}</span>
+            </div>
+            <span className="block text-[11px]">{dt("عبر أي قناة. اتركها فارغة لإلغاء الاستبعاد؛ رسائل الإيصالات لا تُحتسب.")}</span>
+          </label>
           <label className="space-y-1 text-xs text-slate-600">
             <span>{dt("الدولة")}</span>
             <select

@@ -93,7 +93,7 @@ export async function readAuditBackedBrandFonts(): Promise<BrandFont[]> {
 function buildBrandFont(input: BrandFontWriteInput): BrandFont {
   return {
     id: generatedBrandFontId(),
-    profileId: stringField(input.profileId) ?? "brand_gozbebekleri",
+    profileId: stringField(input.profileId) ?? "brand_minber_aksa",
     name: stringField(input.name) ?? "Brand font to verify",
     usage: stringField(input.usage) ?? "to be verified",
     fallback: stringField(input.fallback) ?? "system-ui, sans-serif",

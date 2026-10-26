@@ -695,7 +695,13 @@
     "itemsUnavailable": "Dessa poster kan inte betalas: {items}. Ta bort dem från korgen eller välj ett specifikt projekt och försök igen.",
     "bankTransferUploadNote": "Efter att du har överfört, kommer du att ladda upp kvittot eller överföringsmeddelandet på nästa sida. Din donation bekräftas när vårt ekonomiteam matchar den mot kontot.",
     "ctaBankContinue": "Fortsätt ladda upp överföringskvittot",
-    "recurringCardUnavailable": "Återkommande kortdonationer är för närvarande inte tillgängliga. Försök igen senare."
+    "recurringCardUnavailable": "Återkommande kortdonationer är för närvarande inte tillgängliga. Försök igen senare.",
+    "verificationChoice": "Hur vill du betala?",
+    "verificationDirect": "Direktbetalning",
+    "verificationDirectHelp": "Utan verifieringskod",
+    "verificationSecure": "Bankverifiering",
+    "verificationSecureHelp": "En kod kan krävas",
+    "verificationRequired": "Välj ett betalningsalternativ för att fortsätta."
   },
   "certificates": {
     "certNoLabel": "Certifikatnr",

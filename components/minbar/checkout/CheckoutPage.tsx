@@ -1,4 +1,6 @@
 "use client";
+import { AlbarakaVerificationChoice } from "./AlbarakaVerificationChoice";
+import type { AlbarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
 
 import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { digitsOnly } from "@/lib/minbar/numeric-input";
@@ -109,6 +111,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   useHealLegacyRows(items, replace, hydrated);
 
   const [method, setMethod] = useState<PaymentMethod>("card");
+  const [verificationMode, setVerificationMode] = useState<AlbarakaCheckoutMode | null>(null);
   const [firstName, setFirstName] = useState(donor?.firstName ?? "");
   const [lastName, setLastName] = useState(donor?.lastName ?? "");
   const [email, setEmail] = useState(donor?.email ?? "");
@@ -288,6 +291,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
   /* A card we never collect can't be validated, and the bank rails need one. */
   const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
+  const requiresVerificationChoice = method === "card" && gateway === "ALBARAKA" && !planFrequency;
+  useEffect(() => { setVerificationMode(null); }, [planFrequency]);
   const selectedBank = banks.find((b) => b.id === bankId) ?? banks[0];
 
   /* A transfer is one act by the donor; nothing can be charged again next
@@ -331,6 +336,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting || !items.length) return;
+    if (requiresVerificationChoice && !verificationMode) {
+      setError(t("verificationRequired"));
+      document.getElementById("albaraka-2d")?.focus();
+      return;
+    }
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
       return;
@@ -465,7 +475,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               cvv: cardCvc,
               holder: cardName,
             }
-          : undefined
+          : undefined,
+        gateway === "ALBARAKA" ? (planFrequency ? "2D" : verificationMode || "2D") : undefined
       );
 
       const browserFields: Record<string, string> =
@@ -520,7 +531,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       firstName, email, phone, requireName: !session?.user, requireCard: needsOwnCardForm,
       cardNumber, cardExpiry, cardCvc,
     }) === null));
-  const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete;
+  const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete && (!requiresVerificationChoice || Boolean(verificationMode));
   const steps: CheckoutStep[] = [
     { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: false, enabled: true },
     { n: 2, label: t("stepDetails"), current: true, enabled: true },
@@ -926,6 +937,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
+            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} /> : null}
+
             {belowMinimum ? (
               <div role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>
                 {tGive("belowMinCheckout", { amount: minLabel })}
@@ -957,7 +970,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable)}
+                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable) || (requiresVerificationChoice && !verificationMode)}
                 className="mia-card-cta"
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}

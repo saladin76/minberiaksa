@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { RetryDialog } from "../../_shared/RetryDialog";
 import { toast } from "react-hot-toast";
-import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play } from "lucide-react";
+import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,12 +71,14 @@ export function CampaignRowActions({
   const [plan, setPlan] = React.useState<SendPlan | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [controlsOpen, setControlsOpen] = React.useState(false);
+  const [retryOpen, setRetryOpen] = React.useState(false);
 
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
   const canSend = campaign.status === "APPROVED";
   const canCancel = isPreSend(campaign.status);
   const canControl = campaign.channel === "WHATSAPP" && !isCampaignControlTerminalStatus(campaign.status);
   const canArchive = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED", "CANCELLED"].includes(campaign.status);
+  const canReviewFailures = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED"].includes(campaign.status) && (campaign.failedCount > 0 || campaign.status === "SENT_WITH_ISSUES" || campaign.status === "FAILED");
   if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive) return null;
 
   const togglePause = async () => {
@@ -189,6 +192,7 @@ export function CampaignRowActions({
 
   return (
     <div className="flex items-center justify-end gap-1.5">
+      {canReviewFailures ? <button type="button" onClick={event => { event.stopPropagation(); setRetryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-amber-900"><RefreshCw className="h-3.5 w-3.5" />{dt("إعادة محاولة الفشل")}</button> : null}
       {canControl && (
         <button
           type="button"
@@ -252,6 +256,7 @@ export function CampaignRowActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {canReviewFailures && ["WHATSAPP", "EMAIL", "SMS"].includes(campaign.channel) ? <RetryDialog open={retryOpen} channel={campaign.channel as "WHATSAPP" | "EMAIL" | "SMS"} ids={null} days={30} campaignId={campaign.id} campaignName={campaign.name} purposeGroup="MARKETING" onOpenChange={setRetryOpen} onFinished={onChanged} /> : null}
       <CampaignControlsDialog
         open={controlsOpen}
         onOpenChange={setControlsOpen}

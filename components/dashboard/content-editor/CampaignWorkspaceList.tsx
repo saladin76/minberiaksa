@@ -282,6 +282,7 @@ export function CampaignWorkspaceList() {
           </Link>
         </div>}
       />
+      <ContentLocalizationAuditCard section="campaigns" />
       <ContentMetricStrip items={[
         { label: dt("المشاريع المعروضة"), value: filtered.length, detail: dt("من {0} مشروعًا في القائمة", [rows.length]), icon: Filter, tone: "brand" },
         { label: dt("ترجمات مكتملة"), value: stats.complete, detail: dt("من أصل {0} موضع ترجمة", [stats.total]), icon: Languages, tone: "green" },
@@ -655,7 +656,6 @@ export function CampaignWorkspaceList() {
           </div>
         </footer>
       </section>
-      <ContentLocalizationAuditCard section="campaigns" />
     </div>
   );
 }

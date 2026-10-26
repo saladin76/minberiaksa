@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mergeDonationProviderFilter } from '@/lib/dashboard/donation-provider-filter';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
       relationFilters.length > 0
         ? { AND: [innerWhere, ...relationFilters] }
         : innerWhere;
-    const baseWhere = mergeCountryFilter(mergeLocaleFilter(queryWhere, locale), country);
+    const baseWhere = mergeDonationProviderFilter(mergeCountryFilter(mergeLocaleFilter(queryWhere, locale), country), searchParams.get('provider'));
 
     // Always fetch both paid and failed donations
     const donations = await prisma.donation.findMany({

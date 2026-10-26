@@ -14,6 +14,7 @@
  * this dialog just collects the inputs.
  */
 
+import { DONATION_PROVIDER_OPTIONS } from "@/lib/dashboard/donation-provider-filter";
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
@@ -99,6 +100,7 @@ export interface ExportFormState {
   frequency: "all" | "DAILY" | "FRIDAY" | "MONTHLY";
   locale: string;
   country: string;
+  provider?: string;
   subscriptionOnly: boolean;
   sortBy: "date" | "amount";
   sortOrder: "asc" | "desc";
@@ -158,6 +160,7 @@ function buildQuery(endpoint: string, state: ExportFormState, fields: ExportRepo
   if (fields.frequency && state.frequency !== "all") params.set("frequency", state.frequency);
   if (fields.locale && state.locale !== "all") params.set("locale", state.locale);
   if (fields.country && state.country !== "all") params.set("country", state.country);
+  if (state.provider && state.provider !== "all") params.set("provider", state.provider);
   if (fields.subscriptionOnly && state.subscriptionOnly) params.set("subscriptionOnly", "true");
   if (fields.sort) {
     params.set("sortBy", state.sortBy);
@@ -474,6 +477,14 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
               </Select>
             </div>
           )}
+
+          {state.provider !== undefined ? <div className="space-y-1.5">
+            <Label htmlFor="export-provider" className="text-xs font-medium text-slate-600">{dt("بوابة الدفع")}</Label>
+            <Select value={state.provider} onValueChange={value => setField("provider", value)}>
+              <SelectTrigger id="export-provider" className="text-start"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">{dt("كل البوابات")}</SelectItem>{DONATION_PROVIDER_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.value === "BANK_TRANSFER" ? dt("تحويل بنكي") : option.label}</SelectItem>)}<SelectItem value="__unset">{dt("غير محدد")}</SelectItem></SelectContent>
+            </Select>
+          </div> : null}
 
           {/* Sort */}
           {enabledFields.sort && (

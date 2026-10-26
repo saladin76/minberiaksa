@@ -695,7 +695,13 @@
     "itemsUnavailable": "以下项目无法支付：{items}。请将其从捐赠篮中移除或选择具体项目后重试。",
     "bankTransferUploadNote": "在您转账后，您将在下一页上传收据或转账通知。一旦我们的财务团队与账户匹配，您的捐赠将被确认。",
     "ctaBankContinue": "继续上传转账收据",
-    "recurringCardUnavailable": "目前无法使用银行卡进行定期捐赠。请稍后重试。"
+    "recurringCardUnavailable": "目前无法使用银行卡进行定期捐赠。请稍后重试。",
+    "verificationChoice": "请选择支付方式",
+    "verificationDirect": "直接支付",
+    "verificationDirectHelp": "无需验证码",
+    "verificationSecure": "银行验证",
+    "verificationSecureHelp": "可能需要验证码",
+    "verificationRequired": "请选择一种支付方式以继续。"
   },
   "certificates": {
     "certNoLabel": "证书编号",

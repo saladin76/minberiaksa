@@ -1,7 +1,5 @@
-import { requireDashboardPagePermission } from "@/lib/dashboard/require-page-permission";
-import { EditorialPlanner } from "@/components/dashboard/content-editor/EditorialPlanner";
+import { ContentStrategyPage } from "@/components/dashboard/content-editor/ContentStrategyPage";
 export default async function Page({ searchParams }: { searchParams: Promise<{ improve?: string }> }) {
-  await requireDashboardPagePermission("blog");
   const { improve } = await searchParams;
-  return <EditorialPlanner initialArticleId={improve && /^[a-f0-9]{24}$/i.test(improve) ? improve : ""} />;
+  return <ContentStrategyPage initialTab="editorial" initialArticleId={improve || ""} />;
 }

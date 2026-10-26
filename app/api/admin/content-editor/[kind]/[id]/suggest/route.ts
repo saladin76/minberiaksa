@@ -13,7 +13,9 @@ import {
   hasText,
   parseKind,
   valuesFor,
+  validateChanges,
 } from "@/lib/content-editor/contracts";
+import { translateItem } from "@/lib/content-localization/translate";
 import { contentStore } from "@/lib/content-editor/store";
 import { documentFor, fingerprint, readContent } from "@/lib/content-editor/service";
 import { translateResearchedItem } from "@/lib/content-localization/research-translate";
@@ -44,6 +46,24 @@ export async function POST(
       );
     const fields = fieldsFor(kind, row),
       source = valuesFor(kind, row, "ar");
+    if (body.action === "proofread") {
+      if (!isValidLocale(body.locale))
+        return NextResponse.json({ error: "اختر لغة صالحة للتدقيق" }, { status: 400 });
+      const draft = body.draft === undefined ? valuesFor(kind, row, body.locale) : validateChanges(fields, body.draft);
+      const selected = fields.filter(field => field.group === "content" && !field.locked && hasText(draft[field.key]) && (!Array.isArray(body.keys) || body.keys.includes(field.key)));
+      if (!selected.length) return NextResponse.json({ error: "لا يوجد نص قابل للتدقيق في الحقول المحددة" }, { status: 400 });
+      const result = await translateItem({
+        mode: "proofread", sourceLocale: body.locale, signal: request.signal,
+        itemLabel: CONFIG[kind].label,
+        fields: Object.fromEntries(selected.filter(field => !field.rich).map(field => [field.key, draft[field.key]])),
+        richFields: Object.fromEntries(selected.filter(field => field.rich).map(field => [field.key, draft[field.key]])),
+      }, body.locale);
+      if (!Object.keys(result.fields).length && !Object.keys(result.richFields).length)
+        return NextResponse.json({ error: "لم يُنتج التدقيق نصًا صالحًا للمراجعة. المحتوى لم يتغير." }, { status: 422 });
+      return NextResponse.json({ id, kind, revision: body.revision, action: "proofread", proposals: {
+        [body.locale]: { values: { ...result.fields, ...result.richFields }, warnings: result.warnings },
+      }, errors: {} }, { headers: { "Cache-Control": "no-store" } });
+    }
     if (body.action === "translate") {
       if (
         !Array.isArray(body.locales) ||

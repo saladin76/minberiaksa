@@ -47,6 +47,7 @@ export const CONFIG: Record<
     parentKey: "campaignId",
     permission: "campaigns",
     fields: [
+      { key: "image", label: "صورة غلاف هذه اللغة (فارغ = الصورة الافتراضية)", group: "content", locked: true, optional: true },
       {
         key: "videoUrl",
         label: "فيديو هذه اللغة (فارغ = الفيديو الافتراضي)",
@@ -365,7 +366,7 @@ export function validateChanges(
     if (key === "seoNoIndex" && val !== "" && val !== "true" && val !== "false")
       throw new Error("حالة الفهرسة غير صالحة");
     if (
-      key === "ogImage" &&
+      ["ogImage", "image"].includes(key) &&
       typeof val === "string" &&
       val &&
       (!/^(https?:\/\/|\/[^/])/.test(val) || !safeEditorUrl(val))

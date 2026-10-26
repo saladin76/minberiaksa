@@ -3,14 +3,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
 
-function loadAudience(user: Record<string, unknown>) {
+function loadAudience(user: Record<string, unknown>, communicationDelivery: Record<string, unknown> = {}) {
   const source = readFileSync("lib/communication/smart-audience.ts", "utf8");
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const isolatedModule = { exports: {} as { previewSmartAudience: (definition: unknown) => Promise<{ matched: number }> } };
   const dependencies: Record<string, unknown> = {
     "@prisma/client": {},
-    "@/lib/prisma": { prisma: { user } },
+    "./recent-marketing-filter": { recentMarketingDeliveryWhere },
+    "@/lib/prisma": { prisma: { user, communicationDelivery } },
     "@/lib/locales": { DEFAULT_LOCALE: "ar", isValidLocale: (locale: string) => ["ar", "en"].includes(locale) },
     "@/lib/badge-criteria": { getUserIdsMatchingBadge: async () => [] },
     "./audience-preview-accounting": { summarizeCampaignAudience: async (rows: AsyncIterable<unknown>) => {
@@ -53,4 +55,22 @@ test("a filtered page read failure rejects the preview instead of returning zero
     findMany: async () => { throw new Error("query timeout"); },
   });
   await assert.rejects(() => isolatedModule.previewSmartAudience({ version: 1, kind: "SMART", channel: "EMAIL", filters: { donatedWithinDays: 30 } }), /query timeout/);
+});
+
+test("marketing exclusion retains explicit exclusions and donation filters while inspecting real delivery times", async () => {
+  let deliveryQuery: Record<string, unknown> = {}, membership = "";
+  const isolatedModule = loadAudience({
+    findFirst: async () => ({id:"ffffffffffffffffffffffff"}),
+    findMany: async (input: unknown) => { membership = JSON.stringify(input); return []; },
+  }, {findMany: async (input: Record<string, unknown>) => { deliveryQuery = input; return [{recipientUserId:"recent-donor"}]; }});
+  await isolatedModule.previewSmartAudience({version:1,kind:"SMART",channel:"EMAIL",excludeUserIds:["manual-donor"],filters:{excludeMarketedWithinDays:7,minDonationAmountUSD:25}});
+  assert.match(JSON.stringify(deliveryQuery), /"purpose":"MARKETING"/);assert.match(JSON.stringify(deliveryQuery), /"sentAt"/);
+  assert.match(membership,/manual-donor/);assert.match(membership,/recent-donor/);assert.match(membership,/"amountUSD":\{"gte":25\}/);
+});
+
+test("an oversized recent-marketing exclusion fails closed before selecting recipients", async () => {
+  let selected = false;
+  const isolatedModule = loadAudience({findFirst:async()=>({id:"ffffffffffffffffffffffff"}),findMany:async()=>{selected=true;return [];}}, {findMany:async()=>Array.from({length:50_001},(_,i)=>({recipientUserId:String(i)}))});
+  await assert.rejects(()=>isolatedModule.previewSmartAudience({version:1,kind:"SMART",channel:"EMAIL",filters:{excludeMarketedWithinDays:7}}),/MARKETING_EXCLUSION_WINDOW_TOO_LARGE/);
+  assert.equal(selected,false);
 });

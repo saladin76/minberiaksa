@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { recentMarketingDeliveryWhere } from "./recent-marketing-filter";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import type { CommunicationChannelId } from "./communication-runtime-types";
@@ -9,6 +10,7 @@ import type { RecipientExclusionReason } from "./campaign-audience-accounting";
 export const SMART_AUDIENCE_METADATA_KEY = "smartAudience";
 
 export type SmartAudienceFilters = {
+  excludeMarketedWithinDays?: number | null;
   countries?: string[];
   locales?: string[];
   donatedWithinDays?: number | null;
@@ -77,6 +79,7 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
     kind: "SMART",
     channel,
     filters: {
+      excludeMarketedWithinDays: typeof f.excludeMarketedWithinDays === "number" && Number.isFinite(f.excludeMarketedWithinDays) && f.excludeMarketedWithinDays > 0 ? Math.min(3650, Math.max(1, Math.floor(f.excludeMarketedWithinDays))) : null,
       countries: cleanList(f.countries).map((v) => v.toUpperCase()).slice(0, 100),
       locales: cleanList(f.locales).filter(isValidLocale),
       donatedWithinDays,
@@ -172,6 +175,16 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
 
 async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition): Promise<Prisma.UserWhereInput> {
   const where = buildSmartAudienceUserWhere(definition);
+  if (definition.filters.excludeMarketedWithinDays) {
+    const recent = await prisma.communicationDelivery.findMany({
+      where: { ...recentMarketingDeliveryWhere(definition.filters.excludeMarketedWithinDays), recipientUserId: { not: null } },
+      select: { recipientUserId: true }, distinct: ["recipientUserId"], take: 50_001,
+    });
+    // Do not silently omit exclusions if a very large account needs a narrower window.
+    if (recent.length > 50_000) throw new Error("MARKETING_EXCLUSION_WINDOW_TOO_LARGE");
+    const excluded = [...new Set([...(definition.excludeUserIds || []), ...recent.map(row => row.recipientUserId).filter((id): id is string => Boolean(id))])];
+    where.id = { notIn: excluded };
+  }
   const badgeIds = definition.filters.badgeIds ?? [];
   if (!badgeIds.length) return where;
 

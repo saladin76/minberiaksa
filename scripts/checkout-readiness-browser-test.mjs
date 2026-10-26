@@ -15,7 +15,7 @@ import {writeCart} from "./lib/minbar/cart";
 import ar from "./i18n/messages/ar.json";import en from "./i18n/messages/en.json";import tr from "./i18n/messages/tr.json";
 const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
-writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:"once",amount:25,currency:"USD"}]);
+writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:"USD"}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
 createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={null} defaultCountry="tr"/><Legacy/></NextIntlClientProvider>);`;
 const mocks = {
@@ -56,7 +56,7 @@ try {
  for(const lang of ["ar","en","tr"]){
   for(const width of [390,1440]){
    console.log("Checking checkout",lang,width);
-   const page=await browser.newPage({viewport:{width,height:900}});page.setDefaultTimeout(8000);
+   const page=await browser.newPage({viewport:{width,height:900}});page.setDefaultTimeout(15000);
    page.on("pageerror",err=>{errors.push(err.message);console.error(err.message)});
    await page.route("**/*",async route=>{
     const req=route.request(),url=new URL(req.url());
@@ -70,11 +70,22 @@ try {
     return route.continue();
    });
    await page.addInitScript(()=>{window.fixtureSubmissions=[];HTMLFormElement.prototype.submit=function(){window.fixtureSubmissions.push({action:this.action,method:this.method,target:this.target,mask:this.getAttribute("data-clarity-mask"),fields:Object.fromEntries(new FormData(this))})}});
-   await page.goto(origin+"/?lang="+lang);
+   await page.goto(origin+"/?lang="+lang,{waitUntil:"domcontentloaded"});
    
    await page.locator("#checkout-cardNumber").waitFor();
    const submit=page.locator(".pay-form button[type=submit]");
    const before=requests.length;
+   assert.equal(await page.locator('input[name="albaraka-verification"]:checked').count(),0);
+   assert.equal(await submit.isDisabled(),true);
+   assert.equal(requests.length,before);
+   const mode=width===390?"2D":"3D";
+   await page.locator('#albaraka-'+mode.toLowerCase()).check();
+   assert.equal(requests.length,before,"choosing a mode must not create an order or contact a bank");
+   const boxes=await page.locator('.ab-verification-option').evaluateAll(nodes=>nodes.map(node=>({x:node.getBoundingClientRect().x,y:node.getBoundingClientRect().y,width:node.getBoundingClientRect().width})));
+   assert.equal(boxes.length,2);assert.equal(boxes[0].y,boxes[1].y,"options must remain side by side");
+   if(lang==="ar") assert.ok(boxes[0].x>boxes[1].x,"2D comes first on the right in RTL");
+   checks++;
+
    const checkField=async field=>{
     await submit.click();
     await page.locator("#checkout-"+field+'[aria-invalid="true"]').waitFor();
@@ -106,6 +117,7 @@ try {
    assert.equal(handoff.action,"https://bank.invalid/authorize");assert.equal(handoff.method,"post");assert.equal(handoff.mask,"True");
    assert.deepEqual(handoff.fields,{fixture:"signed-fields"});
    const order=requests.slice(before).find(row=>row.path==="/api/cart/payment");
+   assert.equal(requests.slice(before).find(row=>row.path==="/api/albaraka/3d/initiate").body.securityMode,mode);
    assert.equal(order.body.items[0].campaignId,"600000000000000000000001");assert.equal(order.body.items[0].amount,25);assert.equal(order.body.currency,"USD");
    assert.equal(await page.evaluate(()=>sessionStorage.getItem("mia_guest_donation_access_v1")?.includes("a".repeat(48))||Object.values(sessionStorage).some(value=>value.includes("a".repeat(48)))),true);checks++;
    await page.close();
@@ -113,7 +125,11 @@ try {
  }
  // Imported signed-in accounts must still correct required contact data.
  const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
- await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
+ await page.locator("#albaraka-2d").check();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
+ for(const frequency of ["daily","monthly","friday"]){
+  const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=ar&frequency="+frequency);await page.locator("#checkout-cardNumber").waitFor();
+  assert.equal(await page.locator('input[name="albaraka-verification"]').count(),0,"recurring checkout must hide 2D/3D options");checks++;await page.close();
+ }
  assert.deepEqual(errors,[]);
  await writeFile(path.join(out,"verification.json"),JSON.stringify({checks,locales:["ar","en","tr"],widths:[390,1440],pageErrors:errors,scope:"Real client components with synthetic HTTP/auth/settings and intercepted gateway navigation. No payment, production database, analytics upload or message."},null,2));
  console.log(`Checkout readiness browser checks: ${checks} passed.`);

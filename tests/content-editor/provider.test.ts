@@ -2,6 +2,29 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { translateItem } from "../../lib/content-localization/translate";
 
+test("proofreading keeps the language, rich structure, links and protected amounts", async () => {
+  const original = globalThis.fetch, key = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "test-only-not-a-real-key";
+  const doc = { type: "doc", content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "عنوان تجريبي" }] }, { type: "paragraph", content: [{ type: "text", marks: [{ type: "link", attrs: { href: "https://example.org/give" } }, { type: "bold" }], text: "ساعد 15 عائلة" }] }] };
+  try {
+    globalThis.fetch = async (_url, options) => {
+      const body = JSON.parse(String(options?.body));
+      assert.match(body.messages[0].content, /copy editor/);
+      assert.match(body.messages[1].content, /SAME language/);
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ fields: {}, richTexts: { description: ["عنوان تجريبي", "ساعد 15 عائلة."] } }) } }] }), { status: 200 });
+    };
+    const result = await translateItem({ mode: "proofread", sourceLocale: "ar", fields: {}, richFields: { description: JSON.stringify(doc) } }, "ar");
+    const corrected = JSON.parse(result.richFields.description);
+    assert.equal(corrected.content[1].content[0].text, "ساعد 15 عائلة.");
+    const expected = structuredClone(doc); expected.content[1].content[0].text = "ساعد 15 عائلة.";
+    assert.deepEqual(corrected, expected);
+    assert.equal(result.warnings.length, 0);
+  } finally {
+    globalThis.fetch = original;
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+  }
+});
+
 test("translation calls the real adapter and preserves protected numbers and URLs", async () => {
   const original = globalThis.fetch,
     key = process.env.OPENAI_API_KEY;

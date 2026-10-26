@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { GoogleAdsInsights } from "@/components/dashboard/GoogleAdsInsights";
 import { Ga4ExtendedPanels, Ga4InsightPanel, SearchConsolePanel } from "@/components/dashboard/Ga4Insights";
 import { parseGa4Period, ga4PeriodKey, type Ga4Period } from "@/lib/marketing/ga4-period";
 import axios from "axios";
@@ -136,6 +137,7 @@ export default function GoogleAnalyticsDashboard() {
       </CardContent>
     </Card>
 
+    <GoogleAdsInsights period={period} />
     {reportError ? <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
       <p className="font-semibold">{dt("تعذر تحميل تقارير Google Analytics")}</p>
       <p className="mt-1 leading-6">{dt(ERROR_MESSAGES[reportError] ?? "تعذر قراءة إعدادات Google Analytics. تحقق من الصلاحية والإعدادات ثم أعد المحاولة.")}</p>

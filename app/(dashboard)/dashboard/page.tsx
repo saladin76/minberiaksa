@@ -85,6 +85,7 @@ import {
 import { useViewUserProfile } from "@/context/ViewUserProfileContext";
 import DonationDetailsDialog, { type DonationDetailsTarget } from "@/components/dashboard/DonationDetailsDialog";
 import { DonationGatewayBadge } from "@/components/dashboard/DonationGatewayBadge";
+import { DONATION_PROVIDER_OPTIONS } from "@/lib/dashboard/donation-provider-filter";
 import { ExportReportDialog, EXPORT_DEFAULTS, type ExportFormState } from "@/components/dashboard/ExportReportDialog";
 import { useDonationActions } from "@/components/dashboard/donations/useDonationActions";
 import { userCanEditDonations, userCanExportReports } from "@/lib/dashboard/permissions";
@@ -128,6 +129,7 @@ interface UserOption {
 
 interface DonationRow {
   id: string;
+  locale?: string | null;
   totalAmount: number;
   amount: number;
   amountUSD?: number | null;
@@ -208,7 +210,6 @@ interface DashboardStats {
 type ChartViewType = "bar" | "line" | "area";
 type ChartPeriod = "day" | "yesterday" | "week" | "month" | "year" | "all" | "custom";
 type ChartMetric = "amount" | "teamSupport" | "fees";
-type StatCardSet = "revenue" | "overview" | "breakdown";
 
 const PERIOD_LABELS: Record<ChartPeriod, string> = {
   get day() { return dt("اليوم"); },
@@ -289,7 +290,6 @@ export default function DashboardPage() {
   const [usersSearchInput, setUsersSearchInput] = useState("");
   const [usersSearchCommitted, setUsersSearchCommitted] = useState("");
   const [usersSearchLoading, setUsersSearchLoading] = useState(false);
-  const [statCardSet, setStatCardSet] = useState<StatCardSet>("revenue");
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
@@ -347,6 +347,7 @@ export default function DashboardPage() {
     "all" | "ar" | "en" | "fr" | "tr" | "id" | "pt" | "es" | "de" | "__unset"
   >("all");
   const [donationCountryFilter, setDonationCountryFilter] = useState<string>("all");
+  const [donationProviderFilter, setDonationProviderFilter] = useState("all");
   const [countryOptions, setCountryOptions] = useState<{ code: string; count: number }[]>([]);
   const [countryUnsetCount, setCountryUnsetCount] = useState(0);
 
@@ -498,6 +499,7 @@ export default function DashboardPage() {
       if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
       if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
       if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
+      if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
       const response = await axios.get(`/api/admin/donations/chart?${params}`);
       setChartData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -507,7 +509,7 @@ export default function DashboardPage() {
     } finally {
       setChartLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter]);
 
   useEffect(() => {
     fetchChartData();
@@ -534,6 +536,7 @@ export default function DashboardPage() {
       if (selectedCampaign !== "all") params.set("campaignId", selectedCampaign);
       if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
       if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
+      if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
       const response = await fetch(`/api/admin/stats?${params}`, { signal: controller.signal });
       const data = await response.json();
       if (statsRequestRef.current !== controller) return;
@@ -561,7 +564,7 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
-  }, [chartPeriod, dateFrom, dateTo, selectedCategory, selectedCampaign, donationLocaleFilter, donationCountryFilter]);
+  }, [chartPeriod, dateFrom, dateTo, selectedCategory, selectedCampaign, donationLocaleFilter, donationCountryFilter, donationProviderFilter]);
 
   useEffect(() => {
     fetchStats();
@@ -602,6 +605,7 @@ export default function DashboardPage() {
         if (donationsTypeFilter !== "all") params.set("donationType", donationsTypeFilter);
         if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
         if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
+        if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
@@ -637,6 +641,7 @@ export default function DashboardPage() {
       donationsTypeFilter,
       donationLocaleFilter,
       donationCountryFilter,
+      donationProviderFilter,
       donationsSearch,
     ]
   );
@@ -646,7 +651,7 @@ export default function DashboardPage() {
     if (loading) return;
     setDonationsPage(1);
     fetchDonations(1, false);
-  }, [loading, selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationsSortBy, donationsSortOrder, donationsStatusFilter, donationsTypeFilter, donationLocaleFilter, donationCountryFilter, donationsSearch, fetchDonations]);
+  }, [loading, selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationsSortBy, donationsSortOrder, donationsStatusFilter, donationsTypeFilter, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsSearch, fetchDonations]);
 
   const loadMoreDonations = () => {
     const next = donationsPage + 1;
@@ -707,6 +712,7 @@ export default function DashboardPage() {
       type: donationsTypeFilter,
       locale: donationLocaleFilter === "all" ? "all" : String(donationLocaleFilter),
       country: donationCountryFilter,
+      provider: donationProviderFilter,
       sortBy: donationsSortBy,
       sortOrder: donationsSortOrder,
     };
@@ -720,6 +726,7 @@ export default function DashboardPage() {
     donationsTypeFilter,
     donationLocaleFilter,
     donationCountryFilter,
+    donationProviderFilter,
     donationsSortBy,
     donationsSortOrder,
   ]);
@@ -895,32 +902,10 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-500">{dt("محسوبة حسب الفترة والتصفية المختارة")}</p>
               </div>
             </div>
-            <Tabs
-              value={statCardSet}
-              onValueChange={(v) => setStatCardSet(v as StatCardSet)}
-              className="w-auto"
-            >
-              <TabsList className="bg-muted p-1 rounded-lg h-9" dir={dashDir()}>
-                <TabsTrigger
-                  value="revenue"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
-                >
-                  {dt("الإيرادات")}</TabsTrigger>
-                <TabsTrigger
-                  value="overview"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
-                >
-                  {dt("نظرة عامة")}</TabsTrigger>
-                <TabsTrigger
-                  value="breakdown"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
-                >
-                  {dt("تفصيل التبرعات")}</TabsTrigger>
-              </TabsList>
-            </Tabs>
+
           </div>
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
-            {statCardSet === "revenue" && (
+            {(
               <>
                 <StatsMetricCard
                   compact
@@ -931,16 +916,6 @@ export default function DashboardPage() {
                   accent="emerald"
                   format="money"
                   subtitle={dt("مجموع التبرعات المدفوعة فقط  حسب الفترة والتصفية أعلاه")}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("متوسط التبرع ({0})", [chartFilterPeriodLabelAr])}
-                  bankTransfers={false}
-                  value={(stats?.paidCount ?? 0) > 0 ? (stats?.totalAmount ?? 0) / (stats?.paidCount ?? 1) : 0}
-                  icon={HandCoins}
-                  accent="sky"
-                  format="money"
-                  subtitle={dt("{0} ÷ {1} تبرع ناجح", [formatMoney(stats?.totalAmount ?? 0, undefined, undefined, true), (stats?.paidCount ?? 0).toLocaleString("en-US")])}
                 />
                 <StatsMetricCard
                   compact
@@ -978,7 +953,7 @@ export default function DashboardPage() {
                 />
               </>
             )}
-            {statCardSet === "overview" && (
+            {(
               <>
                 <BankTransfersCard icon={DollarSign} />
                 <StatsMetricCard
@@ -1011,7 +986,7 @@ export default function DashboardPage() {
                 />
               </>
             )}
-            {statCardSet === "breakdown" && (
+            {(
               <>
                 <StatsMetricCard
                   compact
@@ -1046,14 +1021,6 @@ export default function DashboardPage() {
                   accent="indigo"
                   format="money"
                   subtitle={dt("عدد: {0}", [stats?.monthlyStoppedCount ?? 0])}
-                />
-                <StatsMetricCard
-                  compact
-                  title={dt("تبرعات مقبولة")}
-                  value={stats?.paidCount ?? 0}
-                  icon={Receipt}
-                  accent="teal"
-                  subtitle={`${formatMoney(stats?.totalAmount ?? 0, undefined, stats?.totalAmount)}`}
                 />
               </>
             )}
@@ -1903,6 +1870,17 @@ export default function DashboardPage() {
 
   {/* Donation Status Filter */}
   <div className="space-y-1 text-start">
+    <label htmlFor="donation-provider-filter" className="text-[11px] font-semibold text-slate-600">{dt("بوابة الدفع")}</label>
+    <Select value={donationProviderFilter} onValueChange={setDonationProviderFilter}>
+      <SelectTrigger id="donation-provider-filter" className="h-10 w-full rounded-lg border-slate-200 bg-white"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">{dt("كل البوابات")}</SelectItem>
+        {DONATION_PROVIDER_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>{option.value === "BANK_TRANSFER" ? dt("تحويل بنكي") : option.label}</SelectItem>)}
+        <SelectItem value="__unset">{dt("غير محدد")}</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+  <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
       {dt("حالة التبرع")}</label>
     <Select value={donationsStatusFilter} onValueChange={(v) => setDonationsStatusFilter(v as typeof donationsStatusFilter)}>
@@ -1988,7 +1966,8 @@ export default function DashboardPage() {
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                         {dt("المتبرع")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 min-w-[100px] max-w-[130px]">
-                        {dt("الدولة")}</th>
+                        <span title={dt("دولة حساب المتبرع أو رمز هاتفه وقت التبرع؛ اسم الحملة الإعلانية لا يحدد دولته.")}>{dt("دولة المتبرع")}</span></th>
+                      <th className="px-3 py-3 text-start text-[11px] font-semibold text-slate-500">{dt("اللغة")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                         {dt("التبرع")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -2012,18 +1991,18 @@ export default function DashboardPage() {
                   <tbody>
                     {donationsLoading && donations.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="py-12 text-center">
+                        <td colSpan={12} className="py-12 text-center">
                           <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-400" />
                         </td>
                       </tr>
                     ) : !donationsFetchedOnce ? (
                       <tr>
-                        <td colSpan={11} className="py-12 text-center text-slate-500">
+                        <td colSpan={12} className="py-12 text-center text-slate-500">
                           {dt("جاري التحميل...")}</td>
                       </tr>
                     ) : donations.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="py-12 text-center text-slate-500">
+                        <td colSpan={12} className="py-12 text-center text-slate-500">
                           {dt("لا توجد تبرعات تطابق التصفية")}</td>
                       </tr>
                     ) : (
@@ -2052,6 +2031,7 @@ export default function DashboardPage() {
                           <td className="py-2.5 px-3 align-middle max-w-[130px]">
                             <DonationTableCountryColumn countryCode={d.donorCountryCode} />
                           </td>
+                          <td className="px-3 py-2.5 text-center font-medium" dir="ltr">{d.locale?.toUpperCase() || "—"}</td>
                           <td className="py-2.5 px-3 font-medium text-slate-800" dir={dashDir()}>
                             <span dir="ltr">
                               {formatMoney(donationDisplayTotalLocal(d), d.currency, d.amountUSD ?? undefined)}

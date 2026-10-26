@@ -10,22 +10,6 @@ import { dt, dtList } from "@/lib/dashboard/i18n";
 
 export const brandProfiles: BrandProfile[] = [
   {
-    id: "brand_gozbebekleri",
-    key: "gozbebekleri",
-    name: "Gözbebekleri Derneği",
-    get description() { return dt("هوية الجمعية الخيرية التشغيلية الأساسية للوحة التحكم الحالية."); },
-    get mission() { return dt("إيصال حملات إغاثة موثوقة مع دليل واضح للمتبرع وتحديثات ميدانية عملية."); },
-    get vision() { return dt("رحلة تبرع يكون فيها كل تبرع سهل الإعطاء، سهل الثقة، ومرتبطًا بوضوح بالأثر."); },
-    get contentVoice() { return dt("دافئ، موثوق، مباشر، مركّز على الإغاثة، وقائم على الدليل."); },
-    get messagePhilosophy() { return dt("أبقِ المتبرع قريبًا من الميدان دون مبالغة؛ اعرض الدليل والإيصال والخطوة التالية بوضوح."); },
-    primaryLocale: "tr",
-    supportedLocales: ["tr", "ar", "en"],
-    website: "minberiaksa.org",
-    isActive: true,
-    status: "FOUNDATION",
-    get verificationNote() { return dt("ملف اللوحة النشط؛ لا تزال ملفات الشعار/الأصول الرسمية بحاجة إلى تأكيد الرفع النهائي."); },
-  },
-  {
     id: "brand_minber_aksa",
     key: "minber_aksa",
     name: "Minber-i Aksa Derneği",
@@ -37,59 +21,13 @@ export const brandProfiles: BrandProfile[] = [
     primaryLocale: "tr",
     supportedLocales: ["ar", "en", "fr", "tr", "id", "pt", "es", "de"],
     website: "minberiaksa.org",
-    isActive: false,
+    isActive: true,
     status: "FOUNDATION",
     get verificationNote() { return dt("استخدم محتوى/وسائط الموقع الرسمي فقط عند بناء صفحات منبر الأقصى العامة."); },
-  },
-  {
-    id: "brand_burak",
-    key: "burak",
-    name: "Burak Derneği",
-    get description() { return dt("هوية خيرية ثانوية بنبرة حملات تركية أنعم."); },
-    get mission() { return dt("توفير رحلات تبرع تركية واضحة لحملات الإغاثة والأضاحي."); },
-    get vision() { return dt("تجربة تبرع هادئة وموثوقة مدعومة بدليل بعد التبرع وتحديثات بسيطة."); },
-    get contentVoice() { return dt("ناعم، جدير بالثقة، بنبرة خيرية تركية، واضح وواقعي."); },
-    get messagePhilosophy() { return dt("أبقِ نص التبرع عمليًا ومحليًا وقائمًا على الدليل دون مبالغة في الوعود."); },
-    primaryLocale: "tr",
-    supportedLocales: ["tr"],
-    website: "burakdernegi.org",
-    isActive: false,
-    status: "FOUNDATION",
-    get verificationNote() { return dt("بيانات التواصل والتواصل الاجتماعي تحتاج تحققًا رسميًا قبل الاستخدام العام في الإنتاج."); },
   },
 ];
 
 export const brandAssets: BrandAsset[] = [
-  {
-    id: "asset_goz_primary_logo",
-    profileId: "brand_gozbebekleri",
-    get title() { return dt("الشعار الأساسي"); },
-    type: "LOGO",
-    format: "SVG",
-    fileUrl: null,
-    previewUrl: null,
-    get usage() { return dt("اللوحة الرئيسية وإيصالات التبرع وترويسات الحملات الرسمية."); },
-    locale: "all",
-    get notes() { return dt("بحاجة إلى تأكيد: ارفع ملف الشعار/المتجه المعتمد."); },
-    downloadable: false,
-    createdBy: "brand-foundation",
-    status: "TO_VERIFY",
-  },
-  {
-    id: "asset_goz_receipt_template",
-    profileId: "brand_gozbebekleri",
-    get title() { return dt("قالب إيصال التبرع"); },
-    type: "CERTIFICATE",
-    format: "PDF",
-    fileUrl: null,
-    previewUrl: null,
-    get usage() { return dt("رحلة الإيصال والشكر والدليل بعد التبرع."); },
-    locale: "tr",
-    get notes() { return dt("بحاجة إلى تأكيد: اربط بقالب شهادة حقيقي."); },
-    downloadable: false,
-    createdBy: "brand-foundation",
-    status: "TO_VERIFY",
-  },
   {
     id: "asset_minber_waqf_certificate",
     profileId: "brand_minber_aksa",
@@ -120,27 +58,9 @@ export const brandAssets: BrandAsset[] = [
     createdBy: "brand-foundation",
     status: "TO_VERIFY",
   },
-  {
-    id: "asset_burak_intro",
-    profileId: "brand_burak",
-    get title() { return dt("مقدمة/خاتمة فيديو (عنصر مؤقت)"); },
-    type: "VIDEO_INTRO",
-    format: "VIDEO",
-    fileUrl: null,
-    previewUrl: null,
-    get usage() { return dt("فيديوهات الأضاحي والدليل الميداني بعد الاعتماد الرسمي."); },
-    locale: "tr",
-    get notes() { return dt("بحاجة إلى تأكيد: ارفع عنصر الموشن النهائي."); },
-    downloadable: false,
-    createdBy: "brand-foundation",
-    status: "TO_VERIFY",
-  },
 ];
 
 export const brandColors: BrandColor[] = [
-  { id: "color_goz_blue", profileId: "brand_gozbebekleri", get name() { return dt("أزرق الثقة"); }, hex: "#025EB8", rgb: "2, 94, 184", usage: "PRIMARY", get description() { return dt("لون الهوية الأساسي ولون التمييز في اللوحة."); }, order: 1 },
-  { id: "color_goz_navy", profileId: "brand_gozbebekleri", get name() { return dt("كحلي داكن"); }, hex: "#10212B", rgb: "16, 33, 43", usage: "TEXT", get description() { return dt("العناوين ولوحات الثقة والأسطح الجادة في اللوحة."); }, order: 2 },
-  { id: "color_goz_ivory", profileId: "brand_gozbebekleri", get name() { return dt("خلفية دافئة"); }, hex: "#FFFDF8", rgb: "255, 253, 248", usage: "BACKGROUND", get description() { return dt("خلفية ناعمة لصفحات الهوية الموجهة للمتبرعين."); }, order: 3 },
   { id: "color_minber_trust_navy", profileId: "brand_minber_aksa", get name() { return dt("كحلي الثقة"); }, hex: "#10212B", rgb: "16, 33, 43", usage: "PRIMARY", get description() { return dt("لون الثقة الأساسي لمنبر الأقصى."); }, order: 1 },
   { id: "color_minber_deep_navy", profileId: "brand_minber_aksa", get name() { return dt("كحلي داكن"); }, hex: "#132C38", rgb: "19, 44, 56", usage: "TEXT", get description() { return dt("العناوين ولوحات الثقة العالية."); }, order: 2 },
   { id: "color_minber_gold", profileId: "brand_minber_aksa", get name() { return dt("ذهبي الأقصى"); }, hex: "#D39A27", rgb: "211, 154, 39", usage: "ACCENT", get description() { return dt("لمسات الوقف والشهادات والأقصى."); }, order: 3 },
@@ -149,21 +69,17 @@ export const brandColors: BrandColor[] = [
   { id: "color_minber_ivory", profileId: "brand_minber_aksa", get name() { return dt("عاجي فاتح"); }, hex: "#FFFDF8", rgb: "255, 253, 248", usage: "BACKGROUND", get description() { return dt("خلفية الصفحة الدافئة الأساسية."); }, order: 6 },
   { id: "color_minber_sand", profileId: "brand_minber_aksa", get name() { return dt("رملي ناعم"); }, hex: "#F7F2EA", rgb: "247, 242, 234", usage: "BACKGROUND", get description() { return dt("خلفية القسم الثانوية."); }, order: 7 },
   { id: "color_minber_muted", profileId: "brand_minber_aksa", get name() { return dt("نص هادئ"); }, hex: "#52616B", rgb: "82, 97, 107", usage: "TEXT", get description() { return dt("النصوص الداعمة الطويلة."); }, order: 8 },
-  { id: "color_burak_teal", profileId: "brand_burak", get name() { return dt("فيروزي بوراك"); }, hex: "#025E73", rgb: "2, 94, 115", usage: "PRIMARY", get description() { return dt("لون هوية بوراك الأساسي."); }, order: 1 },
-  { id: "color_burak_soft", profileId: "brand_burak", get name() { return dt("أزرق ناعم"); }, hex: "#EAF6FA", rgb: "234, 246, 250", usage: "BACKGROUND", get description() { return dt("خلفية الحملات الناعمة."); }, order: 2 },
 ];
 
 export const brandFonts: BrandFont[] = [
-  { id: "font_goz_ui", profileId: "brand_gozbebekleri", name: "System UI", get usage() { return dt("واجهة اللوحة"); }, fallback: "Inter, Arial, sans-serif", source: "system", get notes() { return dt("مستقر لشاشات اللوحة الداخلية."); } },
   { id: "font_minber_ar", profileId: "brand_minber_aksa", name: "Noto Kufi Arabic", get usage() { return dt("العناوين العربية"); }, fallback: "Tajawal, Arial, sans-serif", source: "Google Fonts", get notes() { return dt("بحاجة إلى تأكيد مقابل خطوط الموقع العام النهائية."); } },
   { id: "font_minber_latin", profileId: "brand_minber_aksa", name: "Poppins", get usage() { return dt("العناوين اللاتينية وأزرار التبرع"); }, fallback: "Inter, Arial, sans-serif", source: "Google Fonts", get notes() { return dt("يصلح للإنجليزية والتركية والفرنسية والبرتغالية والإسبانية والألمانية والإندونيسية."); } },
-  { id: "font_burak_ui", profileId: "brand_burak", name: "Inter", get usage() { return dt("واجهة الحملات التركية"); }, fallback: "Arial, sans-serif", source: "system/google", get notes() { return dt("بحاجة إلى تأكيد مع نظام تصميم بوراك النهائي."); } },
 ];
 
 export const brandGuidelines: BrandGuideline[] = [
   {
-    id: "guide_goz_proof",
-    profileId: "brand_gozbebekleri",
+    id: "guide_minber_proof",
+    profileId: "brand_minber_aksa",
     section: "proof",
     get title() { return dt("الدليل قبل الضغط"); },
     get body() { return dt("يجب أن يعرض نص الحملة تحديثات ميدانية أو إيصالات أو دليلًا تشغيليًا قبل طلب مبلغ أعلى."); },
@@ -171,8 +87,8 @@ export const brandGuidelines: BrandGuideline[] = [
     order: 1,
   },
   {
-    id: "guide_goz_dignity",
-    profileId: "brand_gozbebekleri",
+    id: "guide_minber_dignity",
+    profileId: "brand_minber_aksa",
     section: "donor-dignity",
     get title() { return dt("احترام كرامة المستفيد"); },
     get body() { return dt("تجنّب اللغة التي تُهين متلقّي المساعدة. أظهر الحاجة باحترام مع خطوة تالية واضحة."); },
@@ -208,7 +124,7 @@ export const brandGuidelines: BrandGuideline[] = [
   },
   {
     id: "guide_global_ai",
-    profileId: "brand_gozbebekleri",
+    profileId: "brand_minber_aksa",
     section: "cta",
     get title() { return dt("مخرجات الذكاء الاصطناعي مسودات فقط"); },
     get body() { return dt("قد يقترح الذكاء الاصطناعي نصوصًا وترجمات وفحوص ضوابط، لكنه لا يستطيع النشر أو إرسال الرسائل أو تغيير الميزانيات أو اعتماد الأصول."); },
@@ -219,8 +135,8 @@ export const brandGuidelines: BrandGuideline[] = [
 
 export const brandMessageFrameworks: BrandMessageFramework[] = [
   {
-    id: "framework_goz_friday",
-    profileId: "brand_gozbebekleri",
+    id: "framework_minber_friday",
+    profileId: "brand_minber_aksa",
     get name() { return dt("رسائل الجمعة"); },
     type: "FRIDAY",
     locale: "tr",
@@ -230,8 +146,8 @@ export const brandMessageFrameworks: BrandMessageFramework[] = [
     dontList: dtList(["لا تَعِد بنتائج محددة دون دليل", "لا تضغط بالشعور بالذنب"]),
   },
   {
-    id: "framework_goz_thank_you",
-    profileId: "brand_gozbebekleri",
+    id: "framework_minber_thank_you",
+    profileId: "brand_minber_aksa",
     get name() { return dt("الشكر"); },
     type: "THANK_YOU",
     locale: "tr",
@@ -274,8 +190,8 @@ export const brandMessageFrameworks: BrandMessageFramework[] = [
     dontList: dtList(["لا تختلق إحصاءات لحظية", "لا تستخدم صورًا غير موثّقة"]),
   },
   {
-    id: "framework_goz_reactivation",
-    profileId: "brand_gozbebekleri",
+    id: "framework_minber_reactivation",
+    profileId: "brand_minber_aksa",
     get name() { return dt("إعادة تفعيل المتبرع"); },
     type: "DONOR_REACTIVATION",
     locale: "tr",
@@ -296,8 +212,8 @@ export const brandMessageFrameworks: BrandMessageFramework[] = [
     dontList: dtList(["لا تزدحم نموذج التبرع"]),
   },
   {
-    id: "framework_goz_general",
-    profileId: "brand_gozbebekleri",
+    id: "framework_minber_general",
+    profileId: "brand_minber_aksa",
     get name() { return dt("حملة عامة"); },
     type: "GENERAL",
     locale: "tr",

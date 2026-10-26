@@ -22,7 +22,7 @@ function sessionFor(permissions: string[]): Session {
 test("marketing navigation keeps one attribution entry and exposes tracking through platform settings", () => {
   const marketing = DASHBOARD_NAV_GROUPS.find((group) => group.group === "التسويق");
   assert.ok(marketing);
-  assert.deepEqual(marketing.items.map((item) => item.href), ["/dashboard/marketing/attribution"]);
+  assert.deepEqual(marketing.items.map((item) => item.href), ["/dashboard/marketing/attribution", "/dashboard/referrals"]);
   assert.equal(DASHBOARD_NAV_GROUPS.flatMap((group) => group.items).some((item) => item.href === "/dashboard/marketing/tracking"), false);
   assert.match(readFileSync("app/(dashboard)/dashboard/platform-connections/tracking/page.tsx", "utf8"), /\/dashboard\/marketing\/tracking/);
 });

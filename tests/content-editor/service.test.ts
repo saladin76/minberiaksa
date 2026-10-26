@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { changeEditorialSlugs } from "../../lib/content-editor/bulk-slugs";
 import assert from "node:assert/strict";
 import {
   CONFIG,
@@ -33,6 +34,26 @@ import {
   safeEditorUrl,
 } from "../../lib/content-editor/workspace-settings";
 const id = "111111111111111111111111";
+test("bulk URLs preserve excluded fallback-language URLs and existing financial data", async () => {
+  const m = memory("campaigns", { id, title: "مشروع الماء", description: "محتوى المصدر", slug: "old-ar", currentAmount: 55, slugChanges: [], previousSlugs: [], translations: [{ locale: "en", title: "Water project", description: "Existing content", slug: "old-en" }] });
+  const result = await changeEditorialSlugs(m.store, { kind: "campaigns", id, revision: fingerprint(m.read()), changes: { ar: "new-ar", en: "new-en" }, confirmation: "UPDATE_SLUGS", actor: "test-reviewer" });
+  assert.equal(result.slugs.ar, "new-ar");
+  assert.equal(result.slugs.en, "new-en");
+  for (const locale of ["fr", "tr", "de"]) assert.equal(result.slugs[locale], "old-en");
+  assert.equal(m.read().currentAmount, 55);
+  assert.ok((m.read().previousSlugs as string[]).includes("old-ar"));
+  assert.ok((m.read().previousSlugs as string[]).includes("old-en"));
+  assert.equal(valuesFor("campaigns", m.read(), "fr").title, "", "pinning an excluded URL must never invent a translation");
+});
+
+test("a failed bulk URL change rolls back every earlier language and frozen fallback", async () => {
+  const initial = { id, title: "مشروع", description: "محتوى", slug: "old-ar", slugChanges: [], previousSlugs: [], translations: [{ locale: "en", title: "Project", description: "Existing", slug: "old-en" }] };
+  const m = memory("campaigns", initial);
+  await assert.rejects(changeEditorialSlugs(m.store, { kind: "campaigns", id, revision: fingerprint(m.read()), changes: { ar: "new-ar", en: "invalid slug" }, confirmation: "UPDATE_SLUGS", actor: "test" }));
+  assert.deepEqual(m.read(), initial);
+  await assert.rejects(changeEditorialSlugs(m.store, { kind: "campaigns", id, revision: "stale", changes: { ar: "new-ar" }, confirmation: "UPDATE_SLUGS", actor: "test" }), /تغير/);
+  assert.deepEqual(m.read(), initial);
+});
 test("editor settings never accept financial totals or baseline amounts", () => {
   for (const key of [
     "currentAmount",
@@ -795,4 +816,13 @@ test("shared editor accepts native currency presets without accepting financial 
   assert.deepEqual((settings.suggestedShareCounts as ContentRecord).priceByCurrency, { TRY: 500 });
   assert.equal((settings.shareLabels as Record<string, ContentRecord>).en.singular, "meal");
   assert.throws(() => validateWorkspaceSettings("campaigns", { goalType: "OPEN" }, { currentAmount: 900 }));
+});
+
+test("campaign language covers persist independently without inventing a base image field or changing its gallery", async () => {
+  const m = memory("campaigns", { id, title: "مشروع", description: "نص", images: ["https://example.org/base.jpg"], currentAmount: 25, translations: [] });
+  let doc = await saveContent(m.store, { kind: "campaigns", id, locale: "fr", revision: fingerprint(m.read()), changes: { title: "Projet", description: "Texte", image: "https://example.org/fr.jpg" } });
+  assert.equal(doc.values.fr.image, "https://example.org/fr.jpg");
+  doc = await saveContent(m.store, { kind: "campaigns", id, locale: "ar", revision: doc.revision, changes: { title: "مشروع مراجع", image: "" } });
+  assert.deepEqual(m.read().images, ["https://example.org/base.jpg"]); assert.equal(m.read().currentAmount, 25); assert.equal("image" in m.read(), false);
+  await assert.rejects(saveContent(m.store, { kind: "campaigns", id, locale: "ar", revision: doc.revision, changes: { image: "https://example.org/replacement.jpg" } }));
 });

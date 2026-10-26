@@ -49,6 +49,7 @@ export default function WysiwygEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    content: defaultValue,
     editable: isEditable,
     extensions: [...defaultExtensions, ...extensions],
     editorProps: {
@@ -68,7 +69,10 @@ export default function WysiwygEditor({
   // reset selection to the end after every edit.
   const hydratedKeyRef = useRef<string | null>(null);
 
-  useEffect(() => { editor?.setEditable(isEditable); }, [editor, isEditable]);
+  // Tiptap emits an update by default even when only editable changes. During
+  // hydration that used to send the empty initial document back to the parent,
+  // replacing the published content and disabling SEO as an unsaved draft.
+  useEffect(() => { editor?.setEditable(isEditable, false); }, [editor, isEditable]);
 
   useEffect(() => {
     if (!editor) return;
