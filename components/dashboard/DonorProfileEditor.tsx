@@ -48,7 +48,7 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
     finally { setSaving(false); }
   };
   return <Dialog open onOpenChange={open => { if (!open && !saving) onClose(); }}>
-    <DialogContent dir={dashDir()} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl" onEscapeKeyDown={event => { if (saving) event.preventDefault(); }} onPointerDownOutside={event => event.preventDefault()}>
+    <DialogContent dir={dashDir()} closeClassName={dashDir() === "rtl" ? "left-4 right-auto" : undefined} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl" onEscapeKeyDown={event => { if (saving) event.preventDefault(); }} onPointerDownOutside={event => event.preventDefault()}>
       <DialogHeader className="shrink-0 sm:text-start"><DialogTitle>{dt("تعديل بيانات المتبرع")}</DialogTitle>
         <DialogDescription>{user.name ?? user.email}</DialogDescription></DialogHeader>
       <form onSubmit={save} className="flex min-h-0 flex-col gap-4 overflow-hidden">

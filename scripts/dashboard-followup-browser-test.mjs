@@ -138,6 +138,9 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
    const saveBounds=await page.getByRole("button",{name:ui(locale,"حفظ"),exact:true}).boundingBox();
    assert.ok(saveBounds.y>=0&&saveBounds.y+saveBounds.height<=height,"Save must remain visible while the profile fields scroll");
+   const titleBounds=await page.getByRole("dialog").getByRole("heading").evaluate(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getBoundingClientRect().toJSON()});
+   const closeBounds=await page.getByRole("dialog").getByRole("button",{name:"Close",exact:true}).boundingBox();
+   assert.ok(Math.min(titleBounds.x+titleBounds.width,closeBounds.x+closeBounds.width)-Math.max(titleBounds.x,closeBounds.x)<=1||Math.min(titleBounds.y+titleBounds.height,closeBounds.y+closeBounds.height)-Math.max(titleBounds.y,closeBounds.y)<=1,"The profile close control must not overlap its title in either text direction");
    await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-donor-profile-"+label+".png"),fullPage:true});checks++;
    const fields=page.getByRole("dialog").locator("form > div.overflow-y-auto");
    const fieldsBounds=await fields.boundingBox();
