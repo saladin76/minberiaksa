@@ -15,11 +15,18 @@ import {
   LayoutDashboard,
   RefreshCw,
   Eye,
+  Wallet,
+  Repeat,
+  HandCoins,
+  Landmark,
+  Users,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { CHART_THEME } from "@/lib/dashboard/chart-theme";
 import { HomeDonationSummary } from "@/components/dashboard/HomeDonationSummary";
+import { MetricSummaryBand } from "@/components/dashboard/MetricSummaryBand";
 import {
   DashboardFilterBar,
   type ActiveFilterChip,
@@ -834,7 +841,23 @@ export default function DashboardPage() {
 
 
 
-        {!searchParams.get("userId") && <HomeDonationSummary onRefresh={refreshAfterDonationMutation} />}
+        {!searchParams.get("userId") && <>
+          <MetricSummaryBand
+            icon={Wallet}
+            eyebrow={dt("إجمالي الإيرادات الناجحة")}
+            badge={dt("كل الوقت")}
+            value={stats?.paidRevenueAllTimeUnfiltered != null ? formatInSelectedCurrency(stats.paidRevenueAllTimeUnfiltered) : "—"}
+            note={dt("لا تتأثر هذه القيمة ولا البطاقات المجاورة بالفترة أو التصفية المختارة أدناه.")}
+            stats={[
+              { label: dt("إيرادات شهرية متكررة (MRR)"), icon: Repeat, value: stats?.monthlyRecurringRevenueUnfiltered != null ? formatInSelectedCurrency(stats.monthlyRecurringRevenueUnfiltered) : "—" },
+              { label: dt("عدد التبرعات الناجحة"), icon: HandCoins, value: stats?.paidCountAllTimeUnfiltered?.toLocaleString("en-US") ?? "—" },
+              { label: dt("اشتراكات نشطة"), icon: Landmark, value: stats?.activeMonthlyCountUnfiltered?.toLocaleString("en-US") ?? "—" },
+              { label: dt("إجمالي المستخدمين"), icon: Users, value: stats?.totalUsers?.toLocaleString("en-US") ?? "—" },
+              { label: dt("متوسط التبرع"), icon: Calculator, value: stats?.paidRevenueAllTimeUnfiltered != null && (stats.paidCountAllTimeUnfiltered ?? 0) > 0 ? formatInSelectedCurrency(stats.paidRevenueAllTimeUnfiltered / stats.paidCountAllTimeUnfiltered!) : "—" },
+            ]}
+          />
+          <HomeDonationSummary onRefresh={refreshAfterDonationMutation} />
+        </>}
 
         {/* التحليلات */}
         <section className="space-y-4">

@@ -20,6 +20,8 @@ export interface CampaignRow {
   repliedCount: number;
   donationCount: number;
   revenue: number;
+  unpricedPaidCount?: number;
+  trackingRequiresTemplateUpdate?: boolean;
   failedDonationCount?: number;
   metadata?: {
     sendControls?: {

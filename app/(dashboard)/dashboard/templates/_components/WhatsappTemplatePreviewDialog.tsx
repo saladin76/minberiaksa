@@ -41,6 +41,7 @@ interface PerformancePayload {
     clickToDonationRate: number;
     failureRate: number;
     revenuePerMessage: number;
+    unpricedPaidCount?: number;
   };
   bestCountry: { key: string; count: number } | null;
   bestLanguage: { key: string; count: number } | null;
@@ -143,6 +144,7 @@ export function WhatsappTemplatePreviewDialog({ template, open, onOpenChange }: 
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-slate-500" />
               <h3 className="text-xs font-semibold text-slate-800">{dt("أداء القالب")}</h3>
+              {perf && (perf.performance.unpricedPaidCount ?? 0) > 0 && <p className="text-xs text-amber-700">{dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [perf.performance.unpricedPaidCount ?? 0])}</p>}
             </div>
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-6 text-slate-500 text-sm">

@@ -1,3 +1,4 @@
+import { campaignTrackingValues, trackCampaignMetaButtons } from "./campaign-message-tracking";
 import { donationTemplateValues } from "./template-donation-links";
 import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-failure-link";
 import { donationNotificationParameters, isDonationMoneyNotificationEvent } from "@/lib/templates/donation-money";
@@ -197,14 +198,14 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
     const prepared=await donationTemplateValues({componentsSchema:meta.componentsSchema,scopedNames:meta.scopedNames,values,donationId:archived.trigger?.donationId || archived.snapshot?.donation?.id,recipientUserId:row.recipientUserId});
     if(!prepared.ok)return result(deliveryId,prepared.reason as RetryOutcomeCode,base);
     const built = buildMetaComponents({
-      componentsSchema: meta.componentsSchema, values: prepared.values,
+      componentsSchema: meta.componentsSchema, values: row.campaignId ? campaignTrackingValues(meta.componentsSchema, prepared.values, { id: row.campaignId, channel }) : prepared.values,
       positionalNames: meta.positionalNames, scopedNames: meta.scopedNames,
       headerMediaUrl: meta.headerMediaUrl, headerMediaFilename: meta.headerMediaFilename, headerLocation: meta.headerLocation,
     });
     if (!built.ok) return result(deliveryId, built.reason as RetryOutcomeCode, { ...base, detail: built.detail });
     provider = "META_WHATSAPP";
     senderId = routed.sender.id;
-    payload = { channel, sender: { provider, phoneNumberId: routed.sender.phoneNumberId }, to: recipient, templateName: meta.name, languageCode: meta.language, components: built.components };
+    payload = { channel, sender: { provider, phoneNumberId: routed.sender.phoneNumberId }, to: recipient, templateName: meta.name, languageCode: meta.language, components: row.campaignId ? trackCampaignMetaButtons({ campaign: { id: row.campaignId, channel }, componentsSchema: meta.componentsSchema, components: built.components }) : built.components };
   } else {
     if (!renderedBody) return result(deliveryId, "NO_RENDERED_BODY", base);
     const route = await resolveSmsProvider(null, recipient);

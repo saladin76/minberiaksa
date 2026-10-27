@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 const ACCEPTED = new Set(["SENT_TO_PROVIDER", "SENT", "DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED"]);
 const ARRIVED = new Set(["DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED"]);
 const READ_LIKE = new Set(["READ", "OPENED"]);
-const CLICKED_LIKE = new Set(["CLICKED", "REPLIED"]);
+// A reply proves engagement, but provides no evidence that a URL was clicked.
+const CLICKED_LIKE = new Set(["CLICKED"]);
 const FAILURES = new Set(["FAILED", "BOUNCED"]);
 const RECOMPUTABLE_STATUS = new Set(["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED"]);
 
@@ -42,6 +43,7 @@ export function tallyDeliveryStatuses(statuses: readonly (string | null)[]): Cam
 type DeliveryEngagementRow = {
   status: string | null; deliveredAt: Date | null; readAt: Date | null;
   openedAt: Date | null; clickedAt: Date | null; repliedAt: Date | null;
+  sentAt?: Date | null; providerMessageId?: string | null;
 };
 
 /** Timestamp evidence survives subsequent status transitions. */
@@ -50,7 +52,7 @@ export function tallyDeliveryRows(rows: readonly DeliveryEngagementRow[]): Campa
   for (const row of rows) {
     const status = row.status ?? "";
     counters.total++;
-    if (ACCEPTED.has(status)) counters.sent++;
+    if (row.sentAt || row.providerMessageId || ACCEPTED.has(status)) counters.sent++;
     if (row.deliveredAt || row.readAt || row.openedAt || row.clickedAt || row.repliedAt || ARRIVED.has(status)) counters.delivered++;
     if (row.readAt || row.openedAt || row.clickedAt || row.repliedAt || READ_LIKE.has(status)) counters.read++;
     if (row.clickedAt || CLICKED_LIKE.has(status)) counters.clicked++;
@@ -76,7 +78,7 @@ export async function recomputeCampaignCounters(campaignId: string): Promise<Rec
     });
     if (!campaign) return { ok: false, reason: "NOT_FOUND" };
     const rows = await prisma.communicationDelivery.findMany({
-      where: { campaignId }, select: { status: true, deliveredAt: true, readAt: true, openedAt: true, clickedAt: true, repliedAt: true },
+      where: { campaignId }, select: { status: true, sentAt: true, providerMessageId: true, deliveredAt: true, readAt: true, openedAt: true, clickedAt: true, repliedAt: true },
     });
     if (!rows.length) return { ok: true, changed: false, counters: tallyDeliveryStatuses([]), status: campaign.status };
     const counters = tallyDeliveryRows(rows);

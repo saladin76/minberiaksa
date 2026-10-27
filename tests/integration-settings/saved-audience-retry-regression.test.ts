@@ -1,3 +1,4 @@
+import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
@@ -234,6 +235,7 @@ function engineHarness(options: EngineOptions = {}) {
     listRetryCandidates: (filter: { channel: string; ids?: string[] }) => Promise<string[]>;
     retryPreflight: (filter: { channel: string; ids?: string[] }) => Promise<unknown>;
   }>("lib/communication/delivery-retry-service.ts", {
+    "./campaign-message-tracking": campaignTracking,
     "@/lib/templates/donation-money": donationMoney,
     "./retry-batches": { RETRY_BATCH_CAP: 25 },
     "./retry-readiness": { retryPayloadBlockReason: () => null },

@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
-import { createOrUpdateCampaignLink } from "@/lib/marketing/campaign-links/campaign-link-registry-service";
 import {
   buildUniqueCampaignUtmAliases,
   campaignUtmLinksFromWhatsAppTemplates,
+  campaignsNeedingTrackedTemplate,
   isCommunicationUtmMedium,
   resolveCommunicationCampaignId,
   type CampaignUtmLink,
@@ -97,6 +97,7 @@ export async function attachTrackingLink(
   if (input.createInGenerator && input.baseUrl?.trim()) {
     url = decorateUrl(input.baseUrl.trim(), params);
     try {
+      const { createOrUpdateCampaignLink } = await import("@/lib/marketing/campaign-links/campaign-link-registry-service");
       const link = await createOrUpdateCampaignLink({
         name: `تواصل  ${source}  ${campaign.id}`,
         platform: source,
@@ -156,22 +157,36 @@ function str(o: Record<string, unknown>, k: string): string | null {
   const v = o[k];
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
-function valueUSD(d: { amountUSD: number | null; totalAmount: number; amount: number }): number {
-  return d.amountUSD ?? d.totalAmount ?? d.amount ?? 0;
+function valueUSD(d: DonationRow): number | null {
+  if (typeof d.amountUSD === "number" && Number.isFinite(d.amountUSD)) return d.amountUSD;
+  return d.currency === "USD" && Number.isFinite(d.amount) ? d.amount : null;
 }
+function isPaid(d: DonationRow): boolean { return d.status === "PAID" && !!d.paidAt; }
+function cents(value: number): number { return Math.round(value * 100) / 100; }
 
-type DonationRow = { id: string; status: string; amount: number; amountUSD: number | null; totalAmount: number; attribution: unknown; donorCountryCode?: string | null };
+type DonationRow = { id: string; status: string; paidAt: Date | null; amount: number; currency: string; amountUSD: number | null; totalAmount: number; attribution: unknown; donorCountryCode?: string | null };
 
 const COMM_SOURCES = new Set(["whatsapp", "email", "sms"]);
 
-/** Fetch a bounded window of donations that carry a communication-medium attribution. */
-async function loadCommunicationDonations(sinceDays = 180): Promise<DonationRow[]> {
-  if (!process.env.DATABASE_URL) return [];
-  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
-  const rows = await prisma.donation
-    .findMany({ where: { createdAt: { gte: since } }, select: { id: true, status: true, amount: true, amountUSD: true, totalAmount: true, attribution: true }, orderBy: { createdAt: "desc" }, take: 8000 })
-    .catch(() => []);
-  return rows.filter((d) => isCommunicationUtmMedium(attr(d).utm_medium));
+/** Walk every page. A busy checkout must not push older campaign income out of a display cap.
+ * Read failures reject the report instead of being represented as zero revenue. */
+export async function loadCommunicationDonations(): Promise<DonationRow[]> {
+  if (!process.env.DATABASE_URL) throw new Error("COMMUNICATION_ATTRIBUTION_DATABASE_UNAVAILABLE");
+  const donations: DonationRow[] = [];
+  let cursor: string | undefined;
+  for (;;) {
+    const rows: DonationRow[] = await prisma.donation.findMany({
+      where: { status: { in: ["PAID", "FAILED"] }, ...(cursor ? { id: { gt: cursor } } : {}) },
+      select: { id: true, status: true, paidAt: true, amount: true, currency: true, amountUSD: true, totalAmount: true, attribution: true },
+      orderBy: { id: "asc" }, take: 1000,
+    });
+    donations.push(...rows.filter((d) => isCommunicationUtmMedium(attr(d).utm_medium)));
+    if (rows.length < 1000) break;
+    const next = rows.at(-1)?.id;
+    if (!next || next === cursor) throw new Error("COMMUNICATION_ATTRIBUTION_CURSOR_STALLED");
+    cursor = next;
+  }
+  return donations;
 }
 
 /** Include archived links when checking uniqueness: an old sent link can still
@@ -182,15 +197,15 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
     prisma.communicationCampaignTrackingLink.findMany({
       select: { campaignId: true, url: true, source: true, medium: true },
       take: 10_000,
-    }).catch(() => []),
+    }),
     prisma.communicationCampaign.findMany({
       where: { channel: "WHATSAPP", templateGroupId: { not: null } },
       select: { id: true, channel: true, templateGroupId: true },
       take: 10_000,
-    }).catch(() => []),
+    }),
   ]);
   // Do not claim an alias is unique when a campaign/link scan reached its safety bound.
-  if (rows.length >= 10_000 || campaigns.length >= 10_000) return [];
+  if (rows.length >= 10_000 || campaigns.length >= 10_000) throw new Error("COMMUNICATION_ATTRIBUTION_LINK_SCAN_INCOMPLETE");
 
   const templateIds = [...new Set(campaigns.map((campaign) => campaign.templateGroupId).filter((id): id is string => Boolean(id)))];
   let templateLinks: CampaignUtmLink[] = [];
@@ -199,9 +214,10 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
       where: { provider: "META_WHATSAPP", templateId: { in: templateIds } },
       select: { templateId: true, componentsSchema: true },
       take: 20_000,
-    }).catch(() => []);
-    // A truncated variant scan cannot establish that a generic UTM is unique.
-    if (variants.length < 20_000) {
+    });
+    // A truncated scan cannot establish alias uniqueness.
+    if (variants.length >= 20_000) throw new Error("COMMUNICATION_ATTRIBUTION_TEMPLATE_SCAN_INCOMPLETE");
+    {
       templateLinks = campaignUtmLinksFromWhatsAppTemplates(
         campaigns.map((campaign) => ({ campaignId: campaign.id, channel: campaign.channel, templateId: campaign.templateGroupId })),
         variants,
@@ -218,6 +234,7 @@ export type CampaignDonationReport = {
   confidence: AttributionConfidence;
   successful: { count: number; valueUSD: number };
   failed: { count: number; valueUSD: number } | null; // null = failed attempts not applicable/none captured for this campaign
+  unpricedPaidCount: number;
   averageUSD: number | null;
   bestLanguage: { locale: string; label: string; valueUSD: number } | null;
   visits: null; // visits are not stored
@@ -242,28 +259,29 @@ export async function getCampaignDonationReport(campaign: { id: string; channel:
   const matched = donations.filter((d) =>
     resolveCommunicationCampaignId(attr(d), campaignIds, aliases) === campaign.id,
   );
-  const usingExactCampaignId = exactMatches.length > 0;
+  const usingExactCampaignId = matched.length > 0 && exactMatches.length === matched.length;
 
-  const paid = matched.filter((d) => d.status === "PAID");
+  const paid = matched.filter((d) => isPaid(d));
   const failed = matched.filter((d) => d.status === "FAILED");
-  const successValue = paid.reduce((s, d) => s + valueUSD(d), 0);
-  const failedValue = failed.reduce((s, d) => s + valueUSD(d), 0);
+  const successValue = paid.reduce((s, d) => s + (valueUSD(d) ?? 0), 0);
+  const failedValue = failed.reduce((s, d) => s + (valueUSD(d) ?? 0), 0);
 
   // Best language by successful donation value (from the attribution locale).
   const byLocale = new Map<string, number>();
   for (const d of paid) {
-    const loc = str(attr(d), "locale");
-    if (loc && isValidLocale(loc)) byLocale.set(loc, (byLocale.get(loc) ?? 0) + valueUSD(d));
+    const loc = str(attr(d), "locale") ?? str(attr(d), "language");
+    if (loc && isValidLocale(loc)) byLocale.set(loc, (byLocale.get(loc) ?? 0) + (valueUSD(d) ?? 0));
   }
   const bestLangEntry = [...byLocale.entries()].sort((a, b) => b[1] - a[1])[0];
 
   return {
     hasTrackingLink: links.length > 0,
     confidence: usingExactCampaignId ? "دقيق" : matched.length > 0 ? "جزئي" : "غير متاح",
-    successful: { count: paid.length, valueUSD: Math.round(successValue) },
-    failed: failed.length > 0 ? { count: failed.length, valueUSD: Math.round(failedValue) } : null,
-    averageUSD: paid.length > 0 ? Math.round(successValue / paid.length) : null,
-    bestLanguage: bestLangEntry ? { locale: bestLangEntry[0], label: LOCALES[bestLangEntry[0] as SupportedLocale]?.label ?? bestLangEntry[0], valueUSD: Math.round(bestLangEntry[1]) } : null,
+    successful: { count: paid.length, valueUSD: cents(successValue) },
+    failed: failed.length > 0 ? { count: failed.length, valueUSD: cents(failedValue) } : null,
+    unpricedPaidCount: paid.filter(d => valueUSD(d) === null).length,
+    averageUSD: paid.length > 0 && paid.every(d => valueUSD(d) !== null) ? cents(successValue / paid.length) : null,
+    bestLanguage: bestLangEntry ? { locale: bestLangEntry[0], label: LOCALES[bestLangEntry[0] as SupportedLocale]?.label ?? bestLangEntry[0], valueUSD: cents(bestLangEntry[1]) } : null,
     visits: null,
     links,
   };
@@ -275,44 +293,77 @@ export type CampaignOutcomeMetric = {
   donationCount: number;
   revenue: number;
   failedDonationCount: number;
+  unpricedPaidCount: number;
+};
+export type CampaignOutcomeSummary = {
+  metrics: Map<string, CampaignOutcomeMetric>;
+  staticTrackingCampaignIds: string[];
+  unattributed: { donationCount: number; revenue: number; unpricedPaidCount: number };
 };
 
-/**
- * Batch exact-attribution metrics for the campaign list.
- *
- * Exact campaign IDs are preferred. Legacy generic UTMs can be credited only
- * when a registered link maps the value to one campaign; channel-only fallback
- * is deliberately forbidden so comparisons never double-credit donations.
- */
-export async function getCampaignOutcomeMetrics(
-  campaignIds: readonly string[],
-): Promise<Map<string, CampaignOutcomeMetric>> {
+/** Each settled donation is credited at most once. Shared historical aliases
+ * remain visible as unattributed income rather than being assigned by guesswork. */
+export async function getCampaignOutcomeSummary(campaignIds: readonly string[]): Promise<CampaignOutcomeSummary> {
   const ids = new Set(campaignIds.filter(Boolean));
-  const out = new Map<string, CampaignOutcomeMetric>();
-  if (!ids.size) return out;
-
-  const [donations, trackingLinks] = await Promise.all([
-    loadCommunicationDonations(),
-    loadCampaignUtmLinks(),
-  ]);
+  const metrics = new Map<string, CampaignOutcomeMetric>();
+  const unattributed = { donationCount: 0, revenue: 0, unpricedPaidCount: 0 };
+  if (!ids.size) return { metrics, unattributed, staticTrackingCampaignIds: [] };
+  const [donations, trackingLinks] = await Promise.all([loadCommunicationDonations(), loadCampaignUtmLinks()]);
   const aliases = buildUniqueCampaignUtmAliases(trackingLinks);
   for (const donation of donations) {
     const campaignId = resolveCommunicationCampaignId(attr(donation), ids, aliases);
-    if (!campaignId) continue;
-    const current = out.get(campaignId) ?? { donationCount: 0, revenue: 0, failedDonationCount: 0 };
-    if (donation.status === "PAID") {
-      current.donationCount += 1;
-      current.revenue += valueUSD(donation);
-    } else if (donation.status === "FAILED") {
-      current.failedDonationCount += 1;
+    if (!campaignId) {
+      if (isPaid(donation)) {
+        unattributed.donationCount++;
+        const usd = valueUSD(donation);
+        if (usd === null) unattributed.unpricedPaidCount++;
+        else unattributed.revenue += usd;
+      }
+      continue;
     }
-    out.set(campaignId, current);
+    const current = metrics.get(campaignId) ?? { donationCount: 0, revenue: 0, failedDonationCount: 0, unpricedPaidCount: 0 };
+    if (isPaid(donation)) {
+      current.donationCount++;
+      const usd = valueUSD(donation);
+      if (usd === null) current.unpricedPaidCount++;
+      else current.revenue += usd;
+    } else if (donation.status === "FAILED") current.failedDonationCount++;
+    metrics.set(campaignId, current);
   }
+  for (const metric of metrics.values()) metric.revenue = cents(metric.revenue);
+  unattributed.revenue = cents(unattributed.revenue);
+  return { metrics, unattributed, staticTrackingCampaignIds: campaignsNeedingTrackedTemplate(trackingLinks) };
+}
 
-  for (const [id, metric] of out) {
-    out.set(id, { ...metric, revenue: Math.round(metric.revenue * 100) / 100 });
+export async function getCampaignOutcomeMetrics(campaignIds: readonly string[]): Promise<Map<string, CampaignOutcomeMetric>> {
+  return (await getCampaignOutcomeSummary(campaignIds)).metrics;
+}
+
+/** Template reporting uses the same settled-payment and UTM rules as campaigns. */
+export async function getTemplateDonationOutcome(template: { id: string; externalTemplateId: string | null }): Promise<CampaignOutcomeMetric> {
+  const [campaigns, donations, links] = await Promise.all([
+    prisma.communicationCampaign.findMany({ where: { channel: "WHATSAPP", templateGroupId: template.id }, select: { id: true } }),
+    loadCommunicationDonations(), loadCampaignUtmLinks(),
+  ]);
+  const ids = new Set(campaigns.map(campaign => campaign.id));
+  const templateIds = new Set([template.id, template.externalTemplateId].filter(Boolean));
+  const aliases = buildUniqueCampaignUtmAliases(links);
+  const result = { donationCount: 0, revenue: 0, failedDonationCount: 0, unpricedPaidCount: 0 };
+  for (const donation of donations) {
+    const attribution = attr(donation);
+    const campaign = resolveCommunicationCampaignId(attribution, ids, aliases);
+    const explicitCampaignId = ["utm_campaign", "utm_id", "campaign_id"].some(key => /^[a-f0-9]{24}$/i.test(str(attribution, key) ?? ""));
+    const legacyTemplate = !explicitCampaignId && templateIds.has(str(attribution, "twilio_template_id"));
+    if (!campaign && !legacyTemplate) continue;
+    if (isPaid(donation)) {
+      result.donationCount++;
+      const usd = valueUSD(donation);
+      if (usd === null) result.unpricedPaidCount++;
+      else result.revenue += usd;
+    } else if (donation.status === "FAILED") result.failedDonationCount++;
   }
-  return out;
+  result.revenue = cents(result.revenue);
+  return result;
 }
 
 export type CommunicationDonationOverview = {
@@ -332,12 +383,12 @@ export async function getCommunicationDonationOverview(): Promise<CommunicationD
 
   const [donations, campaigns, links, allLinks] = await Promise.all([
     loadCommunicationDonations(),
-    prisma.communicationCampaign.findMany({ where: { status: { notIn: ["ARCHIVED"] } }, select: { id: true, name: true, channel: true }, take: 300 }).catch(() => []),
-    prisma.communicationCampaignTrackingLink.findMany({ where: { status: "ACTIVE" }, select: { campaignId: true }, take: 2000 }).catch(() => []),
+    prisma.communicationCampaign.findMany({ where: { status: { notIn: ["ARCHIVED"] } }, select: { id: true, name: true, channel: true }, take: 300 }),
+    prisma.communicationCampaignTrackingLink.findMany({ where: { status: "ACTIVE" }, select: { campaignId: true }, take: 2000 }),
     loadCampaignUtmLinks(),
   ]);
 
-  const paid = donations.filter((d) => d.status === "PAID");
+  const paid = donations.filter((d) => isPaid(d));
   const failedAll = donations.filter((d) => d.status === "FAILED");
   const nameById = new Map(campaigns.map((c) => [c.id, c.name]));
   const linkedCampaignIds = new Set(links.map((l) => l.campaignId));
@@ -352,27 +403,27 @@ export async function getCommunicationDonationOverview(): Promise<CommunicationD
     const src = str(a, "utm_source")?.toLowerCase();
     if (src && COMM_SOURCES.has(src)) {
       const c = byChannel.get(src) ?? { count: 0, valueUSD: 0 };
-      c.count += 1; c.valueUSD += valueUSD(d); byChannel.set(src, c);
+      c.count += 1; c.valueUSD += (valueUSD(d) ?? 0); byChannel.set(src, c);
     }
-    const loc = str(a, "locale");
+    const loc = str(a, "locale") ?? str(a, "language");
     if (loc && isValidLocale(loc)) {
       const c = byLanguage.get(loc) ?? { count: 0, valueUSD: 0 };
-      c.count += 1; c.valueUSD += valueUSD(d); byLanguage.set(loc, c);
+      c.count += 1; c.valueUSD += (valueUSD(d) ?? 0); byLanguage.set(loc, c);
     }
     const camp = resolveCommunicationCampaignId(a, campaignIds, aliases);
     if (camp && nameById.has(camp)) {
       const c = byCampaign.get(camp) ?? { count: 0, valueUSD: 0 };
-      c.count += 1; c.valueUSD += valueUSD(d); byCampaign.set(camp, c);
+      c.count += 1; c.valueUSD += (valueUSD(d) ?? 0); byCampaign.set(camp, c);
     }
   }
 
   const hasData = paid.length > 0 || links.length > 0;
   return {
     hasData,
-    byChannel: [...byChannel.entries()].map(([source, v]) => ({ source, label: SOURCE_LABEL[source] ?? source, count: v.count, valueUSD: Math.round(v.valueUSD) })).sort((a, b) => b.valueUSD - a.valueUSD),
-    byLanguage: [...byLanguage.entries()].map(([locale, v]) => ({ locale, label: LOCALES[locale as SupportedLocale]?.label ?? locale, count: v.count, valueUSD: Math.round(v.valueUSD) })).sort((a, b) => b.valueUSD - a.valueUSD),
-    bestCampaigns: [...byCampaign.entries()].map(([campaignId, v]) => ({ campaignId, name: nameById.get(campaignId) ?? campaignId, count: v.count, valueUSD: Math.round(v.valueUSD) })).sort((a, b) => b.valueUSD - a.valueUSD).slice(0, 8),
+    byChannel: [...byChannel.entries()].map(([source, v]) => ({ source, label: SOURCE_LABEL[source] ?? source, count: v.count, valueUSD: cents(v.valueUSD) })).sort((a, b) => b.valueUSD - a.valueUSD),
+    byLanguage: [...byLanguage.entries()].map(([locale, v]) => ({ locale, label: LOCALES[locale as SupportedLocale]?.label ?? locale, count: v.count, valueUSD: cents(v.valueUSD) })).sort((a, b) => b.valueUSD - a.valueUSD),
+    bestCampaigns: [...byCampaign.entries()].map(([campaignId, v]) => ({ campaignId, name: nameById.get(campaignId) ?? campaignId, count: v.count, valueUSD: cents(v.valueUSD) })).sort((a, b) => b.valueUSD - a.valueUSD).slice(0, 8),
     campaignsWithoutLinks: campaigns.filter((c) => !linkedCampaignIds.has(c.id)).slice(0, 12),
-    failed: failedAll.length > 0 ? { count: failedAll.length, valueUSD: Math.round(failedAll.reduce((s, d) => s + valueUSD(d), 0)) } : null,
+    failed: failedAll.length > 0 ? { count: failedAll.length, valueUSD: cents(failedAll.reduce((s, d) => s + (valueUSD(d) ?? 0), 0)) } : null,
   };
 }

@@ -8484,5 +8484,10 @@
   "المُرسِل البديل متاح": "Fallback sender available",
   "الشروط غير متطابقة": "Conditions do not match",
   "مطابق": "Matched",
-  "لا يوجد مُرسِل متاح": "No sender available"
+  "لا يوجد مُرسِل متاح": "No sender available",
+  "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة.": "Could not load revenue attribution. Please retry.",
+  "إيراد تواصل غير منسوب: {0} دولار من {1} تبرع مؤكد. الروابط القديمة لا تحدد حملة واحدة؛ هذا المبلغ غير مضاف إلى صفوف الحملات.": "Unattributed communication revenue: ${0} from {1} confirmed donations. Historical links do not identify a single campaign; this amount is excluded from campaign rows.",
+  "توجد {0} تبرعات دون تحويل مؤكد للدولار.": "{0} donations have no confirmed USD conversion.",
+  "تبرعات مؤكدة الدفع من روابط الحملة": "Confirmed payments from campaign links",
+  "توجد قوالب واتساب بروابط ثابتة مشتركة. يلزم اعتماد زر ديناميكي بمعرّف الحملة لدى Meta لفصل إيرادات كل حملة.": "Some WhatsApp templates share static links. Meta must approve a dynamic button carrying the campaign ID to separate campaign revenue."
 }

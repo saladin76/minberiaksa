@@ -8476,5 +8476,10 @@
   "المُرسِل البديل متاح": "Yedek gönderici kullanılabilir",
   "الشروط غير متطابقة": "Koşullar eşleşmiyor",
   "مطابق": "Eşleşti",
-  "لا يوجد مُرسِل متاح": "Kullanılabilir gönderici yok"
+  "لا يوجد مُرسِل متاح": "Kullanılabilir gönderici yok",
+  "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة.": "Gelir ilişkilendirmesi yüklenemedi. Yeniden deneyin.",
+  "إيراد تواصل غير منسوب: {0} دولار من {1} تبرع مؤكد. الروابط القديمة لا تحدد حملة واحدة؛ هذا المبلغ غير مضاف إلى صفوف الحملات.": "İlişkilendirilmemiş iletişim geliri: {1} onaylı bağıştan {0} dolar. Eski bağlantılar tek bir kampanyayı belirtmiyor; bu tutar kampanya satırlarına eklenmedi.",
+  "توجد {0} تبرعات دون تحويل مؤكد للدولار.": "{0} bağışın doğrulanmış dolar karşılığı yok.",
+  "تبرعات مؤكدة الدفع من روابط الحملة": "Kampanya bağlantılarından onaylanmış ödemeler",
+  "توجد قوالب واتساب بروابط ثابتة مشتركة. يلزم اعتماد زر ديناميكي بمعرّف الحملة لدى Meta لفصل إيرادات كل حملة.": "Bazı WhatsApp şablonları ortak sabit bağlantılar kullanıyor. Her kampanyanın gelirini ayırmak için Meta kampanya kimliğini taşıyan dinamik bir düğmeyi onaylamalıdır."
 }
