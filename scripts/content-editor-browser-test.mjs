@@ -503,6 +503,7 @@ try {
   const additions = await browser.newPage({viewport:{width:1440,height:1000}});
   additions.on("pageerror", error => errors.push("A1 workflows: " + error.message));
   await additions.context().addCookies([{name:"dash-locale",value:"ar",url:origin}]);
+  await additions.route("https://example.org/fixture-video.mp4", route => route.fulfill({status:200,contentType:"video/mp4",body:""}));
   await additions.goto(origin+"/?kind=campaigns");
   await additions.getByRole("button",{name:/الإنجازات والسجل/}).click();
   const campaignBeforeUpdateRevision = documents.get("campaigns").revision;
@@ -510,7 +511,7 @@ try {
   let modal=additions.getByRole("dialog");
   await modal.getByLabel("العنوان",{exact:true}).fill("تحديث ميداني");
   await modal.getByLabel("المحتوى",{exact:true}).fill("تم توزيع الخبز وفق الخطة.");
-  await modal.getByLabel("رابط الفيديو أو كود iframe",{exact:true}).fill(origin+"/fixture-video.mp4");
+  await modal.getByLabel("رابط الفيديو أو كود iframe",{exact:true}).fill("https://example.org/fixture-video.mp4");
   await modal.getByRole("button",{name:"EN",exact:true}).click();
   await modal.getByLabel("العنوان",{exact:true}).fill("Field update");
   await modal.getByLabel("المحتوى",{exact:true}).fill("Bread was distributed according to plan.");
