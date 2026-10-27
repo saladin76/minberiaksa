@@ -1,3 +1,5 @@
+import { getTemplateDonationOutcome } from "@/lib/communication/campaign-attribution-service";
+import { tallyDeliveryRows } from "@/lib/communication/campaign-counter-service";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -15,13 +17,10 @@ import type {
 
 /**
  * Return performance metrics + quality recommendations for one WhatsApp
- * template. Pulls per-recipient `SentMessage` rows by templateId, then joins
- * paid donations whose attribution carries the matching `twilio_template_id`
- * (set by the tracked-URL builder) to count donations + revenue.
- *
- * Clicks are not stored yet (no Twilio click-tracking webhook), so
- * `clicked = donations` as a conservative lower bound  replaced once the
- * webhook lands.
+ * template. Meta metrics use the active CommunicationDelivery archive, while
+ * legacy templates retain their original SentMessage archive. Revenue requires
+ * a confirmed payment and campaign/template attribution; replies and donations
+ * are never manufactured into click events.
  */
 export async function GET(
   _request: Request,
@@ -54,29 +53,20 @@ export async function GET(
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
-  // SentMessage aggregates  per template (raw counts).
-  const grouped = await prisma.sentMessage.groupBy({
-    by: ["status"],
-    where: { templateId: id, channel: "WHATSAPP" },
-    _count: { _all: true },
-  });
-  let sent = 0;
-  let failed = 0;
-  let skipped = 0;
-  for (const g of grouped) {
-    if (g.status === "SENT") sent = g._count._all;
-    else if (g.status === "FAILED") failed = g._count._all;
-    else if (g.status === "SKIPPED") skipped = g._count._all;
-  }
-
-  // Best country / language  group SentMessage by recipient country (via
-  // user join) if available. We do a lightweight lookup of recipientUserIds
-  // and aggregate their donorCountryCode from the User table.
-  const recentRecipients = await prisma.sentMessage.findMany({
-    where: { templateId: id, channel: "WHATSAPP", recipientUserId: { not: null } },
-    select: { recipientUserId: true, locale: true },
-    take: 2000,
-  });
+  const isMeta = template.provider === "META_WHATSAPP";
+  const [deliveryRows, legacyGrouped, recentRecipients, outcome] = await Promise.all([
+    isMeta ? prisma.communicationDelivery.findMany({
+      where: { templateId: id, channel: "WHATSAPP" },
+      select: { status: true, sentAt: true, providerMessageId: true, deliveredAt: true, readAt: true, openedAt: true, clickedAt: true, repliedAt: true },
+    }) : Promise.resolve([]),
+    isMeta ? Promise.resolve([]) : prisma.sentMessage.groupBy({ by: ["status"], where: { templateId: id, channel: "WHATSAPP" }, _count: { _all: true } }),
+    isMeta ? prisma.communicationDelivery.findMany({ where: { templateId: id, channel: "WHATSAPP", recipientUserId: { not: null } }, select: { recipientUserId: true, locale: true }, take: 2000 })
+      : prisma.sentMessage.findMany({ where: { templateId: id, channel: "WHATSAPP", recipientUserId: { not: null } }, select: { recipientUserId: true, locale: true }, take: 2000 }),
+    getTemplateDonationOutcome(template),
+  ]);
+  const counters = tallyDeliveryRows(deliveryRows);
+  const legacySent = legacyGrouped.filter(row => row.status === "SENT").reduce((sum, row) => sum + row._count._all, 0);
+  const legacyFailed = legacyGrouped.filter(row => row.status === "FAILED").reduce((sum, row) => sum + row._count._all, 0);
   const userIds = Array.from(
     new Set(
       recentRecipients
@@ -104,42 +94,13 @@ export async function GET(
   const bestCountry = mapBest(byCountry);
   const bestLanguage = mapBest(byLanguage);
 
-  // Donations attributed to this template via `twilio_template_id` UTM. We
-  // match on either the internal template id OR the externalTemplateId  the
-  // tracked-URL builder may use either depending on import state.
-  const templateIdCandidates = [template.id, template.externalTemplateId].filter(
-    (v): v is string => typeof v === "string" && v.length > 0
-  );
-  const donationsRaw = await prisma.donation.findMany({
-    where: {
-      status: "PAID",
-      paidAt: { not: null },
-    },
-    select: { id: true, attribution: true, amountUSD: true, totalAmount: true, amount: true },
-    take: 5000,
-  });
-  let donations = 0;
-  let revenueUSD = 0;
-  for (const d of donationsRaw) {
-    const attr = d.attribution as Record<string, unknown> | null;
-    if (!attr) continue;
-    const idInAttr =
-      typeof attr["twilio_template_id"] === "string"
-        ? (attr["twilio_template_id"] as string)
-        : null;
-    if (!idInAttr) continue;
-    if (!templateIdCandidates.includes(idInAttr)) continue;
-    donations += 1;
-    revenueUSD += Number(d.amountUSD ?? d.totalAmount ?? d.amount ?? 0);
-  }
-
   const performance: TemplatePerformance = {
-    sent: sent + failed + skipped,
-    delivered: sent,
-    failed,
-    clicked: donations, // lower bound  webhook would refine
-    donations,
-    revenueUSD: Math.round(revenueUSD * 100) / 100,
+    sent: isMeta ? counters.sent : legacySent,
+    delivered: isMeta ? counters.delivered : 0,
+    failed: isMeta ? counters.failed : legacyFailed,
+    clicked: isMeta ? counters.clicked : 0,
+    donations: outcome.donationCount,
+    revenueUSD: outcome.revenue,
   };
 
   const clickToDonationRate =
@@ -170,6 +131,7 @@ export async function GET(
     },
     performance: {
       ...performance,
+      unpricedPaidCount: outcome.unpricedPaidCount,
       clickToDonationRate: Math.round(clickToDonationRate * 10000) / 10000,
       failureRate: Math.round(failureRate * 10000) / 10000,
       revenuePerMessage: Math.round(revenuePerMessage * 100) / 100,

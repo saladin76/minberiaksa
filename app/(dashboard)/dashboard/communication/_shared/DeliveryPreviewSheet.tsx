@@ -164,8 +164,8 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
 
   return (
     <Sheet open={!!id} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-full overflow-y-auto p-0 sm:max-w-[760px]" dir={dashDir()}>
-        <SheetHeader className="sticky top-0 z-10 border-b border-slate-200 bg-white p-5">
+      <SheetContent side="left" className="w-full overflow-y-auto p-0 sm:max-w-[760px] [&>button]:z-20" dir={dashDir()}>
+        <SheetHeader className="sticky top-0 z-10 border-b border-slate-200 bg-white px-12 py-5">
           <SheetTitle className="flex items-center justify-between gap-3 text-start">
             <span className="flex min-w-0 items-center gap-2">
               <ChannelIcon className="h-5 w-5 shrink-0 text-brand" />

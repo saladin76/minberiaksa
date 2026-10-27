@@ -1,3 +1,4 @@
+import { campaignTrackingValues, trackCampaignBody, trackCampaignMetaButtons } from "./campaign-message-tracking";
 import { templateLocaleHeader } from "./template-locale-media";
 import { getSmartAudienceDefinitionForSegmentKey } from "./smart-audience";
 import { recentMarketingDeliveryWhere } from "./recent-marketing-filter";
@@ -15,7 +16,7 @@ import { EMAIL_PROVIDER_ID } from "./providers/email/client";
 import { getActiveCommunicationRuntimeBundle } from "./runtime-config";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "./sender-resolution";
 import { resolveVariantForLocale, NOT_READY, META_PROVIDER } from "./whatsapp-template-sync";
-import { buildMetaComponents } from "./providers/meta-whatsapp/parameters";
+import { buildMetaComponents, type MetaComponent } from "./providers/meta-whatsapp/parameters";
 import { buildWhatsappRenderedPreview } from "./whatsapp-rendered-preview";
 import { resolveAudienceOrigin } from "./audience-list-service";
 import { computeFinalStatus, recomputeCampaignCounters } from "./campaign-counter-service";
@@ -377,6 +378,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, locale: recipient.locale, purpose, origin, templateName: rendered.templateName }, "LANGUAGE_EXCLUDED");
         outcome.skipped++; bump(outcome.reasons, "LANGUAGE_EXCLUDED"); return outcome;
       }
+      rendered.body = trackCampaignBody(rendered.body, { id: campaignId, channel });
       const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose });
       const sender = routed.ok ? routed.sender : null;
       const routingReason = routed.ok ? null : routed.reason;
@@ -394,7 +396,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
         outcome.skipped++; bump(outcome.reasons, reason); return outcome;
       }
       let metaName = rendered.templateName, metaLanguage: string = recipient.locale;
-      let metaComponents: unknown[] | undefined;
+      let metaComponents: MetaComponent[] | undefined;
       if (channel === "WHATSAPP") {
         const readiness = whatsapp && sender?.businessAccountId ? resolveVariantForLocale(whatsapp.byWaba.get(sender.businessAccountId) ?? [], recipient.locale, fallbackLocale) : NOT_READY;
         if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) {
@@ -410,13 +412,13 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
           outcome.skipped++; bump(outcome.reasons, reason); return outcome;
         }
         const localizedHeader = templateLocaleHeader(whatsapp?.templateMedia ?? {}, readiness.locale ?? readiness.languageCode);
-        const built = buildMetaComponents({ componentsSchema: readiness.componentsSchema, values: templateValuesFor(whatsapp?.positionalNames ?? [], recipientCtx), positionalNames: whatsapp?.positionalNames ?? [], scopedNames: whatsapp?.scopedNames ?? {}, headerMediaUrl: typeof localizedHeader.mediaUrl === "string" ? localizedHeader.mediaUrl : null, headerMediaFilename: typeof localizedHeader.fileName === "string" ? localizedHeader.fileName : null, headerLocation: whatsapp?.headerLocation ?? null });
+        const built = buildMetaComponents({ componentsSchema: readiness.componentsSchema, values: campaignTrackingValues(readiness.componentsSchema, templateValuesFor(whatsapp?.positionalNames ?? [], recipientCtx), { id: campaignId, channel }), positionalNames: whatsapp?.positionalNames ?? [], scopedNames: whatsapp?.scopedNames ?? {}, headerMediaUrl: typeof localizedHeader.mediaUrl === "string" ? localizedHeader.mediaUrl : null, headerMediaFilename: typeof localizedHeader.fileName === "string" ? localizedHeader.fileName : null, headerLocation: whatsapp?.headerLocation ?? null });
         if (!built.ok) {
           await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: `${built.reason}  ${built.detail}` });
           outcome.skipped++; bump(outcome.reasons, built.reason); return outcome;
         }
-        metaName = readiness.providerTemplateName; metaLanguage = readiness.languageCode; metaComponents = built.components;
-        await updateDeliveryVariables(deliveryId, { snapshot, routing, whatsappPreview: buildWhatsappRenderedPreview({ componentsSchema: readiness.componentsSchema, builtComponents: built.components, fallbackBody: rendered.body, providerTemplateName: readiness.providerTemplateName, languageCode: readiness.languageCode }) });
+        metaName = readiness.providerTemplateName; metaLanguage = readiness.languageCode; metaComponents = trackCampaignMetaButtons({ campaign: { id: campaignId, channel }, componentsSchema: readiness.componentsSchema, components: built.components });
+        await updateDeliveryVariables(deliveryId, { snapshot, routing, whatsappPreview: buildWhatsappRenderedPreview({ componentsSchema: readiness.componentsSchema, builtComponents: metaComponents, fallbackBody: rendered.body, providerTemplateName: readiness.providerTemplateName, languageCode: readiness.languageCode }) });
       }
       let frequencyReservation: WhatsAppMarketingReservation | null = null;
       if (channel === "WHATSAPP" && purpose === "MARKETING") {

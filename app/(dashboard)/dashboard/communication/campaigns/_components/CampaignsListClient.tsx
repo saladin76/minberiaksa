@@ -15,6 +15,8 @@ import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export function CampaignsListClient() {
   const [campaigns, setCampaigns] = React.useState<CampaignRow[]>([]);
+  const [unattributed, setUnattributed] = React.useState({ donationCount: 0, revenue: 0, unpricedPaidCount: 0 });
+  const [loadError, setLoadError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
   const [channel, setChannel] = React.useState("all");
@@ -29,13 +31,15 @@ export function CampaignsListClient() {
   }, []);
 
   const load = React.useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setLoadError(false);
     try {
       const res = await fetch("/api/communication/campaigns?includeArchived=true", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحميل الحملات"));
       setCampaigns(json.campaigns ?? []);
+      setUnattributed(json.unattributed ?? { donationCount: 0, revenue: 0, unpricedPaidCount: 0 });
     } catch (e) {
+      setLoadError(true);
       toast.error((e as Error).message);
     } finally {
       setLoading(false);
@@ -70,9 +74,10 @@ export function CampaignsListClient() {
         acc.clicked += campaign.clickedCount;
         acc.donations += campaign.donationCount;
         acc.revenue += campaign.revenue;
+        acc.unpriced += campaign.unpricedPaidCount ?? 0;
         return acc;
       },
-      { sent: 0, engaged: 0, clicked: 0, donations: 0, revenue: 0 },
+      { sent: 0, engaged: 0, clicked: 0, donations: 0, revenue: 0, unpriced: 0 },
     );
   }, [filtered]);
 
@@ -132,14 +137,18 @@ export function CampaignsListClient() {
         </Select>
       </FilterBar>
 
-      {!loading && campaigns.length > 0 && (
+      {loadError && <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{dt("تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة.")}</p>}
+      {!loading && !loadError && filtered.some(campaign => campaign.trackingRequiresTemplateUpdate) && <p role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900">{dt("توجد قوالب واتساب بروابط ثابتة مشتركة. يلزم اعتماد زر ديناميكي بمعرّف الحملة لدى Meta لفصل إيرادات كل حملة.")}</p>}
+      {!loading && !loadError && unattributed.donationCount > 0 && <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">{dt("إيراد تواصل غير منسوب: {0} دولار من {1} تبرع مؤكد. الروابط القديمة لا تحدد حملة واحدة؛ هذا المبلغ غير مضاف إلى صفوف الحملات.", [unattributed.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 }), unattributed.donationCount])}{unattributed.unpricedPaidCount > 0 && <> {dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [unattributed.unpricedPaidCount])}</>}</p>}
+      {!loading && !loadError && analytics.unpriced > 0 && <p role="status" className="mb-4 text-sm text-amber-800">{dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [analytics.unpriced])}</p>}
+      {!loading && !loadError && campaigns.length > 0 && (
         <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
           {[
             { label: dt("إجمالي المُرسل"), value: analytics.sent.toLocaleString("en-US"), hint: dt("رسالة مقبولة لدى المزوّد"), icon: Send },
             { label: dt("تفاعل/فتح"), value: `${analytics.engaged.toLocaleString("en-US")} · ${engagementRate}%`, hint: dt("قراءة/فتح/نقر/رد مثبت"), icon: Eye },
             { label: dt("ضغطات مسجلة"), value: `${analytics.clicked.toLocaleString("en-US")} · ${clickRate}%`, hint: dt("متاح عندما يرسل المزوّد حدث Click"), icon: MousePointerClick },
             { label: dt("تبرعات منسوبة"), value: analytics.donations.toLocaleString("en-US"), hint: dt("UTM مطابق للحملة"), icon: HandHeart },
-            { label: dt("إيراد منسوب"), value: `${analytics.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}`, hint: dt("تبرعات PAID من روابط الحملة"), icon: Banknote },
+            { label: dt("إيراد منسوب"), value: `${analytics.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}`, hint: dt("تبرعات مؤكدة الدفع من روابط الحملة"), icon: Banknote },
           ].map((item) => {
             const Icon = item.icon;
             return (

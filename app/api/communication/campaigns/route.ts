@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { listCampaigns, createCampaign } from "@/lib/communication/campaign-service";
-import { getCampaignOutcomeMetrics } from "@/lib/communication/campaign-attribution-service";
+import { getCampaignOutcomeSummary } from "@/lib/communication/campaign-attribution-service";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -66,17 +66,22 @@ export async function GET(request: NextRequest) {
 
   const includeArchived = request.nextUrl.searchParams.get("includeArchived") === "true";
   const campaigns = await listCampaigns({ includeArchived });
-  const outcomeMetrics = await getCampaignOutcomeMetrics(campaigns.map((campaign) => campaign.id));
+  let outcomes: Awaited<ReturnType<typeof getCampaignOutcomeSummary>>;
+  try { outcomes = await getCampaignOutcomeSummary(campaigns.map((campaign) => campaign.id)); }
+  catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة." }, { status: 503 }); }
+  const outcomeMetrics = outcomes.metrics;
   const enriched = campaigns.map((campaign) => {
     const outcome = outcomeMetrics.get(campaign.id);
     return {
       ...campaign,
       donationCount: outcome?.donationCount ?? 0,
       revenue: outcome?.revenue ?? 0,
+      unpricedPaidCount: outcome?.unpricedPaidCount ?? 0,
+      trackingRequiresTemplateUpdate: outcomes.staticTrackingCampaignIds.includes(campaign.id),
       failedDonationCount: outcome?.failedDonationCount ?? 0,
     };
   });
-  return NextResponse.json({ ok: true, campaigns: enriched });
+  return NextResponse.json({ ok: true, campaigns: enriched, unattributed: outcomes.unattributed });
 }
 
 export async function POST(request: NextRequest) {

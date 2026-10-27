@@ -1,3 +1,4 @@
+import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
 import { templateLocaleHeader } from "../../lib/communication/template-locale-media";
 import test from "node:test";
@@ -24,7 +25,7 @@ type Progress = { cursor: string | null; total: number; sent: number; skipped: n
 type State = { id: string; name: string; status: string; channel: string; purpose: string; templateGroupId: string; audienceSegmentKey: null; scheduledAt: Date; metadata: Dict };
 type Recipient = { cursorId: string; userId: string; name: string; email: string; phone: string; locale: string; country: string };
 type Delivery = Dict & { id: string; status: string; recipientUserId: string; recipientEmail?: string; recipientPhone?: string; providerMessageId?: string; errorMessage?: string };
-type Options = { denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
+type Options = { trackingBody?: string; denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
 type Result = { ok: boolean; status: string; sent: number; skipped: number; failed: number; total: number; hasMore?: boolean; blocked?: string };
 type Engine = {
   executeCampaignSend: (id: string, opts?: { mode?: string; maxBatches?: number; batchSize?: number; timeBudgetMs?: number }) => Promise<Result>;
@@ -40,6 +41,7 @@ function engineHarness(options: Options = {}) {
   const deliveries: Delivery[] = options.resumeAtEnd ? recipients.map((r, i) => ({ id: `d${i}`, status: "SENT", recipientUserId: r.userId, recipientEmail: r.email, providerMessageId: `p${i}` })) : [];
   let queue: Array<Recipient & { id: string; nextAttemptAt: Date }> = [];
   let calls = 0, gates = 0, creates = 0;
+  const payloads: Dict[] = [];
   const checkpoints: Array<{ status: string; metadata: Dict; options: Dict }> = [];
   const events: string[] = [];
   function mutate(_id: string, fn: (current: Dict) => Dict | null, config: { status?: string; expectedStatus?: string } = {}) {
@@ -57,6 +59,7 @@ function engineHarness(options: Options = {}) {
     quietHours: { enabled: !!options.quiet, timezoneMode: "RECIPIENT", timezone: "Europe/Istanbul" } });
   const counter = isolated<{ computeFinalStatus: (total: number, sent: number, skipped: number, failed: number) => string }>("lib/communication/campaign-counter-service.ts", { "@/lib/prisma": { prisma: {} } });
   const engine = isolated<Engine>("lib/communication/campaign-send-executor.ts", {
+    "./campaign-message-tracking": campaignTracking,
     "./template-locale-media": { templateLocaleHeader },
     "./smart-audience": { getSmartAudienceDefinitionForSegmentKey: async () => options.recentMarketing ? { filters: { excludeMarketedWithinDays: 7 } } : null },
     "./recent-marketing-filter": { recentMarketingDeliveryWhere },
@@ -81,7 +84,7 @@ function engineHarness(options: Options = {}) {
         nextCursor: page.at(-1)?.cursorId ?? opts.cursor ?? null, exhausted: page.length < opts.batchSize, truncated: page.length >= opts.batchSize,
         ...(page.length ? {} : { blocked: "AUDIENCE_EXHAUSTED" }) };
     } },
-    "./template-compat": { renderChannelTemplate: async () => ({ templateName: "template", subject: "Subject", body: "Body", usedFallback: false }) },
+    "./template-compat": { renderChannelTemplate: async () => ({ templateName: "template", subject: "Subject", body: options.trackingBody ?? "Body", usedFallback: false }) },
     "@/lib/templates/variables": { loadContextsForUserIds: async (ids: string[]) => { if (options.failContext) throw new Error("CONTEXT_READ_FAILED"); return new Map(ids.map((id) => [id, { user: { name: id } }])); } },
     "./update-campaign": { sourceUpdateOf: () => null, loadUpdateSource: async () => null, updateContextFor: () => ({}) },
     "./delivery-log-service": {
@@ -91,7 +94,7 @@ function engineHarness(options: Options = {}) {
       updateDeliveryVariables: async () => ({ ok: true }),
     },
     "./provider-router": { resolveProviderForSendWithRuntime: () => ({ canSend: true, providerId: "ELASTIC_EMAIL" }),
-      sendPreparedDelivery: async () => { calls++; events.push("send"); if (options.sendThrows) throw new Error("socket error"); return { ok: true, providerMessageId: `p-${calls}`, internalAccepted: false }; } },
+      sendPreparedDelivery: async (payload: Dict) => { payloads.push(payload); calls++; events.push("send"); if (options.sendThrows) throw new Error("socket error"); return { ok: true, providerMessageId: `p-${calls}`, internalAccepted: false }; } },
     "./providers/email/client": { EMAIL_PROVIDER_ID: "ELASTIC_EMAIL" },
     "./runtime-config": { getActiveCommunicationRuntimeBundle: async () => ({}) },
     "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
@@ -115,7 +118,7 @@ function engineHarness(options: Options = {}) {
     "./recipient-timezone": { recipientTimeZone: () => "Europe/Istanbul" },
   }, "\nexports.__test = { mapWithConcurrency };\n");
   function expireLease() { const lease = campaign.metadata.sendLease as { expiresAt: string } | undefined; if (lease) lease.expiresAt = new Date(0).toISOString(); }
-  return { engine, campaign, deliveries, checkpoints, options, events, state: () => ({ calls, creates, queue: clone(queue) }), expireLease,
+  return { engine, campaign, deliveries, payloads, checkpoints, options, events, state: () => ({ calls, creates, queue: clone(queue) }), expireLease,
     releaseQuiet: () => { options.quiet = false; for (const row of queue) row.nextAttemptAt = new Date(0); } };
 }
 
@@ -268,4 +271,14 @@ for (const channel of ["EMAIL", "SMS"]) test(`${channel} executor never bypasses
   const result = await h.engine.executeCampaignSend("campaign");
   assert.equal(h.state().calls, 0); assert.equal(result.sent, 0); assert.equal(result.skipped, 2);
   assert.ok(h.deliveries.every(row => row.status === "SKIPPED" && row.errorMessage === "NO_SENDER_AVAILABLE"));
+});
+
+ test("the campaign executor archives and sends the same uniquely tracked donation link", async () => {
+  const h = engineHarness({ trackingBody: '<a href="/en/bagislar?ref=fixture">Donate</a>' });
+  const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(result.ok, true);
+  for (const payload of h.payloads) {
+    assert.ok(String(payload.html).includes("utm_id=campaign"));
+    assert.equal(payload.html, h.deliveries.find(row => row.recipientEmail === payload.to)?.renderedBody);
+  }
 });

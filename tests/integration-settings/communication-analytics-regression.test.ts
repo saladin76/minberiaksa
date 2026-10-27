@@ -11,7 +11,7 @@ test("campaign analytics surfaces delivery engagement and attributed outcomes", 
   const table = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignsTable.tsx");
   const list = read("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignsListClient.tsx");
 
-  assert.match(api, /getCampaignOutcomeMetrics/);
+  assert.match(api, /getCampaignOutcomeSummary/);
   assert.match(api, /failedDonationCount/);
   assert.match(counters, /openedAt/);
   assert.match(counters, /clickedAt/);
@@ -31,7 +31,7 @@ test("campaign outcomes resolve exact IDs or unique registered UTMs without chan
   assert.match(source, /buildUniqueCampaignUtmAliases/);
   assert.match(source, /resolveCommunicationCampaignId/);
   assert.doesNotMatch(source, /donations\.filter\(\(d\) => source &&/);
-  assert.match(source, /donation\.status === "PAID"/);
+  assert.match(source, /d\.status === "PAID" && !!d\.paidAt/);
 });
 
 test("WhatsApp templates can be archived and restored without losing history", () => {

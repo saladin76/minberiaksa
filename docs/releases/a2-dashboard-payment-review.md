@@ -1,6 +1,6 @@
 # Donation dashboard summary and payment evidence
 
-The home dashboard has five fixed-period measures and a neighboring average: today's confirmed gross revenue, this month's confirmed gross revenue, this month's team support, this month's approved/imported incoming bank transfers, this month's failed donation attempts, and the average confirmed gross donation this month. Each measure includes its count where applicable. The previous all-time summary band and duplicate top cards are removed.
+The home dashboard has five fixed-period measures and a neighboring average: today's confirmed gross revenue, this month's confirmed gross revenue, this month's team support, this month's approved/imported incoming bank transfers, this month's failed donation attempts, and the average confirmed gross donation this month. Each measure includes its count where applicable. The compact all-time summary band is retained above these period cards, with an all-time average added. The band uses the existing unfiltered successful revenue/count, MRR, active subscription and user metrics; period/provider filters below do not change it. Its average uses the same all-time revenue basis as the band, while the period card remains the confirmed gross average for the current month.
 
 ## Definitions
 

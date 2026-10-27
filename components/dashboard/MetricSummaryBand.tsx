@@ -71,6 +71,7 @@ export function MetricSummaryBand({
 }: Props) {
   return (
     <section
+      aria-label={eyebrow}
       className={cn(
         "relative isolate overflow-hidden rounded-2xl border border-slate-200/90 bg-white",
         "shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
@@ -106,7 +107,7 @@ export function MetricSummaryBand({
                 </span>
               )}
             </div>
-            <p className="mt-0.5 text-[30px] font-bold leading-tight tabular-nums tracking-tight text-slate-900 sm:text-[34px]">
+            <p className="mt-0.5 break-words text-[26px] font-bold leading-tight tabular-nums tracking-tight text-slate-900 sm:text-[34px]" dir="ltr">
               {value}
             </p>
           </div>

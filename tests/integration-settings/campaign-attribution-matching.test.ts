@@ -6,6 +6,7 @@ import ts from "typescript";
 import {
   buildUniqueCampaignUtmAliases,
   campaignUtmLinksFromWhatsAppTemplates,
+  campaignsNeedingTrackedTemplate,
   isCommunicationUtmMedium,
   resolveCommunicationCampaignId,
   type CampaignUtmLink,
@@ -64,6 +65,12 @@ test("non-communication UTMs never resolve to communication campaigns", () => {
   }, new Set([campaignA]), aliases), null);
 });
 
+test("explicit IDs outside the viewed campaigns and contradictory IDs never fall back to a generic alias", () => {
+  const aliases = buildUniqueCampaignUtmAliases([link(campaignA)]);
+  assert.equal(resolveCommunicationCampaignId({ utm_medium: "communication", utm_source: "whatsapp", utm_campaign: "whatsapp-campaign", utm_id: campaignB }, new Set([campaignA]), aliases), null);
+  assert.equal(resolveCommunicationCampaignId({ utm_medium: "communication", utm_campaign: campaignA, utm_id: campaignB }, new Set([campaignA, campaignB]), aliases), null);
+});
+
 test("legacy channel-named WhatsApp media is recognized only through its registered link", () => {
   const aliases = buildUniqueCampaignUtmAliases([{
     campaignId: campaignA,
@@ -100,7 +107,7 @@ test("campaign reporting credits a paid donation through its unique registered l
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
       donation: { findMany: async () => [{
-        id: "donation-1", status: "PAID", amount: 75, amountUSD: 75, totalAmount: 75,
+        id: "donation-1", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 75, amountUSD: 75, totalAmount: 75,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
       }] },
       communicationCampaignTrackingLink: { findMany: async () => linkRows },
@@ -109,7 +116,7 @@ test("campaign reporting credits a paid donation through its unique registered l
     "@/lib/audit-log": { writeAuditLog: async () => undefined },
     "@/lib/locales": { LOCALES: {}, isValidLocale: () => false },
     "@/lib/marketing/campaign-links/campaign-link-registry-service": { createOrUpdateCampaignLink: async () => ({}) },
-    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, isCommunicationUtmMedium, resolveCommunicationCampaignId },
+    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignsNeedingTrackedTemplate, isCommunicationUtmMedium, resolveCommunicationCampaignId },
   });
 
   const metrics = await service.getCampaignOutcomeMetrics([campaignA]);
@@ -125,7 +132,7 @@ test("campaign reporting can recover the UTM from the approved template when no 
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
       donation: { findMany: async () => [{
-        id: "donation-2", status: "PAID", amount: 125, amountUSD: 125, totalAmount: 125,
+        id: "donation-2", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 125, amountUSD: 125, totalAmount: 125,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
       }] },
       communicationCampaignTrackingLink: { findMany: async () => [] },
@@ -141,7 +148,7 @@ test("campaign reporting can recover the UTM from the approved template when no 
     "@/lib/audit-log": { writeAuditLog: async () => undefined },
     "@/lib/locales": { LOCALES: {}, isValidLocale: () => false },
     "@/lib/marketing/campaign-links/campaign-link-registry-service": { createOrUpdateCampaignLink: async () => ({}) },
-    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignUtmLinksFromWhatsAppTemplates, isCommunicationUtmMedium, resolveCommunicationCampaignId },
+    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignUtmLinksFromWhatsAppTemplates, campaignsNeedingTrackedTemplate, isCommunicationUtmMedium, resolveCommunicationCampaignId },
   });
 
   const metric = (await service.getCampaignOutcomeMetrics([campaignA])).get(campaignA);
@@ -158,7 +165,7 @@ test("new and attached links replace generic campaign UTMs with a campaign-speci
     "@/lib/audit-log": { writeAuditLog: async () => undefined },
     "@/lib/locales": { LOCALES: {}, isValidLocale: () => true },
     "@/lib/marketing/campaign-links/campaign-link-registry-service": { createOrUpdateCampaignLink: async () => ({}) },
-    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, isCommunicationUtmMedium, resolveCommunicationCampaignId },
+    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignsNeedingTrackedTemplate, isCommunicationUtmMedium, resolveCommunicationCampaignId },
   });
 
   const params = service.buildTrackingParams({ id: campaignA, channel: "WHATSAPP" });
@@ -170,6 +177,101 @@ test("new and attached links replace generic campaign UTMs with a campaign-speci
 });
 
 type ServiceDependencies = Record<string, unknown>;
+
+type Outcome = { donationCount: number; revenue: number; unpricedPaidCount: number; failedDonationCount?: number };
+function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean }) {
+  let calls = 0;
+  const service = isolated<{
+    getCampaignOutcomeSummary: (ids: string[]) => Promise<{ metrics: Map<string, Outcome>; unattributed: Outcome }>;
+  }>("lib/communication/campaign-attribution-service.ts", {
+    "@/lib/prisma": { prisma: {
+      donation: { findMany: async (query: { where: { id?: { gt: string } } }) => {
+        calls++;
+        if (input.fail) throw new Error("database offline");
+        if (input.paged && !query.where.id) return Array.from({ length: 1000 }, (_, index) => ({ id: String(index), status: "PAID", attribution: {} }));
+        return input.donations ?? [];
+      } },
+      communicationCampaignTrackingLink: { findMany: async () => input.links ?? [] },
+      communicationCampaign: { findMany: async () => [] },
+    } },
+    "@/lib/audit-log": { writeAuditLog: async () => undefined },
+    "@/lib/locales": { LOCALES: {}, isValidLocale: () => true },
+    "@/lib/marketing/campaign-links/campaign-link-registry-service": {},
+    "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignUtmLinksFromWhatsAppTemplates, campaignsNeedingTrackedTemplate, isCommunicationUtmMedium, resolveCommunicationCampaignId },
+  });
+  return { service, calls: () => calls };
+}
+const confirmed = { id: "paid", status: "PAID", paidAt: new Date("2026-10-01"), amount: 10.25, amountUSD: 10.25, totalAmount: 12, currency: "USD", attribution: { utm_source: "whatsapp", utm_medium: "messaging", utm_campaign: campaignA } };
+
+test("campaign income requires settlement, preserves cents, and never labels unconverted TRY as USD", async () => {
+  const { service } = reportingHarness({ donations: [
+    confirmed,
+    { ...confirmed, id: "pending", paidAt: null, amountUSD: 999 },
+    { ...confirmed, id: "unpriced", currency: "TRY", amountUSD: null, amount: 3000 },
+    { ...confirmed, id: "zero-placeholder", currency: "TRY", amountUSD: 0, amount: 1000 },
+    { ...confirmed, id: "usd-fallback", amountUSD: null, amount: 5.12, totalAmount: 6 },
+    { ...confirmed, id: "failed", status: "FAILED", paidAt: null },
+  ] });
+  const metric = (await service.getCampaignOutcomeSummary([campaignA])).metrics.get(campaignA)!;
+  assert.equal(metric.donationCount, 4);
+  assert.equal(metric.revenue, 15.37);
+  assert.equal(metric.unpricedPaidCount, 2);
+  assert.equal(metric.failedDonationCount, 1);
+});
+
+test("actual shared messaging UTMs remain visible as unassigned income without double credit", async () => {
+  const links = [campaignA, campaignB].map(campaignId => ({ ...link(campaignId), url: link(campaignId).url.replace("medium=communication", "medium=messaging") }));
+  const { service } = reportingHarness({ donations: [{ ...confirmed, attribution: { ...confirmed.attribution, utm_campaign: "whatsapp-campaign" } }], links });
+  const result = await service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(result.metrics.size, 0);
+  assert.equal(result.unattributed.donationCount, 1);
+  assert.equal(result.unattributed.revenue, 10.25);
+});
+
+test("campaign income survives the donation display cap and database failure never becomes zero", async () => {
+  const { service, calls } = reportingHarness({ donations: [confirmed], paged: true });
+  assert.equal((await service.getCampaignOutcomeSummary([campaignA])).metrics.get(campaignA)?.revenue, 10.25);
+  assert.equal(calls(), 2);
+  await assert.rejects(reportingHarness({ fail: true }).service.getCampaignOutcomeSummary([campaignA]), /database offline/);
+});
+
+test("a reply without click evidence never increments campaign click totals", () => {
+  const counters = isolated<{ tallyDeliveryStatuses: (statuses: string[]) => { clicked: number; replied: number }; tallyDeliveryRows: (rows: Record<string, unknown>[]) => { clicked: number; replied: number } }>("lib/communication/campaign-counter-service.ts", { "@/lib/prisma": { prisma: {} } });
+  const row = { status: "REPLIED", deliveredAt: null, readAt: null, openedAt: null, clickedAt: null, repliedAt: new Date() };
+  assert.equal(counters.tallyDeliveryStatuses(["REPLIED"]).clicked, 0);
+  assert.equal(counters.tallyDeliveryRows([row]).clicked, 0);
+  assert.equal(counters.tallyDeliveryRows([row]).replied, 1);
+  assert.equal(counters.tallyDeliveryRows([{ ...row, clickedAt: new Date() }]).clicked, 1);
+  const acceptedThenFailed = counters.tallyDeliveryRows([{ ...row, status: "FAILED", repliedAt: null, providerMessageId: "accepted-id", sentAt: new Date() }]) as { sent?: number; failed?: number };
+  assert.equal(acceptedThenFailed.sent, 1);
+  assert.equal(acceptedThenFailed.failed, 1);
+});
+
+test("Meta template performance reads real delivery evidence instead of the inactive legacy archive", async () => {
+  const counters = isolated<Record<string, unknown>>("lib/communication/campaign-counter-service.ts", { "@/lib/prisma": { prisma: {} } });
+  const row = { status: "FAILED", sentAt: new Date(), providerMessageId: "fixture-accepted", deliveredAt: null, readAt: null, openedAt: null, clickedAt: null, repliedAt: null };
+  const route = isolated<{ GET: (request: unknown, context: { params: Promise<{ id: string }> }) => Promise<{ performance: Record<string, number> }> }>("app/api/templates/whatsapp/[id]/performance/route.ts", {
+    "next/server": { NextResponse: { json: (value: unknown) => value } },
+    "next-auth": { getServerSession: async () => ({}) },
+    "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
+    "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => null },
+    "@/lib/prisma": { prisma: {
+      whatsappTemplate: { findUnique: async () => ({ id: "template", provider: "META_WHATSAPP", externalTemplateId: null }) },
+      communicationDelivery: { findMany: async (query: { select: { status?: boolean } }) => query.select.status ? [row] : [] },
+      sentMessage: { groupBy: async () => { throw new Error("Meta must not read the legacy send archive"); } },
+    } },
+    "@/lib/communication/campaign-counter-service": counters,
+    "@/lib/communication/campaign-attribution-service": { getTemplateDonationOutcome: async () => ({ donationCount: 1, revenue: 10.25, unpricedPaidCount: 0 }) },
+    "@/lib/messaging/whatsapp-template-recommendations": { computeTemplateRecommendations: () => [] },
+  });
+  const result = await route.GET({}, { params: Promise.resolve({ id: "template" }) });
+  assert.equal(result.performance.sent, 1);
+  assert.equal(result.performance.failed, 1);
+  assert.equal(result.performance.delivered, 0);
+  assert.equal(result.performance.clicked, 0, "a donation is not a click event");
+  assert.equal(result.performance.revenueUSD, 10.25);
+});
+
 function isolated<T>(file: string, dependencies: ServiceDependencies): T {
   const output = ts.transpileModule(fs.readFileSync(file, "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },

@@ -5,6 +5,7 @@ export type CampaignUtmLink = {
   url: string;
   source?: string | null;
   medium?: string | null;
+  origin?: "whatsapp-template";
 };
 
 export type CampaignTemplateRef = {
@@ -19,7 +20,7 @@ export type WhatsAppTemplateSchema = {
 };
 
 type AttributionLike = Record<string, unknown> | null | undefined;
-const COMMUNICATION_UTM_MEDIUMS = new Set(["communication", "whatsapp", "wa", "email", "sms"]);
+const COMMUNICATION_UTM_MEDIUMS = new Set(["communication", "messaging", "whatsapp", "wa", "email", "sms"]);
 
 export function isCommunicationUtmMedium(value: unknown): boolean {
   const medium = normalized(text(value));
@@ -53,10 +54,23 @@ export function campaignUtmLinksFromWhatsAppTemplates(
   for (const campaign of campaigns) {
     if (campaign.channel.toUpperCase() !== "WHATSAPP" || !campaign.templateId) continue;
     for (const url of urlsByTemplate.get(campaign.templateId) ?? []) {
-      links.push({ campaignId: campaign.campaignId, url, source: "whatsapp", medium: "communication" });
+      links.push({ campaignId: campaign.campaignId, url, source: "whatsapp", medium: "communication", origin: "whatsapp-template" });
     }
   }
   return links;
+}
+
+/** A registered companion link does not change a Meta-approved static button. */
+export function campaignsNeedingTrackedTemplate(links: readonly CampaignUtmLink[]): string[] {
+  const blocked = new Set<string>();
+  for (const link of links) {
+    if (link.origin !== "whatsapp-template") continue;
+    const params = paramsFor(link.url);
+    if (!params || !isCommunicationUtmMedium(params.get("utm_medium"))) continue;
+    if (params.get("utm_id") === link.campaignId || params.get("utm_campaign") === link.campaignId) continue;
+    if (!/\{\{\s*(?:\d+|[a-z][a-z0-9_]*)\s*\}\}$/.test(link.url)) blocked.add(link.campaignId);
+  }
+  return [...blocked];
 }
 
 function text(value: unknown): string | null {
@@ -124,14 +138,13 @@ export function resolveCommunicationCampaignId(
   if (!isCommunicationUtmMedium(medium)) return null;
 
   const utmCampaign = text(attribution.utm_campaign);
-  if (utmCampaign && campaignIds.has(utmCampaign)) return utmCampaign;
-
-  // These fields are present on newly decorated communication links. Limit
-  // this interpretation to the communication medium so ad-platform IDs can
-  // never be mistaken for internal campaign IDs.
-  for (const field of ["campaign_id", "utm_id"]) {
-    const value = text(attribution[field]);
-    if (value && campaignIds.has(value)) return value;
+  const explicit = [utmCampaign, text(attribution.campaign_id), text(attribution.utm_id)]
+    .filter((value): value is string => !!value && (/^[a-f0-9]{24}$/i.test(value) || campaignIds.has(value)));
+  if (explicit.length) {
+    // A campaign outside the current list, or contradictory explicit IDs,
+    // cannot fall back to another campaign's generic alias.
+    const unique = new Set(explicit);
+    return unique.size === 1 && campaignIds.has(explicit[0]) ? explicit[0] : null;
   }
 
   if (!utmCampaign) return null;

@@ -206,7 +206,7 @@ export function CampaignsTable({
                       <span className="text-slate-300">—</span>
                     ) : (
                       <span className={cn("font-semibold", c.revenue === 0 ? "text-slate-400" : "text-emerald-700")}>
-                        {c.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                        {c.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}{(c.unpricedPaidCount ?? 0) > 0 && <span title={dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [c.unpricedPaidCount ?? 0])}> *</span>}
                       </span>
                     )}
                   </td>

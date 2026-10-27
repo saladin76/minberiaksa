@@ -1,3 +1,4 @@
+import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
@@ -23,6 +24,7 @@ function loadService(includeMissingPayload = false) {
     },
   };
   const dependencies: Record<string, unknown> = {
+    "./campaign-message-tracking": campaignTracking,
     "@/lib/templates/donation-money": donationMoney,
     "./template-donation-links": { donationTemplateValues: async () => ({ ok: true, values: {} }) },
     "@/lib/templates/localize-donation-failure-link": { localizeDonationFailureLinks: (body: string) => body },
@@ -94,6 +96,7 @@ function loadRetryRoute() {
   const createdAt = new Date("2026-10-01T00:00:00.000Z");
   const firstPage = Array.from({ length: 25 }, (_, index) => ({ id: `delivery-${index + 1}`, createdAt }));
   const dependencies: Record<string, unknown> = {
+    "./campaign-message-tracking": campaignTracking,
     "next/server": { NextResponse: { json: (body: Record<string, unknown>, init?: { status?: number }) => new Response(JSON.stringify(body), { status: init?.status ?? 200, headers: { "content-type": "application/json" } }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: "admin" } }) },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
