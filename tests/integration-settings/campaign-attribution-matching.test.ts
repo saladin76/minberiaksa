@@ -208,13 +208,14 @@ test("campaign income requires settlement, preserves cents, and never labels unc
     confirmed,
     { ...confirmed, id: "pending", paidAt: null, amountUSD: 999 },
     { ...confirmed, id: "unpriced", currency: "TRY", amountUSD: null, amount: 3000 },
+    { ...confirmed, id: "zero-placeholder", currency: "TRY", amountUSD: 0, amount: 1000 },
     { ...confirmed, id: "usd-fallback", amountUSD: null, amount: 5.12, totalAmount: 6 },
     { ...confirmed, id: "failed", status: "FAILED", paidAt: null },
   ] });
   const metric = (await service.getCampaignOutcomeSummary([campaignA])).metrics.get(campaignA)!;
-  assert.equal(metric.donationCount, 3);
+  assert.equal(metric.donationCount, 4);
   assert.equal(metric.revenue, 15.37);
-  assert.equal(metric.unpricedPaidCount, 1);
+  assert.equal(metric.unpricedPaidCount, 2);
   assert.equal(metric.failedDonationCount, 1);
 });
 

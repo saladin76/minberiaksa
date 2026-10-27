@@ -72,5 +72,8 @@ test("email and SMS outgoing donation links carry campaign IDs without tagging o
   assert.ok(tracked.includes('href="https://outside.example/donate"'));
   assert.ok(tracked.includes('href="/api/receipt?t=secret"'));
   assert.ok(trackCampaignBody("Donate https://minberiaksa.org/tr/bagislar", { id, channel: "SMS" }).includes(`utm_id=${id}`));
+  for (const pathname of ["/ar/pay-zakat-to-palestine", "/tr/msharya-alqds-alwqfy", "/en/recurring-donation"]) {
+    assert.ok(trackCampaignBody(`https://minberiaksa.org${pathname}`, { id, channel: "SMS" }).includes(`utm_id=${id}`), pathname);
+  }
   assert.equal(trackCampaignBody(html, campaign), html, "approved WhatsApp body is not rewritten");
 });

@@ -158,7 +158,7 @@ function str(o: Record<string, unknown>, k: string): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 function valueUSD(d: DonationRow): number | null {
-  if (typeof d.amountUSD === "number" && Number.isFinite(d.amountUSD)) return d.amountUSD;
+  if (typeof d.amountUSD === "number" && Number.isFinite(d.amountUSD) && (d.amountUSD > 0 || d.amount === 0 && d.amountUSD === 0)) return d.amountUSD;
   return d.currency === "USD" && Number.isFinite(d.amount) ? d.amount : null;
 }
 function isPaid(d: DonationRow): boolean { return d.status === "PAID" && !!d.paidAt; }
@@ -176,7 +176,7 @@ export async function loadCommunicationDonations(): Promise<DonationRow[]> {
   let cursor: string | undefined;
   for (;;) {
     const rows: DonationRow[] = await prisma.donation.findMany({
-      where: { status: { in: ["PAID", "FAILED"] }, ...(cursor ? { id: { gt: cursor } } : {}) },
+      where: { OR: [{ status: "PAID", paidAt: { not: null } }, { status: "FAILED" }], ...(cursor ? { id: { gt: cursor } } : {}) },
       select: { id: true, status: true, paidAt: true, amount: true, currency: true, amountUSD: true, totalAmount: true, attribution: true },
       orderBy: { id: "asc" }, take: 1000,
     });

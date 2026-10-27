@@ -1,8 +1,10 @@
 import type { MetaComponent } from "./providers/meta-whatsapp/parameters";
 import { isCommunicationUtmMedium } from "./campaign-attribution-matching";
+import { routeForPathname } from "../minbar/routes";
 
 type Campaign = { id: string; channel: string };
 const SITE = "https://minberiaksa.org";
+const DONATION_PAGES = new Set(["projects", "projectDetail", "zakat", "waqf", "recurring"]);
 
 /** A dedicated approved `utm_id={{1}}` button binds to the campaign, never
  * to the body/name variable that happens to use the same position. */
@@ -29,7 +31,8 @@ function publicDonationUrl(value: string): URL | null {
     // Receipts, sign-in, private documents and payment callback URLs carry access credentials.
     if (/\/(?:api|dashboard|auth|login|receipt|certificates?|success|failure)(?:\/|$)/i.test(url.pathname)) return null;
     if ([...url.searchParams.keys()].some(key => /^(?:t|token|accessToken|signature|orderId|donationId)$/i.test(key))) return null;
-    if (!/\/(?:bagislar|projeler|donate|donations|campaigns|zekatini-filistine-ode)(?:\/|$)/i.test(url.pathname)) return null;
+    const page = routeForPathname(decodeURIComponent(url.pathname));
+    if ((!page || !DONATION_PAGES.has(page)) && !/\/(?:projeler|projects|donate|donations|campaigns|zekatini-filistine-ode)(?:\/|$)/i.test(url.pathname)) return null;
     return url;
   } catch { return null; }
 }
