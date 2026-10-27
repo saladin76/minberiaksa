@@ -13,6 +13,8 @@ import { getBadgeIdsByUser } from '@/lib/badge-criteria';
 import { PAID_DONATION_FILTER } from '@/lib/dashboard/donation-usd-revenue';
 import { setProfileConsent, upsertProfileForUser } from '@/lib/communication/donor-communication-profile-service';
 
+import { donorAccountStatus } from "@/lib/dashboard/donor-account";
+
 function roleLabelAr(r: string) {
   if (r === 'ADMIN') return 'مدير';
   if (r === 'STAFF') return 'طاقم';
@@ -69,7 +71,7 @@ export async function GET(
           },
           orderBy: { createdAt: 'desc' },
         },
-        _count: { select: { donations: true } },
+        _count: { select: { donations: true, accounts: true } },
       },
     });
 
@@ -188,6 +190,7 @@ export async function GET(
     const safeUser = {
       ...userWithoutPwd,
       hasPassword: Boolean(user.password),
+      accountStatus: donorAccountStatus(user),
       donations: donationsForUser,
       ...profileCard,
     };
@@ -452,7 +455,8 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json(updatedUser);
+    const { password: _password, ...safeUpdatedUser } = updatedUser;
+    return NextResponse.json({ ...safeUpdatedUser, hasPassword: Boolean(_password) });
   } catch (error) {
     console.error('Error updating user:', error);
     return NextResponse.json(

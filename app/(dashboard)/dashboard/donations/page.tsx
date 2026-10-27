@@ -73,6 +73,8 @@ function compareBySortField(
   return direction === 'asc' ? order : -order;
 }
 
+import { DonorAccountBadge } from "@/components/dashboard/DonorAccountBadge";
+
 interface Donation {
   id: string;
   amount: number;
@@ -85,6 +87,7 @@ interface Donation {
   donorCountryCode?: string | null;
   donorId: string;
   donor: {
+    accountStatus?: import("@/lib/dashboard/donor-account").DonorAccountStatus;
     id: string;
     name: string;
     email: string;
@@ -359,16 +362,16 @@ export default function DonationsPage() {
   {donation.donor.image ? (
     <img
       src={donation.donor.image}
-      alt={donation.donor.name}
+      alt={donation.donor.name ?? ""}
       className="w-8 h-8 rounded-full"
     />
   ) : (
     <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white font-medium">
-      {donation.donor.name.charAt(0).toUpperCase()}
+      {(donation.donor.name || donation.donor.email || "?").charAt(0).toUpperCase()}
     </div>
   )}
   <div>
-    <p className="text-sm font-medium">{donation.donor.name}</p>
+    <p className="flex flex-wrap items-center gap-1 text-sm font-medium">{donation.donor.name || "—"}<DonorAccountBadge status={donation.donor.accountStatus} /></p>
     <p className="text-xs text-gray-500">{donation.donor.email}</p>
   </div>
 </div>

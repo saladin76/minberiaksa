@@ -143,14 +143,14 @@ export async function completePayPalReturn(input: { donationId: string; orderId:
   });
   if (!donation) return { kind: "failed", reason: "Donation not found" };
 
-  // Never capture twice: a paid donation is simply shown as paid.
-  if (donation.paidAt) return { kind: "paid", accessToken: donation.accessToken };
-
   const snapshot = snapshotOf(donation.providerRaw);
   const expectedOrderId = donation.paypalOrderId ?? snapshot.orderId ?? "";
   if (!expectedOrderId || !input.orderId || expectedOrderId !== input.orderId) {
-    return await failDonation(donation.id, `PayPal order mismatch (expected ${expectedOrderId || "none"}, got ${input.orderId || "none"})`);
+    // A malformed/stale return is not provider evidence of failure, nor authorization to reveal a token.
+    return { kind: "failed", reason: "PayPal order mismatch" };
   }
+  // Verify the order identity before returning a success access token.
+  if (donation.paidAt) return { kind: "paid", accessToken: donation.accessToken };
   if (donation.status === "FAILED") return { kind: "failed", reason: "Donation has already failed" };
 
   let order: PayPalOrder;
@@ -443,12 +443,9 @@ export async function reconcilePayPalDonation(
   try {
     order = await getPayPalOrder(orderId);
   } catch (err) {
-    // PayPal forgets an order that expired unapproved.
-    if (err instanceof PayPalError && err.status === 404) {
-      if (!stale) return { outcome: "open", orderStatus: null };
-      await failDonation(donation.id, `PayPal no longer has order ${orderId} (expired unapproved)`, {}, { abandoned: true });
-      return { outcome: "failed", orderStatus: null };
-    }
+    // A lookup failure does not establish whether approval/capture occurred. It can also mean
+    // the currently configured merchant/environment cannot see the historical order.
+    if (err instanceof PayPalError && err.status === 404) return { outcome: "open", orderStatus: null };
     throw err;
   }
 

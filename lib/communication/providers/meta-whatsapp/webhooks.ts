@@ -143,6 +143,25 @@ export function parseWebhookPayload(payload: unknown): NormalizedWebhookEvent[] 
           idempotencyKey: `wa:status:${wamid}:${mapped}`,
         });
       }
+      // Coexistence echoes are outbound. Only accept the documented field and destination.
+      if ((change as { field?: unknown }).field === "smb_message_echoes") {
+        const echoes = Array.isArray(value.message_echoes) ? value.message_echoes as Record<string, unknown>[] : [];
+        for (const message of echoes) {
+          const wamid = str(message.id);
+          const recipient = str(message.to);
+          if (!wamid || !recipient || !phoneNumberId) continue;
+          const type = str(message.type);
+          // Edits/revocations require a separate mutation model; never mislabel them as a sent reply.
+          if (type === "edit" || type === "revoke") continue;
+          const media = mediaDescriptor(type, message);
+          const button = buttonReply(message);
+          const text = inboundText(type, message, media, button);
+          out.push({ kind: "echo", providerMessageId: wamid, recipient, phoneNumberId,
+            text: text ? text.slice(0, 4000) : null, messageType: type,
+            timestamp: toNumber(message.timestamp), idempotencyKey: `wa:echo:${wamid}`,
+            media, replyToMessageId: contextMessageId(message), buttonReply: button });
+        }
+      }
       const messages = Array.isArray(value.messages) ? value.messages as Record<string, unknown>[] : [];
       for (const message of messages) {
         const wamid = typeof message.id === "string" ? message.id : null;

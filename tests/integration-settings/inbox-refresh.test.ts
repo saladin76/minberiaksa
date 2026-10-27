@@ -26,6 +26,7 @@ function harness(status: string, databaseFailure = false) {
     $runCommandRaw: async (query: { aggregate: string; pipeline: Array<Record<string, unknown>> }) => {
       if (databaseFailure) throw new Error("fixture database unavailable");
       calls.push(query);
+      if (JSON.stringify(query).includes("outbound_echo")) return { cursor: { firstBatch: [] } };
       const inbound = query.aggregate === "CommunicationProviderEvent";
       return { cursor: { firstBatch: [{ _id: { senderId: "business", phone: "+15555555555" }, count: 1,
         lastAt: inbound ? now : outboundAt, lastReplyAt: timeline.INBOX_ACCEPTED_STATUSES.includes(status) ? outboundAt : null,
@@ -39,7 +40,7 @@ function harness(status: string, databaseFailure = false) {
     communicationDelivery: { findMany: async () => [{ id: "outgoing", createdAt: outboundAt, renderedBody: "Reply", status, senderId: "business" }] },
   };
   const dependencies: Record<string, unknown> = {
-    "@/lib/prisma": { prisma }, "@/lib/audit-log": {}, "./phone": phone, "./inbox-timeline": timeline,
+    "@/lib/dashboard/donor-account": {}, "@/lib/prisma": { prisma }, "@/lib/audit-log": {}, "./phone": phone, "./inbox-timeline": timeline,
   };
   const output = ts.transpileModule(fs.readFileSync("lib/communication/conversation-service.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const loaded = { exports: {} as { listConversations: () => Promise<Array<{ needsReply: boolean }>>; getConversation: (id: string) => Promise<{ timeline: Array<{ id: string; status: string | null }> }> } };

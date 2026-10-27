@@ -1,3 +1,4 @@
+import { donorAccountStatus, type DonorAccountStatus } from "@/lib/dashboard/donor-account";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { normalizePhoneE164, phoneDigits, phoneMatchVariants } from "./phone";
@@ -27,6 +28,7 @@ type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: s
  */
 
 export type ConversationDonor = {
+  accountStatus?: DonorAccountStatus;
   userId: string | null;
   name: string | null;
   email: string | null;
@@ -121,12 +123,14 @@ async function matchDonors(phoneDigitsList: string[]): Promise<Map<string, Conve
     });
     // Names live on the User row, not the profile  join them in.
     const userIds = Array.from(new Set(profiles.map((p) => p.userId).filter(Boolean) as string[]));
-    const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } }).catch(() => []) : [];
+    const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, password: true, verifiedAt: true, registeredAt: true, emailVerified: true, _count: { select: { accounts: true } } } }).catch(() => []) : [];
     const nameById = new Map(users.map((u) => [u.id, u.name]));
+    const statusById = new Map(users.map(u => [u.id, donorAccountStatus(u)]));
     for (const p of profiles) {
       const key = phoneDigits(p.phone);
       const donor: ConversationDonor = {
         userId: p.userId,
+        accountStatus: p.userId ? statusById.get(p.userId) ?? "UNKNOWN" : "UNKNOWN",
         name: p.userId ? nameById.get(p.userId) ?? null : null,
         email: p.email,
         locale: p.preferredLocale,
@@ -215,6 +219,18 @@ async function aggregateOutbound(): Promise<RawGroup[]> {
   return groups(result);
 }
 
+async function aggregateAppEchoes(): Promise<RawGroup[]> {
+  const result = await prisma.$runCommandRaw({
+    aggregate: "CommunicationProviderEvent",
+    pipeline: [
+      { $match: { channel: "WHATSAPP", eventType: "outbound_echo", deliveryId: null } },
+      { $group: { _id: { senderId: "$senderId", phone: "$recipient" }, count: { $sum: 1 },
+        lastAt: { $max: "$receivedAt" }, lastReplyAt: { $max: { $cond: [{ $in: ["$status", INBOX_ACCEPTED_STATUSES] }, "$receivedAt", null] } } } },
+    ], allowDiskUse: true, cursor: {},
+  });
+  return groups(result);
+}
+
 function objectIdString(value: unknown): string | null {
   if (typeof value === "string") return value;
   if (value && typeof value === "object" && "$oid" in (value as Record<string, unknown>)) {
@@ -226,7 +242,8 @@ function objectIdString(value: unknown): string | null {
 
 export async function listConversations(opts: { senderId?: string | null } = {}): Promise<ConversationSummary[]> {
   if (!process.env.DATABASE_URL) return [];
-  const [inbound, outbound] = await Promise.all([aggregateInbound(), aggregateOutbound()]);
+  const [inbound, deliveries, appEchoes] = await Promise.all([aggregateInbound(), aggregateOutbound(), aggregateAppEchoes()]);
+  const outbound = [...deliveries, ...appEchoes];
 
   const buckets = new Map<string, Bucket>();
   const ensure = (senderId: string | null, phone: string): Bucket => {
@@ -351,7 +368,7 @@ export async function getConversation(
         where: { channel: "WHATSAPP", recipient: { in: variants }, ...senderScope, ...(before ? { receivedAt: { lt: before } } : {}) },
         orderBy: { receivedAt: "desc" },
         take: limit + 1,
-        select: { id: true, eventType: true, receivedAt: true, status: true, payloadSanitized: true, senderId: true },
+        select: { id: true, eventType: true, receivedAt: true, status: true, payloadSanitized: true, senderId: true, deliveryId: true, providerMessageId: true },
       }),
     prisma.communicationDelivery
       .findMany({
@@ -397,6 +414,17 @@ export async function getConversation(
         status: null,
         media: (payload?.media ?? null) as TimelineItem["media"],
       });
+    } else if (event.eventType === "outbound_echo") {
+      if (!event.deliveryId) {
+        const payload = event.payloadSanitized as { text?: unknown; media?: unknown } | null;
+        const receipts = events.filter(row => row.providerMessageId === event.providerMessageId && row.eventType.startsWith("status_"));
+        const states = [event.status, ...receipts.map(row => row.status)];
+        const status = states.includes("FAILED") ? "FAILED" : states.includes("READ") ? "READ"
+          : states.includes("DELIVERED") ? "DELIVERED" : "SENT";
+        timeline.push({ id: `event:${event.id}`, kind: "outbound", at: event.receivedAt.toISOString(),
+          text: typeof payload?.text === "string" ? payload.text : null, status,
+          media: (payload?.media ?? null) as TimelineItem["media"] });
+      }
     } else {
       timeline.push({ id: `event:${event.id}`, kind: "status", at: event.receivedAt?.toISOString() ?? null, text: null, status: event.status ?? event.eventType });
     }

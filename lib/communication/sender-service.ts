@@ -65,12 +65,16 @@ function dbUnavailable() {
   return { ok: false as const, status: 503, error: "DATABASE_URL is not configured." };
 }
 
-export async function listSenders(): Promise<CommunicationSender[]> {
-  if (!process.env.DATABASE_URL) return [];
+export async function listSenders(strict = false): Promise<CommunicationSender[]> {
+  if (!process.env.DATABASE_URL) {
+    if (strict) throw new Error("ROUTING_DATABASE_UNAVAILABLE");
+    return [];
+  }
   try {
     return await prisma.communicationSender.findMany({ orderBy: [{ enabled: "desc" }, { priority: "asc" }, { name: "asc" }] });
   } catch (error) {
     console.error("listSenders failed", error);
+    if (strict) throw new Error("ROUTING_DATABASE_UNAVAILABLE");
     return [];
   }
 }

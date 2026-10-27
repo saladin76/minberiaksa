@@ -1,5 +1,6 @@
 /** Shape used by the dashboard «عرض الملف» profile card (users list + global dialog). */
 export interface UserProfileCardData {
+  accountStatus?: import("./donor-account").DonorAccountStatus;
   id: string;
   name: string | null;
   email: string | null;

@@ -5076,7 +5076,7 @@
   "رُفض الإيصال وأُبلغ المتبرع بالسبب. يمكنه رفع إيصال آخر ما دامت المحاولات متاحة.": "The receipt was rejected and the donor was notified of the reason. They can upload another receipt while attempts remain.",
   "رُفع {0}": "Uploaded {0}",
   "رُفع الإيصال {0}": "Receipt uploaded {0}",
-  "زائر": "Visitor",
+  "زائر": "Guest",
   "زائر غير مسجّل": "Unregistered visitor",
   "زائر نشط خلال الفترة المحددة": "Active users during the selected period",
   "زد الميزانية تدريجيًا: {0}": "Increase the budget gradually: {0}",
@@ -8471,5 +8471,18 @@
   "مبلغ المشاريع": "Project amount",
   "الرسوم المغطاة": "Covered fees",
   "الإجمالي مع تفصيل المشاريع والدعم والرسوم وحالة التحصيل": "Total with projects, team support, fees and payment confirmation",
-  "الإجمالي: 55 USD (المشاريع: 50 USD; دعم الفريق: 5 USD)": "Total: 55 USD (Projects: 50 USD; Team support: 5 USD)"
+  "الإجمالي: 55 USD (المشاريع: 50 USD; دعم الفريق: 5 USD)": "Total: 55 USD (Projects: 50 USD; Team support: 5 USD)",
+  "عضو مسجل": "Registered member",
+  "نوع الحساب": "Account type",
+  "تعديل بيانات المتبرع": "Edit donor profile",
+  "إدارة بيانات المتبرعين والشارات والتبرعات": "Manage donor profiles, badges and donations",
+  "تم تحديث بيانات المتبرع": "Donor profile updated",
+  "تغيرت البيانات. أغلق النافذة وحدّث القائمة ثم حاول مجددًا.": "This profile changed. Close the dialog, refresh the list and try again.",
+  "تعذّر حفظ البيانات. راجع الحقول وحاول مجددًا.": "Could not save. Check the fields and try again.",
+  "تم اختيار المُرسِل البديل": "Fallback sender selected",
+  "البريد الإلكتروني مستخدم بالفعل": "Email address is already in use",
+  "المُرسِل البديل متاح": "Fallback sender available",
+  "الشروط غير متطابقة": "Conditions do not match",
+  "مطابق": "Matched",
+  "لا يوجد مُرسِل متاح": "No sender available"
 }

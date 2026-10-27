@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { BrandColor, BrandColorUsage } from "./brand-types";
 
 const objectIdPattern = /^[a-f\d]{24}$/i;
-const organizationKeys = ["gozbebekleri", "minber_aksa", "burak"];
+const organizationKeys = ["minber_aksa"];
 const colorUsages: BrandColorUsage[] = ["PRIMARY", "CTA", "BACKGROUND", "ACCENT", "TEXT", "STATUS"];
 
 export type BrandColorActor = {

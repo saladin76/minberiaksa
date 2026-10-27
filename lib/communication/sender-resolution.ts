@@ -45,7 +45,7 @@ export type ResolvedSender = {
 };
 
 export type SenderResolution =
-  | { ok: true; sender: ResolvedSender; matchedBy: "rule" | "capability" | "default" | "runtime-default" }
+  | { ok: true; sender: ResolvedSender; matchedBy: "rule" | "capability" | "default" | "runtime-default"; ruleId?: string; fallbackUsed?: boolean }
   | { ok: false; reason: string };
 
 /**
@@ -68,8 +68,8 @@ export async function loadSenderRoutingSnapshot(
   runtime?: CommunicationRuntimeBundle,
 ): Promise<SenderRoutingSnapshot> {
   const [senders, rules, bundle] = await Promise.all([
-    listSenders().catch(() => []),
-    listRoutingRules(channel).catch(() => []),
+    listSenders(true),
+    listRoutingRules(channel, true),
     runtime ? Promise.resolve(runtime) : getActiveCommunicationRuntimeBundle(),
   ]);
   const channelSenders = senders.filter((sender) => sender.channel === channel);
@@ -137,6 +137,8 @@ export function resolveSenderFromSnapshot(
   return {
     ok: true,
     matchedBy: routed.matchedBy,
+    ruleId: routed.ruleId,
+    fallbackUsed: routed.fallbackUsed,
     sender: {
       id: routed.sender.id,
       provider: raw?.provider ?? routed.sender.provider ?? null,

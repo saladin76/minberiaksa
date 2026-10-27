@@ -98,6 +98,7 @@ providers.push(
           preferredLang: existing.preferredLang ? null : await readLocaleFromCookies(),
         });
         if (!existing.emailVerified) updateData.emailVerified = new Date();
+        if (!existing.registeredAt) updateData.registeredAt = new Date();
         if (Object.keys(updateData).length) await prisma.user.update({ where: { id: existing.id }, data: updateData });
         return {
           id: existing.id,
@@ -116,6 +117,7 @@ providers.push(
           role: "DONOR",
           emailVerified: new Date(),
           verifiedAt: new Date(),
+          registeredAt: new Date(),
           preferredLang,
         },
       });

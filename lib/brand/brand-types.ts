@@ -1,4 +1,4 @@
-export type BrandOrganizationKey = "gozbebekleri" | "minber_aksa" | "burak";
+export type BrandOrganizationKey = "minber_aksa";
 
 export type BrandLocale = "ar" | "tr" | "en" | "fr" | "id" | "pt" | "es" | "de";
 

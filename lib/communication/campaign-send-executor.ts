@@ -380,14 +380,15 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
       const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose });
       const sender = routed.ok ? routed.sender : null;
       const routingReason = routed.ok ? null : routed.reason;
+      const routing = routed.ok ? { matchedBy: routed.matchedBy, ruleId: routed.ruleId ?? null, fallbackUsed: routed.fallbackUsed ?? false } : { reason: routed.reason };
       let to = channel === "EMAIL" ? recipient.email ?? "" : recipient.phone ?? "";
       const decision = resolveProviderForSendWithRuntime(runtime, channel, sender, { country: recipient.country, phone: to });
       const provider = decision.canSend ? decision.providerId : channel === "WHATSAPP" ? "META_WHATSAPP" : channel === "EMAIL" ? EMAIL_PROVIDER_ID : undefined;
       const snapshot = JSON.parse(JSON.stringify(recipientCtx)) as Record<string, unknown>;
-      const created = await createDeliveryRecord({ channel, provider: provider as never, campaignId, templateId, templateName: rendered.templateName, recipientUserId: recipient.userId, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, recipientName: recipient.name, locale: recipient.locale, purpose, origin, renderedSubject: rendered.subject, renderedBody: rendered.body, variables: { snapshot }, senderId: sender?.id ?? null, createdBy: actor?.actorId ?? null, status: "RENDERED" });
+      const created = await createDeliveryRecord({ channel, provider: provider as never, campaignId, templateId, templateName: rendered.templateName, recipientUserId: recipient.userId, recipientEmail: channel === "EMAIL" ? recipient.email : null, recipientPhone: channel !== "EMAIL" ? recipient.phone : null, recipientName: recipient.name, locale: recipient.locale, purpose, origin, renderedSubject: rendered.subject, renderedBody: rendered.body, variables: { snapshot, routing }, senderId: sender?.id ?? null, createdBy: actor?.actorId ?? null, status: "RENDERED" });
       if (!created.ok) throw new Error("ARCHIVE_WRITE_FAILED");
       const deliveryId = created.data.id;
-      if (!sender && channel !== "SMS") {
+      if (!routed.ok) {
         const reason = routingReason ?? "NO_SENDER_AVAILABLE";
         await markDeliveryStatus(deliveryId, "SKIPPED", { errorMessage: reason });
         outcome.skipped++; bump(outcome.reasons, reason); return outcome;
@@ -415,7 +416,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
           outcome.skipped++; bump(outcome.reasons, built.reason); return outcome;
         }
         metaName = readiness.providerTemplateName; metaLanguage = readiness.languageCode; metaComponents = built.components;
-        await updateDeliveryVariables(deliveryId, { snapshot, whatsappPreview: buildWhatsappRenderedPreview({ componentsSchema: readiness.componentsSchema, builtComponents: built.components, fallbackBody: rendered.body, providerTemplateName: readiness.providerTemplateName, languageCode: readiness.languageCode }) });
+        await updateDeliveryVariables(deliveryId, { snapshot, routing, whatsappPreview: buildWhatsappRenderedPreview({ componentsSchema: readiness.componentsSchema, builtComponents: built.components, fallbackBody: rendered.body, providerTemplateName: readiness.providerTemplateName, languageCode: readiness.languageCode }) });
       }
       let frequencyReservation: WhatsAppMarketingReservation | null = null;
       if (channel === "WHATSAPP" && purpose === "MARKETING") {

@@ -5071,7 +5071,7 @@
   "رُفض الإيصال وأُبلغ المتبرع بالسبب. يمكنه رفع إيصال آخر ما دامت المحاولات متاحة.": "Dekont reddedildi ve bağışçıya nedeni bildirildi. Deneme hakkı kaldıkça başka bir dekont yükleyebilir.",
   "رُفع {0}": "Yüklendi: {0}",
   "رُفع الإيصال {0}": "Dekont yüklendi: {0}",
-  "زائر": "Ziyaretçi",
+  "زائر": "Misafir",
   "زائر غير مسجّل": "Kayıtsız ziyaretçi",
   "زائر نشط خلال الفترة المحددة": "Seçilen dönemdeki etkin kullanıcılar",
   "زد الميزانية تدريجيًا: {0}": "Bütçeyi kademeli olarak artırın: {0}",
@@ -8463,5 +8463,18 @@
   "مبلغ المشاريع": "Proje tutarı",
   "الرسوم المغطاة": "Karşılanan ücretler",
   "الإجمالي مع تفصيل المشاريع والدعم والرسوم وحالة التحصيل": "Projeler, ekip desteği, ücretler ve ödeme doğrulaması ile toplam",
-  "الإجمالي: 55 USD (المشاريع: 50 USD; دعم الفريق: 5 USD)": "Toplam: 55 USD (Projeler: 50 USD; Ekip desteği: 5 USD)"
+  "الإجمالي: 55 USD (المشاريع: 50 USD; دعم الفريق: 5 USD)": "Toplam: 55 USD (Projeler: 50 USD; Ekip desteği: 5 USD)",
+  "عضو مسجل": "Kayıtlı üye",
+  "نوع الحساب": "Hesap türü",
+  "تعديل بيانات المتبرع": "Bağışçı bilgilerini düzenle",
+  "إدارة بيانات المتبرعين والشارات والتبرعات": "Bağışçı bilgilerini, rozetleri ve bağışları yönetin",
+  "تم تحديث بيانات المتبرع": "Bağışçı bilgileri güncellendi",
+  "تغيرت البيانات. أغلق النافذة وحدّث القائمة ثم حاول مجددًا.": "Bilgiler değişti. Pencereyi kapatıp listeyi yenileyin ve tekrar deneyin.",
+  "تعذّر حفظ البيانات. راجع الحقول وحاول مجددًا.": "Kaydedilemedi. Alanları kontrol edip tekrar deneyin.",
+  "تم اختيار المُرسِل البديل": "Yedek gönderici seçildi",
+  "البريد الإلكتروني مستخدم بالفعل": "E-posta adresi zaten kullanılıyor",
+  "المُرسِل البديل متاح": "Yedek gönderici kullanılabilir",
+  "الشروط غير متطابقة": "Koşullar eşleşmiyor",
+  "مطابق": "Eşleşti",
+  "لا يوجد مُرسِل متاح": "Kullanılabilir gönderici yok"
 }

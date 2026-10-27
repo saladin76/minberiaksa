@@ -188,6 +188,9 @@ model User {
   /// previous site who have not come back yet; the dashboard's users list
   /// marks everyone else with a check.
   verifiedAt            DateTime?
+  /// Explicit successful account registration evidence, including Google One Tap.
+  /// Guest checkout must never set this field. Missing on ambiguous legacy rows.
+  registeredAt          DateTime?
   role                  Role      @default(DONOR)
   preferredLang         String? // locale from first donation (ar, en, fr) for emails/SMS
 

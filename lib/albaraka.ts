@@ -527,7 +527,7 @@ export function albarakaMdStatusMessage(mdStatus: string): string {
 
 // ── Recurring (merchant-initiated) charges ───────────────────────────────────
 //
-// A recurring plan's first instalment is an ordinary 3D payment at checkout. Every
+// A recurring plan's first instalment uses the donor-present 2D checkout. Every
 // later one is charged by the site's scheduler (`lib/donations/albaraka-recurring.ts`)
 // through the bank's direct /Sale  the "Standart Satış" of the document  with the
 // card the donor authorised, flagged `IsRecurring` / `IsMailOrder` so the bank treats
@@ -536,7 +536,7 @@ export function albarakaMdStatusMessage(mdStatus: string): string {
 // Two things the document states, and this depends on:
 //   - Non-3D sales need a Non-3D (mail-order) terminal, which the bank provisions
 //     separately from the 3D one; its numbers go in ALBARAKA_RECURRING_TERMINAL_NO /
-//     ALBARAKA_RECURRING_POSNET_ID (falling back to the 3D terminal's).
+//     ALBARAKA_RECURRING_POSNET_ID (falling back to the configured 2D terminal).
 //   - The field table marks Cvc2 as required for a standard sale, and CVCs are never
 //     stored here. Recurring transactions are sent without it, as merchant-initiated
 //     transactions are; the bank must have enabled that on the terminal. Until it
