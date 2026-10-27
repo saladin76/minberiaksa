@@ -47,11 +47,11 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
     finally { setSaving(false); }
   };
   return <Dialog open onOpenChange={open => { if (!open && !saving) onClose(); }}>
-    <DialogContent dir={dashDir()} className="max-h-[90vh] overflow-y-auto sm:max-w-xl" onEscapeKeyDown={event => { if (saving) event.preventDefault(); }} onPointerDownOutside={event => event.preventDefault()}>
+    <DialogContent dir={dashDir()} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl" onEscapeKeyDown={event => { if (saving) event.preventDefault(); }} onPointerDownOutside={event => event.preventDefault()}>
       <DialogHeader><DialogTitle>{dt("تعديل بيانات المتبرع")}</DialogTitle>
         <DialogDescription>{user.name ?? user.email}</DialogDescription></DialogHeader>
-      <form onSubmit={save} className="space-y-4">
-        <fieldset disabled={saving} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <form onSubmit={save} className="flex min-h-0 flex-col gap-4 overflow-hidden">
+        <fieldset disabled={saving} className="grid min-h-0 min-w-0 grid-cols-1 gap-3 overflow-y-auto pe-1 sm:grid-cols-2">
           {([
             ["name", dt("الاسم"), "text"], ["email", dt("البريد الإلكتروني"), "email"],
             ["phone", dt("رقم الهاتف"), "tel"], ["countryCode", dt("رمز الدولة"), "text"],
@@ -69,8 +69,8 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
             <option value="">{dt("غير محدد")}</option>{Object.entries(LOCALE_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
           </select></label>
         </fieldset>
-        {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-        <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={saving} onClick={onClose}>{dt("إلغاء")}</Button>
+        {error && <p role="alert" className="shrink-0 text-sm text-rose-700">{error}</p>}
+        <div className="flex shrink-0 justify-end gap-2"><Button type="button" variant="outline" disabled={saving} onClick={onClose}>{dt("إلغاء")}</Button>
           <Button type="submit" disabled={saving}>{saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{dt("حفظ")}</Button></div>
       </form>
     </DialogContent>
