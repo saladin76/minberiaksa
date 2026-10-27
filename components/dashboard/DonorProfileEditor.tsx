@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
   user: UserProfileCardData; canEditEmail: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const formId = useId();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState({
@@ -48,7 +49,7 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
   };
   return <Dialog open onOpenChange={open => { if (!open && !saving) onClose(); }}>
     <DialogContent dir={dashDir()} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl" onEscapeKeyDown={event => { if (saving) event.preventDefault(); }} onPointerDownOutside={event => event.preventDefault()}>
-      <DialogHeader className="shrink-0"><DialogTitle>{dt("تعديل بيانات المتبرع")}</DialogTitle>
+      <DialogHeader className="shrink-0 sm:text-start"><DialogTitle>{dt("تعديل بيانات المتبرع")}</DialogTitle>
         <DialogDescription>{user.name ?? user.email}</DialogDescription></DialogHeader>
       <form onSubmit={save} className="flex min-h-0 flex-col gap-4 overflow-hidden">
         <div className="min-h-0 overflow-y-auto pe-1">
@@ -63,12 +64,12 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
               required={key === "name"} maxLength={key === "countryCode" ? 2 : key === "name" ? 160 : key === "email" ? 254 : undefined}
               disabled={key === "email" && !canEditEmail} dir={["email", "phone", "countryCode", "birthdate"].includes(key) ? "ltr" : undefined} />
           </label>)}
-          <label className="space-y-1 text-sm"><span>{dt("الجنس")}</span><select name="gender" className="h-10 w-full rounded-md border bg-background px-3" value={draft.gender} onChange={event => update("gender", event.target.value)}>
+          <div className="space-y-1 text-sm"><label htmlFor={`${formId}-gender`}>{dt("الجنس")}</label><select id={`${formId}-gender`} name="gender" className="h-10 w-full rounded-md border bg-background px-3" value={draft.gender} onChange={event => update("gender", event.target.value)}>
             <option value="">{dt("غير محدد")}</option><option value="male">{dt("ذكر")}</option><option value="female">{dt("أنثى")}</option>
-          </select></label>
-          <label className="space-y-1 text-sm"><span>{dt("اللغة المفضلة")}</span><select name="preferredLang" className="h-10 w-full rounded-md border bg-background px-3" value={draft.preferredLang} onChange={event => update("preferredLang", event.target.value)}>
+          </select></div>
+          <div className="space-y-1 text-sm"><label htmlFor={`${formId}-preferredLang`}>{dt("اللغة المفضلة")}</label><select id={`${formId}-preferredLang`} name="preferredLang" className="h-10 w-full rounded-md border bg-background px-3" value={draft.preferredLang} onChange={event => update("preferredLang", event.target.value)}>
             <option value="">{dt("غير محدد")}</option>{Object.entries(LOCALE_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
-          </select></label>
+          </select></div>
         </fieldset>
         </div>
         {error && <p role="alert" className="shrink-0 text-sm text-rose-700">{error}</p>}
