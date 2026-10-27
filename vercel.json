@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/editorial-work",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/google-search-work",
+      "schedule": "*/5 * * * *"
     }
   ],
   "installCommand": "npm ci --prefer-offline --no-audit --no-fund",

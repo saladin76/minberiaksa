@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     subject: renderEmailSubject(variant.subject, ctx),
-    html: await renderEmailHtml(variant.document as TReaderDocument, ctx),
+    html: await renderEmailHtml(variant.document as TReaderDocument, ctx, variant.resolvedLocale),
     resolvedLocale: variant.resolvedLocale,
   });
 }

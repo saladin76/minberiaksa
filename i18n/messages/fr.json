@@ -3405,7 +3405,7 @@
     "a_ok": "D'accord",
     "a_no": "Non, merci",
     "s_support_intro": "Je suis désolé, {name}. Votre dernier don était de {amount} le {date}, état : {state}. Dites-moi de quel don il s'agit et ce qui s'est passé ; je le transmets à l'équipe, qui vous répondra par e-mail rapidement.",
-    "s_support_intro_guest": "Je suis désolé. Dites-moi de quel don il s'agit (date et montant) et ce qui s'est passé, laissez votre nom et votre e-mail ; je le transmets à l'équipe, qui vous répondra rapidement.",
+    "s_support_intro_guest": "Connectez-vous pour envoyer votre message. En bref, que s'est-il passé ?",
     "sp_title": "Envoyer à l'équipe",
     "sp_which": "De quel don s'agit-il ?",
     "sp_none": "Aucun don en particulier",
@@ -3440,7 +3440,8 @@
     "cmd_field_frequency": "Fréquence",
     "cmd_field_status": "Statut",
     "a_confirm": "Confirmer",
-    "a_cancel": "Annuler"
+    "a_cancel": "Annuler",
+    "sp_signin": "Connectez-vous pour envoyer votre message"
   },
   "ProjectShares": {
     "unitSingular": "part",

@@ -56,8 +56,6 @@ export function inspectEnvironment(env: NodeJS.ProcessEnv = process.env): Releas
   } catch {
     checks.push({ id: "canonical-url", status: "BLOCKED", message: "Canonical application URL is missing or invalid." });
   }
-  const legacyTwilioEnabled = env.WHATSAPP_LEGACY_TWILIO_ENABLED === "true" || env.TWILIO_LEGACY_ENABLED === "true";
-  checks.push({ id: "twilio-legacy", status: legacyTwilioEnabled ? "BLOCKED" : "PASS", message: legacyTwilioEnabled ? "A Twilio legacy flag is enabled." : "Twilio legacy flags are disabled." });
   const sendgridFallbackEnabled = env.SENDGRID_FALLBACK_ENABLED === "true" || env.EMAIL_SENDGRID_ENABLED === "true";
   checks.push({ id: "sendgrid-legacy", status: sendgridFallbackEnabled ? "BLOCKED" : "PASS", message: sendgridFallbackEnabled ? "A SendGrid fallback flag is enabled." : "SendGrid fallback flags are disabled." });
   const canonicalCandidates = [env.APP_URL, env.NEXTAUTH_URL, env.NEXT_PUBLIC_APP_URL, env.NEXT_PUBLIC_SITE_URL].filter((value): value is string => Boolean(value?.trim())).map((value) => new URL(value).origin);

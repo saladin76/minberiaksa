@@ -1,3 +1,4 @@
+import { recurringReadiness } from "@/lib/donations/recurring-readiness";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -118,6 +119,9 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           nextBillingDate: true,
           lastBillingDate: true,
+          donations: { where: { paidAt: { not: null } }, select: { id: true }, take: 1 },
+          provider: true, paymentCardId: true, paypalVaultId: true, stripeSubscriptionId: true, payforToken: true,
+          amountChangeLock: true, billingLeaseUntil: true, chargeAttempts: true, lastChargeError: true,
           donor: {
             select: {
               id: true,
@@ -156,6 +160,10 @@ export async function GET(request: NextRequest) {
         frequency,
         nextBillingDate: s.nextBillingDate,
         lastBillingDate: s.lastBillingDate,
+        provider: s.provider || "STRIPE",
+        billingReadiness: recurringReadiness({ ...s, hasPaidDonation: s.donations.length > 0 }),
+        chargeAttempts: s.chargeAttempts,
+        lastChargeError: s.lastChargeError,
         donor: s.donor,
         referral: s.referral ? { id: s.referral.id, code: s.referral.code } : null,
         campaigns: s.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),

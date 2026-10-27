@@ -34,7 +34,7 @@ export const CONFIG: Record<
     fields: ContentField[];
   }
 > = {
-  "videos": {"label":"الفيديوهات","model":"video","translationModel":"videoTranslation","parentKey":"videoId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true}]},
+  "videos": {"label":"الفيديوهات","model":"video","translationModel":"videoTranslation","parentKey":"videoId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"وصف الإنجاز","group":"content"}]},
   "playlists": {"label":"برامجنا المصورة","model":"videoPlaylist","translationModel":"playlistTranslation","parentKey":"playlistId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"}]},
   "courses": {"label":"دوراتنا","model":"course","translationModel":"courseTranslation","parentKey":"courseId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"}]},
   "reports": {"label":"التقارير","model":"report","translationModel":"reportTranslation","parentKey":"reportId","permission":"siteContent","fields":[{"key":"title","label":"العنوان","group":"content","required":true},{"key":"description","label":"الوصف","group":"content"},{"key":"fileUrl","label":"رابط ملف هذه اللغة (فارغ = الملف الافتراضي)","group":"content","optional":true,"locked":true}]},

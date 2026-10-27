@@ -1,5 +1,6 @@
 import "server-only";
 
+import { describeVideoSource } from "@/lib/content/video-platform";
 import { prisma } from "@/lib/prisma";
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
@@ -535,34 +536,25 @@ export async function listProjectUpdates(
 ): Promise<MinbarProjectUpdate[]> {
   const rows = await prisma.update.findMany({
     where: { campaignId: projectId },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      image: true,
-      videoUrl: true,
-      createdAt: true,
-      translations: {
-        where: translationLocaleWhere(locale),
-        select: { locale: true, title: true, description: true },
-      },
-    },
+    select: { id: true, title: true, description: true, image: true, videoUrl: true, createdAt: true, translations: { where: translationLocaleWhere(locale), select: { locale: true, title: true, description: true } } },
     orderBy: { createdAt: "desc" },
   });
-
-  return rows.map((row) => {
-    const t = pickTranslation(row.translations, locale);
-    return {
-      id: row.id,
-      title: t?.title || row.title,
-      text: t?.description || row.description,
-      image: row.image,
-      videoUrl: row.videoUrl ?? null,
-      // Serialised here so the value crossing to the client is a plain string;
-      // the page formats it for the locale.
-      createdAt: row.createdAt.toISOString(),
-    };
+  const videos = await prisma.video.findMany({
+    where: { OR: [{ type: "ACHIEVEMENT", campaignIds: { has: projectId } }, ...(rows.length ? [{ sourceUpdateId: { in: rows.map(row => row.id) } }] : [])] },
+    select: { id: true, sourceUpdateId: true, campaignIds: true, type: true, isActive: true, localeFilter: true, title: true, description: true, thumbnail: true, url: true, youtubeId: true, startSeconds: true, createdAt: true, translations: { where: translationLocaleWhere(locale), select: { locale: true, title: true, description: true } } },
+    orderBy: [{ order: "asc" }, { createdAt: "desc" }],
   });
+  const canonicalUpdates = new Set(videos.map(video => video.sourceUpdateId).filter(Boolean));
+  const visibleVideos = videos.filter(video => video.type === "ACHIEVEMENT" && video.isActive && video.campaignIds.includes(projectId) && (!video.localeFilter.length || video.localeFilter.includes(locale)));
+  const canonicalSources = new Set(visibleVideos.map(video => describeVideoSource(video).watchUrl));
+  const updates = rows.filter(row => !canonicalUpdates.has(row.id) && (!row.videoUrl || !canonicalSources.has(describeVideoSource({ url: row.videoUrl }).watchUrl))).map(row => {
+    const translation = pickTranslation(row.translations, locale);
+    return { id: row.id, title: translation?.title || row.title, text: translation?.description || row.description, image: row.image, videoUrl: row.videoUrl, createdAt: row.createdAt.toISOString() };
+  });
+  return [...visibleVideos.map(video => {
+    const translation = pickTranslation(video.translations, locale);
+    return { id: video.id, title: translation?.title || video.title, text: translation?.description ?? video.description ?? "", image: video.thumbnail, videoUrl: describeVideoSource(video).watchUrl, createdAt: video.createdAt.toISOString() };
+  }), ...updates];
 }
 
 /**

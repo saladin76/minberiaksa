@@ -1,4 +1,5 @@
 "use client";
+import { VideoSourceField } from "./VideoSourceField";
 import { dt } from "@/lib/dashboard/i18n";
 import { useState } from "react";
 import type { ContentRecord } from "@/lib/content-editor/contracts";
@@ -283,17 +284,7 @@ export function ProgrammeWorkspace({
                 />
               </label>
             ) : null}
-            {block.kind === "VIDEO" ? (
-              <label className="block space-y-2 text-sm">
-                {dt("معرّف YouTube")}
-                <input
-                  dir="ltr"
-                  className={control + " w-full"}
-                  value={String(block.youtubeId || "")}
-                  onChange={(e) => update("youtubeId", e.target.value)}
-                />
-              </label>
-            ) : null}
+            {block.kind === "VIDEO" ? <VideoSourceField value={String(block.youtubeId || "")} onChange={source => update("youtubeId", source)} /> : null}
             {block.kind === "PLAYLIST_EPISODES" ? (
               <select
                 aria-label={dt("سلسلة حلقات القسم")}

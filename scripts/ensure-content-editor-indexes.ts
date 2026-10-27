@@ -55,6 +55,11 @@ const indexes = [
   { collection: "DonationItem", key: { donationId: 1, campaignId: 1 }, unique: false },
   { collection: "DonationItem", key: { campaignId: 1, donationId: 1 }, unique: false },
   { collection: "Subscription", key: { donorId: 1, status: 1 }, unique: false },
+  { collection: "Video", key: { campaignIds: 1 }, unique: false },
+  { collection: "Video", key: { sourceUpdateId: 1 }, unique: false },
+  { collection: "GoogleSearchPlan", key: { connectionId: 1, createdAt: 1 }, unique: false },
+  { collection: "GoogleSearchPlan", key: { automationEnabled: 1, lastReviewAt: 1 }, unique: false },
+
 ];
 
 async function run() {

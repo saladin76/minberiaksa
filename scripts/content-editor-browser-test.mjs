@@ -15,6 +15,7 @@ const en = require("../lib/dashboard/i18n/catalog/en.json"), tr = require("../li
 const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || text);
 const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
 let editorialWrites = 0;
+let projectLibraryVideos = [];
 let lastEditorialCommand = null;
 const seoFixture = {key:"home",revision:"seo-1",overrides:{},defaults:{ar:{metaTitle:"الصفحة الرئيسية",metaDescription:"وصف افتراضي"}}};
 let css = (
@@ -108,11 +109,13 @@ const server = createServer(async (req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.end('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#164e63"/></svg>');
   } else if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
+  } else if (req.url?.startsWith("/api/videos/admin")) { res.setHeader("Content-Type","application/json");res.end(JSON.stringify({items:projectLibraryVideos}));
   } else if (req.url?.startsWith("/api/campaigns/")) {
     res.setHeader("Content-Type", "application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
       const input=body?JSON.parse(body):{}, campaign=documents.get("campaigns");updateWrites++;
       const result={...input,id:"222222222222222222222222",createdAt:"2026-10-26T08:00:00Z",translations:Object.entries(input.translations||{}).map(([locale,copy])=>({locale,...copy}))};
+      if(input.videoUrl){result.libraryVideoId="333333333333333333333333";projectLibraryVideos=[{id:result.libraryVideoId,title:result.title,isActive:true,sourceUpdateId:result.id,url:input.videoUrl}];}
       campaign.settings.updates=[result];res.end(JSON.stringify(result));
     });
   } else if (req.url?.startsWith("/api/admin/google-analytics/google-ads")) {
@@ -259,7 +262,7 @@ try {
     .getByRole("button", { name: "حفظ التغييرات", exact: true })
     .click();
   await page
-    .getByRole("status")
+    .getByRole("alert")
     .filter({ hasText: "فشل حفظ تجريبي" })
     .waitFor();
   assert.equal(await title.inputValue(), "Titre révisé");
@@ -372,14 +375,14 @@ try {
         }
         assert.equal(await view.getByRole("alert").count(),0, locale + "/" + kind + " unexpected error");
         const prefix = locale + "-" + kind;
-        await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
+        await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
         await view.setViewportSize({width:390,height:844});
         assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), prefix + " mobile layout overflows");
         assert.ok(await nav.evaluateAll(buttons => buttons.every(button => {const box=button.getBoundingClientRect();return box.left>=0 && box.right<=innerWidth+1;})), prefix + " editor sections must remain visible without a hidden horizontal menu");
-        await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
+        await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
         snapshots.push(prefix);
       } finally {
-        await view.screenshot({path:path.join(temp,"last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+        await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,"last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
         await view.close();
       }
     }
@@ -394,7 +397,8 @@ try {
   await writing.waitFor();
   const initialRichText = documents.get("blog").values.ar.content;
   assert.ok((await writing.innerText()).trim().length > 0, "published rich content must appear on first load without reloading saved content");
-  assert.equal(await richPage.getByRole("button", {name:"اقتراح SEO",exact:true}).isDisabled(), false, "mounting the editor must not create a false unsaved draft or disable SEO");
+  await richPage.getByLabel("المهمة",{exact:true}).selectOption("seo");
+  assert.equal(await richPage.getByRole("button", {name:"إعداد الاقتراحات",exact:true}).isDisabled(), false, "mounting the editor must not create a false unsaved draft or disable SEO");
   assert.equal(documents.get("blog").values.ar.content, initialRichText, "mounting must not change the stored content");
   await writing.fill("فقرة أولى للمراجعة");
   await writing.press("End"); await writing.press("Enter"); await writing.pressSequentially("عنوان فرعي واضح");
@@ -462,14 +466,15 @@ try {
         assert.equal(editorialWrites,0,"opening and editing a review must never write content");
       }
       const prefix = locale+"-"+surface;
-      await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
+      await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
       await view.setViewportSize({width:390,height:844});
+      if(surface === "seo") assert.ok((await view.getByLabel(ui(locale,"السوق المستهدف (اختياري)"),{exact:true}).boundingBox()).width >= 250, "SEO market input must stay usable on mobile");
       assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1),prefix+" mobile overflow");
       if (surface === "planner") { await view.waitForFunction(() => { const box = document.querySelector('[role="dialog"]')?.getBoundingClientRect(); return box && box.x >= -1 && box.right <= innerWidth + 1; }, undefined, {timeout:5000}); const box = await view.getByRole("dialog").boundingBox(); assert.ok(box && box.x >= -1 && box.x + box.width <= 391, "review dialog must stay within the mobile viewport: " + JSON.stringify(box)); }
-      await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
+      await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
       workflowScreens.push(prefix);
     } finally {
-      await view.screenshot({path:path.join(temp,"workflow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+      await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,"workflow-last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
       await view.close();
     }
   }
@@ -498,12 +503,15 @@ try {
   const additions = await browser.newPage({viewport:{width:1440,height:1000}});
   additions.on("pageerror", error => errors.push("A1 workflows: " + error.message));
   await additions.context().addCookies([{name:"dash-locale",value:"ar",url:origin}]);
+  await additions.route("https://example.org/fixture-video.mp4", route => route.fulfill({status:200,contentType:"video/mp4",body:""}));
   await additions.goto(origin+"/?kind=campaigns");
   await additions.getByRole("button",{name:/الإنجازات والسجل/}).click();
+  const campaignBeforeUpdateRevision = documents.get("campaigns").revision;
   await additions.getByRole("button",{name:"إضافة تحديث",exact:true}).click();
   let modal=additions.getByRole("dialog");
   await modal.getByLabel("العنوان",{exact:true}).fill("تحديث ميداني");
   await modal.getByLabel("المحتوى",{exact:true}).fill("تم توزيع الخبز وفق الخطة.");
+  await modal.getByLabel("رابط الفيديو أو كود iframe",{exact:true}).fill("https://example.org/fixture-video.mp4");
   await modal.getByRole("button",{name:"EN",exact:true}).click();
   await modal.getByLabel("العنوان",{exact:true}).fill("Field update");
   await modal.getByLabel("المحتوى",{exact:true}).fill("Bread was distributed according to plan.");
@@ -514,7 +522,9 @@ try {
   await additions.screenshot({path:path.join(temp,"ar-update-editor-mobile.png"),fullPage:true,animations:"disabled"});
   await modal.getByRole("button",{name:"حفظ التحديث وكل اللغات",exact:true}).click();
   await modal.waitFor({state:"hidden"});
-  await additions.getByRole("heading",{name:"تحديث ميداني",exact:true}).waitFor();assert.equal(updateWrites,1);
+  await additions.getByText("تحديث ميداني",{exact:true}).waitFor();assert.equal(updateWrites,1);
+  assert.equal(documents.get("campaigns").revision,campaignBeforeUpdateRevision,"project revision stays unchanged when saving history");
+  assert.equal(await additions.getByRole("link",{name:"تعديل: تحديث ميداني",exact:true}).getAttribute("href"),"/dashboard/content/videos/333333333333333333333333","the linked library refreshes without a project revision change");
   assert.equal(documents.get("campaigns").settings.updates[0].translations[0].title,"Field update");
   await additions.goto(origin+"/?surface=strategy");
   await additions.getByRole("tab",{name:"SEO الصفحات العامة",exact:true}).waitFor();

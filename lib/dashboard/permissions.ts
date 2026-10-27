@@ -94,6 +94,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/marketing/attribution", key: "referrals" },
   { prefix: "/dashboard/marketing/tracking", key: "pixels" },
   { prefix: "/dashboard/marketing/connections", key: "platformConnections" },
+  { prefix: "/dashboard/marketing/google-search", key: "platformConnections" },
   { prefix: "/dashboard/marketing", key: "ads" },
   { prefix: "/dashboard/marketing-intelligence", key: "ads" },
   { prefix: "/dashboard/conversion-events", key: "pixels" },

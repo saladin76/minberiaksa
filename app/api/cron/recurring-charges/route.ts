@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     }
 
     const ok = !albarakaFailed && !paypalFailed;
+    if (!dryRun) await writeAuditLog({ actorRole: "SYSTEM", action: "RECURRING_CHARGES_CHECK", entityType: "Subscription", stream: "TEAM", messageAr: `فحص التجديد: البركة ${summary?.scanned ?? 0} مستحق، PayPal ${paypal?.scanned ?? 0} مستحق؛ نجح ${Number(summary?.charged.length ?? 0) + Number(paypal?.charged.length ?? 0)} وفشل ${Number(summary?.failed.length ?? 0) + Number(paypal?.failed.length ?? 0)}.`, metadata: { ok, albarakaEnabled: summary?.enabled ?? false, paypalEnabled: paypal?.enabled ?? false, charged: Number(summary?.charged.length ?? 0) + Number(paypal?.charged.length ?? 0), failed: Number(summary?.failed.length ?? 0) + Number(paypal?.failed.length ?? 0) } }).catch(() => {});
     return NextResponse.json({ ok, ...(summary ?? {}), paypal,
       ...(ok ? {} : { error: "One or more recurring providers failed", providerErrors: { albaraka: albarakaFailed, paypal: paypalFailed } }),
     }, { status: ok ? 200 : 500 });

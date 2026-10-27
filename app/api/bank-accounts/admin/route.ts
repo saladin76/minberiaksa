@@ -1,3 +1,4 @@
+import { isLegacyTransferBank } from "@/lib/bank-transfers/bank-registry";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -59,6 +60,7 @@ export async function GET() {
     }
 
     const items = asDocs(banksRaw)
+      .filter((bank) => !isLegacyTransferBank(bank))
       .map((b) => {
         const id = idOf(b._id as RawId);
         const slug = str(b.slug);

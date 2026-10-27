@@ -131,7 +131,7 @@ test("report request uses scoped bearer access and maps provider errors without 
   );
 });
 
-test("GA4 reports have a dedicated top-level section and use the existing platform tracking settings", () => {
+test("GA4 reports belong to Marketing and use the existing platform tracking settings", () => {
   assert.equal(pathToDashboardPermission("/dashboard/platform-connections/tracking"), "platformConnections");
   assert.equal(pathToDashboardPermission("/dashboard/google-analytics"), "platformConnections");
   const trackingSource = readFileSync("app/api/admin/tracking/route.ts", "utf8");
@@ -144,8 +144,9 @@ test("GA4 reports have a dedicated top-level section and use the existing platfo
   assert.equal(existsSync("app/(dashboard)/dashboard/google-analytics/_components/GoogleAnalyticsDashboard.tsx"), true);
   const settingsUi = readFileSync("app/(dashboard)/dashboard/platform-connections/tracking/_components/TrackingSettingsManager.tsx", "utf8");
   const homeGroup = DASHBOARD_NAV_GROUPS.find((group) => group.group === "الرئيسية");
-  assert.deepEqual(homeGroup?.items.slice(0, 2).map((item) => item.href), ["/dashboard", "/dashboard/google-analytics"]);
-  assert.equal(homeGroup?.items[1]?.key, "platformConnections");
+  assert.equal(homeGroup?.items.some(item => item.href === "/dashboard/google-analytics"), false);
+  const analyticsItem = DASHBOARD_NAV_GROUPS.find(group => group.group === "التسويق")?.items.find(item => item.href === "/dashboard/google-analytics");
+  assert.equal(analyticsItem?.key, "platformConnections");
   assert.doesNotMatch(marketingPage, /GoogleAnalyticsDashboard/);
   assert.doesNotMatch(platformTrackingPage, /GoogleAnalyticsDashboard/);
   assert.match(analyticsPage, /resolveDashboardPageAccess/);

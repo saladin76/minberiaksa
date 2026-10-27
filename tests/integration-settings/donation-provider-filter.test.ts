@@ -14,13 +14,13 @@ test("gateway filter composes with existing OR/AND without replacing dates or st
   assert.deepEqual(donationProviderWhere("__unset"), { OR: [{ provider: null }, { provider: "" }, { provider: { isSet: false } }] });
 });
 
-test("recent marketing exclusion uses actual sends across channels and excludes receipts and failed attempts", () => {
+test("recent marketing exclusion retains accepted contacts even if a later delivery fails", () => {
   const now = new Date("2026-10-26T10:00:00Z");
   const filter = recentMarketingDeliveryWhere(7, now);
   assert.equal(filter.purpose, "MARKETING");
   assert.equal("channel" in filter, false);
   assert.deepEqual(filter.sentAt, { gte: new Date("2026-10-19T10:00:00Z"), lte: now });
-  assert.deepEqual(filter.status, { in: ["SENT_TO_PROVIDER", "SENT", "DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED"] });
+  assert.deepEqual(filter.OR, [{ status: { in: ["SENT_TO_PROVIDER", "SENT", "DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED"] } }, { providerMessageId: { not: null } }]);
   for (const days of [0, -1, 1.5, NaN, 3651]) assert.throws(() => recentMarketingDeliveryWhere(days));
 });
 

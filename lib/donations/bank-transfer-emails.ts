@@ -1,3 +1,4 @@
+import { applyAppFont } from "@/lib/templates/font";
 import "server-only";
 
 import { sendArchivedEmail } from "@/lib/communication/system-email";
@@ -150,7 +151,7 @@ function escapeHtml(value: string): string {
 function layout(lang: string, title: string, paragraphs: string[], button: { label: string; href: string } | null, extraLink: { label: string; href: string } | null, footer: string): string {
   const dir = lang === "ar" || lang === "ur" ? "rtl" : "ltr";
   const align = dir === "rtl" ? "right" : "left";
-  return `<!doctype html><html lang="${lang}" dir="${dir}"><body style="margin:0;background:#f4efe6;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#10212b">
+  return applyAppFont(`<!doctype html><html lang="${lang}" dir="${dir}"><body style="margin:0;background:#f4efe6;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#10212b">
 <main style="max-width:560px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e7dfd0">
   <div style="height:6px;background:#d39a27"></div>
   <div style="padding:28px 28px 8px;text-align:${align}">
@@ -160,7 +161,7 @@ function layout(lang: string, title: string, paragraphs: string[], button: { lab
     ${extraLink ? `<p style="margin:6px 0 0;font-size:14px"><a href="${extraLink.href}" style="color:#a5243d">${escapeHtml(extraLink.label)}</a></p>` : ""}
   </div>
   <div style="padding:16px 28px 26px;font-size:12px;color:#6b6b6b;text-align:${align}">${escapeHtml(footer)}</div>
-</main></body></html>`;
+</main></body></html>`, lang);
 }
 
 export async function sendBankTransferEmail(event: BankTransferEmailEvent, claim: ClaimWithDonation, opts: { locale: string; origin: string }): Promise<void> {

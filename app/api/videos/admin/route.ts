@@ -21,8 +21,10 @@ export async function GET(request: NextRequest) {
     const typeParam = request.nextUrl.searchParams.get("type");
     const type = isVideoType(typeParam) ? typeParam : undefined;
 
+    const campaignId = request.nextUrl.searchParams.get("campaignId");
+    if (campaignId && !/^[a-f0-9]{24}$/i.test(campaignId)) return NextResponse.json({ error: "مشروع غير صالح" }, { status: 400 });
     const rows = await prisma.video.findMany({
-      where: type ? { type } : {},
+      where: { ...(type ? { type } : {}), ...(campaignId ? { campaignIds: { has: campaignId } } : {}) },
       orderBy: [{ type: "asc" }, { order: "asc" }],
       select: {
         id: true,
@@ -33,6 +35,8 @@ export async function GET(request: NextRequest) {
         url: true,
         thumbnail: true,
         regionKey: true,
+        campaignIds: true,
+        sourceUpdateId: true,
         localeFilter: true,
         showOnHome: true,
         order: true,
@@ -41,6 +45,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const linkedIds = [...new Set(rows.flatMap(row => row.campaignIds || []))];
+    const linkedProjects = linkedIds.length ? await prisma.campaign.findMany({ where: { id: { in: linkedIds } }, select: { id: true, title: true } }) : [];
+    const projectsById = new Map(linkedProjects.map(project => [project.id, project]));
     const items = rows.map((v) => ({
       id: v.id,
       slug: v.slug,
@@ -50,6 +57,9 @@ export async function GET(request: NextRequest) {
       url: v.url ?? "",
       thumbnail: v.thumbnail ?? "",
       regionKey: v.regionKey ?? "",
+      campaignIds: v.campaignIds || [],
+      sourceUpdateId: v.sourceUpdateId,
+      campaigns: (v.campaignIds || []).flatMap(id => projectsById.has(id) ? [projectsById.get(id)] : []),
       localeFilter: v.localeFilter,
       showOnHome: v.showOnHome,
       order: v.order,

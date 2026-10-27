@@ -1,3 +1,4 @@
+import { applyAppFont } from "@/lib/templates/font";
 import "server-only";
 import { createDeliveryRecord, markDeliveryStatus } from "./delivery-log-service";
 import { getActiveElasticEmailRuntimeConfig, type ElasticEmailRuntimeValues, type ActiveRuntimeConfig } from "./runtime-config";
@@ -66,6 +67,6 @@ export async function sendVerificationEmailViaRuntime(to: string, verificationUr
   const lang = SUBJECTS[locale] ? locale : "en";
   const subject = SUBJECTS[lang];
   const direction = lang === "ar" ? "rtl" : "ltr";
-  const html = `<!doctype html><html lang="${lang}" dir="${direction}"><body style="font-family:Arial,sans-serif;background:#f3f4f6;padding:32px"><main style="max-width:560px;margin:auto;background:#fff;padding:32px;border-radius:14px"><h1 style="font-size:22px">${subject}</h1><p>${lang === "ar" ? "اضغط على الزر التالي لتأكيد حسابك." : "Use the button below to confirm your account."}</p><p><a href="${verificationUrl}" style="display:inline-block;padding:12px 22px;background:#025EB8;color:#fff;text-decoration:none;border-radius:8px">${subject}</a></p><p style="font-size:12px;word-break:break-all">${verificationUrl}</p></main></body></html>`;
+  const html = applyAppFont(`<!doctype html><html lang="${lang}" dir="${direction}"><body style="font-family:Arial,sans-serif;background:#f3f4f6;padding:32px"><main style="max-width:560px;margin:auto;background:#fff;padding:32px;border-radius:14px"><h1 style="font-size:22px">${subject}</h1><p>${lang === "ar" ? "اضغط على الزر التالي لتأكيد حسابك." : "Use the button below to confirm your account."}</p><p><a href="${verificationUrl}" style="display:inline-block;padding:12px 22px;background:#025EB8;color:#fff;text-decoration:none;border-radius:8px">${subject}</a></p><p style="font-size:12px;word-break:break-all">${verificationUrl}</p></main></body></html>`, lang);
   return sendArchivedEmail({ to, subject, html, locale: lang, origin: "SYSTEM", purpose: "TRANSACTIONAL", templateName: "EMAIL_VERIFICATION" });
 }

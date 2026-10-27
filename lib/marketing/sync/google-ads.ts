@@ -1,26 +1,15 @@
-/**
- * Google Ads (GAQL) sync client. Stub for this phase  credential preflight
- * + NOT_IMPLEMENTED. When implemented it should run GAQL queries against
- * campaign / ad_group / ad_group_ad with segments.date and standard cost /
- * impressions / clicks / conversions metrics.
- */
 import type { SyncClient } from "./types";
-import { missingConfigResult, notImplementedResult } from "./types";
-
-export const syncGoogleAds: SyncClient = async ({ connection }) => {
-  const missing: string[] = [];
-  if (!connection.accountId) missing.push("accountId");
-  if (!connection.developerToken) missing.push("developerToken");
-  if (!connection.appId) missing.push("appId"); // OAuth client id
-  if (!connection.clientSecret) missing.push("clientSecret");
-  if (!connection.refreshToken) missing.push("refreshToken");
-  if (missing.length > 0) {
-    return missingConfigResult(
-      missing,
-      "ناقص بيانات Google Ads  Customer ID و Developer Token و OAuth client id/secret و Refresh Token."
-    );
-  }
-  return notImplementedResult(
-    "مزامنة Google Ads عبر GAQL ستُفعّل في المرحلة التالية  كل البيانات المطلوبة متوفرة."
-  );
+import { missingConfigResult } from "./types";
+import { googleSearchClient, credentialsReady, searchCredentials, SearchApiError } from "../google-search/client";
+import { googleAdsAdPerformanceQuery } from "./google-ads-queries";
+import { mapGoogleAdsRows } from "./google-ads-mapper";
+/** Authenticated, paginated GAQL reads; no ad operations. */
+export const syncGoogleAds: SyncClient = async ({ connection, dateFrom, dateTo }) => {
+  const credentials = searchCredentials(connection);
+  if (!credentialsReady(credentials)) return missingConfigResult(["accountId", "developerToken", "appId", "clientSecret", "refreshToken"].filter(key => !connection[key as keyof typeof connection]), "أكمل بيانات حساب Google Ads ورمز المطوّر وتفويض OAuth.");
+  try {
+    const client = await googleSearchClient(credentials);
+    const rows = await client.query(googleAdsAdPerformanceQuery(dateFrom, dateTo), 50000);
+    return { status: "SUCCESS", rowsFetched: rows.length, message: "تمت مزامنة تقارير Google Ads للمدة المحددة.", snapshots: mapGoogleAdsRows(rows, connection.defaultCurrency) };
+  } catch (error) { return { status: "FAILED", rowsFetched: 0, message: "تعذر جلب تقارير Google Ads.", error: error instanceof SearchApiError ? error.code : "GOOGLE_ADS_SYNC_FAILED" }; }
 };

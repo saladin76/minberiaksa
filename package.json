@@ -158,7 +158,6 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "tiptap-markdown": "^0.8.10",
-    "twilio": "^6.0.2",
     "use-debounce": "^10.0.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.24.1",

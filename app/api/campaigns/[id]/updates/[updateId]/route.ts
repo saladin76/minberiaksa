@@ -4,6 +4,10 @@
 // PATCH /api/campaigns/[id]/updates/[updateId] - Update an update (admin only)
 // DELETE /api/campaigns/[id]/updates/[updateId] - Delete an update (admin only)
 
+import { revalidatePath } from "next/cache";
+import { listProjectUpdates } from "@/lib/minbar/projects";
+import { publishProjectUpdateVideo } from "@/lib/content/project-update-video";
+import { normalizeVideoSource } from "@/lib/content/video-platform";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -11,73 +15,18 @@ import { authOptions } from "../../../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
-import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 
 type ParamsPromise = { params: Promise<{ id: string; updateId: string }> };
 
 // ✅ GET - Fetch specific update with translations
 export async function GET(request: NextRequest, { params }: ParamsPromise) {
-  try {
-    const { id, updateId } = await params;
-    const locale = request.headers.get("x-locale") || "ar";
-
-    const update = await prisma.update.findUnique({
-      where: { id: updateId, campaignId: id },
-      select: {
-        id: true,
-        title: true,        // Arabic default
-        description: true,  // Arabic default
-        image: true,
-        videoUrl: true,
-        createdAt: true,
-        campaignId: true,
-        
-        // Fetch requested locale + English (fallback chain)
-        translations: {
-          where: translationLocaleWhere(locale),
-          select: {
-            locale: true,
-            title: true,
-            description: true,
-          },
-          take: 2,
-        },
-      },
-    });
-
-    if (!update) {
-      return NextResponse.json(
-        { error: "Update not found" },
-        { status: 404 }
-      );
-    }
-
-    const t = pickTranslation(update.translations, locale);
-
-    // Transform: requested locale → English → Arabic (base)
-    const transformedUpdate = {
-      id: update.id,
-      title: t?.title || update.title,
-      description: t?.description || update.description,
-      image: update.image,
-      videoUrl: update.videoUrl,
-      campaignId: update.campaignId,
-      createdAt: update.createdAt.toISOString(),
-    };
-
-    return NextResponse.json(transformedUpdate, {
-      headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-      },
-    });
-    
-  } catch (error) {
-    console.error("Error fetching update:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch update" },
-      { status: 500 }
-    );
-  }
+  const { id, updateId } = await params;
+  const locale = request.headers.get("x-locale") || "ar";
+  const updates = await listProjectUpdates(id, locale);
+  let update = updates.find(row => row.id === updateId);
+  if (!update) { const linked = await prisma.video.findFirst({ where: { sourceUpdateId: updateId }, select: { id: true } }); if (linked) update = updates.find(row => row.id === linked.id); }
+  if (!update) return NextResponse.json({ error: "Update not found" }, { status: 404 });
+  return NextResponse.json({ ...update, description: update.text, campaignId: id }, { headers: { "Cache-Control": "public, s-maxage=120", Vary: "x-locale" } });
 }
 
 // ✅ PATCH - Update an update with translations (admin only)
@@ -103,6 +52,13 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
       );
     }
 
+    const linkedVideo = await prisma.video.findFirst({ where: { sourceUpdateId: updateId }, select: { id: true } });
+    if (linkedVideo) return NextResponse.json({ error: "هذا الإنجاز مرتبط بمكتبة الفيديو. عدّله من المحرر الموحد.", editorHref: `/dashboard/content/videos/${linkedVideo.id}` }, { status: 409 });
+    if (data.videoUrl) {
+      const source = normalizeVideoSource({ url: data.videoUrl });
+      if (source.presentation.provider === "invalid") return NextResponse.json({ error: "كود التضمين أو رابط الفيديو غير مدعوم" }, { status: 400 });
+      data.videoUrl = source.url;
+    }
     // ✅ STEP 3: Prepare update data
     const updateData: any = {};
     if (data.title !== undefined) updateData.title = data.title;
@@ -136,7 +92,8 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
     // locale, then a separate findUnique to re-read what had just been written.
     // With 7 locales that is ~9 sequential round trips; Prisma does the same
     // work atomically in one, and `select` hands back the finished row.
-    const fullUpdate = await prisma.update.update({
+    const fullUpdate = await prisma.$transaction(async tx => {
+    const updated = await tx.update.update({
       where: { id: updateId, campaignId: id },
       data: {
         ...updateData,
@@ -170,6 +127,10 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
       },
     });
 
+    const libraryVideo = await publishProjectUpdateVideo(tx, updated, id);
+    return { ...updated, libraryVideoId: libraryVideo?.id || null };
+    }, { maxWait: 10000, timeout: 30000 });
+
     const actor = auditActorFromDashboardSession(session!);
     queueAuditLog({
       ...actor,
@@ -180,6 +141,7 @@ export async function PATCH(request: NextRequest, { params }: ParamsPromise) {
       metadata: { campaignId: fullUpdate.campaignId },
     });
 
+    revalidatePath("/", "layout");
     return NextResponse.json(fullUpdate, { headers: { "Cache-Control": "no-store" } });
 
   } catch (error) {
@@ -200,6 +162,8 @@ export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
     const denied = requireAdminOrDashboardPermission(session, "campaigns");
     if (denied) return denied;
 
+    const linked = await prisma.video.findFirst({ where: { sourceUpdateId: updateId }, select: { id: true } });
+    if (linked) return NextResponse.json({ error: "احذف الإنجاز من مكتبة الفيديو لإزالة ظهوره المرتبط بالمشروع.", editorHref: `/dashboard/content/videos/${linked.id}` }, { status: 409 });
     // ✅ STEP 2+3: Delete and read in one call  `delete` returns the row, so the
     // preceding existence check was a round trip spent on data the delete itself
     // hands back. A missing row now surfaces as P2025 and is mapped to a 404
@@ -219,6 +183,7 @@ export async function DELETE(request: NextRequest, { params }: ParamsPromise) {
       metadata: { campaignId: existingUpdate.campaignId },
     });
 
+    revalidatePath("/", "layout");
     return NextResponse.json({ 
       success: true,
       message: "Update deleted successfully",

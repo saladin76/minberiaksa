@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { Film, Link2, Loader2, Upload, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { VideoSourceField } from "@/components/dashboard/content-editor/VideoSourceField";
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
 import { dt, dtx } from "@/lib/dashboard/i18n";
 
@@ -222,12 +222,7 @@ export function UpdateMediaFields({
             </label>
           </div>
         ) : (
-          <Input
-            dir="ltr"
-            value={isUploadedVideo(videoUrl) ? '' : videoUrl}
-            onChange={(e) => onVideoChange(e.target.value.trim())}
-            placeholder="https://www.youtube.com/watch?v=…"
-          />
+          <VideoSourceField value={isUploadedVideo(videoUrl) ? "" : videoUrl} onChange={onVideoChange} />
         )}
       </div>
     </div>

@@ -34,6 +34,7 @@ export const VIDEO_WITH_TRANSLATIONS_SELECT = {
   startSeconds: true,
   thumbnail: true,
   regionKey: true,
+  campaignIds: true,
   localeFilter: true,
   showOnHome: true,
   order: true,
@@ -63,6 +64,7 @@ export function buildVideoScalars(body: Record<string, unknown>) {
     startSeconds,
     thumbnail: optionalStr(body.thumbnail),
     regionKey: optionalStr(body.regionKey),
+    campaignIds: parseVideoCampaignIds(body.campaignIds),
     localeFilter: localeList(body.localeFilter),
     showOnHome: body.showOnHome === true,
     order: intOr(body.order, 0),
@@ -82,6 +84,7 @@ export function buildVideoScalarPatch(body: Record<string, unknown>) {
     patch.youtubeId = source.youtubeId;
     patch.url = source.url;
   }
+  if (body.campaignIds !== undefined) patch.campaignIds = parseVideoCampaignIds(body.campaignIds);
   if (body.slug !== undefined) patch.slug = str(body.slug);
   if (body.type !== undefined && isVideoType(body.type)) patch.type = body.type;
   if (body.title !== undefined) patch.title = str(body.title);
@@ -107,4 +110,10 @@ export function videoLiveWhere(locale: string, type?: VideoTypeValue) {
     ...(type ? { type } : {}),
     OR: [{ localeFilter: { isEmpty: true } }, { localeFilter: { has: locale } }],
   };
+}
+
+export function parseVideoCampaignIds(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 100 || value.some(id => typeof id !== "string" || !/^[a-f0-9]{24}$/i.test(id))) throw new Error("المشاريع المرتبطة غير صالحة");
+  return [...new Set(value as string[])];
 }

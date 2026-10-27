@@ -2297,7 +2297,7 @@
     "a_ok": "Në rregull",
     "a_no": "Jo, faleminderit",
     "s_support_intro": "Më vjen keq, {name}. Dhurimi juaj i fundit ishte {amount} më {date}, gjendja: {state}. Më thoni për cilin dhurim bëhet fjalë dhe çfarë ndodhi; ia dërgoj ekipit, që do t'ju përgjigjet së shpejti me email.",
-    "s_support_intro_guest": "Më vjen keq. Më thoni për cilin dhurim bëhet fjalë (data dhe shuma) dhe çfarë ndodhi, lini emrin dhe email-in; ia dërgoj ekipit, që do të përgjigjet së shpejti.",
+    "s_support_intro_guest": "Hyni për të dërguar mesazhin. Shkurt, çfarë ndodhi?",
     "sp_title": "Dërgo te ekipi",
     "sp_which": "Për cilin dhurim bëhet fjalë?",
     "sp_none": "Jo për një dhurim të caktuar",
@@ -2332,7 +2332,8 @@
     "cmd_field_frequency": "Shpeshtësia",
     "cmd_field_status": "Statusi",
     "a_confirm": "Konfirmo",
-    "a_cancel": "Anulo"
+    "a_cancel": "Anulo",
+    "sp_signin": "Hyni për të dërguar mesazhin"
   },
   "CategoryNav": {
     "showMore": "Shfaq më shumë ({count})",

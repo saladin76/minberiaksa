@@ -349,7 +349,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
       if (Date.now() + 15_000 >= deadline) throw new Error("RUN_TIME_BUDGET_REACHED");
       if (alreadyDone.has(recipient.userId)) { recoverOutcome(recipient.userId, outcome); return outcome; }
       if (recentMarketingDays && await prisma.communicationDelivery.findFirst({
-        where: { ...recentMarketingDeliveryWhere(recentMarketingDays), recipientUserId: recipient.userId }, select: { id: true },
+        where: { AND: [recentMarketingDeliveryWhere(recentMarketingDays), { OR: [{ recipientUserId: recipient.userId }, ...(channel === "EMAIL" && recipient.email ? [{ recipientEmail: { equals: recipient.email.trim(), mode: "insensitive" as const } }] : []), ...(channel !== "EMAIL" && recipient.phone ? [{ recipientPhone: { in: phoneMatchVariants(recipient.phone) } }] : [])] }] }, select: { id: true },
       })) {
         await recordSkippedDelivery({ channel, campaignId, templateId, recipientUserId: recipient.userId, recipientName: recipient.name, locale: recipient.locale, purpose, origin, createdBy: actor?.actorId ?? null }, "RECENT_MARKETING_CONTACT");
         outcome.skipped++; bump(outcome.reasons, "RECENT_MARKETING_CONTACT"); return outcome;
@@ -422,7 +422,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
       }
       let frequencyReservation: WhatsAppMarketingReservation | null = null;
       if (channel === "WHATSAPP" && purpose === "MARKETING") {
-        const frequency = await reserveWhatsappMarketingSend(recipient.userId);
+        const frequency = await reserveWhatsappMarketingSend(recipient.userId, new Date(), to);
         if (!frequency.ok) {
           await markDeliveryStatus(
             deliveryId,

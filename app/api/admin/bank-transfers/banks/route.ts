@@ -1,3 +1,4 @@
+import { TRANSFER_BANK_COLLECTION, LEGACY_TRANSFER_BANK_FILTER } from "@/lib/bank-transfers/bank-registry";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -5,15 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 
-const COLLECTION = "BankAccount";
+const COLLECTION = TRANSFER_BANK_COLLECTION;
 const TRANSACTIONS_COLLECTION = "BankTransferTransaction";
 const SUPPORTED_CURRENCIES = ["USD", "TRY", "EUR"] as const;
-
-const DEFAULT_BANKS = [
-  { nameAr: "بنك زراعات كتاليم", nameEn: "Ziraat Katılım Bank", nameTr: "Ziraat Katılım Bankası", code: "ZIRAAT_KATILIM" },
-  { nameAr: "بنك البركة", nameEn: "Albaraka Bank", nameTr: "Albaraka Türk", code: "ALBARAKA" },
-  { nameAr: "بنك كويت ترك", nameEn: "Kuveyt Turk Bank", nameTr: "Kuveyt Türk", code: "KUVEYT_TURK" },
-];
 
 type BankRaw = Record<string, unknown>;
 type StatsRaw = { _id?: unknown; count?: number; total?: number };
@@ -97,21 +92,17 @@ function serializeBank(row: BankRaw, statsMap: Awaited<ReturnType<typeof getStat
 }
 
 async function listRawBanks(): Promise<BankRaw[]> {
-  const result = await prisma.$runCommandRaw({ find: COLLECTION, sort: { displayOrder: 1, createdAt: 1 } });
-  return isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch) ? result.cursor.firstBatch as BankRaw[] : [];
-}
-
-async function ensureDefaultBanks() {
-  const existing = await listRawBanks();
-  const existingCodes = new Set(existing.map((b) => cleanString(b.code)).filter(Boolean));
-  const now = new Date();
-  const ziraat = existing.find((b) => cleanString(b.code) === "ZIRAAT_KATILIM");
-  const ziraatId = mongoId(ziraat?._id) ?? mongoId(ziraat?.id);
-  if (ziraatId && cleanString(ziraat?.nameAr) !== "بنك زراعات كتاليم") {
-    await prisma.$runCommandRaw({ update: COLLECTION, updates: [{ q: { _id: { $oid: ziraatId } }, u: { $set: { nameAr: "بنك زراعات كتاليم", updatedAt: now } } }] });
+  const [current, legacy] = await Promise.all([
+    prisma.$runCommandRaw({ find: COLLECTION, sort: { displayOrder: 1, createdAt: 1 } }),
+    prisma.$runCommandRaw({ find: "BankAccount", filter: LEGACY_TRANSFER_BANK_FILTER }),
+  ]);
+  const rows = (value: unknown): BankRaw[] => isRecord(value) && isRecord(value.cursor) && Array.isArray(value.cursor.firstBatch) ? value.cursor.firstBatch as BankRaw[] : [];
+  const byId = new Map<string, BankRaw>();
+  for (const row of [...rows(legacy), ...rows(current)]) {
+    const id = mongoId(row._id) ?? mongoId(row.id);
+    if (id) byId.set(id, row);
   }
-  const missing = DEFAULT_BANKS.filter((bank) => !existingCodes.has(bank.code)).map((bank, index) => ({ ...bank, currency: "USD", supportedCurrencies: [...SUPPORTED_CURRENCIES], isActive: true, displayOrder: existing.length + index + 1, createdAt: now, updatedAt: now }));
-  if (missing.length) await prisma.$runCommandRaw({ insert: COLLECTION, documents: missing });
+  return [...byId.values()].sort((a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0));
 }
 
 export async function GET() {
@@ -119,7 +110,6 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
     if (denied) return denied;
-    await ensureDefaultBanks();
     const [banks, stats] = await Promise.all([listRawBanks(), getStats()]);
     return NextResponse.json({ banks: banks.map((bank) => serializeBank(bank, stats)), supportedCurrencies: SUPPORTED_CURRENCIES });
   } catch (error) {
@@ -142,7 +132,7 @@ export async function POST(request: NextRequest) {
     await prisma.$runCommandRaw({ insert: COLLECTION, documents: [doc] });
     const [banks, stats] = await Promise.all([listRawBanks(), getStats()]);
     const actor = auditActorFromDashboardSession(session!);
-    await writeAuditLog({ ...actor, stream: "TEAM", action: "BANK_ACCOUNT_CREATED", messageAr: `${actor.actorName ?? "مسؤول"} أضاف بنكًا جديدًا للتحويلات البنكية`, entityType: "BankAccount", metadata: { bankName: nameAr, currency: doc.currency } });
+    await writeAuditLog({ ...actor, stream: "TEAM", action: "BANK_ACCOUNT_CREATED", messageAr: `${actor.actorName ?? "مسؤول"} أضاف بنكًا جديدًا للتحويلات البنكية`, entityType: "BankTransferBank", metadata: { bankName: nameAr, currency: doc.currency } });
     return NextResponse.json({ banks: banks.map((bank) => serializeBank(bank, stats)), supportedCurrencies: SUPPORTED_CURRENCIES }, { status: 201 });
   } catch (error) {
     console.error("[bank-transfers] failed to create bank", error);

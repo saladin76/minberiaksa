@@ -5,7 +5,7 @@
  * returned snapshots, and writes a `PlatformSyncRun` audit row for every
  * attempt. Never throws  failed connections are recorded as `FAILED` and
  * the loop continues so a missing-config Meta connection cannot block a
- * working Twilio sync.
+ * working connection.
  */
 import { prisma } from "@/lib/prisma";
 import type { MarketingPlatformConnection, Prisma } from "@prisma/client";
@@ -25,7 +25,6 @@ import { syncGoogleAds } from "./google-ads";
 import { syncTikTok } from "./tiktok";
 import { syncX } from "./x";
 import { syncGa4 } from "./ga4";
-import { syncTwilio } from "./twilio";
 import { notImplementedResult } from "./types";
 
 export type PlatformSelector =
@@ -34,7 +33,6 @@ export type PlatformSelector =
   | "tiktok"
   | "x"
   | "ga4"
-  | "twilio"
   | "all";
 
 const CLIENT_BY_PLATFORM: Record<string, SyncClient> = {
@@ -43,7 +41,6 @@ const CLIENT_BY_PLATFORM: Record<string, SyncClient> = {
   TIKTOK: syncTikTok,
   X: syncX,
   GA4: syncGa4,
-  TWILIO: syncTwilio,
 };
 
 const SELECTOR_TO_DB_PLATFORM: Record<Exclude<PlatformSelector, "all">, string> = {
@@ -52,7 +49,6 @@ const SELECTOR_TO_DB_PLATFORM: Record<Exclude<PlatformSelector, "all">, string> 
   tiktok: "TIKTOK",
   x: "X",
   ga4: "GA4",
-  twilio: "TWILIO",
 };
 
 export interface SyncJobInput {
@@ -125,7 +121,7 @@ async function pickConnections(input: SyncJobInput): Promise<MarketingPlatformCo
     const single = await prisma.marketingPlatformConnection.findUnique({
       where: { id: input.connectionId },
     });
-    return single ? [single] : [];
+    return single && CLIENT_BY_PLATFORM[single.platform] ? [single] : [];
   }
   const where: Prisma.MarketingPlatformConnectionWhereInput = { enabled: true };
   if (input.platform !== "all") {

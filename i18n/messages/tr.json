@@ -3405,7 +3405,7 @@
     "a_ok": "Tamam",
     "a_no": "Hayır, teşekkürler",
     "s_support_intro": "Bunun için üzgünüm {name}. Son bağışınız {date} tarihinde {amount} tutarında ve durumu: {state}. Hangi bağışı kastettiğinizi ve ne olduğunu söyleyin; ekibe iletirim, e-postanıza kısa sürede yanıt verirler.",
-    "s_support_intro_guest": "Bunun için üzgünüm. Hangi bağışı kastettiğinizi (tarih ve tutar) ve ne olduğunu yazın, adınızı ve e-postanızı bırakın; ekibe iletirim, kısa sürede yanıt verirler.",
+    "s_support_intro_guest": "Mesajınızı göndermek için giriş yapın. Kısaca ne oldu?",
     "sp_title": "Ekibe gönder",
     "sp_which": "Hangi bağışla ilgili?",
     "sp_none": "Belirli bir bağışla ilgili değil",
@@ -3440,7 +3440,8 @@
     "cmd_field_frequency": "Sıklık",
     "cmd_field_status": "Durum",
     "a_confirm": "Onayla",
-    "a_cancel": "İptal"
+    "a_cancel": "İptal",
+    "sp_signin": "Mesajınızı göndermek için giriş yapın"
   },
   "ProjectShares": {
     "unitSingular": "hisse",

@@ -117,28 +117,6 @@ export const integrationProviderCatalog: ProviderCatalogEntry[] = [
     implementationStatus: "PLANNED",
   },
   {
-    key: "twilio",
-    displayName: "Twilio",
-    category: "MESSAGING_PROVIDER",
-    capabilities: ["MESSAGE_DELIVERY", "MESSAGE_STATUS", "WEBHOOKS"],
-    readinessLayers: ["SERVER", "REPORTING"],
-    supportedEnvironments: ["SERVER"],
-    officialDocs: [
-      { label: "Twilio Messaging", url: "https://www.twilio.com/docs/messaging" },
-      { label: "Twilio Status Callbacks", url: "https://www.twilio.com/docs/messaging/guides/outbound-message-status-in-status-callbacks" },
-    ],
-    credentialFields: [
-      { key: "accountSid", label: "Account SID", secret: false, required: true, environment: "SERVER" },
-      { key: "authToken", label: "Auth Token", secret: true, required: true, environment: "SERVER" },
-      { key: "messagingServiceSid", label: "Messaging Service SID", secret: false, required: false, environment: "SERVER" },
-    ],
-    notes: [
-      "Use Twilio for international SMS or WhatsApp flows where enabled.",
-      "Turkey SMS should route to Netgsm instead of Twilio unless explicitly overridden.",
-    ],
-    implementationStatus: "PARTIAL",
-  },
-  {
     key: "netgsm",
     displayName: "Netgsm",
     category: "MESSAGING_PROVIDER",
@@ -155,7 +133,7 @@ export const integrationProviderCatalog: ProviderCatalogEntry[] = [
     ],
     notes: [
       "Primary SMS provider for Turkey.",
-      "Keep routing rules separate from Twilio international SMS.",
+      "Use only explicitly configured active delivery providers.",
     ],
     implementationStatus: "PLANNED",
   },

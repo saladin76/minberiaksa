@@ -64,7 +64,6 @@ const platformAlias: Partial<Record<ProviderKey, string[]>> = {
   ga4: ["GA4", "GOOGLE_ANALYTICS"],
   tiktok: ["TIKTOK"],
   x_ads: ["X", "X_ADS", "TWITTER"],
-  twilio: ["TWILIO"],
   netgsm: ["NETGSM"],
   openai: ["OPENAI"],
   email: ["EMAIL"],

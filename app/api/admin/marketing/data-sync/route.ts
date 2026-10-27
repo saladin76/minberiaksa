@@ -9,7 +9,7 @@ import { runSyncJob, type PlatformSelector } from "@/lib/marketing/sync";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const platforms = ["meta", "google_ads", "tiktok", "x", "ga4", "twilio", "all"] as const satisfies readonly PlatformSelector[];
+const platforms = ["meta", "google_ads", "tiktok", "x", "ga4", "all"] as const satisfies readonly PlatformSelector[];
 
 const schema = z.object({
   platform: z.enum(platforms).default("all"),

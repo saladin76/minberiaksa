@@ -3,6 +3,10 @@
 // GET /api/campaigns/[id]/updates - Get all updates for a campaign
 // POST /api/campaigns/[id]/updates - Create new update (admin only)
 
+import { revalidatePath } from "next/cache";
+import { listProjectUpdates } from "@/lib/minbar/projects";
+import { publishProjectUpdateVideo } from "@/lib/content/project-update-video";
+import { normalizeVideoSource } from "@/lib/content/video-platform";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -10,73 +14,15 @@ import { authOptions } from "../../../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
-import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 
 type ParamsPromise = { params: Promise<{ id: string }> };
 
 // ✅ GET - Fetch campaign updates with translations
 export async function GET(request: NextRequest, { params }: ParamsPromise) {
-  try {
-    const { id } = await params;
-    const locale = request.headers.get("x-locale") || "ar";
-
-    // ✅ Performance optimization: Fetch only needed fields with locale-specific translations
-    const updates = await prisma.update.findMany({
-      where: {
-        campaignId: id,
-      },
-      select: {
-        id: true,
-        title: true,        // Arabic default
-        description: true,  // Arabic default
-        image: true,
-        videoUrl: true,
-        createdAt: true,
-        
-        // Fetch requested locale + English (fallback chain)
-        translations: {
-          where: translationLocaleWhere(locale),
-          select: {
-            locale: true,
-            title: true,
-            description: true,
-          },
-          take: 2,
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50, // Limit to prevent huge payloads
-    });
-
-    // Transform: requested locale → English → Arabic (base)
-    const transformedUpdates = updates.map((update) => {
-      const t = pickTranslation(update.translations, locale);
-      return {
-        id: update.id,
-        title: t?.title || update.title,
-        description: t?.description || update.description,
-        image: update.image,
-        videoUrl: update.videoUrl,
-        createdAt: update.createdAt.toISOString(),
-      };
-    });
-
-    return NextResponse.json(transformedUpdates, {
-      headers: {
-        // Cache for 2 minutes
-        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
-      },
-    });
-    
-  } catch (error) {
-    console.error("Error fetching updates:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch updates" },
-      { status: 500 }
-    );
-  }
+  const { id } = await params;
+  const locale = request.headers.get("x-locale") || "ar";
+  const updates = await listProjectUpdates(id, locale);
+  return NextResponse.json(updates.map(row => ({ ...row, description: row.text })), { headers: { "Cache-Control": "public, s-maxage=120", Vary: "x-locale" } });
 }
 
 // ✅ POST - Create new update with translations (admin only)
@@ -132,12 +78,15 @@ export async function POST(request: NextRequest, { params }: ParamsPromise) {
     // ✅ STEP 5: Create update + translations in a single nested write.
     // The interactive transaction plus the follow-up findUnique cost three
     // round trips to do what Prisma performs atomically in one.
-    const fullUpdate = await prisma.update.create({
+    const source = data.videoUrl ? normalizeVideoSource({ url: data.videoUrl }) : null;
+    if (source?.presentation.provider === "invalid") return NextResponse.json({ error: "كود التضمين أو رابط الفيديو غير مدعوم" }, { status: 400 });
+    const fullUpdate = await prisma.$transaction(async tx => {
+    const created = await tx.update.create({
       data: {
         title: data.title,
         description: data.description,
         image: data.image || null,
-        videoUrl: data.videoUrl || null,
+        videoUrl: source?.url || null,
         campaignId: id,
         ...(translationData.length > 0
           ? {
@@ -168,6 +117,10 @@ export async function POST(request: NextRequest, { params }: ParamsPromise) {
       },
     });
 
+    const libraryVideo = await publishProjectUpdateVideo(tx, created, id);
+    return { ...created, libraryVideoId: libraryVideo?.id || null };
+    }, { maxWait: 10000, timeout: 30000 });
+
     const actor = auditActorFromDashboardSession(session!);
     queueAuditLog({
       ...actor,
@@ -178,6 +131,7 @@ export async function POST(request: NextRequest, { params }: ParamsPromise) {
       metadata: { campaignId: id },
     });
 
+    revalidatePath("/", "layout");
     return NextResponse.json(fullUpdate, {
       status: 201,
       headers: { "Cache-Control": "no-store" },

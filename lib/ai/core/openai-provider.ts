@@ -66,6 +66,7 @@ export async function generateOpenAiDraft(input: ProviderDraftInput): Promise<Pr
   try {
     const response = await fetch(`${status.baseUrl}/responses`, {
       method: "POST",
+      signal: AbortSignal.timeout(90_000),
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",

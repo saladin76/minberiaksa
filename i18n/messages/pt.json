@@ -3336,7 +3336,7 @@
     "a_ok": "Está bem",
     "a_no": "Não, obrigado",
     "s_support_intro": "Lamento, {name}. A sua última doação foi de {amount} em {date}, estado: {state}. Diga-me a que doação se refere e o que aconteceu; envio à equipa, que responderá em breve por e-mail.",
-    "s_support_intro_guest": "Lamento. Diga-me a que doação se refere (data e valor) e o que aconteceu, deixe o seu nome e e-mail; envio à equipa, que responderá em breve.",
+    "s_support_intro_guest": "Inicie sessão para enviar a mensagem. Em resumo, o que aconteceu?",
     "sp_title": "Enviar à equipa",
     "sp_which": "A que doação se refere?",
     "sp_none": "Não é sobre uma doação específica",
@@ -3371,7 +3371,8 @@
     "cmd_field_frequency": "Frequência",
     "cmd_field_status": "Estado",
     "a_confirm": "Confirmar",
-    "a_cancel": "Cancelar"
+    "a_cancel": "Cancelar",
+    "sp_signin": "Inicie sessão para enviar a mensagem"
   },
   "ProjectShares": {
     "unitSingular": "quota",

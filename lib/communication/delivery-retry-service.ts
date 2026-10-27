@@ -251,7 +251,7 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   }
   let frequencyReservation: WhatsAppMarketingReservation | null = null;
   if (row.channel === "WHATSAPP" && row.purpose === "MARKETING") {
-    const frequency = await reserveWhatsappMarketingSend(row.recipientUserId);
+    const frequency = await reserveWhatsappMarketingSend(row.recipientUserId, new Date(), row.recipientPhone);
     if (!frequency.ok) {
       await markDeliveryStatus(
         newId,

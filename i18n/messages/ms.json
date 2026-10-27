@@ -2297,7 +2297,7 @@
     "a_ok": "Baik",
     "a_no": "Tidak, terima kasih",
     "s_support_intro": "Maaf tentang itu, {name}. Derma terakhir anda {amount} pada {date}, status: {state}. Beritahu derma mana yang anda maksudkan dan apa yang berlaku; saya hantar kepada pasukan, mereka akan membalas ke e-mel anda tidak lama lagi.",
-    "s_support_intro_guest": "Maaf tentang itu. Beritahu derma mana yang anda maksudkan (tarikh dan jumlah) dan apa yang berlaku, tinggalkan nama dan e-mel; saya hantar kepada pasukan, mereka akan membalas tidak lama lagi.",
+    "s_support_intro_guest": "Log masuk untuk menghantar mesej. Ringkasnya, apa yang berlaku?",
     "sp_title": "Hantar kepada pasukan",
     "sp_which": "Tentang derma yang mana?",
     "sp_none": "Bukan tentang derma tertentu",
@@ -2332,7 +2332,8 @@
     "cmd_field_frequency": "Kekerapan",
     "cmd_field_status": "Status",
     "a_confirm": "Sahkan",
-    "a_cancel": "Batal"
+    "a_cancel": "Batal",
+    "sp_signin": "Log masuk untuk menghantar mesej"
   },
   "CategoryNav": {
     "showMore": "Tunjuk lagi ({count})",

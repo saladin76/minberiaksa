@@ -21,6 +21,7 @@ import dynamic from "next/dynamic";
 import { EditorModal } from "./EditorModal";
 import { DocumentUploadField } from "./DocumentUploadField";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
+import { ProjectVideoLibrary } from "./ProjectVideoLibrary";
 import { CampaignUpdatesEditor } from "./CampaignUpdatesEditor";
 import { CategoryStructureEditor } from "./CategoryStructureEditor";
 import { MediaCollectionEditor } from "./MediaCollectionEditor";
@@ -117,7 +118,7 @@ function parseRich(value: string) {
 }
 const button =
   "rounded-lg border px-4 py-2 text-sm disabled:opacity-50 hover:bg-slate-50";
-export function ContentEditor({ kind, id, initialSection = "content", initialLocale = "ar" }: { kind: ContentKind; id: string; initialSection?: string; initialLocale?: string }) {
+export function ContentEditor({ kind, id, initialSection = "content", initialLocale = "ar", initialCampaignId }: { initialCampaignId?: string; kind: ContentKind; id: string; initialSection?: string; initialLocale?: string }) {
   const router = useRouter();
   const creationKey = useRef(crypto.randomUUID());
   const donationPresets = useRef<SuggestedDonationsSectionRef>(null);
@@ -130,7 +131,11 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [document, setDocument] = useState<Document | null>(null);
   const [values, setValues] = useState<Record<string, TextValues>>({});
   const [locale, setLocale] = useState(SUPPORTED_LOCALES.includes(initialLocale as typeof SUPPORTED_LOCALES[number]) ? initialLocale : "ar");
-  const [message, setMessage] = useState("");
+  const [message, setMessageText] = useState("");
+  const [messageTone, setMessageTone] = useState<"info" | "success" | "error">("info");
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const setMessage = useCallback((text: string, tone: "info" | "success" | "error" = "info") => { setMessageText(text); setMessageTone(tone); }, []);
+  useEffect(() => { if (messageTone !== "success" || !message) return; const timer = setTimeout(() => setMessage(""), 6500); return () => clearTimeout(timer); }, [message, messageTone, setMessage]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<Ga4Period | null>(null);
   const [busy, setBusy] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -147,6 +152,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [bulkSlugConfirmed, setBulkSlugConfirmed] = useState(false);
   const [section, setSection] = useState(EDITOR_SECTIONS[kind].some(item => item.id === initialSection) ? initialSection : "content");
   const [settingsDraft, setSettingsDraft] = useState<ContentRecord>({});
+  const [assistAction, setAssistAction] = useState<"translate" | "seo" | "proofread" | "faq">("translate");
+  const [assistScope, setAssistScope] = useState("auto");
+  const assistTargetScope = assistScope === "auto" ? (assistAction === "translate" && locale === "ar" ? "missing" : "current") : assistScope;
   const [languageReview, setLanguageReview] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [uploads, setUploads] = useState(0);
@@ -167,7 +175,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       if (number !== requestRef.current) return;
       setDocument(data);
       setValues(data.values);
-      setSettingsDraft(settingsFor(kind, data.settings));
+      setSettingsDraft({ ...settingsFor(kind, data.settings), ...(id === "new" && kind === "videos" && initialCampaignId ? { campaignIds: [initialCampaignId] } : {}) });
       setPresetsDirty(false); setPresetEpoch((epoch) => epoch + 1);
       setSelected(data.fields.filter((f) => !f.locked).map((f) => f.key));
       setMessage("");
@@ -175,7 +183,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       if (number === requestRef.current)
         setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر التحميل"));
     }
-  }, [url, kind]);
+  }, [url, kind, id, initialCampaignId, setMessage]);
   const invalidateRequests = useCallback(() => {
     generationAbort.current?.abort();
     requestRef.current++;
@@ -261,7 +269,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       setPresetsDirty(false); setPresetEpoch((epoch) => epoch + 1);
       setProposal(null);
       setReviewed(false);
-      setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
+      setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"), "success");
+      setSavedAt(new Date().toISOString());
       toast.success(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
       if (id === "new") router.replace(`/dashboard/content/${kind}/${saved.id}`);
     } catch (error) {
@@ -269,19 +278,20 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
         error instanceof Error
           ? error.message
           : dt("تعذر تأكيد الحفظ. احتفظ بتعديلاتك وأعد المحاولة."),
+        "error",
       );
     } finally {
       setBusy("");
     }
   };
-  const suggest = async (action: "seo" | "translate" | "faq" | "proofread", all = false) => {
+  const suggest = async (action: "seo" | "translate" | "faq" | "proofread", all = false, targetLocales?: string[]) => {
     if (!document || (dirty && action !== "proofread") || id === "new") {
       setMessage(dt("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية"));
       return;
     }
-    const targets = action === "translate"
+    const targets = targetLocales ?? (action === "translate"
       ? all ? SUPPORTED_LOCALES.filter((code) => code !== "ar" && !document.statuses[code].complete) : [locale]
-      : all ? SUPPORTED_LOCALES.filter(code => action !== "proofread" || document.fields.some(field => field.group === "content" && !field.locked && (values[code]?.[field.key] || "").trim())) : [locale];
+      : all ? SUPPORTED_LOCALES.filter(code => action !== "proofread" || document.fields.some(field => field.group === "content" && !field.locked && (values[code]?.[field.key] || "").trim())) : [locale]);
     if (!targets.length || (action === "translate" && targets.includes("ar"))) {
       setMessage(dt("اختر لغة أخرى أو لغة تحتاج ترجمة"));
       return;
@@ -642,41 +652,36 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
             disabled={Boolean(busy) || uploads > 0}
             onClick={save}
           >
-            <Save size={16} />
+            {!dirty && savedAt && busy !== "save" ? <CheckCircle2 size={16} /> : <Save size={16} />}
             {uploads
               ? dt("جار رفع الصور…")
               : busy === "save"
                 ? dt("جار الحفظ…")
-                : dt("حفظ التغييرات")}
+                : !dirty && savedAt ? dt("تم الحفظ") : dt("حفظ التغييرات")}
           </button>
         </div>
       </header>
       {languageButtons}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section aria-label={dt("الترجمة والمراجعة")} className="space-y-3 rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
-          <div className="flex items-center gap-2 font-semibold"><Globe2 size={18} aria-hidden="true" /><h2>{dt("الترجمة والمراجعة")}</h2></div>
-          <p className="text-xs leading-6 text-slate-600">{dt("العربية هي المصدر. اختر لغة المحتوى وحدد الحقول، ثم راجع الاقتراحات قبل حفظها معًا.")}</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || locale === "ar" || dirty} onClick={() => suggest("translate")}>{dt("ترجمة الحقول المحددة")}</button>
-            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || dirty} onClick={() => suggest("translate", true)}>{dt("ترجمة اللغات الناقصة")}</button>
-            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || id === "new"} onClick={() => suggest("proofread")}>{dt("تدقيق نص هذه اللغة")}</button>
-            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || id === "new"} onClick={() => suggest("proofread", true)}>{dt("تدقيق نصوص كل اللغات")}</button>
-          </div>
-          <p className="text-xs leading-6 text-slate-600">{dt("التدقيق يحافظ على المعنى والتنسيق. راجع المقترحات ثم اعتمدها في المسودة؛ لا تُحفظ تلقائيًا.")}</p>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />{dt("راجعت نص هذه اللغة")}</label>
-        </section>
-        <section aria-label={dt("SEO والبحث")} className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 font-semibold"><Search size={18} aria-hidden="true" /><h2>{dt("SEO والبحث")}</h2></div>{!isBanner ? <button type="button" className="text-sm font-semibold text-brand underline underline-offset-4" onClick={() => setSection("seo")}>{dt("فتح إعدادات SEO")}</button> : null}</div>
-          <p className="text-xs leading-6 text-slate-600">{dt("راجع عنوان البحث ووصفه والكلمة المستهدفة والمشاركة لكل لغة. الاقتراحات لا تُنشر تلقائيًا.")}</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || dirty} onClick={() => suggest("seo")}>{isBanner ? dt("اقتراح وصف الصورة") : dt("اقتراح SEO")}</button>
-            {!isBanner ? <>
-              <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || dirty} onClick={() => suggest("seo", true)}>{dt("اقتراح SEO لكل اللغات")}</button>
-              <button type="button" className={button + " bg-white"} disabled={Boolean(busy) || dirty} onClick={() => suggest("faq")}>{dt("اقتراح أسئلة لهذه اللغة")}</button>
-            </> : null}
-          </div>
-        </section>
-      </div>
+      <section aria-label={dt("الترجمة وSEO")} className="space-y-4 rounded-2xl border border-sky-100 bg-gradient-to-l from-sky-50 to-white p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-semibold"><Globe2 size={18} aria-hidden="true" /><h2>{dt("الترجمة وSEO")}</h2></div>
+          <p className="text-xs text-slate-500">{dt("١. إعداد الاقتراحات · ٢. مراجعتها · ٣. حفظ التغييرات")}</p>
+        </div>
+        <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <label className="space-y-1 text-sm"><span>{dt("المهمة")}</span><select aria-label={dt("المهمة")} className="w-full rounded-lg border bg-white p-3" value={assistAction} disabled={Boolean(busy)} onChange={event => setAssistAction(event.target.value as typeof assistAction)}>
+            <option value="translate">{dt("ترجمة المحتوى")}</option><option value="seo">{dt("تحسين الظهور في البحث")}</option><option value="proofread">{dt("تدقيق النصوص")}</option>{!isBanner ? <option value="faq">{dt("إعداد أسئلة شائعة")}</option> : null}
+          </select></label>
+          <label className="space-y-1 text-sm"><span>{dt("اللغات المستهدفة")}</span><select aria-label={dt("اللغات المستهدفة")} className="w-full rounded-lg border bg-white p-3" value={assistTargetScope} disabled={Boolean(busy)} onChange={event => setAssistScope(event.target.value)}>
+            <option value="current" disabled={assistAction === "translate" && locale === "ar"}>{LOCALES[locale as keyof typeof LOCALES]?.nativeLabel}</option><option value="missing">{dt("اللغات غير المكتملة")}</option><option value="all">{dt("كل اللغات")}</option>
+          </select></label>
+          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || id === "new" || (dirty && assistAction !== "proofread") || (assistAction === "translate" && assistTargetScope === "current" && locale === "ar")} onClick={() => {
+            const targets = (assistTargetScope === "current" ? [locale] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
+            void suggest(assistAction, false, targets);
+          }}>{assistAction === "translate" ? assistTargetScope === "missing" ? dt("ترجمة اللغات الناقصة") : assistTargetScope === "all" ? dt("ترجمة كل اللغات") : dt("ترجمة الحقول المحددة") : dt("إعداد الاقتراحات")}</button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs leading-6 text-slate-600"><p>{dt("العربية مصدر الترجمة. راجع النتائج وعدّلها قبل اعتمادها؛ النشر يتم عند حفظ التغييرات.")}</p><button type="button" className="font-semibold text-brand underline underline-offset-4" onClick={() => setSection("seo")}>{dt("فتح إعدادات SEO")}</button></div>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />{dt("راجعت نص هذه اللغة")}</label>
+      </section>
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
         <p>{dirty ? dt("احفظ التغييرات أولًا لإعداد اقتراحات من النسخة الحالية.") : dt("كل اقتراح يُراجع في المسودة قبل الحفظ.")}</p>
         <button type="button" className="underline underline-offset-4 disabled:opacity-50" disabled={Boolean(busy) || uploads > 0} onClick={() => { if (!dirty || window.confirm(dt("تحميل النسخة المحفوظة وإلغاء تعديلات المسودة؟"))) void initialLoad(); }}>{dt("تحميل النسخة المحفوظة")}</button>
@@ -689,8 +694,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       </div> : null}
       {message ? (
         <p
-          role="status"
-          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"
+          role={messageTone === "error" ? "alert" : "status"}
+          className={`rounded-xl border p-3 text-sm ${messageTone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : messageTone === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-sky-200 bg-sky-50 text-sky-800"}`}
         >
           {message}
         </p>
@@ -978,9 +983,10 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               </p>
             </section>
           ) : null}
-          {kind === "campaigns" && section === "history" ? (
+          {kind === "campaigns" && section === "history" ? (<>
+            <ProjectVideoLibrary campaignId={id} refreshKey={JSON.stringify([document.revision, document.settings.updates])} disabled={dirty || Boolean(busy) || id === "new"} />
             <CampaignUpdatesEditor campaignId={id} updates={document.settings.updates} disabled={dirty || Boolean(busy)} onSaved={initialLoad} onUploadingChange={onUploadingChange} />
-          ) : null}
+          </>) : null}
           {kind === "blog" && section === "review" && id !== "new" ? <Link href={`/dashboard/editorial-planner?improve=${id}`} className={button}>{dt("تجهيز تحسين المقال والبحث عن مصادره")}</Link> : null}
           {section === "review" ? (
             <section className="space-y-4 rounded-xl border bg-white p-5">
@@ -1030,6 +1036,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           {["campaigns", "categories", "blog", "super-categories"].includes(kind) && section === "links" ? (
             <section className="space-y-3 rounded-xl border bg-white p-4">
               <h3 className="font-semibold">{dt("الرابط وسجل التغييرات")}</h3>
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"><CheckCircle2 size={16} className="me-2 inline" />{dt("حماية روابط الحملات مفعّلة: كل رابط قديم يحوّل تلقائيًا للرابط الجديد مع الاحتفاظ بوسوم التتبع.")}</p>
               <p className="text-xs leading-6 text-slate-600">{dt("يمكن تعديل لغة واحدة أو مراجعة روابط كل اللغات معًا. الروابط القديمة تستمر في التحويل للرابط المعتمد.")}</p>
               <button type="button" className={button + " bg-brand text-white hover:bg-brand-dark"} disabled={Boolean(busy) || dirty || id === "new"} onClick={openBulkSlugs}>{dt("تعديل روابط كل اللغات")}</button>
               <p dir="ltr" className="break-all text-sm">

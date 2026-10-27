@@ -17,8 +17,7 @@ export const dynamic = "force-dynamic";
  * contact form writes to, so it shows up in /dashboard/inbox with the
  * existing triage, tagged `source: "AI_CHAT"`.
  *
- * A signed-in sender is identified by the session; a visitor must give a
- * name and an email so the team can answer. The donation it is about is
+ * Every sender must sign in; identity comes from the session. The donation it is about is
  * accepted only when it belongs to the signed-in sender. The last few
  * turns of the chat are appended so the team sees what was already said.
  */
@@ -42,6 +41,8 @@ function noStore(body: unknown, init: ResponseInit = {}) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions).catch(() => null);
+  if (!session?.user?.id) return noStore({ error: "AUTH_REQUIRED" }, { status: 401 });
   const limit = hit(clientKey(request.headers, "concierge-support"), 5, 10 * 60_000);
   if (!limit.ok) return noStore({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
 
@@ -50,11 +51,8 @@ export async function POST(request: NextRequest) {
   const input = parsed.data;
   const locale = isValidLocale(input.locale) ? input.locale : DEFAULT_LOCALE;
 
-  const session = await getServerSession(authOptions).catch(() => null);
   const userId = typeof session?.user?.id === "string" ? session.user.id : null;
-  if (!userId && (!input.guestName || !input.guestEmail)) {
-    return noStore({ error: "A name and an email are needed so the team can reply" }, { status: 400 });
-  }
+  if (!userId) return noStore({ error: "AUTH_REQUIRED" }, { status: 401 });
 
   /* The donation the message is about: only the sender's own. */
   let donation: { id: string; createdAt: Date; totalAmount: number; currency: string; status: string; paidAt: Date | null; paymentMethod: string | null } | null = null;

@@ -283,7 +283,7 @@ async function sendApprovedTemplateForDonor(args: {
 
   let frequencyReservation: WhatsAppMarketingReservation | null = null;
   if (args.expected === "MARKETING") {
-    const frequency = await reserveWhatsappMarketingSend(args.ctx.userId);
+    const frequency = await reserveWhatsappMarketingSend(args.ctx.userId, new Date(), args.ctx.phone);
     if (!frequency.ok) {
       await markDeliveryStatus(
         created.data.id,

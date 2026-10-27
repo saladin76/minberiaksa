@@ -1,3 +1,4 @@
+import { normalizeVideoSource } from "../content/video-platform";
 import { amountsByCurrency } from "../content/category-page-write";
 import { parseSuggestedDonations } from "../campaign/suggested-donations";
 import { parseSuggestedShareCounts } from "../campaign/campaign-modes";
@@ -41,6 +42,13 @@ export function validateWorkspaceSettings(
     }
     if ((["playlists", "courses"].includes(kind) && key === "videos") || (kind === "super-categories" && ["blocks", "items"].includes(key)))
       continue;
+    if (kind === "videos" && key === "url") {
+      if (typeof value !== "string") throw new Error("رابط فيديو غير صالح");
+      if (!value.trim()) { result.url = null; continue; }
+      const source = normalizeVideoSource({ url: value });
+      if (source.presentation.provider === "invalid" || (value.trim().startsWith("<") && !source.presentation.embedUrl)) throw new Error("كود التضمين أو رابط الفيديو غير مدعوم");
+      result.url = source.url; result.youtubeId = source.youtubeId; continue;
+    }
     if (!spec) throw new Error("إعداد غير مسموح: " + key);
     if (spec.type === "boolean") {
       if (typeof value !== "boolean") throw new Error("قيمة التفعيل غير صالحة");
@@ -113,7 +121,7 @@ export function validateWorkspaceSettings(
         )
       )
         throw new Error("موضع غير صالح");
-      if (key === "campaignIds" && value.length > 3)
+      if (kind === "blog" && key === "campaignIds" && value.length > 3)
         throw new Error("اختر ثلاثة مشاريع على الأكثر");
       if (
         kind === "categories" &&

@@ -1,5 +1,6 @@
 "use client";
 
+import { useContactAuthDraft } from "@/hooks/useContactAuthDraft";
 import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -155,8 +156,6 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
   const [donationId, setDonationId] = useState<string>(block.presetDonationId ?? "");
   /* The assistant's draft of what the visitor said; theirs to edit or send as is. */
   const [reason, setReason] = useState(block.draft ?? "");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const money = (amount: number, currency: string) => {
@@ -166,10 +165,12 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
       return `${amount} ${currency}`;
     }
   };
-  const ready = reason.trim().length >= 3 && (block.signedIn || (name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())));
+  const requireAuth = useContactAuthDraft(draft => { if (typeof draft.reason === "string") setReason(draft.reason); if (typeof draft.phone === "string") setPhone(draft.phone); }, "concierge-support");
+  const ready = reason.trim().length >= 3;
 
   const submit = async () => {
     if (!ready || status === "sending") return;
+    if (!requireAuth({ reason, phone })) return;
     setStatus("sending");
     try {
       const transcript = Array.from(document.querySelectorAll<HTMLElement>(".cg-turn"))
@@ -185,7 +186,6 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
           subject: block.subject,
           donationId: donationId || null,
           reason: reason.trim(),
-          ...(block.signedIn ? {} : { guestName: name.trim(), guestEmail: email.trim() }),
           ...(phone.trim() ? { guestPhone: phone.trim() } : {}),
           transcript,
         }),
@@ -239,12 +239,6 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
       ) : null}
       <span className="cg-label">{block.draft ? t("sp_draft_hint") : t("sp_reason")}</span>
       <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("sp_reason")} aria-label={t("sp_reason")} className="cg-input cg-textarea" rows={block.draft ? 4 : 3} maxLength={2000} disabled={status === "sending"} />
-      {!block.signedIn ? (
-        <div className="cg-gift">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("sp_name")} aria-label={t("sp_name")} className="cg-input" disabled={status === "sending"} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("sp_email")} aria-label={t("sp_email")} className="cg-input" inputMode="email" dir="ltr" disabled={status === "sending"} />
-        </div>
-      ) : null}
       <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("sp_phone")} aria-label={t("sp_phone")} className="cg-input" inputMode="tel" dir="ltr" disabled={status === "sending"} />
       {status === "error" ? (
         <p className="cg-notice cg-notice-warning">
@@ -253,7 +247,7 @@ function SupportTicket({ block, onAction }: { block: Extract<ConciergeBlock, { t
         </p>
       ) : null}
       <button type="button" className="cg-btn cg-btn-primary cg-btn-full" disabled={!ready || status === "sending"} onClick={submit}>
-        {t("sp_send")}
+        {block.signedIn ? t("sp_send") : t("sp_signin")}
       </button>
     </div>
   );

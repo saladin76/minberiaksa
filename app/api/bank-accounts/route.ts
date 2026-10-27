@@ -1,3 +1,4 @@
+import { PUBLISHED_BANK_ACCOUNT_FIELDS } from "@/lib/bank-transfers/bank-registry";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     const rows = await prisma.bankAccount.findMany({
       where: {
+        ...PUBLISHED_BANK_ACCOUNT_FIELDS,
         isActive: true,
         OR: [{ locales: { isEmpty: true } }, { locales: { has: locale } }],
       },

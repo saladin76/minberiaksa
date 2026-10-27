@@ -12,7 +12,6 @@ const PLATFORM_TO_SELECTOR: Record<string, PlatformSelector> = {
   TIKTOK: "tiktok",
   X: "x",
   GA4: "ga4",
-  TWILIO: "twilio",
 };
 
 function defaultDateRange() {

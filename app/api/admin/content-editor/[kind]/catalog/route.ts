@@ -26,7 +26,7 @@ export async function GET(
       kind === "campaigns"
         ? prisma.category.findMany({ select: { id: true, name: true } })
         : [],
-      ["categories", "blog", "super-categories", "urgent-banners"].includes(
+      ["categories", "blog", "super-categories", "urgent-banners", "videos"].includes(
         kind,
       )
         ? prisma.campaign.findMany({

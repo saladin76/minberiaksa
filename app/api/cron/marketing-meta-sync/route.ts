@@ -6,7 +6,7 @@ import { isCronAuthorizationValid } from "@/lib/communication/cron-auth";
  * NOT scheduled in vercel.json  deliberately, and it should stay that way.
  *
  * `/api/cron/marketing-platform-sync` runs every 3 hours over
- * ["meta", "google_ads", "ga4", "tiktok", "x", "twilio"]  "meta" included  so this route is
+ * ["meta", "google_ads", "ga4", "tiktok", "x"]  "meta" included  so this route is
  * fully superseded for scheduled work. Adding it to vercel.json would sync Meta twice on
  * overlapping windows for no benefit.
  *

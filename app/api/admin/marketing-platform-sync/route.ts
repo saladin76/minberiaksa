@@ -12,7 +12,6 @@ const PLATFORM_SELECTORS = [
   "tiktok",
   "x",
   "ga4",
-  "twilio",
   "all",
 ] as const satisfies readonly PlatformSelector[];
 

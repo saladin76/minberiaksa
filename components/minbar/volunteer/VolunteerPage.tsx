@@ -1,4 +1,5 @@
 "use client";
+import { useContactAuthDraft } from "@/hooks/useContactAuthDraft";
 
 import { type FormEvent, type ReactElement, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -110,6 +111,8 @@ export default function VolunteerPage() {
     shakeTimer.current = setTimeout(() => setShake(false), 350);
   };
 
+  const requireContactAuth = useContactAuthDraft(draft => { if (typeof draft.name === "string") setName(draft.name); if (typeof draft.country === "string") setCountry(draft.country); if (typeof draft.email === "string") setEmail(draft.email); if (typeof draft.phone === "string") setPhone(draft.phone); if (typeof draft.trackIndex === "number") setTrackIndex(draft.trackIndex); if (typeof draft.bio === "string") setBio(draft.bio); });
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
@@ -119,6 +122,8 @@ export default function VolunteerPage() {
       return;
     }
 
+    if (!requireContactAuth({ name, country, email, phone, trackIndex, bio })) return;
+
     setSubmitting(true);
     setError("");
     try {
@@ -126,6 +131,8 @@ export default function VolunteerPage() {
          track, and both are answers the applicant actually gave  so they lead
          the message body rather than being dropped on the way to the team. */
       const lines = [
+        `${tContact("nameLabel")}: ${name.trim()}`,
+        `${tContact("emailLabel")}: ${email.trim()}`,
         `${tCommon("volunteerField")}: ${chosenTitle}`,
         country.trim() ? `${t("countryLabel")}: ${country.trim()}` : null,
         bio.trim(),

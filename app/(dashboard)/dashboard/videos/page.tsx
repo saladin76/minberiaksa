@@ -36,6 +36,8 @@ interface VideoRow {
   url: string;
   thumbnail: string;
   regionKey: string;
+  sourceUpdateId?: string | null;
+  campaignIds?: string[]; campaigns?: { id: string; title: string }[];
   localeFilter: string[];
   showOnHome: boolean;
   order: number;
@@ -46,9 +48,10 @@ interface VideoRow {
 const VIDEO_ROW = 'VIDEO_ROW';
 
 function DraggableVideoRow({
-  video, index, moveRow, commitOrder, children,
+  video, index, moveRow, commitOrder, children, reorderEnabled,
 }: {
   video: VideoRow;
+  reorderEnabled: boolean;
   index: number;
   moveRow: (from: number, to: number) => void;
   commitOrder: () => void;
@@ -56,6 +59,7 @@ function DraggableVideoRow({
 }) {
   const [{ isDragging }, drag, preview] = useDrag({
     type: VIDEO_ROW,
+    canDrag: reorderEnabled,
     item: { index },
     /* Persist once on drop. `hover` fires for every row the pointer crosses, so
        saving there sends one transaction per tick and the responses can land
@@ -67,7 +71,7 @@ function DraggableVideoRow({
   const [, drop] = useDrop({
     accept: VIDEO_ROW,
     hover: (item: { index: number }) => {
-      if (item.index === index) return;
+      if (!reorderEnabled || item.index === index) return;
       moveRow(item.index, index);
       item.index = index;
     },
@@ -88,7 +92,7 @@ function DraggableVideoRow({
       ref={rowRef}
       className={`${isDragging ? 'opacity-50' : ''} ${!video.isActive ? 'bg-muted/30' : ''} hover:bg-muted/50 transition-colors`}
     >
-      <TableCell className="w-12 p-2 cursor-grab active:cursor-grabbing" ref={handleRef}>
+      <TableCell className={`w-12 p-2 ${reorderEnabled ? "cursor-grab active:cursor-grabbing" : "opacity-30"}`} ref={handleRef}>
         <GripVertical className="w-5 h-5 text-muted-foreground mx-auto" />
       </TableCell>
       {children}
@@ -120,6 +124,9 @@ export default function VideosPage() {
   const router = useRouter();
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const reorderEnabled = !search.trim() && projectFilter === "all";
   const [tab, setTab] = useState('ALL');
   const [deleteTarget, setDeleteTarget] = useState<VideoRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -146,8 +153,8 @@ export default function VideosPage() {
      section at a time  dragging inside a filtered view would otherwise
      renumber rows the editor cannot see. */
   const visible = useMemo(
-    () => (tab === 'ALL' ? videos : videos.filter((v) => v.type === tab)),
-    [videos, tab]
+    () => (tab === 'ALL' ? videos : videos.filter((v) => v.type === tab)).filter(video => (projectFilter === "all" || video.campaignIds?.includes(projectFilter)) && (!search.trim() || [video.title, video.slug, ...(video.campaigns || []).map(p => p.title)].some(text => text.toLowerCase().includes(search.trim().toLowerCase())))),
+    [videos, tab, search, projectFilter]
   );
 
   const latest = useRef(visible);
@@ -248,6 +255,7 @@ export default function VideosPage() {
           </TabsList>
         </Tabs>
 
+        <div className="flex flex-wrap gap-3 rounded-xl border bg-white p-3"><input aria-label={dt("البحث في الفيديوهات والمشاريع")} className="min-w-0 flex-1 rounded-lg border p-2.5 text-sm" value={search} onChange={event => setSearch(event.target.value)} placeholder={dt("ابحث عن فيديو أو مشروع")} /><select aria-label={dt("المشروع المرتبط")} className="max-w-full rounded-lg border p-2.5 text-sm" value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="all">{dt("كل المشاريع")}</option>{[...new Map(videos.flatMap(video => video.campaigns || []).map(project => [project.id, project])).values()].map(project => <option key={project.id} value={project.id}>{project.title}</option>)}</select>{!reorderEnabled ? <p className="w-full text-xs text-slate-500">{dt("أزل فلاتر البحث والمشروع لإعادة ترتيب القائمة كاملة.")}</p> : null}</div>
         {visible.length === 0 ? (
           <EmptyState
             icon={VideoIcon}
@@ -262,6 +270,7 @@ export default function VideosPage() {
                   <TableHead className="w-12" />
                   <TableHead>{dt("الفيديو")}</TableHead>
                   <TableHead>{dt("القسم")}</TableHead>
+                  <TableHead>{dt("المشاريع المرتبطة")}</TableHead>
                   <TableHead>{dt("اللغات")}</TableHead>
                   <TableHead>{dt("الرئيسية")}</TableHead>
                   <TableHead>{dt("الترجمات")}</TableHead>
@@ -274,6 +283,7 @@ export default function VideosPage() {
                   <DraggableVideoRow
                     key={video.id}
                     video={video}
+                    reorderEnabled={reorderEnabled}
                     index={index}
                     moveRow={moveRow}
                     commitOrder={commitOrder}
@@ -296,10 +306,9 @@ export default function VideosPage() {
                     </TableCell>
                     <TableCell className="text-xs">
                       {VIDEO_TYPE_LABELS[video.type] ?? video.type}
-                      {video.regionKey ? (
-                        <div className="text-[10px] text-slate-400" dir="ltr">{({ regionGaza: dt("غزة"), regionQuds: dt("القدس"), regionAqsa: dt("المسجد الأقصى"), regionField: dt("الميدان"), tagTezkiye: dt("تزكية") } as Record<string, string>)[video.regionKey] || dt(video.regionKey)}</div>
-                      ) : null}
+
                     </TableCell>
+                    <TableCell className="max-w-56 text-xs"><div className="flex flex-wrap gap-1">{video.campaigns?.length ? video.campaigns.map(project => <a key={project.id} href={`/dashboard/content/campaigns/${project.id}?section=history`} className="rounded-md bg-brand/5 px-2 py-1 text-brand hover:underline">{project.title}</a>) : <span className="text-slate-400">{dt("دون مشروع مرتبط")}</span>}</div></TableCell>
                     <TableCell><LocaleScope localeFilter={video.localeFilter} /></TableCell>
                     <TableCell>
                       <Switch
@@ -345,6 +354,7 @@ export default function VideosPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>{dt("حذف الفيديو")}</AlertDialogTitle>
               <AlertDialogDescription>
+              {deleteTarget?.sourceUpdateId ? <span className="mb-2 block font-semibold">{dt("سيُحذف أيضًا تحديث المشروع الذي أُضيف منه هذا الفيديو.")}</span> : null}
                 {dtx("سيتم حذف «{0}» وكل ترجماته نهائيًا.", [deleteTarget?.title])}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

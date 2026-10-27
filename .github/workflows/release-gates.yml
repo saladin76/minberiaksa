@@ -116,7 +116,11 @@ jobs:
         run: node --import tsx scripts/public-media-browser-test.mjs
       - name: Dashboard donation, communication and analytics flows
         run: node --import tsx scripts/dashboard-followup-browser-test.mjs
+      - name: Operations editors, gallery, cart, Search and renewal readiness
+        if: ${{ !cancelled() }}
+        run: node --import tsx scripts/operations-review-browser-test.mjs
       - name: Checkout validation, privacy and gateway handoff
+        if: ${{ !cancelled() }}
         run: node --import tsx scripts/checkout-readiness-browser-test.mjs
       - if: always()
         uses: actions/upload-artifact@v4

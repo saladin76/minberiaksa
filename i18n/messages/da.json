@@ -2297,7 +2297,7 @@
     "a_ok": "Okay",
     "a_no": "Nej tak",
     "s_support_intro": "Det beklager jeg, {name}. Din seneste gave var {amount} den {date}, status: {state}. Fortæl mig, hvilken gave du mener, og hvad der skete; jeg sender det til teamet, som snart svarer på e-mail.",
-    "s_support_intro_guest": "Det beklager jeg. Fortæl mig, hvilken gave du mener (dato og beløb), og hvad der skete, og efterlad navn og e-mail; jeg sender det til teamet, som snart svarer.",
+    "s_support_intro_guest": "Log ind for at sende din besked. Kort: hvad skete der?",
     "sp_title": "Send til teamet",
     "sp_which": "Hvilken gave drejer det sig om?",
     "sp_none": "Ingen bestemt gave",
@@ -2332,7 +2332,8 @@
     "cmd_field_frequency": "Hyppighed",
     "cmd_field_status": "Status",
     "a_confirm": "Bekræft",
-    "a_cancel": "Annuller"
+    "a_cancel": "Annuller",
+    "sp_signin": "Log ind for at sende din besked"
   },
   "CategoryNav": {
     "showMore": "Vis flere ({count})",

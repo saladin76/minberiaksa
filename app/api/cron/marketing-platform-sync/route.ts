@@ -4,7 +4,7 @@ import { isCronAuthorizationValid } from "@/lib/communication/cron-auth";
 
 export const dynamic = "force-dynamic";
 
-const PLATFORMS: PlatformSelector[] = ["meta", "google_ads", "ga4", "tiktok", "x", "twilio"];
+const PLATFORMS: PlatformSelector[] = ["meta", "google_ads", "ga4", "tiktok", "x"];
 
 function day(date: Date) {
   return date.toISOString().slice(0, 10);

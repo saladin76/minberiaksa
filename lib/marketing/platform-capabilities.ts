@@ -90,22 +90,6 @@ export const MARKETING_PLATFORM_CAPABILITIES: MarketingPlatformCapability[] = [
     plannedNext: ["TikTok Reporting API", "TikTok Events API server CompletePayment", "Creative/ad diagnostics"],
   },
   {
-    key: "whatsapp_twilio",
-    title: "WhatsApp / Twilio Messaging",
-    category: "messaging",
-    description: "ربط الرسائل والقوالب وروابط WhatsApp/SMS/Email مع نتائج التبرعات.",
-    connectionFields: [
-      { key: "accountSid", label: "Twilio Account SID", required: true, help: "تجده داخل Twilio Console. يستخدم للوصول إلى الرسائل والقوالب عند الحاجة." },
-      { key: "authToken", label: "Twilio Auth Token", required: true, secret: true, help: "تجده في Twilio Console ويتم حفظه كسري. لا يظهر للمستخدمين." },
-      { key: "messagingServiceSid", label: "Messaging Service SID", help: "يستخدم لتجميع الرسائل ضمن خدمة واحدة وتحليل حملات WhatsApp/SMS." },
-      { key: "whatsappFrom", label: "WhatsApp Sender", help: "رقم WhatsApp المعتمد في Twilio بصيغة whatsapp:+..." },
-    ],
-    canPull: ["Sent messages", "Delivery status", "Failed messages", "Templates", "Campaign/template IDs", "Tracked clicks إذا الروابط مولدة من النظام"],
-    canAnalyze: ["رسائل تصرف بدون تبرعات", "قوالب أعلى تحويلًا", "delivery issues", "click-to-donation rate"],
-    implementedNow: ["Twilio/SentMessage local sync", "UTM support للرسائل"],
-    plannedNext: ["Delivery callbacks", "Click tracking per template", "WhatsApp team inbox integration لاحقًا"],
-  },
-  {
     key: "ai_assistant",
     title: "AI Assistant API",
     category: "ai",

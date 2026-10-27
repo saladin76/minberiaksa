@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
@@ -90,6 +91,7 @@ export async function PUT(
       entityId: full.id,
     });
 
+    revalidatePath("/", "layout");
     return NextResponse.json(full);
   } catch (error) {
     console.error("Error updating video:", error);
@@ -114,12 +116,15 @@ export async function DELETE(
        name an id that no longer resolves to anything. */
     const existing = await prisma.video.findUnique({
       where: { id },
-      select: { id: true, title: true },
+      select: { id: true, title: true, sourceUpdateId: true },
     });
     if (!existing) return NextResponse.json({ error: "Video not found" }, { status: 404 });
 
     // Translations cascade from the schema.
-    await prisma.video.delete({ where: { id } });
+    await prisma.$transaction(async tx => {
+      if (existing.sourceUpdateId) await tx.update.deleteMany({ where: { id: existing.sourceUpdateId } });
+      await tx.video.delete({ where: { id } });
+    });
 
     const actor = auditActorFromDashboardSession(session!);
     queueAuditLog({
@@ -130,6 +135,7 @@ export async function DELETE(
       entityId: existing.id,
     });
 
+    revalidatePath("/", "layout");
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error deleting video:", error);

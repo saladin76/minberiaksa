@@ -84,7 +84,7 @@ export async function sendTriggerMessage(
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
     const html = localizeDonationFailureLinks(
-      await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext), ctx),
+      await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext), ctx, variant.resolvedLocale),
       locale,
     );
     const subject = renderEmailSubject(variant.subject, ctx);
