@@ -984,7 +984,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
             </section>
           ) : null}
           {kind === "campaigns" && section === "history" ? (<>
-            <ProjectVideoLibrary campaignId={id} refreshKey={document.revision} disabled={dirty || Boolean(busy) || id === "new"} />
+            <ProjectVideoLibrary campaignId={id} refreshKey={JSON.stringify([document.revision, document.settings.updates])} disabled={dirty || Boolean(busy) || id === "new"} />
             <CampaignUpdatesEditor campaignId={id} updates={document.settings.updates} disabled={dirty || Boolean(busy)} onSaved={initialLoad} onUploadingChange={onUploadingChange} />
           </>) : null}
           {kind === "blog" && section === "review" && id !== "new" ? <Link href={`/dashboard/editorial-planner?improve=${id}`} className={button}>{dt("تجهيز تحسين المقال والبحث عن مصادره")}</Link> : null}

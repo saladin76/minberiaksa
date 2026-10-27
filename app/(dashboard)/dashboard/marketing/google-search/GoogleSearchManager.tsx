@@ -38,7 +38,20 @@ export function GoogleSearchManager() {
     catch (failure) { setError((failure as Error).message); }
   }, []);
   useEffect(() => { void load(); }, [load]);
-  const openPlan = async (id: string) => { setBusy("load"); setError(""); try { const data = await api(`/api/admin/google-search?id=${id}`); setPlan(data.plan); setReport(null); } catch (failure) { setError((failure as Error).message); } finally { setBusy(""); } };
+  const openPlan = async (id: string) => {
+    setBusy("load"); setError("");
+    try {
+      const data = await api(`/api/admin/google-search?id=${id}`);
+      const selected = data.plan.request as SearchPlanRequest;
+      setPlan(data.plan); setReport(null);
+      setAccountId(selected.connectionId);
+      setPrompt(selected.prompt); setBudget(String(selected.dailyBudget));
+      setCountries(selected.countries.join(", "));
+      setLocales([...selected.locales]); setProjectIds([...selected.projectIds]);
+      setPolitical(selected.containsEuPoliticalAdvertising ? "yes" : "no");
+    } catch (failure) { setError((failure as Error).message); }
+    finally { setBusy(""); }
+  };
   useEffect(() => {
     if (plan?.status !== "PLANNING") return;
     const controller = new AbortController();

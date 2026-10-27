@@ -56,3 +56,12 @@ test('Google revenue uses the exact account calendar period across a daylight-sa
   const window = (loaded.searchReportWindow as unknown as (p: unknown, z: string) => {since:Date;until:Date})({startDate:'2026-10-24',endDate:'2026-10-25'}, 'Europe/Berlin');
   assert.equal(window.since.toISOString(), '2026-10-23T22:00:00.000Z'); assert.equal(window.until.toISOString(), '2026-10-25T23:00:00.000Z');
 });
+
+test('Search paid revenue handles legacy zero FX placeholders without inventing foreign conversion values', async () => {
+  const queries:Record<string,unknown>[]=[];
+  const loaded=isolated('lib/marketing/google-search/revenue.ts',{'@/lib/prisma':{prisma:{donation:{findMany:async(query:Record<string,unknown>)=>{queries.push(query);return [{id:'a',amount:5,amountUSD:0,currency:'USD',attribution:{utm_campaign:'gs-plan'}},{id:'b',amount:100,amountUSD:0,currency:'TRY',attribution:{utm_campaign:'gs-plan'}},{id:'c',amount:0,amountUSD:0,currency:'USD',attribution:{utm_campaign:'gs-plan'}},{id:'d',amount:999,amountUSD:999,currency:'USD',attribution:{utm_campaign:'another-plan'}}]}}}},'@/lib/donations/recurring-schedule':{fromWallClock}});
+  const window={since:new Date('2026-10-01'),until:new Date('2026-10-28')};
+  const result=await (loaded.searchPlanRevenue as unknown as (id:string,window:unknown)=>Promise<{paid:number;revenueUSD:number;missingFx:number}>)('plan',window);
+  assert.equal(result.paid,3);assert.equal(result.revenueUSD,5);assert.equal(result.missingFx,1);
+  const where=queries[0].where as {status:string;paidAt:{gte:Date;lt:Date}};assert.equal(where.status,'PAID');assert.equal(where.paidAt.gte,window.since);assert.equal(where.paidAt.lt,window.until);
+});

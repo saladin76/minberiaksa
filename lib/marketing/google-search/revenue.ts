@@ -18,7 +18,11 @@ export async function searchPlanRevenue(planId: string, window: { since: Date; u
       const attribution = row.attribution as Record<string, unknown> | null;
       if (attribution?.utm_campaign !== `gs-${planId}`) continue;
       paid++;
-      const usd = row.amountUSD ?? (row.currency === "USD" ? row.amount : null);
+      // Legacy zero placeholders are not evidence of a zero-dollar foreign gift.
+      // Match the paid communication reports: use the original USD amount when
+      // its conversion was never filled; flag foreign gifts without a rate.
+      const converted = typeof row.amountUSD === "number" && Number.isFinite(row.amountUSD) && (row.amountUSD > 0 || row.amount === 0 && row.amountUSD === 0);
+      const usd = converted ? row.amountUSD : row.currency === "USD" && Number.isFinite(row.amount) ? row.amount : null;
       if (usd == null || !Number.isFinite(usd)) missingFx++; else cents += Math.round(usd * 100);
     }
     scanned += rows.length;

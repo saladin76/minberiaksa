@@ -15,6 +15,7 @@ const en = require("../lib/dashboard/i18n/catalog/en.json"), tr = require("../li
 const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || text);
 const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
 let editorialWrites = 0;
+let projectLibraryVideos = [];
 let lastEditorialCommand = null;
 const seoFixture = {key:"home",revision:"seo-1",overrides:{},defaults:{ar:{metaTitle:"الصفحة الرئيسية",metaDescription:"وصف افتراضي"}}};
 let css = (
@@ -108,12 +109,13 @@ const server = createServer(async (req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.end('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#164e63"/></svg>');
   } else if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
-  } else if (req.url?.startsWith("/api/videos/admin")) { res.setHeader("Content-Type","application/json");res.end(JSON.stringify({items:[]}));
+  } else if (req.url?.startsWith("/api/videos/admin")) { res.setHeader("Content-Type","application/json");res.end(JSON.stringify({items:projectLibraryVideos}));
   } else if (req.url?.startsWith("/api/campaigns/")) {
     res.setHeader("Content-Type", "application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
       const input=body?JSON.parse(body):{}, campaign=documents.get("campaigns");updateWrites++;
       const result={...input,id:"222222222222222222222222",createdAt:"2026-10-26T08:00:00Z",translations:Object.entries(input.translations||{}).map(([locale,copy])=>({locale,...copy}))};
+      if(input.videoUrl){result.libraryVideoId="333333333333333333333333";projectLibraryVideos=[{id:result.libraryVideoId,title:result.title,isActive:true,sourceUpdateId:result.id,url:input.videoUrl}];}
       campaign.settings.updates=[result];res.end(JSON.stringify(result));
     });
   } else if (req.url?.startsWith("/api/admin/google-analytics/google-ads")) {
@@ -503,10 +505,12 @@ try {
   await additions.context().addCookies([{name:"dash-locale",value:"ar",url:origin}]);
   await additions.goto(origin+"/?kind=campaigns");
   await additions.getByRole("button",{name:/الإنجازات والسجل/}).click();
+  const campaignBeforeUpdateRevision = documents.get("campaigns").revision;
   await additions.getByRole("button",{name:"إضافة تحديث",exact:true}).click();
   let modal=additions.getByRole("dialog");
   await modal.getByLabel("العنوان",{exact:true}).fill("تحديث ميداني");
   await modal.getByLabel("المحتوى",{exact:true}).fill("تم توزيع الخبز وفق الخطة.");
+  await modal.getByLabel("رابط الفيديو أو كود iframe",{exact:true}).fill(origin+"/fixture-video.mp4");
   await modal.getByRole("button",{name:"EN",exact:true}).click();
   await modal.getByLabel("العنوان",{exact:true}).fill("Field update");
   await modal.getByLabel("المحتوى",{exact:true}).fill("Bread was distributed according to plan.");
@@ -517,7 +521,9 @@ try {
   await additions.screenshot({path:path.join(temp,"ar-update-editor-mobile.png"),fullPage:true,animations:"disabled"});
   await modal.getByRole("button",{name:"حفظ التحديث وكل اللغات",exact:true}).click();
   await modal.waitFor({state:"hidden"});
-  await additions.getByRole("heading",{name:"تحديث ميداني",exact:true}).waitFor();assert.equal(updateWrites,1);
+  await additions.getByText("تحديث ميداني",{exact:true}).waitFor();assert.equal(updateWrites,1);
+  assert.equal(documents.get("campaigns").revision,campaignBeforeUpdateRevision,"project revision stays unchanged when saving history");
+  assert.equal(await additions.getByRole("link",{name:"تعديل: تحديث ميداني",exact:true}).getAttribute("href"),"/dashboard/content/videos/333333333333333333333333","the linked library refreshes without a project revision change");
   assert.equal(documents.get("campaigns").settings.updates[0].translations[0].title,"Field update");
   await additions.goto(origin+"/?surface=strategy");
   await additions.getByRole("tab",{name:"SEO الصفحات العامة",exact:true}).waitFor();
