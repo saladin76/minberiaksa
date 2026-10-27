@@ -8644,5 +8644,8 @@
   "مجدول للموعد القادم": "Sonraki tarihe planlandı",
   "أقدم مزامنة محفوظة {0}": "Kaydedilen en eski eşitleme {0}",
   "لم تُزامَن بعض النسخ اللغوية بعد.": "Bazı dil sürümleri henüz eşitlenmedi.",
-  "قوالب Meta غير المرتبطة محليًا": "Yerel eşleşmesi olmayan Meta şablonları"
+  "قوالب Meta غير المرتبطة محليًا": "Yerel eşleşmesi olmayan Meta şablonları",
+  "لم تصل نتيجة مؤكدة للمزامنة (HTTP {0}). راجع آخر نتيجة موثقة قبل إعادة المحاولة.": "Eşitleme sonucu doğrulanamadı (HTTP {0}). Tekrar denemeden önce son kayıtlı sonucu inceleyin.",
+  "انقطع الاتصال قبل تأكيد نتيجة المزامنة. راجع آخر نتيجة موثقة قبل إعادة المحاولة.": "Eşitleme sonucu doğrulanmadan bağlantı kesildi. Tekrar denemeden önce son kayıtlı sonucu inceleyin.",
+  "آخر نتيجة موثقة {0}": "Son kayıtlı sonuç {0}"
 }

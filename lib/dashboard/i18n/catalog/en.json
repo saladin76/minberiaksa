@@ -8652,5 +8652,8 @@
   "مجدول للموعد القادم": "Scheduled for next date",
   "أقدم مزامنة محفوظة {0}": "Oldest recorded sync {0}",
   "لم تُزامَن بعض النسخ اللغوية بعد.": "Some language variants have not been synced yet.",
-  "قوالب Meta غير المرتبطة محليًا": "Meta templates without a local match"
+  "قوالب Meta غير المرتبطة محليًا": "Meta templates without a local match",
+  "لم تصل نتيجة مؤكدة للمزامنة (HTTP {0}). راجع آخر نتيجة موثقة قبل إعادة المحاولة.": "No confirmed sync result was received (HTTP {0}). Review the last recorded result before retrying.",
+  "انقطع الاتصال قبل تأكيد نتيجة المزامنة. راجع آخر نتيجة موثقة قبل إعادة المحاولة.": "The connection was lost before the sync result was confirmed. Review the last recorded result before retrying.",
+  "آخر نتيجة موثقة {0}": "Last recorded result {0}"
 }

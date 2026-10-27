@@ -27,6 +27,7 @@ import { useCampaignScope, CampaignScopeBanner } from "../../_shared/CampaignSco
 import { cn } from "@/lib/utils";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 import { ReadinessCard, type WhatsappTemplateReadiness } from "./ReadinessCard";
+import type { TemplateSyncResult } from "@/lib/communication/template-sync-result";
 
 export type WhatsappRow = {
   id: string;
@@ -60,6 +61,7 @@ type Payload = {
   retryableCount: number;
   provider: { configured: boolean; reason: string | null; missingFields: string[] };
   templates: WhatsappTemplateReadiness;
+  templateSync?: TemplateSyncResult | null;
   statusCounts: Record<string, number>;
   timeseries: Array<{ date: string; sent: number; delivered: number; read: number; failed: number }>;
   rows: WhatsappRow[];
@@ -298,7 +300,7 @@ export function WhatsappChannelDashboard() {
           </section>
 
           <div className="space-y-4">
-            {data && <ReadinessCard provider={data.provider} templates={data.templates} onSynced={() => void load()} />}
+            {data && <ReadinessCard provider={data.provider} templates={data.templates} lastSync={data.templateSync} onSynced={load} />}
             {summary && !neverSent && <FunnelCard steps={funnelSteps} trackingLive={trackingLive} />}
           </div>
         </div>

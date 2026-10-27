@@ -5,7 +5,8 @@ import Link from "next/link";
 import { RefreshCw, Plug, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dt } from "@/lib/dashboard/i18n";
-import { templateSyncTimestamps } from "@/lib/communication/template-sync-timestamps";
+import { templateSyncCoverage } from "@/lib/communication/template-sync-timestamps";
+import { templateSyncResult, type TemplateSyncResult } from "@/lib/communication/template-sync-result";
 import { fmtDateTime } from "../../_shared/channel-ui";
 
 export type WhatsappTemplateReadinessRow = {
@@ -20,7 +21,7 @@ export type WhatsappTemplateReadinessRow = {
   oldestSyncedAt?: string | null;
 };
 
-export type WhatsappTemplateReadiness = { total: number; ready: number; rows: WhatsappTemplateReadinessRow[] };
+export type WhatsappTemplateReadiness = { total: number; ready: number; rows: WhatsappTemplateReadinessRow[]; syncFreshness?: ReturnType<typeof templateSyncCoverage> };
 
 const TEMPLATE_STATE_STYLE: Record<string, { label: string; className: string }> = {
   READY: { get label() { return dt("جاهز للإرسال"); }, className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
@@ -37,41 +38,45 @@ const TEMPLATE_STATE_STYLE: Record<string, { label: string; className: string }>
  * Meta-approved template  and failing either produces the same symptom: nothing sends, silently.
  * Showing both side by side turns "why is this empty?" into a two-second read.
  */
-export function ReadinessCard({ provider, templates, onSynced }: { provider: { configured: boolean; reason: string | null; missingFields: string[] }; templates: WhatsappTemplateReadiness; onSynced: () => void }) {
+export function ReadinessCard({ provider, templates, lastSync, onSynced }: { provider: { configured: boolean; reason: string | null; missingFields: string[] }; templates: WhatsappTemplateReadiness; lastSync?: TemplateSyncResult | null; onSynced: () => void | Promise<void> }) {
   const canSend = provider.configured && templates.ready > 0;
   const [syncing, setSyncing] = useState(false);
-  const [syncNote, setSyncNote] = useState<string | null>(null);
-  const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
-  const latest = templateSyncTimestamps(templates.rows.map((row) => row.latestSyncedAt ?? row.lastSyncedAt)).latestAt;
-  const coverage = templateSyncTimestamps(templates.rows.map((row) => row.lastSyncedAt));
-  const oldest = templateSyncTimestamps(templates.rows.map((row) => row.oldestSyncedAt ?? row.lastSyncedAt)).oldestAt;
+  const [syncNote, setSyncNote] = useState<{ kind: "success" | "failure" | "uncertain"; text: string } | null>(null);
+  const [immediateResult, setImmediateResult] = useState<TemplateSyncResult | null>(null);
+  const coverage = templates.syncFreshness ?? templateSyncCoverage(templates.rows);
+  const latest = coverage.latestAt, oldest = coverage.oldestAt;
+  const saved = immediateResult && (!lastSync || immediateResult.completedAt > lastSync.completedAt) ? immediateResult : lastSync;
+  const unmatchedNames = saved?.unmatchedNames ?? [];
   const formatSyncTime = (value: string) => {
     const formatted = fmtDateTime(value);
     return formatted ? `${formatted.date} · ${formatted.time}` : "";
   };
+  const formatSummary = (result: TemplateSyncResult) => dt("{0} نسخة لغوية عبر {1} قالبًا", [result.variantsUpserted, result.matchedTemplates]) +
+    (result.unmatchedNames.length ? dt(" · {0} قالبًا لدى Meta بلا مقابل محلي", [result.unmatchedNames.length]) : "");
 
   const sync = async () => {
     setSyncing(true);
     setSyncNote(null);
-    setUnmatchedNames([]);
     try {
       const res = await fetch("/api/dashboard/communication/whatsapp/templates/sync", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) {
-        setSyncNote(dt("تعذّرت المزامنة: {0}", [body.error ?? dt("خطأ غير معروف")]));
-        return;
+      const body = await res.json().catch(() => null);
+      const result = res.ok && body?.ok === true ? templateSyncResult({ createdAt: body.completedAt, metadata: { ...body.summary, ok: true } }) : null;
+      if (result) {
+        setImmediateResult(result);
+        setSyncNote({ kind: "success", text: formatSummary(result) });
+      } else if (typeof body?.error === "string") {
+        setSyncNote({ kind: "failure", text: dt("تعذّرت المزامنة: {0}", [body.error]) });
+      } else {
+        setSyncNote({ kind: "uncertain", text: dt("لم تصل نتيجة مؤكدة للمزامنة (HTTP {0}). راجع آخر نتيجة موثقة قبل إعادة المحاولة.", [res.status]) });
       }
-      const s = body.summary as { variantsUpserted: number; matchedTemplates: number; unmatchedNames: string[] };
-      setUnmatchedNames(s.unmatchedNames);
-      setSyncNote(
-        dt("{0} نسخة لغوية عبر {1} قالبًا", [s.variantsUpserted, s.matchedTemplates]) +
-        (s.unmatchedNames.length ? dt(" · {0} قالبًا لدى Meta بلا مقابل محلي", [s.unmatchedNames.length]) : ""),
-      );
-      onSynced();
     } catch {
-      setSyncNote(dt("تعذّرت المزامنة: {0}", [dt("خطأ غير معروف")]));
+      setSyncNote({ kind: "uncertain", text: dt("انقطع الاتصال قبل تأكيد نتيجة المزامنة. راجع آخر نتيجة موثقة قبل إعادة المحاولة.") });
     } finally {
-      setSyncing(false);
+      // Refresh saved provider truth even when the HTTP response was lost. This
+      // reads our database; it never retries the Meta request or sends a message.
+      try { await onSynced(); } catch {
+        setSyncNote(current => current ?? { kind: "uncertain", text: dt("تعذّر تحميل البيانات") });
+      } finally { setSyncing(false); }
     }
   };
 
@@ -130,7 +135,8 @@ export function ReadinessCard({ provider, templates, onSynced }: { provider: { c
       </div>
       {oldest && oldest !== latest && <p className="mt-1 text-[10px] text-slate-500"><time dateTime={oldest}>{dt("أقدم مزامنة محفوظة {0}", [formatSyncTime(oldest)])}</time></p>}
       {templates.total > 0 && !coverage.complete && <p className="mt-1 text-[10px] text-amber-700">{dt("لم تُزامَن بعض النسخ اللغوية بعد.")}</p>}
-      {syncNote && <p role="status" className="mt-1 text-[11px] font-medium text-slate-600">{syncNote}</p>}
+      {syncNote && <p role="status" className={cn("mt-1 text-[11px] font-medium", syncNote.kind === "success" ? "text-emerald-700" : syncNote.kind === "failure" ? "text-red-700" : "text-amber-800")}>{syncNote.text}</p>}
+      {saved && syncNote?.kind !== "success" && <p className="mt-1 text-[10px] text-slate-500">{dt("آخر نتيجة موثقة {0}", [formatSyncTime(saved.completedAt)])} · {formatSummary(saved)}</p>}
       {unmatchedNames.length > 0 && <details className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">
         <summary className="cursor-pointer font-semibold">{dt("قوالب Meta غير المرتبطة محليًا")}</summary>
         <ul className="mt-2 space-y-1">{unmatchedNames.map((name) => <li key={name} dir="ltr" className="break-all">{name}</li>)}</ul>

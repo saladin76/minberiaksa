@@ -45,5 +45,5 @@ export async function POST() {
   if (!summary.ok) {
     return NextResponse.json({ ok: false, error: summary.reason, detail: summary.detail, summary }, { status: 502 });
   }
-  return NextResponse.json({ ok: true, summary });
+  return NextResponse.json({ ok: true, summary, completedAt: new Date().toISOString() });
 }

@@ -43,6 +43,7 @@ test("template Meta sync route returns the synchronized result for an authorized
   const response = await route.POST();
   assert.equal(response.status, 200);
   assert.equal(response.body.ok, true);
+  assert.equal(Number.isFinite(Date.parse(String(response.body.completedAt))), true);
   assert.equal(calls(), 1);
   assert.equal(route.maxDuration, 300);
 });
