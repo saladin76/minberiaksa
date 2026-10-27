@@ -375,7 +375,6 @@ try {
         const prefix = locale + "-" + kind;
         await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
         await view.setViewportSize({width:390,height:844});
-      if(surface === "seo") assert.ok((await view.getByLabel(ui(locale,"السوق المستهدف (اختياري)"),{exact:true}).boundingBox()).width >= 250, "SEO market input must stay usable on mobile");
         assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), prefix + " mobile layout overflows");
         assert.ok(await nav.evaluateAll(buttons => buttons.every(button => {const box=button.getBoundingClientRect();return box.left>=0 && box.right<=innerWidth+1;})), prefix + " editor sections must remain visible without a hidden horizontal menu");
         await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
@@ -467,6 +466,7 @@ try {
       const prefix = locale+"-"+surface;
       await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-desktop.png"),fullPage:true,animations:"disabled"});
       await view.setViewportSize({width:390,height:844});
+      if(surface === "seo") assert.ok((await view.getByLabel(ui(locale,"السوق المستهدف (اختياري)"),{exact:true}).boundingBox()).width >= 250, "SEO market input must stay usable on mobile");
       assert.ok(await view.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1),prefix+" mobile overflow");
       if (surface === "planner") { await view.waitForFunction(() => { const box = document.querySelector('[role="dialog"]')?.getBoundingClientRect(); return box && box.x >= -1 && box.right <= innerWidth + 1; }, undefined, {timeout:5000}); const box = await view.getByRole("dialog").boundingBox(); assert.ok(box && box.x >= -1 && box.x + box.width <= 391, "review dialog must stay within the mobile viewport: " + JSON.stringify(box)); }
       await view.evaluate(() => window.scrollTo(0, 0)); await view.screenshot({path:path.join(temp,prefix+"-mobile.png"),fullPage:true,animations:"disabled"});
