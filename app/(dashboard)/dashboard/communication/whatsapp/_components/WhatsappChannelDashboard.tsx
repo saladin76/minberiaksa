@@ -27,6 +27,7 @@ import { setCommunicationPurposeParams, type CommunicationPurposeGroup } from "@
 import { useCampaignScope, CampaignScopeBanner } from "../../_shared/CampaignScope";
 import { cn } from "@/lib/utils";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { templateSyncTimestamps } from "@/lib/communication/template-sync-timestamps";
 
 export type WhatsappRow = {
   id: string;
@@ -57,6 +58,8 @@ type TemplateRow = {
   approvedLocales: string[];
   rejectionReason: string | null;
   lastSyncedAt: string | null;
+  latestSyncedAt?: string | null;
+  oldestSyncedAt?: string | null;
 };
 
 type Payload = {
@@ -117,22 +120,23 @@ export function buildStages(row: StageSource): JourneyStage[] {
  * Meta-approved template  and failing either produces the same symptom: nothing sends, silently.
  * Showing both side by side turns "why is this empty?" into a two-second read.
  */
-function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["provider"]; templates: Payload["templates"]; onSynced: () => void }) {
+export function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["provider"]; templates: Payload["templates"]; onSynced: () => void }) {
   const canSend = provider.configured && templates.ready > 0;
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
-  /* The oldest sync across templates: readiness is only as current as the least recently synced row,
-     and "never synced" is the single most common reason a template reads NOT_REGISTERED. */
-  const lastSyncedAt = templates.rows.length > 0 && templates.rows.every((row) => Boolean(row.lastSyncedAt))
-    ? templates.rows.reduce<string | null>(
-        (oldest, row) => (row.lastSyncedAt && (!oldest || row.lastSyncedAt < oldest) ? row.lastSyncedAt : oldest),
-        null,
-      )
-    : null;
+  const [unmatchedNames, setUnmatchedNames] = useState<string[]>([]);
+  const latest = templateSyncTimestamps(templates.rows.map((row) => row.latestSyncedAt ?? row.lastSyncedAt)).latestAt;
+  const coverage = templateSyncTimestamps(templates.rows.map((row) => row.lastSyncedAt));
+  const oldest = templateSyncTimestamps(templates.rows.map((row) => row.oldestSyncedAt ?? row.lastSyncedAt)).oldestAt;
+  const formatSyncTime = (value: string) => {
+    const formatted = fmtDateTime(value);
+    return formatted ? `${formatted.date} · ${formatted.time}` : "";
+  };
 
   const sync = async () => {
     setSyncing(true);
     setSyncNote(null);
+    setUnmatchedNames([]);
     try {
       const res = await fetch("/api/dashboard/communication/whatsapp/templates/sync", { method: "POST" });
       const body = await res.json().catch(() => ({}));
@@ -141,11 +145,14 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
         return;
       }
       const s = body.summary as { variantsUpserted: number; matchedTemplates: number; unmatchedNames: string[] };
+      setUnmatchedNames(s.unmatchedNames);
       setSyncNote(
         dt("{0} نسخة لغوية عبر {1} قالبًا", [s.variantsUpserted, s.matchedTemplates]) +
         (s.unmatchedNames.length ? dt(" · {0} قالبًا لدى Meta بلا مقابل محلي", [s.unmatchedNames.length]) : ""),
       );
       onSynced();
+    } catch {
+      setSyncNote(dt("تعذّرت المزامنة: {0}", [dt("خطأ غير معروف")]));
     } finally {
       setSyncing(false);
     }
@@ -200,11 +207,17 @@ function ReadinessCard({ provider, templates, onSynced }: { provider: Payload["p
         >
           <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
           {dt("مزامنة القوالب من Meta")}</button>
-        <span className="text-[10px] text-slate-400">
-          {lastSyncedAt ? dt("آخر مزامنة {0}", [fmtDateTime(lastSyncedAt)?.date ?? ""]) : dt("لم تُزامَن القوالب بعد  الجاهزية تُقرأ من Meta.")}
+        <span className="text-[10px] text-slate-500">
+          {latest ? <time dateTime={latest}>{dt("آخر مزامنة {0}", [formatSyncTime(latest)])}</time> : dt("لم تُزامَن القوالب بعد  الجاهزية تُقرأ من Meta.")}
         </span>
       </div>
-      {syncNote && <p className="mt-1 text-[11px] font-medium text-slate-600">{syncNote}</p>}
+      {oldest && oldest !== latest && <p className="mt-1 text-[10px] text-slate-500"><time dateTime={oldest}>{dt("أقدم مزامنة محفوظة {0}", [formatSyncTime(oldest)])}</time></p>}
+      {templates.total > 0 && !coverage.complete && <p className="mt-1 text-[10px] text-amber-700">{dt("لم تُزامَن بعض النسخ اللغوية بعد.")}</p>}
+      {syncNote && <p role="status" className="mt-1 text-[11px] font-medium text-slate-600">{syncNote}</p>}
+      {unmatchedNames.length > 0 && <details className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900">
+        <summary className="cursor-pointer font-semibold">{dt("قوالب Meta غير المرتبطة محليًا")}</summary>
+        <ul className="mt-2 space-y-1">{unmatchedNames.map((name) => <li key={name} dir="ltr" className="break-all">{name}</li>)}</ul>
+      </details>}
 
       {templates.rows.length > 0 && (
         <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">

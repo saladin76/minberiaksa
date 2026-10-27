@@ -8,6 +8,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getActiveMetaWhatsappRuntimeConfig } from "@/lib/communication/runtime-config";
 import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { resolveVariantForLocale } from "@/lib/communication/whatsapp-template-sync";
+import { templateSyncTimestamps } from "@/lib/communication/template-sync-timestamps";
 import { communicationPurposeWhere, parseCommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 export const runtime = "nodejs";
@@ -182,16 +183,7 @@ export async function GET(request: NextRequest) {
       const approvedLanguages = [...new Set(
         t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode),
       )];
-      // Freshness is trustworthy only when every registered variant has been
-      // synced. When they all have timestamps, expose the oldest one because the
-      // template is only as fresh as its least-recently-synced variant.
-      const allVariantsSynced = t.wabaVariants.length > 0 && t.wabaVariants.every((v) => Boolean(v.lastSyncedAt));
-      const lastSyncedAt = allVariantsSynced
-        ? t.wabaVariants.reduce<Date | null>(
-            (oldest, v) => (!oldest || v.lastSyncedAt < oldest ? v.lastSyncedAt : oldest),
-            null,
-          )
-        : null;
+      const synced = templateSyncTimestamps(t.wabaVariants.map((v) => v.lastSyncedAt));
 
       return {
         id: t.id,
@@ -208,7 +200,11 @@ export async function GET(request: NextRequest) {
           t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED" && v.locale).map((v) => v.locale as string),
         )],
         rejectionReason: canonical.rejectionReason,
-        lastSyncedAt: lastSyncedAt ? lastSyncedAt.toISOString() : null,
+        // Preserve the existing complete-coverage contract; report the most
+        // recent successful sync separately instead of labelling the oldest as latest.
+        lastSyncedAt: synced.complete ? synced.oldestAt : null,
+        latestSyncedAt: synced.latestAt,
+        oldestSyncedAt: synced.oldestAt,
         state: allReady
           ? "READY"
           : partiallyReady

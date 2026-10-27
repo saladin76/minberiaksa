@@ -8641,5 +8641,8 @@
   "دورة قيد المعالجة": "Döngü işleniyor",
   "الفوترة لدى المزوّد": "Sağlayıcının yönettiği faturalama",
   "مستحق للجدولة": "Zamanlama sırası geldi",
-  "مجدول للموعد القادم": "Sonraki tarihe planlandı"
+  "مجدول للموعد القادم": "Sonraki tarihe planlandı",
+  "أقدم مزامنة محفوظة {0}": "Kaydedilen en eski eşitleme {0}",
+  "لم تُزامَن بعض النسخ اللغوية بعد.": "Bazı dil sürümleri henüz eşitlenmedi.",
+  "قوالب Meta غير المرتبطة محليًا": "Yerel eşleşmesi olmayan Meta şablonları"
 }

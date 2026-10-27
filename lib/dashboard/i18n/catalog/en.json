@@ -8649,5 +8649,8 @@
   "دورة قيد المعالجة": "Cycle processing",
   "الفوترة لدى المزوّد": "Provider-managed billing",
   "مستحق للجدولة": "Due for scheduling",
-  "مجدول للموعد القادم": "Scheduled for next date"
+  "مجدول للموعد القادم": "Scheduled for next date",
+  "أقدم مزامنة محفوظة {0}": "Oldest recorded sync {0}",
+  "لم تُزامَن بعض النسخ اللغوية بعد.": "Some language variants have not been synced yet.",
+  "قوالب Meta غير المرتبطة محليًا": "Meta templates without a local match"
 }
