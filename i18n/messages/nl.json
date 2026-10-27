@@ -2297,7 +2297,7 @@
     "a_ok": "Oké",
     "a_no": "Nee, bedankt",
     "s_support_intro": "Dat spijt me, {name}. Uw laatste gift was {amount} op {date}, status: {state}. Vertel me welke gift u bedoelt en wat er gebeurde; ik stuur het naar het team, dat u snel per e-mail antwoordt.",
-    "s_support_intro_guest": "Dat spijt me. Vertel me welke gift u bedoelt (datum en bedrag) en wat er gebeurde, laat uw naam en e-mail achter; ik stuur het naar het team, dat snel antwoordt.",
+    "s_support_intro_guest": "Log in om uw bericht te versturen. Kort: wat is er gebeurd?",
     "sp_title": "Naar het team sturen",
     "sp_which": "Over welke gift gaat het?",
     "sp_none": "Niet over een specifieke gift",
@@ -2332,7 +2332,8 @@
     "cmd_field_frequency": "Frequentie",
     "cmd_field_status": "Status",
     "a_confirm": "Bevestigen",
-    "a_cancel": "Annuleren"
+    "a_cancel": "Annuleren",
+    "sp_signin": "Log in om uw bericht te versturen"
   },
   "CategoryNav": {
     "showMore": "Meer tonen ({count})",

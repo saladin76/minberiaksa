@@ -13,7 +13,6 @@ import {
   Eye,
   DownloadCloud,
   RefreshCw,
-  Info,
   Archive,
   ArchiveRestore,
 } from "lucide-react";
@@ -67,16 +66,6 @@ interface WhatsappTemplateRow {
   lastSyncError: string | null;
 }
 
-interface ImportSummary {
-  status: "ok" | "missing_config" | "not_implemented" | "failed";
-  messageAr: string;
-  imported: number;
-  updated: number;
-  skipped: number;
-  total: number;
-  error?: string | null;
-}
-
 const APPROVAL_PILL: Record<string, string> = {
   approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
   in_review: "bg-amber-50 text-amber-700 border-amber-200",
@@ -108,9 +97,7 @@ export function WhatsappTemplateList() {
   const [loading, setLoading] = React.useState(true);
   const [section, setSection] = React.useState<"SYSTEM" | "CAMPAIGN">("CAMPAIGN");
   const [archiveView, setArchiveView] = React.useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
-  const [importing, setImporting] = React.useState(false);
   const [syncingMeta, setSyncingMeta] = React.useState(false);
-  const [importStatus, setImportStatus] = React.useState<ImportSummary | null>(null);
   const [editor, setEditor] = React.useState<{ open: boolean; id: string | null }>({
     open: false,
     id: null,
@@ -169,28 +156,6 @@ export function WhatsappTemplateList() {
       );
     } finally {
       setSyncingMeta(false);
-    }
-  };
-
-  const handleImport = async () => {
-    setImporting(true);
-    try {
-      const res = await axios.post<ImportSummary>("/api/templates/whatsapp/import");
-      setImportStatus(res.data);
-      if (res.data.status === "ok") {
-        toast.success(res.data.messageAr);
-        await fetchAll();
-      } else if (res.data.status === "missing_config") {
-        toast(res.data.messageAr, { icon: "⚙️" });
-      } else if (res.data.status === "not_implemented") {
-        toast(res.data.messageAr, { icon: "ℹ️" });
-      } else {
-        toast.error(res.data.messageAr);
-      }
-    } catch {
-      toast.error(dt("فشل استيراد قوالب Twilio"));
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -262,23 +227,9 @@ export function WhatsappTemplateList() {
           <p className="text-xs text-muted-foreground">
             {loading ? "…" : dt("{0} قالب واتساب", [visibleTemplates.length])}
           </p>
-          {templates.some((t) => t.provider === "TWILIO") ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-[10px] text-slate-600">
-              {templates.filter((t) => t.provider === "TWILIO").length} {dt(" من Twilio")}</span>
-          ) : null}
+
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void handleImport()}
-            disabled={importing}
-            className="gap-2"
-            title={dt("استيراد قوالب WhatsApp من Twilio")}
-          >
-            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
-            {dt("استيراد من Twilio")}
-          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -306,33 +257,6 @@ export function WhatsappTemplateList() {
             <Plus className="w-4 h-4" /> {dt(" قالب جديد")}</Button>
         </div>
       </div>
-
-      {importStatus && importStatus.status !== "ok" ? (
-        <div
-          className={cn(
-            "rounded-lg border p-3 text-sm flex items-start gap-2",
-            importStatus.status === "missing_config"
-              ? "border-amber-200 bg-amber-50 text-amber-800"
-              : importStatus.status === "not_implemented"
-              ? "border-sky-200 bg-sky-50 text-sky-800"
-              : "border-rose-200 bg-rose-50 text-rose-800"
-          )}
-        >
-          <Info className="w-4 h-4 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-medium">{importStatus.messageAr}</p>
-            {importStatus.error ? (
-              <p className="text-[11px] mt-1 opacity-80 font-mono break-all">
-                {importStatus.error}
-              </p>
-            ) : null}
-            {importStatus.status === "missing_config" ? (
-              <p className="text-[11px] mt-1 opacity-80">
-                {dt("أضف TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN في إعدادات البيئة ثم أعِد المحاولة. لن يتم تخزين هذه القيم في سجل التدقيق.")}</p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
 
       <div className="rounded-lg border border-border overflow-hidden">
         <table className="w-full text-sm text-start">
@@ -391,11 +315,7 @@ export function WhatsappTemplateList() {
                         <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                           {dtx("منصتنا: {0}", [String(t.category ?? t.purpose ?? t.templateType ?? "—").toUpperCase()])}
                         </span>
-                        {t.provider === "TWILIO" ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 text-[10px]">
-                            Twilio
-                          </span>
-                        ) : null}
+
                       </div>
                     </td>
                     <td className="py-3 px-4 align-top">

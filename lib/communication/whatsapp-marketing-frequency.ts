@@ -1,4 +1,6 @@
 import "server-only";
+import { createHash, randomUUID } from "node:crypto";
+import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 
 import { prisma } from "@/lib/prisma";
 import {
@@ -12,6 +14,7 @@ export type WhatsAppMarketingReservation = {
   reservedAt: Date;
   previousAt: Date | null;
   reserved: boolean;
+  contactId?: string; contactToken?: string; contactPreviousAt?: Date | null;
 };
 
 export type WhatsAppMarketingReservationResult =
@@ -26,6 +29,7 @@ export async function loadWhatsappMarketingCooldownDays(): Promise<number | null
 export async function reserveWhatsappMarketingSend(
   userId: string | null | undefined,
   now = new Date(),
+  phone?: string | null,
 ): Promise<WhatsAppMarketingReservationResult> {
   const global = await readCampaignGlobalControls();
   if (!global.ok) return { ok: false, reason: "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE" };
@@ -71,7 +75,7 @@ export async function reserveWhatsappMarketingSend(
       where: {
         channel: "WHATSAPP",
         purpose: "MARKETING",
-        recipientUserId: userId,
+        OR: [{ recipientUserId: userId }, ...(phone ? [{ recipientPhone: { in: phoneMatchVariants(phone) } }] : [])],
         sentAt: { gt: cutoff },
       },
       orderBy: { sentAt: "desc" },
@@ -96,7 +100,20 @@ export async function reserveWhatsappMarketingSend(
     if (claimed.count !== 1) {
       return { ok: false, reason: "WHATSAPP_MARKETING_COOLDOWN" };
     }
-    return { ok: true, reservation: { userId, reservedAt, previousAt, reserved: true } };
+    const reservation: WhatsAppMarketingReservation = { userId, reservedAt, previousAt, reserved: true };
+    const canonical = normalizePhoneE164(phone);
+    if (canonical) {
+      try {
+        const contactId = createHash("sha256").update("whatsapp:" + canonical).digest("hex").slice(0, 24);
+        const token = randomUUID();
+        await prisma.communicationContactFrequency.upsert({ where: { id: contactId }, create: { id: contactId }, update: {} });
+        const contact = await prisma.communicationContactFrequency.findUnique({ where: { id: contactId }, select: { lastSentAt: true } });
+        const lock = await prisma.communicationContactFrequency.updateMany({ where: { id: contactId, OR: [{ lastSentAt: null }, { lastSentAt: { isSet: false } }, { lastSentAt: { lte: cutoff } }] }, data: { lastSentAt: reservedAt, reservationToken: token } });
+        if (lock.count !== 1) { await releaseWhatsappMarketingReservation(reservation); return { ok: false, reason: "WHATSAPP_MARKETING_COOLDOWN" }; }
+        reservation.contactId = contactId; reservation.contactToken = token; reservation.contactPreviousAt = contact?.lastSentAt ?? null;
+      } catch { await releaseWhatsappMarketingReservation(reservation); return { ok: false, reason: "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE" }; }
+    }
+    return { ok: true, reservation };
   } catch {
     return { ok: false, reason: "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE" };
   }
@@ -107,6 +124,7 @@ export async function releaseWhatsappMarketingReservation(
   reservation: WhatsAppMarketingReservation,
 ): Promise<void> {
   if (!reservation.reserved || !reservation.userId) return;
+  if (reservation.contactId && reservation.contactToken) await prisma.communicationContactFrequency.updateMany({ where: { id: reservation.contactId, reservationToken: reservation.contactToken }, data: { lastSentAt: reservation.contactPreviousAt ?? null, reservationToken: null } }).catch(() => undefined);
   await prisma.donorCommunicationProfile.updateMany({
     where: { userId: reservation.userId, lastWhatsappMarketingAt: reservation.reservedAt },
     data: { lastWhatsappMarketingAt: reservation.previousAt },

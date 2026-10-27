@@ -9,16 +9,17 @@ import {
   type MessageSubject,
 } from "@/lib/messages/subjects";
 
-// POST /api/messages - Submit a message (public; optional session)
+// POST /api/messages — authenticated contact submission; identity comes from the session.
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 });
     const body = await request.json();
     const messageBody = typeof body?.body === "string" ? body.body.trim() : "";
     const locale = isValidLocale(body?.locale) ? body.locale : "ar";
     const subject: MessageSubject = isMessageSubject(body?.subject) ? body.subject : "GENERAL";
 
-    if (!messageBody || messageBody.length < 3) {
+    if (!messageBody || messageBody.length < 3 || messageBody.length > 20000) {
       return NextResponse.json(
         { error: "Message body is required (min 3 characters)" },
         { status: 400 }
@@ -42,14 +43,7 @@ export async function POST(request: NextRequest) {
       locale,
     };
 
-    if (session?.user?.id) {
-      data.userId = session.user.id;
-    } else {
-      const guestName = typeof body.guestName === "string" ? body.guestName.trim() || null : null;
-      const guestEmail = typeof body.guestEmail === "string" ? body.guestEmail.trim() || null : null;
-      data.guestName = guestName;
-      data.guestEmail = guestEmail;
-    }
+    data.userId = session.user.id;
 
     const message = await prisma.message.create({
       data: {
@@ -72,17 +66,6 @@ export async function POST(request: NextRequest) {
         entityType: "Message",
         entityId: message.id,
         stream: auditStreamForRole(actor.actorRole),
-      });
-    } else {
-      await writeAuditLog({
-        actorId: null,
-        actorName: data.guestName ?? "زائر",
-        actorRole: "GUEST",
-        action: "CONTACT_MESSAGE",
-        messageAr: `${data.guestName?.trim() || "زائر"} أرسل رسالة تواصل (${locale}) - ${subject}`,
-        entityType: "Message",
-        entityId: message.id,
-        stream: "DONOR",
       });
     }
 

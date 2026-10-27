@@ -3405,7 +3405,7 @@
     "a_ok": "OK",
     "a_no": "No, thanks",
     "s_support_intro": "I'm sorry about that, {name}. Your latest donation was {amount} on {date} and its state is: {state}. Tell me which donation you mean and what happened, and I'll send it to the team to reply to you by email soon.",
-    "s_support_intro_guest": "I'm sorry about that. Tell me which donation you mean (its date and amount) and what happened, leave your name and email, and I'll send it to the team to reply soon.",
+    "s_support_intro_guest": "Sign in to send your message. Briefly, what happened?",
     "sp_title": "Send this to the team",
     "sp_which": "Which donation is it about?",
     "sp_none": "Not about a specific donation",
@@ -3440,7 +3440,8 @@
     "cmd_field_frequency": "Frequency",
     "cmd_field_status": "Status",
     "a_confirm": "Confirm",
-    "a_cancel": "Cancel"
+    "a_cancel": "Cancel",
+    "sp_signin": "Sign in to send your message"
   },
   "ProjectShares": {
     "unitSingular": "share",

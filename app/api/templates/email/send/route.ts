@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const locale = pickLocale({ override: parsed.data.locale, recipientLang: ctx.user.preferredLang });
     const variant = resolveEmailVariant(template, locale);
     const subject = renderEmailSubject(variant.subject, ctx);
-    const html = await renderEmailHtml(variant.document as TReaderDocument, ctx);
+    const html = await renderEmailHtml(variant.document as TReaderDocument, ctx, variant.resolvedLocale);
     const result = await sendArchivedEmail({ to: ctx.user.email, subject, html, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, locale, origin: "MANUAL", purpose: "MARKETING", templateId: template.id, templateName: template.name, createdBy: actor.actorId ?? null }, runtimeConfig);
     const status = result.ok ? "SENT" : result.reason.endsWith("_NOT_CONFIGURED") || result.reason === "PROVIDER_DISABLED" ? "SKIPPED" : "FAILED";
     if (result.ok) sent += 1;

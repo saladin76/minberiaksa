@@ -121,12 +121,11 @@ export async function saveWorkspaceRelations(
       if (max !== null && (!Number.isInteger(max) || max < 1 || max > 200))
         throw new Error("عدد العناصر غير صالح");
       data.maxItems = max;
-      if (
-        b.kind === "VIDEO" &&
-        b.youtubeId &&
-        !/^[A-Za-z0-9_-]{11}$/.test(String(b.youtubeId))
-      )
-        throw new Error("معرّف فيديو القسم غير صالح");
+      if (b.kind === "VIDEO" && b.youtubeId) {
+        const media = describeVideoSource({ url: String(b.youtubeId) });
+        if (!media.embedUrl) throw new Error("كود التضمين أو رابط الفيديو غير مدعوم");
+        data.youtubeId = media.youtubeId || media.sourceUrl;
+      }
       if (
         b.kind === "PLAYLIST_EPISODES" &&
         (!b.refId ||

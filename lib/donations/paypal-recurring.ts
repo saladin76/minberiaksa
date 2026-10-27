@@ -1,4 +1,5 @@
 import "server-only";
+import { withRecurringLease } from "./recurring-lease";
 import { runAfterResponse } from "@/lib/events/after-response";
 
 import type { Prisma } from "@prisma/client";
@@ -97,7 +98,7 @@ export async function chargeDuePayPalSubscriptions(options: { now?: Date; dryRun
   for (const sub of due) {
     let outcome: RecurringChargeOutcome;
     try {
-      outcome = await chargeOne(sub, now, dryRun);
+      outcome = dryRun ? await chargeOne(sub, now, true) : await withRecurringLease(prisma, sub, now, () => chargeOne(sub, now, false)) ?? { subscriptionId: sub.id, donationId: null, result: "already_attempted", amountUSD: null, error: "Billing cycle is being processed or changed" };
     } catch (err) {
       console.error("[paypal-recurring] charge threw", sub.id, err);
       outcome = { subscriptionId: sub.id, donationId: null, result: "unreachable", amountUSD: null, error: err instanceof Error ? err.message : String(err) };

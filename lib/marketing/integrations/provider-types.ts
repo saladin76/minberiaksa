@@ -46,7 +46,6 @@ export type ProviderKey =
   | "ga4"
   | "tiktok"
   | "x_ads"
-  | "twilio"
   | "netgsm"
   | "openai"
   | "google_drive"

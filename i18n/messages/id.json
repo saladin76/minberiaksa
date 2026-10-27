@@ -3336,7 +3336,7 @@
     "a_ok": "Baik",
     "a_no": "Tidak, terima kasih",
     "s_support_intro": "Maaf atas hal itu, {name}. Donasi terakhir Anda {amount} pada {date}, status: {state}. Beri tahu donasi mana yang Anda maksud dan apa yang terjadi; saya teruskan ke tim, mereka akan membalas ke email Anda segera.",
-    "s_support_intro_guest": "Maaf atas hal itu. Beri tahu donasi mana yang Anda maksud (tanggal dan jumlah) dan apa yang terjadi, tinggalkan nama dan email; saya teruskan ke tim, mereka akan membalas segera.",
+    "s_support_intro_guest": "Masuk untuk mengirim pesan. Singkatnya, apa yang terjadi?",
     "sp_title": "Kirim ke tim",
     "sp_which": "Tentang donasi yang mana?",
     "sp_none": "Bukan tentang donasi tertentu",
@@ -3371,7 +3371,8 @@
     "cmd_field_frequency": "Frekuensi",
     "cmd_field_status": "Status",
     "a_confirm": "Konfirmasi",
-    "a_cancel": "Batal"
+    "a_cancel": "Batal",
+    "sp_signin": "Masuk untuk mengirim pesan"
   },
   "ProjectShares": {
     "unitSingular": "saham",

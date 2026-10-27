@@ -14,6 +14,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const body = await response.json(); if (!response.ok) throw new Error(body.error || "HTTP " + response.status); return body as T;
 }
 export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {}) {
+  const [seoTab, setSeoTab] = useState("search"), [messageTone, setMessageTone] = useState("info");
   const [key, setKey] = useState("home"), [locale, setLocale] = useState<SupportedLocale>("ar");
   const [document, setDocument] = useState<Document | null>(null), [draft, setDraft] = useState<PageSeoLocales>({});
   const [proposals, setProposals] = useState<Record<string, Proposal>>({}), [errors, setErrors] = useState<Record<string, string>>({});
@@ -30,25 +31,26 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   const dirty = Boolean(document && JSON.stringify(draft) !== JSON.stringify(document.overrides));
   useDashboardUnsavedChanges(dirty);
   useEffect(() => {
-    const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setProposals({}); setErrors({});
+    const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setMessageTone("info"); setProposals({}); setErrors({});
     api<Document>("/api/admin/page-seo/" + key, { signal: controller.signal }).then((result) => {
       if (!controller.signal.aborted) { setDocument(result); setDraft(result.overrides); }
-    }).catch((error) => { if (!controller.signal.aborted) setMessage(dtMaybe(error.message)); });
+    }).catch((error) => { if (!controller.signal.aborted) { setMessageTone("error"); setMessage(dtMaybe(error.message)); } });
     return () => { controller.abort(); generation.current?.abort(); };
   }, [key]);
+  useEffect(() => { if (!message || messageTone !== "success") return; const timer = setTimeout(() => setMessage(""), 6500); return () => clearTimeout(timer); }, [message, messageTone]);
   const edit = (field: string, value: string) => {
     if (busy === "save") return;
     generation.current?.abort();
     setDraft((previous) => ({ ...previous, [locale]: { ...previous[locale], [field]: value } }));
   };
   const save = async () => {
-    if (!document) return; setBusy("save"); setMessage("");
+    if (!document) return; setBusy("save"); setMessage(""); setMessageTone("info");
     try {
       const saved = await api<Document>("/api/admin/page-seo/" + key, { method: "PUT", body: JSON.stringify({ revision: document.revision, overrides: draft }) });
       const read = await api<Document>("/api/admin/page-seo/" + key);
       if (read.revision !== saved.revision) throw new Error(dt("تغيرت النسخة بعد الحفظ. احتفظ بتعديلاتك ثم أعد تحميلها للمراجعة."));
-      setDocument(read); setDraft(read.overrides); setProposals({}); setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
-    } catch (error) { setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر الحفظ")); }
+      setDocument(read); setDraft(read.overrides); setProposals({}); setMessageTone("success"); setMessage(dt("تم الحفظ والتحقق من النسخة المحفوظة"));
+    } catch (error) { setMessageTone("error"); setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر الحفظ")); }
     finally { setBusy(""); }
   };
   const suggest = async (all: boolean) => {
@@ -77,14 +79,14 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     setMessage(dt("طُبّق الاقتراح في المسودة. احفظ التغييرات لاعتماده."));
   };
   return <div dir={dashDir()} className="mx-auto max-w-6xl space-y-5 pb-12">
-    <header className="flex flex-wrap items-center justify-between gap-3">
+    <header className="sticky top-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur">
       <div>{embedded ? <h2 className="text-lg font-semibold">{dt("SEO الصفحات العامة")}</h2> : <h1 className="text-2xl font-bold">{dt("SEO الصفحات العامة")}</h1>}<p className="mt-2 text-sm text-slate-500">{dt("راجع إعدادات البحث والمشاركة لكل صفحة ولغة، ثم احفظ كل التعديلات معًا.")}</p></div>
       <button type="button" onClick={save} disabled={!document || !dirty || Boolean(busy)} className="rounded bg-brand px-4 py-3 text-white disabled:opacity-50">{dt("حفظ جميع اللغات")}</button>
     </header>
     <label className="block space-y-2"><span>{dt("الصفحة")}</span><select value={key} disabled={Boolean(busy)} className="w-full rounded border bg-white p-3" onChange={(event) => { if (!dirty || window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) setKey(event.target.value); }}>{MANAGED_SEO_PAGES.map((page) => <option key={page.key} value={page.key}>{dt(page.label)}</option>)}</select></label>
-    {message ? <p role="status" className="rounded border bg-white p-3">{message}</p> : null}
+    {message ? <p role={messageTone === "error" ? "alert" : "status"} className={`rounded-xl border p-3 text-sm ${messageTone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : messageTone === "error" ? "border-red-200 bg-red-50 text-red-800" : "bg-sky-50"}`}>{message}</p> : null}
     <div className="flex flex-wrap gap-2">{SUPPORTED_LOCALES.map((code) => <button type="button" key={code} aria-label={LOCALES[code].nativeLabel} title={LOCALES[code].nativeLabel} aria-pressed={locale === code} onClick={() => setLocale(code)} className={"min-h-11 min-w-11 rounded border px-2 py-2 text-xs font-semibold " + (locale === code ? "bg-brand text-white" : "bg-white")}><bdi>{code.toUpperCase()}</bdi></button>)}</div>
-    <Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} />
+    <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer text-sm font-semibold">{dt("الاستفادة من تقارير الزيارات في الاقتراحات")}</summary><div className="mt-4"><Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} /></div></details>
     <div className="flex flex-wrap gap-3 rounded border bg-white p-4">
       <label className="flex-1 text-sm">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
       <button type="button" disabled={!document || Boolean(busy) || dirty} onClick={() => void suggest(false)} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>
@@ -94,10 +96,13 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     </div>
     {document ? <section className="space-y-4 rounded-xl border bg-white p-5" dir={LOCALES[locale].direction}>
       <a href={"/" + locale + managedPagePath(key, locale)} target="_blank" rel="noopener noreferrer" className="text-sm text-brand">{dt("فتح الصفحة")}</a>
-      {PAGE_SEO_FIELDS.map(([field, label]) => <label key={field} className="block space-y-2 text-sm"><span className="font-semibold">{dt(label)}</span>
-        <textarea aria-label={dt(label)} disabled={busy === "save"} value={draft[locale]?.[field] || ""} placeholder={document.defaults[locale]?.[field] || ""} onChange={(event) => edit(field, event.target.value)} className="min-h-20 w-full rounded border p-3" maxLength={field === "metaTitle" || field === "ogTitle" ? 70 : field === "metaDescription" ? 170 : field === "ogImage" ? 2048 : field === "imageAlt" ? 200 : 500} />
+      <p className="text-xs leading-6 text-slate-500">{dt("ابدأ بعنوان البحث ووصفه. الحقول الفارغة تستخدم النص الافتراضي الظاهر داخلها؛ إعدادات المشاركة اختيارية.")}</p>
+      <div className="rounded-xl border bg-slate-50 p-4"><p className="text-xs text-slate-500" dir="ltr">minberiaksa.org/{locale}{managedPagePath(key, locale)}</p><p className="mt-2 text-xl text-blue-800">{draft[locale]?.metaTitle || document.defaults[locale]?.metaTitle}</p><p className="mt-2 line-clamp-3 text-sm leading-7 text-slate-600">{draft[locale]?.metaDescription || document.defaults[locale]?.metaDescription}</p></div>
+      <div role="tablist" aria-label={dt("أقسام SEO")} className="flex flex-wrap gap-2">{[["search", "محركات البحث"], ["share", "المشاركة الاجتماعية"], ["advanced", "إعدادات متقدمة"]].map(([value, label]) => <button type="button" role="tab" key={value} aria-selected={seoTab === value} onClick={() => setSeoTab(value)} className={`rounded-lg border px-3 py-2 text-sm ${seoTab === value ? "bg-brand text-white" : "bg-white"}`}>{dt(label)}</button>)}</div>
+      {PAGE_SEO_FIELDS.filter(([field]) => seoTab === "search" ? ["metaTitle", "metaDescription", "seoKeyword"].includes(field) : seoTab === "share" ? ["ogTitle", "ogDescription", "ogImage", "imageAlt"].includes(field) : false).map(([field, label]) => <label key={field} className="block space-y-2 text-sm"><span className="font-semibold">{dt(label)}</span>
+        <textarea aria-label={dt(label)} disabled={busy === "save"} value={draft[locale]?.[field] || ""} placeholder={document.defaults[locale]?.[field] || ""} onChange={(event) => edit(field, event.target.value)} className="min-h-20 w-full rounded border p-3" maxLength={field === "metaTitle" || field === "ogTitle" ? 70 : field === "metaDescription" || field === "ogDescription" ? 170 : field === "ogImage" ? 2048 : field === "imageAlt" || field === "seoKeyword" ? 200 : 500} />
       </label>)}
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy === "save"} checked={draft[locale]?.seoNoIndex === "true"} onChange={(event) => edit("seoNoIndex", String(event.target.checked))} />{dt("منع فهرسة هذه اللغة مع إبقاء الصفحة ظاهرة")}</label>
+      {seoTab === "advanced" ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy === "save"} checked={draft[locale]?.seoNoIndex === "true"} onChange={(event) => edit("seoNoIndex", String(event.target.checked))} />{dt("منع فهرسة هذه اللغة مع إبقاء الصفحة ظاهرة")}</label> : null}
     </section> : null}
     {Object.keys(proposals).length ? <section className="space-y-4 rounded-xl border bg-white p-5">
       <div className="flex items-center justify-between"><h2 className="font-bold">{dt("مراجعة الاقتراح")}</h2><button type="button" onClick={() => apply(Object.keys(proposals))} className="rounded border px-3 py-2">{dt("تطبيق الجميع في المسودة")}</button></div>

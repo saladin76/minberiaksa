@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getActiveMetaWebhookConfig, type ActiveRuntimeConfig, type MetaWhatsappRuntimeValues } from "../../runtime-config";
 import type { InboundMediaDescriptor, NormalizedWebhookEvent } from "./types";
+import { scrubSecrets } from "./errors";
 
 export type MetaWebhookRuntimeConfig = ActiveRuntimeConfig<Pick<MetaWhatsappRuntimeValues, "appSecret" | "verifyToken">>;
 
@@ -46,9 +47,12 @@ function mapStatus(status: string): "SENT" | "DELIVERED" | "READ" | "FAILED" | n
 
 function firstErrorMessage(errors: unknown): string | null {
   if (Array.isArray(errors) && errors[0] && typeof errors[0] === "object") {
-    const e = errors[0] as { title?: unknown; message?: unknown };
+    const e = errors[0] as { title?: unknown; message?: unknown; code?: unknown; error_data?: { details?: unknown } };
     const text = (typeof e.message === "string" && e.message) || (typeof e.title === "string" && e.title) || "";
-    return text ? text.slice(0, 300) : null;
+    const details = typeof e.error_data?.details === "string" ? e.error_data.details : "";
+    const code = typeof e.code === "number" ? `Meta ${e.code}` : "";
+    const message = [code, text, details && details !== text ? details : ""].filter(Boolean).join(" · ");
+    return message ? scrubSecrets(message).slice(0, 500) : null;
   }
   return null;
 }

@@ -207,7 +207,7 @@ export async function renderChannelTemplate(
     // is what let the placeholder survive unnoticed.
     const renderCtx = ctx ?? SAMPLE_TEMPLATE_CONTEXT;
     const html = localizeDonationFailureLinks(
-      await renderEmailHtml(variant.document as TReaderDocument, renderCtx),
+      await renderEmailHtml(variant.document as TReaderDocument, renderCtx, variant.resolvedLocale),
       locale,
     );
     return {

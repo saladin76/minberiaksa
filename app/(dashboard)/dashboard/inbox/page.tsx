@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { InboundMessagesView } from "./_components/InboundMessagesView";
@@ -21,9 +22,13 @@ export default function InboxPage() {
         <PageHeader
           eyebrow={dt("التواصل")}
           title={dt("الرسائل الواردة")}
-          description={dt("رسائل الزوار والمستخدمين المُرسلة من نموذج «أرسل لنا رسالة» في تذييل الموقع.")}
+          description={dt("رسائل التواصل والدعم والشراكات والتطوع. الإرسال متاح للمستخدمين بعد تسجيل الدخول.")}
           icon={Inbox}
         />
+        <aside className="mb-5 space-y-2 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm leading-7">
+          <p>{dt("تُحفظ الرسائل هنا داخل لوحة التحكم ولا تُرسل تلقائيًا إلى بريد المؤسسة. زر الرد بالبريد يفتح برنامج البريد، وزر واتساب يفتح المحادثة؛ فتحهما لا يؤكد إرسال الرد.")}</p>
+          <Link href="/ar/contact-us" target="_blank" className="font-semibold text-brand underline">{dt("فتح نموذج التواصل على الموقع")}</Link>
+        </aside>
         <InboundMessagesView />
       </div>
     </div>

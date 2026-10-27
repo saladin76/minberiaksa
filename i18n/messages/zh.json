@@ -2297,7 +2297,7 @@
     "a_ok": "好的",
     "a_no": "不用了，谢谢",
     "s_support_intro": "很抱歉，{name}。您最近一笔捐赠是{date}的{amount}，状态：{state}。请告诉我是哪笔捐赠以及发生了什么，我会转交团队，他们会尽快通过邮件回复您。",
-    "s_support_intro_guest": "很抱歉。请告诉我是哪笔捐赠（日期和金额）以及发生了什么，并留下姓名和邮箱，我会转交团队，他们会尽快回复。",
+    "s_support_intro_guest": "登录后发送消息. 简要说明发生了什么",
     "sp_title": "发送给团队",
     "sp_which": "关于哪笔捐赠？",
     "sp_none": "不涉及具体捐赠",
@@ -2332,7 +2332,8 @@
     "cmd_field_frequency": "频率",
     "cmd_field_status": "状态",
     "a_confirm": "确认",
-    "a_cancel": "取消"
+    "a_cancel": "取消",
+    "sp_signin": "登录后发送消息"
   },
   "CategoryNav": {
     "showMore": "显示更多（{count}）",

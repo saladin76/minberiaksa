@@ -108,6 +108,7 @@ const server = createServer(async (req, res) => {
     res.setHeader("Content-Type", "image/svg+xml");
     res.end('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="#164e63"/></svg>');
   } else if (fonts[req.url]) {res.setHeader("Content-Type","font/woff2");res.end(fonts[req.url]);
+  } else if (req.url?.startsWith("/api/videos/admin")) { res.setHeader("Content-Type","application/json");res.end(JSON.stringify({items:[]}));
   } else if (req.url?.startsWith("/api/campaigns/")) {
     res.setHeader("Content-Type", "application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
@@ -259,7 +260,7 @@ try {
     .getByRole("button", { name: "حفظ التغييرات", exact: true })
     .click();
   await page
-    .getByRole("status")
+    .getByRole("alert")
     .filter({ hasText: "فشل حفظ تجريبي" })
     .waitFor();
   assert.equal(await title.inputValue(), "Titre révisé");
@@ -394,7 +395,8 @@ try {
   await writing.waitFor();
   const initialRichText = documents.get("blog").values.ar.content;
   assert.ok((await writing.innerText()).trim().length > 0, "published rich content must appear on first load without reloading saved content");
-  assert.equal(await richPage.getByRole("button", {name:"اقتراح SEO",exact:true}).isDisabled(), false, "mounting the editor must not create a false unsaved draft or disable SEO");
+  await richPage.getByLabel("المهمة",{exact:true}).selectOption("seo");
+  assert.equal(await richPage.getByRole("button", {name:"إعداد الاقتراحات",exact:true}).isDisabled(), false, "mounting the editor must not create a false unsaved draft or disable SEO");
   assert.equal(documents.get("blog").values.ar.content, initialRichText, "mounting must not change the stored content");
   await writing.fill("فقرة أولى للمراجعة");
   await writing.press("End"); await writing.press("Enter"); await writing.pressSequentially("عنوان فرعي واضح");

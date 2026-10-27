@@ -31,6 +31,7 @@ export async function GET() {
   if (denied) return denied;
 
   const rows = await prisma.whatsappTemplate.findMany({
+    where: { OR: [{ provider: null }, { provider: { isSet: false } }, { provider: { not: "TWILIO" } }] },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,

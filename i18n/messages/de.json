@@ -3336,7 +3336,7 @@
     "a_ok": "Okay",
     "a_no": "Nein, danke",
     "s_support_intro": "Das tut mir leid, {name}. Ihre letzte Spende war {amount} am {date}, Status: {state}. Sagen Sie mir, welche Spende Sie meinen und was passiert ist; ich leite es ans Team weiter, das Ihnen bald per E-Mail antwortet.",
-    "s_support_intro_guest": "Das tut mir leid. Sagen Sie mir, welche Spende Sie meinen (Datum und Betrag) und was passiert ist, und hinterlassen Sie Name und E-Mail; ich leite es ans Team weiter, das bald antwortet.",
+    "s_support_intro_guest": "Zum Senden Ihrer Nachricht anmelden. Kurz: Was ist passiert?",
     "sp_title": "An das Team senden",
     "sp_which": "Um welche Spende geht es?",
     "sp_none": "Keine bestimmte Spende",
@@ -3371,7 +3371,8 @@
     "cmd_field_frequency": "Häufigkeit",
     "cmd_field_status": "Status",
     "a_confirm": "Bestätigen",
-    "a_cancel": "Abbrechen"
+    "a_cancel": "Abbrechen",
+    "sp_signin": "Zum Senden Ihrer Nachricht anmelden"
   },
   "ProjectShares": {
     "unitSingular": "Anteil",

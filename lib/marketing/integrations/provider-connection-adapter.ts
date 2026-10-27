@@ -106,15 +106,6 @@ export const PROVIDER_CONNECTION_MAP: ProviderConnectionOption[] = [
     surface: "Browser + Server",
   },
   {
-    providerKey: "twilio",
-    platform: "TWILIO",
-    category: "MESSAGING",
-    section: "MESSAGING",
-    uiLabel: "Twilio",
-    readinessCheck: "Account SID + auth token. International SMS can use Twilio; Turkey SMS should use Netgsm.",
-    surface: "Server",
-  },
-  {
     providerKey: "netgsm",
     platform: "NETGSM",
     category: "MESSAGING",
@@ -142,12 +133,12 @@ export const PROVIDER_CONNECTION_MAP: ProviderConnectionOption[] = [
     surface: "Server",
   },
   {
-    providerKey: "twilio",
+    providerKey: "netgsm",
     platform: "SMS_PROVIDER",
     category: "MESSAGING",
     section: "MESSAGING",
     uiLabel: "Generic SMS Provider",
-    readinessCheck: "Use Netgsm for Turkey SMS and Twilio for international SMS before adding a generic SMS route.",
+    readinessCheck: "Use an explicitly configured supported SMS provider.",
     surface: "Server",
   },
   {

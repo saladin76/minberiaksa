@@ -65,7 +65,6 @@
   "lib/marketing/sync/index.ts",
   "lib/marketing/sync/meta.ts",
   "lib/marketing/sync/tiktok.ts",
-  "lib/marketing/sync/twilio.ts",
   "lib/marketing/sync/x.ts",
   "lib/messages/inbox-status.ts",
   "lib/messages/subjects.ts",
@@ -91,6 +90,8 @@
   "lib/tracking/platform-diagnostics.ts",
   "lib/tracking/tracking-event-contract.ts",
   "lib/uploads/document-file-rules.ts",
-  "lib/uploads/image-file-rules.ts"
+  "lib/uploads/image-file-rules.ts",
+  "lib/donations/recurring-readiness.ts",
+  "lib/communication/whatsapp-failure-guidance.ts"
  ]
 }

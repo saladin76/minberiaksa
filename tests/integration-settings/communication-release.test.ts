@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as metaErrors from "../../lib/communication/providers/meta-whatsapp/errors";
 import * as phone from "../../lib/communication/phone";
 import * as locales from "../../lib/locales";
 import { donorAccountStatus } from "../../lib/dashboard/donor-account";
@@ -21,7 +22,7 @@ function load<T>(file: string, dependencies: Record<string, unknown>) {
 }
 
 const parser = () => load<{ parseWebhookPayload: (body: unknown) => NormalizedWebhookEvent[] }>("lib/communication/providers/meta-whatsapp/webhooks.ts", {
-  "node:crypto": {}, "../../runtime-config": {},
+  "node:crypto": {}, "../../runtime-config": {}, "./errors": metaErrors,
 });
 const payload = (field = "smb_message_echoes", to: string | null = "15555555555") => ({ object: "whatsapp_business_account", entry: [{ changes: [{ field, value: {
   metadata: { phone_number_id: "business" }, message_echoes: [{ id: "wamid-app", from: "905555555555", to, timestamp: "1793030400", type: "text", text: { body: "App reply" } }],

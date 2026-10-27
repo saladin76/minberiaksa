@@ -45,7 +45,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     get group() { return dt("الرئيسية"); },
     items: [
       { key: "revenue", get title() { return dt("اللوحة الرئيسية"); }, href: "/dashboard", icon: "layoutDashboard", keywords: ["home", "overview", "الرئيسية"] },
-      { key: "platformConnections", get title() { return dt("تحليلات Google Analytics"); }, href: "/dashboard/google-analytics", icon: "barChart", keywords: ["google analytics", "analytics", "ga4", "visitors", "pages", "traffic", "تحليلات", "زوار", "إحصاءات"] },
       { key: "monthly", get title() { return dt("التبرعات المتكررة"); }, href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "recurring", "daily", "weekly", "subscriptions", "اشتراكات", "شهري", "يومي", "جمعة"] },
       { key: "bankTransfers", get title() { return dt("التحويلات البنكية"); }, href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
       // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
@@ -123,6 +122,8 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     get group() { return dt("التسويق"); },
     items: [
+      { key: "platformConnections", get title() { return dt("تحليلات Google Analytics"); }, href: "/dashboard/google-analytics", icon: "barChart", keywords: ["google analytics", "analytics", "ga4", "visitors", "pages", "traffic", "تحليلات", "زوار", "إحصاءات"] },
+      { key: "platformConnections", get title() { return dt("إدارة Google Search"); }, href: "/dashboard/marketing/google-search", icon: "target", keywords: ["google ads", "search", "keywords", "جوجل", "كلمات", "حملات البحث"] },
       // The overview, أداء الحملات and التوصيات pages were removed; what is left is the part of
       // التسويق that owns real, first-party data: our own links and our own tracking.
       { key: "referrals", get title() { return dt("الروابط والإسناد"); }, href: "/dashboard/marketing/attribution", icon: "link", keywords: ["attribution", "referrals", "links", "utm"] },

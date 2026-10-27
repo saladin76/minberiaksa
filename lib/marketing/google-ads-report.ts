@@ -11,7 +11,9 @@ const number = (value: unknown) => Number.isFinite(Number(value)) ? Number(value
 const customer = (value: string) => value.replaceAll("-", "").trim();
 
 /** Only OAuth token refresh and fixed GAQL SELECT queries. No mutation API is exposed. */
-export async function fetchGoogleAdsReport(credentials: GoogleAdsCredentials, selection: Ga4Period, fetcher: typeof fetch = fetch, now = new Date()): Promise<GoogleAdsReport> {
+export async function fetchGoogleAdsReport(credentials: GoogleAdsCredentials, selection: Ga4Period, fetcher: typeof fetch = fetch, now = new Date(), campaignPrefix?: string): Promise<GoogleAdsReport> {
+  if (campaignPrefix && !/^Minber [a-f0-9]{24} \| $/.test(campaignPrefix)) throw new GoogleAdsReportError("GOOGLE_ADS_SCOPE_INVALID", 400);
+  const scope = campaignPrefix ? ` AND campaign.name LIKE '${campaignPrefix}%'` : "";
   const period = parseGa4Period(selection, now);
   const id = customer(credentials.customerId), manager = customer(credentials.managerId || "");
   const version = credentials.version || "v26";
@@ -40,9 +42,9 @@ export async function fetchGoogleAdsReport(credentials: GoogleAdsCredentials, se
   const metricFields = "metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value";
   const range = `segments.date BETWEEN '${startDate}' AND '${endDate}'`;
   const [campaigns, keywords, searchTerms] = await Promise.all([
-    query(`SELECT campaign.name, ${metricFields} FROM campaign WHERE ${range} ORDER BY metrics.cost_micros DESC LIMIT 50`),
-    query(`SELECT campaign.name, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, ${metricFields} FROM keyword_view WHERE ${range} AND campaign.advertising_channel_type = 'SEARCH' ORDER BY metrics.cost_micros DESC LIMIT 100`),
-    query(`SELECT campaign.name, search_term_view.search_term, ${metricFields} FROM search_term_view WHERE ${range} AND campaign.advertising_channel_type = 'SEARCH' ORDER BY metrics.cost_micros DESC LIMIT 100`),
+    query(`SELECT campaign.name, ${metricFields} FROM campaign WHERE ${range}${scope} ORDER BY metrics.cost_micros DESC LIMIT 50`),
+    query(`SELECT campaign.name, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, ${metricFields} FROM keyword_view WHERE ${range}${scope} AND campaign.advertising_channel_type = 'SEARCH' ORDER BY metrics.cost_micros DESC LIMIT 100`),
+    query(`SELECT campaign.name, search_term_view.search_term, ${metricFields} FROM search_term_view WHERE ${range}${scope} AND campaign.advertising_channel_type = 'SEARCH' ORDER BY metrics.cost_micros DESC LIMIT 100`),
   ]);
   const normalize = (row: Row, kind: "campaign" | "keyword" | "term"): GoogleAdsPerformanceRow => {
     const metrics = object(row.metrics), campaign = string(object(row.campaign).name), keyword = object(object(row.adGroupCriterion).keyword);

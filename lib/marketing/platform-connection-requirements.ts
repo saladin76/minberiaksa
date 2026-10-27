@@ -22,7 +22,6 @@ export type PlatformKey =
   | "TIKTOK"
   | "X"
   | "GA4"
-  | "TWILIO"
   | "NETGSM"
   | "EMAIL_PROVIDER"
   | "WHATSAPP_PROVIDER"
@@ -144,23 +143,6 @@ const GA4_GUIDE: PlatformRequirements = {
   setupGuideAr: "اربط GA4 لتجهيز Reporting API وMeasurement Protocol. أحداث التتبع المباشر تدار من قسم البكسلات والتتبع.",
 };
 
-const TWILIO_GUIDE: PlatformRequirements = {
-  platform: "TWILIO",
-  category: "MESSAGING",
-  labelAr: "Twilio",
-  required: [
-    { field: "accountId", labelAr: "Account SID", secret: false, guidanceAr: "ناقص Account SID. ستجده في Twilio Console > Account Info." },
-    { field: "authToken", labelAr: "Auth Token", secret: true, guidanceAr: "ناقص Auth Token. ستجده في Twilio Console > Account Info." },
-  ],
-  optional: [
-    { field: "messagingServiceSid", labelAr: "Messaging Service SID", secret: false, guidanceAr: "Messaging Service SID اختياري لكنه مفضل لإدارة الإرسال والـ callbacks." },
-    { field: "whatsappSender", labelAr: "WhatsApp Sender", secret: false, guidanceAr: "WhatsApp Sender اختياري  مثلاً whatsapp:+14155238886." },
-    { field: "smsSender", labelAr: "SMS Sender", secret: false, guidanceAr: "SMS Sender اختياري  رقم E.164 معتمد لدى Twilio." },
-    { field: "emailSender", labelAr: "Email Sender", secret: false, guidanceAr: "Email Sender اختياري  مع تكامل SendGrid عبر Twilio." },
-  ],
-  setupGuideAr: "اربط Twilio لإدارة WhatsApp وSMS والبريد. الإرسال الفعلي الحالي لا يتأثر بهذه الإعدادات حتى تفعيل المزامنة.",
-};
-
 const NETGSM_GUIDE: PlatformRequirements = {
   platform: "NETGSM",
   category: "MESSAGING",
@@ -193,8 +175,11 @@ const EMAIL_PROVIDER_GUIDE: PlatformRequirements = {
   setupGuideAr: "أضف API Key والنطاق المعتمد لإرسال البريد الإلكتروني عبر الموفر المختار لاحقًا.",
 };
 
-const WHATSAPP_PROVIDER_GUIDE: PlatformRequirements = { ...TWILIO_GUIDE, platform: "WHATSAPP_PROVIDER", category: "MESSAGING", labelAr: "موفر WhatsApp" };
-const SMS_PROVIDER_GUIDE: PlatformRequirements = { ...TWILIO_GUIDE, platform: "SMS_PROVIDER", category: "MESSAGING", labelAr: "موفر SMS" };
+const WHATSAPP_PROVIDER_GUIDE: PlatformRequirements = {
+  platform: "WHATSAPP_PROVIDER", category: "MESSAGING", labelAr: "Meta WhatsApp",
+  required: [{ field: "accountId", labelAr: "WABA ID", secret: false, guidanceAr: "معرّف حساب WhatsApp Business من Meta." }, { field: "accessToken", labelAr: "Access Token", secret: true, guidanceAr: "رمز نظام Meta المعتمد للحساب." }, { field: "senderId", labelAr: "Phone Number ID", secret: false, guidanceAr: "معرّف رقم الهاتف من WhatsApp Manager." }], optional: [], setupGuideAr: "تُدار حسابات Meta WhatsApp وأرقامها وقوالبها من مركز التواصل."
+};
+const SMS_PROVIDER_GUIDE: PlatformRequirements = { ...NETGSM_GUIDE, platform: "SMS_PROVIDER", category: "MESSAGING", labelAr: "موفر SMS" };
 
 const OPENAI_GUIDE: PlatformRequirements = {
   platform: "OPENAI",
@@ -305,7 +290,6 @@ const REGISTRY: Record<PlatformKey, PlatformRequirements> = {
   TIKTOK: TIKTOK_GUIDE,
   X: X_GUIDE,
   GA4: GA4_GUIDE,
-  TWILIO: TWILIO_GUIDE,
   NETGSM: NETGSM_GUIDE,
   EMAIL_PROVIDER: EMAIL_PROVIDER_GUIDE,
   WHATSAPP_PROVIDER: WHATSAPP_PROVIDER_GUIDE,

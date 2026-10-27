@@ -2297,7 +2297,7 @@
     "a_ok": "Va bene",
     "a_no": "No, grazie",
     "s_support_intro": "Mi dispiace, {name}. La tua ultima donazione è stata di {amount} il {date}, stato: {state}. Dimmi a quale donazione ti riferisci e cosa è successo; lo inoltro al team, che ti risponderà presto via email.",
-    "s_support_intro_guest": "Mi dispiace. Dimmi a quale donazione ti riferisci (data e importo) e cosa è successo, lascia nome ed email; lo inoltro al team, che risponderà presto.",
+    "s_support_intro_guest": "Accedi per inviare il messaggio. In breve, cosa è successo?",
     "sp_title": "Invia al team",
     "sp_which": "A quale donazione si riferisce?",
     "sp_none": "Non riguarda una donazione specifica",
@@ -2332,7 +2332,8 @@
     "cmd_field_frequency": "Frequenza",
     "cmd_field_status": "Stato",
     "a_confirm": "Conferma",
-    "a_cancel": "Annulla"
+    "a_cancel": "Annulla",
+    "sp_signin": "Accedi per inviare il messaggio"
   },
   "CategoryNav": {
     "showMore": "Mostra altro ({count})",

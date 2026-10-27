@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import * as crypto from "node:crypto";
 import vm from "node:vm";
 import ts from "typescript";
 import * as schedule from "../../lib/donations/recurring-schedule";
@@ -29,10 +30,15 @@ const next = { NextRequest: Request, NextResponse: { json: (data: unknown, optio
 const request = (body: unknown) => new Request("https://fixture.invalid/api/cart/payment", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 function matches(row: Row, where: Row): boolean {
   return Object.entries(where).every(([key, expected]) => {
-    if (expected && typeof expected === "object") {
+    if (key === "AND") return expected.every((item: Row) => matches(row, item));
+    if (key === "OR") return expected.some((item: Row) => matches(row, item));
+    if (expected === null) return row[key] == null;
+    if (expected && typeof expected === "object" && !(expected instanceof Date)) {
+      if ("isSet" in expected) return (row[key] !== undefined) === expected.isSet;
       if ("not" in expected) return row[key] != null;
       if ("lte" in expected) return row[key] != null && row[key] <= expected.lte;
     }
+    if (expected instanceof Date) return row[key]?.getTime() === expected.getTime();
     return row[key] === expected;
   });
 }
@@ -48,6 +54,7 @@ function fixture(mainGateway = "ALBARAKA") {
     subscription: {
       create: async ({ data }: Row) => { const row = { id: id(), chargeAttempts: 0, paymentCardId: null, paypalVaultId: null, ...data, items: data.items?.create ?? [], categoryItems: data.categoryItems?.create ?? [] }; plans.set(row.id, row); return row; },
       update: async ({ where, data }: Row) => Object.assign(plans.get(where.id)!, data),
+      updateMany: async ({ where, data }: Row) => { const rows = [...plans.values()].filter(row => matches(row, where)); for (const row of rows) Object.assign(row, data); return { count: rows.length }; },
       findUnique: async ({ where }: Row) => plans.get(where.id),
       findMany: async ({ where }: Row) => {
         const { donations: relation, ...fields } = where;
@@ -90,6 +97,7 @@ function fixture(mainGateway = "ALBARAKA") {
       chargePayPalVault: async (input: Row) => { bankCalls++; return { id: "order", status: "COMPLETED", purchase_units: [{ custom_id: input.customId, payments: { captures: [{ id: "capture", status: "COMPLETED", amount: { value: input.value, currency_code: input.currency } }] } }] }; },
     },
   };
+  dependencies["./recurring-lease"] = load("lib/donations/recurring-lease.ts", { "node:crypto": crypto });
   const checkout = load("app/api/cart/payment/route.ts", dependencies);
   const driver = load("lib/minbar/checkout.ts", { ...dependencies,
     "../donations/guest-access-client": { rememberGuestDonationAccess: () => false },
@@ -138,7 +146,9 @@ for (const frequency of ["DAILY", "FRIDAY", "MONTHLY"] as const) {
       assert.equal(plan.status, "ACTIVE"); assert.ok(donation.paidAt); assert.ok(plan.lastBillingDate);
       const expectedNext = schedule.firstChargeForPlan({ frequency: plan.frequency, timezone: plan.timezone, scheduleRule: plan.scheduleRule }, signupAt);
       assert.equal(plan.nextBillingDate.toISOString(), expectedNext.toISOString());
-      const firstRun = await worker({ now: dueAt }); assert.equal(firstRun.charged.length, 1); assert.equal(f.calls(), 1);
+      const concurrentRuns = await Promise.all([worker({ now: dueAt }), worker({ now: dueAt })]);
+      assert.equal(concurrentRuns.reduce((sum: number, run: Row) => sum + run.charged.length, 0), 1, "two overlapping workers must settle exactly one cycle"); assert.equal(f.calls(), 1);
+      assert.equal(plan.billingLeaseToken, null); assert.equal(plan.billingLeaseUntil, null);
       assert.ok(plan.nextBillingDate > dueAt); assert.equal(f.increments(), 2);
       const secondRun = await worker({ now: dueAt }); assert.equal(secondRun.scanned, 0); assert.equal(f.calls(), 1);
     });

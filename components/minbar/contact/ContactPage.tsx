@@ -1,4 +1,5 @@
 "use client";
+import { useContactAuthDraft } from "@/hooks/useContactAuthDraft";
 
 import { type FormEvent, type ReactElement, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -108,6 +109,8 @@ export default function ContactPage() {
     shakeTimer.current = setTimeout(() => setShake(false), 350);
   };
 
+  const requireContactAuth = useContactAuthDraft(draft => { if (typeof draft.name === "string") setName(draft.name); if (typeof draft.email === "string") setEmail(draft.email); if (typeof draft.message === "string") setMessage(draft.message); if (typeof draft.subjectIndex === "number") setSubjectIndex(draft.subjectIndex); });
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
@@ -116,6 +119,8 @@ export default function ContactPage() {
       fail(!emailValid && email.trim() ? t("errEmail") : t("errRequired"));
       return;
     }
+
+    if (!requireContactAuth({ name, email, message, subjectIndex })) return;
 
     setSubmitting(true);
     setError("");

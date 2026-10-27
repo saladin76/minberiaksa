@@ -1,4 +1,5 @@
 "use client";
+import { whatsappFailureGuidance } from "@/lib/communication/whatsapp-failure-guidance";
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -248,6 +249,7 @@ export function DeliveryPreviewSheet({ id, stagesFor, trackingLive, onOpenChange
                   {row.status === "SKIPPED" ? dt("سبب عدم الإرسال") : dt("رسالة الخطأ")}
                 </div>
                 <p className="whitespace-pre-wrap break-words text-xs" dir="ltr">{row.errorMessage}</p>
+                {row.channel === "WHATSAPP" && whatsappFailureGuidance(row.errorMessage) ? <p className="mt-3 text-xs leading-7">{dt(whatsappFailureGuidance(row.errorMessage)!)}</p> : null}
               </div>
             )}
 

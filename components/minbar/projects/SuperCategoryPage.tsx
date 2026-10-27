@@ -1,4 +1,5 @@
 "use client";
+import { EmbeddedVideo } from "@/components/minbar/EmbeddedVideo";
 import { describeVideoSource } from "@/lib/content/video-platform";
 
 import Link from "next/link";
@@ -242,15 +243,7 @@ function Block({
               <h2 style={{ margin: "0 0 14px", fontSize: "clamp(20px,2.1vw,27px)", fontWeight: 900 }}>{block.title}</h2>
             ) : null}
             <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden", boxShadow: "0 18px 44px rgba(16,33,43,.16)" }}>
-              <iframe
-                src={youtubeEmbed(block.youtubeId)}
-                title={block.title || page.title}
-                loading="lazy"
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
+              <EmbeddedVideo source={block.youtubeId} title={block.title || page.title} />
             </div>
           </div>
         </section>

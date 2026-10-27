@@ -2,10 +2,12 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useId,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
@@ -52,6 +54,7 @@ export type SuggestedTeamSupportSectionRef = {
 };
 
 type Props = {
+  onValueChange?: (payload: SuggestedTeamSupportPayload | null) => void;
   initialConfig?: SuggestedTeamSupportConfig | null;
   /** Top-level label (Arabic) */
   label: string;
@@ -69,7 +72,7 @@ export const SuggestedTeamSupportSection = forwardRef<
   SuggestedTeamSupportSectionRef,
   Props
 >(function SuggestedTeamSupportSection(
-  { initialConfig, label, helpText, defaultPlaceholder, exceptionsLabel, exceptionsEmptyHint },
+  { initialConfig, label, helpText, defaultPlaceholder, exceptionsLabel, exceptionsEmptyHint, onValueChange },
   ref
 ) {
   const defaultInputId = useId();
@@ -91,22 +94,14 @@ export const SuggestedTeamSupportSection = forwardRef<
     );
   }, [stableKey]);
 
-  useImperativeHandle(ref, () => ({
-    getPayload: (): SuggestedTeamSupportPayload | null => {
-      const amounts = parseAmountsInput(amountsStr);
-      const byCurrency: Record<string, number[]> = {};
-      for (const r of rows) {
-        const code = r.currency.trim().toUpperCase();
-        if (!code) continue;
-        const arr = parseAmountsInput(r.amountsStr);
-        if (arr.length) byCurrency[code] = arr;
-      }
-      if (!amounts.length && Object.keys(byCurrency).length === 0) {
-        return null;
-      }
-      return { amounts, byCurrency };
-    },
-  }));
+  const notifyRef = useRef(onValueChange); notifyRef.current = onValueChange;
+  const readPayload = useCallback((): SuggestedTeamSupportPayload | null => {
+    const amounts = parseAmountsInput(amountsStr); const byCurrency: Record<string, number[]> = {};
+    for (const row of rows) { const code = row.currency.trim().toUpperCase(); const values = parseAmountsInput(row.amountsStr); if (code && values.length) byCurrency[code] = values; }
+    return amounts.length || Object.keys(byCurrency).length ? { amounts, byCurrency } : null;
+  }, [amountsStr, rows]);
+  useEffect(() => { notifyRef.current?.(readPayload()); }, [readPayload]);
+  useImperativeHandle(ref, () => ({ getPayload: readPayload }), [readPayload]);
 
   const addRow = () => setRows((prev) => [...prev, makeRow()]);
 

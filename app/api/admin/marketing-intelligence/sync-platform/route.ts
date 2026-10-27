@@ -6,7 +6,7 @@ import { runSyncJob, type PlatformSelector } from "@/lib/marketing/sync";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED = new Set(["meta", "google_ads", "tiktok", "x", "ga4", "twilio", "all"]);
+const ALLOWED = new Set(["meta", "google_ads", "tiktok", "x", "ga4", "all"]);
 
 function normalizePlatform(value: unknown): PlatformSelector {
   const text = typeof value === "string" ? value.trim().toLowerCase() : "meta";

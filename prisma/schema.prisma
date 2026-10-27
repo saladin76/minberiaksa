@@ -938,6 +938,8 @@ model Subscription {
   /// Unique token held during an institution-initiated reprice across provider
   /// and MongoDB. Fail closed until externally reconciled if a request crashes.
   /// Optional for backwards-compatible MongoDB documents.
+  billingLeaseToken     String?
+  billingLeaseUntil     DateTime?
   amountChangeLock      String?
   amountChangeStartedAt DateTime?
   /// `PAYPAL` plans: the PayPal wallet saved (vaulted) at the first
@@ -2861,11 +2863,14 @@ model Video {
   slug         String    @unique
   type         VideoType
   title        String
+  description  String?
+  sourceUpdateId String? @db.ObjectId
   youtubeId    String?
   url          String?
   startSeconds Int?
   thumbnail    String?
   regionKey    String?
+  campaignIds  String[] @default([]) @db.ObjectId
   localeFilter String[]  @default([])
   showOnHome   Boolean   @default(false)
   order        Int       @default(0)
@@ -2891,11 +2896,41 @@ model Video {
 
 }
 
+model CommunicationContactFrequency {
+  id String @id @map("_id") @db.ObjectId
+  lastSentAt DateTime?
+  reservationToken String?
+}
+
+model GoogleSearchPlan {
+  workLeaseToken String?
+  workLeaseUntil DateTime?
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  connectionId String @db.ObjectId
+  title String
+  status String @default("DRAFT")
+  version Int @default(1)
+  request Json
+  proposal Json
+  evidence Json
+  resources Json?
+  lastError String?
+  automationEnabled Boolean @default(false)
+  automationPolicy Json?
+  lastReviewAt DateTime?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([connectionId, createdAt])
+  @@index([automationEnabled, lastReviewAt])
+}
+
 model VideoTranslation {
   id      String @id @default(auto()) @map("_id") @db.ObjectId
   videoId String @db.ObjectId
   locale  String
   title   String
+  description String?
 
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 

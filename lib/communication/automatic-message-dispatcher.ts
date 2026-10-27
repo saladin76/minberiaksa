@@ -379,7 +379,7 @@ export async function sendAutomaticWhatsappMessage(
   if (input.purpose === "MARKETING") {
     const liveBlock = await automaticConsentBlock(input.recipientUserId, "WHATSAPP", input.purpose);
     if (liveBlock) return skipForRecipientPreference(liveBlock);
-    const frequency = await reserveWhatsappMarketingSend(input.recipientUserId);
+    const frequency = await reserveWhatsappMarketingSend(input.recipientUserId, new Date(), input.recipientPhone);
     if (!frequency.ok) {
       const failed = frequency.reason === "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE";
       await markDeliveryStatus(id, failed ? "FAILED" : "SKIPPED", { errorMessage: frequency.reason });

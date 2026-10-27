@@ -1,4 +1,6 @@
 "use client";
+import { VideoSourceField } from "./VideoSourceField";
+import { ProjectImageGallery } from "./ProjectImageGallery";
 import { CategoryIconPicker } from "@/app/(dashboard)/dashboard/categories/_components/CategoryIconPicker";
 import { dt, dtMaybe } from "@/lib/dashboard/i18n";
 import { useEffect, useState } from "react";
@@ -89,7 +91,7 @@ export function WorkspaceSettings({
         .filter(
           (f) =>
             f.section === section &&
-            f.type !== "custom" &&
+            (f.type !== "custom" || (kind === "videos" && f.key === "url")) &&
             !(kind === "campaigns" && ["defaultDonationAmounts", "defaultShareCounts"].includes(f.key)) &&
             !(
               kind === "campaigns" &&
@@ -125,6 +127,7 @@ export function WorkspaceSettings({
                 title: `${dt(p.label)} · ${dt(s.label)}`,
               })),
             );
+          if (kind === "videos" && f.key === "url") return <VideoSourceField key={f.key} value={String(value || "")} onChange={url => onChange(f.key, url)} />;
           if (kind === "categories" && f.key === "icon") return <section key={f.key} className="space-y-2"><p className="text-sm font-semibold">{dt(f.label)}</p><CategoryIconPicker value={String(value || "")} onChange={(icon) => onChange(f.key, icon)} /></section>;
           if (f.key === "fileUrl")
             return <section key={f.key} className="space-y-2 rounded-xl border bg-white p-5">
@@ -154,70 +157,7 @@ export function WorkspaceSettings({
             );
           if (f.type === "images") {
             const list = Array.isArray(value) ? value.map(String) : [];
-            return (
-              <section
-                key={f.key}
-                className="space-y-4 rounded-xl border bg-white p-5"
-              >
-                <h3 className="font-bold">{dt(f.label)}</h3>
-                <p className="text-xs text-slate-500">
-                  {dt("الصورة الأولى رئيسية. غيّر ترتيب الصور أو أضف صورة جديدة.")}
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {list.map((url, i) => (
-                    <div key={url + i} className="space-y-2 rounded border p-3">
-                      <ImageUploadField
-                        onUploadingChange={onUploadingChange}
-                        label={i === 0 ? dt("الصورة الرئيسية") : dt("الصورة {0}", [i + 1])}
-                        value={url}
-                        onChange={(next) =>
-                          onChange(
-                            f.key,
-                            next
-                              ? list.map((v, n) => (n === i ? next : v))
-                              : list.filter((_, n) => n !== i),
-                          )
-                        }
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={!i}
-                          className="rounded border px-3 py-1 text-xs disabled:opacity-40"
-                          onClick={() => {
-                            const next = [...list];
-                            [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                            onChange(f.key, next);
-                          }}
-                        >
-                          {dt("تقديم")}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={i === list.length - 1}
-                          className="rounded border px-3 py-1 text-xs disabled:opacity-40"
-                          onClick={() => {
-                            const next = [...list];
-                            [next[i + 1], next[i]] = [next[i], next[i + 1]];
-                            onChange(f.key, next);
-                          }}
-                        >
-                          {dt("تأخير")}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <ImageUploadField
-                  onUploadingChange={onUploadingChange}
-                  label={dt("إضافة صورة")}
-                  value=""
-                  onChange={(url) => {
-                    if (url) onChange(f.key, [...list, url]);
-                  }}
-                />
-              </section>
-            );
+            return <ProjectImageGallery key={f.key} label={dt(f.label)} images={list} onChange={images => onChange(f.key, images)} onUploadingChange={onUploadingChange} />;
           }
           if (f.type === "numbers") {
             const list = Array.isArray(value) ? value.map(Number) : [];

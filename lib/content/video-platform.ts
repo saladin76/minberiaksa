@@ -1,4 +1,4 @@
-export type VideoProvider = "youtube" | "vimeo" | "direct" | "external" | "invalid";
+export type VideoProvider = "youtube" | "vimeo" | "facebook" | "direct" | "external" | "invalid";
 
 export interface VideoPresentation {
   provider: VideoProvider;
@@ -17,10 +17,24 @@ const DIRECT_MEDIA = /\.(?:mp4|webm|ogg)(?:$|[?#])/i;
 function safeHttpUrl(value: string): URL | null {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url : null;
+    return !url.username && !url.password && !url.port && ["https:", "http:"].includes(url.protocol) ? url : null;
   } catch {
     return null;
   }
+}
+
+/** Extract only the source; pasted markup is never stored or rendered as HTML. */
+export function extractVideoInput(input: string): string {
+  const value = input.trim();
+  if (!value.startsWith("<")) return value;
+  if (value.length > 10000 || !/^<iframe\b[^>]*>\s*<\/iframe>$/i.test(value)) return "";
+  const tag = value.match(/^<iframe\b([^>]*)>/i)?.[1] || "";
+  const sources = [...tag.matchAll(/\bsrc\s*=\s*(["'])(.*?)\1/gi)];
+  if (sources.length !== 1 || /\bsrcdoc\s*=/i.test(tag)) return "";
+  const source = sources[0][2].replace(/&amp;/gi, "&").replace(/&#(?:0*38|x0*26);/gi, "&");
+  const url = safeHttpUrl(source);
+  if (!url || url.protocol !== "https:") return "";
+  return ["www.facebook.com", "facebook.com", "www.youtube.com", "youtube.com", "www.youtube-nocookie.com", "player.vimeo.com"].includes(url.hostname.toLowerCase()) ? source : "";
 }
 
 function youtubeIdFrom(url: URL): string | null {
@@ -40,7 +54,7 @@ export function describeVideoSource(input: {
   url?: string | null;
   startSeconds?: number | null;
 }): VideoPresentation {
-  const raw = String(input.url ?? input.youtubeId ?? "").trim();
+  const raw = extractVideoInput(String(input.url || input.youtubeId || ""));
   const maybeBareId = !raw.includes("://") && YOUTUBE_ID.test(raw) ? raw : null;
   const parsed = raw ? safeHttpUrl(raw) : null;
   const youtubeId = maybeBareId ?? (parsed ? youtubeIdFrom(parsed) : null);
@@ -80,6 +94,18 @@ export function describeVideoSource(input: {
   }
 
   const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  if (["facebook.com", "m.facebook.com"].includes(host) && parsed.protocol === "https:") {
+    const source = parsed.pathname === "/plugins/video.php" ? safeHttpUrl(parsed.searchParams.get("href") || "") : parsed;
+    const sourceHost = source?.hostname.toLowerCase().replace(/^www\./, "");
+    if (source && source.protocol === "https:" && ["facebook.com", "m.facebook.com"].includes(sourceHost || "") &&
+      (/\/(?:videos|reel)\/[A-Za-z0-9._-]+/.test(source.pathname) || /^\/share\/v\/[A-Za-z0-9_-]+\/?$/.test(source.pathname) || (source.pathname === "/watch/" && /^\d+$/.test(source.searchParams.get("v") || "")) || (source.pathname === "/video.php" && /^\d+$/.test(source.searchParams.get("v") || "")))) {
+      const embed = new URL("https://www.facebook.com/plugins/video.php");
+      embed.searchParams.set("href", source.toString());
+      embed.searchParams.set("show_text", "false");
+      return { provider: "facebook", providerLabel: "Facebook", sourceUrl: source.toString(), watchUrl: source.toString(), embedUrl: embed.toString(), directVideo: false, youtubeId: null };
+    }
+    return { provider: "invalid", providerLabel: "Facebook", sourceUrl: raw, watchUrl: null, embedUrl: null, directVideo: false, youtubeId: null };
+  }
   if (host === "vimeo.com" || host === "player.vimeo.com") {
     const candidate = parsed.pathname.split("/").filter(Boolean).at(-1) ?? "";
     if (VIMEO_ID.test(candidate)) {

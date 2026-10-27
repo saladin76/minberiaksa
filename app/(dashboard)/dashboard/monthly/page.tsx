@@ -1,5 +1,7 @@
 "use client";
 
+import { RecurringHealthPanel } from "@/components/dashboard/RecurringHealthPanel";
+import { BILLING_READINESS_LABELS, type BillingReadiness } from "@/lib/donations/recurring-readiness";
 import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
@@ -159,6 +161,7 @@ interface DonationRow {
 }
 
 interface SubscriptionRow {
+  provider?: string; billingReadiness?: BillingReadiness; lastChargeError?: string | null; chargeAttempts?: number;
   id: string;
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
   amount: number;
@@ -978,6 +981,8 @@ export default function MonthlySubscriptionsDashboardPage() {
             )
           }
         />
+
+        <RecurringHealthPanel />
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>
@@ -2640,6 +2645,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 <Loader2 className="w-4 h-4 shrink-0 animate-spin text-brand" />
                               )}
                             </div>
+                            {s.billingReadiness ? <div className="mt-2 space-y-1 text-[10px] leading-5"><span className={`inline-block rounded-md px-2 py-0.5 ${["authorization_missing", "schedule_missing", "reconciliation_required"].includes(s.billingReadiness) ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600"}`}>{dt(BILLING_READINESS_LABELS[s.billingReadiness])}</span><span className="ms-1 text-slate-400">{s.provider}</span>{s.lastChargeError ? <details className="max-w-64 text-red-700"><summary className="cursor-pointer">{dt("آخر سبب لتعذر الخصم")} ({s.chargeAttempts || 0})</summary><p dir="auto" className="break-words rounded border border-red-100 bg-red-50 p-2">{s.lastChargeError}</p></details> : null}</div> : null}
                             {/* Local status vs the payment provider's  a mismatch is shown, never hidden. */}
                             <div className="mt-1 text-[10px] leading-4">
                               {providerChecks[s.id]?.loading ? (

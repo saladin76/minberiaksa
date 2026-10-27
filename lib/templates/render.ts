@@ -1,6 +1,7 @@
 import type { TReaderDocument } from "@usewaypoint/email-builder";
 import { mergeDocument, mergeText, type TemplateContext } from "./variables";
-import { APP_FONT_STACK, APP_FONT_GOOGLE_LINK, MODERN_SANS_STACK } from "./font";
+import { applyAppFont } from "./font";
+import { normalizeEmailAssets } from "./email-assets";
 
 /**
  * Lazy-loaded so `@usewaypoint/email-builder` (which runs React.createContext
@@ -15,19 +16,10 @@ async function getRenderer() {
 /**
  * Replace email-builder's default MODERN_SANS stack with the app's font and
  * inject a Google-Fonts <link> so clients that support web fonts get Poppins
- * + Noto Kufi Arabic. Clients that don't fall back to the system fonts in
+ * + Cairo Arabic. Clients that don't fall back to the system fonts in
  * APP_FONT_STACK.
  */
-export function applyAppFont(html: string): string {
-  let out = html.split(MODERN_SANS_STACK).join(APP_FONT_STACK);
-  const linkTag = `<link rel="stylesheet" href="${APP_FONT_GOOGLE_LINK}" />`;
-  if (out.includes("<head>")) {
-    out = out.replace("<head>", `<head>${linkTag}`);
-  } else if (/<head[^>]*>/.test(out)) {
-    out = out.replace(/<head([^>]*)>/, `<head$1>${linkTag}`);
-  }
-  return out;
-}
+export { applyAppFont } from "./font";
 
 /** The prop that carries a block's content, per block type. */
 const CONTENT_PROP: Record<string, string> = {
@@ -85,12 +77,13 @@ export function pruneEmptyVariableBlocks(original: TReaderDocument, merged: TRea
 
 export async function renderEmailHtml(
   document: TReaderDocument,
-  ctx: TemplateContext
+  ctx: TemplateContext,
+  locale = ctx.user.preferredLang,
 ): Promise<string> {
   const renderToStaticMarkup = await getRenderer();
   const merged = pruneEmptyVariableBlocks(document, mergeDocument(document, ctx));
   const raw = renderToStaticMarkup(merged, { rootBlockId: "root" });
-  return applyAppFont(raw);
+  return normalizeEmailAssets(applyAppFont(raw, locale), process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL);
 }
 
 export function renderEmailSubject(subject: string, ctx: TemplateContext): string {

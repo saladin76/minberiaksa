@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
+import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_SUGGESTED_TEAM_SUPPORT_AMOUNTS,
@@ -25,6 +27,7 @@ import {
 import {
   SuggestedTeamSupportSection,
   type SuggestedTeamSupportSectionRef,
+  type SuggestedTeamSupportPayload,
 } from "../campaigns/_components/SuggestedTeamSupportSection";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
@@ -141,6 +144,13 @@ function makeRow(item?: CartUpsellItem): UpsellRow {
 }
 
 export default function CartSettingsPage() {
+  const [loadError, setLoadError] = useState("");
+  const [baseline, setBaseline] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [previewCurrency, setPreviewCurrency] = useState("USD");
+  const [supportDraft, setSupportDraft] = useState<SuggestedTeamSupportPayload | null | undefined>(undefined);
+  const [rowDrafts, setRowDrafts] = useState<Record<string, SuggestedTeamSupportPayload | null>>({});
+  const [loadEpoch, setLoadEpoch] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [enabled, setEnabled] = useState(true);
@@ -152,20 +162,30 @@ export default function CartSettingsPage() {
   const { options: campaigns, loading: campaignsLoading } = useCampaignOptions();
   const campaignTitle = useMemo(() => new Map(campaigns.map((c) => [c.id, c.title])), [campaigns]);
 
+  const payloadSnapshot = (settings: { teamSupportEnabled: boolean; suggestedTeamSupport: unknown; cartUpsell: unknown }) => JSON.stringify({ teamSupportEnabled: settings.teamSupportEnabled, suggestedTeamSupport: parseSuggestedTeamSupport(settings.suggestedTeamSupport), cartUpsell: parseCartUpsell(settings.cartUpsell) });
+  const currentSettings = { teamSupportEnabled: enabled, suggestedTeamSupport: supportDraft === undefined ? seed : supportDraft, cartUpsell: { items: upsell.map(row => ({ campaignId: row.campaignId, ...(rowDrafts[row.key] === undefined ? row.seed : rowDrafts[row.key] || { amounts: [], byCurrency: {} }) })) } };
+  const dirty = Boolean(baseline && payloadSnapshot(currentSettings) !== baseline);
+  useDashboardUnsavedChanges(dirty);
+  const onSupportChange = useCallback((payload: SuggestedTeamSupportPayload | null) => setSupportDraft(payload), []);
+  const previewSupport = parseSuggestedTeamSupport(currentSettings.suggestedTeamSupport);
+  const supportAmounts = previewSupport.byCurrency[previewCurrency]?.length ? previewSupport.byCurrency[previewCurrency] : previewSupport.amounts.length ? previewSupport.amounts : DEFAULT_SUGGESTED_TEAM_SUPPORT_AMOUNTS;
+  useEffect(() => { if (!saved) return; const timer = setTimeout(() => setSaved(false), 6500); return () => clearTimeout(timer); }, [saved]);
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setLoading(true); setLoadError("");
     axios
       .get("/api/global-settings")
       .then((res) => {
         if (cancelled) return;
+        setBaseline(payloadSnapshot({ teamSupportEnabled: res.data?.teamSupportEnabled !== false, suggestedTeamSupport: res.data?.suggestedTeamSupport, cartUpsell: res.data?.cartUpsell }));
+        setSupportDraft(undefined); setRowDrafts({});
         setSeed(parseSuggestedTeamSupport(res.data?.suggestedTeamSupport));
         setEnabled(res.data?.teamSupportEnabled !== false);
         setUpsell(parseCartUpsell(res.data?.cartUpsell).items.map((item) => makeRow(item)));
       })
       .catch(() => {
         if (cancelled) return;
-        setSeed(parseSuggestedTeamSupport(null));
+        setLoadError(dt("تعذر تحميل إعدادات السلة. أعد المحاولة قبل التعديل أو الحفظ."));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -173,7 +193,7 @@ export default function CartSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadEpoch]);
 
   const setRowCampaign = (key: string, campaignId: string) =>
     setUpsell((rows) => rows.map((r) => (r.key === key ? { ...r, campaignId } : r)));
@@ -184,7 +204,7 @@ export default function CartSettingsPage() {
   const addRow = () => setUpsell((rows) => (rows.length >= CART_UPSELL_MAX_ITEMS ? rows : [...rows, makeRow()]));
 
   const handleSave = async () => {
-    if (!sectionRef.current) return;
+    if (!sectionRef.current || loadError || saving) return;
     const items: Array<{ campaignId: string; amounts: number[]; byCurrency: Record<string, number[]> }> = [];
     for (const row of upsell) {
       if (!row.campaignId) {
@@ -200,15 +220,19 @@ export default function CartSettingsPage() {
     }
     setSaving(true);
     try {
-      await axios.put("/api/global-settings", {
+      const payload = {
         teamSupportEnabled: enabled,
         suggestedTeamSupport: sectionRef.current.getPayload(),
         cartUpsell: { items },
-      });
+      };
+      await axios.put("/api/global-settings", payload);
+      const verified = await axios.get("/api/global-settings", { headers: { "Cache-Control": "no-cache" } });
+      if (payloadSnapshot({ teamSupportEnabled: verified.data?.teamSupportEnabled !== false, suggestedTeamSupport: verified.data?.suggestedTeamSupport, cartUpsell: verified.data?.cartUpsell }) !== payloadSnapshot(payload)) throw new Error(dt("تعذر تأكيد الإعدادات المحفوظة؛ احتفظ بالتعديلات وأعد التحميل للمراجعة."));
+      setBaseline(payloadSnapshot(payload)); setSaved(true);
       toast.success(dt("تم حفظ الإعدادات"));
     } catch (e) {
       const msg =
-        axios.isAxiosError(e) && e.response?.data?.error ? String(e.response.data.error) : dt("تعذّر حفظ الإعدادات");
+        axios.isAxiosError(e) && e.response?.data?.error ? String(e.response.data.error) : e instanceof Error ? e.message : dt("تعذّر حفظ الإعدادات");
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -219,20 +243,22 @@ export default function CartSettingsPage() {
 
   return (
     <div className="space-y-6" dir={dashDir()}>
-      <div>
+      <div className="sticky top-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur"><div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{dt("إعدادات السلة")}</h1>
         <p className="text-sm text-muted-foreground mt-1.5">
           {dt("ما تعرضه صفحة السلة حول التبرعات التي اختارها المتبرع: خطوة دعم الفريق قبل إتمام الدفع، والمشاريع المقترحة في قسم «وسِّع أثر عطاءك». كلاهما ينطبق على السلة كلها لا على مشروع بعينه.")}</p>
-      </div>
+      </div><Button type="button" onClick={handleSave} disabled={saving || loading || !!loadError || !dirty} className="gap-2 bg-brand text-white">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? dt("جار الحفظ…") : saved && !dirty ? dt("تم الحفظ") : dt("حفظ التغييرات")}</Button></div>
 
-      {loading || seed === undefined ? (
+      {loadError ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loadError}<Button type="button" variant="outline" onClick={() => setLoadEpoch(value => value + 1)} className="ms-3">{dt("إعادة المحاولة")}</Button></div> : null}
+      {saved && !dirty ? <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{dt("تم الحفظ والتحقق من النسخة المحفوظة")}</p> : null}
+      {!loadError && (loading || seed === undefined) ? (
         <Card className="p-5 sm:p-6">
           <div className="flex items-center gap-2 text-muted-foreground py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm">{dt("جاري التحميل...")}</span>
           </div>
         </Card>
-      ) : (
+      ) : !loadError ? (
         <>
           <Card className="p-5 sm:p-6 space-y-6">
             <div>
@@ -251,6 +277,7 @@ export default function CartSettingsPage() {
             <SuggestedTeamSupportSection
               ref={sectionRef}
               initialConfig={seed}
+              onValueChange={onSupportChange}
               label={dt("المبالغ المقترحة (جميع العملات)")}
               helpText={dt("أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تُضف استثناءً أدناه. اتركها فارغة لاستخدام القيم المبدئية للنظام. زر «لا شكراً» يظهر تلقائيًا.")}
               defaultPlaceholder={DEFAULT_SUGGESTED_TEAM_SUPPORT_AMOUNTS.join(", ")}
@@ -288,6 +315,8 @@ export default function CartSettingsPage() {
                           onChange={(id) => setRowCampaign(row.key, id)}
                         />
                       </div>
+                      <Button type="button" variant="ghost" size="icon" disabled={index === 0} aria-label={dt("تقديم")} onClick={() => setUpsell(previous => { const next = [...previous]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })}><ArrowUp size={16} /></Button>
+                      <Button type="button" variant="ghost" size="icon" disabled={index === upsell.length - 1} aria-label={dt("تأخير")} onClick={() => setUpsell(previous => { const next = [...previous]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })}><ArrowDown size={16} /></Button>
                       <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => removeRow(row.key)} aria-label={dt("حذف المشروع")}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -297,6 +326,7 @@ export default function CartSettingsPage() {
                         rowRefs.current.set(row.key, instance);
                       }}
                       initialConfig={row.seed}
+                      onValueChange={payload => setRowDrafts(previous => ({ ...previous, [row.key]: payload }))}
                       label={dt("المبالغ المقترحة (جميع العملات)")}
                       helpText={dt("أرقام مفصولة بفاصلة أو مسافة. تُستخدم لكل العملات ما لم تُضف استثناءً أدناه.")}
                       defaultPlaceholder={DEFAULT_CART_UPSELL_AMOUNTS.join(", ")}
@@ -309,13 +339,13 @@ export default function CartSettingsPage() {
             )}
           </Card>
 
-          <div className="flex justify-end">
-            <Button type="button" onClick={handleSave} disabled={saving} className="gap-2 bg-brand hover:bg-brand-dark text-white">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {dt("حفظ")}</Button>
-          </div>
+          <Card className="space-y-4 border-brand/20 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 font-bold"><Eye size={18} />{dt("معاينة ما يراه المتبرع")}</h2><select aria-label={dt("عملة المعاينة")} value={previewCurrency} onChange={event => setPreviewCurrency(event.target.value)} className="rounded-lg border p-2 text-sm">{SUPPORTED_CURRENCY_OPTIONS.map(currency => <option value={currency.code} key={currency.code}>{currency.code}</option>)}</select></div>
+            <div className="grid gap-4 md:grid-cols-2"><div className="rounded-xl border bg-slate-50 p-4"><h3 className="mb-3 font-semibold">{dt("دعم الفريق")}</h3>{enabled ? <div className="flex flex-wrap gap-2">{supportAmounts.map(amount => <span className="rounded-lg border bg-white px-3 py-2 text-sm" dir="ltr" key={amount}>{amount} {previewCurrency}</span>)}<span className="rounded-lg border px-3 py-2 text-sm">{dt("لا شكرًا")}</span></div> : <p className="text-sm text-slate-500">{dt("خطوة دعم الفريق مخفية")}</p>}</div><div className="space-y-2 rounded-xl border bg-slate-50 p-4"><h3 className="font-semibold">{dt("وسِّع أثر عطاءك")}</h3>{upsell.length ? upsell.map(row => { const config = parseSuggestedTeamSupport(rowDrafts[row.key] === undefined ? row.seed : rowDrafts[row.key]); const amounts = config.byCurrency[previewCurrency]?.length ? config.byCurrency[previewCurrency] : config.amounts; return <div key={row.key} className="rounded-lg border bg-white p-3"><p className="mb-2 text-sm">{campaignTitle.get(row.campaignId) || dt("اختر مشروعًا")}</p><div className="flex flex-wrap gap-2">{amounts.map(amount => <span key={amount} dir="ltr" className="rounded-md bg-brand/5 px-2 py-1 text-xs text-brand">{amount} {previewCurrency}</span>)}</div></div>; }) : <p className="text-sm text-slate-500">{dt("لا مشاريع مختارة  تُعرض الاقتراحات العامة.")}</p>}</div></div>
+            <p className="text-xs leading-6 text-slate-500">{dt("المعاينة تستخدم مبالغ العملة المختارة. المشروع غير النشط أو الموجود بالفعل في السلة لا يظهر للمتبرع ضمن الاقتراحات.")}</p>
+          </Card>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

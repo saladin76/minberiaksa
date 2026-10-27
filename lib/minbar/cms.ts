@@ -1,3 +1,4 @@
+import { PUBLISHED_BANK_ACCOUNT_FIELDS } from "@/lib/bank-transfers/bank-registry";
 import { fillYoutubeTitles } from "@/lib/youtube/oembed";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
@@ -202,7 +203,7 @@ export interface CmsBankAccount {
 /** Accounts published to this locale  `locales` is an allow-list, empty = all. */
 export async function listBankAccounts(locale: string): Promise<CmsBankAccount[]> {
   const rows = await prisma.bankAccount.findMany({
-    where: { isActive: true, OR: [{ locales: { isEmpty: true } }, { locales: { has: locale } }] },
+    where: { ...PUBLISHED_BANK_ACCOUNT_FIELDS, isActive: true, OR: [{ locales: { isEmpty: true } }, { locales: { has: locale } }] },
     orderBy: { order: "asc" },
     select: {
       id: true, slug: true, name: true, branch: true, holder: true, swift: true, logo: true,

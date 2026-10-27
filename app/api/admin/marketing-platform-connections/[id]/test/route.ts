@@ -13,26 +13,7 @@ import {
 } from "@/lib/marketing/platform-connection-requirements";
 import { redactSecretsFromMetadata } from "@/lib/marketing/secrets";
 
-interface TwilioApiSurface {
-  api?: {
-    v2010?: {
-      accounts?: (sid: string) => { fetch: () => Promise<unknown> };
-    };
-  };
-}
-
-/**
- * Test a connection's readiness. Always non-throwing  returns one of:
- *   - status: "active"            required fields present, lightweight check passed
- *   - status: "missing_config"    required fields missing (guidance returned)
- *   - status: "not_implemented"   platform-specific live check not wired yet
- *   - status: "auth_error"        Twilio auth check rejected the credentials
- *   - status: "sync_error"        Twilio reachable but returned an error
- *
- * Currently only Twilio has a live check (a fetch of the account record). All
- * other platforms return `not_implemented` when the required fields are in
- * place. No real message is sent.
- */
+/** Readiness check. No messages, charges or advertising mutations. */
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -45,7 +26,7 @@ export async function POST(
   const row = await prisma.marketingPlatformConnection.findUnique({ where: { id } });
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!isPlatformKey(row.platform)) {
-    return NextResponse.json({ error: "Stored platform unknown" }, { status: 500 });
+    return NextResponse.json({ error: "Stored platform unknown" }, { status: 410 });
   }
   const platform = row.platform as PlatformKey;
   const readiness = evaluateReadiness(platform, row as unknown as Record<string, unknown>, {
@@ -69,61 +50,6 @@ export async function POST(
       completionPercent: readiness.completionPercent,
       guidance: readiness.guidance,
     });
-  }
-
-  // Twilio: lightweight account-record fetch.
-  if (platform === "TWILIO" && row.accountId && row.authToken) {
-    try {
-      const twilioMod = await import("twilio");
-      const client = (twilioMod.default ?? twilioMod)(row.accountId, row.authToken);
-      const accounts =
-        (client as unknown as TwilioApiSurface).api?.v2010?.accounts;
-      if (!accounts) {
-        await persistTestResult({
-          id,
-          status: "NOT_IMPLEMENTED",
-          error: "Twilio SDK lacks api.v2010.accounts",
-          tested: true,
-        });
-        await auditTest(session!, row, "not_implemented", readiness);
-        return NextResponse.json({
-          ok: false,
-          status: "not_implemented",
-          message: "نسخة Twilio SDK لا توفر فحص الحساب  لا يمكن إجراء اختبار مباشر.",
-        });
-      }
-      await accounts(row.accountId).fetch();
-      await persistTestResult({ id, status: "ACTIVE", error: null, tested: true });
-      await auditTest(session!, row, "active", readiness);
-      return NextResponse.json({
-        ok: true,
-        status: "active",
-        message: "تم التحقق من حساب Twilio بنجاح.",
-        completionPercent: readiness.completionPercent,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      const isAuth = /20003|401|auth/i.test(message);
-      await persistTestResult({
-        id,
-        status: isAuth ? "AUTH_ERROR" : "SYNC_ERROR",
-        error: message.slice(0, 240),
-        tested: true,
-      });
-      await auditTest(
-        session!,
-        row,
-        isAuth ? "auth_error" : "sync_error",
-        readiness
-      );
-      return NextResponse.json({
-        ok: false,
-        status: isAuth ? "auth_error" : "sync_error",
-        message: isAuth
-          ? "Auth Token غير صحيح  راجع TWILIO_ACCOUNT_SID و TWILIO_AUTH_TOKEN."
-          : `فشل الاتصال بـ Twilio: ${message.slice(0, 160)}`,
-      });
-    }
   }
 
   // Other platforms: not implemented yet  readiness checks pass but no

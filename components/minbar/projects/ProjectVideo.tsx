@@ -1,5 +1,6 @@
 "use client";
 
+import { describeVideoSource } from "@/lib/content/video-platform";
 import { useEffect, useState } from "react";
 
 /**
@@ -16,6 +17,8 @@ import { useEffect, useState } from "react";
 type Player = { kind: "iframe"; src: string } | { kind: "video"; src: string } | null;
 
 function playerFor(raw: string): Player {
+  const media = describeVideoSource({ url: raw });
+  if (media.embedUrl) return { kind: media.directVideo ? "video" : "iframe", src: media.embedUrl };
   let url: URL;
   try {
     url = new URL(raw);
@@ -50,7 +53,7 @@ function playerFor(raw: string): Player {
 function isFacebookShare(raw: string): boolean {
   try {
     const url = new URL(raw);
-    return url.hostname.includes("facebook.com") && url.pathname.startsWith("/share/");
+    return ["facebook.com", "www.facebook.com", "m.facebook.com", "fb.watch", "www.fb.watch"].includes(url.hostname) && (url.pathname.startsWith("/share/") || url.hostname.endsWith("fb.watch"));
   } catch {
     return false;
   }

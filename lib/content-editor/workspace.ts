@@ -79,11 +79,10 @@ const field = (
 export const SETTING_FIELDS: Record<ContentKind, SettingField[]> = {
   videos: [
     field("type", "نوع الفيديو", "content", "select", [["ACHIEVEMENT", "إنجازات"], ["ENDORSEMENT", "تزكيات"], ["FIELD", "من الميدان"], ["EVENT", "فعالياتنا"]]),
-    field("url", "رابط الفيديو (YouTube / Vimeo / MP4)", "media", "url"),
-    field("youtubeId", "معرّف فيديو YouTube", "media"),
+    field("url", "رابط الفيديو أو كود iframe", "media", "custom"),
     field("thumbnail", "الصورة المصغرة", "media", "image"),
     field("startSeconds", "بداية المقطع بالثواني", "media", "number"),
-    field("regionKey", "المنطقة", "content", "select", [["", "دون منطقة"], ["regionGaza", "غزة"], ["regionQuds", "القدس"], ["regionAqsa", "الأقصى"], ["regionField", "من الميدان"], ["tagTezkiye", "تزكيات"]]),
+    field("campaignIds", "المشاريع المرتبطة", "content", "ids"),
     field("localeFilter", "لغات عرض الفيديو (فارغ = جميع اللغات)", "review", "ids"),
     field("showOnHome", "إظهار في الرئيسية", "review", "boolean"),
     field("isActive", "نشط", "review", "boolean"), field("order", "الترتيب", "review", "number"),
@@ -214,6 +213,7 @@ export function settingsFor(
               : ""),
     ]),
   );
+  if (kind === "videos") result.url = String(row.url || row.youtubeId || "");
   if (kind === "campaigns") {
     result.suggestedDonations = parseSuggestedDonations(row.suggestedDonations);
     result.suggestedShareCounts = parseSuggestedShareCounts(row.suggestedShareCounts);

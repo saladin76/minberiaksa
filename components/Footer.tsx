@@ -35,33 +35,12 @@ const Footer = () => {
   useEffect(() => {
     const shouldSend = searchParams.get('footerMessageSent') === '1';
     if (!shouldSend || !session?.user?.id) return;
-    const run = async () => {
-      try {
-        const raw = window.sessionStorage.getItem(pendingMessageKey);
-        if (!raw) { router.replace(appendCurrencyQuery(pathname, getCurrencyCodeForLinks())); return; }
-        const parsed = JSON.parse(raw) as { body?: string; locale?: string };
-        const trimmed = (parsed.body || '').trim();
-        if (!trimmed) { window.sessionStorage.removeItem(pendingMessageKey); router.replace(appendCurrencyQuery(pathname, getCurrencyCodeForLinks())); return; }
-        const res = await fetch('/api/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ body: trimmed, locale: parsed.locale || locale, subject: 'COMPLAINT' }),
-        });
-        if (!res.ok) throw new Error('Failed');
-        window.sessionStorage.removeItem(pendingMessageKey);
-        setBody('');
-        setSubmitMessage(t('sendSuccess'));
-        try { track('contact_message_sent', { source: 'footer_after_signin', subject: 'COMPLAINT', locale }); } catch {}
-        setTimeout(() => setSubmitMessage(''), 4000);
-      } catch {
-        try { track('contact_message_failed', { source: 'footer_after_signin', subject: 'COMPLAINT', locale }); } catch {}
-        setSubmitMessage(t('sendError'));
-        setTimeout(() => setSubmitMessage(''), 3000);
-      } finally {
-        router.replace(appendCurrencyQuery(pathname, getCurrencyCodeForLinks()));
-      }
-    };
-    run();
+    try {
+      const raw = window.sessionStorage.getItem(pendingMessageKey);
+      if (raw) { const parsed = JSON.parse(raw); if (typeof parsed.body === 'string') setBody(parsed.body); }
+      window.sessionStorage.removeItem(pendingMessageKey);
+    } catch {}
+    router.replace(appendCurrencyQuery(pathname, getCurrencyCodeForLinks()));
   }, [searchParams, session?.user?.id, pathname, router, t, locale]);
 
   useEffect(() => {

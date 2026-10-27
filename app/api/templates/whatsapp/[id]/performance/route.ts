@@ -13,7 +13,7 @@ import type {
   NormalizedButton,
   NormalizedHeader,
   WhatsappTemplateKind,
-} from "@/lib/messaging/twilio-templates";
+} from "@/lib/messaging/whatsapp-template-types";
 
 /**
  * Return performance metrics + quality recommendations for one WhatsApp

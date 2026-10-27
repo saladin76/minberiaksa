@@ -1,4 +1,5 @@
 "use client";
+import { useContactAuthDraft } from "@/hooks/useContactAuthDraft";
 
 import { type FormEvent, type ReactElement, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -77,6 +78,8 @@ export default function PartnerPage() {
     shakeTimer.current = setTimeout(() => setShake(false), 350);
   };
 
+  const requireContactAuth = useContactAuthDraft(draft => { if (typeof draft.org === "string") setOrg(draft.org); if (typeof draft.email === "string") setEmail(draft.email); if (typeof draft.message === "string") setMessage(draft.message); });
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
@@ -85,6 +88,8 @@ export default function PartnerPage() {
       fail();
       return;
     }
+
+    if (!requireContactAuth({ org, email, message })) return;
 
     setSubmitting(true);
     setError("");
@@ -98,7 +103,7 @@ export default function PartnerPage() {
              design but the inbox needs a body, so a blank one falls back to
              the form's own title rather than to invented text. The substance
              is then the organisation name and the address to reply to. */
-          body: message.trim() || t("formTitle"),
+          body: [org.trim(), email.trim(), message.trim() || t("formTitle")].join("\n"),
           locale,
           guestName: org.trim(),
           guestEmail: email.trim(),

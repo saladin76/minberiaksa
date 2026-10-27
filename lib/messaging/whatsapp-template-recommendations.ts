@@ -2,7 +2,7 @@
  * Rule-based quality recommendations for WhatsApp templates.
  *
  * Inputs are intentionally minimal so callers can pass either an imported
- * Twilio template (no perf data yet) or a local template with attached
+ * provider template (no perf data yet) or a local template with attached
  * `TemplatePerformance` metrics. Each rule produces a typed card the UI can
  * render in the preview drawer.
  */
@@ -10,7 +10,7 @@ import type {
   NormalizedButton,
   NormalizedHeader,
   WhatsappTemplateKind,
-} from "./twilio-templates";
+} from "./whatsapp-template-types";
 
 export type TemplateRecommendationKind =
   | "shorten_opening"

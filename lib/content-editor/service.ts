@@ -95,6 +95,13 @@ export async function readContent(db: Store, kind: ContentKind, id: string) {
   if (!row) throw new ContentError("المحتوى غير موجود", 404);
   if (kind === "campaigns" && row.impactCampaign)
     throw new ContentError("مشاريع تسوية الأثر تُدار من محرر الأثر المتخصص");
+  if (kind === "campaigns") {
+    const updates = rows(row.updates);
+    if (updates.length) {
+      const videos = await db.model("video").findMany({ where: { sourceUpdateId: { in: updates.map(update => update.id) } }, select: { id: true, sourceUpdateId: true } });
+      row.updates = updates.map(update => ({ ...update, libraryVideoId: videos.find(video => video.sourceUpdateId === update.id)?.id || null }));
+    }
+  }
   return row;
 }
 export function documentFor(kind: ContentKind, row: ContentRecord) {
@@ -407,7 +414,20 @@ export async function saveWorkspace(
         error instanceof Error ? error.message : "علاقات محتوى غير صالحة",
       );
     }
-    return documentFor(input.kind, await readContent(tx, input.kind, input.id));
+    const final = await readContent(tx, input.kind, input.id);
+    if (input.kind === "videos" && final.sourceUpdateId) {
+      const sourceUpdate = await tx.model("update").findUnique({ where: { id: final.sourceUpdateId } });
+      if (sourceUpdate) await tx.model("update").update({ where: { id: final.sourceUpdateId }, data: {
+        title: text(final.title), description: text(final.description), image: final.thumbnail || null,
+        videoUrl: final.url || (final.youtubeId ? `https://www.youtube.com/watch?v=${final.youtubeId}` : null),
+        translations: { upsert: rows(final.translations).map(translation => ({
+          where: { updateId_locale: { updateId: final.sourceUpdateId, locale: translation.locale } },
+          create: { locale: translation.locale, title: text(translation.title), description: text(translation.description) },
+          update: { title: text(translation.title), description: text(translation.description) },
+        })) },
+      } });
+    }
+    return documentFor(input.kind, final);
   });
 }
 export async function changeCategorySlug(

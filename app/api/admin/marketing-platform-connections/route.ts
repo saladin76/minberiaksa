@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       { name: "asc" },
     ],
   });
-  const connections = rows.map(serializeConnection);
+  const connections = rows.filter(row => isPlatformKey(row.platform)).map(serializeConnection);
 
   const summary = {
     total: connections.length,
