@@ -59,6 +59,7 @@ const indexes = [
   { collection: "Video", key: { sourceUpdateId: 1 }, unique: false },
   { collection: "GoogleSearchPlan", key: { connectionId: 1, createdAt: 1 }, unique: false },
   { collection: "GoogleSearchPlan", key: { automationEnabled: 1, lastReviewAt: 1 }, unique: false },
+  { collection: "AuditLog", key: { action: 1, entityType: 1, createdAt: -1 }, unique: false },
 
 ];
 

@@ -11,3 +11,13 @@ export function templateSyncTimestamps(values: ReadonlyArray<Date | string | nul
     complete: values.length > 0 && timestamps.length === values.length,
   };
 }
+
+type SyncDates = { lastSyncedAt: Date | string | null; latestSyncedAt?: Date | string | null; oldestSyncedAt?: Date | string | null };
+/** Compute over every template before a dashboard truncates its preview rows. */
+export function templateSyncCoverage(rows: ReadonlyArray<SyncDates>) {
+  return {
+    latestAt: templateSyncTimestamps(rows.map(row => row.latestSyncedAt ?? row.lastSyncedAt)).latestAt,
+    oldestAt: templateSyncTimestamps(rows.map(row => row.oldestSyncedAt ?? row.lastSyncedAt)).oldestAt,
+    complete: templateSyncTimestamps(rows.map(row => row.lastSyncedAt)).complete,
+  };
+}

@@ -8,7 +8,8 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getActiveMetaWhatsappRuntimeConfig } from "@/lib/communication/runtime-config";
 import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { resolveVariantForLocale } from "@/lib/communication/whatsapp-template-sync";
-import { templateSyncTimestamps } from "@/lib/communication/template-sync-timestamps";
+import { templateSyncTimestamps, templateSyncCoverage } from "@/lib/communication/template-sync-timestamps";
+import { templateSyncResult, WHATSAPP_CATALOGUE_SYNC_ACTION } from "@/lib/communication/template-sync-result";
 import { communicationPurposeWhere, parseCommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 export const runtime = "nodejs";
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     const [
       total, byStatus,
-      allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryPreflightResult, activeSenders,
+      allTimeTotal, rows, listTotal, bucketRows, templates, metaConfig, retryPreflightResult, activeSenders, lastTemplateSync,
     ] = await Promise.all([
       prisma.communicationDelivery.count({ where: rangeWhere }),
       prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
@@ -123,6 +124,11 @@ export async function GET(request: NextRequest) {
         },
         select: { businessAccountId: true },
       }),
+      prisma.auditLog.findFirst({
+        where: { action: WHATSAPP_CATALOGUE_SYNC_ACTION, entityType: "WhatsappTemplate" },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true, metadata: true },
+      }).catch(() => null),
     ]);
 
     const statusCounts: Record<string, number> = {};
@@ -237,7 +243,8 @@ export async function GET(request: NextRequest) {
         reason: metaConfig.configured ? null : metaConfig.reason,
         missingFields: metaConfig.configured ? [] : metaConfig.missingFields,
       },
-      templates: { total: templateRows.length, ready: readyTemplates, rows: templateRows.slice(0, 8) },
+      templates: { total: templateRows.length, ready: readyTemplates, rows: templateRows.slice(0, 8), syncFreshness: templateSyncCoverage(templateRows) },
+      templateSync: templateSyncResult(lastTemplateSync),
       statusCounts,
       timeseries: [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date)),
       rows,
