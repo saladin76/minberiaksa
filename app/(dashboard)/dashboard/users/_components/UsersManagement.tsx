@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ import {
   UserCircle,
   Mail,
   MessageCircle,
-  BadgeCheck,
 } from "lucide-react";
 import { SendTemplateDialog, type SendTarget } from "@/components/dashboard/SendTemplateDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,6 +63,9 @@ import type { UserProfileCardData } from "@/lib/dashboard/user-profile-card";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
+import { DonorProfileEditor } from "@/components/dashboard/DonorProfileEditor";
+import { DonorAccountBadge } from "@/components/dashboard/DonorAccountBadge";
+
 const PAGE_SIZE = 10;
 
 type UserRow = UserProfileCardData;
@@ -90,11 +92,15 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [profileToEdit, setProfileToEdit] = useState<UserRow | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const { openUserProfileCard } = useViewUserProfile();
 
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const [searchInput, setSearchInput] = useState(() => searchParams.get("q") ?? "");
+  const [accountFilter, setAccountFilter] = useState("all");
+  const usersRequest = useRef(0);
   const [preferredLangFilter, setPreferredLangFilter] = useState<string>("all");
   const [badgeFilter, setBadgeFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<GenderFilterValue>("all");
@@ -114,6 +120,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
 
   const fetchUsers = useCallback(
     async (pageNum: number, append: boolean) => {
+      const requestId = ++usersRequest.current;
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
       try {
@@ -124,6 +131,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
         params.set("sortBy", sortBy);
         params.set("sortOrder", sortOrder);
         if (search) params.set("search", search);
+        if (scope === "donors" && accountFilter !== "all") params.set("accountStatus", accountFilter);
         if (preferredLangFilter && preferredLangFilter !== "all")
           params.set("preferredLang", preferredLangFilter);
         if (scope === "donors" && badgeFilter && badgeFilter !== "all")
@@ -131,18 +139,23 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
         if (genderFilter !== "all") params.set("gender", genderFilter);
         applyAgeBracketParams(params, ageFilter);
         const res = await axios.get(`/api/users?${params}`);
+        if (requestId !== usersRequest.current) return;
         const list = res.data?.users ?? [];
         setUsers((prev) => (append ? [...prev, ...list] : list));
         setTotal(res.data?.pagination?.total ?? 0);
       } catch (err) {
+        if (requestId !== usersRequest.current) return;
+        if (append) setPage(previous => Math.max(1, previous - 1));
         console.error("Error fetching users:", err);
         toast.error(dt("فشل في تحميل المستخدمين"));
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestId === usersRequest.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
-    [scope, search, preferredLangFilter, badgeFilter, genderFilter, ageFilter, sortBy, sortOrder]
+    [scope, search, preferredLangFilter, badgeFilter, genderFilter, ageFilter, sortBy, sortOrder, accountFilter]
   );
 
   useEffect(() => {
@@ -235,7 +248,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
     scope === "donors" ? dt("المتبرعين") : dt("فريق العمل");
   const pageSubtitle =
     scope === "donors"
-      ? dt("عرض المتبرعين، الشارات، والتبرعات (تعديل الأدوار للمدير فقط)")
+      ? dt("إدارة بيانات المتبرعين والشارات والتبرعات")
       : dt("المدراء وأعضاء الطاقم  المدراء يظهرون أولًا؛ لا يظهر حسابك الحالي في القائمة");
 
   const toggleSelectUser = (id: string) => {
@@ -403,6 +416,13 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                 />
               </div>
               )}
+              {scope === "donors" && <label className="space-y-2 text-start text-[11px] font-medium text-slate-500">
+                <span>{dt("نوع الحساب")}</span>
+                <select value={accountFilter} onChange={event => setAccountFilter(event.target.value)} className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs">
+                  <option value="all">{dt("الكل")}</option><option value="MEMBER">{dt("عضو مسجل")}</option>
+                  <option value="GUEST">{dt("زائر")}</option><option value="UNKNOWN">{dt("غير محدد")}</option>
+                </select>
+              </label>}
               <div className="space-y-2 text-start">
                 <label className="text-[11px] font-medium text-slate-500">{dt("ترتيب حسب")}</label>
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
@@ -587,20 +607,9 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                {/* The check marks a donor who has used this site themselves 
-                                    signed in, verified their email or given through checkout.
-                                    Donors imported from the old site who have not come back yet
-                                    show without it. */}
                                 <p className="flex min-w-0 items-center gap-1 text-[13px] font-medium text-slate-900">
                                   <span className="truncate">{u.name ?? dt("بلا اسم")}</span>
-                                  {u.verifiedAt ? (
-                                    <BadgeCheck
-                                      className="h-3.5 w-3.5 shrink-0 fill-sky-500 text-white"
-                                      aria-label={dt("حساب مُفعّل")}
-                                    >
-                                      <title>{dt("حساب مُفعّل منذ {0}", [new Date(u.verifiedAt).toLocaleDateString(dashIntl("ar-EG"), { dateStyle: "medium" })])}</title>
-                                    </BadgeCheck>
-                                  ) : null}
+                                  {scope === "donors" && <DonorAccountBadge status={u.accountStatus} />}
                                 </p>
                                 <p className="truncate text-[11px] text-slate-500" title={u.email ?? undefined}>
                                   {u.email ?? u.phone ?? "—"}
@@ -768,12 +777,15 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                                     <Pencil className="w-4 h-4 me-2" />
                                     {dt("تعديل الصلاحيات")}</DropdownMenuItem>
                                 )}
-                                {scope === "donors" &&
-                                  u.role === "DONOR" &&
-                                  isFullAdmin && (
+                                {scope === "donors" && u.role === "DONOR" && (
+                                  <DropdownMenuItem onClick={() => setProfileToEdit(u)}>
+                                    <Pencil className="w-4 h-4 me-2" />{dt("تعديل بيانات المتبرع")}
+                                  </DropdownMenuItem>
+                                )}
+                                {scope === "donors" && u.role === "DONOR" && isFullAdmin && (
                                   <DropdownMenuItem onClick={() => handleEditClick(u)}>
-                                    <Pencil className="w-4 h-4 me-2" />
-                                    {dt("تعديل الصلاحيات")}</DropdownMenuItem>
+                                    <Pencil className="w-4 h-4 me-2" />{dt("تعديل الصلاحيات")}
+                                  </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -807,6 +819,8 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
         </section>
       </div>
 
+      {profileToEdit && <DonorProfileEditor key={profileToEdit.id} user={profileToEdit} canEditEmail={isFullAdmin}
+        onClose={() => setProfileToEdit(null)} onSaved={() => { setPage(1); void fetchUsers(1, false); }} />}
       <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
         <DialogOverlay className="fixed inset-0 bg-black/50" />
         <DialogContent className="fixed top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[min(90vh,640px)] overflow-y-auto p-4 sm:p-6 transform -translate-x-1/2 -translate-y-1/2 bg-card text-card-foreground border border-border rounded-lg shadow-lg" dir={dashDir()}>

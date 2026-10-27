@@ -113,9 +113,10 @@ type MetaAssetsPayload = {
   }>;
 };
 
-type Preview =
-  | { wouldSend: true; matchedBy: string; sender: { id: string | null; displayPhoneNumber: string | null; senderEmail: string | null; smsSender: string | null; provider: string | null } }
-  | { wouldSend: false; reason: string };
+type RuleTrace = { ruleId: string | null; locale: string | null; country: string | null; purpose: string | null; reason: string; priority: number; primaryAvailable: boolean; fallbackAvailable: boolean };
+type Preview = ({ trace?: RuleTrace[] } & (
+  | { wouldSend: true; matchedBy: string; ruleId?: string | null; fallbackUsed?: boolean; sender: { id: string | null; displayPhoneNumber: string | null; senderEmail: string | null; smsSender: string | null; provider: string | null } }
+  | { wouldSend: false; reason: string }));
 
 const MATCHED_BY_LABELS: Record<string, string> = {
   get rule() { return dt("بقاعدة توجيه صريحة"); },
@@ -1145,10 +1146,12 @@ function RuleForm({
 function RoutingPreview() {
   const [form, setForm] = useState({ channel: "WHATSAPP", locale: "ar", country: "", purpose: "TRANSACTIONAL" });
   const [result, setResult] = useState<Preview | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => { setResult(null); setError(false); }, [form]);
   const [loading, setLoading] = useState(false);
 
   const run = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setError(false);
     try {
       const params = new URLSearchParams({ channel: form.channel, purpose: form.purpose });
       if (form.locale.trim()) params.set("locale", form.locale.trim());
@@ -1156,7 +1159,8 @@ function RoutingPreview() {
       const res = await fetch(`/api/dashboard/communication/routing-rules?${params}`, { cache: "no-store" });
       const body = await res.json();
       setResult(res.ok && body.ok ? body : null);
-    } finally {
+      setError(!res.ok || !body.ok);
+    } catch { setResult(null); setError(true); } finally {
       setLoading(false);
     }
   }, [form]);
@@ -1189,6 +1193,7 @@ function RoutingPreview() {
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {dt(" اختبر")}</button>
       </div>
 
+      {error && <p role="alert" className="mt-3 text-sm text-rose-700">{dt("تعذر تحميل البيانات")}</p>}
       {result && (
         result.wouldSend ? (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -1197,6 +1202,7 @@ function RoutingPreview() {
               {result.sender.displayPhoneNumber || result.sender.senderEmail || result.sender.smsSender || result.sender.provider || "—"}
             </span>
             {"  "}{MATCHED_BY_LABELS[result.matchedBy] ?? result.matchedBy}
+            {result.fallbackUsed && <span className="ms-2">{dt("تم اختيار المُرسِل البديل")}</span>}
           </p>
         ) : (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -1204,6 +1210,14 @@ function RoutingPreview() {
             {dtx("لن يُرسَل إلى هذا المستلم  {0}. هذا قرار نهائي: لا يوجد بديل من إعداد البيئة يتجاوزه.", [result.reason])}</p>
         )
       )}
+      {result?.trace && result.trace.length > 0 && <details className="mt-3 text-xs text-slate-600">
+        <summary className="cursor-pointer font-medium">{dt("تفاصيل")}</summary>
+        <ul className="mt-2 space-y-2">{result.trace.map((row, index) => <li key={row.ruleId ?? index} className="rounded-lg border p-2">
+          <span dir="ltr">{row.locale ?? "*"} / {row.country ?? "*"}</span> · {row.purpose ? PURPOSE_LABELS[row.purpose] ?? row.purpose : dt("الكل")} · {dt("الأولوية")}: {row.priority}
+          <p>{row.reason === "DISABLED" ? dt("معطّل") : row.reason === "MATCH" ? dt("مطابق") : dt("الشروط غير متطابقة")}
+            {row.reason === "MATCH" && !row.primaryAvailable && <span> · {row.fallbackAvailable ? dt("المُرسِل البديل متاح") : dt("لا يوجد مُرسِل متاح")}</span>}</p>
+        </li>)}</ul>
+      </details>}
     </div>
   );
 }

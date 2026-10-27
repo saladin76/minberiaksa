@@ -29,6 +29,7 @@ export type CommunicationSenderConfig = {
 };
 
 export type SenderRoutingRuleConfig = {
+  id?: string;
   channel: CommunicationChannel;
   locale?: string | null;
   country?: string | null;
@@ -47,7 +48,7 @@ export type SenderRoutingRequest = {
 };
 
 export type SenderRoutingResult =
-  | { sender: CommunicationSenderConfig; matchedBy: "rule" | "capability" | "default" }
+  | { sender: CommunicationSenderConfig; matchedBy: "rule" | "capability" | "default"; ruleId?: string; fallbackUsed?: boolean }
   | { skipped: true; reason: string };
 
 function normLocale(value?: string | null): string | null {
@@ -85,7 +86,7 @@ function byPriority(a: CommunicationSenderConfig, b: CommunicationSenderConfig):
   const pa = a.priority ?? 100;
   const pb = b.priority ?? 100;
   if (pa !== pb) return pa - pb;
-  return (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0);
+  return (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0) || a.id.localeCompare(b.id);
 }
 
 /**
@@ -95,6 +96,8 @@ function byPriority(a: CommunicationSenderConfig, b: CommunicationSenderConfig):
  */
 function ruleScore(rule: SenderRoutingRuleConfig, req: { locale: string | null; country: string | null; purpose: CommunicationPurpose }): number | null {
   let score = 0;
+  if (rule.locale && !normLocale(rule.locale)) return null;
+  if (rule.country && !normCountry(rule.country)) return null;
   const ruleLocale = normLocale(rule.locale);
   const ruleCountry = normCountry(rule.country);
   if (ruleLocale) {
@@ -110,6 +113,21 @@ function ruleScore(rule: SenderRoutingRuleConfig, req: { locale: string | null; 
     score += 1;
   }
   return score;
+}
+
+/** Inspect the same rule predicates as the executor without contacting any provider. */
+export function explainSenderRouting(request: SenderRoutingRequest, senders: CommunicationSenderConfig[], rules: SenderRoutingRuleConfig[]) {
+  const locale = normLocale(request.locale), country = normCountry(request.country);
+  const available = (id: string | null | undefined) => {
+    const sender = senders.find(row => row.id === id);
+    return Boolean(sender && sender.channel === request.channel && isUsable(sender) && supportsLocale(sender, locale) && supportsCountry(sender, country) && supportsPurpose(sender, request.purpose));
+  };
+  return rules.map(rule => {
+    const score = ruleScore(rule, { locale, country, purpose: request.purpose });
+    return { ruleId: rule.id ?? null, locale: rule.locale ?? null, country: rule.country ?? null, purpose: rule.purpose ?? null, priority: rule.priority ?? 100, specificity: score,
+      reason: !rule.enabled ? "DISABLED" : rule.channel !== request.channel ? "CHANNEL_MISMATCH" : score === null ? "PREDICATE_MISMATCH" : "MATCH",
+      primaryAvailable: available(rule.senderId), fallbackAvailable: available(rule.fallbackSenderId) };
+  }).sort((a, b) => (b.specificity ?? -1) - (a.specificity ?? -1) || a.priority - b.priority || (a.ruleId ?? "").localeCompare(b.ruleId ?? ""));
 }
 
 export function resolveSender(
@@ -131,13 +149,13 @@ export function resolveSender(
     .filter((r) => r.enabled && r.channel === request.channel)
     .map((r) => ({ rule: r, score: ruleScore(r, { locale, country, purpose: request.purpose }) }))
     .filter((entry): entry is { rule: SenderRoutingRuleConfig; score: number } => entry.score !== null)
-    .sort((a, b) => b.score - a.score || (a.rule.priority ?? 100) - (b.rule.priority ?? 100));
+    .sort((a, b) => b.score - a.score || (a.rule.priority ?? 100) - (b.rule.priority ?? 100) || (a.rule.id ?? a.rule.senderId).localeCompare(b.rule.id ?? b.rule.senderId));
 
   for (const { rule } of candidateRules) {
     const primary = byId.get(rule.senderId);
-    if (primary && isUsable(primary)) return { sender: primary, matchedBy: "rule" };
+    if (primary && primary.channel === request.channel && isUsable(primary) && supportsLocale(primary, locale) && supportsCountry(primary, country) && supportsPurpose(primary, request.purpose)) return { sender: primary, matchedBy: "rule", ruleId: rule.id, fallbackUsed: false };
     const fallback = rule.fallbackSenderId ? byId.get(rule.fallbackSenderId) : undefined;
-    if (fallback && isUsable(fallback)) return { sender: fallback, matchedBy: "rule" };
+    if (fallback && fallback.channel === request.channel && isUsable(fallback) && supportsLocale(fallback, locale) && supportsCountry(fallback, country) && supportsPurpose(fallback, request.purpose)) return { sender: fallback, matchedBy: "rule", ruleId: rule.id, fallbackUsed: true };
   }
 
   // 2) Capability match (locale + country + purpose), by priority.

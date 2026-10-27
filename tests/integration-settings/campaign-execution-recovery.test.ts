@@ -24,7 +24,7 @@ type Progress = { cursor: string | null; total: number; sent: number; skipped: n
 type State = { id: string; name: string; status: string; channel: string; purpose: string; templateGroupId: string; audienceSegmentKey: null; scheduledAt: Date; metadata: Dict };
 type Recipient = { cursorId: string; userId: string; name: string; email: string; phone: string; locale: string; country: string };
 type Delivery = Dict & { id: string; status: string; recipientUserId: string; recipientEmail?: string; recipientPhone?: string; providerMessageId?: string; errorMessage?: string };
-type Options = { recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
+type Options = { denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
 type Result = { ok: boolean; status: string; sent: number; skipped: number; failed: number; total: number; hasMore?: boolean; blocked?: string };
 type Engine = {
   executeCampaignSend: (id: string, opts?: { mode?: string; maxBatches?: number; batchSize?: number; timeBudgetMs?: number }) => Promise<Result>;
@@ -36,7 +36,7 @@ function engineHarness(options: Options = {}) {
   }));
   const now = new Date().toISOString();
   const previous: Progress = { cursor: recipients.at(-1)?.cursorId ?? null, total: recipients.length, sent: recipients.length, skipped: 0, failed: 0, done: false, batches: 1, blockedRuns: 0, reasons: {}, startedAt: now, updatedAt: now };
-  const campaign: State = { id: "campaign", name: "Test", status: options.resumeAtEnd ? "SENDING" : "APPROVED", channel: "EMAIL", purpose: "MARKETING", templateGroupId: "template", audienceSegmentKey: null, scheduledAt: new Date(0), metadata: options.resumeAtEnd ? { sendProgress: previous } : {} };
+  const campaign: State = { id: "campaign", name: "Test", status: options.resumeAtEnd ? "SENDING" : "APPROVED", channel: options.channel ?? "EMAIL", purpose: "MARKETING", templateGroupId: "template", audienceSegmentKey: null, scheduledAt: new Date(0), metadata: options.resumeAtEnd ? { sendProgress: previous } : {} };
   const deliveries: Delivery[] = options.resumeAtEnd ? recipients.map((r, i) => ({ id: `d${i}`, status: "SENT", recipientUserId: r.userId, recipientEmail: r.email, providerMessageId: `p${i}` })) : [];
   let queue: Array<Recipient & { id: string; nextAttemptAt: Date }> = [];
   let calls = 0, gates = 0, creates = 0;
@@ -94,7 +94,7 @@ function engineHarness(options: Options = {}) {
       sendPreparedDelivery: async () => { calls++; events.push("send"); if (options.sendThrows) throw new Error("socket error"); return { ok: true, providerMessageId: `p-${calls}`, internalAccepted: false }; } },
     "./providers/email/client": { EMAIL_PROVIDER_ID: "ELASTIC_EMAIL" },
     "./runtime-config": { getActiveCommunicationRuntimeBundle: async () => ({}) },
-    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
+    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
     "./whatsapp-template-sync": {}, "./providers/meta-whatsapp/parameters": {}, "./whatsapp-rendered-preview": {},
     "./audience-list-service": { resolveAudienceOrigin: async () => "CAMPAIGN" },
     "./campaign-counter-service": { ...counter, recomputeCampaignCounters: async () => ({ ok: !options.failCounter, status: campaign.status }) },
@@ -261,4 +261,11 @@ test("live marketing exclusion skips contacted recipients before any provider se
   const h = engineHarness({ recentMarketing: true }); const result = await h.engine.executeCampaignSend("campaign");
   assert.equal(h.state().calls, 0); assert.equal(result.skipped, 2);
   assert.ok(h.deliveries.every(row => row.status === "SKIPPED" && row.errorMessage === "RECENT_MARKETING_CONTACT"));
+});
+
+for (const channel of ["EMAIL", "SMS"]) test(`${channel} executor never bypasses a final routing refusal`, async () => {
+  const h = engineHarness({ channel, denyRouting: true });
+  const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(h.state().calls, 0); assert.equal(result.sent, 0); assert.equal(result.skipped, 2);
+  assert.ok(h.deliveries.every(row => row.status === "SKIPPED" && row.errorMessage === "NO_SENDER_AVAILABLE"));
 });

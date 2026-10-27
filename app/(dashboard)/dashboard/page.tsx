@@ -117,6 +117,8 @@ interface UserOption {
   email: string;
 }
 
+import { DonorAccountBadge } from "@/components/dashboard/DonorAccountBadge";
+
 interface DonationRow {
   id: string;
   locale?: string | null;
@@ -143,7 +145,7 @@ interface DonationRow {
   conversionEventsSentAt?: string | null;
   conversionFailedEventsSentAt?: string | null;
   createdAt: string;
-  donor: { id: string; name: string | null; email: string };
+  donor: { id: string; name: string | null; email: string; accountStatus?: import("@/lib/dashboard/donor-account").DonorAccountStatus };
   donorCountryCode?: string | null;
   campaigns: { id: string; title: string }[];
   categories: { id: string; name: string }[];
@@ -1825,6 +1827,7 @@ export default function DashboardPage() {
                             >
                               <p className="font-medium text-slate-900">
                                 {d.donor?.name || "—"}
+                                <DonorAccountBadge status={d.donor?.accountStatus} />
                               </p>
                               {d.donor?.email && (
                                 <p className="text-[10px] text-slate-500 truncate max-w-[160px]">

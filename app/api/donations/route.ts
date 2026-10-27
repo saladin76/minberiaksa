@@ -1,3 +1,4 @@
+import { donorAccountStatus } from "@/lib/dashboard/donor-account";
 import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { donationPaymentEvidence } from "@/lib/donations/payment-evidence";
 import { POST as createCartDonation } from "@/app/api/cart/payment/route";
@@ -237,7 +238,7 @@ export async function GET(request: NextRequest) {
     const donations = await prisma.donation.findMany({
       where,
       include: {
-        donor: { select: { id: true, name: true, email: true, image: true } },
+        donor: { select: { id: true, name: true, email: true, image: true, password: true, verifiedAt: true, registeredAt: true, emailVerified: true, _count: { select: { accounts: true } } } },
         items: { include: { campaign: { select: { id: true, title: true, images: true } } } },
         categoryItems: { include: { category: { select: { id: true, name: true } } } },
         comments: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -299,7 +300,7 @@ export async function GET(request: NextRequest) {
       // current create path sets CARD or PAYPAL. Default to CARD on read so
       // table cells / receipts never render blank.
       paymentMethod: donation.paymentMethod ?? "CARD",
-      donor: donation.donor,
+      donor: { id: donation.donor.id, name: donation.donor.name, email: donation.donor.email, image: donation.donor.image, accountStatus: donorAccountStatus(donation.donor) },
       campaigns: donation.items.map((item) => ({ id: item.campaign.id, title: item.campaign.title, images: item.campaign.images })),
       categories: (donation.categoryItems ?? []).map((ci) => ({ id: ci.category.id, name: ci.category.name })),
       referral: donation.referral ? { id: donation.referral.id, code: donation.referral.code, name: donation.referral.name } : null,

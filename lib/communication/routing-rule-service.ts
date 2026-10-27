@@ -63,8 +63,11 @@ async function findEnabledPredicateConflict(input: {
   });
 }
 
-export async function listRoutingRules(channel?: CommunicationChannelId): Promise<SenderRoutingRule[]> {
-  if (!process.env.DATABASE_URL) return [];
+export async function listRoutingRules(channel?: CommunicationChannelId, strict = false): Promise<SenderRoutingRule[]> {
+  if (!process.env.DATABASE_URL) {
+    if (strict) throw new Error("ROUTING_DATABASE_UNAVAILABLE");
+    return [];
+  }
   try {
     return await prisma.senderRoutingRule.findMany({
       where: channel ? { channel } : undefined,
@@ -72,6 +75,7 @@ export async function listRoutingRules(channel?: CommunicationChannelId): Promis
     });
   } catch (error) {
     console.error("listRoutingRules failed", error);
+    if (strict) throw new Error("ROUTING_DATABASE_UNAVAILABLE");
     return [];
   }
 }
@@ -291,6 +295,7 @@ export async function deleteRoutingRule(id: string, actor?: Actor): Promise<Serv
 /** Map a stored routing rule into the pure config the sender-router consumes. */
 export function toRoutingRuleConfig(row: SenderRoutingRule): SenderRoutingRuleConfig {
   return {
+    id: row.id,
     channel: row.channel as CommunicationChannel,
     locale: row.locale,
     country: row.country,

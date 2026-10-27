@@ -125,7 +125,7 @@ export function waitedLabel(createdAt: string | Date, now: number = Date.now()):
  * filters are active, while the badge counts the whole inbox, so a total from one is a wrong
  * number for the other. `-1` is true regardless of what is being filtered.
  */
-export const INBOX_UNREAD_EVENT = "gozbebekleri:inbox-unread";
+export const INBOX_UNREAD_EVENT = "minberiaksa:inbox-unread";
 
 export function emitInboxUnreadDelta(delta: number): void {
   if (typeof window === "undefined" || !delta) return;

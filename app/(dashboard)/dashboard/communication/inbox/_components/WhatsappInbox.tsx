@@ -30,7 +30,10 @@ import { mergeInboxTimeline } from "@/lib/communication/inbox-timeline";
  * message the donor never receives, recorded as sent.
  */
 
+import { DonorAccountBadge } from "@/components/dashboard/DonorAccountBadge";
+
 type Donor = {
+  accountStatus?: import("@/lib/dashboard/donor-account").DonorAccountStatus;
   userId: string | null;
   name: string | null;
   email: string | null;
@@ -214,6 +217,7 @@ export function WhatsappInbox() {
       setConversations(nextConversations);
       setSenders(nextSenders);
       setNeedsReply(data.needsReply ?? 0);
+      window.dispatchEvent(new CustomEvent("whatsapp-inbox-updated"));
 
       if (!senderSelectionReady.current && nextSenders.length > 0) {
         senderSelectionReady.current = true;
@@ -532,7 +536,7 @@ export function WhatsappInbox() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">
-                      {detail.donor?.name || detail.phone}
+                      {detail.donor?.name || detail.phone} {detail.donor && <DonorAccountBadge status={detail.donor.accountStatus} />}
                     </p>
                     <p className="text-xs text-slate-500">
                       {detail.phone}

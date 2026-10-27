@@ -6,6 +6,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { createRoutingRule } from "@/lib/communication/routing-rule-service";
 import { loadSenderRoutingSnapshot, resolveSenderFromSnapshot } from "@/lib/communication/sender-resolution";
+import { explainSenderRouting } from "@/lib/communication/sender-router";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES, type CommunicationChannelId, type CommunicationPurposeId } from "@/lib/communication/communication-runtime-types";
 
 /**
@@ -72,21 +73,27 @@ export async function GET(request: NextRequest) {
   });
   if (!parsed.success) return NextResponse.json({ error: "Invalid query" }, { status: 400 });
 
-  const snapshot = await loadSenderRoutingSnapshot(parsed.data.channel as CommunicationChannelId);
+  let snapshot;
+  try { snapshot = await loadSenderRoutingSnapshot(parsed.data.channel as CommunicationChannelId); }
+  catch { return NextResponse.json({ error: "ROUTING_DATABASE_UNAVAILABLE" }, { status: 503 }); }
   const routed = resolveSenderFromSnapshot(snapshot, {
     locale: parsed.data.locale,
     country: parsed.data.country,
     purpose: parsed.data.purpose as CommunicationPurposeId,
   });
+  const trace = explainSenderRouting(parsed.data, snapshot.senders, snapshot.rules);
 
   if (!routed.ok) {
     /* A refusal is a legitimate answer and is shown as one: this recipient would not be messaged. */
-    return NextResponse.json({ ok: true, wouldSend: false, reason: routed.reason });
+    return NextResponse.json({ ok: true, wouldSend: false, reason: routed.reason, trace });
   }
   return NextResponse.json({
     ok: true,
     wouldSend: true,
+    trace,
     matchedBy: routed.matchedBy,
+    ruleId: routed.ruleId ?? null,
+    fallbackUsed: routed.fallbackUsed ?? false,
     sender: {
       id: routed.sender.id,
       displayPhoneNumber: routed.sender.displayPhoneNumber,

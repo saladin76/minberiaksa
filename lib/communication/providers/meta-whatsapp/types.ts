@@ -100,4 +100,10 @@ export type NormalizedInboundEvent = {
   buttonReply?: { id: string | null; title: string | null } | null;
 };
 
-export type NormalizedWebhookEvent = NormalizedStatusEvent | NormalizedInboundEvent;
+/** A message sent from an onboarded WhatsApp Business app, never an incoming donor reply. */
+export type NormalizedEchoEvent = Omit<NormalizedInboundEvent, "kind" | "from" | "profileName"> & {
+  kind: "echo";
+  recipient: string;
+};
+
+export type NormalizedWebhookEvent = NormalizedStatusEvent | NormalizedInboundEvent | NormalizedEchoEvent;

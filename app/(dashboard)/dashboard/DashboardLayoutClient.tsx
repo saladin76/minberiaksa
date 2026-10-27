@@ -194,19 +194,30 @@ function DashboardContent({
   useEffect(() => {
     if (!canUseWhatsappInbox) { setWhatsappInboxCount(0); return; }
     let cancelled = false;
+    let running = false;
     const run = async () => {
+      if (running || document.hidden) return;
+      running = true;
       try {
         const res = await fetch('/api/dashboard/communication/inbox?filter=needsReply&limit=1', { cache: 'no-store' });
-        if (!res.ok) { if (!cancelled) setWhatsappInboxCount(0); return; }
+        if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled) setWhatsappInboxCount(Math.max(0, Number(data?.needsReply ?? 0)));
-      } catch {
-        if (!cancelled) setWhatsappInboxCount(0);
-      }
+        const count = Number(data?.needsReply);
+        if (!cancelled && Number.isFinite(count)) setWhatsappInboxCount(Math.max(0, count));
+      } catch { /* Retain the last confirmed count during transient failures. */ }
+      finally { running = false; }
     };
-    run();
+    void run();
     const timer = setInterval(run, 30000);
-    return () => { cancelled = true; clearInterval(timer); };
+    window.addEventListener("whatsapp-inbox-updated", run);
+    window.addEventListener("focus", run);
+    document.addEventListener("visibilitychange", run);
+    return () => {
+      cancelled = true; clearInterval(timer);
+      window.removeEventListener("whatsapp-inbox-updated", run);
+      window.removeEventListener("focus", run);
+      document.removeEventListener("visibilitychange", run);
+    };
   }, [canUseWhatsappInbox]);
 
   /**

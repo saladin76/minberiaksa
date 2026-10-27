@@ -19,6 +19,8 @@ import {
   parseGenderParam,
 } from '@/lib/dashboard/user-demographics';
 
+import { donorAccountStatus, donorAccountWhere } from "@/lib/dashboard/donor-account";
+
 type UserScope = 'donors' | 'team' | 'all';
 
 // GET /api/users  scope=donors | scope=team | omit/empty/all = every role (no role filter)
@@ -68,6 +70,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const accountStatus = searchParams.get("accountStatus");
+    if (accountStatus && !["MEMBER", "GUEST", "UNKNOWN"].includes(accountStatus)) return NextResponse.json({ error: "Invalid account status" }, { status: 400 });
     const preferredLang = searchParams.get('preferredLang') || undefined;
     const badgeId = searchParams.get('badgeId') || undefined;
     const search = searchParams.get('search')?.trim() || undefined;
@@ -76,7 +80,7 @@ export async function GET(request: NextRequest) {
     const maxAge = parseAgeParam(searchParams.get('maxAge'));
     const sortBy = (searchParams.get('sortBy') || 'createdAt') as 'createdAt' | 'name' | 'email' | 'donationsCount' | 'totalDonated' | 'role';
     const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
-    const page = parseInt(searchParams.get('page') || '1');
+    const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1') || 1);
     const limit = Math.min(parseInt(searchParams.get('limit') || '10') || 10, 100);
     const skip = (page - 1) * limit;
 
@@ -92,11 +96,14 @@ export async function GET(request: NextRequest) {
       ...(preferredLang && { preferredLang }),
       ...(search && search.length > 0 && {
         OR: [
-          { name: { contains: search } },
-          { email: { contains: search } },
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search } },
         ],
       }),
     };
+
+    if (accountStatus && scope === 'donors') where.AND = [donorAccountWhere(accountStatus as "MEMBER" | "GUEST" | "UNKNOWN")];
 
     if (scope === 'team' && session?.user?.id) {
       where = { ...where, NOT: { id: session.user.id } };
@@ -160,7 +167,7 @@ export async function GET(request: NextRequest) {
             amountUSD: g?._sum.amountUSD ?? 0,
           };
         });
-        const mult = sortOrder === 'desc' ? 1 : -1;
+        const mult = sortOrder === 'desc' ? -1 : 1;
         if (sortBy === 'donationsCount') {
           withZero.sort((a, b) => mult * (a.count - b.count));
         } else {
@@ -206,7 +213,10 @@ export async function GET(request: NextRequest) {
       createdAt: true,
       updatedAt: true,
       verifiedAt: true,
-      _count: { select: { donations: true } },
+      registeredAt: true,
+      emailVerified: true,
+      password: true,
+      _count: { select: { donations: true, accounts: true } },
     } as const;
 
     type UserListRow = Prisma.UserGetPayload<{ select: typeof baseSelect }>;
@@ -281,14 +291,19 @@ export async function GET(request: NextRequest) {
         ? await getBadgeIdsByUser(userIds, allBadges)
         : new Map<string, string[]>();
 
-    const usersWithTotals = users.map((u) => ({
-      ...u,
-      totalDonationsCount: totalByDonorId.get(u.id)?.paidDonationCount ?? 0,
-      totalDonatedAmount: totalByDonorId.get(u.id)?.totalAmount ?? 0,
-      totalDonatedAmountUSD: totalByDonorId.get(u.id)?.amountUSD ?? 0,
-      lastDonationAt: totalByDonorId.get(u.id)?.lastDonationAt ?? null,
-      badgeIds: badgeIdsByUser.get(u.id) ?? [],
-    }));
+    const usersWithTotals = users.map((u) => {
+      const { password, ...safe } = u;
+      return {
+        ...safe,
+        accountStatus: donorAccountStatus(u),
+        hasPassword: Boolean(password),
+        totalDonationsCount: totalByDonorId.get(u.id)?.paidDonationCount ?? 0,
+        totalDonatedAmount: totalByDonorId.get(u.id)?.totalAmount ?? 0,
+        totalDonatedAmountUSD: totalByDonorId.get(u.id)?.amountUSD ?? 0,
+        lastDonationAt: totalByDonorId.get(u.id)?.lastDonationAt ?? null,
+        badgeIds: badgeIdsByUser.get(u.id) ?? [],
+      };
+    });
 
     return NextResponse.json({
       users: usersWithTotals,

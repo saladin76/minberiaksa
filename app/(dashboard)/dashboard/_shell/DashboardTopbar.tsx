@@ -36,11 +36,11 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, show
   return (
     <header
       className={cn(
-        'sticky top-0 z-20 h-16 flex items-center justify-between gap-3 px-3 sm:px-4 lg:px-6',
+        'sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-2 px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0 lg:px-6',
         'bg-white/85 backdrop-blur-md border-b border-slate-200',
       )}
     >
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex min-w-0 max-w-full shrink-0 items-center gap-2 sm:shrink">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -83,7 +83,7 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, show
         </nav>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex max-w-full flex-wrap items-center gap-1.5 sm:shrink-0 sm:flex-nowrap sm:gap-2">
         <button
           type="button"
           onClick={onOpenSearch}
@@ -96,20 +96,14 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, show
           <Link
             href="/dashboard/communication/inbox"
             className={cn(
-              "relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
+              "relative inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
               whatsappInboxCount > 0
-                ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_14px_rgba(16,185,129,.65)] hover:bg-emerald-600"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-[0_0_10px_rgba(16,185,129,.28)] hover:border-emerald-400 hover:bg-emerald-100",
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                : "border-slate-200 bg-white text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50",
             )}
             aria-label={whatsappInboxCount > 0 ? dt("واتساب، {0} محادثة تنتظر الرد", [whatsappInboxCount]) : dt("محادثات واتساب")}
             title={whatsappInboxCount > 0 ? dt("{0} محادثة واتساب تنتظر الرد", [whatsappInboxCount]) : dt("محادثات واتساب")}
           >
-            {whatsappInboxCount > 0 && (
-              <span className="absolute -start-1 -top-1 flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70" />
-                <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-rose-500" />
-              </span>
-            )}
             <WhatsappMark />
             {whatsappInboxCount > 0 && (
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold tabular-nums text-white">
