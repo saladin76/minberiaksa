@@ -754,7 +754,8 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                           </td>
 
                           <td className="px-3 py-2.5 text-end">
-                            <DropdownMenu>
+                            {/* Dialogs opened from this menu own the modal background lock. */}
+                            <DropdownMenu modal={false}>
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="outline" aria-label={dt("الإجراءات")} className="gap-1 rounded-full">
                                   <MoreHorizontal className="w-4 h-4" />
