@@ -51,7 +51,7 @@ test("email suppression preserves non-email channel preferences", () => {
 
 test("WhatsApp template readiness accepts real approved locales and exposes stale sync truth", () => {
   const route = read("app/api/dashboard/communication/whatsapp/route.ts");
-  const ui = read("app/(dashboard)/dashboard/communication/whatsapp/_components/WhatsappChannelDashboard.tsx");
+  const ui = read("app/(dashboard)/dashboard/communication/whatsapp/_components/ReadinessCard.tsx");
   assert.match(route, /variants\.flatMap\(\(variant\) => \[variant\.locale, variant\.languageCode\]\)/);
   assert.match(route, /const anyReady = readyWabas > 0/);
   assert.match(route, /ready: anyReady/);
