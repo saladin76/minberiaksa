@@ -67,8 +67,8 @@ export function GoogleSearchManager() {
     <PageHeader eyebrow={dt("التسويق")} title={dt("إدارة Google Search")} description={dt("خطط متعددة اللغات مبنية على صفحات المشاريع وتقارير الحساب، مع مراجعة الميزانية والإنشاء داخل Google ومتابعة الأداء.")} icon={Search} />
     <div className="flex flex-wrap gap-2"><Link href="/dashboard/google-analytics" className={button}><ArrowUpRight size={16} />{dt("تقارير Google Analytics")}</Link><Link href="/dashboard/platform-connections" className={button}>{dt("إدارة الحسابات والاتصالات")}</Link><button type="button" onClick={load} disabled={Boolean(busy)} className={button}><RefreshCw size={16} />{dt("تحديث")}</button></div>
     {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
-    <div className="grid items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-      <aside className="space-y-4">
+    <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <aside className="min-w-0 space-y-4">
         <section className="space-y-4 rounded-2xl border bg-white p-4">
           <h2 className="flex items-center gap-2 font-bold"><Bot size={20} />{dt("مساعد حملات البحث")}</h2>
           <label className="block space-y-1 text-sm"><span>{dt("الحساب الإعلاني")}</span><select className={field} value={accountId} onChange={e => setAccountId(e.target.value)}><option value="">{dt("اختر حسابًا")}</option>{accounts.map(a => <option key={a.id} value={a.id} disabled={!a.ready || !a.enabled}>{a.name} · {a.customerId} {a.ready && a.enabled ? "" : dt("(الاتصال غير جاهز)")}</option>)}</select></label>

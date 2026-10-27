@@ -80,19 +80,19 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   };
   return <div dir={dashDir()} className="mx-auto max-w-6xl space-y-5 pb-12">
     <header className="sticky top-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur">
-      <div>{embedded ? <h2 className="text-lg font-semibold">{dt("SEO الصفحات العامة")}</h2> : <h1 className="text-2xl font-bold">{dt("SEO الصفحات العامة")}</h1>}<p className="mt-2 text-sm text-slate-500">{dt("راجع إعدادات البحث والمشاركة لكل صفحة ولغة، ثم احفظ كل التعديلات معًا.")}</p></div>
+      <div>{embedded ? <h2 className="text-lg font-semibold">{dt("SEO الصفحات العامة")}</h2> : <h1 className="text-2xl font-bold">{dt("SEO الصفحات العامة")}</h1>}<p className="mt-2 hidden text-sm text-slate-500 sm:block">{dt("راجع إعدادات البحث والمشاركة لكل صفحة ولغة، ثم احفظ كل التعديلات معًا.")}</p></div>
       <button type="button" onClick={save} disabled={!document || !dirty || Boolean(busy)} className="rounded bg-brand px-4 py-3 text-white disabled:opacity-50">{dt("حفظ جميع اللغات")}</button>
     </header>
     <label className="block space-y-2"><span>{dt("الصفحة")}</span><select value={key} disabled={Boolean(busy)} className="w-full rounded border bg-white p-3" onChange={(event) => { if (!dirty || window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) setKey(event.target.value); }}>{MANAGED_SEO_PAGES.map((page) => <option key={page.key} value={page.key}>{dt(page.label)}</option>)}</select></label>
     {message ? <p role={messageTone === "error" ? "alert" : "status"} className={`rounded-xl border p-3 text-sm ${messageTone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : messageTone === "error" ? "border-red-200 bg-red-50 text-red-800" : "bg-sky-50"}`}>{message}</p> : null}
     <div className="flex flex-wrap gap-2">{SUPPORTED_LOCALES.map((code) => <button type="button" key={code} aria-label={LOCALES[code].nativeLabel} title={LOCALES[code].nativeLabel} aria-pressed={locale === code} onClick={() => setLocale(code)} className={"min-h-11 min-w-11 rounded border px-2 py-2 text-xs font-semibold " + (locale === code ? "bg-brand text-white" : "bg-white")}><bdi>{code.toUpperCase()}</bdi></button>)}</div>
     <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer text-sm font-semibold">{dt("الاستفادة من تقارير الزيارات في الاقتراحات")}</summary><div className="mt-4"><Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} /></div></details>
-    <div className="flex flex-wrap gap-3 rounded border bg-white p-4">
-      <label className="flex-1 text-sm">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
+    <div className="grid items-end gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_auto_auto]">
+      <label className="min-w-0 text-sm sm:col-span-2 lg:col-span-1">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
       <button type="button" disabled={!document || Boolean(busy) || dirty} onClick={() => void suggest(false)} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>
       <button type="button" disabled={!document || Boolean(busy) || dirty} onClick={() => void suggest(true)} className="rounded border px-3 py-2">{dt("اقتراح SEO لجميع اللغات")}</button>
       {busy === "research" ? <button type="button" onClick={() => generation.current?.abort()} className="rounded border px-3 py-2">{dt("إيقاف")}</button> : null}
-      {progress ? <p role="status" className="w-full text-sm">{progress.done} / {progress.total}</p> : null}
+      {progress ? <p role="status" className="col-span-full text-sm">{progress.done} / {progress.total}</p> : null}
     </div>
     {document ? <section className="space-y-4 rounded-xl border bg-white p-5" dir={LOCALES[locale].direction}>
       <a href={"/" + locale + managedPagePath(key, locale)} target="_blank" rel="noopener noreferrer" className="text-sm text-brand">{dt("فتح الصفحة")}</a>

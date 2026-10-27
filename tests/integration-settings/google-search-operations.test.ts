@@ -114,3 +114,22 @@ test('automatic Search monitoring is opt-in, bounded to five owned keywords, and
   assert.ok(scoped.mutations[1].mutateOperations.every(op=>Object.keys(op).join()==='adGroupCriterionOperation'));
   const outside=await run(true,true);assert.equal(outside.mutations.length,0);assert.equal(outside.plan.lastError,'INVALID_RESOURCE_SCOPE');
 });
+
+test('durable multilingual planning admits one worker and resumes without repeating completed languages', async () => {
+  const planRequest = { ...request, locales: ['ar', 'en', 'tr'], dailyBudget: 30 };
+  let plan = { id, connectionId:id, status:'PLANNING',version:1,request:planRequest,proposal:{summary:'',campaigns:[] as SearchProposal['campaigns'],expansion:[]},evidence:{destinations:planRequest.locales.map(locale=>({...destinations[0],locale,url:`https://minberiaksa.org/${locale}/bagislar/winter`})),report:{currency:'USD',timezone:'Europe/Istanbul'},targeting:{languages:{ar:'languageConstants/1019',en:'languageConstants/1000',tr:'languageConstants/1037'},locations:{TR:'geoTargetConstants/2792'}},keywords:[],researchWarnings:[],completedLocales:[] as string[],summaries:[] as string[]},workLeaseToken:null as string|null,workLeaseUntil:null as Date|null,lastError:null as string|null };
+  const generated:string[]=[];let failEnglish=true;
+  const db={marketingPlatformConnection:{findFirst:async()=>({id})},googleSearchPlan:{findUnique:async()=>structuredClone(plan),updateMany:async({where,data}:{where:Record<string,unknown>;data:Record<string,unknown>})=>{
+    if(where.version!==undefined&&where.version!==plan.version||where.status!==undefined&&where.status!==plan.status||where.workLeaseToken!==undefined&&where.workLeaseToken!==plan.workLeaseToken||where.OR&&plan.workLeaseUntil&&plan.workLeaseUntil.getTime()>Date.now())return {count:0};
+    plan={...plan,...data,version:typeof data.version==='object'?plan.version+1:plan.version} as typeof plan;return {count:1};
+  }}};
+  const dependencies:Record<string,unknown>={'@/lib/prisma':{prisma:db},'@/lib/campaign/soft-delete-filter':{NOT_SOFT_DELETED:{}},'@/lib/minbar/routes':{},'node:crypto':{randomUUID:()=>String(Math.random())},'@/lib/ai/core/openai-provider':{getOpenAiProviderStatus:()=>({mode:'ready'}),generateOpenAiDraft:async(input:{prompt:string})=>{
+    const target=JSON.parse(input.prompt).request;const locale=target.locales[0];generated.push(locale);if(locale==='en'&&failEnglish){failEnglish=false;throw new Error('TEMPORARY_PLANNER_FAILURE')}
+    return {status:'COMPLETED',mode:'OPENAI',answer:JSON.stringify({...proposal,campaigns:[{...proposal.campaigns[0],locale,dailyBudgetMicros:Math.round(target.dailyBudget*1e6)}]})};
+  }},'@/lib/ai/core/ai-core-service':{getAiContext:()=>({})},'../google-ads-report':{},'./client':{searchCredentials:()=>credentials,googleSearchClient:async()=>({call:async()=>({results:[]})})},'./contracts':{searchPlanRequest,validateSearchProposal}};
+  const load=()=>{const loaded={exports:{} as {continueSearchPlanning:(id:string)=>Promise<void>}};const code=ts.transpileModule(fs.readFileSync('lib/marketing/google-search/planner.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new vm.Script(code).runInNewContext({module:loaded,exports:loaded.exports,Date,Number,Math,JSON,URL,require:(name:string)=>{assert.ok(name in dependencies,name);return dependencies[name]}});return loaded.exports.continueSearchPlanning};
+  await Promise.all([load()(id),load()(id)]);assert.deepEqual(generated,['ar']);assert.deepEqual(Array.from(plan.evidence.completedLocales),['ar']);
+  await load()(id);assert.equal(plan.status,'PLANNING_FAILED');assert.deepEqual(Array.from(plan.evidence.completedLocales),['ar']);
+  plan.status='PLANNING';plan.version++;
+  await load()(id);await load()(id);assert.equal(plan.status,'DRAFT');assert.deepEqual(generated,['ar','en','en','tr']);assert.equal(plan.proposal.campaigns.length,3);assert.equal(plan.proposal.campaigns.reduce((sum,c)=>sum+c.dailyBudgetMicros,0),30000000);
+});
