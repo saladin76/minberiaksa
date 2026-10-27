@@ -9,7 +9,7 @@ import { getActiveMetaWhatsappRuntimeConfig } from "@/lib/communication/runtime-
 import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { resolveVariantForLocale } from "@/lib/communication/whatsapp-template-sync";
 import { templateSyncTimestamps, templateSyncCoverage } from "@/lib/communication/template-sync-timestamps";
-import { templateSyncResult } from "@/lib/communication/template-sync-result";
+import { templateSyncResult, WHATSAPP_CATALOGUE_SYNC_ACTION } from "@/lib/communication/template-sync-result";
 import { communicationPurposeWhere, parseCommunicationPurposeGroup } from "@/lib/communication/purpose-group";
 
 export const runtime = "nodejs";
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
         select: { businessAccountId: true },
       }),
       prisma.auditLog.findFirst({
-        where: { action: "communication.whatsapp.templates.sync", entityType: "WhatsappTemplate" },
+        where: { action: WHATSAPP_CATALOGUE_SYNC_ACTION, entityType: "WhatsappTemplate" },
         orderBy: { createdAt: "desc" },
         select: { createdAt: true, metadata: true },
       }).catch(() => null),

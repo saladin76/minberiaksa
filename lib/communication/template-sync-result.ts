@@ -1,3 +1,7 @@
+// Legacy sync audits also include single-template/WABA refreshes, so they cannot
+// establish that the complete catalogue was synchronized.
+export const WHATSAPP_CATALOGUE_SYNC_ACTION = "communication.whatsapp.templates.catalogue.sync";
+
 export type TemplateSyncResult = {
   completedAt: string;
   variantsUpserted: number;

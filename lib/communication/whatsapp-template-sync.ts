@@ -1,4 +1,5 @@
 import { forEachTemplateSyncItem } from "./template-sync-work";
+import { WHATSAPP_CATALOGUE_SYNC_ACTION } from "./template-sync-result";
 import { templateLocaleFromLanguage } from "./template-locale-media";
 import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import "server-only";
@@ -296,7 +297,9 @@ export async function syncMetaWhatsappTemplates(opts: {
     actorId: opts.actor?.actorId ?? undefined,
     actorName: opts.actor?.actorName ?? undefined,
     actorRole: opts.actor?.actorRole ?? "SYSTEM",
-    action: "communication.whatsapp.templates.sync",
+    action: opts.templateId || opts.businessAccountId?.trim()
+      ? "communication.whatsapp.templates.sync"
+      : WHATSAPP_CATALOGUE_SYNC_ACTION,
     messageAr: `مزامنة قوالب واتساب من Meta عبر ${summary.wabasSynced} WABA — ${summary.variantsUpserted} نسخة WABA/لغة`,
     messageEn: `WhatsApp template sync across ${summary.wabasSynced} WABA(s); ${summary.variantsUpserted} WABA/language variant(s)`,
     entityType: "WhatsappTemplate",
