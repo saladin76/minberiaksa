@@ -119,7 +119,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  const open=async(surface)=>page.goto(`${origin}/?surface=${surface}&lang=${locale}`,{waitUntil:"domcontentloaded"});
 
  const initialProfileWrites=requests.filter(row=>row.path.endsWith("/profile")&&row.method==="PUT").length;
- // Real donor editor: validation, cancel, save and stale-write recovery at both viewport sizes.
+ // Real donor editor: validation, cancel, save and stale-write recovery at all viewport sizes.
  await open("donorProfile");
  await page.getByText(ui(locale,"عضو مسجل"),{exact:true}).waitFor();
  await page.getByRole("dialog").getByLabel(ui(locale,"الاسم"),{exact:true}).fill("Edited fixture");
@@ -139,6 +139,15 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
    const saveBounds=await page.getByRole("button",{name:ui(locale,"حفظ"),exact:true}).boundingBox();
    assert.ok(saveBounds.y>=0&&saveBounds.y+saveBounds.height<=height,"Save must remain visible while the profile fields scroll");
    await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-donor-profile-"+label+".png"),fullPage:true});checks++;
+   const fields=page.getByRole("dialog").locator("form > div.overflow-y-auto");
+   const fieldsBounds=await fields.boundingBox();
+   assert.ok(fieldsBounds.y+fieldsBounds.height<saveBounds.y,"Scrolling profile fields must stay above the action buttons");
+   const preferredLanguage=page.getByRole("dialog").getByLabel(ui(locale,"اللغة المفضلة"),{exact:true});
+   await preferredLanguage.scrollIntoViewIfNeeded();
+   const languageBounds=await preferredLanguage.boundingBox();
+   assert.ok(languageBounds.y>=fieldsBounds.y&&languageBounds.y+languageBounds.height<=fieldsBounds.y+fieldsBounds.height+1,"The final profile field must be reachable without hiding the actions");
+   assert.equal(await preferredLanguage.evaluate(node=>{const r=node.getBoundingClientRect();return node===document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)}),true,"The final profile field must accept pointer input");
+   await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-donor-profile-scrolled-"+label+".png"),fullPage:true});checks++;
    await open("topbar");const link=page.getByRole("link",{name:ui(locale,"واتساب، {0} محادثة تنتظر الرد").replace("{0}","27"),exact:true});await link.waitFor();
    assert.equal(await link.getAttribute("href"),"/dashboard/communication/inbox");const bounds=await link.boundingBox();assert.ok(bounds.width>=40&&bounds.height>=40);
    const overlaps=await page.locator("header button, header a").evaluateAll(nodes=>{
