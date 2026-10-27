@@ -98,7 +98,7 @@ jobs:
 
   content-browser:
     name: Content editor browser fixtures
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CONTENT_EDITOR_ARTIFACTS: .artifacts/content-editor
       DATABASE_URL: mongodb://127.0.0.1:27017/minberiaksa_ci
@@ -110,7 +110,9 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
-      - run: npx playwright install --with-deps chromium
+      # This hosted image already has Chromium runtime libraries; fixtures serve bundled Cairo.
+      # Keep the Playwright-pinned browser without unrelated apt/font upgrades.
+      - run: npx playwright install chromium
       - run: npm run test:content-editors:browser
       - name: Public programme and course playback
         run: node --import tsx scripts/public-media-browser-test.mjs

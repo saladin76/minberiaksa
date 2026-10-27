@@ -39,3 +39,9 @@ VPS installation and provider verification still require running the pinned rele
 ## Validation
 
 See the commit's release gates for type checks, integration tests, content-editor tests and browser artifacts. Added behavioral coverage includes normalized-phone concurrency, recurring-worker concurrency, protected support endpoints, safe embeds/redirects, canonical project-video publication, Google atomic/uncertain outcomes, optimizer scope, restoring the selected account when reopening a plan, legacy zero FX placeholders and timezone-aligned financial reporting. Operations browser fixtures cover AR/EN/TR at desktop, 390px and 320px; they do not establish real bank acceptance or message delivery.
+
+## Follow-up: WhatsApp template sync diagnostics
+
+A successful live catalogue sync exposed a misleading “last sync” date: the dashboard labelled the oldest saved template/variant timestamp as the latest sync. The API now returns the latest and oldest saved timestamps separately while preserving the existing complete-coverage field. The dashboard displays the actual latest date and time, an independently labelled oldest saved sync, and an incomplete-coverage notice. A successful manual sync also exposes the exact unmatched Meta template names in an expandable list for review, without automatically importing them or sending messages. Failed sync requests report an accessible status instead of leaving an unhandled rejection.
+
+Behavioral timestamp tests cover mixed dates, timezone offsets, invalid/missing values and input preservation. The operations browser suite exercises catalogue synchronization, refreshed timestamps, partial coverage, unmatched names and absence of message-sending requests in Arabic, English and Turkish at desktop, 390px and 320px widths. These tests do not prove production deployment, bank acceptance or delivery of a new message.
