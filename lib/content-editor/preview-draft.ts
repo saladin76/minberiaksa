@@ -22,8 +22,10 @@ export function preparePreviewDraft(kind: ContentKind, row: ContentRecord, local
       const previous = Array.isArray(row[key]) ? (row[key] as ContentRecord[]).find(entry => entry.id === id) : undefined;
       const result: ContentRecord = { ...previous, id };
       const keys = key === "blocks" ? ["kind", "anchor", "linkUrl", "image", "youtubeId", "refId", "maxItems", "isActive", "eyebrow", "title", "subtitle", "body", "linkLabel"] : key === "values" ? ["label"] : ["icon", "title", "body"];
+      const localized = locale !== "ar" && item.translations && typeof item.translations === "object" && !Array.isArray(item.translations)
+        ? (item.translations as ContentRecord)[locale] as ContentRecord | undefined : undefined;
       for (const field of keys) {
-        const value = item[field];
+        const value = localized && ["eyebrow", "title", "subtitle", "body", "linkLabel", "label"].includes(field) && Object.hasOwn(localized,field) ? localized[field] : item[field];
         if (value === undefined && previous && ["eyebrow", "title", "subtitle", "body", "linkLabel", "label"].includes(field)) continue;
         if (field === "kind") { if (!isBlockKind(value)) throw new Error("نوع قسم غير صالح"); result.kind = value; }
         else if (field === "isActive") { if (typeof value !== "boolean") throw new Error("حالة غير صالحة"); result[field] = value; }

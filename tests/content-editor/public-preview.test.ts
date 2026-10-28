@@ -53,6 +53,17 @@ function majorProject(blocks: Record<string, unknown>[] = []) {
   });
   return { row, queries, service };
 }
+test("adding, editing and removing a temporary card preserves the main draft without stale child fields",()=>{
+  const values={name:"Unsaved category","infoCards.new-card.title":"Temporary title","infoCards.kept.title":"Kept card"};
+  const source={...values};const result=preview.previewDraftValues("categories",values,{infoCards:[{id:"kept"}]});
+  assert.deepEqual(result,{name:"Unsaved category","infoCards.kept.title":"Kept card"});assert.deepEqual(values,source);
+});
+test("a new category card previews its unsaved localized text",()=>{
+  const row={name:"Saved",translations:[],values:[],infoCards:[]};
+  const draft=preparePreviewDraft("categories",row,"en",{name:"Draft category"},{infoCards:[{draftKey:"new-card",icon:"alert",title:"",body:"",translations:{en:{title:"English draft",body:"English body"}}}]});
+  const cards=draft.settings.infoCards as Record<string,unknown>[];
+  assert.equal(cards[0].title,"English draft");assert.equal(cards[0].body,"English body");assert.deepEqual(row.infoCards,[]);
+});
 test("linked projects appear without requiring a separately configured grid and preserve editorial order", async () => {
   const h = majorProject(), page = await h.service.getSuperCategory("restoration", "ar");
   assert.deepEqual(Array.from(page.blocks[0].campaigns, item => item.id), ["first", "second"]);

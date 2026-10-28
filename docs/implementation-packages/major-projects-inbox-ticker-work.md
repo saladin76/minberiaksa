@@ -1,6 +1,6 @@
 # Current dashboard and public-page work (28 October 2026)
 
-Branch: `fix/major-projects-inbox-ticker`, built on PR118. Both changes belong to the combined release; production publishing is deferred pending release authorization.
+Branch: `fix/major-projects-inbox-ticker`, built on PR118. Both changes belong to the explicitly approved combined release. Production publishing is a separate VPS action.
 
 ## New request
 
@@ -12,7 +12,7 @@ Branch: `fix/major-projects-inbox-ticker`, built on PR118. Both changes belong t
 6. Use the actual public-page appearance for editor previews, including drafts.
 7. Real paid donation ticker with server-masked names; optional registered-member display without fabricated payment claims.
 
-## Implemented in working tree; validation and review still in progress
+## Implemented changes
 
 - The reserved `/bagislar/al-quds-home-restoration` route previously rendered a separate static page with a different region filter and six-project limit. It now delegates to the normal CMS project route, including canonical URLs, publication checks and metadata. Deletion/unpublishing no longer resurrects that static landing page.
 - A super-category with linked projects and no configured CAMPAIGNS block gets a fallback project grid. Explicit hidden grids remain hidden. Public readers still filter unpublished/deleted projects.
@@ -31,27 +31,28 @@ Branch: `fix/major-projects-inbox-ticker`, built on PR118. Both changes belong t
 - Read markers persist only after a real scoped inbound event is found; failed persistence returns 503 and remains retryable. Opening does not mark a conversation answered. Mongo aggregation now uses Prisma aggregateRaw rather than a first cursor batch; the official Prisma documentation warns against runCommandRaw for aggregation because cursor sessions are not guaranteed: https://www.prisma.io/docs/orm/v7/prisma-client/using-raw-sql/raw-queries .
 - English and Turkish dashboard phrases compiled; all 19 public locales include the community supporter label.
 - Local tests, typecheck, lint and locale audits have passed. A clean Next.js production build passed using dummy constructor credentials, disabled external AI calls and an unreachable loopback database.
-- Browser execution and visual review are incomplete: the browser download was truncated, and transfer of the new branch is blocked pending authorization. The isolated browser fixtures compile but are not reported as passing.
+- Browser fixtures exercise real components with isolated HTTP and routing adapters. The actual editor preview button preserves unsaved text; image display, native audio playback, downloads and microphone recording are covered. Public phone header controls also remain within the viewport at 320 and 390 pixels in Arabic, English and Turkish.
 - Live-source configuration accepts empty legacy lists without accepting malformed values. Unknown-sender timelines remain isolated, and aggregation tests include 127 conversations. The test harness sends no real messages and performs no production writes.
 
 ## Deployment boundaries
 
-This is a local review branch; a remote PR for this batch has not been created. PR118 is still unmerged and is its prerequisite. Live provider delivery, bank/recurring collection, Google-account permission and CMS overrides need production verification after an explicitly approved release. No bank charge, provider media upload, AI generation or donor communication was executed by these checks.
+PR119 is stacked on PR118. The user explicitly approved uploading the branch and merging both PRs once checks and visual review pass. Live provider delivery, bank/recurring collection, Google-account permissions and CMS overrides require production verification after deployment. These isolated checks do not establish that a real donor payment or real WhatsApp delivery succeeded. No bank charge, provider media upload, AI generation or donor communication was executed by these checks.
 
 ## Source and privacy boundaries
 
 The approved Turkish source material was reviewed read-only. Private source-document links and identifiers are deliberately excluded from repository documentation. No production DB writes, messages, charges or provider media calls were performed during implementation.
 
-## Final local validation
+## Release validation
 
-Validated implementation commit: `341a4a7782d79a32f3f4487ef182d230b5b9ec5b` (source tree `2dc5c4c1a5d3a5d3fb560dd28b385319341053cd`).
-
-- 1,116 integration tests and 139 content-editor tests passed: 1,255 total.
-- Whole-repository TypeScript passed. ESLint passed with 183 existing findings, zero critical findings and no increases.
-- Dashboard dictionary check: 7,504 active phrases, zero missing translations. Public i18n and locale strict audits passed.
-- Both affected browser fixture bundles compile. Browser execution and visual review remain incomplete because Chromium installation failed with a truncated archive. No new browser check is counted as passed.
-- Clean Next.js 16.4.3 production build passed, including 150 static pages, using isolated dummy build settings and an unreachable loopback database.
-- Shell deployment scripts passed syntax checks.
+- 1,116 integration tests and 145 content-editor tests: 1,261 total. Integration checks run in GitHub Actions; the content suite also passes locally.
+- Whole-repository TypeScript passes. ESLint passes with 183 existing findings, zero critical findings and no increases.
+- Dashboard dictionary check: 7,504 active phrases, zero missing translations. All 19 public locale strict audits pass.
+- Seven browser suites cover content editors, major projects/private previews/ticker, inbox media, public media, dashboard flows, operations and checkout. Screenshots and per-suite results are retained as GitHub Actions artifacts. Browser success is a merge gate.
+- Local content editor browser verification: 23 checks and 84 snapshots. Major-project verification includes Arabic/English/Turkish preview layouts, draft retention, masked ticker sources, a configured 30-second interval surviving ten-second polls, category-fetch failure isolation and phone header bounds.
+- Screenshots reviewed for actual desktop/mobile previews, major-project management, Arabic/English/Turkish layouts, Aqsa/Zakat copy, ticker controls, donor-account cards and inbox media/composer. The visual review found a clipped phone menu; compact header spacing and control bounds were fixed and covered by browser assertions.
+- Clean Next.js 16.4.3 production builds use isolated dummy constructor credentials, disabled external AI calls and an unreachable loopback database. Expected database-read warnings do not imply a live database check.
+- Shell deployment scripts pass syntax checks. Deployment ensures FFmpeg/Opus before activating the build.
+- The SEO change handles invalid suggestion responses and preserves drafts; it does not prove that a production provider or reverse-proxy configuration problem has been corrected.
 
 ## Combined release authorization
 
