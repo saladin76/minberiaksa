@@ -121,10 +121,16 @@ jobs:
       - run: npx playwright install chromium
       - run: npm run test:content-editors:browser
       - name: Major projects, private previews and live ticker
+        if: ${{ !cancelled() }}
         run: node --import tsx scripts/major-projects-browser-test.mjs
+      - name: Inbox media playback and download
+        if: ${{ !cancelled() }}
+        run: node --import tsx scripts/inbox-media-browser-test.mjs
       - name: Public programme and course playback
+        if: ${{ !cancelled() }}
         run: node --import tsx scripts/public-media-browser-test.mjs
       - name: Dashboard donation, communication and analytics flows
+        if: ${{ !cancelled() }}
         run: node --import tsx scripts/dashboard-followup-browser-test.mjs
       - name: Operations editors, gallery, cart, Search and renewal readiness
         if: ${{ !cancelled() }}

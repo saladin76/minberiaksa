@@ -78,7 +78,7 @@ const bundle = await build({
       name: "next-standalone",
       setup(b) {
         b.onResolve({ filter: /^next-auth\/react$/ }, () => ({ path: "session", namespace: "fixture-session" }));
-        b.onLoad({ filter: /.*/, namespace: "fixture-session" }, () => ({ contents: "export function useSession(){return {data:null,status:'unauthenticated'}}", loader: "js" }));
+        b.onLoad({ filter: /.*/, namespace: "fixture-session" }, () => ({ contents: "export function useSession(){return {data:null,status:'unauthenticated'}};export function signIn(){};export function signOut(){}", loader: "js" }));
         b.onResolve({ filter: /^next\/(link|dynamic|image|navigation)$/ }, (args) => ({
           path: args.path,
           namespace: "fixture-next",
@@ -86,7 +86,7 @@ const bundle = await build({
         b.onLoad({ filter: /.*/, namespace: "fixture-next" }, (args) => ({
           contents:
             args.path === "next/navigation"
-              ? "export function usePathname(){return location.pathname};export function useRouter(){ return {replace(){}, push(){}, refresh(){}}; }"
+              ? "import {useMemo} from 'react';export function useSearchParams(){return useMemo(()=>new URLSearchParams(location.search),[])};export function usePathname(){return location.pathname};export function useRouter(){ return {replace(){}, push(){}, refresh(){}}; }"
               : args.path === "next/image"
               ? 'import React from "react"; export default function Image({src,alt,...props}){return React.createElement("img",{src,alt,...props});}'
               : args.path === "next/link"
@@ -99,6 +99,7 @@ const bundle = await build({
     },
   ],
 });
+if(process.env.CHECK_BUNDLE_ONLY){console.log("Content editor browser bundle: compiled");process.exit(0);}
 const server = createServer(async (req, res) => {
   if (req.url === "/api/upload") {
     req.resume();
