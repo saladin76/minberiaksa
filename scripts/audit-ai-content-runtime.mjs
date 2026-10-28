@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export async function probeContentRuntime({ runtime, env = process.env, request = fetch, checkGeneration = false, builders, errors }) {
-  const safeModel = value => typeof value === "string" && /^(?:gpt-|o[134](?:-|$))[a-zA-Z0-9._:-]{0,115}$/.test(value) ? value : "INVALID_MODEL_NAME";
+  const safeModel = value => typeof value === "string" && /^(?:gpt-|o[134](?:-|$))[a-zA-Z0-9._:-]{0,115}$/.test(value) ? value : "CUSTOM_MODEL_REDACTED";
   const models = builders.contentModels(env);
   /** @type {Record<string, {status: string, details?: import("../lib/ai/core/openai-response").OpenAiFailureDetails}>} */
   const stages = {};
@@ -19,7 +19,7 @@ export async function probeContentRuntime({ runtime, env = process.env, request 
     try {
       report.providerRequests++;
       const response = await request("https://api.openai.com/v1/responses", { method: "POST", redirect: "error", cache: "no-store",
-        headers: { Authorization: "Bearer " + runtime.apiKey, "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, max_output_tokens: 4096 }), signal: AbortSignal.timeout(90000) });
+        headers: { Authorization: "Bearer " + runtime.apiKey, "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, max_output_tokens: payload.max_output_tokens ?? 4096 }), signal: AbortSignal.timeout(90000) });
       if (!response.ok) throw await errors.openAiFailure(response, stage);
       const body = await response.json();
       const text = errors.openAiResponseText(body); JSON.parse(text.replace(/^```json\s*/i, "").replace(/```$/, "").trim());

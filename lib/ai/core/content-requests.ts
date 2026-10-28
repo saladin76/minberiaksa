@@ -17,9 +17,13 @@ export function researchRequest(prompt: string, env: NodeJS.ProcessEnv = process
   };
 }
 export function researchedTranslationRequest(userContent: string, env: NodeJS.ProcessEnv = process.env) {
+  const model = contentModels(env).translation;
+  // GPT-4o / mini (including snapshots and fine-tunes) have a 16,384-token output ceiling.
+  // Keep the configured model; never ask it for the larger budget used by the default research model.
+  const outputBudget = /(?:^|:)gpt-4o(?:-|:|$)/.test(model) ? 16_384 : 24_000;
   return {
-    model: contentModels(env).translation,
+    model,
     instructions: "Translate professionally into the requested language. Use natural native phrasing and researched terminology, while preserving the source's meaning, facts, numbers, names, URLs, placeholders and currencies exactly. Never add claims from research. Return JSON only.",
-    input: userContent, text: { format: { type: "json_object" } }, max_output_tokens: 24000, store: false,
+    input: userContent, text: { format: { type: "json_object" } }, max_output_tokens: outputBudget, store: false,
   };
 }

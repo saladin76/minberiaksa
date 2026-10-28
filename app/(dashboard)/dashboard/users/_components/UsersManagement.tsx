@@ -79,6 +79,8 @@ interface BadgeOption {
 
 type Scope = "donors" | "team";
 
+function invalidateRequest(request: { current: number }) { request.current++; }
+
 export default function UsersManagement({ scope }: { scope: Scope }) {
   const { data: session } = useSession();
   const isFullAdmin = session?.user?.role === "ADMIN";
@@ -88,6 +90,9 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const { convertToCurrency } = useCurrency();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState(false);
+  const [listLoaded, setListLoaded] = useState(false);
+  const [registeredError, setRegisteredError] = useState(false);
   const [total, setTotal] = useState(0);
   const [registeredTotal, setRegisteredTotal] = useState<number | null>(null);
   const [page, setPage] = useState(1);
@@ -122,11 +127,13 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const fetchUsers = useCallback(
     async (pageNum: number, append: boolean) => {
       const requestId = ++usersRequest.current;
-      if (pageNum === 1) setLoading(true);
+      if (pageNum === 1) { setLoading(true); setSelectedUserIds(new Set()); setListLoaded(false); }
       else setLoadingMore(true);
+      setListError(false);
       try {
         const params = new URLSearchParams();
         params.set("scope", scope);
+        params.set("includeRegisteredCount", "0");
         params.set("page", String(pageNum));
         params.set("limit", String(PAGE_SIZE));
         params.set("sortBy", sortBy);
@@ -139,16 +146,19 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
           params.set("badgeId", badgeFilter);
         if (genderFilter !== "all") params.set("gender", genderFilter);
         applyAgeBracketParams(params, ageFilter);
-        const res = await axios.get(`/api/users?${params}`);
+        const res = await axios.get(`/api/users?${params}`, { timeout: 15000 });
         if (requestId !== usersRequest.current) return;
-        const list = res.data?.users ?? [];
+        if (!Array.isArray(res.data?.users) || !Number.isInteger(res.data?.pagination?.total) || res.data.pagination.total < 0) throw new Error("Invalid user list");
+        const list = res.data.users;
         setUsers((prev) => (append ? [...prev, ...list] : list));
         setTotal(res.data?.pagination?.total ?? 0);
-        setRegisteredTotal(Number.isInteger(res.data?.registeredDonorsTotal) ? res.data.registeredDonorsTotal : null);
-      } catch (err) {
+        setListLoaded(true);
+      } catch {
         if (requestId !== usersRequest.current) return;
         if (append) setPage(previous => Math.max(1, previous - 1));
-        console.error("Error fetching users:", err);
+        setListError(true);
+        setSendDialog(previous => ({ ...previous, open: false }));
+        console.error("Error fetching users");
         toast.error(dt("فشل في تحميل المستخدمين"));
       } finally {
         if (requestId === usersRequest.current) {
@@ -160,6 +170,21 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
     [scope, search, preferredLangFilter, badgeFilter, genderFilter, ageFilter, sortBy, sortOrder, accountFilter]
   );
 
+  const registeredRequest = useRef(0);
+  const loadRegisteredTotal = useCallback(async () => {
+    if (scope !== "donors") return;
+    const request = ++registeredRequest.current;
+    setRegisteredError(false);
+    try {
+      const response = await axios.get("/api/users?scope=donors&summary=registered", { timeout: 15000 });
+      if (request !== registeredRequest.current) return;
+      const count = response.data?.registeredDonorsTotal;
+      if (!Number.isInteger(count) || count < 0) throw new Error("Invalid registered count");
+      setRegisteredTotal(count);
+    } catch { if (request === registeredRequest.current) setRegisteredError(true); }
+  }, [scope]);
+  useEffect(() => { void loadRegisteredTotal(); return () => invalidateRequest(registeredRequest); }, [loadRegisteredTotal]);
+
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 400);
     return () => clearTimeout(t);
@@ -167,7 +192,8 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
 
   useEffect(() => {
     setPage(1);
-    fetchUsers(1, false);
+    void fetchUsers(1, false);
+    return () => invalidateRequest(usersRequest);
   }, [search, preferredLangFilter, badgeFilter, genderFilter, ageFilter, sortBy, sortOrder, fetchUsers]);
 
   useEffect(() => {
@@ -278,10 +304,12 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
     return "$" + (typeof n === "number" ? n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "0");
   };
 
-  const hasMore = users.length < total && !loadingMore;
+  const listReady = listLoaded && !listError && !loading;
+  const hasMore = listReady && users.length < total && !loadingMore;
 
   const hasActiveFilters =
     search !== "" ||
+    (scope === "donors" && accountFilter !== "all") ||
     preferredLangFilter !== "all" ||
     badgeFilter !== "all" ||
     genderFilter !== "all" ||
@@ -289,27 +317,13 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
 
   const resetFilters = () => {
     setSearchInput("");
+    setAccountFilter("all");
     setPreferredLangFilter("all");
     setBadgeFilter("all");
     setGenderFilter("all");
     setAgeFilter("all");
   };
 
-  if (loading && users.length === 0) {
-    return (
-      <div className="min-h-0" dir={dashDir()}>
-        <div className="space-y-6 p-4 md:p-6 max-w-[1600px] mx-auto">
-          <div className="h-10 w-64 bg-slate-200 rounded animate-pulse" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 rounded-lg bg-slate-200 animate-pulse" />
-            ))}
-          </div>
-          <div className="h-64 rounded-lg bg-slate-200 animate-pulse" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-0" dir={dashDir()}>
@@ -323,8 +337,12 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
           </p>
         </header>
 
+        {listError ? <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <span>{dt("فشل في تحميل المستخدمين")}{users.length ? " · " + dt("تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.") : ""}</span>
+          <Button variant="outline" size="sm" onClick={() => { setPage(1); void fetchUsers(1, false); }}>{dt("إعادة المحاولة")}</Button>
+        </div> : null}
         <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${scope === "donors" ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
-          {scope === "donors" ? <Card className="border border-sky-100 shadow-sm"><div className="p-5 text-start"><p className="text-xs font-medium text-slate-500">{dt("المتبرعون الذين لديهم حساب مسجل")}</p><p className="mt-2 text-xl font-bold tabular-nums">{registeredTotal === null ? "—" : registeredTotal.toLocaleString()}</p><p className="mt-1 text-xs text-slate-500">{dt("إجمالي الحسابات المسجلة في الموقع، مستقل عن فلاتر القائمة.")}</p></div></Card> : null}
+          {scope === "donors" ? <Card className="border border-sky-100 shadow-sm"><div className="p-5 text-start"><p className="text-xs font-medium text-slate-500">{dt("المتبرعون الذين لديهم حساب مسجل")}</p><p className="mt-2 text-xl font-bold tabular-nums">{registeredTotal === null || registeredError ? dt("غير متاح") : registeredTotal.toLocaleString()}</p><p className="mt-1 text-xs text-slate-500">{dt("إجمالي الحسابات المسجلة في الموقع، مستقل عن فلاتر القائمة.")}</p>{registeredError ? <div role="alert" className="mt-2 text-xs text-red-700"><span>{dt("تعذر تحميل البيانات")}</span><button type="button" className="ms-2 underline" onClick={() => void loadRegisteredTotal()}>{dt("إعادة المحاولة")}</button></div> : null}</div></Card> : null}
 
           <Card className="border border-border shadow-sm" dir={dashDir()}>
             <div className="p-5 flex items-start gap-4">
@@ -333,7 +351,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
               </div>
               <div className="min-w-0 text-start">
                 <p className="text-xs font-medium text-slate-500">{dt("المطابقون للتصفية")}</p>
-                <p className="text-xl font-bold text-slate-900 tabular-nums">{total}</p>
+                <p className="text-xl font-bold text-slate-900 tabular-nums">{listReady ? total : "—"}</p>
               </div>
             </div>
           </Card>
@@ -344,7 +362,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
               </div>
               <div className="min-w-0 text-start">
                 <p className="text-xs font-medium text-slate-500">{dt("المستخدمين المعروضين")}</p>
-                <p className="text-xl font-bold text-slate-900 tabular-nums">{users.length}</p>
+                <p className="text-xl font-bold text-slate-900 tabular-nums">{listReady ? users.length : "—"}</p>
               </div>
             </div>
           </Card>
@@ -474,7 +492,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                 <span className="text-sm text-slate-700">
                   {selectedUserIds.size > 0
                     ? dt("تم اختيار {0} مستخدم", [selectedUserIds.size])
-                    : dt("إرسال للنتائج المُصفّاة الحالية ({0})", [total])}
+                    : listReady ? dt("إرسال للنتائج المُصفّاة الحالية ({0})", [total]) : dt("غير متاح")}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   {selectedUserIds.size > 0 && (
@@ -490,7 +508,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                     <Button
                       size="sm"
                       onClick={() => setSendDialog({ open: true, channel: "email" })}
-                      disabled={total === 0}
+                      disabled={!listReady || total === 0}
                       className="gap-2 bg-brand hover:bg-brand/90"
                     >
                       <Mail className="w-4 h-4" /> {dt(" إرسال بريد")}</Button>
@@ -501,6 +519,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                     <Button
                       size="sm"
                       onClick={() => router.push("/dashboard/communication/whatsapp")}
+                      disabled={!listReady || total === 0}
                       className="gap-2 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
                     >
                       <MessageCircle className="w-4 h-4" /> {dt(" واتساب من مركز التواصل")}</Button>
@@ -529,7 +548,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                     <div key={i} className="h-12 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
                   ))}
                 </div>
-              ) : users.length === 0 ? (
+              ) : listError && users.length === 0 ? <div className="p-6 text-sm text-slate-600">{dt("غير متاح")}</div> : users.length === 0 ? (
                 <EmptyState
                   icon={Users}
                   title={dt("لا يوجد مستخدمين مطابقين")}
@@ -547,6 +566,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                     <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-700">
                       <th className="w-10 px-3 py-2.5">
                         <Checkbox
+                          disabled={!listReady}
                           checked={isAllDisplayedSelected}
                           onCheckedChange={(checked: boolean | "indeterminate") => selectAllDisplayed(checked === true)}
                           aria-label={dt("تحديد الكل")}
@@ -595,6 +615,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                           <td className="px-3 py-2.5">
                             <Checkbox
                               checked={selected}
+                              disabled={!listReady}
                               onCheckedChange={() => toggleSelectUser(u.id)}
                               aria-label={dt("تحديد {0}", [u.name || u.email])}
                             />
@@ -761,7 +782,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                             {/* Dialogs opened from this menu own the modal background lock. */}
                             <DropdownMenu modal={false}>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="outline" aria-label={dt("الإجراءات")} className="gap-1 rounded-full">
+                                <Button disabled={!listReady} size="sm" variant="outline" aria-label={dt("الإجراءات")} className="gap-1 rounded-full">
                                   <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>

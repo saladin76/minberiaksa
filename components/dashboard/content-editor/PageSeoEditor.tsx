@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { EditorModal } from "./EditorModal";
 import { runSuggestionBatch, readSuggestionJson, SuggestionRequestError, requestSuggestion } from "@/lib/content-editor/suggestion-batch";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
@@ -26,7 +25,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const generation = useRef<AbortController | null>(null);
   const draftRef = useRef(draft); draftRef.current = draft;
-  const [batchPlan, setBatchPlan] = useState<string[] | null>(null), [skipped, setSkipped] = useState<readonly string[]>([]), [failureReasons, setFailureReasons] = useState<Record<string, string>>({});
+  const [skipped, setSkipped] = useState<readonly string[]>([]), [failureReasons, setFailureReasons] = useState<Record<string, string>>({});
   const [analyticsPeriod, setAnalyticsPeriod] = useState<Ga4Period | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -112,7 +111,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     <div className="grid items-end gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_auto_auto]">
       <label className="min-w-0 text-sm sm:col-span-2 lg:col-span-1">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
       <button type="button" disabled={!document || Boolean(busy)} onClick={() => void suggest([locale])} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>
-      <button type="button" disabled={!document || Boolean(busy)} onClick={() => setBatchPlan([...SUPPORTED_LOCALES])} className="rounded border px-3 py-2">{dt("اقتراح SEO لجميع اللغات")}</button>
+      <button type="button" disabled={!document || Boolean(busy)} onClick={() => void suggest([...SUPPORTED_LOCALES])} className="rounded border px-3 py-2">{dt("اقتراح SEO لجميع اللغات")}</button>
       {busy === "research" ? <button type="button" onClick={() => generation.current?.abort()} className="rounded border px-3 py-2">{dt("إيقاف")}</button> : null}
       {progress ? <p role="status" className="col-span-full text-sm"><bdi dir="ltr">{progress.done} / {progress.total}</bdi></p> : null}
     </div>
@@ -144,7 +143,6 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     </section> : null}
     {Object.values(failureReasons).some(code => code.startsWith("AI_")) ? <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block text-sm font-semibold text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي والنموذج")}</Link> : null}
     {skipped.length ? <p className="text-sm text-slate-600">{dt("لم تُطلب هذه اللغات: {0}", [skipped.map(code => LOCALES[code as SupportedLocale]?.nativeLabel || code).join("، ")])}</p> : null}
-    {batchPlan ? <EditorModal title={dt("مراجعة نطاق الطلب")} onClose={() => setBatchPlan(null)}><div className="w-full max-w-xl space-y-4 rounded-xl bg-white p-5"><h2 className="text-lg font-bold">{dt("مراجعة نطاق الطلب")}</h2><p>{dt("اللغات المستهدفة: {0}", [batchPlan.length])}</p><p className="text-sm leading-7">{batchPlan.map(code => LOCALES[code as SupportedLocale].nativeLabel).join("، ")}</p><p className="text-sm">{dt("طلبات المزوّد المتوقعة بحد أقصى: {0}", [batchPlan.length])}</p><p className="text-sm text-slate-600">{dt("التكلفة المالية تعتمد على النموذج وحجم النص وتسعير حساب المزوّد؛ لا يتوفر تقدير مالي موثوق هنا.")}</p><p className="text-sm text-slate-600">{dt("الطلب يجهّز اقتراحات للمراجعة فقط، ولا يحفظ أو ينشر المحتوى.")}</p><div className="flex flex-wrap gap-2"><button type="button" className="rounded-lg bg-brand px-4 py-2 text-sm text-white" onClick={() => { const targets = batchPlan; setBatchPlan(null); void suggest(targets); }}>{dt("بدء إعداد الاقتراحات")}</button><button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setBatchPlan(null)}>{dt("إلغاء")}</button></div></div></EditorModal> : null}
     {Object.entries(errors).map(([code, error]) => <p key={code} role="alert" className="rounded border border-red-200 p-3 text-sm text-red-700">{LOCALES[code as SupportedLocale].nativeLabel}: {error}</p>)}
   </div>;
 }

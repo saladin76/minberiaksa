@@ -354,7 +354,7 @@ try {
 
   let failedSuggestions=0;const savesBeforeFailedBatch=saves;
   await page.route("**/api/admin/content-editor/*/*/suggest",route=>{failedSuggestions++;return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"راجع الرصيد وحد الإنفاق قبل إعادة المحاولة.",reason:"AI_QUOTA_EXCEEDED",stopBatch:true})})});
-  await page.getByLabel("اللغات المستهدفة",{exact:true}).selectOption("all");await page.getByRole("button",{name:"ترجمة كل اللغات",exact:true}).click();await page.getByRole("dialog").waitFor();assert.equal(failedSuggestions,0);await page.getByRole("dialog").getByRole("button",{name:"بدء إعداد الاقتراحات",exact:true}).click();
+  await page.getByLabel("اللغات المستهدفة",{exact:true}).selectOption("all");await page.getByRole("button",{name:"ترجمة كل اللغات",exact:true}).click();assert.equal(await page.getByRole("dialog").count(),0);
   await page.getByRole("heading",{name:"لم تتوفر اقتراحات للمراجعة",exact:true}).waitFor();assert.equal(failedSuggestions,1);assert.equal(saves,savesBeforeFailedBatch);assert.equal(await title.inputValue(),"Unsaved edit");
   assert.equal(await page.getByRole("button",{name:"تطبيق جميع الاقتراحات على المسودة",exact:true}).isDisabled(),true);
   await page.getByRole("link",{name:"مراجعة اتصال الذكاء الاصطناعي والنموذج",exact:true}).waitFor();await page.screenshot({path:path.join(temp,"ar-translation-quota-stopped.png"),fullPage:true,animations:"disabled"});await page.unroute("**/api/admin/content-editor/*/*/suggest");
