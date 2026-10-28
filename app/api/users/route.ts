@@ -70,6 +70,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // The global registered-account card must not wait for list joins, sorting or filtered totals.
+    if (searchParams.get("summary") === "registered") {
+      if (scope !== "donors") return NextResponse.json({ error: "Invalid summary scope" }, { status: 400 });
+      const registeredDonorsTotal = await prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER")] } });
+      return NextResponse.json({ registeredDonorsTotal }, { headers: { "Cache-Control": "private, no-store" } });
+    }
+
     const accountStatus = searchParams.get("accountStatus");
     if (accountStatus && !["MEMBER", "GUEST", "UNKNOWN"].includes(accountStatus)) return NextResponse.json({ error: "Invalid account status" }, { status: 400 });
     const preferredLang = searchParams.get('preferredLang') || undefined;
@@ -141,7 +148,7 @@ export async function GET(request: NextRequest) {
 
     const [total, registeredDonorsTotal] = await Promise.all([
       prisma.user.count({ where }),
-      scope === "donors" ? prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER")] } }) : Promise.resolve(null),
+      scope === "donors" && searchParams.get("includeRegisteredCount") !== "0" ? prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER")] } }) : Promise.resolve(null),
     ]);
 
     const isAggregateSort = sortBy === 'donationsCount' || sortBy === 'totalDonated';

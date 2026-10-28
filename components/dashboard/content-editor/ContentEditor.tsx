@@ -145,7 +145,6 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [analyticsPeriod, setAnalyticsPeriod] = useState<Ga4Period | null>(null);
   const [busy, setBusy] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [batchPlan, setBatchPlan] = useState<{action: "seo" | "translate" | "faq" | "proofread"; targets: string[]} | null>(null);
   const [generationProgress, setGenerationProgress] = useState<{ done: number; total: number } | null>(null);
   const generationAbort = useRef<AbortController | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -652,7 +651,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           </select></label>
           <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0 || id === "new" || (assistAction === "translate" && assistTargetScope === "current" && locale === "ar")} onClick={() => {
             const targets = (assistTargetScope === "current" ? [locale] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
-            if (targets.length > 1) setBatchPlan({ action: assistAction, targets }); else void suggest(assistAction, false, targets);
+            void suggest(assistAction, false, targets);
           }}>{assistAction === "translate" ? assistTargetScope === "missing" ? dt("ترجمة اللغات الناقصة") : assistTargetScope === "all" ? dt("ترجمة كل اللغات") : dt("ترجمة الحقول المحددة") : dt("إعداد الاقتراحات")}</button>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs leading-6 text-slate-600"><p>{dt("تُستخدم مسودة العربية مصدرًا للترجمة. تطبيق الاقتراح يغيّر المسودة فقط؛ راجع التغييرات قبل الحفظ.")}</p><button type="button" className="font-semibold text-brand underline underline-offset-4" onClick={() => setSection("seo")}>{dt("فتح إعدادات SEO")}</button></div>
@@ -676,14 +675,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           {message}
         </p>
       ) : null}
-      {batchPlan ? <EditorModal title={dt("مراجعة نطاق الطلب")} onClose={() => setBatchPlan(null)}><div className="w-full max-w-xl space-y-4 rounded-xl bg-white p-5">
-        <h2 className="text-lg font-bold">{dt("مراجعة نطاق الطلب")}</h2>
-        <p>{dt("اللغات المستهدفة: {0}", [batchPlan.targets.length])}</p><p className="text-sm leading-7">{batchPlan.targets.map(code => LOCALES[code as SupportedLocale]?.nativeLabel || code).join("، ")}</p>
-        <p className="text-sm">{dt("طلبات المزوّد المتوقعة بحد أقصى: {0}", [batchPlan.targets.length * (batchPlan.action === "translate" ? 2 : 1)])}</p>
-        <p className="text-sm text-slate-600">{dt("التكلفة المالية تعتمد على النموذج وحجم النص وتسعير حساب المزوّد؛ لا يتوفر تقدير مالي موثوق هنا.")}</p>
-        <p className="text-sm text-slate-600">{dt("الطلب يجهّز اقتراحات للمراجعة فقط، ولا يحفظ أو ينشر المحتوى.")}</p>
-        <div className="flex flex-wrap gap-2"><button type="button" className={button + " bg-brand text-white"} onClick={() => { const plan = batchPlan; setBatchPlan(null); void suggest(plan.action, false, plan.targets); }}>{dt("بدء إعداد الاقتراحات")}</button><button type="button" className={button} onClick={() => setBatchPlan(null)}>{dt("إلغاء")}</button></div>
-      </div></EditorModal> : null}
+
       {proposal ? (
         <section className="space-y-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

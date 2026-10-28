@@ -30,3 +30,23 @@ test("successful research and translation probes do not publish generated conten
   assert.equal(result.providerRequests, 2); assert.equal(result.status, "generation_ready"); assert.equal(result.databaseWrites, 0);
   assert.doesNotMatch(JSON.stringify(result), /Synthetic unpublished content|fixture-key/);
 });
+
+test("the mini fallback uses a supported live output limit, and the diagnostic exercises that exact limit", async () => {
+  for (const model of ["gpt-4o-mini", "gpt-4o-mini-2024-07-18", "ft:gpt-4o-mini-2024-07-18:fixture:translation"]) {
+    const env = { NODE_ENV: "test" as const, CONTENT_LOCALIZATION_MODEL: model };
+    const production = builders.researchedTranslationRequest("Synthetic draft", env);
+    let calls = 0;
+    const result = await probeContentRuntime({ runtime, env, builders, errors, checkGeneration: true, request: async (_url, init) => {
+      calls++; const body = JSON.parse(String(init?.body));
+      if (calls === 2) {
+        assert.equal(body.max_output_tokens, production.max_output_tokens, "a smaller diagnostic override would hide a rejected live request");
+        if (body.max_output_tokens > 16_384) return Response.json({ error: { code: "invalid_value", param: "max_output_tokens" } }, { status: 400 });
+      }
+      return Response.json({ status: "completed", output: [
+        ...(calls === 1 ? [{ type: "web_search_call", status: "completed", action: { sources: [{ url: "https://example.test/docs" }] } }] : []),
+        { type: "message", content: [{ type: "output_text", text: JSON.stringify({ title: "Synthetic result" }) }] },
+      ] });
+    } });
+    assert.equal(result.status, "generation_ready"); assert.equal(production.model, model);
+  }
+});

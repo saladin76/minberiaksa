@@ -110,5 +110,7 @@ test("registered account total ignores donor search filters and is inaccessible 
   });
   const request={url:"https://fixture.test/api/users?scope=donors&search=filtered&accountStatus=GUEST"};
   assert.equal((await route.GET(request)).body.registeredDonorsTotal,42);assert.match(JSON.stringify(queries[0]),/filtered/);assert.doesNotMatch(JSON.stringify(queries[1]),/filtered|GUEST|verifiedAt/);assert.match(JSON.stringify(queries[1]),/registeredAt|accounts/);
-  permitted=false;assert.equal((await route.GET(request)).status,403);assert.equal(queries.length,2);
+  const summary={url:"https://fixture.test/api/users?scope=donors&summary=registered&search=ignored&accountStatus=GUEST"};
+  assert.equal((await route.GET(summary)).body.registeredDonorsTotal,42);assert.equal(queries.length,3);assert.doesNotMatch(JSON.stringify(queries[2]),/ignored|GUEST/);
+  permitted=false;assert.equal((await route.GET(request)).status,403);assert.equal((await route.GET(summary)).status,403);assert.equal(queries.length,3);
 });

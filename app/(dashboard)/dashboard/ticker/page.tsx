@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,25 +46,34 @@ const DEFAULT_CONFIG: TickerConfig = {
   maxIntervalSeconds: 8,
 };
 
+function invalidateRequest(request: { current: number }) { request.current++; }
+
 export default function TickerAdminPanel() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const configRequest = useRef(0);
   const [config, setConfig] = useState<TickerConfig>(DEFAULT_CONFIG);
   const [donorNamesInput, setDonorNamesInput] = useState("");
 
   const fetchConfig = useCallback(async () => {
+    const request = ++configRequest.current;
     setLoading(true);
+    setLoadError(false);
     try {
-      const response = await fetch("/api/live-donation-ticker?view=admin", { cache: "no-store" });
-      if (response.status === 404) {
+      const response = await fetch("/api/live-donation-ticker?view=admin", { cache: "no-store", signal: AbortSignal.timeout(15000) });
+      const data = await response.json().catch(() => null);
+      if (request !== configRequest.current) return;
+      if (response.status === 404 && data?.error === "No ticker configuration found") {
         setConfig(DEFAULT_CONFIG);
         setDonorNamesInput("");
         return;
       }
       if (!response.ok) throw new Error(dt("فشل في تحميل إعدادات شريط التبرعات"));
 
-      const data = await response.json();
+      if (!data || typeof data.id !== "string" || typeof data.isActive !== "boolean" || !Array.isArray(data.donorNames) || !Array.isArray(data.amountRanges)
+        || !Number.isInteger(data.minIntervalSeconds) || !Number.isInteger(data.maxIntervalSeconds)) throw new Error(dt("تعذر تحميل الإعدادات"));
       setConfig({
         id: data.id,
         isActive: data.isActive === true,
@@ -76,22 +85,26 @@ export default function TickerAdminPanel() {
         maxIntervalSeconds: Number.isInteger(data.maxIntervalSeconds) ? data.maxIntervalSeconds : DEFAULT_CONFIG.maxIntervalSeconds,
       });
       setDonorNamesInput((Array.isArray(data.donorNames) ? data.donorNames : []).join("\n"));
-    } catch (error) {
+    } catch {
+      if (request !== configRequest.current) return;
+      setLoadError(true);
       toast({
         title: dt("تعذر تحميل الإعدادات"),
-        description: error instanceof Error ? error.message : dt("حاول تحديث الصفحة"),
+        description: dt("حاول تحديث الصفحة"),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (request === configRequest.current) setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
     void fetchConfig();
+    return () => invalidateRequest(configRequest);
   }, [fetchConfig]);
 
   const handleSave = async () => {
+    if (loading || saving || loadError) return;
     const donorNames = donorNamesInput.split(/\r?\n/u).map((name) => name.trim()).filter(Boolean);
     const probabilityTotal = config.amountRanges.reduce((sum, range) => sum + range.probability, 0);
     const rangesAreValid = config.amountRanges.length > 0 && config.amountRanges.every((range) =>
@@ -188,6 +201,15 @@ export default function TickerAdminPanel() {
   if (loading) {
     return <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" aria-label={dt("جارٍ التحميل")} /></div>;
   }
+
+  if (loadError) return <div className="mx-auto max-w-5xl space-y-6">
+    <PageHeader title={dt("شريط التبرعات")} icon={Ticket} />
+    <div role="alert" className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">
+      <p>{dt("تعذر تحميل الإعدادات")}</p>
+      <Button variant="outline" onClick={() => void fetchConfig()}>{dt("إعادة المحاولة")}</Button>
+    </div>
+    <Button disabled><Save className="ms-2 h-4 w-4" />{dt("حفظ الإعدادات")}</Button>
+  </div>;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
