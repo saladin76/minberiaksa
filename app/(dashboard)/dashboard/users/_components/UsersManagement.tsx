@@ -89,6 +89,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [registeredTotal, setRegisteredTotal] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -143,6 +144,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
         const list = res.data?.users ?? [];
         setUsers((prev) => (append ? [...prev, ...list] : list));
         setTotal(res.data?.pagination?.total ?? 0);
+        setRegisteredTotal(Number.isInteger(res.data?.registeredDonorsTotal) ? res.data.registeredDonorsTotal : null);
       } catch (err) {
         if (requestId !== usersRequest.current) return;
         if (append) setPage(previous => Math.max(1, previous - 1));
@@ -321,7 +323,9 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
           </p>
         </header>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${scope === "donors" ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+          {scope === "donors" ? <Card className="border border-sky-100 shadow-sm"><div className="p-5 text-start"><p className="text-xs font-medium text-slate-500">{dt("المتبرعون الذين لديهم حساب مسجل")}</p><p className="mt-2 text-xl font-bold tabular-nums">{registeredTotal === null ? "—" : registeredTotal.toLocaleString()}</p><p className="mt-1 text-xs text-slate-500">{dt("إجمالي الحسابات المسجلة في الموقع، مستقل عن فلاتر القائمة.")}</p></div></Card> : null}
+
           <Card className="border border-border shadow-sm" dir={dashDir()}>
             <div className="p-5 flex items-start gap-4">
               <div className="p-2.5 rounded-lg shrink-0 bg-brand-orange/8 text-brand-orange border border-brand-orange/20">

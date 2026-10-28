@@ -86,7 +86,7 @@ const bundle = await build({
         b.onLoad({ filter: /.*/, namespace: "fixture-next" }, (args) => ({
           contents:
             args.path === "next/navigation"
-              ? "export function useRouter(){ return {replace(){}, push(){}, refresh(){}}; }"
+              ? "export function usePathname(){return location.pathname};export function useRouter(){ return {replace(){}, push(){}, refresh(){}}; }"
               : args.path === "next/image"
               ? 'import React from "react"; export default function Image({src,alt,...props}){return React.createElement("img",{src,alt,...props});}'
               : args.path === "next/link"

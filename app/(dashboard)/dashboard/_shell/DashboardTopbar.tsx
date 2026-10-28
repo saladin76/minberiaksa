@@ -101,8 +101,8 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, show
                 ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
                 : "border-slate-200 bg-white text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50",
             )}
-            aria-label={whatsappInboxCount > 0 ? dt("واتساب، {0} محادثة تنتظر الرد", [whatsappInboxCount]) : dt("محادثات واتساب")}
-            title={whatsappInboxCount > 0 ? dt("{0} محادثة واتساب تنتظر الرد", [whatsappInboxCount]) : dt("محادثات واتساب")}
+            aria-label={whatsappInboxCount > 0 ? dt("واتساب، {0} محادثة غير مقروءة", [whatsappInboxCount]) : dt("محادثات واتساب")}
+            title={whatsappInboxCount > 0 ? dt("{0} محادثة واتساب غير مقروءة", [whatsappInboxCount]) : dt("محادثات واتساب")}
           >
             <WhatsappMark />
             {whatsappInboxCount > 0 && (

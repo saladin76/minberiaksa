@@ -99,6 +99,8 @@ git pull --ff-only origin "$BRANCH"
 lock_after="$(sha1sum package-lock.json | cut -d' ' -f1)"
 DEPLOY_SHA="$(git rev-parse HEAD)"
 
+if [[ -f scripts/ensure-inbox-media-tools.sh ]]; then bash scripts/ensure-inbox-media-tools.sh; fi
+
 # A local npm install can rewrite package-lock.json on the VPS. Comparing the
 # installed modules only to that working-tree lock would then bless the drift.
 # The deploy must use the package manifest and lockfile committed at DEPLOY_SHA.

@@ -126,7 +126,7 @@ export async function PUT(
     queueAuditLog({
       ...actor,
       action: "SUPER_CATEGORY_UPDATE",
-      messageAr: `${actor.actorName ?? "مسؤول"} حدّث القسم الكبير: ${full.title}`,
+      messageAr: `${actor.actorName ?? "مسؤول"} حدّث المشروع الكبير: ${full.title}`,
       entityType: "SuperCategory",
       entityId: full.id,
     });
@@ -136,7 +136,7 @@ export async function PUT(
     if (isContentWriteConflict(error)) return NextResponse.json({ error: "تغير المحتوى لدى زميل. أعد تحميل الصفحة قبل الحفظ." }, { status: 409 });
     console.error("Error updating super category:", error);
     return NextResponse.json(
-      { error: writeErrorMessage(error, "تعذّر تحديث القسم الكبير") },
+      { error: writeErrorMessage(error, "تعذّر تحديث المشروع الكبير") },
       { status: 500 }
     );
   }
@@ -167,7 +167,7 @@ export async function DELETE(
     queueAuditLog({
       ...actor,
       action: "SUPER_CATEGORY_DELETE",
-      messageAr: `${actor.actorName ?? "مسؤول"} حذف القسم الكبير: ${existing.title}`,
+      messageAr: `${actor.actorName ?? "مسؤول"} حذف المشروع الكبير: ${existing.title}`,
       entityType: "SuperCategory",
       entityId: existing.id,
     });
@@ -176,7 +176,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Error deleting super category:", error);
     return NextResponse.json(
-      { error: writeErrorMessage(error, "تعذّر حذف القسم الكبير") },
+      { error: writeErrorMessage(error, "تعذّر حذف المشروع الكبير") },
       { status: 500 }
     );
   }

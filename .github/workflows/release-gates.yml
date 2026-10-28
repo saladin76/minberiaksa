@@ -79,6 +79,12 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - name: Voice encoder prerequisite
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
       - run: npm run test:integration-settings
       - name: Content editor and audit regressions
         run: npm run test:content-editors
@@ -114,6 +120,8 @@ jobs:
       # Keep the Playwright-pinned browser without unrelated apt/font upgrades.
       - run: npx playwright install chromium
       - run: npm run test:content-editors:browser
+      - name: Major projects, private previews and live ticker
+        run: node --import tsx scripts/major-projects-browser-test.mjs
       - name: Public programme and course playback
         run: node --import tsx scripts/public-media-browser-test.mjs
       - name: Dashboard donation, communication and analytics flows

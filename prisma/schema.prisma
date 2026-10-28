@@ -1439,7 +1439,10 @@ model LiveDonationTicker {
 
   isActive Boolean @default(true)
 
-  /// Operator-configured display labels; never loaded from donor records.
+  showRecentDonations Boolean @default(true)
+  showRegisteredNames Boolean @default(false)
+
+  /// Optional operator-configured display labels for legacy display mode.
   donorNames String[] @default([])
 
   /// Operator-configured display amounts and their selection weights.

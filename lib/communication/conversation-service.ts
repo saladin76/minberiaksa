@@ -53,11 +53,13 @@ export type ConversationSummary = {
   lastMessageAt: string | null;
   lastInboundText: string | null;
   needsReply: boolean;
+  unread: boolean;
   inboundCount: number;
   outboundCount: number;
   sender: ConversationSender | null;
 };
 
+const READ_ACTION = "communication.conversation.read";
 const HANDLED_ACTION = "communication.conversation.handled";
 
 /** No sender row claims this number  kept as its own bucket rather than merged into a real one. */
@@ -172,14 +174,12 @@ function rawDate(value: unknown): number {
 }
 
 function groups(result: unknown): RawGroup[] {
-  const batch = (result as { cursor?: { firstBatch?: unknown } } | null)?.cursor?.firstBatch;
-  return Array.isArray(batch) ? (batch as RawGroup[]) : [];
+  if (!Array.isArray(result)) throw new Error("INBOX_AGGREGATION_INVALID");
+  return result as RawGroup[];
 }
 
 async function aggregateInbound(): Promise<RawGroup[]> {
-  const result = await prisma
-    .$runCommandRaw({
-      aggregate: "CommunicationProviderEvent",
+  const result = await prisma.communicationProviderEvent.aggregateRaw({
       pipeline: [
         { $match: { channel: "WHATSAPP", eventType: "inbound_message" } },
         { $sort: { receivedAt: -1 } },
@@ -192,16 +192,13 @@ async function aggregateInbound(): Promise<RawGroup[]> {
           },
         },
       ],
-      allowDiskUse: true,
-      cursor: {},
+      options: { allowDiskUse: true },
     });
   return groups(result);
 }
 
 async function aggregateOutbound(): Promise<RawGroup[]> {
-  const result = await prisma
-    .$runCommandRaw({
-      aggregate: "CommunicationDelivery",
+  const result = await prisma.communicationDelivery.aggregateRaw({
       pipeline: [
         { $match: { channel: "WHATSAPP", recipientPhone: { $ne: null } } },
         {
@@ -213,20 +210,18 @@ async function aggregateOutbound(): Promise<RawGroup[]> {
           },
         },
       ],
-      allowDiskUse: true,
-      cursor: {},
+      options: { allowDiskUse: true },
     });
   return groups(result);
 }
 
 async function aggregateAppEchoes(): Promise<RawGroup[]> {
-  const result = await prisma.$runCommandRaw({
-    aggregate: "CommunicationProviderEvent",
+  const result = await prisma.communicationProviderEvent.aggregateRaw({
     pipeline: [
       { $match: { channel: "WHATSAPP", eventType: "outbound_echo", deliveryId: null } },
       { $group: { _id: { senderId: "$senderId", phone: "$recipient" }, count: { $sum: 1 },
         lastAt: { $max: "$receivedAt" }, lastReplyAt: { $max: { $cond: [{ $in: ["$status", INBOX_ACCEPTED_STATUSES] }, "$receivedAt", null] } } } },
-    ], allowDiskUse: true, cursor: {},
+    ], options: { allowDiskUse: true },
   });
   return groups(result);
 }
@@ -281,10 +276,11 @@ export async function listConversations(opts: { senderId?: string | null } = {})
     bucket.lastReplyAt = Math.max(bucket.lastReplyAt, rawDate(row.lastReplyAt));
   }
 
-  const [donorMap, handledMap, senders] = await Promise.all([
+  const [donorMap, handledMap, senders, readMap] = await Promise.all([
     matchDonors([...new Set([...buckets.values()].map((b) => phoneDigits(b.phone)))]),
     loadHandledMarkers(),
     senderMap(),
+    loadReadMarkers([...buckets.keys()]),
   ]);
 
   let summaries: ConversationSummary[] = [...buckets.values()].map((bucket) => {
@@ -304,6 +300,7 @@ export async function listConversations(opts: { senderId?: string | null } = {})
       lastMessageAt: lastAt ? new Date(lastAt).toISOString() : null,
       lastInboundText: bucket.lastInboundText,
       needsReply: bucket.lastInboundAt > bucket.lastReplyAt && !handled,
+      unread: bucket.lastInboundAt > Math.max(bucket.lastReplyAt, readMap.get(bucket.id) ?? 0) && !handled,
       inboundCount: bucket.inboundCount,
       outboundCount: bucket.outboundCount,
       sender: bucket.senderId ? senders.get(bucket.senderId) ?? null : null,
@@ -360,7 +357,7 @@ export async function getConversation(
   if (!variants.length) return null;
   const limit = Math.min(Math.max(opts.limit ?? TIMELINE_PAGE, 1), 200);
   const before = opts.before ? new Date(opts.before) : null;
-  const senderScope = senderId ? { senderId } : {};
+  const senderScope = senderId ? { senderId } : { OR: [{senderId:null}, {senderId:{isSet:false}}] };
 
   const [events, deliveries, donorMap, senders] = await Promise.all([
     prisma.communicationProviderEvent
@@ -400,6 +397,7 @@ export async function getConversation(
       text: preview?.body ?? delivery.renderedBody ?? null,
       status: delivery.status,
       whatsappPreview: preview,
+      media: vars?.media as TimelineItem["media"] || null,
     });
   }
   let resolvedSenderId: string | null = senderId;
@@ -509,4 +507,27 @@ export async function logConversationAction(idOrPhone: string, action: "followup
     stream: "TEAM",
   });
   return { ok: true };
+}
+
+
+/** Read acknowledgement covers an actual displayed inbound event, never a future arrival. */
+export async function markConversationRead(idOrPhone: string, eventId: string, actor?: Actor): Promise<boolean> {
+  const { senderId, phone } = parseConversationId(idOrPhone);
+  const id = eventId.replace(/^event:/, "");
+  if (!/^[a-f0-9]{24}$/i.test(id)) return false;
+  const event = await prisma.communicationProviderEvent.findFirst({ where: { id, channel: "WHATSAPP", eventType: "inbound_message", recipient: { in: phoneMatchVariants(phone) }, ...(senderId ? {senderId} : { OR: [{senderId:null}, {senderId:{isSet:false}}] }) }, select: { receivedAt: true } });
+  if (!event) return false;
+  await prisma.auditLog.create({data:{ actorId: actor?.actorId ?? undefined, actorName: actor?.actorName ?? undefined, actorRole: actor?.actorRole ?? "ADMIN", action: READ_ACTION, entityType: "CommunicationConversation", entityId: conversationId(senderId, phone), messageAr: "تم فتح محادثة واتساب", metadata: { seenThrough: event.receivedAt.toISOString(), externalCall: false }, stream: "TEAM" }});
+  return true;
+}
+async function loadReadMarkers(ids: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (!ids.length) return result;
+  const rows = await prisma.auditLog.findMany({ where: { entityType: "CommunicationConversation", action: READ_ACTION, entityId: { in: ids } }, select: { entityId: true, metadata: true } });
+  for (const row of rows) {
+    const metadata = row.metadata as { seenThrough?: unknown } | null;
+    const at = typeof metadata?.seenThrough === "string" ? Date.parse(metadata.seenThrough) : NaN;
+    if (row.entityId && Number.isFinite(at)) result.set(row.entityId, Math.max(result.get(row.entityId) ?? 0, at));
+  }
+  return result;
 }

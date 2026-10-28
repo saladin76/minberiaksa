@@ -21,6 +21,8 @@ import { dt } from "@/lib/dashboard/i18n";
 interface TickerConfig {
   id?: string;
   isActive: boolean;
+  showRecentDonations: boolean;
+  showRegisteredNames: boolean;
   donorNames: string[];
   amountRanges: AmountRange[];
   minIntervalSeconds: number;
@@ -36,6 +38,8 @@ interface AmountRange {
 
 const DEFAULT_CONFIG: TickerConfig = {
   isActive: true,
+  showRecentDonations: true,
+  showRegisteredNames: false,
   donorNames: [],
   amountRanges: [{ minAmount: 5, maxAmount: 50, probability: 100, label: "small" }],
   minIntervalSeconds: 3,
@@ -64,6 +68,8 @@ export default function TickerAdminPanel() {
       setConfig({
         id: data.id,
         isActive: data.isActive === true,
+        showRecentDonations: data.showRecentDonations !== false,
+        showRegisteredNames: data.showRegisteredNames === true,
         donorNames: Array.isArray(data.donorNames) ? data.donorNames : [],
         amountRanges: Array.isArray(data.amountRanges) ? data.amountRanges : [],
         minIntervalSeconds: Number.isInteger(data.minIntervalSeconds) ? data.minIntervalSeconds : DEFAULT_CONFIG.minIntervalSeconds,
@@ -93,7 +99,8 @@ export default function TickerAdminPanel() {
       Number.isFinite(range.maxAmount) && range.maxAmount >= range.minAmount &&
       Number.isFinite(range.probability) && range.probability >= 0 && range.probability <= 100,
     );
-    if (!donorNames.length) {
+    const live = config.showRecentDonations || config.showRegisteredNames;
+    if (!live && !donorNames.length) {
       toast({ title: dt("أدخل أسماء العرض"), description: dt("أضف اسمًا واحدًا على الأقل لاستخدامه في الشريط"), variant: "destructive" });
       return;
     }
@@ -101,7 +108,7 @@ export default function TickerAdminPanel() {
       toast({ title: dt("راجع قائمة أسماء العرض"), description: dt("استخدم حتى 100 اسم، بحد أقصى 80 حرفًا للاسم الواحد"), variant: "destructive" });
       return;
     }
-    if (!rangesAreValid || Math.abs(probabilityTotal - 100) > 0.01) {
+    if (!live && (!rangesAreValid || Math.abs(probabilityTotal - 100) > 0.01)) {
       toast({ title: dt("راجع اقتراحات المبالغ"), description: dt("تأكد من صحة النطاقات وأن مجموع احتمالاتها يساوي 100٪"), variant: "destructive" });
       return;
     }
@@ -128,6 +135,8 @@ export default function TickerAdminPanel() {
         body: JSON.stringify({
           ...(config.id ? { id: config.id } : {}),
           isActive: config.isActive,
+          showRecentDonations: config.showRecentDonations,
+          showRegisteredNames: config.showRegisteredNames,
           donorNames,
           amountRanges: config.amountRanges,
           minIntervalSeconds: config.minIntervalSeconds,
@@ -140,6 +149,8 @@ export default function TickerAdminPanel() {
       setConfig({
         id: result.id ?? config.id,
         isActive: result.isActive === true,
+        showRecentDonations: result.showRecentDonations === true,
+        showRegisteredNames: result.showRegisteredNames === true,
         donorNames: result.donorNames ?? donorNames,
         amountRanges: result.amountRanges ?? config.amountRanges,
         minIntervalSeconds: result.minIntervalSeconds,
@@ -182,7 +193,7 @@ export default function TickerAdminPanel() {
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         title={dt("شريط التبرعات")}
-        description={dt("تحكم في أسماء العرض الافتراضية ونطاقات المبالغ وتوقيت الإشعارات")}
+        description={dt("اعرض التبرعات الفعلية وأسماء مجتمع الداعمين مع إخفاء الأسماء وتحديد توقيت الإشعارات")}
         icon={Ticket}
         actions={(
           <div className="flex flex-wrap gap-2">
@@ -197,20 +208,21 @@ export default function TickerAdminPanel() {
         )}
       />
 
-      {config.isActive && !donorNamesInput.split("\n").some((name) => name.trim()) ? (
+      {config.isActive && !config.showRecentDonations && !config.showRegisteredNames && !donorNamesInput.split("\n").some((name) => name.trim()) ? (
         <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
           {dt("الشريط مفعل لكن قائمة أسماء العرض فارغة. أضف أسماء العرض واحفظها ليظهر الشريط.")}
         </p>
       ) : null}
+      <Card><CardHeader><CardTitle>{dt("مصدر أسماء التيكر")}</CardTitle><CardDescription>{dt("يُخفى الاسم على الخادم ليظهر أول وآخر حرف من الاسم الأول والأخير فقط. لا تُعرض بيانات الاتصال.")}</CardDescription></CardHeader><CardContent className="space-y-4"><label className="flex items-center justify-between gap-3"><span>{dt("عرض التبرعات المدفوعة خلال آخر 24 ساعة")}</span><Switch checked={config.showRecentDonations} onCheckedChange={value => setConfig(current => ({...current, showRecentDonations:value}))} /></label><label className="flex items-center justify-between gap-3"><span>{dt("عرض أسماء الحسابات المسجلة أيضًا")}</span><Switch checked={config.showRegisteredNames} onCheckedChange={value => setConfig(current => ({...current, showRegisteredNames:value}))} /></label><p className="text-xs leading-6 text-slate-500">{dt("أسماء الحسابات تظهر كأعضاء في مجتمع الداعمين، دون نسبة تبرع أو مبلغ غير حقيقي لهم.")}</p></CardContent></Card>
       <Card>
         <CardHeader>
           <CardTitle>{dt("حالة الشريط")}</CardTitle>
-          <CardDescription>{dt("عند التفعيل، يعرض الموقع إشعارات باستخدام بيانات العرض التي تضيفها هنا")}</CardDescription>
+          <CardDescription>{dt("عند التفعيل، يعرض الموقع الإشعارات من المصادر المحددة أعلاه")}</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-between gap-6">
           <div>
             <Label htmlFor="ticker-active" className="text-base">{config.isActive ? dt("الشريط مفعل") : dt("الشريط متوقف")}</Label>
-            <p className="mt-1 text-sm text-muted-foreground">{dt("لا يقرأ الشريط أسماء المتبرعين الحقيقيين؛ يستخدم أسماء العرض الافتراضية أدناه فقط")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{dt("تظهر الأسماء مخفية، والتبرعات المعتمدة فقط تحمل مبلغًا وتوقيتًا فعليين.")}</p>
           </div>
           <Switch
             id="ticker-active"
@@ -220,6 +232,7 @@ export default function TickerAdminPanel() {
         </CardContent>
       </Card>
 
+      {!config.showRecentDonations && !config.showRegisteredNames ? <>
       <Card>
         <CardHeader>
           <CardTitle>{dt("أسماء العرض الافتراضية")}</CardTitle>
@@ -245,7 +258,7 @@ export default function TickerAdminPanel() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle>{dt("اقتراحات المبالغ")}</CardTitle>
-              <CardDescription>{dt("يختار الشريط نطاقًا حسب النسبة، ثم مبلغًا عشوائيًا داخله. يجب أن يكون مجموع النسب 100٪")}</CardDescription>
+              <CardDescription>{dt("إعدادات توافق قديمة؛ لا تُعرض هذه الأرقام كتبرعات فعلية. استخدم مصدر التبرعات المدفوعة لعرض مبالغ حقيقية.")}</CardDescription>
             </div>
             <Button type="button" variant="outline" onClick={addAmountRange}>
               <Plus className="ms-2 h-4 w-4" />{dt("إضافة نطاق")}
@@ -287,6 +300,7 @@ export default function TickerAdminPanel() {
         </CardContent>
       </Card>
 
+      </> : null}
       <Card>
         <CardHeader>
           <CardTitle>{dt("توقيت الإشعارات")}</CardTitle>
@@ -322,7 +336,7 @@ export default function TickerAdminPanel() {
 
       <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
         <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-        <p className="leading-6">{dt("الشريط يستخدم الأسماء والنطاقات التي يحددها المسؤول فقط. لا يستعلم عن اسم متبرع حقيقي ولا يخلط سجلات التبرعات الحقيقية مع هذه الإشعارات الافتراضية.")}</p>
+        <p className="leading-6">{dt("التبرعات الفعلية مأخوذة من المدفوعات المعتمدة فقط. أسماء الحسابات المسجلة تظهر كدعم مجتمعي دون مبلغ. إعدادات العرض اليدوية لا تنشئ تبرعات.")}</p>
       </div>
     </div>
   );

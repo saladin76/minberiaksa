@@ -158,10 +158,10 @@ export function SuperCategoryForm({
 
       if (mode === 'create') {
         await axios.post('/api/super-categories', payload);
-        toast.success(dt("تم إنشاء القسم الكبير"));
+        toast.success(dt("تم إنشاء المشروع الكبير"));
       } else {
         await axios.put(`/api/super-categories/${superCategoryId}`, payload);
-        toast.success(dt("تم حفظ القسم الكبير"));
+        toast.success(dt("تم حفظ المشروع الكبير"));
       }
       router.push('/dashboard/super-categories');
       router.refresh();
@@ -181,7 +181,7 @@ export function SuperCategoryForm({
         <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/dashboard/super-categories')}>
           <ArrowRight className="me-1 h-4 w-4" />
           {dt("رجوع")}</Button>
-        <h1 className="text-lg font-bold">{mode === 'create' ? dt("قسم كبير جديد") : dt("تعديل القسم الكبير")}</h1>
+        <h1 className="text-lg font-bold">{mode === 'create' ? dt("قسم كبير جديد") : dt("تعديل المشروع الكبير")}</h1>
       </div>
 
       {/* ── Identity ─────────────────────────────────────────────────── */}

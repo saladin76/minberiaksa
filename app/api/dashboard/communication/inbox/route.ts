@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
 
   let rows = all;
   if (filter === "needsReply") rows = rows.filter((c) => c.needsReply);
+  else if (filter === "unread") rows = rows.filter(c => c.unread);
   else if (filter === "unresolved") rows = rows.filter((c) => c.unresolved);
   if (search) {
     rows = rows.filter((c) =>
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
     ok: true,
     conversations: rows.slice(offset, offset + limit),
     total: rows.length,
+    unread: all.filter(c => c.unread).length,
     needsReply: all.filter((c) => c.needsReply).length,
     senders,
   });

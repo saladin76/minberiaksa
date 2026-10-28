@@ -2491,6 +2491,7 @@
   "LiveDonationsTicker": {
     "now": "zojuist",
     "donated": "heeft gedoneerd",
-    "for": "voor"
+    "for": "voor",
+    "communitySupporter": "Uit onze gemeenschap van supporters"
   }
 }

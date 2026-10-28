@@ -80,7 +80,7 @@ const server=createServer(async(request,response)=>{const url=new URL(request.ur
  if(url.pathname==="/style.css"){response.writeHead(200,{"content-type":"text/css"});response.end(css+extraCss);return}
  let body={};if(request.method!=="GET"){let raw="";for await(const chunk of request)raw+=chunk;try{body=JSON.parse(raw)}catch{}}
  if(url.pathname.startsWith("/api/"))requests.push({path:url.pathname,query:Object.fromEntries(url.searchParams),method:request.method,body});
- if(url.pathname==="/api/users")return json({users:[{id,name:"Fixture donor",email:"fixture@example.test",phone:"+15555555555",role:"DONOR",accountStatus:"MEMBER",countryCode:"TR",countryName:"Türkiye",preferredLang:"en",createdAt:"2026-10-26T00:00:00.000Z",updatedAt:"2026-10-26T00:00:00.000Z",badgeIds:[],totalDonationsCount:1,totalDonatedAmountUSD:100}],pagination:{total:1,pages:1}});
+ if(url.pathname==="/api/users")return json({users:[{id,name:"Fixture donor",email:"fixture@example.test",phone:"+15555555555",role:"DONOR",accountStatus:"MEMBER",countryCode:"TR",countryName:"Türkiye",preferredLang:"en",createdAt:"2026-10-26T00:00:00.000Z",updatedAt:"2026-10-26T00:00:00.000Z",badgeIds:[],totalDonationsCount:1,totalDonatedAmountUSD:100}],registeredDonorsTotal:42,pagination:{total:1,pages:1}});
  if(url.pathname===`/api/dashboard/donors/${id}/profile`)return profileConflict?json({error:"PROFILE_CONFLICT"},409):json({ok:true});
  if(url.pathname==="/api/admin/subscriptions/overview/day-of-month/details")return json({rows:[{id,subscriptionId:id,status:"ACTIVE",frequency:"DAILY",amount:1,amountUSD:1,currency:"USD",createdAt:"2026-10-25T11:49:00Z",nextBillingDate:"2026-10-26T11:30:00Z",scheduledAt:url.searchParams.get("month")+"-"+url.searchParams.get("day").padStart(2,"0")+"T11:30:00Z",paidAt:"2026-10-25T11:49:00Z",donor:{id,name:"Calendar fixture",email:"calendar@example.test"},campaigns:[],categories:[],referral:null}],totals:{count:1,amountUSD:1}});
  if(url.pathname==="/api/admin/link-generator/data")return json({locales:["ar","en","tr"],currencies:["USD"],campaigns:[],categories:[],posts:[],postCategories:[]});
@@ -128,7 +128,7 @@ const server=createServer(async(request,response)=>{const url=new URL(request.ur
  response.writeHead(200,{"content-type":"text/html"});response.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>');
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const origin=`http://127.0.0.1:${server.address().port}`;let browser;const errors=[];let checks=0;
-try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,headless:true,args:["--no-sandbox","--disable-dev-shm-usage","--use-fake-ui-for-media-stream","--use-fake-device-for-media-stream"]});
  for(const locale of ["ar","en","tr"]){const page=await browser.newPage({viewport:{width:1440,height:1000}});page.on("pageerror",error=>{errors.push(error.message);console.error("fixture page error:",error.message)});page.setDefaultTimeout(20000);await page.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
  const open=async(surface,suffix="")=>page.goto(`${origin}/?surface=${surface}&lang=${locale}${suffix}`,{waitUntil:"domcontentloaded"});
 
@@ -167,6 +167,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
    await verifyUnlockedNavigation();
    assert.equal(requests.filter(row=>row.path.endsWith("/profile")&&row.method==="PUT").at(-1).body.name,"Edited fixture through row menu");checks++;
    await open("donorManagement");
+   await page.getByText(ui(locale,"المتبرعون الذين لديهم حساب مسجل"),{exact:true}).waitFor();await page.getByText("42",{exact:true}).waitFor();
    await page.getByRole("button",{name:ui(locale,"الإجراءات"),exact:true}).click();
    await page.getByRole("menuitem",{name:ui(locale,"تعديل الصلاحيات"),exact:true}).click();
    await page.getByRole("dialog").getByRole("heading",{name:ui(locale,"تعديل الدور والصلاحيات"),exact:true}).waitFor();
@@ -210,7 +211,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
    assert.ok(languageBounds.y>=fieldsBounds.y&&languageBounds.y+languageBounds.height<=fieldsBounds.y+fieldsBounds.height+1,"The final profile field must be reachable without hiding the actions");
    assert.equal(await preferredLanguage.evaluate(node=>{const r=node.getBoundingClientRect();return node===document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)}),true,"The final profile field must accept pointer input");
    await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-donor-profile-scrolled-"+label+".png"),fullPage:true});checks++;
-   await open("topbar");const link=page.getByRole("link",{name:ui(locale,"واتساب، {0} محادثة تنتظر الرد").replace("{0}","27"),exact:true});await link.waitFor();
+   await open("topbar");const link=page.getByRole("link",{name:ui(locale,"واتساب، {0} محادثة غير مقروءة").replace("{0}","27"),exact:true});await link.waitFor();
    assert.equal(await link.getAttribute("href"),"/dashboard/communication/inbox");const bounds=await link.boundingBox();assert.ok(bounds.width>=40&&bounds.height>=40);
    const overlaps=await page.locator("header button, header a").evaluateAll(nodes=>{
      const controls=nodes.map(node=>({rect:node.getBoundingClientRect(),label:node.getAttribute("aria-label")||node.textContent})).filter(item=>item.rect.width>0&&item.rect.height>0);
@@ -233,7 +234,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
   const finish=(body,status=200)=>route.fulfill({status,contentType:"application/json",body:JSON.stringify(body)});
   if(contact==="inbox")return finish({ok:true,conversations:contacts,senders:[],needsReply:2});
   const name=contact===contacts[0].id?"A":"B";
-  if(route.request().method()==="POST"){posts++;return finish(failSend?{error:"PROVIDER_REJECTED"}:{ok:true,deliveryId:"reply"},failSend?502:200);}
+  if(route.request().method()==="POST"){if(url.pathname.endsWith("/media")){posts++;assert.match(route.request().headers()["content-type"],/multipart\/form-data/);return finish({ok:true,deliveryId:"media-reply"});}if(route.request().postDataJSON()?.action==="read")return finish({ok:true});posts++;return finish(failSend?{error:"PROVIDER_REJECTED"}:{ok:true,deliveryId:"reply"},failSend?502:200);}
   if(name==="A"&&firstHeld){firstHeld=false;await new Promise(resolve=>{releaseFirst=resolve;});}
   const older=url.searchParams.has("before");
   return finish({ok:true,conversation:{...contacts[name==="A"?0:1],timeline:older?[{id:name+"-older",kind:"inbound",text:name+" older history",status:null,at:"2026-10-25T00:00:00Z"}]:timeline(name),hasMore:!older,oldestAt:older?"2026-10-25T00:00:00Z":"2026-10-26T10:00:00Z"},replyWindow:{open:true,lastInboundAt:"2026-10-26T10:00:00Z",remainingMs:3600000}});
@@ -247,6 +248,12 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByRole("button",{name:ui(locale,"تحديث"),exact:true}).click();await page.getByText("B older history",{exact:true}).waitFor();await page.getByText(ui(locale,"قُرئت"),{exact:false}).first().waitFor();assert.ok(await thread.evaluate(node=>node.scrollTop)<80);assert.equal(await page.getByText("B message 34",{exact:true}).count(),1);checks++;
  failSend=true;await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).click();await page.getByText("PROVIDER_REJECTED",{exact:false}).waitFor();assert.equal(await page.locator("textarea").inputValue(),"Draft B");assert.equal(posts,1);checks++;
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-inbox-mobile.png"),fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-inbox-desktop.png"),fullPage:true});checks++;
+
+ failSend=false;await page.locator('input[type="file"]').setInputFiles({name:"fixture.png",mimeType:"image/png",buffer:Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3i0AAAAASUVORK5CYII=","base64")});
+ await page.getByText("fixture.png",{exact:true}).waitFor();await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).click();await page.getByText(ui(locale,"أُرسل الردّ."),{exact:true}).waitFor();assert.equal(await page.getByText("fixture.png",{exact:true}).count(),0);checks++;
+ await page.context().grantPermissions(["microphone"]);await page.getByRole("button",{name:ui(locale,"تسجيل رسالة صوتية"),exact:true}).click();await page.getByRole("button",{name:ui(locale,"إيقاف التسجيل"),exact:true}).waitFor();assert.equal(await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).isDisabled(),true);
+ await page.waitForTimeout(350);await page.getByRole("button",{name:ui(locale,"إيقاف التسجيل"),exact:true}).click();await page.getByText(ui(locale,"رسالة صوتية جاهزة للإرسال"),{exact:true}).waitFor();assert.equal(await page.locator("audio[controls]").count(),1);checks++;
+ await page.locator("textarea").fill("Text stays with audio");await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).click();await page.getByText(ui(locale,"أُرسل الردّ."),{exact:true}).waitFor();assert.equal(await page.locator("textarea").inputValue(),"Text stays with audio");checks++;
  await page.unroute("**/api/dashboard/communication/inbox**");
  trackingSettings={googleAdsConversionId:null,googleAdsConversionLabel:null};
  await open("tracking");

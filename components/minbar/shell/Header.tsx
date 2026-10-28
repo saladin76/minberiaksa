@@ -201,15 +201,16 @@ export default function Header({
     const spacer = spacerRef.current;
     if (!head || !spacer) return;
 
+    const owner = head.ownerDocument, view = owner.defaultView || window;
     let applied = -1;
     const sync = () => {
       const next = Math.ceil(head.getBoundingClientRect().height);
       if (Math.abs(next - applied) < 0.5) return;
       applied = next;
-      requestAnimationFrame(() => {
+      view.requestAnimationFrame(() => {
         spacer.style.height = `${next}px`;
         // The phone menu drawer opens right under the header, whatever its height.
-        document.documentElement.style.setProperty("--mia-head-h", `${next}px`);
+        owner.documentElement.style.setProperty("--mia-head-h", `${next}px`);
       });
     };
     // A ResizeObserver delivers its first entry on `observe()`, after the
@@ -218,10 +219,10 @@ export default function Header({
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
     if (observer) observer.observe(head);
     else sync();
-    window.addEventListener("resize", sync);
+    view.addEventListener("resize", sync);
     return () => {
       observer?.disconnect();
-      window.removeEventListener("resize", sync);
+      view.removeEventListener("resize", sync);
     };
   }, []);
 

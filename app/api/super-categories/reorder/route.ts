@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     queueAuditLog({
       ...actor,
       action: "SUPER_CATEGORY_REORDER",
-      messageAr: `${actor.actorName ?? "مسؤول"} أعاد ترتيب الأقسام الكبرى (${updates.length})`,
+      messageAr: `${actor.actorName ?? "مسؤول"} أعاد ترتيب المشاريع الكبرى (${updates.length})`,
       entityType: "SuperCategory",
     });
 

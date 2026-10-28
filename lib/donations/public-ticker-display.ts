@@ -71,3 +71,13 @@ export function generateTickerDisplay(
     categoryName: categoryIndex >= 0 ? categoryNames[categoryIndex]! : null,
   };
 }
+
+
+/** First and last word only; full names never cross the public API boundary. */
+export function maskTickerName(value: unknown): string {
+  const words = typeof value === "string" ? value.normalize("NFC").replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, "").trim().split(/\s+/u).filter(Boolean) : [];
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  const mask = (word: string) => { const letters = [...segmenter.segment(word)].map(item => item.segment); return letters.length < 2 ? "***" : letters[0] + "***" + letters[letters.length - 1]; };
+  return words.length ? [words[0], ...(words.length > 1 ? [words[words.length - 1]] : [])].map(mask).join(" ") : "***";
+}
+export type PublicTickerEntry = { key: string; source: "DONATION" | "COMMUNITY"; name: string; amount: number | null; currency: string | null; at: string | null };

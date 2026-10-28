@@ -1,3 +1,4 @@
+import { applyPublicPreview, previewText, type PublicPreviewDraft } from "@/lib/content-editor/public-preview";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
@@ -111,10 +112,10 @@ const PAGE_SELECT = {
 } as const;
 
 /** One category's whole page, or `null` when the slug names nothing. */
-export async function getCategoryPage(idOrSlug: string, locale: string): Promise<CategoryPageContent | null> {
+export async function getCategoryPage(idOrSlug: string, locale: string, draft?: PublicPreviewDraft): Promise<CategoryPageContent | null> {
   /* `whereByIdOrAnyLocaleSlug` only matches on `id` when the key actually looks
      like an ObjectId, so an unknown slug misses rather than throwing. */
-  return readCategoryPage(whereByIdOrAnyLocaleSlug(idOrSlug), locale);
+  return readCategoryPage(whereByIdOrAnyLocaleSlug(idOrSlug), locale, draft);
 }
 
 /**
@@ -131,8 +132,8 @@ export async function getCategoryPageByTemplate(
 
 type CategoryWhere = NonNullable<Parameters<typeof prisma.category.findFirst>[0]>["where"];
 
-async function readCategoryPage(where: CategoryWhere, locale: string): Promise<CategoryPageContent | null> {
-  const row = await prisma.category.findFirst({
+async function readCategoryPage(where: CategoryWhere, locale: string, draft?: PublicPreviewDraft): Promise<CategoryPageContent | null> {
+  const fetched = draft?.seed ? null : await prisma.category.findFirst({
     where,
     select: {
       ...PAGE_SELECT,
@@ -156,14 +157,15 @@ async function readCategoryPage(where: CategoryWhere, locale: string): Promise<C
       },
     },
   });
-  if (!row) return null;
+  if (!fetched && !draft?.seed) return null;
+  const row = applyPublicPreview(fetched ?? draft!.seed as unknown as NonNullable<typeof fetched>, draft);
 
   const t = pickTranslation(row.translations, locale);
 
   /* Child translations are fetched together rather than per row: a page with
      five values and three cards would otherwise be eight extra queries. */
-  const valueIds = row.values.map((v) => v.id);
-  const cardIds = row.infoCards.map((c) => c.id);
+  const valueIds = row.values.map((v) => v.id).filter(id => /^[a-f0-9]{24}$/i.test(id));
+  const cardIds = row.infoCards.map((c) => c.id).filter(id => /^[a-f0-9]{24}$/i.test(id));
   const achievementIds = row.achievementVideoIds ?? [];
 
   const [valueTranslations, cardTranslations, allAchievements, projects] = await Promise.all([
@@ -180,7 +182,7 @@ async function readCategoryPage(where: CategoryWhere, locale: string): Promise<C
         })
       : Promise.resolve([]),
     achievementIds.length ? listVideos(locale, "ACHIEVEMENT") : Promise.resolve([] as CmsVideo[]),
-    listProjectsInCategory(row.id, locale),
+    row.id === "new" ? Promise.resolve([]) : listProjectsInCategory(row.id, locale),
   ]);
 
   const byValue = new Map<string, typeof valueTranslations>();
@@ -198,12 +200,12 @@ async function readCategoryPage(where: CategoryWhere, locale: string): Promise<C
 
   const values: CategoryPageValue[] = row.values.map((v) => ({
     id: v.id,
-    label: pickTranslation(byValue.get(v.id) ?? [], locale)?.label || v.label,
+    label: previewText(draft, `values.${v.id}.label`, pickTranslation(byValue.get(v.id) ?? [], locale)?.label || v.label),
   }));
 
   const cards: CategoryPageCard[] = row.infoCards.map((c) => {
     const ct = pickTranslation(byCard.get(c.id) ?? [], locale);
-    return { id: c.id, icon: c.icon, title: ct?.title || c.title, body: ct?.body || c.body };
+    return { id: c.id, icon: c.icon, title: previewText(draft, `infoCards.${c.id}.title`, ct?.title || c.title), body: previewText(draft, `infoCards.${c.id}.body`, ct?.body || c.body) };
   });
 
   /* The achievements rail keeps the editor's order, and a video that has since

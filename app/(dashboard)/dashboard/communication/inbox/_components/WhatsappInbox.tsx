@@ -30,6 +30,8 @@ import { mergeInboxTimeline } from "@/lib/communication/inbox-timeline";
  * message the donor never receives, recorded as sent.
  */
 
+import { InboxAttachments, type InboxAttachment } from "./InboxAttachments";
+import { InboxMedia } from "./InboxMedia";
 import { DonorAccountBadge } from "@/components/dashboard/DonorAccountBadge";
 
 type Donor = {
@@ -56,6 +58,7 @@ type Conversation = {
   lastMessageAt: string | null;
   lastInboundText: string | null;
   needsReply: boolean;
+  unread?: boolean;
   inboundCount: number;
   outboundCount: number;
   sender: Sender | null;
@@ -112,6 +115,7 @@ type Detail = {
 type ReplyWindow = { open: boolean; lastInboundAt: string | null; remainingMs: number; lastInboundMessageId: string | null };
 
 const FILTERS = [
+  { value: "unread", get label() { return dt("غير المقروءة"); } },
   { value: "needsReply", get label() { return dt("بانتظار ردّ"); } },
   { value: "unresolved", get label() { return dt("غير مرتبطة"); } },
   { value: "all", get label() { return dt("الكل"); } },
@@ -174,6 +178,9 @@ export function WhatsappInbox() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const draft = activeId ? drafts[activeId] ?? "" : "";
   const [sending, setSending] = useState(false);
+  const [recordingVoice, setRecordingVoice] = useState(false);
+  const [attachments, setAttachments] = useState<Record<string, InboxAttachment | undefined>>({});
+  const attachment = activeId ? attachments[activeId] : undefined;
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [smartOpen, setSmartOpen] = useState(false);
   const [smartInitialMode, setSmartInitialMode] = useState<"FREEFORM" | "UTILITY" | "MARKETING" | undefined>(undefined);
@@ -183,6 +190,7 @@ export function WhatsappInbox() {
   const listRequest = useRef(0);
   const detailRequest = useRef(0);
   const replyInFlight = useRef(false);
+  const readAcknowledgements = useRef(new Map<string, string>());
   const followBottom = useRef(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const selectConversation = useCallback((id: string | null) => {
@@ -234,7 +242,10 @@ export function WhatsappInbox() {
       if (nextConversations.length === 0) {
         selectConversation(null);
       } else {
-        if (!nextConversations.some((conversation: Conversation) => conversation.id === activeRef.current)) selectConversation(nextConversations[0].id);
+        if (!nextConversations.some((conversation: Conversation) => conversation.id === activeRef.current)) {
+          if (filter === "unread" && silent) selectConversation(null);
+          else selectConversation(nextConversations[0].id);
+        }
       }
     } catch (error) {
       if (request !== listRequest.current) return;
@@ -274,6 +285,11 @@ export function WhatsappInbox() {
         oldestAt: previous.oldestAt,
       } : data.conversation);
       setReplyWindow(data.replyWindow);
+      const latest = [...(data.conversation.timeline as TimelineItem[])].reverse().find(item => item.kind === "inbound");
+      if (latest && document.visibilityState === "visible" && readAcknowledgements.current.get(id) !== latest.id) {
+        readAcknowledgements.current.set(id, latest.id);
+        void fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "read", eventId: latest.id }), signal: AbortSignal.timeout(12000) }).then(response => { if (!response.ok) throw new Error("Read acknowledgement failed"); setConversations(previous => previous.map(conversation => conversation.id === id ? {...conversation,unread:false} : conversation)); window.dispatchEvent(new CustomEvent("whatsapp-inbox-updated")); }).catch(() => { if (readAcknowledgements.current.get(id) === latest.id) readAcknowledgements.current.delete(id); });
+      }
     } catch (error) {
       if (request !== detailRequest.current || activeRef.current !== id) return;
       setDetailError((error as Error).message || dt("تعذّر تحميل المحادثة"));
@@ -320,21 +336,25 @@ export function WhatsappInbox() {
   }, [activeId, loadList]);
 
   const sendReply = useCallback(async () => {
-    if (!activeId || !draft.trim() || replyInFlight.current) return;
+    if (!activeId || recordingVoice || (!draft.trim() && !attachment) || replyInFlight.current) return;
     const conversationId = activeId;
     const submittedDraft = draft;
+    const submittedAttachment = attachment;
+    const audioOnly = Boolean(attachment && (attachment.voice || attachment.file.type.startsWith("audio/")));
     replyInFlight.current = true;
     setSending(true);
     setNotice(null);
     try {
-      const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(activeId)}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "reply", body: draft.trim() }),
+      let form: FormData | null = null;
+      if (attachment) { form = new FormData(); form.set("file", attachment.file); form.set("voice", String(attachment.voice)); form.set("body", audioOnly ? "" : draft.trim()); }
+      const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(activeId)}${attachment ? "/media" : ""}`, {
+        method: "POST", ...(attachment ? {} : { headers: { "content-type": "application/json" } }),
+        body: form || JSON.stringify({ action: "reply", body: draft.trim() }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok !== true) throw new Error("Unconfirmed send response");
-      if (res.ok && data.ok) setDrafts(previous => previous[conversationId] === submittedDraft ? { ...previous, [conversationId]: "" } : previous);
+      if (res.ok && data.ok && !audioOnly) setDrafts(previous => previous[conversationId] === submittedDraft ? { ...previous, [conversationId]: "" } : previous);
+      if (res.ok && data.ok && submittedAttachment) setAttachments(previous => previous[conversationId] === submittedAttachment ? { ...previous, [conversationId]: undefined } : previous);
       if (activeRef.current !== conversationId) return;
       if (!res.ok || !data.ok) {
         /* The window closing between load and send is the one failure an operator will actually
@@ -343,6 +363,11 @@ export function WhatsappInbox() {
           tone: "error",
           text: data.error === "REPLY_WINDOW_CLOSED"
             ? dt("انتهت نافذة الردّ الحر قبل الإرسال  استخدم قالبًا معتمدًا.")
+            : data.error === "MEDIA_TYPE_OR_SIZE_INVALID" ? dt("نوع الملف أو حجمه غير مدعوم. راجع المرفق وأعد المحاولة.")
+            : typeof data.error === "string" && data.error.startsWith("VOICE_CONVERSION") ? dt("معالجة التسجيل غير متاحة حاليًا. يمكنك إرفاق ملف صوتي محفوظ بدلًا منه.")
+            : data.error === "CONVERSATION_SENDER_UNAVAILABLE" ? dt("رقم واتساب لهذه المحادثة غير متاح للإرسال. راجع حالة المُرسل.")
+            : data.error === "CONTACT_POLICY_UNAVAILABLE" ? dt("تعذر التحقق من سياسة التواصل. لم تُرسل الرسالة؛ أعد المحاولة بعد استعادة الاتصال.")
+            : data.error === "MEDIA_SEND_UNCONFIRMED" ? dt("نتيجة إرسال المرفق غير مؤكدة؛ راجع سجل المحادثة وMeta قبل إعادة الإرسال.")
             : data.error === "ACCEPTED_UNRECORDED"
               ? dt("قبل المزوّد الرسالة لكن تعذّر تحديث سجلها؛ لا تُعد إرسالها")
             : dt("تعذّر الإرسال: {0}", [data.error ?? dt("خطأ غير معروف")]),
@@ -360,7 +385,7 @@ export function WhatsappInbox() {
       replyInFlight.current = false;
       setSending(false);
     }
-  }, [activeId, draft, loadDetail, loadList]);
+  }, [activeId, draft, attachment, recordingVoice, loadDetail, loadList]);
 
   const senderOptions = useMemo(
     () => [{ value: "", label: dt("كل الأرقام") }, ...senders.map((s) => ({ value: s.id, label: s.phone ? `${s.name} · ${s.phone}` : s.name }))],
@@ -484,6 +509,7 @@ export function WhatsappInbox() {
                         <span className="text-sm font-semibold text-slate-900 truncate">
                           {c.donor?.name || c.phone}
                         </span>
+                        {c.unread ? <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-600" aria-label={dt("محادثة غير مقروءة")} /> : null}
                         {c.needsReply && (
                           <span className="shrink-0 rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
                             {dt("بانتظار ردّ")}</span>
@@ -627,14 +653,8 @@ export function WhatsappInbox() {
                           inbound ? "border border-slate-200 bg-white text-slate-800" : "border border-emerald-200 bg-emerald-50 text-slate-900",
                         )}
                       >
-                        {item.media && MediaIcon && (
-                          /* A voice note or a photo of a receipt is a message. It used to arrive as an
-                             empty bubble because only `text.body` was parsed. */
-                          <p className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                            <MediaIcon className="w-3.5 h-3.5" />
-                            {mediaLabel(item.media)}
-                          </p>
-                        )}
+                        {item.media && MediaIcon ? item.media.mediaId ? <InboxMedia conversationId={activeId!} itemId={item.id} media={item.media}/> : <p className="text-xs text-slate-500">{mediaLabel(item.media)}</p> : null}
+                        {item.media?.caption && item.media.caption !== item.text ? <p className="whitespace-pre-wrap">{item.media.caption}</p> : null}
 
                         {!inbound && item.whatsappPreview?.header?.type === "image" && item.whatsappPreview.header.mediaUrl && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -723,6 +743,8 @@ export function WhatsappInbox() {
                   <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
                     {dt("المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف حتى تُعدّل حالة التواصل.")}</div>
                 ) : replyWindow?.open ? (
+                  <div className="space-y-3">
+                    <InboxAttachments key={activeId} onRecordingChange={setRecordingVoice} attachment={attachment} disabled={sending} onChange={value => { const target = activeId!; setAttachments(previous => ({...previous, [target]:value || undefined})); }} onError={text => setNotice({tone:"error",text})}/>
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draft}
@@ -735,12 +757,12 @@ export function WhatsappInbox() {
                     <button
                       type="button"
                       onClick={() => void sendReply()}
-                      disabled={sending || !draft.trim()}
+                      disabled={sending || recordingVoice || (!draft.trim() && !attachment)}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
                     >
                       {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       {dt("إرسال")}</button>
-                  </div>
+                  </div></div>
                 ) : detail.donor?.userId ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <div>

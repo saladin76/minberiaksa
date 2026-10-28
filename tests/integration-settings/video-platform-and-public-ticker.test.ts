@@ -44,7 +44,7 @@ test("video edit form opens the same effective source that public playback resol
   assert.equal(legacy.sourceUrl, "https://vimeo.com/12345678");
 });
 
-test("public ticker only generates configured display values, never donor records", () => {
+test("legacy ticker display values remain explicit and real feeds delegate to the masked reader", () => {
   const names = ["اسم عرض أول", "اسم عرض ثانٍ"];
   const event = generateTickerDisplay({
     donorNames: names,
@@ -58,7 +58,7 @@ test("public ticker only generates configured display values, never donor record
   });
   const route = readFileSync("app/api/live-donation-ticker/route.ts", "utf8");
   assert.match(route, /donorNames: ticker\.donorNames/);
-  assert.doesNotMatch(route, /prisma\.(?:donation|user)|donor:\s*\{\s*select:\s*\{\s*name/);
+  assert.match(route, /publicTickerEntries/);
   assert.match(route, /prisma\.\$transaction/);
   assert.match(route, /allowedUpdates\.isActive === true[\s\S]*?where: \{ id: \{ not: id \} \}[\s\S]*?data: \{ isActive: false \}/);
 });

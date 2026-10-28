@@ -736,7 +736,8 @@
   "LiveDonationsTicker": {
     "donated": "berdonasi",
     "for": "untuk",
-    "now": "baru saja"
+    "now": "baru saja",
+    "communitySupporter": "Dari komunitas pendukung kami"
   },
   "Profile": {
     "nav": {

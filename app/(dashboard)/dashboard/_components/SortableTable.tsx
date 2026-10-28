@@ -34,6 +34,7 @@ export function SortableTable<T>({
   onCommit,
   isDimmed,
   dragType,
+  reorderDisabled = false,
 }: {
   rows: T[];
   getId: (row: T) => string;
@@ -45,6 +46,7 @@ export function SortableTable<T>({
   isDimmed?: (row: T) => boolean;
   /** Distinct per table so two on one page cannot accept each other's rows. */
   dragType: string;
+  reorderDisabled?: boolean;
 }) {
   return (
     <DndProvider backend={HTML5Backend}>
@@ -65,6 +67,7 @@ export function SortableTable<T>({
                 index={index}
                 dragType={dragType}
                 dimmed={isDimmed?.(row) ?? false}
+                reorderDisabled={reorderDisabled}
                 onMove={onMove}
                 onCommit={onCommit}
               >
@@ -81,17 +84,19 @@ export function SortableTable<T>({
 }
 
 function SortableRow({
-  index, dragType, dimmed, onMove, onCommit, children,
+  index, dragType, dimmed, onMove, onCommit, children, reorderDisabled,
 }: {
   index: number;
   dragType: string;
   dimmed: boolean;
+  reorderDisabled: boolean;
   onMove: (from: number, to: number) => void;
   onCommit: () => void;
   children: ReactNode;
 }) {
   const [{ isDragging }, drag, preview] = useDrag({
     type: dragType,
+    canDrag: !reorderDisabled,
     item: { index },
     /* Persist once on drop. `hover` fires for every row the pointer crosses, so
        saving there sends one transaction per tick and the responses can land
@@ -103,7 +108,7 @@ function SortableRow({
   const [, drop] = useDrop({
     accept: dragType,
     hover: (item: { index: number }) => {
-      if (item.index === index) return;
+      if (reorderDisabled || item.index === index) return;
       onMove(item.index, index);
       item.index = index;
     },
@@ -124,7 +129,7 @@ function SortableRow({
       ref={rowRef}
       className={`${isDragging ? 'opacity-50' : ''} ${dimmed ? 'bg-muted/30' : ''} hover:bg-muted/50 transition-colors`}
     >
-      <TableCell className="w-12 p-2 cursor-grab active:cursor-grabbing" ref={handleRef}>
+      <TableCell className={`w-12 p-2 ${reorderDisabled ? "opacity-30" : "cursor-grab active:cursor-grabbing"}`} aria-disabled={reorderDisabled} ref={handleRef}>
         <GripVertical className="w-5 h-5 text-muted-foreground mx-auto" />
       </TableCell>
       {children}

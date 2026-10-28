@@ -2491,6 +2491,7 @@
   "LiveDonationsTicker": {
     "now": "たった今",
     "donated": "寄付しました",
-    "for": "へ"
+    "for": "へ",
+    "communitySupporter": "支援者コミュニティより"
   }
 }

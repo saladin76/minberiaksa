@@ -33,6 +33,7 @@ import ConciergeEntry from "@/components/minbar/concierge/ConciergeEntry";
  */
 
 export interface ProjectDetailProps {
+  preview?: boolean;
   project: MinbarProject;
   updates: MinbarProjectUpdate[];
   gallery: string[];
@@ -45,7 +46,7 @@ export interface ProjectDetailProps {
 /** The hero shows the opening of the description; the About tab has all of it. */
 const HERO_SUMMARY_MAX = 280;
 
-export default function ProjectDetail({ project, updates, gallery, related, donorCount, comments }: ProjectDetailProps) {
+export default function ProjectDetail({ project, updates, gallery, related, donorCount, comments, preview = false }: ProjectDetailProps) {
   const locale = useLocale();
   const t = useTranslations("projects");
   const tCommon = useTranslations("common");
@@ -165,9 +166,9 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
             ) : null}
           </div>
 
-          <DonationPanel project={project} donorCount={donorCount} />
-          <div className="pd-project-concierge">
-            <ConciergeEntry intent="current_page" />
+          <DonationPanel preview={preview} project={project} donorCount={donorCount} />
+          <div className="pd-project-concierge" hidden={preview}>
+            {!preview ? <ConciergeEntry intent="current_page" /> : null}
           </div>
         </div>
       </section>
@@ -222,7 +223,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
               </div>
             ) : null}
 
-            {tab === "comments" ? <ProjectComments projectId={project.id} initial={comments} /> : null}
+            {tab === "comments" ? <div inert={preview || undefined}><ProjectComments projectId={project.id} initial={comments} /></div> : null}
 
             {tab === "gallery" ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px,1fr))", gap: 12 }}>

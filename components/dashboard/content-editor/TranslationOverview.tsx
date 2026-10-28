@@ -106,7 +106,7 @@ export function TranslationOverview({
       </div>
       {kind === "categories" ? (
         <p className="text-sm text-slate-500">
-          {dt("التصنيفات تجمع المشاريع وترتبها. الأقسام الكبرى صفحات برامج تضم مشاريع ومقالات ومواد أخرى.")}
+          {dt("التصنيفات تجمع المشاريع وترتبها. المشاريع الكبرى صفحات برامج تضم مشاريع ومقالات ومواد أخرى.")}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">

@@ -94,14 +94,9 @@ test("app replies resolve only their conversation and old timeline pages retain 
     getConversation: (id: string) => Promise<{ timeline: Array<{ kind: string; status: string }> }>;
   }>("lib/communication/conversation-service.ts", {
     "@/lib/prisma": { prisma: {
-      $runCommandRaw: async (query: { aggregate: string; pipeline: unknown }) => {
-        if (query.aggregate === "CommunicationDelivery") return { cursor: { firstBatch: [] } };
-        if (JSON.stringify(query).includes("outbound_echo")) return { cursor: { firstBatch: [{ _id: { senderId: "one", phone: "+15555555555" }, count: 1, lastAt: replyAt, lastReplyAt: replyAt }] } };
-        return { cursor: { firstBatch: ["one", "two"].map(senderId => ({ _id: { senderId, phone: "+15555555555" }, count: 1, lastAt: at })) } };
-      },
       donorCommunicationProfile: { findMany: async () => [] }, communicationSender: { findMany: async () => [{ id: "one", name: "One" }, { id: "two", name: "Two" }] }, auditLog: { findMany: async () => [] },
-      communicationProviderEvent: { findMany: async () => [{ id: "echo", providerMessageId: "wamid", eventType: "outbound_echo", status: "READ", receivedAt: replyAt, senderId: "one", deliveryId: null, payloadSanitized: { text: "Reply", media: { kind: "image" } } }] },
-      communicationDelivery: { findMany: async () => [] },
+      communicationProviderEvent: { aggregateRaw: async (query:unknown) => JSON.stringify(query).includes("outbound_echo") ? [{ _id: { senderId: "one", phone: "+15555555555" }, count: 1, lastAt: replyAt, lastReplyAt: replyAt }] : ["one", "two"].map(senderId => ({ _id: { senderId, phone: "+15555555555" }, count: 1, lastAt: at })), findMany: async () => [{ id: "echo", providerMessageId: "wamid", eventType: "outbound_echo", status: "READ", receivedAt: replyAt, senderId: "one", deliveryId: null, payloadSanitized: { text: "Reply", media: { kind: "image" } } }] },
+      communicationDelivery: { aggregateRaw: async () => [], findMany: async () => [] },
     } }, "@/lib/audit-log": {}, "./phone": phone, "./inbox-timeline": inboxTimeline, "@/lib/dashboard/donor-account": { donorAccountStatus },
   });
   const conversations = await service.listConversations();

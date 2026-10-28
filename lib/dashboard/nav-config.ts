@@ -59,7 +59,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { key: "campaigns", get title() { return dt("المشاريع"); }, href: "/dashboard/campaigns", icon: "heart", keywords: ["projects", "campaigns", "مشاريع"] },
       { key: "categories", get title() { return dt("التصنيفات"); }, href: "/dashboard/categories", icon: "globe", keywords: ["categories", "countries", "تصنيفات"] },
-      { key: "siteContent", get title() { return dt("الأقسام الكبرى"); }, href: "/dashboard/super-categories", icon: "layers", keywords: ["super", "category", "programme", "landing", "أقسام", "برنامج", "عبادا لنا"] },
+      { key: "siteContent", get title() { return dt("المشاريع الكبرى"); }, href: "/dashboard/super-categories", icon: "layers", keywords: ["super", "category", "programme", "landing", "أقسام", "برنامج", "عبادا لنا"] },
     ],
   },
   {

@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 import { useTranslations, useLocale } from "next-intl";
 import { AnimatePresence, motion } from "motion/react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { generateTickerDisplay, type TickerAmountRange } from "@/lib/donations/public-ticker-display";
+import { generateTickerDisplay, type TickerAmountRange, type PublicTickerEntry } from "@/lib/donations/public-ticker-display";
 
 interface TickerConfig {
   enabled: boolean;
+  entries?: PublicTickerEntry[];
   donorNames: string[];
   amountRanges: TickerAmountRange[];
   minIntervalSeconds: number;
@@ -19,7 +20,10 @@ interface TickerConfig {
 
 interface DonationDisplay {
   name: string;
-  amount: number;
+  amount: number | null;
+  currency?: string | null;
+  source?: string;
+  at?: string | null;
   categoryName: string | null;
   id: number;
 }
@@ -35,6 +39,8 @@ export default function LiveDonationsGlass() {
   const [categories, setCategories] = useState<string[]>([]);
   const [currentDonation, setCurrentDonation] = useState<DonationDisplay | null>(null);
   const nextId = useRef(0);
+  const seenDonations = useRef(new Set<string>());
+  const communityIndex = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +56,7 @@ export default function LiveDonationsGlass() {
         if (ticker.enabled === true && Array.isArray(ticker.donorNames) && Array.isArray(ticker.amountRanges)) {
           setConfig({
             enabled: true,
+            ...(Array.isArray(ticker.entries) ? { entries: ticker.entries } : {}),
             donorNames: ticker.donorNames.filter((name: unknown): name is string => typeof name === "string" && name.trim().length > 0),
             amountRanges: ticker.amountRanges,
             minIntervalSeconds: Number.isInteger(ticker.minIntervalSeconds) ? ticker.minIntervalSeconds : 3,
@@ -68,20 +75,26 @@ export default function LiveDonationsGlass() {
       }
     };
     void load();
-    return () => { cancelled = true; };
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 10000);
+    return () => { cancelled = true; window.clearInterval(timer); };
   }, [locale]);
 
   useEffect(() => {
-    if (!config?.enabled || !config.donorNames.length || !config.amountRanges.length) return;
+    if (!config?.enabled || (!config.entries && (!config.donorNames.length || !config.amountRanges.length))) return;
     let stopped = false;
     let showTimer: number | undefined;
     let hideTimer: number | undefined;
 
     const showNext = () => {
       if (stopped) return;
-      const display = generateTickerDisplay(config, categories);
-      if (!display) return;
-      setCurrentDonation({ ...display, id: ++nextId.current });
+      if (document.hidden) { showTimer = window.setTimeout(showNext, 1500); return; }
+      const fresh = config.entries?.find(entry => entry.source === "DONATION" && !seenDonations.current.has(entry.key));
+      const community = config.entries?.filter(entry => entry.source === "COMMUNITY") || [];
+      const entry = fresh || (community.length ? community[communityIndex.current++ % community.length] : null);
+      const legacy = config.entries ? null : generateTickerDisplay(config, categories);
+      if (fresh) seenDonations.current.add(fresh.key);
+      const display = entry ? { ...entry, categoryName: null } : legacy ? { ...legacy, amount: null, source: "DISPLAY" } : null;
+      if (display) setCurrentDonation({ ...display, id: ++nextId.current }); else setCurrentDonation(null);
 
       const minMs = Math.max(3000, config.minIntervalSeconds * 1000);
       const maxMs = Math.max(minMs, config.maxIntervalSeconds * 1000);
@@ -100,7 +113,8 @@ export default function LiveDonationsGlass() {
 
   if (!config?.enabled) return null;
 
-  const formatMoney = (amount: number) => {
+  const formatMoney = (amount: number, currency = "USD") => {
+    if (currency !== "USD") return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
     const converted = convertToCurrency(amount);
     if (converted?.convertedValue != null && converted.currency) {
       try {
@@ -143,11 +157,11 @@ export default function LiveDonationsGlass() {
                     {currentDonation.name}
                   </p>
                   <p className="text-xs leading-snug text-gray-600 dark:text-gray-300">
-                    {t("donated")} <span className="font-semibold text-sky-700 dark:text-sky-300">{formatMoney(currentDonation.amount)}</span>
+                    {currentDonation.source === "DONATION" && currentDonation.amount !== null ? <>{t("donated")} <span className="font-semibold text-sky-700 dark:text-sky-300">{formatMoney(currentDonation.amount, currentDonation.currency || "USD")}</span></> : t("communitySupporter")}
                     {currentDonation.categoryName ? <> {t("for")} {currentDonation.categoryName}</> : null}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap text-[10px] text-gray-500 dark:text-gray-400">{t("now")}</span>
+                <span className="shrink-0 whitespace-nowrap text-[10px] text-gray-500 dark:text-gray-400">{currentDonation.at ? new Intl.DateTimeFormat(locale, {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Istanbul"}).format(new Date(currentDonation.at)) : ""}</span>
               </div>
               <div className="h-px w-full bg-gradient-to-r from-transparent via-sky-400/30 to-transparent" />
             </Card>

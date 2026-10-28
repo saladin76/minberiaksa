@@ -84,8 +84,8 @@ test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-
   requires(inboxPath, [/إرسال قالب تحية/, /initialMode=\{smartInitialMode\}/]);
   requires(smartDialog, [/initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/, /const preferred = initialMode/, /setMode\(preferred\)/]);
 });
-test("dashboard topbar makes unanswered WhatsApp conversations visually prominent", () => {
-  requires("app/(dashboard)/dashboard/DashboardLayoutClient.tsx", [/filter=needsReply/, /setInterval\(run, 30000\)/]);
+test("dashboard topbar makes unread WhatsApp conversations visually prominent", () => {
+  requires("app/(dashboard)/dashboard/DashboardLayoutClient.tsx", [/filter=unread/, /setInterval\(run, 30000\)/]);
   requires("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx", [/href="\/dashboard\/communication\/inbox"/, /WhatsappMark/, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/, /href="\/dashboard\/inbox"/]);
   requires("lib/dashboard/nav-config.ts", [], [/href: "\/dashboard\/communication\/inbox"/, /href: "\/dashboard\/inbox"/]);
 });

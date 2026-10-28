@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { EditorModal } from "./EditorModal";
-import { runSuggestionBatch, suggestionResponseError, SuggestionRequestError } from "@/lib/content-editor/suggestion-batch";
+import { runSuggestionBatch, readSuggestionJson, SuggestionRequestError } from "@/lib/content-editor/suggestion-batch";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
 import { parseGa4Period, type Ga4Period } from "@/lib/marketing/ga4-period";
@@ -15,7 +15,7 @@ type Document = { key: string; revision: string | null; defaults: PageSeoLocales
 type Proposal = { key: string; locale: string; revision: string | null; base?: PageSeoValues; values: PageSeoValues; research: { summary: string; sources: { url: string; title?: string }[] } };
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, cache: "no-store", headers: { "Content-Type": "application/json", ...init?.headers } });
-  const body = await response.json().catch(() => null); if (!response.ok || !body) throw suggestionResponseError(body || {}, dt("تعذر إكمال الطلب")); return body as T;
+  return readSuggestionJson<T>(response, dt("تعذر إكمال الطلب"));
 }
 export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {}) {
   const [seoTab, setSeoTab] = useState("search"), [messageTone, setMessageTone] = useState("info");
@@ -143,7 +143,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
         <button type="button" disabled={Boolean(busy)} onClick={() => apply([code])} className="rounded border px-3 py-2">{dt("استخدام في المسودة")}</button>
       </article>)}
     </section> : null}
-    {Object.keys(failureReasons).length ? <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block text-sm font-semibold text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي والنموذج")}</Link> : null}
+    {Object.values(failureReasons).some(code => code.startsWith("AI_")) ? <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block text-sm font-semibold text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي والنموذج")}</Link> : null}
     {skipped.length ? <p className="text-sm text-slate-600">{dt("لم تُطلب هذه اللغات: {0}", [skipped.map(code => LOCALES[code as SupportedLocale]?.nativeLabel || code).join("، ")])}</p> : null}
     {batchPlan ? <EditorModal title={dt("مراجعة نطاق الطلب")} onClose={() => setBatchPlan(null)}><div className="w-full max-w-xl space-y-4 rounded-xl bg-white p-5"><h2 className="text-lg font-bold">{dt("مراجعة نطاق الطلب")}</h2><p>{dt("اللغات المستهدفة: {0}", [batchPlan.length])}</p><p className="text-sm leading-7">{batchPlan.map(code => LOCALES[code as SupportedLocale].nativeLabel).join("، ")}</p><p className="text-sm">{dt("طلبات المزوّد المتوقعة بحد أقصى: {0}", [batchPlan.length])}</p><p className="text-sm text-slate-600">{dt("التكلفة المالية تعتمد على النموذج وحجم النص وتسعير حساب المزوّد؛ لا يتوفر تقدير مالي موثوق هنا.")}</p><p className="text-sm text-slate-600">{dt("الطلب يجهّز اقتراحات للمراجعة فقط، ولا يحفظ أو ينشر المحتوى.")}</p><div className="flex flex-wrap gap-2"><button type="button" className="rounded-lg bg-brand px-4 py-2 text-sm text-white" onClick={() => { const targets = batchPlan; setBatchPlan(null); void suggest(targets); }}>{dt("بدء إعداد الاقتراحات")}</button><button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setBatchPlan(null)}>{dt("إلغاء")}</button></div></div></EditorModal> : null}
     {Object.entries(errors).map(([code, error]) => <p key={code} role="alert" className="rounded border border-red-200 p-3 text-sm text-red-700">{LOCALES[code as SupportedLocale].nativeLabel}: {error}</p>)}

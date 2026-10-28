@@ -1,5 +1,5 @@
 "use client";
-import { runSuggestionBatch, suggestionResponseError } from "@/lib/content-editor/suggestion-batch";
+import { runSuggestionBatch, readSuggestionJson } from "@/lib/content-editor/suggestion-batch";
 import type { Ga4Period } from "@/lib/marketing/ga4-period";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
@@ -30,6 +30,7 @@ import { CategoryStructureEditor } from "./CategoryStructureEditor";
 import { MediaCollectionEditor } from "./MediaCollectionEditor";
 import { ProgrammeWorkspace } from "./ProgrammeWorkspace";
 import { WorkspacePreview } from "./WorkspacePreview";
+const PublicPagePreview = dynamic(() => import("./PublicPagePreview").then(module => module.PublicPagePreview), { ssr: false });
 import { WorkspaceSettings, useEditorCatalog } from "./WorkspaceSettings";
 import { SeoWorkspace } from "./SeoWorkspace";
 import { EDITOR_SECTIONS, settingsFor } from "@/lib/content-editor/workspace";
@@ -90,9 +91,7 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
     cache: "no-store",
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body) throw suggestionResponseError(body || {}, dt("تعذر إكمال الطلب"));
-  return body;
+  return readSuggestionJson<T>(res, dt("تعذر إكمال الطلب"));
 }
 function previewText(value: string): string {
   try {
@@ -702,7 +701,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               {dt("إغلاق")}
             </button>
           </div>
-          {Object.keys(proposal.failureReasons || {}).length ? <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block text-sm font-semibold text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي والنموذج")}</Link> : null}
+          {Object.values(proposal.failureReasons || {}).some(code => code.startsWith("AI_")) ? <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block text-sm font-semibold text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي والنموذج")}</Link> : null}
           {proposal.skipped?.length ? <p className="text-sm text-slate-600">{dt("لم تُطلب هذه اللغات: {0}", [proposal.skipped.map(code => LOCALES[code as SupportedLocale]?.nativeLabel || code).join("، ")])}</p> : null}
           {Object.entries(proposal.errors).map(([code, error]) => (
             <p role="alert" key={code}>
@@ -1154,9 +1153,10 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       {previewOpen ? (
         <EditorModal
           title={dt("معاينة الصفحة")}
+          wide
           onClose={() => setPreviewOpen(false)}
         >
-          <section className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-2xl bg-slate-50 p-6">
+          <section className="max-h-[90vh] w-full overflow-auto rounded-2xl bg-slate-50 p-2">
             <div className="mb-5 flex items-center justify-between">
               <h2 id="content-preview-heading" className="text-xl font-bold">
                 {dt("معاينة الصفحة")}
@@ -1169,14 +1169,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
                 {dt("إغلاق")}
               </button>
             </div>
-            <WorkspacePreview
-              kind={kind}
-              values={current}
-              source={source}
-              settings={liveSettings}
-              locale={locale}
-              expanded
-            />
+            {["campaigns", "super-categories", "categories", "blog"].includes(kind) ? <PublicPagePreview kind={kind} id={id} locale={locale} changes={current} settings={{...Object.fromEntries(Object.entries(settingsDraft).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(settingsFor(kind, document.settings)[key]))), ...(kind === "campaigns" && presetsDirty ? {suggestedDonations: donationPresets.current?.getPayload(), suggestedShareCounts: sharePresets.current?.getPayload(), shareLabels: unitLabels.current?.getPayload()} : {})}} /> : <WorkspacePreview kind={kind} values={current} source={source} settings={liveSettings} locale={locale} expanded />}
           </section>
         </EditorModal>
       ) : null}

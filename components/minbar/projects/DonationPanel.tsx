@@ -46,7 +46,7 @@ const FREQUENCIES: ReadonlyArray<{ id: CartFreqKey; key: string }> = [
 /** Note length that fits the certificate's dedication line. */
 const NOTE_MAX = 90;
 
-export default function DonationPanel({ project, donorCount = 0 }: { project: MinbarProject; donorCount?: number }) {
+export default function DonationPanel({ project, donorCount = 0, preview = false }: { project: MinbarProject; donorCount?: number; preview?: boolean }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("common");
@@ -184,6 +184,7 @@ export default function DonationPanel({ project, donorCount = 0 }: { project: Mi
   return (
     <div
       id="pd-aside"
+      inert={preview || undefined}
       style={{
         position: "sticky",
         top: 122,
