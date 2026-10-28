@@ -315,6 +315,13 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await allTime.getByText("$800.04",{exact:true}).waitFor();
  await allTime.getByText(ui(locale,"متوسط التبرع"),{exact:true}).waitFor();checks++;
 
+ for(const width of [1440,390,320]){
+  await page.setViewportSize({width,height:1000});
+  const dimensions=await metricSection.getByRole("article").evaluateAll(cards=>cards.map(card=>({height:card.getBoundingClientRect().height,scroll:card.scrollWidth,width:card.clientWidth})));
+  assert.equal(dimensions.length,6);assert.ok(dimensions.every(card=>card.height<=130&&card.scroll<=card.width+1),"compact revenue cards remain readable without horizontal overflow");
+  await metricSection.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-compact-revenue-"+width+".png")});checks++;
+ }
+ await page.setViewportSize({width:1440,height:1000});
  await page.getByRole("cell",{name:"EN",exact:true}).first().waitFor();
  await page.getByRole("row").filter({hasText:"Fixture DAILY"}).getByRole("cell",{name:ui(locale,"ناجح")+" 2D",exact:true}).waitFor();
  await page.getByRole("row").filter({hasText:"Fixture DAILY"}).getByRole("button",{name:ui(locale,"عرض"),exact:true}).click();

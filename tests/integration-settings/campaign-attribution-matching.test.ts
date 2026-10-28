@@ -180,7 +180,7 @@ test("new and attached links replace generic campaign UTMs with a campaign-speci
 type ServiceDependencies = Record<string, unknown>;
 
 type Outcome = { donationCount: number; revenue: number; unpricedPaidCount: number; failedDonationCount?: number };
-function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean }) {
+function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void> }) {
   let calls = 0, scans = 0;
   const service = isolated<{
     getCampaignOutcomeSummary: (ids: string[]) => Promise<{ metrics: Map<string, Outcome>; unattributed: Outcome }>;
@@ -197,8 +197,8 @@ function reportingHarness(input: { donations?: Record<string, unknown>[]; links?
         if (input.paged && calls === 1) return Array.from({ length: 1000 }, (_, index) => ({ id: String(index), status: "PAID", attribution: {} }));
         return input.donations ?? [];
       } },
-      communicationCampaignTrackingLink: { findMany: async () => input.links ?? [] },
-      communicationCampaign: { findMany: async () => [] },
+      communicationCampaignTrackingLink: { findMany: async () => input.linksRead ? input.linksRead() : input.links ?? [] },
+      communicationCampaign: { findMany: async () => { await input.waitForCampaigns; return []; } },
     } },
     "@/lib/audit-log": { writeAuditLog: async () => undefined },
     "@/lib/locales": { LOCALES: {}, isValidLocale: () => true },
@@ -295,4 +295,21 @@ function isolated<T>(file: string, dependencies: ServiceDependencies): T {
     },
   });
   return loaded.exports as T;
+}
+
+for (const nested of [false, true]) {
+  test(`campaign failure waits for ${nested ? "nested" : "sibling"} reads before diagnostic disconnect`, async () => {
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    const { service } = reportingHarness(nested
+      ? { linksRead: async () => { throw new Error("links offline"); }, waitForCampaigns: pending }
+      : { fail: true, linksRead: async () => { await pending; return []; } });
+    let finished = false;
+    const result = service.getCampaignOutcomeSummary([campaignA]).then(() => { finished = true; return "unexpected success"; }, error => { finished = true; return String(error); });
+    try {
+      await new Promise<void>(resolve => setImmediate(resolve));
+      assert.equal(finished, false, "the CLI must not disconnect while sibling reads are active");
+    } finally { release(); }
+    assert.match(await result, nested ? /links offline/ : /database offline/);
+  });
 }

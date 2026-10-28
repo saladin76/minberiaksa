@@ -11,7 +11,9 @@ export function communicationDonationScan(cursor?: string) {
       "attribution.utm_medium": { $regex: "^\\s*(?:" + COMMUNICATION_UTM_MEDIUM_VALUES.join("|") + ")\\s*$", $options: "i" },
       ...(cursor ? { _id: { $gt: { $oid: cursor } } } : {}),
     },
-    options: { projection: { _id: 1 }, sort: { _id: 1 }, limit: COMMUNICATION_DONATION_PAGE_SIZE, maxTimeMS: 15000 },
+    // Prisma 6 deserializes FindOptions into Rust Duration before converting to MongoDB milliseconds.
+    // A numeric maxTimeMS fails in the engine before the query can reach MongoDB.
+    options: { projection: { _id: 1 }, sort: { _id: 1 }, limit: COMMUNICATION_DONATION_PAGE_SIZE, maxTimeMS: { secs: 15, nanos: 0 } },
   };
 }
 
