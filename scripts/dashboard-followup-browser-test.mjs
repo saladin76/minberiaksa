@@ -296,6 +296,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await aiCard.getByLabel(ui(locale,"تفعيل اتصال الذكاء الاصطناعي في الموقع"),{exact:true}).uncheck();await aiSave.click();await aiCard.getByText(ui(locale,"الاتصال غير مفعّل"),{exact:true}).waitFor();checks++;
  await aiModel.fill("gpt-4.1-mini");await page.route("**/api/admin/ai/connection",route=>route.request().method()==="PUT"?route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({ok:false,error:"AI_SETTINGS_CONFLICT"})}):route.continue());
  await aiSave.click();await aiCard.getByText(ui(locale,"تغير الاتصال في جلسة أخرى. حدّث الإعدادات قبل الحفظ."),{exact:false}).waitFor();assert.equal(await aiSave.isDisabled(),true);
+ await aiModel.fill("gpt-4.1");assert.equal(await aiCard.getByRole("button",{name:ui(locale,"تحميل الإعدادات الحالية وإلغاء التغييرات"),exact:true}).isVisible(),true);
  await page.unroute("**/api/admin/ai/connection");await aiCard.getByRole("button",{name:ui(locale,"تحميل الإعدادات الحالية وإلغاء التغييرات"),exact:true}).click();await aiKey.waitFor();assert.equal(await aiModel.inputValue(),"gpt-4o-mini");checks++;
  for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-ai-connection-"+width+".png"),fullPage:true});checks++;}
  await page.setViewportSize({width:1440,height:1000});
