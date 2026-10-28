@@ -31,12 +31,15 @@ export async function cancelSuggestionTask(id: string, ownerId: string) {
  * No request snapshot, cookie or key is stored; only the generated review result is retained for 24 hours. A killed worker is never retried implicitly.
  */
 export async function queueSuggestion(request: NextRequest, ownerId: string, permission: string,
-  execute: (request: NextRequest) => Promise<Response>) {
+  execute: (request: NextRequest) => Promise<Response>, analyticsAccess?: { denied: Response | null }) {
   const requestId = request.headers.get("X-Suggestion-Request");
   if (!/^[a-f0-9-]{36}$/i.test(requestId || "")) return taskJson({ error: "معرّف طلب غير صالح" }, 400);
   const text = await request.text();
   if (Buffer.byteLength(text) > 1_000_000) return taskJson({ error: "المسودة كبيرة جدًا؛ حدد حقولًا أقل في الطلب." }, 413);
-  try { JSON.parse(text); } catch { return taskJson({ error: "طلب غير صالح" }, 400); }
+  let payload: unknown;
+  try { payload = JSON.parse(text); } catch { return taskJson({ error: "طلب غير صالح" }, 400); }
+  const requiresAnalytics = Boolean(payload && typeof payload === "object" && "analyticsPeriod" in payload && payload.analyticsPeriod);
+  if (requiresAnalytics && (!analyticsAccess || analyticsAccess.denied)) return analyticsAccess?.denied || taskJson({ error: "FORBIDDEN" }, 403);
   const id = createHash("sha256").update(ownerId + ":" + requestId).digest("hex");
   const requestHash = createHash("sha256").update(request.url + "\n" + text).digest("hex");
   const existing = await prisma.aiSuggestionTask.findUnique({ where: { id } });
@@ -47,7 +50,7 @@ export async function queueSuggestion(request: NextRequest, ownerId: string, per
   if (active >= 2) return taskJson({ error: "انتظر اكتمال طلباتك الحالية قبل بدء اقتراح آخر.", reason: "AI_RATE_LIMITED", stopBatch: true }, 429);
   const deadlineAt = new Date(now.getTime() + DEADLINE_MS);
   try {
-    await prisma.aiSuggestionTask.create({ data: { id, ownerId, permission, requestHash, deadlineAt, expiresAt: new Date(now.getTime() + 86_400_000) } });
+    await prisma.aiSuggestionTask.create({ data: { id, ownerId, permission, requestHash, requiresAnalytics, deadlineAt, expiresAt: new Date(now.getTime() + 86_400_000) } });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       const concurrent = await prisma.aiSuggestionTask.findUnique({ where: { id } });

@@ -8856,5 +8856,6 @@
   "رفض المزوّد إعداد التنوع لهذه المهمة. راجع توافق إعداد النموذج.": "The provider rejected this task’s temperature setting. Check model compatibility.",
   "مرحلة الفشل: بحث الويب.": "Failed stage: web research.",
   "مرحلة الفشل: الترجمة أو التدقيق.": "Failed stage: translation or proofreading.",
-  "تعذر تأكيد طلب الاقتراح. احتفظ بالمسودة وراجع اتصال الخادم قبل إعادة الطلب.": "Unable to confirm the suggestion request. Keep your draft and check the server connection before retrying."
+  "تعذر تأكيد طلب الاقتراح. احتفظ بالمسودة وراجع اتصال الخادم قبل إعادة الطلب.": "Unable to confirm the suggestion request. Keep your draft and check the server connection before retrying.",
+  "لا تتوفر لديك صلاحيات هذا الطلب. راجع صلاحيات القسم ومصادر البيانات.": "You do not have permission for this request. Check access to the section and its data sources."
 }

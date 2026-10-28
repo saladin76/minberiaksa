@@ -37,7 +37,7 @@ function fixture() {
   new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, Date, Map, Buffer, AbortSignal, AbortController, setInterval, clearInterval, require: (id: string) => {
     if (!(id in dependencies)) throw new Error("Unexpected dependency " + id); return dependencies[id];
   } });
-  const request = (body = { revision: "draft", locale: "fr" }, id = "11111111-1111-4111-8111-111111111111", signal?: AbortSignal) => new Request("https://example.test/api/admin/content-editor/campaigns/111111111111111111111111/suggest", {
+  const request = (body: Record<string, unknown> = { revision: "draft", locale: "fr" }, id = "11111111-1111-4111-8111-111111111111", signal?: AbortSignal) => new Request("https://example.test/api/admin/content-editor/campaigns/111111111111111111111111/suggest", {
     method: "POST", headers: { Prefer: "respond-async", "X-Suggestion-Request": id }, body: JSON.stringify(body), signal,
   }) as Parameters<Service["queueSuggestion"]>[0];
   return { tasks, callbacks, request, service: loaded.exports };
@@ -85,4 +85,17 @@ test("a missing worker reaches a controlled deadline without restarting or charg
   const response = await h.service.suggestionTaskResponse((await h.service.readSuggestionTask(taskId, "operator"))!);
   assert.equal(response.status, 502); assert.equal((await response.json()).reason, "AI_TIMEOUT"); assert.equal(h.callbacks.length, 1);
   row.expiresAt = new Date(Date.now() - 1); assert.equal(await h.service.readSuggestionTask(taskId, "operator"), null);
+});
+
+test("analytics source authorization is retained with the task before background work starts", async () => {
+  const h = fixture();
+  await h.service.queueSuggestion(h.request({ revision: "draft", locale: "fr", analyticsPeriod: { startDate: "2026-10-01" } } as Parameters<typeof h.request>[0]), "operator", "campaigns", async () => Response.json({}), { denied: null });
+  assert.equal([...h.tasks.values()][0].requiresAnalytics, true);
+  assert.equal(h.callbacks.length, 1);
+});
+
+test("analytics tasks cannot be queued without source permission", async () => {
+  const h = fixture();
+  const response = await h.service.queueSuggestion(h.request({ analyticsPeriod: {} }), "operator", "campaigns", async () => Response.json({}));
+  assert.equal(response.status, 403); assert.equal(h.tasks.size, 0); assert.equal(h.callbacks.length, 0);
 });

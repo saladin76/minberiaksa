@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, ctx: Context): Promise<Response
   try {
     if (request.headers?.get("Prefer") === "respond-async") {
       if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-      return await queueSuggestion(request, session.user.id, "siteContent", detached => POST(detached, ctx));
+      return await queueSuggestion(request, session.user.id, "siteContent", detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const { key } = await ctx.params, body = await request.json();
     if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");

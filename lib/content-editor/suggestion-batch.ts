@@ -1,7 +1,7 @@
 import { dt } from "../dashboard/i18n";
 import { isSuggestionFailureCode, stopsSuggestionBatch } from "../ai/core/suggestion-failure";
 
-const RESPONSE_FAILURES = new Set(["SUGGESTION_RESPONSE_INVALID", "SUGGESTION_SESSION_EXPIRED", "SUGGESTION_TIMEOUT"]);
+const RESPONSE_FAILURES = new Set(["SUGGESTION_RESPONSE_INVALID", "SUGGESTION_SESSION_EXPIRED", "SUGGESTION_PERMISSION_DENIED", "SUGGESTION_TIMEOUT"]);
 
 export class SuggestionRequestError extends Error {
   constructor(message: string, public reason?: string) { super(message); }
@@ -31,6 +31,7 @@ export async function runSuggestionBatch<T>(input: {
 export async function readSuggestionJson<T>(response: Response, fallback: string): Promise<T> {
   const body = await response.json().catch(() => null);
   if (response.redirected || response.status === 401) throw new SuggestionRequestError(dt("انتهت جلسة الدخول. سجّل الدخول مجددًا ثم أعد الطلب؛ المسودة لم تتغير."), "SUGGESTION_SESSION_EXPIRED");
+  if (response.status === 403) throw new SuggestionRequestError(dt("لا تتوفر لديك صلاحيات هذا الطلب. راجع صلاحيات القسم ومصادر البيانات."), "SUGGESTION_PERMISSION_DENIED");
   if (!body || typeof body !== "object") {
     if (response.status === 504 || response.status === 408) throw new SuggestionRequestError(dt("انتهت مهلة الخادم قبل تأكيد النتيجة. احتفظ بالمسودة وأعد المحاولة بعد مراجعة الاتصال."), "SUGGESTION_TIMEOUT");
     throw new SuggestionRequestError(dt("أعاد الخادم صفحة غير متوقعة بدل البيانات المطلوبة. احتفظ بالمسودة وراجع اتصال الخادم قبل إعادة الطلب."), "SUGGESTION_RESPONSE_INVALID");

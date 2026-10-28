@@ -8848,5 +8848,6 @@
   "رفض المزوّد إعداد التنوع لهذه المهمة. راجع توافق إعداد النموذج.": "Sağlayıcı bu görevin çeşitlilik ayarını reddetti. Model uyumluluğunu kontrol edin.",
   "مرحلة الفشل: بحث الويب.": "Başarısız aşama: web araştırması.",
   "مرحلة الفشل: الترجمة أو التدقيق.": "Başarısız aşama: çeviri veya düzeltme.",
-  "تعذر تأكيد طلب الاقتراح. احتفظ بالمسودة وراجع اتصال الخادم قبل إعادة الطلب.": "Öneri isteği doğrulanamadı. Taslağınızı koruyup yeniden denemeden önce sunucu bağlantısını kontrol edin."
+  "تعذر تأكيد طلب الاقتراح. احتفظ بالمسودة وراجع اتصال الخادم قبل إعادة الطلب.": "Öneri isteği doğrulanamadı. Taslağınızı koruyup yeniden denemeden önce sunucu bağlantısını kontrol edin.",
+  "لا تتوفر لديك صلاحيات هذا الطلب. راجع صلاحيات القسم ومصادر البيانات.": "Bu istek için yetkiniz yok. Bölüm ve veri kaynaklarına erişim izinlerini kontrol edin."
 }

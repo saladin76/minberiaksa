@@ -46,3 +46,12 @@ test("cancelling a queued suggestion requests cancellation without starting anot
   });
   await assert.rejects(api.requestSuggestion("/suggest", {}, controller.signal)); assert.equal(cancelled, 1);
 });
+
+test("revoked source permission stops the remaining languages before another suggestion is queued", async () => {
+  let calls = 0;
+  const api = fixture(async () => { calls++; return Response.json({ error: "Forbidden" }, { status: 403 }); });
+  const result = await api.runSuggestionBatch({ targets: ["en", "fr"], signal: new AbortController().signal,
+    request: () => api.requestSuggestion("/suggest", {}, new AbortController().signal), onSuccess: () => assert.fail("No result expected"), onError: () => {}, onProgress: () => {},
+  });
+  assert.equal(calls, 1); assert.equal(result.sharedFailure, true); assert.equal(result.skipped.length, 1);
+});

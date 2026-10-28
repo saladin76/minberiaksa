@@ -41,7 +41,7 @@ export async function POST(
   try {
     if (request.headers?.get("Prefer") === "respond-async") {
       if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => POST(detached, ctx));
+      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const body = await request.json();
     const row = await readContent(contentStore, kind, id);

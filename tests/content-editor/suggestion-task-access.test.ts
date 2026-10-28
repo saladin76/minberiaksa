@@ -4,14 +4,14 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
-function fixture(role: string | null, allowed = true) {
+function fixture(role: string | null, allowed = true, requiresAnalytics: boolean | null = false, analyticsAllowed = false) {
   let reads = 0, cancellations = 0;
-  const task = { id: "a".repeat(64), ownerId: "operator", permission: "campaigns", result: { title: "Private reviewed proposal" } };
+  const task = { id: "a".repeat(64), ownerId: "operator", permission: "campaigns", requiresAnalytics, result: { title: "Private reviewed proposal" } };
   const deps: Record<string, unknown> = {
     "next-auth": { getServerSession: async () => role ? { user: { id: "operator", role } } : null },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/dashboard/permissions": { isDashboardPermissionKey: (key: string) => key === "campaigns" },
-    "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: (_session: unknown, permission: string) => allowed && permission === "campaigns" ? null : Response.json({ error: "Forbidden" }, { status: 403 }) },
+    "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: (_session: unknown, permission: string) => allowed && (permission === "campaigns" || permission === "platformConnections" && analyticsAllowed) ? null : Response.json({ error: "Forbidden" }, { status: 403 }) },
     "@/lib/content-editor/suggestion-tasks": {
       taskJson: (body: unknown, status = 200) => Response.json(body, { status }),
       readSuggestionTask: async (_id: string, ownerId: string) => { reads++; assert.equal(ownerId, "operator"); return task; },
@@ -34,4 +34,11 @@ test("revoked section permission blocks proposal reads and cancellation for staf
 });
 test("an authorized operator can read and cancel only after the section guard succeeds", async () => {
   const h = fixture("STAFF"); assert.equal((await h.get()).status, 200); assert.equal((await h.cancel()).status, 200); assert.equal(h.counts().cancellations, 1);
+});
+
+for (const flag of [true, null]) test(`retained analytics evidence stays protected after source permission is revoked (flag ${flag})`, async () => {
+  const h = fixture("STAFF", true, flag, false);
+  const result = await h.get(); assert.equal(result.status, 403); assert.doesNotMatch(await result.text(), /Private reviewed/);
+  assert.equal((await h.cancel()).status, 403); assert.equal(h.counts().cancellations, 0);
+  assert.equal((await fixture("STAFF", true, flag, true).get()).status, 200);
 });

@@ -14,7 +14,14 @@ async function access(ctx: Context) {
   const task = await readSuggestionTask((await ctx.params).id, session.user.id);
   if (!task || !isDashboardPermissionKey(task.permission)) return { denied: taskJson({ error: "NOT_FOUND" }, 404) };
   const permissionDenied = requireAdminOrDashboardPermission(session, task.permission);
-  return permissionDenied ? { denied: permissionDenied } : { task };
+  if (permissionDenied) return { denied: permissionDenied };
+  // A retained result can include restricted GA4 evidence. Recheck that source permission too.
+  // Legacy tasks have no explicit flag and must fail closed for operators without analytics access.
+  if (task.requiresAnalytics !== false) {
+    const analyticsDenied = requireAdminOrDashboardPermission(session, "platformConnections");
+    if (analyticsDenied) return { denied: analyticsDenied };
+  }
+  return { task };
 }
 export async function GET(_request: NextRequest, ctx: Context) {
   try { const result = await access(ctx); return result.denied || await suggestionTaskResponse(result.task!); }

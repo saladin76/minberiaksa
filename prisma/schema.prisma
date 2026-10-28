@@ -3573,6 +3573,8 @@ model AiSuggestionTask {
   ownerId     String
   permission  String
   requestHash String
+  /// Null covers older tasks: require analytics permission conservatively on reads.
+  requiresAnalytics Boolean?
   status      String   @default("QUEUED")
   httpStatus  Int?
   result      Json?
