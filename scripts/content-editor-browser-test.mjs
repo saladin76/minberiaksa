@@ -241,7 +241,8 @@ try {
   await page
     .getByRole("heading", { name: "اختبار التصنيف", exact: true, level: 1 })
     .waitFor();
-  await page.getByRole("button", {name:'Français', exact:true}).click();
+  if (!(await page.getByRole("button", {name:"Français", exact:true}).isVisible())) await page.getByText(/^لغات أخرى/).click();
+  await page.getByRole("button", {name:"Français", exact:true}).click();
   const title = page.getByLabel("اسم التصنيف", { exact: true });
   await title.waitFor();
   assert.equal(await title.inputValue(), "");
@@ -316,7 +317,8 @@ try {
   assert.equal(await title.inputValue(), "Unsaved edit");
   assert.equal(await page.evaluate(() => !window.dispatchEvent(new Event("dashboard:check-unsaved-draft", {cancelable:true}))), true, "dashboard language reload must detect the draft");
   await page.getByRole("button", {name:'English', exact:true}).click();
-  await page.getByRole("button", {name:'Français', exact:true}).click();
+  if (!(await page.getByRole("button", {name:"Français", exact:true}).isVisible())) await page.getByText(/^لغات أخرى/).click();
+  await page.getByRole("button", {name:"Français", exact:true}).click();
   assert.equal(await title.inputValue(), "Unsaved edit", "switching content languages must preserve the draft");
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(

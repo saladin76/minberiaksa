@@ -18,9 +18,9 @@ export interface CampaignRow {
   failedCount: number;
   clickedCount: number;
   repliedCount: number;
-  donationCount: number;
-  revenue: number;
-  unpricedPaidCount?: number;
+  donationCount: number | null;
+  revenue: number | null;
+  unpricedPaidCount?: number | null;
   trackingRequiresTemplateUpdate?: boolean;
   failedDonationCount?: number;
   metadata?: {

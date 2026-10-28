@@ -12,6 +12,7 @@ import { faqTranslationFields, translatedFaq } from "./faq";
 import { translateResearchedItem } from "../content-localization/research-translate";
 import { generateResearchedArticle } from "./seo-research";
 import { editorialWeekKey, isDuplicateEditorialTopic, type EditorialJobKind } from "./editorial-contracts";
+import { selectEditorialRetries } from "./editorial-failure";
 
 const json = (value: unknown) => value as Prisma.InputJsonValue;
 const EDITABLE = new Set(["title", "description", "content", "metaTitle", "metaDescription", "seoKeyword", "ogTitle", "ogDescription", "imageAlt", "faqContent"]);
@@ -168,4 +169,19 @@ export async function changeEditorialJob(id: string, version: string, action: "r
   if (action === "cancel" && !["QUEUED", "RUNNING", "FAILED", "REVIEW"].includes(job.status)) throw new ContentError("لا يمكن إلغاء هذه المهمة");
   const result = await prisma.editorialJob.updateMany({ where: { id, version }, data: { status: action === "retry" ? "QUEUED" : "CANCELLED", error: null, leaseToken: null, leaseUntil: null, version: randomUUID() } });
   if (!result.count) throw new ContentError("تغيرت المهمة. أعد تحميل القائمة.", 409);
+}
+
+/** Requeue a bounded transient-only batch; request/configuration errors require individual review. */
+export async function retryTransientEditorialJobs() {
+  const settings = await editorialSettings();
+  if (!settings.configured) throw new ContentError("خدمة بحث المحتوى غير مهيأة");
+  const jobs = await prisma.editorialJob.findMany({ where: { status: "FAILED" }, orderBy: { updatedAt: "asc" }, take: 1001, select: { id: true, version: true, error: true, attempts: true, updatedAt: true } });
+  if (jobs.length > 1000) throw new ContentError("عدد المهام كبير. راجع المهام وأعد المحاولات بشكل فردي.");
+  const selection = selectEditorialRetries(jobs);
+  let count = 0;
+  for (const job of selection.selected) {
+    const changed = await prisma.editorialJob.updateMany({ where: { id: job.id, version: job.version, status: "FAILED" }, data: { status: "QUEUED", error: null, leaseToken: null, leaseUntil: null, version: randomUUID() } });
+    count += changed.count;
+  }
+  return { count, blocked: selection.blocked, deferred: selection.deferred, remaining: selection.remaining };
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { toast } from "react-hot-toast";
+import { readDashboardJson } from "@/lib/dashboard/read-json";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -18,6 +18,10 @@ export function CampaignsListClient() {
   const [unattributed, setUnattributed] = React.useState({ donationCount: 0, revenue: 0, unpricedPaidCount: 0 });
   const [loadError, setLoadError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [outcomesReady, setOutcomesReady] = React.useState(false);
+  const [outcomeError, setOutcomeError] = React.useState(false);
+  const activeRead = React.useRef<AbortController | null>(null);
   const [search, setSearch] = React.useState("");
   const [channel, setChannel] = React.useState("all");
   const [status, setStatus] = React.useState("active");
@@ -31,23 +35,34 @@ export function CampaignsListClient() {
   }, []);
 
   const load = React.useCallback(async () => {
-    setLoading(true); setLoadError(false);
+    activeRead.current?.abort();
+    const controller = new AbortController(); activeRead.current = controller;
+    const current = () => activeRead.current === controller && !controller.signal.aborted;
+    setLoading(true); setLoadError(false); setOutcomeError(false); setOutcomesReady(false);
+    let listLoaded = false;
     try {
-      const res = await fetch("/api/communication/campaigns?includeArchived=true", { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحميل الحملات"));
-      setCampaigns(json.campaigns ?? []);
-      setUnattributed(json.unattributed ?? { donationCount: 0, revenue: 0, unpricedPaidCount: 0 });
-    } catch (e) {
-      setLoadError(true);
-      toast.error((e as Error).message);
+      const base = await readDashboardJson<{ campaigns: CampaignRow[] }>("/api/communication/campaigns?includeArchived=true&includeOutcomes=false", controller.signal);
+      if (!current()) return;
+      if (!Array.isArray(base.campaigns)) throw new Error("INVALID_CAMPAIGN_LIST");
+      setCampaigns(base.campaigns.map(row => ({ ...row, donationCount: null, revenue: null, unpricedPaidCount: null })));
+      setHasLoaded(true); setLoading(false); listLoaded = true;
+      if (!base.campaigns.length) { setUnattributed({donationCount:0,revenue:0,unpricedPaidCount:0}); setOutcomesReady(true); return; }
+      const report = await readDashboardJson<{ campaigns: CampaignRow[]; unattributed: typeof unattributed }>("/api/communication/campaigns?includeArchived=true", controller.signal);
+      if (!current()) return;
+      if (!Array.isArray(report.campaigns) || !report.unattributed) throw new Error("INVALID_CAMPAIGN_REPORT");
+      setCampaigns(report.campaigns); setUnattributed(report.unattributed); setOutcomesReady(true);
+    } catch {
+      if (!current()) return;
+      if (listLoaded) setOutcomeError(true);
+      else setLoadError(true);
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
     void load();
+    return () => activeRead.current?.abort();
   }, [load]);
 
   // Filtered and sorted client-side: the service caps the list at 200 rows, so this is a small
@@ -72,8 +87,8 @@ export function CampaignsListClient() {
         acc.sent += campaign.sentCount;
         acc.engaged += Math.max(campaign.readCount, campaign.clickedCount, campaign.repliedCount);
         acc.clicked += campaign.clickedCount;
-        acc.donations += campaign.donationCount;
-        acc.revenue += campaign.revenue;
+        acc.donations += campaign.donationCount ?? 0;
+        acc.revenue += campaign.revenue ?? 0;
         acc.unpriced += campaign.unpricedPaidCount ?? 0;
         return acc;
       },
@@ -92,7 +107,7 @@ export function CampaignsListClient() {
         searchPlaceholder={dt("ابحث باسم الحملة…")}
         actions={
           <>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={load} disabled={loading}>
+            <Button aria-label={dt("تحديث")} variant="outline" size="sm" className="gap-1.5" onClick={load} disabled={loading}>
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
               <span className="hidden sm:inline">{dt("تحديث")}</span>
             </Button>
@@ -137,18 +152,20 @@ export function CampaignsListClient() {
         </Select>
       </FilterBar>
 
-      {loadError && <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{dt("تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة.")}</p>}
-      {!loading && !loadError && filtered.some(campaign => campaign.trackingRequiresTemplateUpdate) && <p role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900">{dt("توجد قوالب واتساب بروابط ثابتة مشتركة. يلزم اعتماد زر ديناميكي بمعرّف الحملة لدى Meta لفصل إيرادات كل حملة.")}</p>}
-      {!loading && !loadError && unattributed.donationCount > 0 && <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">{dt("إيراد تواصل غير منسوب: {0} دولار من {1} تبرع مؤكد. الروابط القديمة لا تحدد حملة واحدة؛ هذا المبلغ غير مضاف إلى صفوف الحملات.", [unattributed.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 }), unattributed.donationCount])}{unattributed.unpricedPaidCount > 0 && <> {dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [unattributed.unpricedPaidCount])}</>}</p>}
-      {!loading && !loadError && analytics.unpriced > 0 && <p role="status" className="mb-4 text-sm text-amber-800">{dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [analytics.unpriced])}</p>}
-      {!loading && !loadError && campaigns.length > 0 && (
+      {loadError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><p>{dt("تعذّر تحميل الحملات. البيانات السابقة قد تكون قديمة؛ أعد المحاولة.")}</p><Button variant="outline" size="sm" onClick={load}>{dt("إعادة المحاولة")}</Button></div>}
+      {hasLoaded && !outcomesReady && !outcomeError && !loadError && <p role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">{dt("الحملات ظاهرة؛ جارٍ تحميل الإيرادات المؤكدة.")}</p>}
+      {outcomeError && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p>{dt("تعذّر تحميل إسناد الإيرادات؛ بيانات الحملات متاحة والمبالغ غير متاحة مؤقتًا.")}</p><Button variant="outline" size="sm" onClick={load}>{dt("إعادة المحاولة")}</Button></div>}
+      {outcomesReady && !loadError && filtered.some(campaign => campaign.trackingRequiresTemplateUpdate) && <p role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900">{dt("توجد قوالب واتساب بروابط ثابتة مشتركة. يلزم اعتماد زر ديناميكي بمعرّف الحملة لدى Meta لفصل إيرادات كل حملة.")}</p>}
+      {outcomesReady && !loadError && unattributed.donationCount > 0 && <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">{dt("إيراد تواصل غير منسوب: {0} دولار من {1} تبرع مؤكد. الروابط القديمة لا تحدد حملة واحدة؛ هذا المبلغ غير مضاف إلى صفوف الحملات.", [unattributed.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 }), unattributed.donationCount])}{unattributed.unpricedPaidCount > 0 && <> {dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [unattributed.unpricedPaidCount])}</>}</p>}
+      {outcomesReady && !loadError && analytics.unpriced > 0 && <p role="status" className="mb-4 text-sm text-amber-800">{dt("توجد {0} تبرعات دون تحويل مؤكد للدولار.", [analytics.unpriced])}</p>}
+      {hasLoaded && !loadError && campaigns.length > 0 && (
         <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
           {[
             { label: dt("إجمالي المُرسل"), value: analytics.sent.toLocaleString("en-US"), hint: dt("رسالة مقبولة لدى المزوّد"), icon: Send },
             { label: dt("تفاعل/فتح"), value: `${analytics.engaged.toLocaleString("en-US")} · ${engagementRate}%`, hint: dt("قراءة/فتح/نقر/رد مثبت"), icon: Eye },
             { label: dt("ضغطات مسجلة"), value: `${analytics.clicked.toLocaleString("en-US")} · ${clickRate}%`, hint: dt("متاح عندما يرسل المزوّد حدث Click"), icon: MousePointerClick },
-            { label: dt("تبرعات منسوبة"), value: analytics.donations.toLocaleString("en-US"), hint: dt("UTM مطابق للحملة"), icon: HandHeart },
-            { label: dt("إيراد منسوب"), value: `${analytics.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}`, hint: dt("تبرعات مؤكدة الدفع من روابط الحملة"), icon: Banknote },
+            { label: dt("تبرعات منسوبة"), value: outcomesReady ? analytics.donations.toLocaleString("en-US") : "—", hint: dt("UTM مطابق للحملة"), icon: HandHeart },
+            { label: dt("إيراد منسوب"), value: outcomesReady ? `${analytics.revenue.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "—", hint: dt("تبرعات مؤكدة الدفع من روابط الحملة"), icon: Banknote },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -165,7 +182,7 @@ export function CampaignsListClient() {
         </div>
       )}
 
-      {loading ? (
+      {loading && !hasLoaded ? (
         // Shaped like the table it replaces, so the layout does not jump when rows arrive.
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="h-10 border-b border-slate-100 bg-slate-50/90" />
@@ -178,7 +195,7 @@ export function CampaignsListClient() {
             </div>
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : loadError && !hasLoaded ? null : filtered.length === 0 ? (
         <EmptyState
           icon={Megaphone}
           title={campaigns.length === 0 ? dt("لا توجد حملات تسويقية بعد") : dt("لا توجد حملة مطابقة")}

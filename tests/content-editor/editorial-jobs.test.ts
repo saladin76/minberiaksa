@@ -7,9 +7,10 @@ import { randomUUID } from "node:crypto";
 import * as contracts from "../../lib/content-editor/contracts";
 import * as faq from "../../lib/content-editor/faq";
 import * as editorial from "../../lib/content-editor/editorial-contracts";
+import * as failure from "../../lib/content-editor/editorial-failure";
 import { ContentError, fingerprint } from "../../lib/content-editor/service";
 import type { ContentRecord } from "../../lib/content-editor/contracts";
-type JobApi = { runEditorialJobs: () => Promise<unknown[]>; applyEditorialJob: (id: string, version: string, input: unknown) => Promise<{ contentId: string }> };
+type JobApi = { runEditorialJobs: () => Promise<unknown[]>; retryTransientEditorialJobs: () => Promise<{count:number;blocked:number;remaining:number}>; applyEditorialJob: (id: string, version: string, input: unknown) => Promise<{ contentId: string }> };
 const sourceId = "111111111111111111111111", jobId = "222222222222222222222222";
 function fixture(options: { locked?: boolean; configured?: boolean; kind?: string } = {}) {
   let row: ContentRecord = { id: sourceId, title: "عنوان المقال", description: "وصف", content: "نص عربي مكتمل", translations: [{ locale: "en", title: "Title", description: "Description", content: "" }] };
@@ -23,7 +24,7 @@ function fixture(options: { locked?: boolean; configured?: boolean; kind?: strin
   const matches = (where: ContentRecord) => (!where.id || where.id === job.id) && (!where.version || where.version === job.version) && (!where.status || where.status === job.status) && (!where.leaseToken || where.leaseToken === job.leaseToken);
   const jobModel = {
     findUnique: async () => structuredClone(job),
-    findMany: async (args: { where?: ContentRecord }) => args.where?.kind === "ARTICLE" ? [] : job.status === "QUEUED" ? [structuredClone(job)] : [],
+    findMany: async (args: { where?: ContentRecord }) => args.where?.kind === "ARTICLE" ? [] : args.where?.status === "FAILED" ? (job.status === "FAILED" ? [structuredClone(job)] : []) : job.status === "QUEUED" ? [structuredClone(job)] : [],
     updateMany: async (args: { where: ContentRecord; data: ContentRecord }) => {
       if (!matches(args.where)) return { count: 0 };
       Object.assign(job, args.data); return { count: 1 };
@@ -48,7 +49,7 @@ function fixture(options: { locked?: boolean; configured?: boolean; kind?: strin
     } },
     "../../i18n/locale-messages": { messagesFor: () => ({ about: {} }) },
     "../locales": { SUPPORTED_LOCALES: ["ar", "en", "tr"] },
-    "./contracts": contracts, "./faq": faq, "./editorial-contracts": editorial,
+    "./contracts": contracts, "./faq": faq, "./editorial-contracts": editorial, "./editorial-failure": failure,
     "./service": { ContentError, fingerprint, readContent: async () => structuredClone(row),
       saveWorkspace: async (_tx: unknown, input: { locale: string; changes: ContentRecord }) => { writes++; const target = (row.translations as ContentRecord[]).find((target) => target.locale === input.locale); if (target) Object.assign(target, input.changes); return {}; } },
     "./store": { contentStore: store },
@@ -63,6 +64,7 @@ function fixture(options: { locked?: boolean; configured?: boolean; kind?: strin
     if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name); return dependencies[name];
   } });
   return { api: isolatedModule.exports, job: () => structuredClone(job), stats: () => ({ writes, creations, providerCalls }),
+    failJob: (error: string, attempts = 1) => { job.status = "FAILED"; job.error = error; job.attempts = attempts; job.updatedAt = new Date("2026-10-01T00:00:00Z"); },
     changeSource: () => { row.content = "تحرير أحدث"; },
     changeTarget: () => { (row.translations as ContentRecord[])[0].content = "Human edit"; },
   };
@@ -100,3 +102,15 @@ test("an active runner lease or missing provider configuration leaves work queue
     assert.equal(f.job().status, "QUEUED"); assert.equal(f.stats().providerCalls, 0);
   }
 });
+
+ test("batch retry leaves request, access and billing failures for individual review", async () => {
+ for (const error of ["رفض المزوّد صيغة الطلب (400)","AI_ACCESS_DENIED (403)","AI_QUOTA_EXCEEDED (429)"]) {
+ const f=fixture();f.failJob(error);const result=await f.api.retryTransientEditorialJobs();
+ assert.equal(result.count,0);assert.equal(result.blocked,1);assert.equal(f.job().status,"FAILED");assert.equal(f.stats().providerCalls,0);
+ }
+ });
+ test("transient editorial retries are queued once without generating or publishing content",async()=>{
+ const f=fixture();f.failJob("AI_PROVIDER_UNAVAILABLE (503)");assert.equal((await f.api.retryTransientEditorialJobs()).count,1);
+ assert.equal(f.job().status,"QUEUED");assert.equal((await f.api.retryTransientEditorialJobs()).count,0);assert.equal(f.stats().providerCalls,0);assert.equal(f.stats().writes,0);
+ const exhausted=fixture();exhausted.failJob("AI_TIMEOUT",3);assert.equal((await exhausted.api.retryTransientEditorialJobs()).count,0);
+ });

@@ -77,7 +77,7 @@ function CheckRow({ label, state, detail, evidence, lastTest, lastTestLabel = dt
           <p className="mt-1 text-[11px] font-semibold text-slate-600">{evidence}</p>
           {lastTest ? (
             <p className="mt-1 text-[11px] text-slate-400">
-              {lastTestLabel}: {new Date(lastTest).toLocaleString(dashIntl("ar"))}
+              {lastTestLabel}: {new Date(lastTest).toLocaleString(dashIntl("ar"), {timeZone:"Europe/Istanbul",timeZoneName:"short"})}
             </p>
           ) : null}
         </div>
@@ -134,7 +134,7 @@ export default async function HealthPage() {
     {
       label: "Cron",
       state: cronState,
-      detail: scheduler.configured ? dt("حماية Route مضبوطة داخل Vercel.") : dt("CRON_SECRET يحتاج إعدادًا داخل Vercel."),
+      detail: scheduler.configured ? dt("حماية مهام الجدولة مضبوطة على خادم الاستضافة.") : dt("مفتاح حماية الجدولة يحتاج إعدادًا على خادم الاستضافة."),
       evidence:
         cronState === "VERIFIED" ? dt("آخر اختبار للجدولة نجح.")
         : cronState === "CONFIGURED" ? dt("السر مضبوط؛ لم يُختبر تشغيل الجدولة.")

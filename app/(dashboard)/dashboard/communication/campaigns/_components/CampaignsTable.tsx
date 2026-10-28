@@ -47,7 +47,10 @@ export function sortCampaigns(rows: CampaignRow[], sort: CampaignSort): Campaign
       case "date":
         return (new Date(rowDate(a).iso).getTime() - new Date(rowDate(b).iso).getTime()) * factor;
       default:
-        return (a[sort.key] - b[sort.key]) * factor;
+        // Unavailable financial values stay last in either direction.
+        if (a[sort.key] == null) return b[sort.key] == null ? 0 : 1;
+        if (b[sort.key] == null) return -1;
+        return (a[sort.key]! - b[sort.key]!) * factor;
     }
   });
 }
@@ -84,10 +87,10 @@ function SortHeader({
 }
 
 /** A count cell. Campaigns that never went out show a dash  a column of zeros reads as broken. */
-function CountCell({ value, show, tone }: { value: number; show: boolean; tone?: string }) {
+function CountCell({ value, show, tone }: { value: number | null; show: boolean; tone?: string }) {
   return (
     <td className="whitespace-nowrap px-3 py-2.5 text-end align-middle tabular-nums">
-      {!show ? (
+      {!show || value == null ? (
         <span className="text-slate-300">—</span>
       ) : (
         <span className={cn("font-semibold", value === 0 ? "text-slate-400" : tone ?? "text-slate-900")}>
@@ -202,7 +205,7 @@ export function CampaignsTable({
                   <CountCell value={c.repliedCount} show={showResults} tone="text-amber-700" />
                   <CountCell value={c.donationCount} show={showResults} tone="text-emerald-700" />
                   <td className="whitespace-nowrap px-3 py-2.5 text-end align-middle tabular-nums">
-                    {!showResults ? (
+                    {!showResults || c.revenue == null ? (
                       <span className="text-slate-300">—</span>
                     ) : (
                       <span className={cn("font-semibold", c.revenue === 0 ? "text-slate-400" : "text-emerald-700")}>

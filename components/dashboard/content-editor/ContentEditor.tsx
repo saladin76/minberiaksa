@@ -1,6 +1,8 @@
 "use client";
 import type { Ga4Period } from "@/lib/marketing/ga4-period";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
+import { ContentLanguagePicker } from "./ContentLanguagePicker";
+import type { SupportedLocale } from "@/lib/locales";
 import { toast } from "react-hot-toast";
 import { dashDir, dt, dtMaybe } from "@/lib/dashboard/i18n";
 import { SuggestedDonationsSection, type SuggestedDonationsSectionRef } from "@/app/(dashboard)/dashboard/campaigns/_components/SuggestedDonationsSection";
@@ -482,12 +484,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Globe2 size={18} aria-hidden="true" />{dt("لغة المحتوى")}<span className="font-normal text-slate-500">· {LOCALES[locale as keyof typeof LOCALES].nativeLabel}</span></h2>
         <span className="text-xs text-slate-500">{status.complete ? dt("المحتوى مكتمل") : dt("حقول ناقصة: {0}", [status.missing.length])} · {status.seoComplete ? dt("إعدادات البحث مكتملة") : dt("إعدادات البحث تحتاج استكمالًا")}</span>
       </div>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label={dt("اختيار لغة المحتوى")}>
-        {SUPPORTED_LOCALES.map(code => {
-          const state = localeStatus(document.fields, source, values[code] || {}, code);
-          return <button key={code} type="button" aria-pressed={locale === code} aria-label={LOCALES[code].nativeLabel} title={`${LOCALES[code].nativeLabel} · ${state.complete ? dt("مكتمل") : dt("ناقص")}`} disabled={Boolean(busy)} onClick={() => { setLocale(code); setReviewed(false); }} className={`flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${locale === code ? "border-brand bg-brand text-white" : "border-slate-200 text-slate-600 hover:border-brand/40 hover:bg-slate-50"}`}><bdi>{code.toUpperCase()}</bdi><span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${locale === code ? "bg-white" : state.complete ? "bg-emerald-600" : "bg-amber-500"}`} /></button>;
-        })}
-      </div>
+      <ContentLanguagePicker value={locale as SupportedLocale} disabled={Boolean(busy)} onChange={code => { setLocale(code); setReviewed(false); }} completion={Object.fromEntries(SUPPORTED_LOCALES.map(code => [code, localeStatus(document.fields, source, values[code] || {}, code).complete]))} />
     </section>
   );
   const renderField = (field: ContentField) => (

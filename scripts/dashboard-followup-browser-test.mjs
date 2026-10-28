@@ -334,6 +334,11 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
   await page.screenshot({animations:"disabled",path:path.join(artifacts,`${locale}-${scenario}-mobile.png`),fullPage:true});await page.setViewportSize({width:1440,height:1000});checks++;
  }
  gatewayScenario="paid";
+ await page.route("**/api/global-settings",route=>route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"Unavailable"})}));
+ await open("gateways");await page.getByRole("alert").filter({hasText:ui(locale,"تعذّر تحميل إعدادات الدفع. أعد المحاولة قبل تعديل أي إعداد.")}).waitFor();
+ assert.equal(await page.getByRole("radio").count(),0,"a failed settings read must not expose an inferred gateway");checks++;
+ await page.unroute("**/api/global-settings");await page.getByRole("button",{name:ui(locale,"إعادة المحاولة"),exact:true}).click();
+ await page.getByRole("heading",{name:ui(locale,"التكرار"),exact:true}).waitFor();checks++;
  await open("gateways");await page.getByRole("heading",{name:ui(locale,"التكرار"),exact:true}).waitFor();await page.getByText(ui(locale,"يومي")+" / "+ui(locale,"كل جمعة"),{exact:true}).waitFor();assert.equal(await page.getByText(ui(locale,"شهري"),{exact:true}).count(),1);assert.equal(await page.getByText(ui(locale,"التبرعات الشهرية تمرّ دائمًا عبر Stripe لأنها تحتاج إلى تحصيل متكرر لا توفّره بوابتا 3D Secure. كما يبقى Stripe هو المسار الاحتياطي عند فشل أي عملية 3D Secure."),{exact:true}).count(),0);await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);const payforHeading=await page.getByRole("heading",{name:/PayFor/}).boundingBox();const payforSwitch=await page.getByRole("switch").last().boundingBox();assert.ok(payforHeading&&payforSwitch&&(Math.min(payforHeading.x+payforHeading.width,payforSwitch.x+payforSwitch.width)<=Math.max(payforHeading.x,payforSwitch.x)||Math.min(payforHeading.y+payforHeading.height,payforSwitch.y+payforSwitch.height)<=Math.max(payforHeading.y,payforSwitch.y)),"gateway switch must not cover its heading on mobile");await page.screenshot({animations:"disabled",path:path.join(artifacts,`${locale}-recurring-readiness-mobile.png`),fullPage:true});await page.setViewportSize({width:1440,height:1000});checks++;
  for(const width of [1440,390]){
  await page.setViewportSize({width,height:900});await open("deliveryPreview");
@@ -342,6 +347,25 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByRole("button",{name:"Header navigation",exact:true}).click();assert.equal(await page.locator("#fixture-nav").textContent(),"usable");checks++;
  }
  await page.setViewportSize({width:1440,height:1000});
+ const financialPattern="**/api/communication/campaigns?includeArchived=true";
+ let releaseFinancial;const financialGate=new Promise(resolve=>{releaseFinancial=resolve});
+ await page.route(financialPattern,async route=>{await financialGate;await route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({ok:false})})});
+ await open("campaignOverview");
+ await page.getByRole("link",{name:"Fixture confirmed campaign",exact:true}).waitFor();
+ await page.getByText(ui(locale,"الحملات ظاهرة؛ جارٍ تحميل الإيرادات المؤكدة."),{exact:true}).waitFor();
+ assert.equal(await page.locator("tbody tr").first().locator("td").nth(8).textContent(),"—");
+ assert.equal(await page.locator("tbody tr").first().locator("td").nth(9).textContent(),"—");checks++;
+ releaseFinancial();await page.getByRole("alert").filter({hasText:ui(locale,"تعذّر تحميل إسناد الإيرادات؛ بيانات الحملات متاحة والمبالغ غير متاحة مؤقتًا.")}).waitFor();
+ assert.equal(await page.getByRole("link",{name:"Fixture confirmed campaign",exact:true}).isVisible(),true);checks++;
+ await page.setViewportSize({width:390,height:844});await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-campaign-financial-unavailable.png"),fullPage:true});
+ await page.unroute(financialPattern);await page.getByRole("button",{name:ui(locale,"إعادة المحاولة"),exact:true}).click();
+ await page.getByText("150.25",{exact:true}).first().waitFor();checks++;
+ const basePattern="**/api/communication/campaigns?includeArchived=true&includeOutcomes=false";
+ await page.route(basePattern,route=>route.fulfill({status:503,contentType:"text/html",body:"<html>Unavailable</html>"}));
+ await open("campaignOverview");await page.getByRole("alert").filter({hasText:ui(locale,"تعذّر تحميل الحملات. البيانات السابقة قد تكون قديمة؛ أعد المحاولة.")}).waitFor();
+ assert.equal(await page.getByText(ui(locale,"لا توجد حملات تسويقية بعد"),{exact:true}).count(),0);checks++;
+ await page.unroute(basePattern);await page.getByRole("button",{name:ui(locale,"إعادة المحاولة"),exact:true}).click();
+ await page.getByRole("link",{name:"Fixture confirmed campaign",exact:true}).waitFor();await page.setViewportSize({width:1440,height:1000});
  await open("campaignOverview");
  await page.getByRole("link",{name:"Fixture confirmed campaign",exact:true}).waitFor();
  await page.getByText(ui(locale,"إيراد تواصل غير منسوب: {0} دولار من {1} تبرع مؤكد. الروابط القديمة لا تحدد حملة واحدة؛ هذا المبلغ غير مضاف إلى صفوف الحملات.").replace("{0}","75.5").replace("{1}","3"),{exact:false}).waitFor();

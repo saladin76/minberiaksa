@@ -14,7 +14,7 @@ export default function AiConciergeOverviewPage() {
     <ConciergeShell
       title={dt("أداء مساعد العطاء")}
       icon={Sparkles}
-      description={dt("كم زائرًا استخدم المساعد، إلى أين وصلوا، وكم تبرعًا جاء بفضله  مباشرة أو لاحقًا.")}
+      description={dt("استخدام المساعد ومراحل رحلة التبرع، والتبرعات المنسوبة إليه مباشرة أو ضمن نافذة الإسناد.")}
     >
       <OverviewView />
     </ConciergeShell>

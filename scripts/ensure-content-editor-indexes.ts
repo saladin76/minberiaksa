@@ -60,6 +60,7 @@ const indexes = [
   { collection: "GoogleSearchPlan", key: { connectionId: 1, createdAt: 1 }, unique: false },
   { collection: "GoogleSearchPlan", key: { automationEnabled: 1, lastReviewAt: 1 }, unique: false },
   { collection: "AuditLog", key: { action: 1, entityType: 1, createdAt: -1 }, unique: false },
+  { collection: "Donation", key: { "attribution.utm_medium": 1, status: 1, _id: 1 }, unique: false },
 
 ];
 
