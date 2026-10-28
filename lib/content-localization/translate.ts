@@ -1,3 +1,4 @@
+import { researchedTranslationRequest } from "../ai/core/content-requests";
 import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import { openAiFailure, openAiResponseText, OpenAiResponseError } from "../ai/core/openai-response";
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
@@ -148,13 +149,9 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST", signal,
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-      body: JSON.stringify({
-        model: process.env.CONTENT_PRO_TRANSLATION_MODEL || process.env.SEO_RESEARCH_MODEL || process.env.CONTENT_LOCALIZATION_MODEL || "gpt-5.5",
-        instructions: "Translate professionally into the requested language. Use natural native phrasing and researched terminology, while preserving the source's meaning, facts, numbers, names, URLs, placeholders and currencies exactly. Never add claims from research. Return JSON only.",
-        input: userContent, text: { format: { type: "json_object" } }, max_output_tokens: 24000,
-      }),
+      body: JSON.stringify(researchedTranslationRequest(userContent)),
     });
-    if (!response.ok) throw await openAiFailure(response);
+    if (!response.ok) throw await openAiFailure(response, "TRANSLATION");
     const payload = await response.json();
     const raw = openAiResponseText(payload);
     try { return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>; }
@@ -183,7 +180,7 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
     }),
   });
 
-  if (!response.ok) throw await openAiFailure(response);
+  if (!response.ok) throw await openAiFailure(response, "TRANSLATION");
   const payload = await response.json();
   const raw = payload?.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || !raw) throw new OpenAiResponseError("AI_EMPTY_RESPONSE");

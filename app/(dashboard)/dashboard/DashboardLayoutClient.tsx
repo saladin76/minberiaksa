@@ -199,7 +199,7 @@ function DashboardContent({
       if (running || document.hidden) return;
       running = true;
       try {
-        const res = await fetch('/api/dashboard/communication/inbox?filter=unread&limit=1', { cache: 'no-store' });
+        const res = await fetch('/api/dashboard/communication/inbox/summary', { cache: 'no-store', signal: AbortSignal.timeout(20000) });
         if (!res.ok) return;
         const data = await res.json();
         const count = Number(data?.unread);

@@ -94,7 +94,7 @@ type Bucket = {
  * phoneNumberId. Uses CommunicationSender data (no fake/demo numbers).
  */
 export async function listInboxSenders(): Promise<ConversationSender[]> {
-  if (!process.env.DATABASE_URL) return [];
+  if (!process.env.DATABASE_URL) throw new Error("INBOX_SENDERS_UNAVAILABLE");
   try {
     const rows = await prisma.communicationSender.findMany({
       where: { channel: "WHATSAPP" },
@@ -102,14 +102,13 @@ export async function listInboxSenders(): Promise<ConversationSender[]> {
       orderBy: [{ isDefault: "desc" }, { name: "asc" }],
     });
     return rows.map((s) => ({ id: s.id, name: s.displayName || s.name, phone: s.displayPhoneNumber ?? null }));
-  } catch (error) {
-    console.error("listInboxSenders failed", error);
-    return [];
+  } catch {
+    throw new Error("INBOX_SENDERS_UNAVAILABLE");
   }
 }
 
-async function senderMap(): Promise<Map<string, ConversationSender>> {
-  const senders = await listInboxSenders();
+async function senderMap(known?: Promise<ConversationSender[]>): Promise<Map<string, ConversationSender>> {
+  const senders = await (known || listInboxSenders());
   return new Map(senders.map((s) => [s.id, s]));
 }
 
@@ -188,11 +187,11 @@ async function aggregateInbound(): Promise<RawGroup[]> {
             _id: { senderId: "$senderId", phone: "$recipient" },
             count: { $sum: 1 },
             lastAt: { $first: "$receivedAt" },
-            lastPayload: { $first: "$payloadSanitized" },
+            lastPayload: { $first: { text: "$payloadSanitized.text" } },
           },
         },
       ],
-      options: { allowDiskUse: true },
+      options: { allowDiskUse: true, maxTimeMS: 15000 },
     });
   return groups(result);
 }
@@ -201,6 +200,7 @@ async function aggregateOutbound(): Promise<RawGroup[]> {
   const result = await prisma.communicationDelivery.aggregateRaw({
       pipeline: [
         { $match: { channel: "WHATSAPP", recipientPhone: { $ne: null } } },
+        { $project: { _id: 0, senderId: 1, recipientPhone: 1, createdAt: 1, status: 1 } },
         {
           $group: {
             _id: { senderId: "$senderId", phone: "$recipientPhone" },
@@ -210,7 +210,7 @@ async function aggregateOutbound(): Promise<RawGroup[]> {
           },
         },
       ],
-      options: { allowDiskUse: true },
+      options: { allowDiskUse: true, maxTimeMS: 15000 },
     });
   return groups(result);
 }
@@ -221,7 +221,7 @@ async function aggregateAppEchoes(): Promise<RawGroup[]> {
       { $match: { channel: "WHATSAPP", eventType: "outbound_echo", deliveryId: null } },
       { $group: { _id: { senderId: "$senderId", phone: "$recipient" }, count: { $sum: 1 },
         lastAt: { $max: "$receivedAt" }, lastReplyAt: { $max: { $cond: [{ $in: ["$status", INBOX_ACCEPTED_STATUSES] }, "$receivedAt", null] } } } },
-    ], options: { allowDiskUse: true },
+    ], options: { allowDiskUse: true, maxTimeMS: 15000 },
   });
   return groups(result);
 }
@@ -235,9 +235,20 @@ function objectIdString(value: unknown): string | null {
   return null;
 }
 
-export async function listConversations(opts: { senderId?: string | null } = {}): Promise<ConversationSummary[]> {
-  if (!process.env.DATABASE_URL) return [];
-  const [inbound, deliveries, appEchoes] = await Promise.all([aggregateInbound(), aggregateOutbound(), aggregateAppEchoes()]);
+// A badge refresh and an inbox load can arrive together. Share only pending reads;
+// never cache read/handled markers or reuse a completed snapshot for a later event.
+let pendingGroups: Promise<[RawGroup[], RawGroup[], RawGroup[]]> | null = null;
+async function conversationGroups() {
+  if (pendingGroups) return pendingGroups;
+  const pending = Promise.all([aggregateInbound(), aggregateOutbound(), aggregateAppEchoes()]);
+  pendingGroups = pending;
+  try { return await pending; }
+  finally { if (pendingGroups === pending) pendingGroups = null; }
+}
+
+export async function listConversations(opts: { senderId?: string | null; summaryOnly?: boolean; senderRows?: Promise<ConversationSender[]> } = {}): Promise<ConversationSummary[]> {
+  if (!process.env.DATABASE_URL) throw new Error("INBOX_UNAVAILABLE");
+  const [inbound, deliveries, appEchoes] = await conversationGroups();
   const outbound = [...deliveries, ...appEchoes];
 
   const buckets = new Map<string, Bucket>();
@@ -277,9 +288,9 @@ export async function listConversations(opts: { senderId?: string | null } = {})
   }
 
   const [donorMap, handledMap, senders, readMap] = await Promise.all([
-    matchDonors([...new Set([...buckets.values()].map((b) => phoneDigits(b.phone)))]),
+    opts.summaryOnly ? Promise.resolve(new Map<string, ConversationDonor[]>()) : matchDonors([...new Set([...buckets.values()].map((b) => phoneDigits(b.phone)))]),
     loadHandledMarkers(),
-    senderMap(),
+    opts.summaryOnly ? Promise.resolve(new Map<string, ConversationSender>()) : senderMap(opts.senderRows),
     loadReadMarkers([...buckets.keys()]),
   ]);
 

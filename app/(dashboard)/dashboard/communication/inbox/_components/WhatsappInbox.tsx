@@ -162,7 +162,10 @@ export function WhatsappInbox() {
   const initialQuery = searchParams.get("q") ?? "";
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [senders, setSenders] = useState<Sender[]>([]);
-  const [needsReply, setNeedsReply] = useState(0);
+  const [needsReply, setNeedsReply] = useState<number | null>(null);
+  const [loadingSenders, setLoadingSenders] = useState(true);
+  const [sendersReady, setSendersReady] = useState(false);
+  const [senderError, setSenderError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [senderId, setSenderId] = useState<string>("");
   const [query, setQuery] = useState(initialQuery);
@@ -188,6 +191,8 @@ export function WhatsappInbox() {
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const activeRef = useRef<string | null>(null);
   const listRequest = useRef(0);
+  const listController = useRef<AbortController | null>(null);
+  const senderController = useRef<AbortController | null>(null);
   const detailRequest = useRef(0);
   const replyInFlight = useRef(false);
   const readAcknowledgements = useRef(new Map<string, string>());
@@ -208,36 +213,61 @@ export function WhatsappInbox() {
     setSmartOpen(false);
   }, []);
 
+  // Business numbers must remain available even when the archive is slow or unavailable.
+  const loadSenders = useCallback(async () => {
+    senderController.current?.abort();
+    const controller = new AbortController();
+    senderController.current = controller;
+    setLoadingSenders(true);
+    setSenderError(null);
+    try {
+      const response = await fetch("/api/dashboard/communication/inbox/senders", {
+        cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]),
+      });
+      const data = await response.json();
+      if (controller.signal.aborted) return;
+      if (!response.ok || !data.ok || !Array.isArray(data.senders)) throw new Error("INBOX_SENDERS_UNAVAILABLE");
+      const nextSenders: Sender[] = data.senders;
+      setSenders(nextSenders);
+      if (!senderSelectionReady.current) {
+        senderSelectionReady.current = true;
+        let remembered: string | null = null;
+        try { remembered = window.localStorage.getItem("communication:whatsapp:senderId"); } catch { /* Storage is optional. */ }
+        setSenderId(remembered && nextSenders.some(sender => sender.id === remembered)
+          ? remembered : nextSenders.length === 1 ? nextSenders[0].id : "");
+      }
+    } catch {
+      if (!controller.signal.aborted) setSenderError(dt("تعذّر تحميل أرقام واتساب. أعد المحاولة؛ الأرقام المحفوظة لم تُحذف."));
+    } finally {
+      if (senderController.current === controller && !controller.signal.aborted) {
+        senderController.current = null;
+        setLoadingSenders(false);
+        setSendersReady(true);
+      }
+    }
+  }, []);
+  useEffect(() => { void loadSenders(); return () => senderController.current?.abort(); }, [loadSenders]);
+
   const loadList = useCallback(async (silent = false) => {
+    if (silent && listController.current) return;
+    listController.current?.abort();
+    const controller = new AbortController();
+    listController.current = controller;
     const request = ++listRequest.current;
-    if (!silent) setLoadingList(true);
+    if (!silent) { setLoadingList(true); setNeedsReply(null); }
     setListError(null);
     try {
       const params = new URLSearchParams({ filter });
       if (senderId) params.set("senderId", senderId);
       if (query.trim()) params.set("q", query.trim());
-      const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
+      const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) });
       const data = await res.json();
       if (request !== listRequest.current) return;
       if (!res.ok || !data.ok) throw new Error(data.error === "INBOX_UNAVAILABLE" ? dt("تعذّر تحميل صندوق واتساب") : data.error ?? "load failed");
       const nextConversations = data.conversations ?? [];
-      const nextSenders = data.senders ?? [];
       setConversations(nextConversations);
-      setSenders(nextSenders);
       setNeedsReply(data.needsReply ?? 0);
       window.dispatchEvent(new CustomEvent("whatsapp-inbox-updated"));
-
-      if (!senderSelectionReady.current && nextSenders.length > 0) {
-        senderSelectionReady.current = true;
-        const remembered = typeof window !== "undefined" ? window.localStorage.getItem("communication:whatsapp:senderId") : null;
-        const preferred = remembered && nextSenders.some((sender: Sender) => sender.id === remembered)
-          ? remembered
-          : (nextSenders.length === 1 ? nextSenders[0].id : "");
-        if (preferred !== senderId) {
-          setSenderId(preferred);
-          return;
-        }
-      }
 
       if (nextConversations.length === 0) {
         selectConversation(null);
@@ -248,24 +278,28 @@ export function WhatsappInbox() {
         }
       }
     } catch (error) {
-      if (request !== listRequest.current) return;
+      if (request !== listRequest.current || controller.signal.aborted) return;
       setListError((error as Error).message || dt("تعذّر تحميل صندوق واتساب"));
     } finally {
-      if (request === listRequest.current) setLoadingList(false);
+      if (request === listRequest.current) { listController.current = null; setLoadingList(false); }
     }
   }, [filter, senderId, query, selectConversation]);
 
-  useEffect(() => { void loadList(); return () => invalidateRequest(listRequest); }, [loadList]);
+  useEffect(() => {
+    if (!sendersReady) return;
+    void loadList();
+    return () => { invalidateRequest(listRequest); listController.current?.abort(); listController.current = null; };
+  }, [loadList, sendersReady]);
 
   // Keep an operational inbox fresh without forcing the team to click «تحديث».
   // Silent polling preserves the current list on transient errors instead of
   // turning a backend/network failure into a false empty state.
   useEffect(() => {
     const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") void loadList(true);
+      if (sendersReady && document.visibilityState === "visible") void loadList(true);
     }, 30_000);
     return () => window.clearInterval(id);
-  }, [loadList]);
+  }, [loadList, sendersReady]);
 
   const loadDetail = useCallback(async (id: string, silent = false) => {
     if (activeRef.current !== id) return;
@@ -402,7 +436,7 @@ export function WhatsappInbox() {
         actions={
           <button
             type="button"
-            onClick={() => { void loadList(); if (activeRef.current) void loadDetail(activeRef.current, true); }}
+            onClick={() => { void loadSenders(); void loadList(); if (activeRef.current) void loadDetail(activeRef.current, true); }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <RefreshCw className={cn("w-4 h-4", loadingList && "animate-spin")} />
@@ -418,18 +452,20 @@ export function WhatsappInbox() {
           options={FILTERS}
         />
         <select
+          aria-label={dt("رقم واتساب")}
+          disabled={loadingSenders && senders.length === 0}
           value={senderId}
           onChange={(e) => {
             const value = e.target.value;
             setSenderId(value);
-            if (typeof window !== "undefined") {
+            try {
               if (value) window.localStorage.setItem("communication:whatsapp:senderId", value);
               else window.localStorage.removeItem("communication:whatsapp:senderId");
-            }
+            } catch { /* Storage is optional. */ }
           }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700"
         >
-          {senderOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {loadingSenders && senders.length === 0 ? <option value="">{dt("جارٍ تحميل أرقام واتساب…")}</option> : senderOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <div className="relative">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -442,11 +478,14 @@ export function WhatsappInbox() {
         </div>
         <span className={cn(
           "rounded-full border px-2.5 py-1 text-xs font-medium",
-          needsReply > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700",
+          needsReply === null || listError ? "border-slate-200 bg-slate-50 text-slate-600" : needsReply > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700",
         )}>
-          {needsReply > 0 ? dt("{0} محادثة بانتظار ردّ", [needsReply]) : dt("لا شيء بانتظار ردّ")}
+          {listError ? dt("تعذّر تحديث العدد") : needsReply === null ? dt("جارٍ تحميل العدد…") : needsReply > 0 ? dt("{0} محادثة بانتظار ردّ", [needsReply]) : dt("لا شيء بانتظار ردّ")}
         </span>
         </div>
+        {senderError && <div role="alert" className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+          <span>{senderError}</span><button type="button" onClick={() => void loadSenders()} className="font-semibold underline">{dt("إعادة المحاولة")}</button>
+        </div>}
       </div>
 
       <div className="grid min-h-[68vh] gap-4 xl:grid-cols-[minmax(20rem,23rem)_minmax(0,1fr)]">

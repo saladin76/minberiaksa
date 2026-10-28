@@ -9,6 +9,12 @@ export function providerErrorMessage(code?: string): string {
     case "AI_MODEL_UNAVAILABLE": return dt("النموذج المحدد غير متاح لهذا المشروع. راجع إعداد النموذج على الخادم.");
     case "AI_QUOTA_EXCEEDED": return dt("رصيد خدمة الذكاء الاصطناعي أو حد الإنفاق غير كافٍ. راجع فوترة المزوّد.");
     case "AI_RATE_LIMITED": return dt("بلغت خدمة الذكاء الاصطناعي حد الطلبات المؤقت. أعد المحاولة لاحقًا.");
+    case "AI_INVALID_MODEL": return dt("رفض المزوّد النموذج المستخدم لهذه المهمة. راجع إعداد نموذج البحث والترجمة على الخادم.");
+    case "AI_INVALID_SEARCH_TOOL": return dt("رفض المزوّد إعداد أداة البحث لهذه المهمة. راجع دعم نموذج البحث وإعداداته.");
+    case "AI_INVALID_OUTPUT_FORMAT": return dt("رفض المزوّد تنسيق إخراج هذه المهمة. راجع توافق النموذج مع صيغة JSON.");
+    case "AI_INVALID_TEMPERATURE": return dt("رفض المزوّد إعداد التنوع لهذه المهمة. راجع توافق إعداد النموذج.");
+    case "AI_STAGE_WEB_RESEARCH": return dt("مرحلة الفشل: بحث الويب.");
+    case "AI_STAGE_TRANSLATION": return dt("مرحلة الفشل: الترجمة أو التدقيق.");
     case "AI_INVALID_REQUEST": return dt("رفض المزوّد صيغة الطلب أو إحدى أدواته. راجع توافق النموذج وإعدادات الخدمة.");
     case "AI_OUTPUT_INCOMPLETE": return dt("لم يكتمل رد التحليل. لم تُعتمد نتيجة جزئية؛ أعد المحاولة.");
     case "AI_OUTPUT_INVALID": return dt("أعاد المزوّد نتيجة غير قابلة للمراجعة. لم يتغير المحتوى؛ جرّب عينة واحدة بعد المراجعة.");

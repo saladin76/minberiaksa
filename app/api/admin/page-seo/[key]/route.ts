@@ -1,3 +1,4 @@
+import { queueSuggestion } from "@/lib/content-editor/suggestion-tasks";
 import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -14,11 +15,11 @@ import { isValidLocale } from "@/lib/locales";
 import { revalidatePath } from "next/cache";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 type Context = { params: Promise<{ key: string }> };
 async function access() { const session = await getServerSession(authOptions); return { session, denied: requireAdminOrDashboardPermission(session, "siteContent") }; }
 function failure(error: unknown) {
-  const ai = suggestionFailure(error); if (ai) return NextResponse.json({ error: ai.error, reason: ai.reason, stopBatch: ai.stopBatch }, { status: ai.status });
+  const ai = suggestionFailure(error); if (ai) return NextResponse.json({ error: ai.error, reason: ai.reason, details: ai.details, stopBatch: ai.stopBatch }, { status: ai.status });
   if (error instanceof ContentError || error instanceof SeoResearchError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error("managed-page-seo operation failed");
   return NextResponse.json({ error: "تعذر تأكيد العملية. احتفظ بالمسودة وأعد المحاولة." }, { status: 500 });
@@ -39,9 +40,13 @@ export async function PUT(request: NextRequest, ctx: Context) {
     return NextResponse.json(saved);
   } catch (error) { return failure(error); }
 }
-export async function POST(request: NextRequest, ctx: Context) {
+export async function POST(request: NextRequest, ctx: Context): Promise<Response> {
   const { session, denied } = await access(); if (denied) return denied;
   try {
+    if (request.headers?.get("Prefer") === "respond-async") {
+      if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+      return await queueSuggestion(request, session.user.id, "siteContent", detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
+    }
     const { key } = await ctx.params, body = await request.json();
     if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");
     const document = await readPageSeoDocument(key);

@@ -1,5 +1,5 @@
 "use client";
-import { runSuggestionBatch, readSuggestionJson } from "@/lib/content-editor/suggestion-batch";
+import { runSuggestionBatch, readSuggestionJson, requestSuggestion } from "@/lib/content-editor/suggestion-batch";
 import type { Ga4Period } from "@/lib/marketing/ga4-period";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
@@ -306,11 +306,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
     try {
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
-          const response = await api<Proposal>(url + "/suggest", { method: "POST", signal: controller.signal,
-            body: JSON.stringify({ action, locale: target, locales: [target], keys: selected, revision,
+          const response = await requestSuggestion<Proposal>(url + "/suggest", { action, locale: target, locales: [target], keys: selected, revision,
               ...(action === "translate" ? { sourceDraft: drafts.ar || {} } : { draft: drafts[target] || {} }),
-              ...(action === "seo" && analyticsPeriod ? { analyticsPeriod } : {}) }),
-          });
+              ...(action === "seo" && analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.id !== id || response.kind !== kind || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return response;
         },
@@ -322,7 +320,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       if (snapshot !== JSON.stringify(valuesRef.current)) throw new Error(dt("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا."));
       combined.skipped = result.skipped;
       if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
-      if (result.sharedFailure && result.skipped.length) setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]), "error");
+      if (result.sharedFailure && result.skipped.length) setMessage((Object.values(combined.errors)[0] || "") + " " + dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]), "error");
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) { if (generationAbort.current === controller) setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر إعداد الاقتراح"), "error"); }
     finally { if (generationAbort.current === controller) { generationAbort.current = null; setGenerationProgress(null); setBusy(""); } }

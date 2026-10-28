@@ -60,6 +60,11 @@ const indexes = [
   { collection: "GoogleSearchPlan", key: { connectionId: 1, createdAt: 1 }, unique: false },
   { collection: "GoogleSearchPlan", key: { automationEnabled: 1, lastReviewAt: 1 }, unique: false },
   { collection: "AuditLog", key: { action: 1, entityType: 1, createdAt: -1 }, unique: false },
+  { collection: "AuditLog", key: { action: 1, entityType: 1, entityId: 1 }, unique: false },
+  { collection: "AiSuggestionTask", key: { ownerId: 1, status: 1, deadlineAt: 1 }, unique: false },
+  { collection: "AiSuggestionTask", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "CommunicationProviderEvent", key: { channel: 1, eventType: 1, receivedAt: -1 }, unique: false },
+  { collection: "CommunicationDelivery", key: { channel: 1, senderId: 1, recipientPhone: 1, createdAt: -1, status: 1 }, unique: false },
   { collection: "Donation", key: { "attribution.utm_medium": 1, status: 1, _id: 1 }, unique: false },
 
 ];
@@ -96,7 +101,7 @@ async function run() {
       const existing = result
         ? (
             result.cursor as {
-              firstBatch?: Array<{ key?: unknown; unique?: boolean }>;
+              firstBatch?: Array<{ key?: unknown; unique?: boolean; expireAfterSeconds?: number }>;
             }
           )?.firstBatch || []
         : [];
@@ -105,6 +110,9 @@ async function run() {
       );
 
       if (matching) {
+        if ("expireAfterSeconds" in spec && matching.expireAfterSeconds !== spec.expireAfterSeconds) {
+          throw new Error(`TTL index differs for ${spec.collection}; inspect it before changing retention`);
+        }
         if (spec.unique && !matching.unique) {
           const message = `Non-unique index already exists for ${spec.collection}; inspect it before creating a unique index`;
           if (checkOnly) {
@@ -131,6 +139,7 @@ async function run() {
             key: spec.key,
             name: "content_editor_" + Object.keys(spec.key).join("_"),
             ...(spec.unique ? { unique: true } : {}),
+            ...("expireAfterSeconds" in spec ? { expireAfterSeconds: spec.expireAfterSeconds } : {}),
           },
         ],
       });
