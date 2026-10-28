@@ -13,10 +13,18 @@ import { faqTranslationFields, translatedFaq } from "./faq";
 import { translateResearchedItem } from "../content-localization/research-translate";
 import { generateResearchedArticle } from "./seo-research";
 import { editorialWeekKey, isDuplicateEditorialTopic, type EditorialJobKind } from "./editorial-contracts";
-import { selectEditorialRetries } from "./editorial-failure";
+import { editorialFailure, selectEditorialRetries, summarizeEditorialFailures, type EditorialFailureKind } from "./editorial-failure";
+import { suggestionFailure } from "../ai/core/suggestion-failure";
 
 const json = (value: unknown) => value as Prisma.InputJsonValue;
 const EDITABLE = new Set(["title", "description", "content", "metaTitle", "metaDescription", "seoKeyword", "ogTitle", "ogDescription", "imageAlt", "faqContent"]);
+/** Bounded, read-only diagnostics. Historical failure reasons do not prove current readiness. */
+export async function editorialFailureReview(reason?: EditorialFailureKind) {
+  const jobs = await prisma.editorialJob.findMany({ where: { status: "FAILED" }, orderBy: [{ updatedAt: "asc" }, { id: "asc" }], take: 1001, select: { id: true, error: true, attempts: true, updatedAt: true } });
+  const sampled = jobs.slice(0, 1000);
+  return { summary: { ...summarizeEditorialFailures(sampled), truncated: jobs.length > 1000 },
+    matchingIds: reason ? sampled.filter(job => editorialFailure(job.error).kind === reason).map(job => job.id) : undefined };
+}
 export async function editorialSettings() {
   const settings = await prisma.editorialSettings.findUnique({ where: { id: "plan" } });
   return { weeklyEnabled: settings?.weeklyEnabled ?? true, market: settings?.market || "", configured: Boolean((await getOpenAiRuntime("content")).apiKey) };
@@ -127,7 +135,9 @@ export async function runEditorialJobs(signal?: AbortSignal, maximum = 2) {
       return { id: candidate.id, status };
     } catch (error) {
       const status = error instanceof ContentError && error.status === 409 ? "STALE" : "FAILED";
-      await prisma.editorialJob.updateMany({ where: { id: candidate.id, leaseToken, status: "RUNNING" }, data: { status, error: (error instanceof Error ? error.message : "تعذر تجهيز المسودة").slice(0, 1000), leaseToken: null, leaseUntil: null, version: randomUUID() } });
+      const failure = suggestionFailure(error);
+      const message = failure ? failure.reason + ": " + failure.error : error instanceof ContentError ? error.message : "تعذر تجهيز المسودة. راجع المهمة قبل إعادة المحاولة.";
+      await prisma.editorialJob.updateMany({ where: { id: candidate.id, leaseToken, status: "RUNNING" }, data: { status, error: message.slice(0, 1000), leaseToken: null, leaseUntil: null, version: randomUUID() } });
       return { id: candidate.id, status };
     }
   }));

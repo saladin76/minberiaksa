@@ -7,10 +7,11 @@ import { randomUUID } from "node:crypto";
 import * as contracts from "../../lib/content-editor/contracts";
 import * as faq from "../../lib/content-editor/faq";
 import * as editorial from "../../lib/content-editor/editorial-contracts";
+import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
 import * as failure from "../../lib/content-editor/editorial-failure";
 import { ContentError, fingerprint } from "../../lib/content-editor/service";
 import type { ContentRecord } from "../../lib/content-editor/contracts";
-type JobApi = { runEditorialJobs: () => Promise<unknown[]>; retryTransientEditorialJobs: () => Promise<{count:number;blocked:number;remaining:number}>; applyEditorialJob: (id: string, version: string, input: unknown) => Promise<{ contentId: string }> };
+type JobApi = { editorialFailureReview: (reason?: failure.EditorialFailureKind) => Promise<{summary:{scanned:number;eligible:number;blocked:number;truncated:boolean};matchingIds?:string[]}>; runEditorialJobs: () => Promise<unknown[]>; retryTransientEditorialJobs: () => Promise<{count:number;blocked:number;remaining:number}>; applyEditorialJob: (id: string, version: string, input: unknown) => Promise<{ contentId: string }> };
 const sourceId = "111111111111111111111111", jobId = "222222222222222222222222";
 function fixture(options: { locked?: boolean; configured?: boolean; kind?: string } = {}) {
   let row: ContentRecord = { id: sourceId, title: "عنوان المقال", description: "وصف", content: "نص عربي مكتمل", translations: [{ locale: "en", title: "Title", description: "Description", content: "" }] };
@@ -50,6 +51,7 @@ function fixture(options: { locked?: boolean; configured?: boolean; kind?: strin
     } },
     "../../i18n/locale-messages": { messagesFor: () => ({ about: {} }) },
     "../locales": { SUPPORTED_LOCALES: ["ar", "en", "tr"] },
+    "../ai/core/suggestion-failure": { suggestionFailure },
     "./contracts": contracts, "./faq": faq, "./editorial-contracts": editorial, "./editorial-failure": failure,
     "./service": { ContentError, fingerprint, readContent: async () => structuredClone(row),
       saveWorkspace: async (_tx: unknown, input: { locale: string; changes: ContentRecord }) => { writes++; const target = (row.translations as ContentRecord[]).find((target) => target.locale === input.locale); if (target) Object.assign(target, input.changes); return {}; } },
@@ -115,3 +117,12 @@ test("an active runner lease or missing provider configuration leaves work queue
  assert.equal(f.job().status,"QUEUED");assert.equal((await f.api.retryTransientEditorialJobs()).count,0);assert.equal(f.stats().providerCalls,0);assert.equal(f.stats().writes,0);
  const exhausted=fixture();exhausted.failJob("AI_TIMEOUT",3);assert.equal((await exhausted.api.retryTransientEditorialJobs()).count,0);
  });
+
+
+test("failure review is read-only and selects ids only for the requested reason", async () => {
+  const f = fixture(); f.failJob("AI_ACCESS_DENIED (403)");
+  const all = await f.api.editorialFailureReview(); assert.equal(all.summary.scanned,1); assert.equal(all.summary.blocked,1); assert.equal(all.summary.eligible,0); assert.equal(all.summary.truncated,false); assert.equal(all.matchingIds,undefined);
+  assert.deepEqual((await f.api.editorialFailureReview("access")).matchingIds,[jobId]);
+  assert.deepEqual((await f.api.editorialFailureReview("temporary")).matchingIds,[]);
+  assert.equal(f.stats().providerCalls,0); assert.equal(f.stats().writes,0); assert.equal(f.job().status,"FAILED");
+});

@@ -1,3 +1,4 @@
+import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
 import { loadGa4DashboardReport } from "@/lib/marketing/ga4-server";
 import { ga4ContentPagePath, ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/content-editor/contracts";
 import { translateItem } from "@/lib/content-localization/translate";
 import { contentStore } from "@/lib/content-editor/store";
-import { documentFor, fingerprint, readContent } from "@/lib/content-editor/service";
+import { ContentError, documentFor, fingerprint, readContent } from "@/lib/content-editor/service";
 import { translateResearchedItem } from "@/lib/content-localization/research-translate";
 import { isValidLocale } from "@/lib/locales";
 export const maxDuration = 300;
@@ -44,12 +45,17 @@ export async function POST(
         { error: "تغير المحتوى. أعد تحميله قبل طلب اقتراح جديد." },
         { status: 409 },
       );
-    const fields = fieldsFor(kind, row),
-      source = valuesFor(kind, row, "ar");
+    const fields = fieldsFor(kind, row);
+    const draftValues = (value: unknown, locale: string) => {
+      if (value === undefined) return valuesFor(kind, row, locale);
+      try { return { ...valuesFor(kind, row, locale), ...validateChanges(fields, value) }; }
+      catch { throw new ContentError("حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
+    };
+    const source = body.action === "translate" ? draftValues(body.sourceDraft, "ar") : valuesFor(kind, row, "ar");
     if (body.action === "proofread") {
       if (!isValidLocale(body.locale))
         return NextResponse.json({ error: "اختر لغة صالحة للتدقيق" }, { status: 400 });
-      const draft = body.draft === undefined ? valuesFor(kind, row, body.locale) : validateChanges(fields, body.draft);
+      const draft = draftValues(body.draft, body.locale);
       const selected = fields.filter(field => field.group === "content" && !field.locked && hasText(draft[field.key]) && (!Array.isArray(body.keys) || body.keys.includes(field.key)));
       if (!selected.length) return NextResponse.json({ error: "لا يوجد نص قابل للتدقيق في الحقول المحددة" }, { status: 400 });
       const result = await translateItem({
@@ -148,7 +154,7 @@ export async function POST(
     }
     if (!["seo", "faq"].includes(body.action) || !isValidLocale(body.locale))
       return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
-    const values = valuesFor(kind, row, body.locale);
+    const values = draftValues(body.draft, body.locale);
     const context = fields.filter((field) => field.group === "content" && hasText(values[field.key]));
     if (!context.length)
       return NextResponse.json({ error: "احفظ محتوى هذه اللغة أولًا" }, { status: 400 });
@@ -191,7 +197,10 @@ export async function POST(
       errors: {},
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("content-editor suggestions", error);
+    const failure = suggestionFailure(error);
+    if (failure) return NextResponse.json({ error: failure.error, reason: failure.reason, stopBatch: failure.stopBatch }, { status: failure.status });
+    if (error instanceof ContentError) return NextResponse.json({ error: error.message }, { status: error.status });
+    console.error("content-editor suggestions failed");
     return NextResponse.json(
       { error: error instanceof SeoResearchError ? error.message : "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ." },
       { status: error instanceof SeoResearchError ? error.status : 502 },

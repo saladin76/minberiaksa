@@ -124,7 +124,7 @@ const server = createServer(async (req, res) => {
   } else if (req.url?.startsWith("/api/admin/page-seo/")) {
     res.setHeader("Content-Type","application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
-      if (req.method === "POST") res.end(JSON.stringify({values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}}));
+      if (req.method === "POST") res.end(JSON.stringify({key:seoFixture.key,locale:JSON.parse(body).locale,revision:seoFixture.revision,values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}}));
       else res.end(JSON.stringify(seoFixture));
     });
   } else if (req.url?.startsWith("/api/admin/editorial-jobs/articles")) {
@@ -340,6 +340,13 @@ try {
     animations: "disabled",
   });
 
+  let failedSuggestions=0;const savesBeforeFailedBatch=saves;
+  await page.route("**/api/admin/content-editor/*/*/suggest",route=>{failedSuggestions++;return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"راجع الرصيد وحد الإنفاق قبل إعادة المحاولة.",reason:"AI_QUOTA_EXCEEDED",stopBatch:true})})});
+  await page.getByLabel("اللغات المستهدفة",{exact:true}).selectOption("all");await page.getByRole("button",{name:"ترجمة كل اللغات",exact:true}).click();await page.getByRole("dialog").waitFor();assert.equal(failedSuggestions,0);await page.getByRole("dialog").getByRole("button",{name:"بدء إعداد الاقتراحات",exact:true}).click();
+  await page.getByRole("heading",{name:"لم تتوفر اقتراحات للمراجعة",exact:true}).waitFor();assert.equal(failedSuggestions,1);assert.equal(saves,savesBeforeFailedBatch);assert.equal(await title.inputValue(),"Unsaved edit");
+  assert.equal(await page.getByRole("button",{name:"تطبيق جميع الاقتراحات على المسودة",exact:true}).isDisabled(),true);
+  await page.getByRole("link",{name:"مراجعة اتصال الذكاء الاصطناعي والنموذج",exact:true}).waitFor();await page.screenshot({path:path.join(temp,"ar-translation-quota-stopped.png"),fullPage:true,animations:"disabled"});await page.unroute("**/api/admin/content-editor/*/*/suggest");
+
   // Mount every supported editor and its actual section controls without production data.
   for (const locale of ["ar", "en", "tr"]) {
     await page.context().addCookies([{name:"dash-locale", value:locale, url:origin}]);
@@ -403,6 +410,9 @@ try {
   await richPage.getByLabel("المهمة",{exact:true}).selectOption("seo");
   assert.equal(await richPage.getByRole("button", {name:"إعداد الاقتراحات",exact:true}).isDisabled(), false, "mounting the editor must not create a false unsaved draft or disable SEO");
   assert.equal(documents.get("blog").values.ar.content, initialRichText, "mounting must not change the stored content");
+  assert.equal(await richPage.getByRole("button",{name:"حفظ التغييرات",exact:true}).isDisabled(),true,"a clean existing document cannot be saved again");
+  await richPage.getByText(/^لغات أخرى/).click();await richPage.getByLabel("البحث عن لغة",{exact:true}).fill("no-such-language-xyz");await richPage.getByRole("status").filter({hasText:"لا توجد لغة مطابقة. جرّب اسم اللغة أو رمزها."}).waitFor();await richPage.getByLabel("البحث عن لغة",{exact:true}).fill("");await richPage.getByText(/^لغات أخرى/).click();
+
   await writing.fill("فقرة أولى للمراجعة");
   await writing.press("End"); await writing.press("Enter"); await writing.pressSequentially("عنوان فرعي واضح");
   await writingTools.getByRole("button", {name:"عنوان فرعي H2",exact:true}).click();

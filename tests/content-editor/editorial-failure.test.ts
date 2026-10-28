@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { editorialFailure, selectEditorialRetries } from "../../lib/content-editor/editorial-failure";
+import { editorialFailure, selectEditorialRetries, summarizeEditorialFailures } from "../../lib/content-editor/editorial-failure";
 
 test("only known temporary errors are eligible for a bounded batch retry", () => {
   const jobs = Array.from({length:25},(_,id)=>({id,error:"AI_RATE_LIMITED (429)",attempts:1,updatedAt:"2026-10-01T00:00:00Z"}));
@@ -25,3 +25,20 @@ test("saved errors describe their own category without claiming that the current
  const missing={error:ready.error,attempts:1};
  assert.deepEqual(selectEditorialRetries([ready,fresh,missing],now).selected,[ready]);
  });
+
+
+test("failure diagnostics partition eligible, cooling down and blocked jobs without mutating them", () => {
+  const now = new Date("2026-10-28T00:00:00Z");
+  const jobs = [
+    {error:"AI_NOT_CONFIGURED (503)",attempts:1,updatedAt:"2026-10-01T00:00:00Z"},
+    {error:"AI_QUOTA_EXCEEDED (429)",attempts:1,updatedAt:"2026-10-01T00:00:00Z"},
+    {error:"AI_RATE_LIMITED",attempts:1,updatedAt:"2026-10-27T23:40:00Z"},
+    {error:"AI_TIMEOUT",attempts:1,updatedAt:"2026-10-27T23:59:00Z"},
+    {error:"AI_TIMEOUT",attempts:3,updatedAt:"2026-10-01T00:00:00Z"},
+  ];
+  const before = structuredClone(jobs), summary = summarizeEditorialFailures(jobs, now);
+  assert.equal(summary.scanned,5); assert.equal(summary.eligible,1); assert.equal(summary.deferred,1); assert.equal(summary.blocked,3);
+  assert.equal(summary.byReason.find(row=>row.kind==="configuration")?.count,1);
+  assert.equal(summary.byReason.reduce((total,row)=>total+row.count,0),jobs.length);
+  assert.equal(summary.checkedAt,now.toISOString()); assert.deepEqual(jobs,before);
+});
