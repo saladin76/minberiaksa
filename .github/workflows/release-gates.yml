@@ -126,6 +126,9 @@ jobs:
       - name: Inbox media playback and download
         if: ${{ !cancelled() }}
         run: node --import tsx scripts/inbox-media-browser-test.mjs
+      - name: Inbox microphone with production permission headers
+        if: ${{ !cancelled() }}
+        run: node --import tsx scripts/inbox-permissions-browser-test.mjs
       - name: Public programme and course playback
         if: ${{ !cancelled() }}
         run: node --import tsx scripts/public-media-browser-test.mjs

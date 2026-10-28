@@ -195,6 +195,12 @@ const nextConfig: NextConfig = {
           ...SECURITY_HEADERS,
         ],
       },
+      // Voice notes need browser microphone permission on the protected inbox page.
+      // The general policy still blocks capture elsewhere and in third-party frames.
+      {
+        source: "/dashboard/communication/inbox/:path*",
+        headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), browsing-topics=()" }],
+      },
       /* `/public` files are served with `max-age=0` by default, so every visit
          re-downloaded the logo, the pattern tile and every font. Fonts and the
          hero stills are named per version and never change in place; the other
