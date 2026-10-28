@@ -322,7 +322,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       if (snapshot !== JSON.stringify(valuesRef.current)) throw new Error(dt("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا."));
       combined.skipped = result.skipped;
       if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
-      if (result.sharedFailure) setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]), "error");
+      if (result.sharedFailure && result.skipped.length) setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]), "error");
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) { if (generationAbort.current === controller) setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر إعداد الاقتراح"), "error"); }
     finally { if (generationAbort.current === controller) { generationAbort.current = null; setGenerationProgress(null); setBusy(""); } }

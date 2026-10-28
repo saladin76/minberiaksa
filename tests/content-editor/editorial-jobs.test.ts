@@ -58,7 +58,7 @@ function fixture(options: { locked?: boolean; configured?: boolean; kind?: strin
     "./store": { contentStore: store },
     "./create": { createWorkspace: async (_tx: unknown, input: { settings: ContentRecord; locale: string }) => { assert.equal(input.settings.published, false); assert.equal(input.locale, "ar"); creations++; return { id: sourceId }; } },
     "../content-localization/research-translate": { translateResearchedItem: async () => { providerCalls++; return { translation: { fields: {}, richFields: { content: "Translated body" }, warnings: [] }, research: { sources: [{ url: "https://example.org/source" }] } }; } },
-    "./seo-research": { generateResearchedArticle: async () => { providerCalls++; return { values: { title: "موضوع جديد", content: "محتوى المقال", description: "ملخص" }, notes: [], research: { sources: [] } }; } },
+    "./seo-research": { SeoResearchError: class SeoResearchError extends Error {}, generateResearchedArticle: async () => { providerCalls++; return { values: { title: "موضوع جديد", content: "محتوى المقال", description: "ملخص" }, notes: [], research: { sources: [] } }; } },
   };
   const source = readFileSync("lib/content-editor/editorial-jobs.ts", "utf8");
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;

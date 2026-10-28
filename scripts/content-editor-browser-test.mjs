@@ -288,7 +288,7 @@ try {
   await title.fill("Edited while generating");
   release();
   await page
-    .getByRole("status")
+    .locator('[role="status"], [role="alert"]')
     .filter({ hasText: /تغير النص أثناء الطلب|أُوقف الطلب/ })
     .waitFor();
   assert.equal(await title.inputValue(), "Edited while generating");

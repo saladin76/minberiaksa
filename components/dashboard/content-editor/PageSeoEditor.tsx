@@ -80,7 +80,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       });
       if (generation.current !== controller) return;
       setSkipped(result.skipped);
-      if (result.sharedFailure) { setMessageTone("error"); setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])); }
+      if (result.sharedFailure && result.skipped.length) { setMessageTone("error"); setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])); }
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } finally { if (generation.current === controller) { generation.current = null; setBusy(""); } }
   };

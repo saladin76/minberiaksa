@@ -11,7 +11,7 @@ import { contentStore } from "./store";
 import { createWorkspace } from "./create";
 import { faqTranslationFields, translatedFaq } from "./faq";
 import { translateResearchedItem } from "../content-localization/research-translate";
-import { generateResearchedArticle } from "./seo-research";
+import { generateResearchedArticle, SeoResearchError } from "./seo-research";
 import { editorialWeekKey, isDuplicateEditorialTopic, type EditorialJobKind } from "./editorial-contracts";
 import { editorialFailure, selectEditorialRetries, summarizeEditorialFailures, type EditorialFailureKind } from "./editorial-failure";
 import { suggestionFailure } from "../ai/core/suggestion-failure";
@@ -136,7 +136,7 @@ export async function runEditorialJobs(signal?: AbortSignal, maximum = 2) {
     } catch (error) {
       const status = error instanceof ContentError && error.status === 409 ? "STALE" : "FAILED";
       const failure = suggestionFailure(error);
-      const message = failure ? failure.reason + ": " + failure.error : error instanceof ContentError ? error.message : "تعذر تجهيز المسودة. راجع المهمة قبل إعادة المحاولة.";
+      const message = failure ? failure.reason + ": " + failure.error : (error instanceof ContentError || error instanceof SeoResearchError) ? error.message : "تعذر تجهيز المسودة. راجع المهمة قبل إعادة المحاولة.";
       await prisma.editorialJob.updateMany({ where: { id: candidate.id, leaseToken, status: "RUNNING" }, data: { status, error: message.slice(0, 1000), leaseToken: null, leaseUntil: null, version: randomUUID() } });
       return { id: candidate.id, status };
     }

@@ -143,8 +143,8 @@ export async function generateResearchedSeo(input: {
   market?: string;
   analyticsEvidence?: unknown;
 }, signal?: AbortSignal) {
-  const apiKey = (await getOpenAiRuntime("content")).apiKey;
-  if (!apiKey) throw new SeoResearchError("خدمة بحث SEO غير مهيأة على الخادم", 503, "AI_NOT_CONFIGURED");
+  const runtime = await getOpenAiRuntime("content"), apiKey = runtime.apiKey;
+  if (!apiKey) throw new SeoResearchError("خدمة بحث SEO غير مهيأة على الخادم", 503, runtime.error || "AI_NOT_CONFIGURED");
   const type = input.type;
     const title = cleanString(input.title, 220);
     const description = cleanString(input.description, 3500);
@@ -226,8 +226,8 @@ export async function generateResearchedSeo(input: {
 export async function generateResearchedArticle(input: {
   existingTitles: string[]; sourceContext: string; improvement?: { title: string; content: string }; market?: string;
 }, signal?: AbortSignal) {
-  const apiKey = (await getOpenAiRuntime("content")).apiKey;
-  if (!apiKey) throw new SeoResearchError("خدمة بحث المحتوى غير مهيأة على الخادم", 503, "AI_NOT_CONFIGURED");
+  const runtime = await getOpenAiRuntime("content"), apiKey = runtime.apiKey;
+  if (!apiKey) throw new SeoResearchError("خدمة بحث المحتوى غير مهيأة على الخادم", 503, runtime.error || "AI_NOT_CONFIGURED");
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000),
