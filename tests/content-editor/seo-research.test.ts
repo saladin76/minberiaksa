@@ -18,6 +18,7 @@ function service(payload: unknown, capture: unknown[] = []) {
       return { ok: true, json: async () => payload };
     },
     require: (name: string) => {
+      if (name === "../ai/core/connection-settings") return { getOpenAiRuntime: async () => ({ apiKey: "test-key" }) };
       if (name === "../ai/core/openai-response") return { openAiFailure };
       if (name === "../ai/core/provider-error-message") return { providerErrorMessage };
       if (name === "server-only") return {};

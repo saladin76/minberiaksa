@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
 
-/** No database, donor data, settings changes or messages. Generation is explicit opt-in. */
+/** Reads the shared connection in CLI mode; no donor data, settings writes or messages. Generation is explicit opt-in. */
 export async function auditAiRuntime(env, { checkGeneration = false, checkResearch = false, request = fetch } = {}) {
   const key = env.OPENAI_API_KEY?.trim();
   const externalCallsEnabled = env.AI_CORE_ENABLE_EXTERNAL_CALLS === "true";
@@ -55,6 +55,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const nextEnv = await import("@next/env");
   const { loadEnvConfig } = nextEnv.default ?? nextEnv;
   loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
-  const report = await auditAiRuntime(process.env, { checkGeneration: process.argv.includes("--check-generation"), checkResearch: process.argv.includes("--check-research") });
-  console.log(JSON.stringify(report, null, 2));
+  const { require: tsxRequire } = await import("tsx/cjs/api");
+  const { AiConnectionConfig } = tsxRequire("../lib/ai/core/connection-config.ts", import.meta.url);
+  const { createAiConnectionStore } = tsxRequire("../lib/ai/core/connection-store-core.ts", import.meta.url);
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient({ log: [] });
+  try {
+  const connection = new AiConnectionConfig(process.env.DATABASE_URL ? createAiConnectionStore(command => prisma.$runCommandRaw(command)) : { read: async () => null, replace: async () => false });
+  const [core, content] = await Promise.all([connection.runtime(), connection.runtime("content")]);
+  const effectiveEnv = { ...process.env, OPENAI_API_KEY: content.apiKey || "", AI_CORE_ENABLE_EXTERNAL_CALLS: String(core.enabled), AI_CORE_OPENAI_MODEL: core.model, AI_CORE_OPENAI_BASE_URL: core.baseUrl };
+  const report = await auditAiRuntime(effectiveEnv, { checkGeneration: process.argv.includes("--check-generation"), checkResearch: process.argv.includes("--check-research") });
+  console.log(JSON.stringify({ ...report, connectionSource: core.source }, null, 2));
+  } catch { console.log(JSON.stringify({ configured: false, connectionError: "AI_SETTINGS_UNAVAILABLE", generationRequests: 0, databaseWrites: 0, settingsWrites: 0 })); }
+  finally { await prisma.$disconnect(); }
 }

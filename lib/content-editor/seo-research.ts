@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import { openAiFailure } from "../ai/core/openai-response";
 import { providerErrorMessage } from "../ai/core/provider-error-message";
 import "server-only";
@@ -142,7 +143,7 @@ export async function generateResearchedSeo(input: {
   market?: string;
   analyticsEvidence?: unknown;
 }, signal?: AbortSignal) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = (await getOpenAiRuntime("content")).apiKey;
   if (!apiKey) throw new SeoResearchError("خدمة بحث SEO غير مهيأة على الخادم", 503);
   const type = input.type;
     const title = cleanString(input.title, 220);
@@ -225,7 +226,7 @@ export async function generateResearchedSeo(input: {
 export async function generateResearchedArticle(input: {
   existingTitles: string[]; sourceContext: string; improvement?: { title: string; content: string }; market?: string;
 }, signal?: AbortSignal) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = (await getOpenAiRuntime("content")).apiKey;
   if (!apiKey) throw new SeoResearchError("خدمة بحث المحتوى غير مهيأة على الخادم", 503);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",

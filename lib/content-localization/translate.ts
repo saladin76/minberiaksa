@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { missingProtectedTokens } from "./protected-tokens";
 
@@ -138,7 +139,7 @@ function injectTexts(doc: TiptapNode, texts: string[]): string {
 /* ── The model call ──────────────────────────────────────────────────────── */
 
 async function askModel(userContent: string, options: { signal?: AbortSignal; researched?: boolean; proofread?: boolean } = {}): Promise<Record<string, unknown>> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = (await getOpenAiRuntime("content")).apiKey;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
   const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000);

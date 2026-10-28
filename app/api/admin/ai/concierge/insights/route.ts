@@ -32,7 +32,7 @@ export async function GET() {
       take: 30,
       select: { id: true, createdAt: true, createdByName: true, from: true, to: true, filters: true, conversationCount: true, messageCount: true, mode: true, model: true },
     });
-    const provider = getOpenAiProviderStatus();
+    const provider = await getOpenAiProviderStatus();
     return NextResponse.json(
       { items, provider: { ready: provider.mode === "ready", model: provider.model, reason: provider.reason } },
       { headers: { "Cache-Control": "no-store" } }

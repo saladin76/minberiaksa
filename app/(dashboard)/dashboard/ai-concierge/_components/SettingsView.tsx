@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Bot, Database, Eye, Loader2, MessageSquareText, Save, Sparkles, Target, Undo2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -89,7 +90,7 @@ export function SettingsView() {
             <b>{data.provider.ready ? dt("جاهز") : data.provider.configured ? dt("معطّل") : dt("غير مهيأ")}</b>
             <br />
             {data.provider.model ? <span dir="ltr">{data.provider.model}</span> : null}
-            {!data.provider.ready && <span className="block text-[11.5px] opacity-80">{dt("يُضبط من متغيرات الخادم: OPENAI_API_KEY و AI_CORE_ENABLE_EXTERNAL_CALLS=true (و AI_CORE_OPENAI_MODEL اختياريًا).")}</span>}
+            {!data.provider.ready && <Link href="/dashboard/platform-connections/tracking#ai-connection" className="block text-[11.5px] underline">{dt("يمكن ربط المفتاح وتفعيل الاتصال من ربط المنصات ← بكسلات التتبع ← اتصال الذكاء الاصطناعي للموقع.")}</Link>}
           </div>
           <div className="divide-y divide-slate-100">
             <Toggle label={dt("استخدام الذكاء الاصطناعي في الردود")} hint={dt("عند الإيقاف يجيب المساعد بالمسار الثابت (الأزرار والقواعد) فقط  مفيد لإيقاف التكلفة أو عند مشكلة في المزوّد.")} checked={form.llmEnabled} onChange={(v) => set("llmEnabled", v)} />

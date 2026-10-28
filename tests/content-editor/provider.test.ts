@@ -1,3 +1,4 @@
+import { before, after } from "node:test";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { translateItem } from "../../lib/content-localization/translate";
@@ -152,3 +153,7 @@ test("Quran text in ornamental brackets remains immutable", async () => {
     ).length,
   );
 });
+
+const databaseUrlBeforeFixture = process.env.DATABASE_URL;
+before(() => { delete process.env.DATABASE_URL; });
+after(() => { if (databaseUrlBeforeFixture === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = databaseUrlBeforeFixture; });

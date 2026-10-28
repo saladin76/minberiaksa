@@ -54,7 +54,7 @@ test("AI audit CLI loads the actual CommonJS Next environment package", async ()
   const dir = await mkdtemp(join(tmpdir(), "ai-env-"));
   try {
     const { stdout, stderr } = await exec(process.execPath, [resolve("scripts/audit-ai-runtime.mjs")], {
-      cwd: dir, env: { ...process.env, OPENAI_API_KEY: "", AI_CORE_ENABLE_EXTERNAL_CALLS: "false" },
+      cwd: dir, env: { ...process.env, DATABASE_URL: "", OPENAI_API_KEY: "", AI_CORE_ENABLE_EXTERNAL_CALLS: "false" },
     });
     const report = JSON.parse(stdout);
     assert.equal(report.configured, false);

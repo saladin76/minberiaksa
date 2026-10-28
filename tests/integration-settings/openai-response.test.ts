@@ -1,3 +1,4 @@
+import { before, after } from "node:test";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openAiFailure, openAiResponseText } from "../../lib/ai/core/openai-response";
@@ -35,3 +36,7 @@ test("AI Core consumes an actual REST response instead of reporting a successful
     globalThis.fetch=previous.fetch;
   }
 });
+
+const databaseUrlBeforeFixture = process.env.DATABASE_URL;
+before(() => { delete process.env.DATABASE_URL; });
+after(() => { if (databaseUrlBeforeFixture === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = databaseUrlBeforeFixture; });

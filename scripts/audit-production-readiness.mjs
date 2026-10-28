@@ -139,7 +139,10 @@ async function main() {
         const { JWT } = require("google-auth-library");
         report.google = await auditGooglePermissions({ account, propertyId: tracking.gaPropertyId || process.env.GA4_PROPERTY_ID, origin: process.env.NEXT_PUBLIC_SITE_URL || "https://minberiaksa.org", propertyOverride: process.env.SEARCH_CONSOLE_SITE_URL, getToken: async scope => (await new JWT({ email: account.client_email, key: account.private_key, scopes: [scope] }).getAccessToken()).token });
       }
-      report.aiCore = await auditOpenAiAccess(process.env);
+      const { AiConnectionConfig } = await load("lib/ai/core/connection-config.ts");
+      const { createAiConnectionStore } = await load("lib/ai/core/connection-store-core.ts");
+      const runtime = await new AiConnectionConfig(createAiConnectionStore(command => prisma.$runCommandRaw(command))).runtime();
+      report.aiCore = { ...await auditOpenAiAccess({ ...process.env, OPENAI_API_KEY: runtime.apiKey || "", AI_CORE_ENABLE_EXTERNAL_CALLS: String(runtime.enabled), AI_CORE_OPENAI_MODEL: runtime.model, AI_CORE_OPENAI_BASE_URL: runtime.baseUrl }), connectionSource: runtime.source, connectionError: runtime.error };
     } else { report.providerChecks = "not_requested; use --check-providers for read-only Google/OpenAI access checks"; }
     report.notes = ["No cron or payment endpoint was invoked. Loopback probes only GET public global-settings.", "A reachable loopback alone does not prove authenticated cron success; review recent route logs.", "Missing historical plan data is reported only; subscriptions are never activated, repaired or charged.", "Only matching Search Console properties are reported. Google queries are read-only. OpenAI checks model metadata without generating content.", "Keys, tokens, card references, donor contacts and subscription identifiers are not printed."];
     console.log(JSON.stringify(report, null, 2));

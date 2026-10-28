@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
@@ -18,7 +19,7 @@ const json = (value: unknown) => value as Prisma.InputJsonValue;
 const EDITABLE = new Set(["title", "description", "content", "metaTitle", "metaDescription", "seoKeyword", "ogTitle", "ogDescription", "imageAlt", "faqContent"]);
 export async function editorialSettings() {
   const settings = await prisma.editorialSettings.findUnique({ where: { id: "plan" } });
-  return { weeklyEnabled: settings?.weeklyEnabled ?? true, market: settings?.market || "", configured: Boolean(process.env.OPENAI_API_KEY) };
+  return { weeklyEnabled: settings?.weeklyEnabled ?? true, market: settings?.market || "", configured: Boolean((await getOpenAiRuntime("content")).apiKey) };
 }
 export async function saveEditorialSettings(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new ContentError("إعدادات غير صالحة");

@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "@/lib/ai/core/connection-settings";
 import { OpenAiResponseError } from "@/lib/ai/core/openai-response";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -16,11 +17,12 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   let period;
   try { period = parseGa4Period(body ?? {}); } catch { return NextResponse.json({ error: "GA4_PERIOD_INVALID" }, { status: 400 }); }
-  const provider = getOpenAiProviderStatus();
-  if (provider.mode !== "ready" || !process.env.OPENAI_API_KEY || !provider.model) return NextResponse.json({ error: "GA4_ANALYSIS_NOT_CONFIGURED" }, { status: 503 });
+  const runtime = await getOpenAiRuntime();
+  const provider = await getOpenAiProviderStatus(runtime);
+  if (provider.mode !== "ready" || !runtime.apiKey || !provider.model) return NextResponse.json({ error: "GA4_ANALYSIS_NOT_CONFIGURED" }, { status: 503 });
   try {
     const data = await loadGa4DashboardReport(period);
-    const result = await analyzeGa4Report({ report: data.report, period, locale: isValidLocale(body?.locale) ? body.locale : "ar", model: provider.model, baseUrl: provider.baseUrl, apiKey: process.env.OPENAI_API_KEY });
+    const result = await analyzeGa4Report({ report: data.report, period, locale: isValidLocale(body?.locale) ? body.locale : "ar", model: provider.model, baseUrl: provider.baseUrl, apiKey: runtime.apiKey });
     queueAuditLog({ ...auditActorFromDashboardSession(session!), action: "GA4_ANALYSIS", entityType: "GoogleAnalytics", entityId: data.propertyId, messageAr: "تحليل بيانات زيارات الموقع", metadata: { period, evidenceCount: result.evidence.length } });
     return NextResponse.json({ ...result, period, reportUpdatedAt: data.updatedAt, generatedAt: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return NextResponse.json({ error: error instanceof Ga4ReportError ? error.message : "GA4_ANALYSIS_FAILED", reason: error instanceof OpenAiResponseError ? error.code : error instanceof Error && error.name === "TimeoutError" ? "AI_TIMEOUT" : undefined }, { status: error instanceof Ga4ReportError ? error.status : 502 }); }
