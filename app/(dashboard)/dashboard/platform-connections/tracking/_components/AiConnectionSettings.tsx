@@ -7,6 +7,7 @@ import { providerErrorMessage } from "@/lib/ai/core/provider-error-message";
 import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 function message(error: unknown) {
+  if (axios.isAxiosError(error) && ["ECONNABORTED", "ETIMEDOUT"].includes(error.code || "")) return providerErrorMessage("AI_TIMEOUT");
   const code = axios.isAxiosError(error) ? error.response?.data?.error : undefined;
   switch (code) {
     case "AI_SETTINGS_CONFLICT": return dt("تغير الاتصال في جلسة أخرى. حدّث الإعدادات قبل الحفظ.");
@@ -37,7 +38,7 @@ export default function AiConnectionSettings({ canManage, canTest }: { canManage
   const apply = (settings: AiConnectionSnapshot) => { if (typeof settings.model !== "string" || typeof settings.enabled !== "boolean" || typeof settings.keyPresent !== "boolean" || typeof settings.canSave !== "boolean" || !(settings.revision === null || typeof settings.revision === "string")) throw new Error("Invalid settings"); setSaved(settings); setModel(settings.model); setEnabled(settings.enabled); setApiKey(""); setClearKey(false); setConflict(false); };
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true); setError(""); setNotice(""); setTested(false);
-    try { const response = await axios.get("/api/admin/ai/connection", { signal, timeout: 20000 }); if (response.data?.ok !== true || !response.data.settings) throw new Error("Invalid settings"); apply(response.data.settings); }
+    try { const response = await axios.get("/api/admin/ai/connection", { signal, timeout: 27000 }); if (response.data?.ok !== true || !response.data.settings) throw new Error("Invalid settings"); apply(response.data.settings); }
     catch (error) { if (!signal?.aborted) { setSaved(null); setError(message(error)); } }
     finally { if (!signal?.aborted) setLoading(false); }
   }, []);
@@ -46,7 +47,7 @@ export default function AiConnectionSettings({ canManage, canTest }: { canManage
     if (!saved || !canManage || busy || loading || !saved.canSave) return;
     setBusy("save"); resetFeedback();
     try {
-      const response = await axios.put("/api/admin/ai/connection", { revision: saved.revision, model, enabled, ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}), clearKey }, { timeout: 20000 });
+      const response = await axios.put("/api/admin/ai/connection", { revision: saved.revision, model, enabled, ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}), clearKey }, { timeout: 27000 });
       if (response.data?.ok !== true || !response.data.settings) throw new Error("Invalid settings");
       apply(response.data.settings); setNotice(dt("تم حفظ اتصال الذكاء الاصطناعي للموقع. تسري الإعدادات على الطلبات الجديدة."));
     } catch (error) { setError(message(error)); if (axios.isAxiosError(error) && error.response?.data?.error === "AI_SETTINGS_CONFLICT") setConflict(true); } finally { setBusy(null); }
@@ -55,7 +56,7 @@ export default function AiConnectionSettings({ canManage, canTest }: { canManage
     if (!saved || !canTest || busy || loading || clearKey) return;
     setBusy("test"); resetFeedback();
     try {
-      const response = await axios.post("/api/admin/ai/connection", canManage ? { model, ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}) } : {}, { timeout: 20000 });
+      const response = await axios.post("/api/admin/ai/connection", canManage ? { model, ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}) } : {}, { timeout: 27000 });
       if (response.data?.ok !== true || response.data.result?.check !== "MODEL_ACCESS") throw new Error("Invalid test result");
       setTested(true); setNotice(dt("نجح اختبار الوصول إلى النموذج {0}. لم يُحفظ الاختبار ولم يُنشأ محتوى؛ الرصيد والتوليد يحتاجان تحققًا منفصلًا.", [response.data.result.model]));
     } catch (error) { setError(message(error)); } finally { setBusy(null); }

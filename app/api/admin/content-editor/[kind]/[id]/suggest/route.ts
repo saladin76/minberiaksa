@@ -1,3 +1,4 @@
+import { queueSuggestion } from "@/lib/content-editor/suggestion-tasks";
 import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
 import { loadGa4DashboardReport } from "@/lib/marketing/ga4-server";
@@ -26,7 +27,7 @@ export const dynamic = "force-dynamic";
 export async function POST(
   request: NextRequest,
   ctx: { params: Promise<{ kind: string; id: string }> },
-) {
+): Promise<Response> {
   const { kind: raw, id } = await ctx.params,
     kind = parseKind(raw);
   if (!kind || !/^[a-f0-9]{24}$/i.test(id))
@@ -38,6 +39,10 @@ export async function POST(
     );
   if (denied) return denied;
   try {
+    if (request.headers?.get("Prefer") === "respond-async") {
+      if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => POST(detached, ctx));
+    }
     const body = await request.json();
     const row = await readContent(contentStore, kind, id);
     if (body.revision !== fingerprint(row))
@@ -198,7 +203,7 @@ export async function POST(
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const failure = suggestionFailure(error);
-    if (failure) return NextResponse.json({ error: failure.error, reason: failure.reason, stopBatch: failure.stopBatch }, { status: failure.status });
+    if (failure) return NextResponse.json({ error: failure.error, reason: failure.reason, details: failure.details, stopBatch: failure.stopBatch }, { status: failure.status });
     if (error instanceof ContentError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("content-editor suggestions failed");
     return NextResponse.json(

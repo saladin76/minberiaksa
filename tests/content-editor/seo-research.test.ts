@@ -1,5 +1,5 @@
+import { researchRequest } from "../../lib/ai/core/content-requests";
 import { openAiFailure } from "../../lib/ai/core/openai-response";
-import { providerErrorMessage } from "../../lib/ai/core/provider-error-message";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -20,7 +20,7 @@ function service(payload: unknown, capture: unknown[] = []) {
     require: (name: string) => {
       if (name === "../ai/core/connection-settings") return { getOpenAiRuntime: async () => ({ apiKey: "test-key" }) };
       if (name === "../ai/core/openai-response") return { openAiFailure };
-      if (name === "../ai/core/provider-error-message") return { providerErrorMessage };
+      if (name === "../ai/core/content-requests") return { researchRequest };
       if (name === "server-only") return {};
       if (name === "@/lib/locales") return { isValidLocale: (value: string) => ["ar", "en", "tr"].includes(value) };
       if (name === "@/lib/content-localization/translate") return { LOCALE_ENGLISH_NAMES: { en: "English" } };

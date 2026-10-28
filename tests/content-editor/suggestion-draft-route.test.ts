@@ -16,7 +16,7 @@ function fixture(mode = "ok") {
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status || 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: {} }) }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => mode === "denied" ? { status: 403 } : null },
-    "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
+    "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
     "@/lib/content-editor/service": { ContentError, readContent: async () => { calls.reads++; return row; }, fingerprint: () => "revision", documentFor: () => ({ slugs: {} }) },
     "@/lib/content-editor/store": { contentStore: {} }, "@/lib/locales": { isValidLocale: (value: string) => ["ar", "en", "fr"].includes(value) },
     "@/lib/content-localization/translate": { translateItem: async () => ({ fields: {}, richFields: {}, warnings: [] }) },

@@ -33,9 +33,10 @@ function harness(status: string, databaseFailure = false) {
       }];
   };
 
+  const hydration = { donors: 0, senders: 0 };
   const prisma = {
-    donorCommunicationProfile: { findMany: async () => [] },
-    communicationSender: { findMany: async () => [{ id: "business", name: "Business" }] },
+    donorCommunicationProfile: { findMany: async () => { hydration.donors++; return []; } },
+    communicationSender: { findMany: async () => { hydration.senders++; return [{ id: "business", name: "Business" }]; } },
     auditLog: { findMany: async () => [] },
     communicationProviderEvent: { aggregateRaw: (q:Parameters<typeof aggregate>[1]) => aggregate("CommunicationProviderEvent",q), findMany: async () => [{ id: "incoming", eventType: "inbound_message", receivedAt: now, payloadSanitized: { text: "Incoming" }, senderId: "business" }] },
     communicationDelivery: { aggregateRaw: (q:Parameters<typeof aggregate>[1]) => aggregate("CommunicationDelivery",q), findMany: async () => [{ id: "outgoing", createdAt: outboundAt, renderedBody: "Reply", status, senderId: "business" }] },
@@ -44,12 +45,12 @@ function harness(status: string, databaseFailure = false) {
     "@/lib/dashboard/donor-account": {}, "@/lib/prisma": { prisma }, "@/lib/audit-log": {}, "./phone": phone, "./inbox-timeline": timeline,
   };
   const output = ts.transpileModule(fs.readFileSync("lib/communication/conversation-service.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const loaded = { exports: {} as { listConversations: () => Promise<Array<{ needsReply: boolean }>>; getConversation: (id: string) => Promise<{ timeline: Array<{ id: string; status: string | null }> }> } };
+  const loaded = { exports: {} as { listConversations: (options?: { summaryOnly?: boolean }) => Promise<Array<{ needsReply: boolean }>>; getConversation: (id: string) => Promise<{ timeline: Array<{ id: string; status: string | null }> }> } };
   new vm.Script(output).runInNewContext({ module: loaded, exports: loaded.exports, Date, Map, console, process: { env: { DATABASE_URL: "fixture" } }, require: (id: string) => {
     if (!(id in dependencies)) throw new Error("Unexpected dependency " + id);
     return dependencies[id];
   } });
-  return { service: loaded.exports, calls };
+  return { service: loaded.exports, calls, hydration };
 }
 
 test("database failure is not returned as an empty successful inbox", async () => {
@@ -97,4 +98,15 @@ test("provider acceptance with archive failure reports uncertainty rather than r
   assert.equal(sends, 1);
   assert.equal(result.ok, false);
   assert.equal(result.reason, "ACCEPTED_UNRECORDED");
+});
+
+test("concurrent inbox and badge readers share grouping without hydrating private donor/sender data for counts", async () => {
+  const h = harness("SENT");
+  const [first, second] = await Promise.all([h.service.listConversations({ summaryOnly: true }), h.service.listConversations({ summaryOnly: true })]);
+  assert.equal(first[0].needsReply, second[0].needsReply);
+  assert.equal(h.calls.filter(call => call.aggregate).length, 3);
+  assert.deepEqual(h.hydration, { donors: 0, senders: 0 });
+  await h.service.listConversations();
+  assert.equal(h.calls.filter(call => call.aggregate).length, 6, "completed results must not hide newly arrived messages");
+  assert.deepEqual(h.hydration, { donors: 1, senders: 1 });
 });

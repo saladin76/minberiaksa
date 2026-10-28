@@ -61,7 +61,7 @@ async function runSetup(
 test("explicit production index setup runs on the VPS without Vercel variables", async () => {
   const result = await runSetup(["--production"]);
   assert.equal(result.clients, 1);
-  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 28);
+  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 33);
   assert.equal(result.disconnects, 1);
   assert.equal(result.exitCode, undefined);
 });
@@ -75,7 +75,7 @@ test("production index setup skips Vercel previews without opening the database"
 
 test("production index setup still runs on Vercel production", async () => {
   const result = await runSetup(["--production"], { VERCEL: "1", VERCEL_ENV: "production" });
-  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 28);
+  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 33);
   assert.equal(result.disconnects, 1);
 });
 

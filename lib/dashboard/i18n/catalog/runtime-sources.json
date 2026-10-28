@@ -93,6 +93,7 @@
   "lib/uploads/image-file-rules.ts",
   "lib/donations/recurring-readiness.ts",
   "lib/communication/whatsapp-failure-guidance.ts",
-  "lib/content-editor/suggestion-batch.ts"
+  "lib/content-editor/suggestion-batch.ts",
+  "lib/content-editor/suggestion-tasks.ts"
  ]
 }

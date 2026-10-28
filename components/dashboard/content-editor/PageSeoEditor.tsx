@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { EditorModal } from "./EditorModal";
-import { runSuggestionBatch, readSuggestionJson, SuggestionRequestError } from "@/lib/content-editor/suggestion-batch";
+import { runSuggestionBatch, readSuggestionJson, SuggestionRequestError, requestSuggestion } from "@/lib/content-editor/suggestion-batch";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
 import { parseGa4Period, type Ga4Period } from "@/lib/marketing/ga4-period";
@@ -64,23 +64,22 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     const controller = new AbortController(); generation.current?.abort(); generation.current = controller;
     const snapshot = structuredClone(draftRef.current), revision = document.revision, pageKey = key;
     setBusy("research"); setProposals({}); setErrors({}); setSkipped([]); setFailureReasons({}); setMessage(""); setMessageTone("info"); setProgress({ done: 0, total: targets.length });
+    let firstFailure = "";
     try {
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
           const draft = snapshot[target] || {};
-          const response = await api<Proposal>("/api/admin/page-seo/" + pageKey, { method: "POST", signal: controller.signal,
-            body: JSON.stringify({ locale: target, revision, market, ...(Object.keys(draft).length ? { draft } : {}), ...(analyticsPeriod ? { analyticsPeriod } : {}) }),
-          });
+          const response = await requestSuggestion<Proposal>("/api/admin/page-seo/" + pageKey, { locale: target, revision, market, ...(Object.keys(draft).length ? { draft } : {}), ...(analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.key !== pageKey || response.locale !== target || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return { ...response, base: structuredClone(draft) };
         },
         onSuccess: (target, result) => { if (generation.current === controller) setProposals(previous => ({ ...previous, [target]: result })); },
-        onError: (target, error) => { if (generation.current !== controller) return; setErrors(previous => ({ ...previous, [target]: error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح") })); if (error instanceof SuggestionRequestError && error.reason) setFailureReasons(previous => ({ ...previous, [target]: error.reason! })); },
+        onError: (target, error) => { if (generation.current !== controller) return; firstFailure ||= error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح"); setErrors(previous => ({ ...previous, [target]: error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح") })); if (error instanceof SuggestionRequestError && error.reason) setFailureReasons(previous => ({ ...previous, [target]: error.reason! })); },
         onProgress: (done, total) => { if (generation.current === controller) setProgress({ done, total }); },
       });
       if (generation.current !== controller) return;
       setSkipped(result.skipped);
-      if (result.sharedFailure && result.skipped.length) { setMessageTone("error"); setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])); }
+      if (result.sharedFailure && result.skipped.length) { setMessageTone("error"); setMessage(firstFailure + " " + dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])); }
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } finally { if (generation.current === controller) { generation.current = null; setBusy(""); } }
   };

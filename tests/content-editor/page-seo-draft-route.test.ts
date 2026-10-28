@@ -24,7 +24,7 @@ function fixture(mode = "ok") {
   class SeoResearchError extends Error { status = 502; }
   class Ga4ReportError extends Error { status = 502; }
   const route = load("app/api/admin/page-seo/[key]/route.ts", {
-    "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "next/server": { NextResponse: { json: (body: unknown, options?: {status?:number}) => ({ body, status: options?.status || 200 }) } },
+    "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "next/server": { NextResponse: { json: (body: unknown, options?: {status?:number}) => ({ body, status: options?.status || 200 }) } },
     "next-auth": { getServerSession: async () => ({user:{}}) }, "@/app/api/auth/[...nextauth]/options": {authOptions:{}}, "@/lib/dashboard/api-auth": {requireAdminOrDashboardPermission:()=>mode==="denied"?{status:403}:null},
     "@/lib/content-editor/service": {ContentError}, "@/lib/content-editor/page-seo": {...pageSeo, readPageSeoDocument:async()=>{reads++;return document;}, savePageSeoDocument:async()=>{writes++;throw new Error("Unexpected write");},pageSeoDefaults:()=>({values:{metaTitle:"Default title",metaDescription:"Default description"},context:"Public page context"})},
     "@/lib/content-editor/seo-research": {SeoResearchError,generateResearchedSeo:async(input:Record<string,unknown>)=>{calls.push(input);if(mode==="quota")throw new OpenAiResponseError("AI_QUOTA_EXCEEDED");return {suggestion:{seoTitle:"Proposal",metaDescription:"Description",primaryKeyword:"Keyword",altText:"Alt"},research:{sources:[]}};}},

@@ -40,3 +40,11 @@ test("AI Core consumes an actual REST response instead of reporting a successful
 const databaseUrlBeforeFixture = process.env.DATABASE_URL;
 before(() => { delete process.env.DATABASE_URL; });
 after(() => { if (databaseUrlBeforeFixture === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = databaseUrlBeforeFixture; });
+
+test("invalid requests retain only allowlisted stage and parameter categories", async () => {
+  const safe = await openAiFailure(new Response(JSON.stringify({ error: { code: "unsupported_parameter", param: "tools[0].search_context_size", message: "private-key donor@example.test" } }), { status: 400 }), "WEB_RESEARCH");
+  assert.equal(safe.details?.field, "SEARCH_TOOL"); assert.equal(safe.details?.stage, "WEB_RESEARCH");
+  assert.doesNotMatch(JSON.stringify(safe), /private-key|donor@/);
+  const hostile = await openAiFailure(new Response(JSON.stringify({ error: { code: "private-key", param: "donor@example.test" } }), { status: 400 }), "TRANSLATION");
+  assert.deepEqual(hostile.details, { stage: "TRANSLATION" });
+});

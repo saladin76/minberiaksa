@@ -267,6 +267,9 @@ model AuditLog {
   metadata   Json?
   /// TEAM: actions by ADMIN/STAFF  DONOR: actions by donors (e.g. donations, profile)
   stream     String
+
+  @@index([action, entityType, createdAt(sort: Desc)], map: "content_editor_action_entityType_createdAt")
+  @@index([action, entityType, entityId], map: "content_editor_action_entityType_entityId")
 }
 
 /**
@@ -2444,6 +2447,7 @@ model CommunicationDelivery {
   @@index([channel, status])
   @@index([recipientUserId])
   @@index([providerMessageId])
+  @@index([channel, senderId, recipientPhone, createdAt(sort: Desc), status], map: "content_editor_channel_senderId_recipientPhone_createdAt_status")
 }
 
 /// Durable queue for recipients temporarily held by recipient-local quiet hours.
@@ -2486,6 +2490,7 @@ model CommunicationProviderEvent {
 
   @@index([deliveryId])
   @@index([providerMessageId])
+  @@index([channel, eventType, receivedAt(sort: Desc)], map: "content_editor_channel_eventType_receivedAt")
 }
 
 /// A reusable audience list  a custom manual list or a TEST list used to try
@@ -3560,4 +3565,20 @@ model ContentRouteReservation {
   kind String
   contentId String @db.ObjectId
   createdAt DateTime @default(now())
+}
+
+/// Short-lived results for long editor suggestions; content is applied only by the editor's save flow.
+model AiSuggestionTask {
+  id          String   @id @map("_id")
+  ownerId     String
+  permission  String
+  requestHash String
+  status      String   @default("QUEUED")
+  httpStatus  Int?
+  result      Json?
+  deadlineAt  DateTime
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([ownerId, status, deadlineAt], map: "content_editor_ownerId_status_deadlineAt")
 }
