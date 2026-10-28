@@ -65,7 +65,13 @@ export async function GET(request: NextRequest) {
   if (denied) return denied;
 
   const includeArchived = request.nextUrl.searchParams.get("includeArchived") === "true";
-  const campaigns = await listCampaigns({ includeArchived });
+  let campaigns: Awaited<ReturnType<typeof listCampaigns>>;
+  try { campaigns = await listCampaigns({ includeArchived }); }
+  catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل الحملات" }, { status: 503 }); }
+  // Show the campaign workflow immediately; lifetime income is an independent read.
+  if (request.nextUrl.searchParams.get("includeOutcomes") === "false") {
+    return NextResponse.json({ ok: true, campaigns: campaigns.map(campaign => ({ ...campaign, donationCount: null, revenue: null, unpricedPaidCount: null })), outcomesReady: false });
+  }
   let outcomes: Awaited<ReturnType<typeof getCampaignOutcomeSummary>>;
   try { outcomes = await getCampaignOutcomeSummary(campaigns.map((campaign) => campaign.id)); }
   catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة." }, { status: 503 }); }

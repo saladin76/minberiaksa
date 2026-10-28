@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as donationScan from "../../lib/communication/campaign-donation-scan";
 import {
   buildUniqueCampaignUtmAliases,
   campaignUtmLinksFromWhatsAppTemplates,
@@ -106,7 +107,7 @@ test("campaign reporting credits a paid donation through its unique registered l
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
-      donation: { findMany: async () => [{
+      donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-1", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 75, amountUSD: 75, totalAmount: 75,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
       }] },
@@ -131,7 +132,7 @@ test("campaign reporting can recover the UTM from the approved template when no 
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
-      donation: { findMany: async () => [{
+      donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-2", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 125, amountUSD: 125, totalAmount: 125,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
       }] },
@@ -180,15 +181,20 @@ type ServiceDependencies = Record<string, unknown>;
 
 type Outcome = { donationCount: number; revenue: number; unpricedPaidCount: number; failedDonationCount?: number };
 function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean }) {
-  let calls = 0;
+  let calls = 0, scans = 0;
   const service = isolated<{
     getCampaignOutcomeSummary: (ids: string[]) => Promise<{ metrics: Map<string, Outcome>; unattributed: Outcome }>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
-      donation: { findMany: async (query: { where: { id?: { gt: string } } }) => {
+      donation: { findRaw: async () => {
+        scans++;
+        if (input.fail) throw new Error("database offline");
+        if (input.paged && scans === 1) return Array.from({length:1000},(_,index)=>({_id:{$oid:(index+1).toString(16).padStart(24,"0")}}));
+        return (input.donations ?? []).map((_,index)=>({_id:{$oid:(1001+index).toString(16).padStart(24,"0")}}));
+      }, findMany: async () => {
         calls++;
         if (input.fail) throw new Error("database offline");
-        if (input.paged && !query.where.id) return Array.from({ length: 1000 }, (_, index) => ({ id: String(index), status: "PAID", attribution: {} }));
+        if (input.paged && calls === 1) return Array.from({ length: 1000 }, (_, index) => ({ id: String(index), status: "PAID", attribution: {} }));
         return input.donations ?? [];
       } },
       communicationCampaignTrackingLink: { findMany: async () => input.links ?? [] },
@@ -283,6 +289,7 @@ function isolated<T>(file: string, dependencies: ServiceDependencies): T {
     process: { env: { DATABASE_URL: "test" } },
     URL,
     require: (id: string) => {
+      if (id === "./campaign-donation-scan") return donationScan;
       if (!(id in dependencies)) throw new Error(`Unexpected dependency: ${id}`);
       return dependencies[id];
     },

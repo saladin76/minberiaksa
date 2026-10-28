@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -44,8 +45,8 @@ const MAIN_GATEWAY_CARDS: {
   },
   {
     value: "ALBARAKA",
-    name: "Albaraka Türk (2D)",
-    get description() { return dt("بوابة بنك البركة التركي بالدفع المباشر (2D) دون تحقق 3D Secure: تُخصم البطاقة فورًا في صفحة الدفع دون تحويل المتبرع إلى صفحة البنك."); },
+    name: "Albaraka Türk",
+    get description() { return dt("بوابة بنك البركة التركي. تدعم الدفع المباشر 2D والتحقق البنكي 3D Secure بحسب إعدادات الدفع وتفويض البنك."); },
     icon: Landmark,
     tone: "bg-emerald-50 text-emerald-700",
   },
@@ -53,6 +54,8 @@ const MAIN_GATEWAY_CARDS: {
 
 export default function PaymentGatewaysPage() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [savingGateway, setSavingGateway] = useState(false);
   const [savingPayfor, setSavingPayfor] = useState(false);
   const [payforEnabled, setPayforEnabled] = useState(true);
@@ -65,22 +68,22 @@ export default function PaymentGatewaysPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setLoading(true); setLoadError(false);
     axios
-      .get<SettingsResponse>("/api/global-settings")
+      .get<SettingsResponse>("/api/global-settings", {timeout: 20000})
       .then((res) => {
         if (cancelled) return;
+        if (!["STRIPE", "ALBARAKA"].includes(res.data?.mainGateway || "")) throw new Error("INVALID_PAYMENT_SETTINGS");
         setPayforEnabled(res.data?.payforEnabled !== false);
         setMainGateway(parseMainGateway(res.data?.mainGateway));
-        setAlbarakaConfigured(res.data?.albarakaConfigured !== false);
+        setAlbarakaConfigured(res.data?.albarakaConfigured === true);
         setAlbarakaRecurringReady(res.data?.albarakaRecurringReady === true);
         setAlbarakaUseOOS(res.data?.albarakaUseOOS === true);
         setAllowAnyAmount(res.data?.allowAnyAmount === true);
       })
       .catch(() => {
         if (cancelled) return;
-        setPayforEnabled(true);
-        setMainGateway("STRIPE");
+        setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -88,7 +91,7 @@ export default function PaymentGatewaysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   const errorMessage = (e: unknown, fallback: string) =>
     axios.isAxiosError(e) && e.response?.data?.error
@@ -104,7 +107,7 @@ export default function PaymentGatewaysPage() {
     );
 
   const handleSelectGateway = async (next: MainGateway) => {
-    if (next === mainGateway || savingGateway) return;
+    if (loading || loadError || next === mainGateway || savingGateway) return;
     const nextName = MAIN_GATEWAY_CARDS.find((g) => g.value === next)?.name ?? next;
     const currentName = MAIN_GATEWAY_CARDS.find((g) => g.value === mainGateway)?.name ?? mainGateway;
     const reason = confirmPaymentChange(dt("البوابة الرئيسية: {0} ← {1}", [currentName, nextName]));
@@ -128,6 +131,7 @@ export default function PaymentGatewaysPage() {
   };
 
   const handleTogglePayfor = async (next: boolean) => {
+    if (loading || loadError) return;
     const reason = confirmPaymentChange(
       next
         ? dt("تفعيل PayFor: ستمر تبرعات الليرة التركية لمرة واحدة عبر PayFor.")
@@ -153,6 +157,7 @@ export default function PaymentGatewaysPage() {
   };
 
   const handleToggleAnyAmount = async (next: boolean) => {
+    if (loading || loadError) return;
     const reason = confirmPaymentChange(
       next
         ? dt("السماح بأي مبلغ: يستطيع المتبرع التبرع بأي مبلغ بعملته كما يكتبه تمامًا (مثلًا 1 ليرة أو 1 جنيه) دون حد أدنى.")
@@ -189,6 +194,8 @@ export default function PaymentGatewaysPage() {
           <Loader2 className="w-4 h-4 animate-spin" />
           <span className="text-sm">{dt("جاري التحميل...")}</span>
         </Card>
+      ) : loadError ? (
+        <Card role="alert" className="space-y-3 border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"><p>{dt("تعذّر تحميل إعدادات الدفع. أعد المحاولة قبل تعديل أي إعداد.")}</p><button type="button" className="rounded-lg border bg-white px-3 py-2" onClick={() => setLoadAttempt(attempt => attempt + 1)}>{dt("إعادة المحاولة")}</button></Card>
       ) : (
         <div className="space-y-6">
           <section className="space-y-3">
@@ -352,13 +359,14 @@ export default function PaymentGatewaysPage() {
             <dl className="space-y-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2">
                 <dt>{dt("يومي")} / {dt("كل جمعة")}</dt>
-                <dd><span dir="ltr">Albaraka Türk (2D)</span> · {albarakaRecurringReady ? dt("جاهز") : dt("غير متاح")}</dd>
+                <dd><span dir="ltr">Albaraka Türk</span> · {albarakaRecurringReady ? dt("إعداد التجديد مكتمل") : dt("غير متاح")}</dd>
               </div>
               <div className="flex flex-wrap justify-between gap-2">
                 <dt>{dt("شهري")}</dt>
-                <dd>{mainGatewayName}{mainGateway === "ALBARAKA" ? <> · {albarakaRecurringReady ? dt("جاهز") : dt("غير متاح")}</> : null}</dd>
+                <dd>{mainGatewayName}{mainGateway === "ALBARAKA" ? <> · {albarakaRecurringReady ? dt("إعداد التجديد مكتمل") : dt("غير متاح")}</> : null}</dd>
               </div>
             </dl>
+            <p className="text-xs leading-6 text-slate-500">{dt("اكتمال إعداد التجديد لا يثبت نجاح الخصم. راجع آخر تحصيل وأسباب الفشل في التبرعات المتكررة.")} <Link className="text-brand underline" href="/dashboard/monthly">{dt("التبرعات المتكررة")}</Link></p>
           </Card>
         </div>
       )}

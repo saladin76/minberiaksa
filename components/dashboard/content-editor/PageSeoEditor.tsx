@@ -1,5 +1,6 @@
 "use client";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
+import { ContentLanguagePicker } from "./ContentLanguagePicker";
 import { parseGa4Period, type Ga4Period } from "@/lib/marketing/ga4-period";
 import { isValidLocale } from "@/lib/locales";
 import { useEffect, useRef, useState } from "react";
@@ -85,7 +86,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     </header>
     <label className="block space-y-2"><span>{dt("الصفحة")}</span><select value={key} disabled={Boolean(busy)} className="w-full rounded border bg-white p-3" onChange={(event) => { if (!dirty || window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) setKey(event.target.value); }}>{MANAGED_SEO_PAGES.map((page) => <option key={page.key} value={page.key}>{dt(page.label)}</option>)}</select></label>
     {message ? <p role={messageTone === "error" ? "alert" : "status"} className={`rounded-xl border p-3 text-sm ${messageTone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : messageTone === "error" ? "border-red-200 bg-red-50 text-red-800" : "bg-sky-50"}`}>{message}</p> : null}
-    <div className="flex flex-wrap gap-2">{SUPPORTED_LOCALES.map((code) => <button type="button" key={code} aria-label={LOCALES[code].nativeLabel} title={LOCALES[code].nativeLabel} aria-pressed={locale === code} onClick={() => setLocale(code)} className={"min-h-11 min-w-11 rounded border px-2 py-2 text-xs font-semibold " + (locale === code ? "bg-brand text-white" : "bg-white")}><bdi>{code.toUpperCase()}</bdi></button>)}</div>
+    <ContentLanguagePicker value={locale} onChange={setLocale} disabled={busy === "save"} />
     <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer text-sm font-semibold">{dt("الاستفادة من تقارير الزيارات في الاقتراحات")}</summary><div className="mt-4"><Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} /></div></details>
     <div className="grid items-end gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_auto_auto]">
       <label className="min-w-0 text-sm sm:col-span-2 lg:col-span-1">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>

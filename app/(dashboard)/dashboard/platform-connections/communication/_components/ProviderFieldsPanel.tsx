@@ -66,7 +66,7 @@ export function ProviderFieldsPanel({
             {isCron ? dt("بنية الجدولة التحتية") : dt("إعدادات المزود")}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            {isCron ? dt("يُدار CRON_SECRET داخل Vercel فقط.") : dt("{0}/{1} حقل مكتمل", [completed, snapshot.fields.length])}
+            {isCron ? dt("يُدار مفتاح حماية الجدولة في إعدادات خادم الاستضافة.") : dt("{0}/{1} حقل مكتمل", [completed, snapshot.fields.length])}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -247,7 +247,7 @@ export function ProviderFieldsPanel({
 function CronInfrastructure({ scheduler, busy, canTest, onTest }: { scheduler: SchedulerUiStatus; busy: string | null; canTest: boolean; onTest: () => void }) {
   return (
     <div className="space-y-4">
-      <Banner tone="pending" title={dt("مفتاح Cron من إعدادات البنية التحتية ويُضبط مرة واحدة داخل Vercel لأن Vercel يرسله تلقائيًا مع طلبات الجدولة.")}>
+      <Banner tone="pending" title={dt("مفتاح حماية الجدولة يُضبط على خادم الاستضافة، ويرسله مشغل المهام مع طلبات الجدولة المعتمدة.")}>
         <code className="inline-block rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" dir="ltr">CRON_SECRET</code>
       </Banner>
 
@@ -293,5 +293,5 @@ function TestResult({ title, result, fallbackAt, fallbackResult, failure }: { ti
 }
 
 function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleString(dashIntl("ar")) : dt("لم يتم");
+  return value ? new Date(value).toLocaleString(dashIntl("ar"), {timeZone:"Europe/Istanbul",timeZoneName:"short"}) : dt("لم يتم");
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { communicationDonationScan, communicationDonationPageIds, COMMUNICATION_DONATION_PAGE_SIZE } from "./campaign-donation-scan";
 import { writeAuditLog } from "@/lib/audit-log";
 import { LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import {
@@ -175,15 +176,16 @@ export async function loadCommunicationDonations(): Promise<DonationRow[]> {
   const donations: DonationRow[] = [];
   let cursor: string | undefined;
   for (;;) {
-    const rows: DonationRow[] = await prisma.donation.findMany({
-      where: { OR: [{ status: "PAID", paidAt: { not: null } }, { status: "FAILED" }], ...(cursor ? { id: { gt: cursor } } : {}) },
+    const ids = communicationDonationPageIds(await prisma.donation.findRaw(communicationDonationScan(cursor)));
+    const rows: DonationRow[] = ids.length ? await prisma.donation.findMany({
+      where: { id: { in: ids } },
       select: { id: true, status: true, paidAt: true, amount: true, currency: true, amountUSD: true, totalAmount: true, attribution: true },
-      orderBy: { id: "asc" }, take: 1000,
-    });
+      orderBy: { id: "asc" },
+    }) : [];
     donations.push(...rows.filter((d) => isCommunicationUtmMedium(attr(d).utm_medium)));
-    if (rows.length < 1000) break;
-    const next = rows.at(-1)?.id;
-    if (!next || next === cursor) throw new Error("COMMUNICATION_ATTRIBUTION_CURSOR_STALLED");
+    if (ids.length < COMMUNICATION_DONATION_PAGE_SIZE) break;
+    const next = ids.at(-1);
+    if (!next || cursor && next <= cursor) throw new Error("COMMUNICATION_ATTRIBUTION_CURSOR_STALLED");
     cursor = next;
   }
   return donations;

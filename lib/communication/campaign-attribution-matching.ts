@@ -20,7 +20,8 @@ export type WhatsAppTemplateSchema = {
 };
 
 type AttributionLike = Record<string, unknown> | null | undefined;
-const COMMUNICATION_UTM_MEDIUMS = new Set(["communication", "messaging", "whatsapp", "wa", "email", "sms"]);
+export const COMMUNICATION_UTM_MEDIUM_VALUES = ["communication", "messaging", "whatsapp", "wa", "email", "sms"] as const;
+const COMMUNICATION_UTM_MEDIUMS: ReadonlySet<string> = new Set(COMMUNICATION_UTM_MEDIUM_VALUES);
 
 export function isCommunicationUtmMedium(value: unknown): boolean {
   const medium = normalized(text(value));

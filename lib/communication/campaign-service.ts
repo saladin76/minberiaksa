@@ -36,17 +36,12 @@ function dbUnavailable() {
 }
 
 export async function listCampaigns(opts: { includeArchived?: boolean } = {}): Promise<CommunicationCampaign[]> {
-  if (!process.env.DATABASE_URL) return [];
-  try {
-    return await prisma.communicationCampaign.findMany({
+  if (!process.env.DATABASE_URL) throw new Error("CAMPAIGN_DATABASE_UNAVAILABLE");
+  return prisma.communicationCampaign.findMany({
       where: opts.includeArchived ? undefined : { status: { not: "ARCHIVED" } },
       orderBy: { updatedAt: "desc" },
       take: 200,
     });
-  } catch (error) {
-    console.error("listCampaigns failed", error);
-    return [];
-  }
 }
 
 export async function getCampaign(id: string): Promise<CommunicationCampaign | null> {

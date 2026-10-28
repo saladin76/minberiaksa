@@ -81,7 +81,7 @@ export function OverviewView() {
         <>
           <MetricSummaryBand
             icon={Wallet}
-            eyebrow={dt("تبرعات جاءت بفضل مساعد العطاء")}
+            eyebrow={dt("تبرعات منسوبة إلى مساعد العطاء")}
             badge={periodLabel(period)}
             value={usd(k.totalUSD)}
             note={dt("مباشر: التبرع أُضيف للسلة من داخل المساعد. غير مباشر: تحدّث الزائر مع المساعد ثم تبرّع خلال {0} أيام (من المتصفح نفسه أو من حسابه). يُحسب كل تبرع مرة واحدة.", [data.windowDays])}

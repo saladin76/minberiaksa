@@ -328,7 +328,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                 <Users className="w-5 h-5" />
               </div>
               <div className="min-w-0 text-start">
-                <p className="text-xs font-medium text-slate-500">{dt("إجمالي المستخدمين")}</p>
+                <p className="text-xs font-medium text-slate-500">{dt("المطابقون للتصفية")}</p>
                 <p className="text-xl font-bold text-slate-900 tabular-nums">{total}</p>
               </div>
             </div>
