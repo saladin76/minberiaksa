@@ -243,6 +243,7 @@ try {
     .waitFor();
   if (!(await page.getByRole("button", {name:"Français", exact:true}).isVisible())) await page.getByText(/^لغات أخرى/).click();
   await page.getByRole("button", {name:"Français", exact:true}).click();
+  assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Français", "selecting an additional language must retain keyboard focus");
   const title = page.getByLabel("اسم التصنيف", { exact: true });
   await title.waitFor();
   assert.equal(await title.inputValue(), "");
