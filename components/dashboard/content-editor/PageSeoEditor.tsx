@@ -115,7 +115,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       <button type="button" disabled={!document || Boolean(busy)} onClick={() => void suggest([locale])} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>
       <button type="button" disabled={!document || Boolean(busy)} onClick={() => setBatchPlan([...SUPPORTED_LOCALES])} className="rounded border px-3 py-2">{dt("اقتراح SEO لجميع اللغات")}</button>
       {busy === "research" ? <button type="button" onClick={() => generation.current?.abort()} className="rounded border px-3 py-2">{dt("إيقاف")}</button> : null}
-      {progress ? <p role="status" className="col-span-full text-sm">{progress.done} / {progress.total}</p> : null}
+      {progress ? <p role="status" className="col-span-full text-sm"><bdi dir="ltr">{progress.done} / {progress.total}</bdi></p> : null}
     </div>
     <p className="text-xs text-slate-500">{dt("ستُعد الاقتراحات من نسخة مستقلة من المسودة الحالية، دون حفظها أو نشرها.")}</p>
     {document ? <section className="space-y-4 rounded-xl border bg-white p-5" dir={LOCALES[locale].direction}>
