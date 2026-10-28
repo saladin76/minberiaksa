@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
 
   const context = request.nextUrl.searchParams.get("context");
   if (context === "marketing" || context === "content" || context === "archive" || context === "brand") {
-    return jsonNoStore({ ok: true, readiness: getAiAssistantReadiness(context) });
+    return jsonNoStore({ ok: true, readiness: await getAiAssistantReadiness(context) });
   }
 
-  return jsonNoStore(getAiCoreOverview());
+  return jsonNoStore(await getAiCoreOverview());
 }
 
 export async function POST(request: NextRequest) {

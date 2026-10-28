@@ -43,7 +43,7 @@ export async function prepareSearchPlan(request: SearchPlanRequest, createdBy: s
   const credentials = searchCredentials(connection);
   const [client, destinations, report] = await Promise.all([googleSearchClient(credentials), searchDestinations(request), fetchGoogleAdsReport(credentials, { range: "28d" })]);
   const targeting = await searchTargeting(client, request);
-  if (getOpenAiProviderStatus().mode !== "ready") throw new Error("AI_PLANNER_NOT_READY");
+  if ((await getOpenAiProviderStatus()).mode !== "ready") throw new Error("AI_PLANNER_NOT_READY");
   return prisma.googleSearchPlan.create({ data: { connectionId: connection.id, title: request.prompt.slice(0, 160), createdBy, status: "PLANNING", request,
     proposal: { summary: "", campaigns: [], expansion: [] },
     evidence: JSON.parse(JSON.stringify({ destinations, report, targeting, keywords: [], researchWarnings: [], completedLocales: [], summaries: [], createdAt: new Date().toISOString() })) } });

@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "@/lib/ai/core/connection-settings";
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
@@ -142,8 +143,9 @@ async function catalogLines(): Promise<string[]> {
 }
 
 export async function askInsightModel(prompt: string): Promise<{ result: InsightResult | null; model: string | null; error: string | null }> {
-  const status = getOpenAiProviderStatus();
-  const apiKey = process.env.OPENAI_API_KEY;
+  const runtime = await getOpenAiRuntime();
+  const status = await getOpenAiProviderStatus(runtime);
+  const apiKey = runtime.apiKey;
   if (status.mode !== "ready" || !apiKey) return { result: null, model: null, error: status.reason };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

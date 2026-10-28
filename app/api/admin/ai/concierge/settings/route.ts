@@ -28,7 +28,7 @@ export async function GET() {
       prisma.aiConciergeInsight.count(),
       prisma.aiConciergeConversation.findFirst({ orderBy: { startedAt: "asc" }, select: { startedAt: true } }),
     ]);
-    const provider = getOpenAiProviderStatus();
+    const provider = await getOpenAiProviderStatus();
     return NextResponse.json(
       {
         settings,

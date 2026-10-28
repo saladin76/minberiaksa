@@ -56,7 +56,7 @@ const promptExamples: Partial<Record<AiAssistantContextKey, string[]>> = {
   ],
 };
 
-export function getAiCoreOverview(): AiCoreOverview {
+export async function getAiCoreOverview(): Promise<AiCoreOverview> {
   return {
     source: "shared-ai-core-skeleton",
     generatedAt: new Date().toISOString(),
@@ -69,7 +69,7 @@ export function getAiCoreOverview(): AiCoreOverview {
     contexts: aiAssistantContexts,
     toolContracts: aiToolContracts,
     humanApprovalRules: aiHumanApprovalRules,
-    provider: getOpenAiProviderStatus(),
+    provider: await getOpenAiProviderStatus(),
     audit: {
       mode: "memory-foundation",
       recent: listAiAuditLogEntries(),
@@ -81,14 +81,14 @@ export function getAiContext(key: AiAssistantContextKey) {
   return aiAssistantContexts.find((context) => context.key === key) ?? null;
 }
 
-export function getAiAssistantReadiness(contextKey: AiAssistantContextKey): AiAssistantReadiness | null {
+export async function getAiAssistantReadiness(contextKey: AiAssistantContextKey): Promise<AiAssistantReadiness | null> {
   const context = getAiContext(contextKey);
   if (!context) return null;
   return {
     context,
     tools: getAiToolContractsForContext(contextKey),
     humanApprovalRules: aiHumanApprovalRules,
-    provider: getOpenAiProviderStatus(),
+    provider: await getOpenAiProviderStatus(),
     promptExamples: promptExamples[contextKey] ?? [],
   };
 }
@@ -116,7 +116,7 @@ export async function createAiDraftResponse(
       answer: "الأداة المطلوبة غير مسموحة لهذا السياق أوالسياق غير معروف.",
       requestedTool: requestedTool?.name ?? null,
       auditId: audit.id,
-      provider: getOpenAiProviderStatus(),
+      provider: await getOpenAiProviderStatus(),
       suggestedNextActions: ["اختر أداة مناسبة للسياق.", "راجع tool contracts قبل إعادة المحاولة."],
       safety: { requiresHumanApproval: true, blockedActions: aiHumanApprovalRules.map((rule) => rule.action) },
     };
@@ -143,7 +143,7 @@ export async function createAiDraftResponse(
     answer: providerResult.answer || `تم استقبال الطلب: ${prompt.trim() || "بدون نص"}.`,
     requestedTool: requestedTool?.name ?? null,
     auditId: audit.id,
-    provider: getOpenAiProviderStatus(),
+    provider: await getOpenAiProviderStatus(),
     suggestedNextActions: [
       "راجع مصادر البيانات المسموحة قبل استخدام التحليل.",
       "حوّل أي اقتراح إرسال أونشر أوميزانية إلى طلب موافقة بشرية.",

@@ -1,4 +1,5 @@
 import "server-only";
+import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import type { ParsedBankTransferRow } from "./statement-parser";
 
 /**
@@ -19,16 +20,6 @@ export type AiRowEnhancement = { donorName: string | null; project: string | nul
 const TIMEOUT_MS = 25_000;
 const MAX_ROWS = 200;
 
-function aiReady(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY) && process.env.AI_CORE_ENABLE_EXTERNAL_CALLS === "true";
-}
-function model(): string {
-  return process.env.AI_CORE_OPENAI_MODEL || process.env.OPENAI_MODEL || "gpt-4.1-mini";
-}
-function baseUrl(): string {
-  return (process.env.AI_CORE_OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
-}
-
 const SYSTEM_PROMPT = [
   "You extract charity donation info from Turkish bank-statement transfer lines.",
   "For each item you receive an index (i) and a raw description (plus amount/currency/date for context).",
@@ -44,7 +35,9 @@ const SYSTEM_PROMPT = [
  * or the call fails (caller then uses the heuristic enhancer).
  */
 export async function aiEnhanceBankRows(rows: ParsedBankTransferRow[]): Promise<Map<string, AiRowEnhancement> | null> {
-  if (!aiReady() || rows.length === 0) return null;
+  if (rows.length === 0) return null;
+  const runtime = await getOpenAiRuntime();
+  if (!runtime.apiKey) return null;
 
   const slice = rows.slice(0, MAX_ROWS);
   const items = slice.map((r, i) => ({
@@ -58,12 +51,12 @@ export async function aiEnhanceBankRows(rows: ParsedBankTransferRow[]): Promise<
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${baseUrl()}/chat/completions`, {
+    const res = await fetch(`${runtime.baseUrl}/chat/completions`, {
       method: "POST",
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${runtime.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: model(),
+        model: runtime.model,
         temperature: 0,
         response_format: { type: "json_object" },
         messages: [

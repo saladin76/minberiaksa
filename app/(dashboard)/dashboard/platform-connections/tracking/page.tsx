@@ -7,6 +7,7 @@ import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { getTrackingReadiness } from "@/lib/platform-connections/readiness";
 import { PageHeader, Card, CardHeader, StatusBadge } from "../_components/ui";
 import TrackingSettingsManager from "./_components/TrackingSettingsManager";
+import AiConnectionSettings from "./_components/AiConnectionSettings";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 export const metadata = { get title() { return dt("بكسلات التتبع | ربط المنصات والإرسال"); } };
@@ -38,6 +39,8 @@ export default async function TrackingPage() {
             {dt("فتح سجل التحويلات")}</Link>
         }
       />
+
+      <AiConnectionSettings canManage={canManage} canTest={canTest} />
 
       <Card>
         <CardHeader

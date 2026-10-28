@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "@/lib/ai/core/connection-settings";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -286,7 +287,7 @@ async function generateProfessionalTranslation(
   // Arabic remains proofreading, not translation. Keep this deliberately
   // separate from translateItem so RELIGIOUS_LOCKED rules cannot accidentally
   // turn a proofreading action into machine translation.
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = (await getOpenAiRuntime("content")).apiKey;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
   const sourceArabic = Object.fromEntries(

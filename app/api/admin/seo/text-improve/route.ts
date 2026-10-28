@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "@/lib/ai/core/connection-settings";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No text provided" }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = (await getOpenAiRuntime("content")).apiKey;
     if (!apiKey) {
       return NextResponse.json({ ok: true, source: "fallback", ...fallbackImprove(type, locale, title, text, keywords) });
     }

@@ -1,3 +1,4 @@
+import { getOpenAiRuntime } from "@/lib/ai/core/connection-settings";
 import "server-only";
 
 import { getOpenAiProviderStatus } from "@/lib/ai/core/openai-provider";
@@ -135,8 +136,9 @@ export interface LlmOutcome {
 }
 
 export async function askModel(input: LlmInput): Promise<LlmOutcome> {
-  const status = getOpenAiProviderStatus();
-  const apiKey = process.env.OPENAI_API_KEY;
+  const runtime = await getOpenAiRuntime();
+  const status = await getOpenAiProviderStatus(runtime);
+  const apiKey = runtime.apiKey;
   if (status.mode !== "ready" || !apiKey) return { verdict: null, reason: "disabled" };
 
   const controller = new AbortController();

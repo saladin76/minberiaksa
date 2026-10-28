@@ -42,6 +42,7 @@ function fixture(options: { locked?: boolean; configured?: boolean; kind?: strin
     },
   };
   const dependencies: Record<string, unknown> = {
+    "../ai/core/connection-settings": { getOpenAiRuntime: async () => ({ apiKey: options.configured === false ? null : "test-key" }) },
     "server-only": {}, "node:crypto": { randomUUID },
     "../prisma": { prisma: {
       editorialSettings: { upsert: async () => ({}), findUnique: async () => ({ weeklyEnabled: true, market: "" }), updateMany: async (args: { where: ContentRecord }) => ({ count: options.locked && "OR" in args.where ? 0 : 1 }) },
