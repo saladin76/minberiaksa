@@ -1,4 +1,7 @@
 "use client";
+import Link from "next/link";
+import { EditorModal } from "./EditorModal";
+import { runSuggestionBatch, suggestionResponseError, SuggestionRequestError } from "@/lib/content-editor/suggestion-batch";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
 import { parseGa4Period, type Ga4Period } from "@/lib/marketing/ga4-period";
@@ -9,10 +12,10 @@ import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales"
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 import { MANAGED_SEO_PAGES, PAGE_SEO_FIELDS, managedPagePath, type PageSeoLocales, type PageSeoValues } from "@/lib/content-editor/page-seo-registry";
 type Document = { key: string; revision: string | null; defaults: PageSeoLocales; overrides: PageSeoLocales };
-type Proposal = { values: PageSeoValues; research: { summary: string; sources: { url: string; title?: string }[] } };
+type Proposal = { key: string; locale: string; revision: string | null; base?: PageSeoValues; values: PageSeoValues; research: { summary: string; sources: { url: string; title?: string }[] } };
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, cache: "no-store", headers: { "Content-Type": "application/json", ...init?.headers } });
-  const body = await response.json(); if (!response.ok) throw new Error(body.error || "HTTP " + response.status); return body as T;
+  const body = await response.json().catch(() => null); if (!response.ok || !body) throw suggestionResponseError(body || {}, dt("تعذر إكمال الطلب")); return body as T;
 }
 export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {}) {
   const [seoTab, setSeoTab] = useState("search"), [messageTone, setMessageTone] = useState("info");
@@ -22,6 +25,8 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   const [busy, setBusy] = useState(""), [message, setMessage] = useState(""), [market, setMarket] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const generation = useRef<AbortController | null>(null);
+  const draftRef = useRef(draft); draftRef.current = draft;
+  const [batchPlan, setBatchPlan] = useState<string[] | null>(null), [skipped, setSkipped] = useState<readonly string[]>([]), [failureReasons, setFailureReasons] = useState<Record<string, string>>({});
   const [analyticsPeriod, setAnalyticsPeriod] = useState<Ga4Period | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -32,7 +37,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   const dirty = Boolean(document && JSON.stringify(draft) !== JSON.stringify(document.overrides));
   useDashboardUnsavedChanges(dirty);
   useEffect(() => {
-    const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setMessageTone("info"); setProposals({}); setErrors({});
+    const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setMessageTone("info"); setProposals({}); setErrors({}); setSkipped([]); setFailureReasons({});
     api<Document>("/api/admin/page-seo/" + key, { signal: controller.signal }).then((result) => {
       if (!controller.signal.aborted) { setDocument(result); setDraft(result.overrides); }
     }).catch((error) => { if (!controller.signal.aborted) { setMessageTone("error"); setMessage(dtMaybe(error.message)); } });
@@ -54,30 +59,47 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     } catch (error) { setMessageTone("error"); setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر الحفظ")); }
     finally { setBusy(""); }
   };
-  const suggest = async (all: boolean) => {
-    if (!document || dirty) { setMessage(dt("احفظ التعديلات أولًا لطلب اقتراح مرتبط بالنسخة الحالية")); return; }
+  const suggest = async (targets: string[]) => {
+    if (!document) return;
     const controller = new AbortController(); generation.current?.abort(); generation.current = controller;
-    const targets = all ? [...SUPPORTED_LOCALES] : [locale]; let cursor = 0, done = 0;
-    setBusy("research"); setProposals({}); setErrors({}); setMessage(""); setProgress({ done, total: targets.length });
-    await Promise.all(Array.from({ length: Math.min(2, targets.length) }, async () => {
-      while (cursor < targets.length && !controller.signal.aborted) {
-        const target = targets[cursor++];
-        try {
-          const result = await api<Proposal>("/api/admin/page-seo/" + key, { method: "POST", signal: controller.signal, body: JSON.stringify({ locale: target, revision: document.revision, market, ...(analyticsPeriod ? {analyticsPeriod} : {}) }) });
-          if (!controller.signal.aborted) setProposals((previous) => ({ ...previous, [target]: result }));
-        } catch (error) {
-          if (!controller.signal.aborted) setErrors((previous) => ({ ...previous, [target]: error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح") }));
-        } finally { done++; if (!controller.signal.aborted) setProgress({ done, total: targets.length }); }
-      }
-    }));
-    if (generation.current === controller) setBusy("");
+    const snapshot = structuredClone(draftRef.current), revision = document.revision, pageKey = key;
+    setBusy("research"); setProposals({}); setErrors({}); setSkipped([]); setFailureReasons({}); setMessage(""); setMessageTone("info"); setProgress({ done: 0, total: targets.length });
+    try {
+      const result = await runSuggestionBatch({ targets, signal: controller.signal,
+        request: async target => {
+          const draft = snapshot[target] || {};
+          const response = await api<Proposal>("/api/admin/page-seo/" + pageKey, { method: "POST", signal: controller.signal,
+            body: JSON.stringify({ locale: target, revision, market, ...(Object.keys(draft).length ? { draft } : {}), ...(analyticsPeriod ? { analyticsPeriod } : {}) }),
+          });
+          if (response.key !== pageKey || response.locale !== target || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
+          return { ...response, base: structuredClone(draft) };
+        },
+        onSuccess: (target, result) => { if (generation.current === controller) setProposals(previous => ({ ...previous, [target]: result })); },
+        onError: (target, error) => { if (generation.current !== controller) return; setErrors(previous => ({ ...previous, [target]: error instanceof Error ? dtMaybe(error.message) : dt("تعذر إنشاء الاقتراح") })); if (error instanceof SuggestionRequestError && error.reason) setFailureReasons(previous => ({ ...previous, [target]: error.reason! })); },
+        onProgress: (done, total) => { if (generation.current === controller) setProgress({ done, total }); },
+      });
+      if (generation.current !== controller) return;
+      setSkipped(result.skipped);
+      if (result.sharedFailure && result.skipped.length) { setMessageTone("error"); setMessage(dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])); }
+      else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
+    } finally { if (generation.current === controller) { generation.current = null; setBusy(""); } }
   };
-  const apply = (codes: string[]) => {
-    setDraft((previous) => {
-      const next = { ...previous }; for (const code of codes) if (proposals[code]) next[code] = { ...next[code], ...proposals[code].values }; return next;
-    });
-    setProposals((previous) => Object.fromEntries(Object.entries(previous).filter(([code]) => !codes.includes(code))));
-    setMessage(dt("طُبّق الاقتراح في المسودة. احفظ التغييرات لاعتماده."));
+  const apply = (codes: string[], selectedField?: string) => {
+    if (!document || busy) return;
+    const accepted: Record<string, PageSeoValues> = {}; let conflicts = 0;
+    for (const code of codes) {
+      const proposal = proposals[code]; if (!proposal || proposal.revision !== document.revision || proposal.key !== key) continue;
+      for (const [field, value] of Object.entries(proposal.values)) {
+        if ((selectedField && selectedField !== field) || !PAGE_SEO_FIELDS.some(([key]) => key === field)) continue;
+        if ((draftRef.current[code]?.[field] || "") !== (proposal.base?.[field] || "")) { conflicts++; continue; }
+        (accepted[code] ||= {})[field] = value;
+      }
+    }
+    if (Object.keys(accepted).length) {
+      setDraft(previous => { const next = { ...previous }; for (const [code, values] of Object.entries(accepted)) next[code] = { ...next[code], ...values }; return next; });
+      setProposals(previous => { const next = { ...previous }; for (const [code, values] of Object.entries(accepted)) { const remaining = { ...next[code].values }; for (const field of Object.keys(values)) delete remaining[field]; if (Object.keys(remaining).length) next[code] = { ...next[code], values: remaining }; else delete next[code]; } return next; });
+    }
+    setMessageTone(conflicts ? "error" : "info"); setMessage(conflicts ? dt("تغير هذا الحقل بعد إعداد الاقتراح. راجع المسودة واطلب اقتراحًا جديدًا.") : dt("طُبّق الاقتراح في المسودة. احفظ التغييرات لاعتماده."));
   };
   return <div dir={dashDir()} className="mx-auto max-w-6xl space-y-5 pb-12">
     <header className="sticky top-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur">
@@ -90,11 +112,12 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer text-sm font-semibold">{dt("الاستفادة من تقارير الزيارات في الاقتراحات")}</summary><div className="mt-4"><Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} /></div></details>
     <div className="grid items-end gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_auto_auto]">
       <label className="min-w-0 text-sm sm:col-span-2 lg:col-span-1">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
-      <button type="button" disabled={!document || Boolean(busy) || dirty} onClick={() => void suggest(false)} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>
-      <button type="button" disabled={!document || Boolean(busy) || dirty} onClick={() => void suggest(true)} className="rounded border px-3 py-2">{dt("اقتراح SEO لجميع اللغات")}</button>
+      <button type="button" disabled={!document || Boolean(busy)} onClick={() => void suggest([locale])} className="rounded border px-3 py-2">{dt("اقتراح SEO للغة الحالية")}</button>
+      <button type="button" disabled={!document || Boolean(busy)} onClick={() => setBatchPlan([...SUPPORTED_LOCALES])} className="rounded border px-3 py-2">{dt("اقتراح SEO لجميع اللغات")}</button>
       {busy === "research" ? <button type="button" onClick={() => generation.current?.abort()} className="rounded border px-3 py-2">{dt("إيقاف")}</button> : null}
-      {progress ? <p role="status" className="col-span-full text-sm">{progress.done} / {progress.total}</p> : null}
+      {progress ? <p role="status" className="col-span-full text-sm"><bdi dir="ltr">{progress.done} / {progress.total}</bdi></p> : null}
     </div>
+    <p className="text-xs text-slate-500">{dt("ستُعد الاقتراحات من نسخة مستقلة من المسودة الحالية، دون حفظها أو نشرها.")}</p>
     {document ? <section className="space-y-4 rounded-xl border bg-white p-5" dir={LOCALES[locale].direction}>
       <a href={"/" + locale + managedPagePath(key, locale)} target="_blank" rel="noopener noreferrer" className="text-sm text-brand">{dt("فتح الصفحة")}</a>
       <p className="text-xs leading-6 text-slate-500">{dt("ابدأ بعنوان البحث ووصفه. الحقول الفارغة تستخدم النص الافتراضي الظاهر داخلها؛ إعدادات المشاركة اختيارية.")}</p>
@@ -106,15 +129,23 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       {seoTab === "advanced" ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy === "save"} checked={draft[locale]?.seoNoIndex === "true"} onChange={(event) => edit("seoNoIndex", String(event.target.checked))} />{dt("منع فهرسة هذه اللغة مع إبقاء الصفحة ظاهرة")}</label> : null}
     </section> : null}
     {Object.keys(proposals).length ? <section className="space-y-4 rounded-xl border bg-white p-5">
-      <div className="flex items-center justify-between"><h2 className="font-bold">{dt("مراجعة الاقتراح")}</h2><button type="button" onClick={() => apply(Object.keys(proposals))} className="rounded border px-3 py-2">{dt("تطبيق الجميع في المسودة")}</button></div>
+      <div className="flex items-center justify-between"><h2 className="font-bold">{dt("مراجعة الاقتراح")}</h2><button type="button" disabled={Boolean(busy)} onClick={() => apply(Object.keys(proposals))} className="rounded border px-3 py-2">{dt("تطبيق الجميع في المسودة")}</button></div>
       {Object.entries(proposals).map(([code, proposal]) => <article key={code} dir={LOCALES[code as SupportedLocale].direction} className="space-y-3 rounded border p-4">
         <h3 className="font-bold">{LOCALES[code as SupportedLocale].nativeLabel}</h3>
-        {PAGE_SEO_FIELDS.filter(([field]) => field in proposal.values).map(([field, label]) => <label key={field} className="block space-y-1 text-sm"><span>{dt(label)}</span><textarea aria-label={dt(label)} className="w-full rounded border p-2" value={proposal.values[field] || ""} onChange={(event) => setProposals((previous) => ({ ...previous, [code]: { ...previous[code], values: { ...previous[code].values, [field]: event.target.value } } }))} /></label>)}
+        {PAGE_SEO_FIELDS.filter(([field]) => field in proposal.values).map(([field, label]) => <article key={field} className="space-y-3 rounded-lg border bg-slate-50 p-3">
+          <h4 className="text-sm font-semibold">{dt(label)}</h4><div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded border bg-white p-3 text-sm"><p className="mb-2 text-xs font-semibold text-slate-500">{dt("المسودة قبل الاقتراح")}</p><p className="whitespace-pre-wrap break-words">{proposal.base?.[field] || document?.defaults[code]?.[field] || dt("فارغ")}</p></div>
+            <label className="space-y-2 text-sm"><span className="text-xs font-semibold">{dt("الاقتراح القابل للتعديل")}</span><textarea aria-label={dt(label)} className="min-h-24 w-full rounded border p-2" value={proposal.values[field] || ""} onChange={event => setProposals(previous => ({ ...previous, [code]: { ...previous[code], values: { ...previous[code].values, [field]: event.target.value } } }))} /></label>
+          </div><button type="button" disabled={Boolean(busy)} aria-label={dt("تطبيق {0} في المسودة", [dt(label)])} className="rounded border bg-white px-3 py-2 text-sm" onClick={() => apply([code], field)}>{dt("استخدام هذا الحقل")}</button>
+        </article>)}
         <p className="text-sm">{proposal.research.summary}</p>
         <ul className="list-disc ps-5 text-sm">{proposal.research.sources.filter((source) => /^https?:\/\//.test(source.url)).map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="text-brand">{source.title || source.url}</a></li>)}</ul>
-        <button type="button" onClick={() => apply([code])} className="rounded border px-3 py-2">{dt("استخدام في المسودة")}</button>
+        <button type="button" disabled={Boolean(busy)} onClick={() => apply([code])} className="rounded border px-3 py-2">{dt("استخدام في المسودة")}</button>
       </article>)}
     </section> : null}
+    {Object.keys(failureReasons).length ? <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block text-sm font-semibold text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي والنموذج")}</Link> : null}
+    {skipped.length ? <p className="text-sm text-slate-600">{dt("لم تُطلب هذه اللغات: {0}", [skipped.map(code => LOCALES[code as SupportedLocale]?.nativeLabel || code).join("، ")])}</p> : null}
+    {batchPlan ? <EditorModal title={dt("مراجعة نطاق الطلب")} onClose={() => setBatchPlan(null)}><div className="w-full max-w-xl space-y-4 rounded-xl bg-white p-5"><h2 className="text-lg font-bold">{dt("مراجعة نطاق الطلب")}</h2><p>{dt("اللغات المستهدفة: {0}", [batchPlan.length])}</p><p className="text-sm leading-7">{batchPlan.map(code => LOCALES[code as SupportedLocale].nativeLabel).join("، ")}</p><p className="text-sm">{dt("طلبات المزوّد المتوقعة بحد أقصى: {0}", [batchPlan.length])}</p><p className="text-sm text-slate-600">{dt("التكلفة المالية تعتمد على النموذج وحجم النص وتسعير حساب المزوّد؛ لا يتوفر تقدير مالي موثوق هنا.")}</p><p className="text-sm text-slate-600">{dt("الطلب يجهّز اقتراحات للمراجعة فقط، ولا يحفظ أو ينشر المحتوى.")}</p><div className="flex flex-wrap gap-2"><button type="button" className="rounded-lg bg-brand px-4 py-2 text-sm text-white" onClick={() => { const targets = batchPlan; setBatchPlan(null); void suggest(targets); }}>{dt("بدء إعداد الاقتراحات")}</button><button type="button" className="rounded-lg border px-4 py-2 text-sm" onClick={() => setBatchPlan(null)}>{dt("إلغاء")}</button></div></div></EditorModal> : null}
     {Object.entries(errors).map(([code, error]) => <p key={code} role="alert" className="rounded border border-red-200 p-3 text-sm text-red-700">{LOCALES[code as SupportedLocale].nativeLabel}: {error}</p>)}
   </div>;
 }

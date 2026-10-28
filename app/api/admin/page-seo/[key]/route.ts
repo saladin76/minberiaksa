@@ -1,9 +1,10 @@
+import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { ContentError } from "@/lib/content-editor/service";
-import { pageSeoDefaults, readPageSeoDocument, savePageSeoDocument } from "@/lib/content-editor/page-seo";
+import { pageSeoDefaults, readPageSeoDocument, savePageSeoDocument, validatePageSeoOverrides } from "@/lib/content-editor/page-seo";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
 import { managedPagePath } from "@/lib/content-editor/page-seo-registry";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
@@ -17,6 +18,7 @@ export const maxDuration = 120;
 type Context = { params: Promise<{ key: string }> };
 async function access() { const session = await getServerSession(authOptions); return { session, denied: requireAdminOrDashboardPermission(session, "siteContent") }; }
 function failure(error: unknown) {
+  const ai = suggestionFailure(error); if (ai) return NextResponse.json({ error: ai.error, reason: ai.reason, stopBatch: ai.stopBatch }, { status: ai.status });
   if (error instanceof ContentError || error instanceof SeoResearchError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error("managed-page-seo operation failed");
   return NextResponse.json({ error: "تعذر تأكيد العملية. احتفظ بالمسودة وأعد المحاولة." }, { status: 500 });
@@ -45,6 +47,8 @@ export async function POST(request: NextRequest, ctx: Context) {
     const document = await readPageSeoDocument(key);
     if (document.revision !== body.revision) throw new ContentError("تغيرت إعدادات الصفحة. أعد تحميلها أولًا.", 409);
     const source = pageSeoDefaults(key, body.locale);
+    const overrides = body.draft === undefined ? document.overrides[body.locale] || {} : validatePageSeoOverrides({ [body.locale]: body.draft })[body.locale];
+    const values = Object.fromEntries(Object.entries(source.values).map(([field, fallback]) => [field, overrides[field] || fallback]));
     let analyticsEvidence;
     if (body.analyticsPeriod) {
       const gaDenied = requireAdminOrDashboardPermission(session, "platformConnections"); if (gaDenied) return gaDenied;
@@ -53,7 +57,7 @@ export async function POST(request: NextRequest, ctx: Context) {
       analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}${managedPagePath(key, body.locale)}`);
     }
 
-    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: source.values.metaTitle, analyticsEvidence, description: source.values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
+    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
     return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
 }

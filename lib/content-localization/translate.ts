@@ -1,4 +1,5 @@
 import { getOpenAiRuntime } from "../ai/core/connection-settings";
+import { openAiFailure, openAiResponseText, OpenAiResponseError } from "../ai/core/openai-response";
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { missingProtectedTokens } from "./protected-tokens";
 
@@ -139,8 +140,8 @@ function injectTexts(doc: TiptapNode, texts: string[]): string {
 /* ── The model call ──────────────────────────────────────────────────────── */
 
 async function askModel(userContent: string, options: { signal?: AbortSignal; researched?: boolean; proofread?: boolean } = {}): Promise<Record<string, unknown>> {
-  const apiKey = (await getOpenAiRuntime("content")).apiKey;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+  const runtime = await getOpenAiRuntime("content"), apiKey = runtime.apiKey;
+  if (!apiKey) throw new OpenAiResponseError(runtime.error || "AI_NOT_CONFIGURED");
 
   const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000);
   if (options.researched) {
@@ -153,15 +154,11 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
         input: userContent, text: { format: { type: "json_object" } }, max_output_tokens: 24000,
       }),
     });
-    if (!response.ok) throw new Error("Professional translation provider failed (" + response.status + ")");
+    if (!response.ok) throw await openAiFailure(response);
     const payload = await response.json();
-    const messages: unknown[] = Array.isArray(payload.output) ? payload.output : [];
-    const raw = messages.flatMap((entry) => {
-      const row = entry as { content?: { type?: string; text?: string }[] };
-      return Array.isArray(row.content) ? row.content.filter((part) => part.type === "output_text" && typeof part.text === "string").map((part) => part.text || "") : [];
-    }).join("");
-    if (!raw.trim()) throw new Error("Professional translation returned no content");
-    return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>;
+    const raw = openAiResponseText(payload);
+    try { return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>; }
+    catch { throw new OpenAiResponseError("AI_OUTPUT_INVALID"); }
   }
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -186,14 +183,12 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
     }),
   });
 
-  if (!response.ok) {
-    const details = await response.text().catch(() => "");
-    throw new Error(`AI translation failed: ${response.status} ${details.slice(0, 300)}`);
-  }
+  if (!response.ok) throw await openAiFailure(response);
   const payload = await response.json();
   const raw = payload?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string" || !raw) throw new Error("AI translation returned no content");
-  return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>;
+  if (typeof raw !== "string" || !raw) throw new OpenAiResponseError("AI_EMPTY_RESPONSE");
+  try { return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>; }
+  catch { throw new OpenAiResponseError("AI_OUTPUT_INVALID"); }
 }
 
 /** Translate one item into one locale. */

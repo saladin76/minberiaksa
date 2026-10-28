@@ -131,7 +131,7 @@ function webSources(payload: unknown, annotations: unknown[]) {
 
 
 export class SeoResearchError extends Error {
-  constructor(message: string, public status = 502) { super(message); }
+  constructor(message: string, public status = 502, public reason?: string) { super(message); }
 }
 
 export async function generateResearchedSeo(input: {
@@ -143,8 +143,8 @@ export async function generateResearchedSeo(input: {
   market?: string;
   analyticsEvidence?: unknown;
 }, signal?: AbortSignal) {
-  const apiKey = (await getOpenAiRuntime("content")).apiKey;
-  if (!apiKey) throw new SeoResearchError("خدمة بحث SEO غير مهيأة على الخادم", 503);
+  const runtime = await getOpenAiRuntime("content"), apiKey = runtime.apiKey;
+  if (!apiKey) throw new SeoResearchError("خدمة بحث SEO غير مهيأة على الخادم", 503, runtime.error || "AI_NOT_CONFIGURED");
   const type = input.type;
     const title = cleanString(input.title, 220);
     const description = cleanString(input.description, 3500);
@@ -198,7 +198,7 @@ export async function generateResearchedSeo(input: {
     }),
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(75000)]) : AbortSignal.timeout(75000),
   });
-  if (!response.ok) throw new SeoResearchError(`${providerErrorMessage((await openAiFailure(response)).code)} (${response.status})`);
+  if (!response.ok) { const failure = await openAiFailure(response); throw new SeoResearchError(`${providerErrorMessage(failure.code)} (${response.status})`, 502, failure.code); }
   const payload: unknown = await response.json();
   const { text, annotations } = responseOutputText(payload);
   const output = asRecord(payload).output;
@@ -226,8 +226,8 @@ export async function generateResearchedSeo(input: {
 export async function generateResearchedArticle(input: {
   existingTitles: string[]; sourceContext: string; improvement?: { title: string; content: string }; market?: string;
 }, signal?: AbortSignal) {
-  const apiKey = (await getOpenAiRuntime("content")).apiKey;
-  if (!apiKey) throw new SeoResearchError("خدمة بحث المحتوى غير مهيأة على الخادم", 503);
+  const runtime = await getOpenAiRuntime("content"), apiKey = runtime.apiKey;
+  if (!apiKey) throw new SeoResearchError("خدمة بحث المحتوى غير مهيأة على الخادم", 503, runtime.error || "AI_NOT_CONFIGURED");
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000),
@@ -250,7 +250,7 @@ export async function generateResearchedArticle(input: {
       store: false,
     }),
   });
-  if (!response.ok) throw new SeoResearchError(`${providerErrorMessage((await openAiFailure(response)).code)} (${response.status})`);
+  if (!response.ok) { const failure = await openAiFailure(response); throw new SeoResearchError(`${providerErrorMessage(failure.code)} (${response.status})`, 502, failure.code); }
   const payload: unknown = await response.json(), output = asRecord(payload).output;
   if (!Array.isArray(output) || !output.some((item) => asRecord(item).type === "web_search_call" && asRecord(item).status === "completed")) throw new SeoResearchError("لم يكتمل بحث المقال");
   const result = responseOutputText(payload), sources = webSources(payload, result.annotations).filter((source) => /^https?:\/\//.test(source.url));

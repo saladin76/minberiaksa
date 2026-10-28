@@ -20,6 +20,13 @@ import {
  * "unavailable", never a fake 0. Visits are not stored, so they are always reported as unavailable.
  */
 
+/** Finish sibling reads before propagating a failure, so CLI cleanup cannot disconnect an active query. */
+async function completeAttributionReads<const T extends readonly unknown[]>(reads: T) {
+  const results = await Promise.allSettled(reads);
+  for (const result of results) if (result.status === "rejected") throw result.reason;
+  return results.map(result => (result as PromiseFulfilledResult<unknown>).value) as { -readonly [K in keyof T]: Awaited<T[K]> };
+}
+
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null };
 
 export const COMMUNICATION_MEDIUM = "communication";
@@ -195,7 +202,7 @@ export async function loadCommunicationDonations(): Promise<DonationRow[]> {
  * be the source of a donation after its campaign was archived. */
 async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
   if (!process.env.DATABASE_URL) return [];
-  const [rows, campaigns] = await Promise.all([
+  const [rows, campaigns] = await completeAttributionReads([
     prisma.communicationCampaignTrackingLink.findMany({
       select: { campaignId: true, url: true, source: true, medium: true },
       take: 10_000,
@@ -246,7 +253,7 @@ export type CampaignDonationReport = {
 /** Per-campaign donation attribution. A generic UTM is credited only when a
  * registered link maps it unambiguously to this one campaign. */
 export async function getCampaignDonationReport(campaign: { id: string; channel: string }): Promise<CampaignDonationReport> {
-  const [links, allLinks, donations] = await Promise.all([
+  const [links, allLinks, donations] = await completeAttributionReads([
     listTrackingLinks(campaign.id),
     loadCampaignUtmLinks(),
     loadCommunicationDonations(),
@@ -310,7 +317,7 @@ export async function getCampaignOutcomeSummary(campaignIds: readonly string[]):
   const metrics = new Map<string, CampaignOutcomeMetric>();
   const unattributed = { donationCount: 0, revenue: 0, unpricedPaidCount: 0 };
   if (!ids.size) return { metrics, unattributed, staticTrackingCampaignIds: [] };
-  const [donations, trackingLinks] = await Promise.all([loadCommunicationDonations(), loadCampaignUtmLinks()]);
+  const [donations, trackingLinks] = await completeAttributionReads([loadCommunicationDonations(), loadCampaignUtmLinks()]);
   const aliases = buildUniqueCampaignUtmAliases(trackingLinks);
   for (const donation of donations) {
     const campaignId = resolveCommunicationCampaignId(attr(donation), ids, aliases);
@@ -343,7 +350,7 @@ export async function getCampaignOutcomeMetrics(campaignIds: readonly string[]):
 
 /** Template reporting uses the same settled-payment and UTM rules as campaigns. */
 export async function getTemplateDonationOutcome(template: { id: string; externalTemplateId: string | null }): Promise<CampaignOutcomeMetric> {
-  const [campaigns, donations, links] = await Promise.all([
+  const [campaigns, donations, links] = await completeAttributionReads([
     prisma.communicationCampaign.findMany({ where: { channel: "WHATSAPP", templateGroupId: template.id }, select: { id: true } }),
     loadCommunicationDonations(), loadCampaignUtmLinks(),
   ]);
@@ -383,7 +390,7 @@ export async function getCommunicationDonationOverview(): Promise<CommunicationD
   const empty: CommunicationDonationOverview = { hasData: false, byChannel: [], byLanguage: [], bestCampaigns: [], campaignsWithoutLinks: [], failed: null };
   if (!process.env.DATABASE_URL) return empty;
 
-  const [donations, campaigns, links, allLinks] = await Promise.all([
+  const [donations, campaigns, links, allLinks] = await completeAttributionReads([
     loadCommunicationDonations(),
     prisma.communicationCampaign.findMany({ where: { status: { notIn: ["ARCHIVED"] } }, select: { id: true, name: true, channel: true }, take: 300 }),
     prisma.communicationCampaignTrackingLink.findMany({ where: { status: "ACTIVE" }, select: { campaignId: true }, take: 2000 }),

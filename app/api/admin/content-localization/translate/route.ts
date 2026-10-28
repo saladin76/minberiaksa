@@ -1,3 +1,4 @@
+import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
@@ -69,7 +70,9 @@ export async function POST(request: NextRequest) {
     );
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("content-localization/translate failed:", error);
+    const failure = suggestionFailure(error);
+    if (failure) return NextResponse.json({ error: failure.error, reason: failure.reason, stopBatch: failure.stopBatch }, { status: failure.status });
+    console.error("content-localization/translate failed");
     const message = error instanceof Error ? error.message : "Translation failed";
     const status = /OPENAI_API_KEY/.test(message) ? 503 : 500;
     return NextResponse.json({ error: message }, { status });

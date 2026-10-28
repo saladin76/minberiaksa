@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { dt, dashDir, dtMaybe, dashIntl } from "@/lib/dashboard/i18n";
-import { editorialFailure } from "@/lib/content-editor/editorial-failure";
+import { editorialFailure, type EditorialFailureKind } from "@/lib/content-editor/editorial-failure";
 import { LOCALES, type SupportedLocale } from "@/lib/locales";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 import { EditorModal } from "./EditorModal";
@@ -13,8 +13,9 @@ import { CalendarDays, CheckCheck, Globe2, Loader2, RefreshCw, Settings2, Sparkl
 const RichEditor = dynamic(() => import("@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor"), { ssr: false });
 type Job = { id: string; kind: string; status: string; locale: string; title?: string; sourceId?: string; resultContentId?: string; error?: string; version: string; createdAt: string; updatedAt?: string; attempts: number; result?: { values: TextValues; notes?: string[]; research?: { summary?: string; sources?: { url: string; title?: string }[] } } };
 type Settings = { weeklyEnabled: boolean; market: string; configured: boolean };
-type Listing = { jobs: Job[]; nextCursor: string | null; counts: { status: string; _count: number }[]; settings: Settings; lastCompleted?: { kind: string; locale: string; updatedAt: string } | null };
-const FAILURE_ADVICE = { request: "راجع صيغة الطلب والأدوات والنموذج قبل اختبار محاولة واحدة.", access: "راجع مفتاح الخدمة وصلاحيات المشروع قبل إعادة المحاولة.", model: "راجع إتاحة النموذج المحدد للمشروع قبل إعادة المحاولة.", billing: "راجع الرصيد وحد الإنفاق قبل إعادة المحاولة.", temporary: "عطل مؤقت؛ يمكن إعادة المحاولة ضمن دفعة محدودة.", review: "راجع سبب الفشل والمصدر قبل إعادة المحاولة." };
+type Listing = { jobs: Job[]; nextCursor: string | null; counts: { status: string; _count: number }[]; settings: Settings; lastCompleted?: { kind: string; locale: string; updatedAt: string } | null; failureReview?: { scanned: number; byReason: {kind: EditorialFailureKind; count: number}[]; eligible: number; deferred: number; blocked: number; truncated: boolean; checkedAt: string } };
+const FAILURE_LABELS: Record<EditorialFailureKind, string> = { configuration: "إعداد الاتصال", billing: "الرصيد والفوترة", request: "صيغة الطلب", access: "صلاحية الوصول", model: "إتاحة النموذج", temporary: "عطل مؤقت", review: "مراجعة أخرى" };
+const FAILURE_ADVICE = { configuration: "راجع تفعيل الاتصال المركزي ومفتاح الخدمة قبل إعادة المحاولة.", request: "راجع صيغة الطلب والأدوات والنموذج قبل اختبار محاولة واحدة.", access: "راجع مفتاح الخدمة وصلاحيات المشروع قبل إعادة المحاولة.", model: "راجع إتاحة النموذج المحدد للمشروع قبل إعادة المحاولة.", billing: "راجع الرصيد وحد الإنفاق قبل إعادة المحاولة.", temporary: "عطل مؤقت؛ يمكن إعادة المحاولة ضمن دفعة محدودة.", review: "راجع سبب الفشل والمصدر قبل إعادة المحاولة." };
 const STATUS: Record<string, string> = { QUEUED: "في الانتظار", RUNNING: "قيد التجهيز", REVIEW: "جاهز للمراجعة", APPLIED: "تم الاعتماد", FAILED: "فشل التجهيز", STALE: "تغير المصدر", CANCELLED: "ملغى" };
 const KIND: Record<string, string> = { ARTICLE: "مقال الأسبوع", TRANSLATION: "ترجمة مقال", IMPROVE_ARTICLE: "تحسين مقال" };
 const LABELS: Record<string, string> = { title: "العنوان", description: "الملخص", content: "المحتوى", metaTitle: "عنوان البحث", metaDescription: "وصف البحث", seoKeyword: "العبارة الرئيسية المستهدفة", imageAlt: "وصف الصورة", ogTitle: "عنوان المشاركة", ogDescription: "وصف المشاركة", faqContent: "الأسئلة الشائعة" };
@@ -33,6 +34,8 @@ export function EditorialPlanner({ initialArticleId = "", embedded = false }: { 
   const [reviewUploads, setReviewUploads] = useState(0);
   const [savedArticleId, setSavedArticleId] = useState("");
   const trackReviewUpload = useCallback((uploading: boolean) => setReviewUploads(count => Math.max(0, count + (uploading ? 1 : -1))), []);
+  const [reason, setReason] = useState("");
+  const [retryReview, setRetryReview] = useState<Job | null>(null), [retryConfirmed, setRetryConfirmed] = useState(false);
   const [filter, setFilter] = useState(""), [cursor, setCursor] = useState<string | null>(null);
   const [articleId, setArticleId] = useState(initialArticleId), [busy, setBusy] = useState(""), [message, setMessage] = useState("");
   const [review, setReview] = useState<Job | null>(null), [values, setValues] = useState<TextValues>({});
@@ -44,13 +47,13 @@ export function EditorialPlanner({ initialArticleId = "", embedded = false }: { 
   const refresh = useCallback(async () => {
     const generation = ++refreshGeneration.current;
     setLoading(true);
-    const query = new URLSearchParams(); if (filter) query.set("status", filter); if (cursor) query.set("cursor", cursor);
+    const query = new URLSearchParams(); if (filter) query.set("status", filter); if (cursor) query.set("cursor", cursor); if (reason) query.set("reason", reason);
     try {
       const result = await api<Listing>("/api/admin/editorial-jobs?" + query);
       if (generation !== refreshGeneration.current) return;
       setListing(result); setSettings((current) => current || result.settings);
     } finally { if (generation === refreshGeneration.current) setLoading(false); }
-  }, [filter, cursor]);
+  }, [filter, cursor, reason]);
   useEffect(() => {
     let active = true;
     const generation = refreshGeneration;
@@ -115,7 +118,7 @@ export function EditorialPlanner({ initialArticleId = "", embedded = false }: { 
   };
   const jobActions = (job: Job) => <div className="flex flex-wrap justify-end gap-2">
     {["REVIEW", "STALE", "APPLIED"].includes(job.status) ? <button type="button" disabled={Boolean(busy) || reviewLoading} className="rounded-lg border bg-white px-3 py-2 text-brand" onClick={() => void openReview(job.id)}>{dt("فتح المراجعة")}</button> : null}
-    {["FAILED", "CANCELLED"].includes(job.status) ? <button type="button" disabled={Boolean(busy)} className="rounded-lg border bg-white px-3 py-2" onClick={() => void changeJob(job, "retry")}>{dt("إعادة المحاولة")}</button> : null}
+    {["FAILED", "CANCELLED"].includes(job.status) ? <button type="button" disabled={Boolean(busy)} className="rounded-lg border bg-white px-3 py-2" onClick={() => { if (job.status === "FAILED" && !editorialFailure(job.error).temporary) { setRetryReview(job); setRetryConfirmed(false); } else void changeJob(job, "retry"); }}>{dt("إعادة المحاولة")}</button> : null}
     {["QUEUED", "RUNNING", "FAILED", "REVIEW"].includes(job.status) ? <button type="button" disabled={Boolean(busy)} className="rounded-lg border bg-white px-3 py-2 text-slate-500" onClick={() => void changeJob(job, "cancel")}>{dt("إلغاء المهمة")}</button> : null}
     {job.resultContentId || job.sourceId ? <Link href={"/dashboard/content/blog/" + (job.resultContentId || job.sourceId) + "?locale=" + job.locale} className="rounded-lg border bg-white px-3 py-2">{dt("فتح المقال")}</Link> : null}
   </div>;
@@ -134,13 +137,22 @@ export function EditorialPlanner({ initialArticleId = "", embedded = false }: { 
     {message ? <p role="status" className="rounded-xl border bg-sky-50 p-4 text-sm">{message}</p> : null}
     {savedArticleId ? <Link href={`/dashboard/content/blog/${savedArticleId}`} className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{dt("فتح المقال المحفوظ")}</Link> : null}
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{["REVIEW", "QUEUED", "RUNNING", "FAILED"].map(status => <div key={status} className={`rounded-xl border p-4 ${status === "FAILED" && countFor(status) ? "border-amber-200 bg-amber-50" : "bg-white"}`}><p className="text-xs text-slate-500">{dt(STATUS[status])}</p><p className="mt-2 text-2xl font-bold">{listing ? countFor(status) : "—"}</p></div>)}</div>
-    {listing ? <section aria-label={dt("تشخيص التجهيز")} className="space-y-2 rounded-xl border bg-white p-4 text-sm"><h2 className="font-semibold">{dt("تشخيص التجهيز")}</h2><p className="text-slate-600">{listing.lastCompleted ? dt("آخر مهمة مكتملة أو معتمدة: {0}", [new Date(listing.lastCompleted.updatedAt).toLocaleString(dashIntl("ar-EG"), {timeZone:"Europe/Istanbul"})]) : dt("لا توجد مهمة مكتملة موثقة بعد.")}</p><p className="text-xs leading-6 text-slate-500">{dt("أخطاء الطلب والصلاحية والرصيد تحتاج مراجعة. الدفعة الجماعية تعيد الأخطاء المؤقتة بعد انتظار 10 دقائق، بحد 20 مهمة وأقل من 3 محاولات.")}</p></section> : null}
+    {listing ? <section aria-label={dt("تشخيص التجهيز")} className="space-y-2 rounded-xl border bg-white p-4 text-sm"><h2 className="font-semibold">{dt("تشخيص التجهيز")}</h2><p className="text-slate-600">{listing.lastCompleted ? dt("آخر مهمة مكتملة أو معتمدة: {0}", [new Date(listing.lastCompleted.updatedAt).toLocaleString(dashIntl("ar-EG"), {timeZone:"Europe/Istanbul"})]) : dt("لا توجد مهمة مكتملة موثقة بعد.")}</p><p className="text-xs leading-6 text-slate-500">{dt("أخطاء الطلب والصلاحية والرصيد تحتاج مراجعة. الدفعة الجماعية تعيد الأخطاء المؤقتة بعد انتظار 10 دقائق، بحد 20 مهمة وأقل من 3 محاولات.")}</p>
+      <Link href="/dashboard/platform-connections/tracking#ai-connection" className="inline-block font-medium text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي")}</Link>
+      {listing.failureReview ? <div className="space-y-3 border-t pt-3">
+        <p>{dt("مؤهلة لإعادة المحاولة: {0} · بانتظار المهلة: {1} · تحتاج مراجعة فردية: {2}", [listing.failureReview.eligible, listing.failureReview.deferred, listing.failureReview.blocked])}</p>
+        <p className="text-xs text-slate-500">{listing.failureReview.truncated ? dt("الملخص والفلتر يشملان أقدم 1000 مهمة فاشلة فقط. إعادة المحاولة الجماعية متوقفة حتى مراجعة القائمة.") : dt("تم تصنيف {0} مهمة فاشلة. الأسباب محفوظة من المحاولات السابقة ولا تثبت جاهزية الاتصال الآن.", [listing.failureReview.scanned])}</p>
+        <div role="group" aria-label={dt("تصفية حسب سبب الفشل")} className="flex flex-wrap gap-2">
+          <button type="button" aria-pressed={!reason} onClick={() => { setReason(""); setCursor(null); }} className="rounded-lg border px-3 py-2 text-xs">{dt("جميع الأسباب")}</button>
+          {listing.failureReview.byReason.filter(item => item.count > 0).map(item => <button key={item.kind} type="button" aria-pressed={reason === item.kind} onClick={() => { setReason(item.kind); setFilter("FAILED"); setCursor(null); setView("tasks"); }} className={`rounded-lg border px-3 py-2 text-xs ${reason === item.kind ? "border-brand bg-sky-50 text-brand" : "bg-white"}`}>{dt(FAILURE_LABELS[item.kind])}: {item.count}</button>)}
+        </div>
+      </div> : null}</section> : null}
     <nav role="tablist" aria-label={dt("مساحة العمل التحريري")} className="flex flex-wrap gap-2 rounded-xl border bg-white p-2">
       {[["tasks", "المهام والمراجعة"], ["create", "تجهيز محتوى"], ["settings", "الإعدادات والجدولة"]].map(([key, label]) => <button key={key} id={`editorial-tab-${key}`} role="tab" aria-selected={view === key} aria-controls="editorial-panel" type="button" className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold ${view === key ? "bg-brand text-white" : "text-slate-500"}`} onClick={() => setView(key)}>{key === "tasks" ? <CheckCheck size={17} /> : key === "create" ? <Sparkles size={17} /> : <Settings2 size={17} />}{dt(label)}</button>)}
     </nav>
     <section id="editorial-panel" role="tabpanel" aria-labelledby={`editorial-tab-${view}`} className="space-y-4">
     {view === "tasks" ? <>
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">{dt("المهام والمراجعة")}</h2><label className="flex items-center gap-3 text-sm">{dt("الحالة")}<select value={filter} onChange={event => { setFilter(event.target.value); setCursor(null); }} className="rounded-lg border bg-white p-2"><option value="">{dt("جميع الحالات")}</option>{Object.entries(STATUS).map(([value, label]) => <option key={value} value={value}>{dt(label)}</option>)}</select></label></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">{dt("المهام والمراجعة")}</h2><label className="flex items-center gap-3 text-sm">{dt("الحالة")}<select value={filter} onChange={event => { setFilter(event.target.value); setReason(""); setCursor(null); }} className="rounded-lg border bg-white p-2"><option value="">{dt("جميع الحالات")}</option>{Object.entries(STATUS).map(([value, label]) => <option key={value} value={value}>{dt(label)}</option>)}</select></label></div>
       <p className="text-xs text-slate-500">{dt("مهام كل مقال مجمعة معًا؛ افتح المقال لعرض اللغات والحالات والمراجعات.")}</p>
       {!listing ? <p role="status" className="rounded-xl border bg-white p-6">{dt("تحميل المحتوى…")}</p> : !groups.length ? <div className="rounded-2xl border border-dashed bg-white p-10 text-center"><CheckCheck className="mx-auto mb-3 h-8 w-8 text-slate-300" /><p>{dt("لا توجد مهام تطابق الحالة المحددة.")}</p></div> : groups.map(group => <details key={group.key} open={group.jobs.some(job => job.status === "REVIEW") || Boolean(filter)} className="overflow-hidden rounded-2xl border bg-white">
         <summary className="cursor-pointer p-4"><span className="font-semibold">{group.jobs[0].title || dt(KIND[group.jobs[0].kind] || group.jobs[0].kind)}</span><span className="ms-3 text-xs text-slate-500">{dt("مهام: {0}", [group.jobs.length])}</span><span className="mt-2 flex flex-wrap gap-2">{[...new Set(group.jobs.map(job => job.status))].map(status => <span key={status} className={`rounded-full px-2 py-1 text-[11px] ${status === "FAILED" ? "bg-amber-50 text-amber-800" : status === "REVIEW" ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>{dt(STATUS[status] || status)}</span>)}</span></summary>
@@ -155,10 +167,19 @@ export function EditorialPlanner({ initialArticleId = "", embedded = false }: { 
     </div> : null}
     {view === "settings" && settings ? <div className="grid gap-4 lg:grid-cols-2">
       <section className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><CalendarDays size={18} />{dt("المقال الأسبوعي")}</h2><p className="text-sm leading-7 text-slate-500">{dt("التجهيز كل اثنين الساعة 10:00 بتوقيت إسطنبول، بموضوع مختلف ومصادر بحث قابلة للتحقق.")}</p><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.weeklyEnabled} disabled={Boolean(busy)} onChange={event => setSettings({...settings, weeklyEnabled:event.target.checked})} />{dt("تفعيل التجهيز الأسبوعي")}</label><label className="block space-y-2 text-sm"><span>{dt("السوق المستهدف (اختياري)")}</span><input maxLength={120} className="w-full rounded-lg border p-3" value={settings.market} disabled={Boolean(busy)} onChange={event => setSettings({...settings,market:event.target.value})} /></label><button type="button" disabled={Boolean(busy) || !dirtySettings} className="rounded-lg bg-brand px-4 py-2 text-sm text-white disabled:opacity-50" onClick={async () => { setBusy("settings"); try { const saved = await api<Settings>("/api/admin/editorial-jobs",{method:"PUT",body:JSON.stringify({weeklyEnabled:settings.weeklyEnabled,market:settings.market})});setSettings(saved);await refresh();setMessage(dt("تم حفظ الإعدادات")); } catch(error) {setMessage(error instanceof Error ? dtMaybe(error.message):dt("تعذر الحفظ"));} finally {setBusy("");} }}>{dt("حفظ الإعدادات")}</button></section>
-      <section className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="font-bold">{dt("تشغيل المهام")}</h2><p className="text-sm leading-7 text-slate-500">{dt("التشغيل اليدوي يجهز الاقتراحات فقط. اعتماد المحتوى خطوة منفصلة بعد المراجعة.")}</p>{!settings.configured ? <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{dt("خدمة بحث المحتوى غير مهيأة. تبقى المهام في الانتظار حتى استكمال الإعداد.")}</p> : null}<div className="flex flex-wrap gap-3"><button type="button" disabled={Boolean(busy) || !settings.configured} onClick={() => void action("run")} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{dt("معالجة الدفعة التالية")}</button><button type="button" disabled={Boolean(busy) || !settings.configured || !countFor("FAILED")} onClick={() => void action("retry-failed")} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{dt("إعادة محاولة الأخطاء المؤقتة")}</button></div></section>
+      <section className="space-y-4 rounded-2xl border bg-white p-5"><h2 className="font-bold">{dt("تشغيل المهام")}</h2><p className="text-sm leading-7 text-slate-500">{dt("التشغيل اليدوي يجهز الاقتراحات فقط. اعتماد المحتوى خطوة منفصلة بعد المراجعة.")}</p>{!settings.configured ? <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{dt("خدمة بحث المحتوى غير مهيأة. تبقى المهام في الانتظار حتى استكمال الإعداد.")}</p> : null}<div className="flex flex-wrap gap-3"><button type="button" disabled={Boolean(busy) || !settings.configured} onClick={() => void action("run")} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{dt("معالجة الدفعة التالية")}</button><button type="button" disabled={Boolean(busy) || !settings.configured || !listing?.failureReview?.eligible || listing.failureReview.truncated} onClick={() => void action("retry-failed")} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{dt("إعادة محاولة الأخطاء المؤقتة")}</button></div></section>
     </div> : null}
     </section>
     {busy ? <p role="status" className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{dt("جار تنفيذ الطلب…")}</p> : null}
+    {retryReview ? <EditorModal title={dt("مراجعة قبل إعادة المحاولة")} onClose={() => { if (!busy) setRetryReview(null); }}><div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-5">
+      <h2 className="text-lg font-semibold">{dt("مراجعة قبل إعادة المحاولة")}</h2>
+      <p className="text-sm leading-7">{dt(FAILURE_ADVICE[editorialFailure(retryReview.error).kind])}</p>
+      <p className="rounded-lg bg-amber-50 p-3 text-sm">{retryReview.error}</p>
+      <Link href="/dashboard/platform-connections/tracking#ai-connection" className="block text-sm text-brand underline">{dt("مراجعة اتصال الذكاء الاصطناعي")}</Link>
+      <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={retryConfirmed} onChange={event => setRetryConfirmed(event.target.checked)} />{dt("راجعت السبب وأريد إعادة جدولة هذه المهمة وحدها.")}</label>
+      <p className="text-xs leading-6 text-slate-500">{dt("إعادة الجدولة تتيح للمعالج تنفيذ طلب جديد قد تُحتسب تكلفته لدى المزود. لا تثبت نجاح التجهيز ولا تنشر المحتوى.")}</p>
+      <div className="flex gap-2"><button type="button" disabled={!retryConfirmed || Boolean(busy)} className="rounded-lg bg-brand px-4 py-2 text-white disabled:opacity-50" onClick={async () => { const job = retryReview; setRetryReview(null); await changeJob(job, "retry"); }}>{dt("إعادة جدولة هذه المهمة")}</button><button type="button" disabled={Boolean(busy)} onClick={() => setRetryReview(null)} className="rounded-lg border px-4 py-2">{dt("إلغاء")}</button></div>
+    </div></EditorModal> : null}
     {review ? <EditorModal title={dt("مراجعة المسودة التحريرية")} onClose={closeReview}><div className="max-h-[90vh] w-full max-w-5xl space-y-4 overflow-y-auto rounded-xl bg-white p-6" dir={LOCALES[review.locale as SupportedLocale]?.direction || "rtl"}>
       <div className="flex items-center justify-between"><h2 className="text-xl font-bold">{dt("مراجعة المسودة التحريرية")}</h2><button type="button" onClick={closeReview} className="rounded border px-3 py-2">{dt("إغلاق")}</button></div>
       {review.status !== "REVIEW" ? <p className="text-sm text-amber-700">{dt(STATUS[review.status] || review.status)}</p> : null}
