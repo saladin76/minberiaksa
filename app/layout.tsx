@@ -8,6 +8,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment, isVercelDeployment } from "@/lib/seo";
 import { isValidLocale, localeDirection } from "@/lib/locales";
 import DeferredContentsquare from "@/components/DeferredContentsquare";
+import { InboxPermissionsBoundary } from "@/components/dashboard/InboxPermissionsBoundary";
 import "./[locale]/globals.css";
 import "@/styles/self-hosted-fonts.css";
 
@@ -160,7 +161,7 @@ export default async function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-        {children}
+        <InboxPermissionsBoundary>{children}</InboxPermissionsBoundary>
         <MicrosoftClarity />
         <Suspense fallback={null}>
           <EngagementInstrumentation />
