@@ -1,10 +1,14 @@
+import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { prisma } from "@/lib/prisma";
-import { normalizeTickerDisplayNames } from "@/lib/donations/public-ticker-display";
+import { publicTickerEntries } from "@/lib/donations/public-ticker-feed";
+import { maskTickerName, normalizeTickerDisplayNames } from "@/lib/donations/public-ticker-display";
+
+const cachedPublicEntries = unstable_cache((showRecentDonations: boolean, showRegisteredNames: boolean) => publicTickerEntries(prisma, { showRecentDonations, showRegisteredNames }), ["public-ticker-masked-feed-v1"], { revalidate: 5 });
 
 /**
  * GET: Fetch live donation ticker configuration
@@ -21,23 +25,26 @@ export async function GET(request: NextRequest) {
       return config ? NextResponse.json(config) : NextResponse.json({ error: "No ticker configuration found" }, { status: 404 });
     }
 
-    // The public ticker uses only operator-entered display names and amount
-    // ranges. It never queries Donation or User records.
+    // Public entries contain server-masked names only; contacts and database ids stay private.
     const ticker = await prisma.liveDonationTicker.findFirst({
       where: { isActive: true },
       orderBy: { updatedAt: 'desc' }
     });
     if (!ticker) return NextResponse.json({ enabled: false });
 
+    if (ticker.showRecentDonations || ticker.showRegisteredNames) {
+      const entries = await cachedPublicEntries(ticker.showRecentDonations, ticker.showRegisteredNames);
+      return NextResponse.json({ enabled: true, entries, donorNames: [], amountRanges: [], minIntervalSeconds: ticker.minIntervalSeconds, maxIntervalSeconds: ticker.maxIntervalSeconds }, { headers: { "Cache-Control": "no-store" } });
+    }
     return NextResponse.json({
       enabled: ticker.donorNames.length > 0 && ticker.amountRanges.length > 0,
-      donorNames: ticker.donorNames,
+      donorNames: ticker.donorNames.map(maskTickerName),
       amountRanges: ticker.amountRanges,
       minIntervalSeconds: ticker.minIntervalSeconds,
       maxIntervalSeconds: ticker.maxIntervalSeconds,
     });
   } catch (error) {
-    console.error('Error fetching ticker config:', error);
+    console.error('Error fetching ticker config');
     return NextResponse.json(
       { error: 'Failed to fetch ticker configuration' },
       { status: 500 }
@@ -55,16 +62,18 @@ export async function POST(request: NextRequest) {
     if (denied) return denied;
 
     const data = await request.json();
-    const { minIntervalSeconds, maxIntervalSeconds, donorNames, amountRanges, isActive = true } = data;
+    const { minIntervalSeconds, maxIntervalSeconds, donorNames, amountRanges, isActive = true, showRecentDonations = false, showRegisteredNames = false } = data;
+    if (typeof showRecentDonations !== "boolean" || typeof showRegisteredNames !== "boolean") return NextResponse.json({ error: "Invalid ticker source" }, { status: 400 });
+    const live = showRecentDonations || showRegisteredNames;
     const timingError = validateTiming(minIntervalSeconds ?? 3, maxIntervalSeconds ?? 8);
     if (timingError) return NextResponse.json({ error: timingError }, { status: 400 });
     if (typeof isActive !== "boolean") {
       return NextResponse.json({ error: "isActive must be a boolean" }, { status: 400 });
     }
-    const normalizedNames = normalizeTickerDisplayNames(donorNames);
+    const normalizedNames = live && Array.isArray(donorNames) && donorNames.length === 0 ? [] : normalizeTickerDisplayNames(donorNames);
     const normalizedRanges = normalizeAmountRanges(amountRanges);
-    if (!normalizedNames?.length) return NextResponse.json({ error: "Display names must be non-empty strings, at most 80 characters each, with no more than 100 entries" }, { status: 400 });
-    if (!normalizedRanges?.length) return NextResponse.json({ error: "Add amount ranges whose probabilities total 100" }, { status: 400 });
+    if ((donorNames !== undefined && !normalizedNames) || (!live && !normalizedNames?.length)) return NextResponse.json({ error: "Display names must be non-empty strings, at most 80 characters each, with no more than 100 entries" }, { status: 400 });
+    if ((amountRanges !== undefined && !normalizedRanges) || (!live && !normalizedRanges?.length)) return NextResponse.json({ error: "Add amount ranges whose probabilities total 100" }, { status: 400 });
 
     // Keep the active configuration intact if creating its replacement fails.
     const ticker = await prisma.$transaction(async (tx) => {
@@ -72,8 +81,9 @@ export async function POST(request: NextRequest) {
       return tx.liveDonationTicker.create({
         data: {
           isActive,
-          donorNames: normalizedNames,
-          amountRanges: normalizedRanges,
+          showRecentDonations, showRegisteredNames,
+          donorNames: normalizedNames || [],
+          amountRanges: normalizedRanges || [],
           minIntervalSeconds: minIntervalSeconds ?? 3,
           maxIntervalSeconds: maxIntervalSeconds ?? 8,
         },
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(ticker, { status: 201 });
   } catch (error) {
-    console.error('Error creating ticker config:', error);
+    console.error('Error creating ticker config');
     return NextResponse.json(
       { error: 'Failed to create ticker configuration' },
       { status: 500 }
@@ -120,22 +130,27 @@ export async function PATCH(request: NextRequest) {
 
     const current = await prisma.liveDonationTicker.findUnique({
       where: { id },
-      select: { donorNames: true, amountRanges: true, minIntervalSeconds: true, maxIntervalSeconds: true },
+      select: { showRecentDonations: true, showRegisteredNames: true, donorNames: true, amountRanges: true, minIntervalSeconds: true, maxIntervalSeconds: true },
     });
     if (!current) return NextResponse.json({ error: "Ticker configuration not found" }, { status: 404 });
 
     const allowedUpdates: Record<string, unknown> = {};
+    for (const field of ["showRecentDonations", "showRegisteredNames"] as const) {
+      if (updates[field] !== undefined && typeof updates[field] !== "boolean") return NextResponse.json({ error: "Invalid ticker source" }, { status: 400 });
+      if (updates[field] !== undefined) allowedUpdates[field] = updates[field];
+    }
+    const live = (updates.showRecentDonations ?? current.showRecentDonations) || (updates.showRegisteredNames ?? current.showRegisteredNames);
     if (typeof updates.isActive === "boolean") allowedUpdates.isActive = updates.isActive;
     else if (updates.isActive !== undefined) return NextResponse.json({ error: "isActive must be a boolean" }, { status: 400 });
     if (updates.donorNames !== undefined) {
-      const names = normalizeTickerDisplayNames(updates.donorNames);
-      if (!names?.length) return NextResponse.json({ error: "Display names must be non-empty strings, at most 80 characters each, with no more than 100 entries" }, { status: 400 });
-      allowedUpdates.donorNames = names;
+      const names = live && Array.isArray(updates.donorNames) && updates.donorNames.length === 0 ? [] : normalizeTickerDisplayNames(updates.donorNames);
+      if (!names || (!live && !names.length)) return NextResponse.json({ error: "Display names must be non-empty strings, at most 80 characters each, with no more than 100 entries" }, { status: 400 });
+      allowedUpdates.donorNames = names || [];
     }
     if (updates.amountRanges !== undefined) {
       const ranges = normalizeAmountRanges(updates.amountRanges);
-      if (!ranges?.length) return NextResponse.json({ error: "Add amount ranges whose probabilities total 100" }, { status: 400 });
-      allowedUpdates.amountRanges = ranges;
+      if (!ranges || (!live && !ranges.length)) return NextResponse.json({ error: "Add amount ranges whose probabilities total 100" }, { status: 400 });
+      allowedUpdates.amountRanges = ranges || [];
     }
     if (updates.minIntervalSeconds !== undefined) allowedUpdates.minIntervalSeconds = updates.minIntervalSeconds;
     if (updates.maxIntervalSeconds !== undefined) allowedUpdates.maxIntervalSeconds = updates.maxIntervalSeconds;
@@ -146,8 +161,10 @@ export async function PATCH(request: NextRequest) {
     }
     const timingError = validateTiming(nextMin ?? current.minIntervalSeconds, nextMax ?? current.maxIntervalSeconds);
     if (timingError) return NextResponse.json({ error: timingError }, { status: 400 });
+    const mergedNames = (allowedUpdates.donorNames as string[] | undefined) ?? current.donorNames;
+    if (!live && !mergedNames.length) return NextResponse.json({error:"Add display names or enable a live source"},{status:400});
     const mergedRanges = (allowedUpdates.amountRanges as { probability: number }[] | undefined) ?? current.amountRanges;
-    if (Math.abs(mergedRanges.reduce((sum, range) => sum + range.probability, 0) - 100) > 0.01) {
+    if (!live && Math.abs(mergedRanges.reduce((sum, range) => sum + range.probability, 0) - 100) > 0.01) {
       return NextResponse.json({ error: "Amount range probabilities must total 100" }, { status: 400 });
     }
     if (!Object.keys(allowedUpdates).length) {
@@ -181,7 +198,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(ticker);
   } catch (error) {
-    console.error('Error updating ticker config:', error);
+    console.error('Error updating ticker config');
     return NextResponse.json(
       { error: 'Failed to update ticker configuration' },
       { status: 500 }
@@ -202,7 +219,8 @@ function validateTiming(minIntervalSeconds: unknown, maxIntervalSeconds: unknown
 }
 
 function normalizeAmountRanges(rawRanges: unknown): { minAmount: number; maxAmount: number; probability: number; label: string }[] | null {
-  if (!Array.isArray(rawRanges) || rawRanges.length === 0 || rawRanges.length > 20) return null;
+  if (!Array.isArray(rawRanges) || rawRanges.length > 20) return null;
+  if (!rawRanges.length) return [];
   const ranges: { minAmount: number; maxAmount: number; probability: number; label: string }[] = [];
   for (const rangeValue of rawRanges) {
     if (!rangeValue || typeof rangeValue !== "object") return null;

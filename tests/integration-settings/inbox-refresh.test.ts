@@ -22,22 +22,23 @@ function harness(status: string, databaseFailure = false) {
   const now = new Date("2026-10-26T11:00:00Z");
   const outboundAt = new Date("2026-10-26T12:00:00Z");
   const calls: Array<Record<string, unknown>> = [];
-  const prisma = {
-    $runCommandRaw: async (query: { aggregate: string; pipeline: Array<Record<string, unknown>> }) => {
+  const aggregate = async (collection: string, query: { pipeline: Array<Record<string, unknown>> }) => {
       if (databaseFailure) throw new Error("fixture database unavailable");
-      calls.push(query);
-      if (JSON.stringify(query).includes("outbound_echo")) return { cursor: { firstBatch: [] } };
-      const inbound = query.aggregate === "CommunicationProviderEvent";
-      return { cursor: { firstBatch: [{ _id: { senderId: "business", phone: "+15555555555" }, count: 1,
+      calls.push({aggregate:collection,...query});
+      if (JSON.stringify(query).includes("outbound_echo")) return [];
+      const inbound = collection === "CommunicationProviderEvent";
+      return [{ _id: { senderId: "business", phone: "+15555555555" }, count: 1,
         lastAt: inbound ? now : outboundAt, lastReplyAt: timeline.INBOX_ACCEPTED_STATUSES.includes(status) ? outboundAt : null,
         lastPayload: { text: "Incoming" },
-      }] } };
-    },
+      }];
+  };
+
+  const prisma = {
     donorCommunicationProfile: { findMany: async () => [] },
     communicationSender: { findMany: async () => [{ id: "business", name: "Business" }] },
     auditLog: { findMany: async () => [] },
-    communicationProviderEvent: { findMany: async () => [{ id: "incoming", eventType: "inbound_message", receivedAt: now, payloadSanitized: { text: "Incoming" }, senderId: "business" }] },
-    communicationDelivery: { findMany: async () => [{ id: "outgoing", createdAt: outboundAt, renderedBody: "Reply", status, senderId: "business" }] },
+    communicationProviderEvent: { aggregateRaw: (q:Parameters<typeof aggregate>[1]) => aggregate("CommunicationProviderEvent",q), findMany: async () => [{ id: "incoming", eventType: "inbound_message", receivedAt: now, payloadSanitized: { text: "Incoming" }, senderId: "business" }] },
+    communicationDelivery: { aggregateRaw: (q:Parameters<typeof aggregate>[1]) => aggregate("CommunicationDelivery",q), findMany: async () => [{ id: "outgoing", createdAt: outboundAt, renderedBody: "Reply", status, senderId: "business" }] },
   };
   const dependencies: Record<string, unknown> = {
     "@/lib/dashboard/donor-account": {}, "@/lib/prisma": { prisma }, "@/lib/audit-log": {}, "./phone": phone, "./inbox-timeline": timeline,
@@ -74,6 +75,7 @@ test("provider acceptance with archive failure reports uncertainty rather than r
   let sends = 0;
   const dependencies: Record<string, unknown> = {
     "server-only": {},
+    "./inbox-media": {}, "./voice-note": {}, "./providers/meta-whatsapp/media-messages": {},
     "@/lib/prisma": { prisma: {
       donorCommunicationProfile: { findFirst: async () => null },
       communicationProviderEvent: { findFirst: async () => ({ receivedAt: new Date(), providerMessageId: "incoming" }) },
@@ -81,8 +83,8 @@ test("provider acceptance with archive failure reports uncertainty rather than r
     "./delivery-log-service": { createDeliveryRecord: async () => ({ ok: true, data: { id: "archived" } }), markDeliveryStatus: async () => ({ ok: false }) },
     "./conversation-service": { parseConversationId: () => ({ senderId: "business", phone: "+15555555555" }) },
     "./phone": phone,
-    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({ raw: new Map([["business", { id: "business", phoneNumberId: "fixture-number" }]]) }) },
-    "./runtime-config": { getActiveMetaWhatsappRuntimeConfig: async () => ({}) },
+    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({ raw: new Map([["business", { id: "business", phoneNumberId: "fixture-number", enabled:true,status:"ACTIVE",channel:"WHATSAPP" }]]) }) },
+    "./runtime-config": { getActiveMetaWhatsappRuntimeConfig: async () => ({configured:true}) },
     "./providers/meta-whatsapp/messages": { sendTextMessage: async () => { sends++; return { ok: true, providerMessageId: "accepted" }; } },
   };
   const output = ts.transpileModule(fs.readFileSync("lib/communication/conversation-reply-service.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;

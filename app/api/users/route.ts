@@ -139,7 +139,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const total = await prisma.user.count({ where });
+    const [total, registeredDonorsTotal] = await Promise.all([
+      prisma.user.count({ where }),
+      scope === "donors" ? prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER")] } }) : Promise.resolve(null),
+    ]);
 
     const isAggregateSort = sortBy === 'donationsCount' || sortBy === 'totalDonated';
     let orderedIds: string[] = [];
@@ -307,6 +310,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       users: usersWithTotals,
+      registeredDonorsTotal,
       pagination: {
         total,
         pages: Math.ceil(total / limit),

@@ -2491,6 +2491,7 @@
   "LiveDonationsTicker": {
     "now": "ora",
     "donated": "ha donato",
-    "for": "per"
+    "for": "per",
+    "communitySupporter": "Dalla nostra comunità di sostenitori"
   }
 }

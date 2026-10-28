@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating super category:", error);
     return NextResponse.json(
-      { error: writeErrorMessage(error, "تعذّر إنشاء القسم الكبير") },
+      { error: writeErrorMessage(error, "تعذّر إنشاء المشروع الكبير") },
       { status: 500 }
     );
   }

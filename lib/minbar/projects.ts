@@ -1,3 +1,4 @@
+import { applyPublicPreview, type PublicPreviewDraft } from "@/lib/content-editor/public-preview";
 import "server-only";
 
 import { describeVideoSource } from "@/lib/content/video-platform";
@@ -408,20 +409,20 @@ export async function listProjectsInCategory(
  * `PRODUCTION_SEO_CONTRACT.md` gives every language its own slug and a visitor
  * on `/fr/projects/<french-slug>` must resolve.
  */
-export async function getProject(slug: string, locale: string): Promise<MinbarProject | null> {
+export async function getProject(slug: string, locale: string, draft?: PublicPreviewDraft): Promise<MinbarProject | null> {
   /* `id` is a Mongo ObjectId column: handing it an arbitrary slug makes Prisma
      throw rather than miss, which turns every unknown project URL into a 500
      instead of a 404. `whereByIdOrAnyLocaleSlug` only matches on `id` when the
      key actually looks like one. */
-  let row = (await prisma.campaign.findFirst({
+  let row = (draft?.seed ?? await prisma.campaign.findFirst({
     where: {
-      AND: [{ isActive: true }, NOT_SOFT_DELETED, whereByIdOrAnyLocaleSlug(slug, "translations", true)],
+      AND: [...(draft ? [] : [{ isActive: true }]), NOT_SOFT_DELETED, whereByIdOrAnyLocaleSlug(slug, "translations", true)],
     },
     select: selectFor(locale),
   })) as unknown as CampaignRow | null;
 
   let redirectedFrom: string | undefined;
-  if (!row) {
+  if (!row && !draft) {
     const alias = await prisma.campaignSlugRedirect.findUnique({
       where: { locale_slug: { locale, slug } },
       select: { campaignId: true },
@@ -436,7 +437,7 @@ export async function getProject(slug: string, locale: string): Promise<MinbarPr
   }
 
   if (!row) return null;
-  const project = toProject(row, locale, true);
+  const project = toProject(applyPublicPreview(row, draft), locale, true);
   return redirectedFrom ? { ...project, redirectedFrom } : project;
 }
 

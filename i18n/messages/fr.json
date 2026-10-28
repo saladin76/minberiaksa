@@ -736,7 +736,8 @@
   "LiveDonationsTicker": {
     "donated": "a donné",
     "for": "pour",
-    "now": "à l'instant"
+    "now": "à l'instant",
+    "communitySupporter": "Notre communauté de soutien"
   },
   "Profile": {
     "nav": {

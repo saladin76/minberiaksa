@@ -2491,6 +2491,7 @@
   "LiveDonationsTicker": {
     "now": "nyss",
     "donated": "donerade",
-    "for": "för"
+    "for": "för",
+    "communitySupporter": "Från vår gemenskap av supportrar"
   }
 }

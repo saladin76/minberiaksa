@@ -119,7 +119,7 @@ export const CONFIG: Record<
     ],
   },
   "super-categories": {
-    label: "الأقسام الكبرى",
+    label: "المشاريع الكبرى",
     model: "superCategory",
     translationModel: "superCategoryTranslation",
     parentKey: "superCategoryId",

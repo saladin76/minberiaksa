@@ -736,7 +736,8 @@
   "LiveDonationsTicker": {
     "donated": "تبرع",
     "for": "لصالح",
-    "now": "الآن"
+    "now": "الآن",
+    "communitySupporter": "من مجتمع الداعمين"
   },
   "Profile": {
     "nav": {

@@ -11,6 +11,8 @@ const require = createRequire(import.meta.url);
 const { documentFor } = require("../lib/content-editor/service.ts");
 const { CONTENT_KINDS } = require("../lib/content-editor/contracts.ts");
 const { EDITOR_SECTIONS } = require("../lib/content-editor/workspace.ts");
+const { preparePreviewDraft } = require("../lib/content-editor/preview-draft.ts");
+const { pickNamespaces, SHELL_NAMESPACES } = require("../i18n/locale-messages.ts");
 const en = require("../lib/dashboard/i18n/catalog/en.json"), tr = require("../lib/dashboard/i18n/catalog/tr.json");
 const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || text);
 const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
@@ -25,6 +27,7 @@ let css = (
     from: undefined,
   })
 ).css;
+css += (await readFile("app/[locale]/globals.css", "utf8")).match(/:root\s*\{[\s\S]*?\}/)?.[0] || "";
 const fontFiles = {
   "/fixture-cairo-ar.woff2": "public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2",
   "/fixture-cairo-latin.woff2": "public/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2",
@@ -40,6 +43,7 @@ css += `
 :root{--radius:.5rem;--font-cairo:FixtureCairo;--font-montserrat:FixtureMontserrat;}
 body{font-family:var(--font-cairo),var(--font-montserrat),system-ui,sans-serif;}
 `;
+css += await readFile("styles/minbar/minbar.css","utf8") + await readFile("styles/minbar/locale-fonts.css","utf8");
 const id = "111111111111111111111111";
 const fixture = {
   id,
@@ -77,8 +81,10 @@ const bundle = await build({
     {
       name: "next-standalone",
       setup(b) {
+        b.onResolve({filter:/^@\/context\/CurrencyContext$/},()=>({path:"currency",namespace:"fixture-currency"}));
+        b.onLoad({filter:/.*/,namespace:"fixture-currency"},()=>({contents:'const value={getSelectedCurrency:()=>"USD",convertToCurrency:n=>({convertedValue:n,currency:"USD",exchangeRate:1}),convertToUSD:n=>n};export function useCurrency(){return value}',loader:"js"}));
         b.onResolve({ filter: /^next-auth\/react$/ }, () => ({ path: "session", namespace: "fixture-session" }));
-        b.onLoad({ filter: /.*/, namespace: "fixture-session" }, () => ({ contents: "export function useSession(){return {data:null,status:'unauthenticated'}}", loader: "js" }));
+        b.onLoad({ filter: /.*/, namespace: "fixture-session" }, () => ({ contents: "export function useSession(){return {data:null,status:'unauthenticated'}};export function signIn(){};export function signOut(){}", loader: "js" }));
         b.onResolve({ filter: /^next\/(link|dynamic|image|navigation)$/ }, (args) => ({
           path: args.path,
           namespace: "fixture-next",
@@ -86,7 +92,7 @@ const bundle = await build({
         b.onLoad({ filter: /.*/, namespace: "fixture-next" }, (args) => ({
           contents:
             args.path === "next/navigation"
-              ? "export function useRouter(){ return {replace(){}, push(){}, refresh(){}}; }"
+              ? "import {useMemo} from 'react';export function useSearchParams(){return useMemo(()=>new URLSearchParams(location.search),[])};export function useParams(){return {locale:new URLSearchParams(location.search).get('lang')||'ar'}};export function usePathname(){return location.pathname};export function useRouter(){ return {replace(){}, push(){}, refresh(){}}; }"
               : args.path === "next/image"
               ? 'import React from "react"; export default function Image({src,alt,...props}){return React.createElement("img",{src,alt,...props});}'
               : args.path === "next/link"
@@ -99,6 +105,7 @@ const bundle = await build({
     },
   ],
 });
+if(process.env.CHECK_BUNDLE_ONLY){console.log("Content editor browser bundle: compiled");process.exit(0);}
 const server = createServer(async (req, res) => {
   if (req.url === "/api/upload") {
     req.resume();
@@ -166,6 +173,11 @@ const server = createServer(async (req, res) => {
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
       res.setHeader("Content-Type", "application/json");
+      if (req.url.endsWith("/preview")) {
+        const input=JSON.parse(body), draft=preparePreviewDraft(kind,doc.settings,input.locale,input.changes,input.settings);
+        const page={id,slug:"category",pageTemplate:null,name:draft.changes.name,description:draft.changes.description||"",image:"",heroImage:"",heroVideoId:"",heroLead:draft.changes.heroLead||"",ctaLabel:"",stats:null,projectsTitle:"",donateTitle:"",donateNote:"",suggestedAmounts:[],suggestedByCurrency:{},donateTarget:null,achievementsTitle:"",values:[],cards:[],projects:[],achievements:[]};
+        res.end(JSON.stringify({kind,page,messages:pickNamespaces(input.locale,[...SHELL_NAMESPACES,"cart","homepage","ProjectExtras","CampaignsPage","CategoryLanding"])}));return;
+      }
       if (req.url.endsWith("/suggest")) {
         const input = JSON.parse(body);
         if (delay) await delay;
@@ -346,6 +358,8 @@ try {
   await page.getByRole("heading",{name:"لم تتوفر اقتراحات للمراجعة",exact:true}).waitFor();assert.equal(failedSuggestions,1);assert.equal(saves,savesBeforeFailedBatch);assert.equal(await title.inputValue(),"Unsaved edit");
   assert.equal(await page.getByRole("button",{name:"تطبيق جميع الاقتراحات على المسودة",exact:true}).isDisabled(),true);
   await page.getByRole("link",{name:"مراجعة اتصال الذكاء الاصطناعي والنموذج",exact:true}).waitFor();await page.screenshot({path:path.join(temp,"ar-translation-quota-stopped.png"),fullPage:true,animations:"disabled"});await page.unroute("**/api/admin/content-editor/*/*/suggest");
+
+  const previewPage=await browser.newPage({viewport:{width:1440,height:1000}});previewPage.on("pageerror",error=>errors.push(error.message));await previewPage.context().addCookies([{name:"dash-locale",value:"ar",url:origin}]);await previewPage.goto(origin+"/?kind=categories");await previewPage.getByRole("heading",{level:1}).waitFor();await previewPage.getByLabel("اسم التصنيف",{exact:true}).fill("مسودة معاينة الصفحة");const beforePreview=saves;await previewPage.getByRole("button",{name:"معاينة الصفحة",exact:true}).click();await previewPage.frameLocator("iframe").getByRole("heading",{name:"مسودة معاينة الصفحة",exact:true,level:1}).waitFor();await previewPage.getByRole("button",{name:"إغلاق",exact:true}).click();assert.equal(await previewPage.getByLabel("اسم التصنيف",{exact:true}).inputValue(),"مسودة معاينة الصفحة");assert.equal(saves,beforePreview);await previewPage.close();
 
   // Mount every supported editor and its actual section controls without production data.
   for (const locale of ["ar", "en", "tr"]) {
@@ -566,7 +580,7 @@ try {
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
-      checks: process.env.A1_WORKFLOWS_ONLY ? 6 : 22,
+      checks: process.env.A1_WORKFLOWS_ONLY ? 6 : 23,
       snapshots: (snapshots.length + workflowScreens.length) * 2 + 6,
       passed: true,
       screenshots: temp,

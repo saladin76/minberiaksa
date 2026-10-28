@@ -2491,6 +2491,7 @@
   "LiveDonationsTicker": {
     "now": "अभी",
     "donated": "ने दान किया",
-    "for": "के लिए"
+    "for": "के लिए",
+    "communitySupporter": "हमारे सहयोगी समुदाय से"
   }
 }

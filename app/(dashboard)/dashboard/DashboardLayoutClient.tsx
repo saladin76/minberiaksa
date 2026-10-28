@@ -199,10 +199,10 @@ function DashboardContent({
       if (running || document.hidden) return;
       running = true;
       try {
-        const res = await fetch('/api/dashboard/communication/inbox?filter=needsReply&limit=1', { cache: 'no-store' });
+        const res = await fetch('/api/dashboard/communication/inbox?filter=unread&limit=1', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        const count = Number(data?.needsReply);
+        const count = Number(data?.unread);
         if (!cancelled && Number.isFinite(count)) setWhatsappInboxCount(Math.max(0, count));
       } catch { /* Retain the last confirmed count during transient failures. */ }
       finally { running = false; }

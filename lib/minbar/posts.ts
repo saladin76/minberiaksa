@@ -1,3 +1,4 @@
+import { applyPublicPreview, type PublicPreviewDraft } from "@/lib/content-editor/public-preview";
 import { hasText } from "@/lib/content-editor/contracts";
 import { prisma } from "@/lib/prisma";
 import { pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
@@ -174,10 +175,10 @@ export async function listArticles({
 }
 
 /** One article by locale slug, base slug, or id. `null` when unpublished. */
-export async function getArticle(slugOrId: string, locale: string): Promise<MinbarArticleDetail | null> {
+export async function getArticle(slugOrId: string, locale: string, draft?: PublicPreviewDraft): Promise<MinbarArticleDetail | null> {
   try {
-    const row = await prisma.post.findFirst({
-      where: { published: true, ...whereByIdOrAnyLocaleSlug(slugOrId, "translations", true) },
+    const fetched = draft?.seed ? null : await prisma.post.findFirst({
+      where: { ...(draft ? {} : { published: true }), ...whereByIdOrAnyLocaleSlug(slugOrId, "translations", true) },
       select: {
         id: true,
         slug: true,
@@ -223,7 +224,8 @@ export async function getArticle(slugOrId: string, locale: string): Promise<Minb
       },
     });
 
-    if (!row) return null;
+    if (!fetched && !draft?.seed) return null;
+    const row = applyPublicPreview(fetched ?? draft!.seed as unknown as NonNullable<typeof fetched>, draft);
 
     const localized = pickTranslation(row.translations, locale);
     const baseCard: CardRow = {

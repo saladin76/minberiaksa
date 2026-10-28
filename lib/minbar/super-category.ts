@@ -1,3 +1,4 @@
+import { applyPublicPreview, previewText, type PublicPreviewDraft } from "@/lib/content-editor/public-preview";
 import { pickLocaleSlug, whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -115,10 +116,10 @@ const PAGE_SELECT = {
   metaDescription: true,
   items: { orderBy: { order: "asc" as const }, select: { kind: true, refId: true, order: true } },
   blocks: {
-    where: { isActive: true },
     orderBy: { order: "asc" as const },
     select: {
       id: true,
+      isActive: true,
       kind: true,
       anchor: true,
       eyebrow: true,
@@ -208,10 +209,11 @@ export async function listNavSuperCategories(locale: string): Promise<NavSuperCa
  */
 export async function getSuperCategory(
   slug: string,
-  locale: string
+  locale: string,
+  draft?: PublicPreviewDraft
 ): Promise<SuperCategoryContent | null> {
-  const row = await prisma.superCategory.findFirst({
-    where: { AND: [whereByIdOrAnyLocaleSlug(slug, "translations", true), { isActive: true }] },
+  const fetched = draft?.seed ? null : await prisma.superCategory.findFirst({
+    where: { AND: [whereByIdOrAnyLocaleSlug(slug, "translations", true), ...(draft ? [] : [{ isActive: true }])] },
     select: {
       ...PAGE_SELECT,
       translations: {
@@ -235,7 +237,8 @@ export async function getSuperCategory(
       },
     },
   });
-  if (!row) return null;
+  if (!fetched && !draft?.seed) return null;
+  const row = applyPublicPreview(fetched ?? draft!.seed as unknown as NonNullable<typeof fetched>, draft);
 
   const t = pickTranslation(row.translations, locale);
 
@@ -278,7 +281,7 @@ export async function getSuperCategory(
   };
 
   const blockTranslations = await prisma.superCategoryBlockTranslation.findMany({
-    where: { blockId: { in: row.blocks.map((b) => b.id) }, ...translationLocaleWhere(locale) },
+    where: { blockId: { in: row.blocks.map((b) => b.id).filter(id => /^[a-f0-9]{24}$/i.test(id)) }, ...translationLocaleWhere(locale) },
     select: { blockId: true, locale: true, eyebrow: true, title: true, subtitle: true, body: true, linkLabel: true },
   });
   const perBlock = new Map<string, typeof blockTranslations>();
@@ -288,18 +291,18 @@ export async function getSuperCategory(
     perBlock.set(tr.blockId, list);
   }
 
-  const blocks: SuperCategoryBlockContent[] = row.blocks.map((b) => {
+  const blocks: SuperCategoryBlockContent[] = row.blocks.filter(b => b.isActive !== false).map((b) => {
     const bt = pickTranslation(perBlock.get(b.id) ?? [], locale);
     const source = BLOCK_SOURCE_KIND[b.kind as SuperCategoryBlockKindValue];
     return {
       key: b.id,
       kind: b.kind as SuperCategoryBlockKindValue,
       anchor: b.anchor ?? "",
-      eyebrow: bt?.eyebrow || b.eyebrow || "",
-      title: bt?.title || b.title || "",
-      subtitle: bt?.subtitle || b.subtitle || "",
-      body: bt?.body || b.body || "",
-      linkLabel: bt?.linkLabel || b.linkLabel || "",
+      eyebrow: previewText(draft, `blocks.${b.id}.eyebrow`, bt?.eyebrow || b.eyebrow || ""),
+      title: previewText(draft, `blocks.${b.id}.title`, bt?.title || b.title || ""),
+      subtitle: previewText(draft, `blocks.${b.id}.subtitle`, bt?.subtitle || b.subtitle || ""),
+      body: previewText(draft, `blocks.${b.id}.body`, bt?.body || b.body || ""),
+      linkLabel: previewText(draft, `blocks.${b.id}.linkLabel`, bt?.linkLabel || b.linkLabel || ""),
       linkUrl: b.linkUrl ?? "",
       image: b.image ?? "",
       youtubeId: b.youtubeId ?? "",
@@ -316,6 +319,13 @@ export async function getSuperCategory(
           : null,
     };
   });
+
+  // Selecting projects must be sufficient to show them. An explicitly configured
+  // (including hidden) grid remains authoritative and is never resurrected.
+  if (linked.has("CAMPAIGN") && !row.blocks.some(block => block.kind === "CAMPAIGNS")) {
+    const selected = pick("CAMPAIGN", campaigns);
+    if (selected.length) blocks.push({ key: "linked-projects", kind: "CAMPAIGNS", anchor: "projects", eyebrow: "", title: "", subtitle: "", body: "", linkLabel: "", linkUrl: "", image: "", youtubeId: "", campaigns: selected, posts: [], videos: [], playlists: [], courses: [], reports: [], booklets: [], playlist: null });
+  }
 
   const ctas = [
     { label: t?.ctaPrimaryLabel || row.ctaPrimaryLabel || "", href: row.ctaPrimaryHref || "" },

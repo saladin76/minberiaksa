@@ -2491,6 +2491,7 @@
   "LiveDonationsTicker": {
     "now": "nettopp",
     "donated": "har donert",
-    "for": "til"
+    "for": "til",
+    "communitySupporter": "Fra vårt fellesskap av støttespillere"
   }
 }

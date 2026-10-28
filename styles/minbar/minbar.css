@@ -5132,7 +5132,10 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   .mia-head .mia-main-row > .mia-header-search,
   .mia-head .mia-main-row > span[aria-hidden="true"] { display: none !important; }
   .mia-head svg.mia-phone-only { display: block !important; }
+  .mia-head .mia-main-row [data-pop="locale"] { flex: 0 1 auto !important; min-width: 0; }
   .mia-head .mia-phone-pills { display: flex !important; align-items: center; gap: 6px; }
+  .mia-head .mia-phone-pill { min-width: 0; }
+  .mia-head .mia-phone-pill:last-child { flex: 0 0 auto; }
   .mia-head .mia-menu-phone-tools { display: grid !important; }
 }
 .mia-head .mia-phone-pill {
@@ -5143,9 +5146,9 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
   white-space: nowrap; cursor: pointer; transition: background .18s ease, border-color .18s ease;
 }
 .mia-head .mia-phone-pill[aria-expanded="true"] { border-color: #D39A27; background: rgba(255,255,255,.22); }
-.mia-head .mia-phone-pill__value { max-width: 76px; overflow: hidden; text-overflow: ellipsis; unicode-bidi: isolate; }
+.mia-head .mia-phone-pill__value { min-width: 0; max-width: 76px; overflow: hidden; text-overflow: ellipsis; unicode-bidi: isolate; }
 .mia-head .mia-phone-pill__value b { color: #F4DEAB; font-weight: 900; }
-@media (max-width: 380px) {
+@media (max-width: 430px) {
   .mia-head .mia-phone-pill { padding: 0 8px; gap: 4px; font-size: 12px; }
   .mia-head .mia-phone-pill > svg:first-child:not(:last-child) { display: none; }
   .mia-head .mia-phone-pill__value { max-width: 62px; }
@@ -5256,7 +5259,10 @@ html[data-mia-drawer="open"] .mia-scope .mia-qb-sec { display: none !important; 
 
 @media (max-width: 365px) {
   .mia-head .mia-main-row { gap: 3px !important; padding-inline: 5px !important; }
-  .mia-head .mia-main-row img[src*="logo-horizontal"] { max-width: 80px !important; }
+  .mia-head .mia-main-row img[src*="logo-horizontal"] { max-width: 56px !important; }
+  .mia-head .mia-main-row .mia-circle { width: 40px !important; height: 40px !important; }
+  .mia-head .mia-phone-pills { gap: 4px !important; }
+  .mia-head .mia-phone-pill { padding-inline: 6px; gap: 3px; font-size: 11px; }
   .mia-head .mia-main-row .mia-header-search__toggle { width: 36px; height: 36px; }
 }
 
