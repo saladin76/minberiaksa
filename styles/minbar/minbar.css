@@ -3492,9 +3492,11 @@ html.cg-open .mia-scope:has(.mia-qb-sec) { padding-bottom: 0; }
 .mia-scope .ib-logo:hover { transform: translateY(-2px); }
 
 @media (max-width: 900px) {
-  .mia-scope .ib-hero { grid-template-columns: minmax(0, 1fr) !important; padding-top: 96px !important; padding-bottom: 60px !important; }
-  /* The wordmark stops overlapping the copy box once the hero is one column. */
-  .mia-scope .ib-logo { width: min(52vw, 180px) !important; }
+  .mia-scope .ib-hero { grid-template-columns: minmax(0, 1fr) !important; padding-top: 24px !important; padding-bottom: 60px !important; }
+  /* Reserve the logo's actual height; a fixed title offset fails for tall logos. */
+  .mia-scope .ib-logo { position: relative !important; inset: auto !important; margin: 24px 24px 0; width: min(52vw, 180px) !important; max-width: calc(100% - 48px); }
+  .mia-scope .ib-hero > div:first-child { min-width: 0; max-width: 100%; }
+  .mia-scope .ib-hero h1 { overflow-wrap: anywhere; }
 }
 @media (max-width: 620px) {
   .mia-scope .ib-hero > div:first-child { padding: 22px 20px !important; }

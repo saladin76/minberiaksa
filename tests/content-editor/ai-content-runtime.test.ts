@@ -22,6 +22,7 @@ test("successful research and translation probes do not publish generated conten
   let count = 0;
   const result = await probeContentRuntime({ runtime, env: { NODE_ENV: "test" }, builders, errors, checkGeneration: true, request: async (_url, init) => {
     count++; const body = JSON.parse(String(init?.body)); assert.equal(body.store, false);
+    if (count === 2) assert.match(body.input, /json/i, "the diagnostic must exercise the same input-level JSON requirement as the live editor");
     return Response.json({ status: "completed", output: [
       ...(count === 1 ? [{ type: "web_search_call", status: "completed", action: { sources: [{ url: "https://example.test/docs" }] } }] : []),
       { type: "message", content: [{ type: "output_text", text: JSON.stringify({ title: "Synthetic unpublished content" }) }] },

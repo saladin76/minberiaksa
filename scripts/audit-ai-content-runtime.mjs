@@ -31,7 +31,9 @@ export async function probeContentRuntime({ runtime, env = process.env, request 
     }
   };
   if (!await run("WEB_RESEARCH", builders.researchRequest('Find the official OpenAI documentation for Responses API web search. Return JSON only with title and url. This is a synthetic connection test.', env))) { report.status = "research_failed"; return report; }
-  const translated = await run("TRANSLATION", builders.researchedTranslationRequest('Translate the Arabic title "مشروع تعليمي" into English. Return JSON only: {"title":"..."}. This is a synthetic connection test.', env));
+  // Like an editor title, this prompt has no JSON keyword of its own. The shared
+  // builder must provide it; adding it here would conceal a rejected live request.
+  const translated = await run("TRANSLATION", builders.researchedTranslationRequest('Translate the Arabic title "مشروع تعليمي" into English. Return {"title":"..."}. This is a synthetic connection test.', env));
   report.status = translated ? "generation_ready" : "translation_failed"; return report;
 }
 

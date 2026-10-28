@@ -24,6 +24,8 @@ export function researchedTranslationRequest(userContent: string, env: NodeJS.Pr
   return {
     model,
     instructions: "Translate professionally into the requested language. Use natural native phrasing and researched terminology, while preserving the source's meaning, facts, numbers, names, URLs, placeholders and currencies exactly. Never add claims from research. Return JSON only.",
-    input: userContent, text: { format: { type: "json_object" } }, max_output_tokens: outputBudget, store: false,
+    // JSON mode validates the input messages, not only top-level instructions.
+    // A plain title/terminology prompt must satisfy that contract too.
+    input: "Return valid JSON only.\n" + userContent, text: { format: { type: "json_object" } }, max_output_tokens: outputBudget, store: false,
   };
 }

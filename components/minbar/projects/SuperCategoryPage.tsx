@@ -255,7 +255,7 @@ function Block({
           <div style={{ ...SECTION, display: "grid", gap: 18 }}>
             <BlockHeading block={block} />
             {block.campaigns.length ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 22, justifyContent: "center" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 22, justifyContent: "center" }}>
                 {block.campaigns.map((project) => (
                   <ProjectDonateCard key={project.id} project={project} />
                 ))}
