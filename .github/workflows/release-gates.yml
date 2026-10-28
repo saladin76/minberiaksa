@@ -145,6 +145,15 @@ jobs:
           path: .artifacts/content-editor/
           retention-days: 7
 
+      - name: Capture pinned browser runtime for local fixture verification
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-browser-runtime
+          path: ~/.cache/ms-playwright/chromium_headless_shell-*
+          include-hidden-files: true
+          retention-days: 1
+
   e2e:
     name: Playwright (critical journeys)
     runs-on: ubuntu-latest

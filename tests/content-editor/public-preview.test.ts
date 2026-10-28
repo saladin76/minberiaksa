@@ -28,6 +28,20 @@ test("localized preview changes are isolated from saved rows and unknown or unsa
   assert.throws(() => preparePreviewDraft("super-categories", row, "ar", { title: "Draft" }, { heroImage: "javascript:alert(1)" }));
 });
 
+test("new programme blocks retain their draft text without requiring a saved child",async()=>{
+  const h=majorProject();
+  const draft=preparePreviewDraft("super-categories",h.row,"en",{title:"Draft"},{blocks:[{id:"draft-new",kind:"TEXT",isActive:true,title:"New section",eyebrow:"Draft eyebrow",subtitle:"Draft subtitle",body:"Draft section body",linkLabel:"Read more",linkUrl:"/en/projects"}]});
+  const result=await h.service.getSuperCategory("restoration","en",draft);
+  assert.equal(result.blocks[0].title,"New section");assert.equal(h.row.blocks.length,0);
+});
+for(const [kind,group,textKey] of [["super-categories","blocks","title"],["categories","values","label"],["categories","infoCards","body"]] as const)test(`removed ${group} text does not invalidate the remaining preview`,()=>{
+  const child={id:"b".repeat(24),kind:"TEXT",isActive:true,title:"Saved section",body:"Saved body",label:"Saved value"};
+  const row={title:"Saved",name:"Saved",translations:[],[group]:[child]};
+  const draft=preparePreviewDraft(kind,row,"ar",{[kind==="categories"?"name":"title"]:"Draft",[`${group}.${child.id}.${textKey}`]:"Old snapshot"},{[group]:[]});
+  assert.deepEqual(draft.settings[group],[]);assert.equal(Object.keys(draft.changes).some(key=>key.startsWith(group+".")),false);
+  assert.throws(()=>preparePreviewDraft(kind,row,"ar",{[`${group}.foreign.password`]:"Forbidden"},{[group]:[]}));
+});
+
 function majorProject(blocks: Record<string, unknown>[] = []) {
   const queries: unknown[] = [];
   const row = { id: "a".repeat(24), slug: "restoration", title: "Saved", intro: "", subtitle: "", heroVideoLocales: [], translations: [], items: [{ kind: "CAMPAIGN", refId: "first" }, { kind: "CAMPAIGN", refId: "archived" }, { kind: "CAMPAIGN", refId: "second" }], blocks };

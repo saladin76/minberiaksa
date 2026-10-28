@@ -41,15 +41,14 @@ export default function LiveDonationsGlass() {
   const nextId = useRef(0);
   const seenDonations = useRef(new Set<string>());
   const communityIndex = useRef(0);
+  const latestFeed = useRef({ config, categories });
+  useEffect(() => { latestFeed.current = { config, categories }; }, [config, categories]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const [tickerResponse, categoriesResponse] = await Promise.all([
-          fetch("/api/live-donation-ticker", { cache: "no-store" }),
-          fetch(`/api/categories?locale=${encodeURIComponent(locale)}&limit=100`, { cache: "no-store" }),
-        ]);
+        const tickerResponse = await fetch("/api/live-donation-ticker", { cache: "no-store" });
         if (!tickerResponse.ok) throw new Error("Failed to load ticker configuration");
         const ticker = await tickerResponse.json();
         if (cancelled) return;
@@ -65,10 +64,6 @@ export default function LiveDonationsGlass() {
         } else {
           setConfig(null);
         }
-        if (categoriesResponse.ok) {
-          const data = await categoriesResponse.json();
-          if (!cancelled) setCategories((data.items ?? []).map((item: { name?: string }) => item.name).filter((name: unknown): name is string => typeof name === "string" && Boolean(name.trim())));
-        }
       } catch (error) {
         console.error("Error loading configured donation ticker:", error);
         if (!cancelled) setConfig(null);
@@ -77,10 +72,23 @@ export default function LiveDonationsGlass() {
     void load();
     const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 10000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [locale]);
+  }, []);
 
   useEffect(() => {
-    if (!config?.enabled || (!config.entries && (!config.donorNames.length || !config.amountRanges.length))) return;
+    let cancelled = false;
+    void fetch(`/api/categories?locale=${encodeURIComponent(locale)}&limit=100`, { cache: "no-store" }).then(async response => {
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!cancelled) setCategories((data.items ?? []).map((item: { name?: string }) => item.name).filter((name: unknown): name is string => typeof name === "string" && Boolean(name.trim())));
+    }).catch(() => { /* Optional legacy labels never block confirmed donations. */ });
+    return () => { cancelled = true; };
+  }, [locale]);
+
+  const tickerEnabled = Boolean(config?.enabled && (config.entries || (config.donorNames.length && config.amountRanges.length)));
+  const minimumInterval = config?.minIntervalSeconds ?? 3;
+  const maximumInterval = config?.maxIntervalSeconds ?? 8;
+  useEffect(() => {
+    if (!tickerEnabled) { setCurrentDonation(null); return; }
     let stopped = false;
     let showTimer: number | undefined;
     let hideTimer: number | undefined;
@@ -88,6 +96,8 @@ export default function LiveDonationsGlass() {
     const showNext = () => {
       if (stopped) return;
       if (document.hidden) { showTimer = window.setTimeout(showNext, 1500); return; }
+      const { config, categories } = latestFeed.current;
+      if (!config?.enabled) return;
       const fresh = config.entries?.find(entry => entry.source === "DONATION" && !seenDonations.current.has(entry.key));
       const community = config.entries?.filter(entry => entry.source === "COMMUNITY") || [];
       const entry = fresh || (community.length ? community[communityIndex.current++ % community.length] : null);
@@ -96,8 +106,8 @@ export default function LiveDonationsGlass() {
       const display = entry ? { ...entry, categoryName: null } : legacy ? { ...legacy, amount: null, source: "DISPLAY" } : null;
       if (display) setCurrentDonation({ ...display, id: ++nextId.current }); else setCurrentDonation(null);
 
-      const minMs = Math.max(3000, config.minIntervalSeconds * 1000);
-      const maxMs = Math.max(minMs, config.maxIntervalSeconds * 1000);
+      const minMs = Math.max(3000, minimumInterval * 1000);
+      const maxMs = Math.max(minMs, maximumInterval * 1000);
       const intervalMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
       hideTimer = window.setTimeout(() => setCurrentDonation(null), Math.min(DISPLAY_MAX_MS, intervalMs));
       showTimer = window.setTimeout(showNext, intervalMs);
@@ -109,7 +119,7 @@ export default function LiveDonationsGlass() {
       if (showTimer !== undefined) window.clearTimeout(showTimer);
       if (hideTimer !== undefined) window.clearTimeout(hideTimer);
     };
-  }, [config, categories]);
+  }, [tickerEnabled, minimumInterval, maximumInterval]);
 
   if (!config?.enabled) return null;
 

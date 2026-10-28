@@ -20,7 +20,7 @@ const category={id,slug:"category",pageTemplate:null,name:"Category",description
 const article={id,slug:"article",title:"Article",excerpt:"Article introduction",cover:"/image.svg",createdAt:"2026-10-28T00:00:00.000Z",updatedAt:"2026-10-28T00:00:00.000Z",category:null,content:"<h2>Article section</h2><p>Draft article body.</p>",campaignIds:[],baseSlug:"article",seoTitle:"",seoDescription:"",seoKeywords:[],imageAlt:"",isLocalized:true,availableLocales:["ar","en","tr"],localizations:[]};
 let rows=[{id,slug:"published",title:"Published programme",heroImage:"",logoImage:"",accentColor:"#7c2318",order:0,isActive:true,translationCount:2,itemCount:3,blockCount:2},{id:second,slug:"draft",title:"Draft programme",heroImage:"",logoImage:"",accentColor:"#7c2318",order:1,isActive:false,translationCount:1,itemCount:1,blockCount:0}];
 let ticker={id,isActive:true,showRecentDonations:true,showRegisteredNames:false,donorNames:[],amountRanges:[],minIntervalSeconds:3,maxIntervalSeconds:8};
-const requests=[],errors=[];let listFailure=false;
+const requests=[],errors=[];let listFailure=false,liveInterval=3;
 const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {PublicPagePreview} from './components/dashboard/content-editor/PublicPagePreview';import MajorProjects from './app/(dashboard)/dashboard/super-categories/page';import Ticker from './app/(dashboard)/dashboard/ticker/page';import LiveTicker from './components/LiveDonationsTicker';import {NextIntlClientProvider} from 'next-intl';import {setDashLocale} from './lib/dashboard/i18n';const q=new URLSearchParams(location.search);const locale=q.get('lang')||'ar';setDashLocale(locale);document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';const surface=q.get('surface')||'preview';const kind=q.get('kind')||'campaigns';createRoot(document.getElementById('root')).render(surface==='majors'?<MajorProjects/>:surface==='ticker'?<Ticker/>:surface==='live'?<NextIntlClientProvider locale={locale} messages={window.fixtureMessages}><LiveTicker/></NextIntlClientProvider>:<PublicPagePreview kind={kind} id='${id}' locale={locale} changes={{title:'Draft '+locale,name:'Draft '+locale,faqContent:'[{"q":"Draft FAQ","a":"Draft answer"}]'}} settings={q.has('template')?{pageTemplate:q.get('template')}:{}}/>);`,resolveDir:process.cwd(),loader:"tsx"},bundle:true,platform:"browser",format:"iife",write:false,jsx:"automatic",loader:{".css":"empty"},tsconfig:path.join(process.cwd(),"tsconfig.json"),define:{"process.env.NODE_ENV":'"test"'},plugins:[{name:"fixture-next",setup(builder){
   builder.onResolve({filter:/^next\/(link|navigation|image)$/},args=>({path:args.path,namespace:"next"}));
   builder.onLoad({filter:/.*/,namespace:"next"},args=>({contents:args.path==="next/navigation"?'export function useRouter(){return {push(){},replace(){},refresh(){}}};export function usePathname(){return location.pathname};export function useSearchParams(){return new URLSearchParams(location.search)}':args.path==="next/image"?'import React from "react";export default function Image({src,alt,...props}){return <img src={src} alt={alt} {...props}/>}':'import React from "react";export default function Link(props){return <a {...props}/>}',loader:"tsx",resolveDir:process.cwd()}));
@@ -42,7 +42,7 @@ const server=createServer(async(req,res)=>{
  if(url.pathname==="/api/live-donation-ticker"){
   if(req.method==="PATCH"){ticker={...ticker,...input};return json(ticker);}
   if(url.searchParams.get("view")==="admin")return json(ticker);
-  return json({enabled:true,entries:[{key:"payment",source:"DONATION",name:"م***د ع***ي",amount:30,currency:"TRY",at:"2026-10-28T10:00:00Z"},{key:"member",source:"COMMUNITY",name:"A***e S***h",amount:null,currency:null,at:null}],donorNames:[],amountRanges:[],minIntervalSeconds:3,maxIntervalSeconds:3});
+  return json({enabled:true,entries:[{key:"payment",source:"DONATION",name:"م***د ع***ي",amount:30,currency:"TRY",at:"2026-10-28T10:00:00Z"},{key:"member",source:"COMMUNITY",name:"A***e S***h",amount:null,currency:null,at:null}],donorNames:[],amountRanges:[],minIntervalSeconds:liveInterval,maxIntervalSeconds:liveInterval});
  }
  if(url.pathname==="/api/categories")return json({items:[]});
  if(url.pathname==="/api/global-settings")return json({allowAnyAmount:false});
@@ -53,10 +53,10 @@ const server=createServer(async(req,res)=>{
  res.setHeader("Content-Type","text/html");res.end(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/test.css"></head><body><div id="root"></div><script>window.fixtureMessages=${JSON.stringify(pickNamespaces(url.searchParams.get("lang")||"ar",["LiveDonationsTicker"]))}</script><script src="/bundle.js"></script></body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const origin=`http://127.0.0.1:${server.address().port}`;
-let browser,checks=0;
+let browser,activePage,checks=0;
 try{
  browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
- for(const locale of ["ar","en","tr"]){rows=rows.map((row,index)=>({...row,isActive:index===0}));ticker={...ticker,showRegisteredNames:false};const page=await browser.newPage({viewport:{width:1440,height:1050}});page.on("pageerror",error=>errors.push(error.message));page.setDefaultTimeout(15000);await page.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
+ for(const locale of ["ar","en","tr"]){rows=rows.map((row,index)=>({...row,isActive:index===0}));ticker={...ticker,showRegisteredNames:false};const page=await browser.newPage({viewport:{width:1440,height:1050}});activePage=page;page.on("pageerror",error=>errors.push(error.message));page.setDefaultTimeout(15000);await page.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
   for(const kind of ["campaigns","super-categories","categories","blog"]){
    await page.goto(`${origin}/?surface=preview&lang=${locale}&kind=${kind}`);const frame=page.frameLocator("iframe");await frame.getByRole("heading",{name:"Draft "+locale,exact:true,level:1}).waitFor();
    await frame.getByText("Draft FAQ",{exact:true}).waitFor();assert.equal(await page.locator("iframe").evaluate(node=>node.contentDocument.documentElement.lang),locale);checks++;
@@ -76,7 +76,18 @@ try{
   await page.screenshot({path:path.join(artifacts,`${locale}-ticker-settings.png`),fullPage:true,animations:"disabled"});
   await page.goto(`${origin}/?surface=live&lang=${locale}`);await page.getByText("م***د ع***ي",{exact:true}).waitFor();await page.getByText(/TRY|₺/).waitFor();checks++;
   await page.getByText("A***e S***h",{exact:true}).waitFor();const entry=page.locator('[aria-live="polite"]');assert.doesNotMatch(await entry.innerText(),/\$|₺|TRY/);checks++;
-  await page.screenshot({path:path.join(artifacts,`${locale}-ticker-community.png`),fullPage:true,animations:"disabled"});await page.close();
+  await page.screenshot({path:path.join(artifacts,`${locale}-ticker-community.png`),fullPage:true,animations:"disabled"});
+  liveInterval=30;await page.clock.install();await page.route("**/api/categories**",route=>route.abort());const initialFeed=page.waitForResponse(response=>new URL(response.url()).pathname==="/api/live-donation-ticker");await page.goto(`${origin}/?surface=live&lang=${locale}`);await initialFeed;await page.locator('[aria-live="polite"]').waitFor({state:"attached"});
+  await page.clock.fastForward(1300);await page.getByText("م***د ع***ي",{exact:true}).waitFor();
+  const refresh=page.waitForResponse(response=>new URL(response.url()).pathname==="/api/live-donation-ticker");await page.clock.fastForward(10000);await refresh;await page.clock.fastForward(2000);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));assert.equal(await page.getByText("A***e S***h",{exact:true}).count(),0,"polling must not shorten the configured 30-second interval");checks++;
+  await page.clock.fastForward(20000);await page.getByText("A***e S***h",{exact:true}).waitFor();checks++;liveInterval=3;await page.close();
  }
  assert.deepEqual(errors,[]);await writeFile(path.join(artifacts,"result.json"),JSON.stringify({checks,errors,productionWrites:0,providerCalls:0},null,2));console.log(`Major projects, previews and ticker browser checks: ${checks} passed`);
-}finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
+}finally{
+ if(activePage&&!activePage.isClosed()){
+  await activePage.screenshot({path:path.join(artifacts,"last-state.png"),fullPage:true,animations:"disabled"}).catch(()=>{});
+  const state=await activePage.evaluate(()=>({url:location.href,body:document.body.innerText,frames:[...document.querySelectorAll("iframe")].map(node=>({body:node.contentDocument?.body?.innerHTML,title:node.title,width:node.clientWidth,height:node.clientHeight}))})).catch(()=>null);
+  await writeFile(path.join(artifacts,"last-state.json"),JSON.stringify({errors,state},null,2));
+ }
+ await browser?.close();await new Promise(resolve=>server.close(resolve));
+}

@@ -21,9 +21,10 @@ export function preparePreviewDraft(kind: ContentKind, row: ContentRecord, local
       if (!/^[\w-]{1,80}$/.test(id)) throw new Error("معرف معاينة غير صالح");
       const previous = Array.isArray(row[key]) ? (row[key] as ContentRecord[]).find(entry => entry.id === id) : undefined;
       const result: ContentRecord = { ...previous, id };
-      const keys = key === "blocks" ? ["kind", "anchor", "linkUrl", "image", "youtubeId", "refId", "maxItems", "isActive"] : key === "values" ? ["label"] : ["icon", "title", "body"];
+      const keys = key === "blocks" ? ["kind", "anchor", "linkUrl", "image", "youtubeId", "refId", "maxItems", "isActive", "eyebrow", "title", "subtitle", "body", "linkLabel"] : key === "values" ? ["label"] : ["icon", "title", "body"];
       for (const field of keys) {
         const value = item[field];
+        if (value === undefined && previous && ["eyebrow", "title", "subtitle", "body", "linkLabel", "label"].includes(field)) continue;
         if (field === "kind") { if (!isBlockKind(value)) throw new Error("نوع قسم غير صالح"); result.kind = value; }
         else if (field === "isActive") { if (typeof value !== "boolean") throw new Error("حالة غير صالحة"); result[field] = value; }
         else if (field === "maxItems") { if (value != null && (!Number.isInteger(value) || Number(value) < 1 || Number(value) > 100)) throw new Error("عدد غير صالح"); result[field] = value ?? null; }
@@ -37,5 +38,11 @@ export function preparePreviewDraft(kind: ContentKind, row: ContentRecord, local
       return result;
     });
   }
-  return { locale, settings, changes: validateChanges(fieldsFor(kind, { ...row, ...settings }), changes) };
+  const currentFields = fieldsFor(kind, { ...row, ...settings });
+  const allowed = new Map([...fieldsFor(kind, row), ...currentFields].map(field => [field.key, field]));
+  const validated = validateChanges([...allowed.values()], changes);
+  const currentKeys = new Set(currentFields.map(field => field.key));
+  // Removed children may still have saved text in the editor snapshot. Validate
+  // it against the saved contract, then exclude it from the rendered draft.
+  return { locale, settings, changes: Object.fromEntries(Object.entries(validated).filter(([key]) => currentKeys.has(key))) };
 }
