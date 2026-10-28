@@ -110,6 +110,31 @@ test("changed amounts are rejected by the adapter before a draft can apply them"
     else process.env.OPENAI_API_KEY = key;
   }
 });
+test("researched editor translation satisfies JSON mode using its input messages, not only top-level instructions", async () => {
+  const original = globalThis.fetch, key = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "test-only-not-a-real-key";
+  let calls = 0;
+  try {
+    globalThis.fetch = async (url, options) => {
+      calls++;
+      assert.equal(String(url), "https://api.openai.com/v1/responses");
+      const body = JSON.parse(String(options?.body));
+      assert.equal(body.text.format.type, "json_object");
+      // The API validates the input itself; JSON in `instructions` alone is insufficient.
+      if (!/json/i.test(JSON.stringify(body.input))) return Response.json({ error: { type: "invalid_request_error", param: "input" } }, { status: 400 });
+      assert.match(body.input, /ترميم منازل البلدة القديمة/);
+      assert.equal(body.store, false);
+      return Response.json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ fields: { title: "Restoring homes in the Old City" }, richTexts: {} }) }] }] });
+    };
+    const result = await translateItem({ fields: { title: "ترميم منازل البلدة القديمة" }, researchContext: "Use established architectural terminology." }, "en");
+    assert.equal(calls, 1);
+    assert.equal(result.fields.title, "Restoring homes in the Old City");
+    assert.deepEqual(result.warnings, []);
+  } finally {
+    globalThis.fetch = original;
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+  }
+});
 test("oversized plain fields fail instead of silently translating only the beginning", async () => {
   await assert.rejects(
     translateItem({ fields: { title: "a".repeat(12001) } }, "en"),
