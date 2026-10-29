@@ -80,8 +80,8 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
 test("WhatsApp inbox defaults to all conversations and remembers an available sender", () => {
   requires(inboxPath, [/useState\("all"\)/, /communication:whatsapp:senderId/, /nextSenders\.length === 1/, /nextConversations\[0\]\.id/, /selectConversation\(nextConversations\[0\]\.id\)/, /عرض كل المحادثات/]);
 });
-test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-hour window", () => {
-  requires(inboxPath, [/إرسال قالب تحية/, /initialMode=\{smartInitialMode\}/]);
+test("WhatsApp inbox accurately labels its approved-template picker outside the 24-hour window", () => {
+  requires(inboxPath, [/اختيار قالب معتمد/, /initialMode=\{smartInitialMode\}/], [/إرسال قالب تحية/]);
   requires(smartDialog, [/initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/, /const preferred = initialMode/, /setMode\(preferred\)/]);
 });
 test("dashboard topbar makes unread WhatsApp conversations visually prominent", () => {

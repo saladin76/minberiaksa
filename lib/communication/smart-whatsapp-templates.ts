@@ -1,5 +1,5 @@
 import { resolveTemplateKind } from "./template-kind";
-import { resolveVariantForLocale, type VariantRow } from "./whatsapp-template-readiness";
+import { resolveExactVariantForLocale, type VariantRow } from "./whatsapp-template-readiness";
 
 type Purpose = "UTILITY" | "MARKETING";
 type Template = {
@@ -12,7 +12,7 @@ type Template = {
 };
 type Choice = { id: string; name: string; category: string | null };
 
-/** Match the send path: routed WABA, locale fallback, approval, then Meta's actual category. */
+/** Match the send path: routed WABA, exact donor language, approval and Meta's actual category. */
 export function smartWhatsappTemplateChoices(
   templates: Template[],
   locale: string,
@@ -26,7 +26,7 @@ export function smartWhatsappTemplateChoices(
     if (!waba) continue;
     for (const template of templates) {
       if (resolveTemplateKind(template) !== (purpose === "MARKETING" ? "CAMPAIGN" : "SYSTEM")) continue;
-      const readiness = resolveVariantForLocale(
+      const readiness = resolveExactVariantForLocale(
         template.wabaVariants.filter((variant) => variant.businessAccountId === waba), locale,
       );
       if (!readiness.ready || readiness.category?.toUpperCase() !== purpose) continue;

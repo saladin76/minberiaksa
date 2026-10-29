@@ -1,6 +1,7 @@
 import { forEachTemplateSyncItem } from "./template-sync-work";
 import { WHATSAPP_CATALOGUE_SYNC_ACTION } from "./template-sync-result";
 import { templateLocaleFromLanguage } from "./template-locale-media";
+import { resolveExactVariantForLocale } from "./whatsapp-template-readiness";
 import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import "server-only";
 
@@ -387,8 +388,10 @@ export async function getTemplateReadiness(
   templateId: string,
   locale: string,
   businessAccountId?: string | null,
+  exactLanguage = false,
 ): Promise<VariantReadiness> {
   if (!process.env.DATABASE_URL) return NOT_READY;
+  const resolve = exactLanguage ? resolveExactVariantForLocale : resolveVariantForLocale;
   if (businessAccountId) {
     const variants = await prisma.whatsappTemplateWabaVariant.findMany({
       where: { templateId, provider: META_PROVIDER, businessAccountId },
@@ -403,7 +406,7 @@ export async function getTemplateReadiness(
         lastSyncedAt: true,
       },
     }).catch(() => []);
-    return resolveVariantForLocale(variants as VariantRow[], locale);
+    return resolve(variants as VariantRow[], locale);
   }
   const variants = await prisma.whatsappTemplateVariant.findMany({
     where: { templateId, provider: META_PROVIDER },
@@ -418,7 +421,7 @@ export async function getTemplateReadiness(
       lastSyncedAt: true,
     },
   }).catch(() => []);
-  return resolveVariantForLocale(variants as VariantRow[], locale);
+  return resolve(variants as VariantRow[], locale);
 }
 
 export async function approvedLocalesFor(templateId: string, businessAccountId?: string | null): Promise<string[]> {

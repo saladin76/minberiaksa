@@ -818,7 +818,7 @@ export function WhatsappInbox() {
                         className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                       >
                         <MessageCircle className="h-4 w-4" />
-                        {dt("إرسال قالب تحية")}</button>
+                        {dt("اختيار قالب معتمد")}</button>
                       <button
                         type="button"
                         onClick={() => {

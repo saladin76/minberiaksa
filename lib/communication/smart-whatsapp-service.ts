@@ -19,6 +19,7 @@ import { smartWhatsappTemplateChoices } from "./smart-whatsapp-templates";
 import { classifyEventTemplates } from "./template-event-classification";
 import { isWhatsappExplicitlyUnsubscribed } from "./campaign-audience-accounting";
 import { retryDefinitelyNotSent } from "./retry-recipient-guard";
+import { templateLocaleFromLanguage } from "./template-locale-media";
 import {
   reserveWhatsappMarketingSend,
   releaseWhatsappMarketingReservation,
@@ -92,11 +93,14 @@ async function donor(userId: string) {
   ]);
   if (!user) return null;
   const profile = profileResult.value;
+  const locale = [profile?.preferredLocale, user.preferredLang]
+    .map((value) => templateLocaleFromLanguage(value ?? ""))
+    .find(isValidLocale) ?? "ar";
   return {
     id: user.id,
     name: user.name,
     phone: normalizePhoneE164(profile?.phone ?? user.phone),
-    locale: profile?.preferredLocale ?? user.preferredLang ?? "ar",
+    locale,
     country: profile?.countryCode ?? user.countryCode ?? null,
     doNotContact: profile?.doNotContact ?? false,
     whatsappUnsubscribed: isWhatsappExplicitlyUnsubscribed(profile),
@@ -194,7 +198,7 @@ async function sendApprovedTemplateForDonor(args: {
     return { ok: false, reason: "UTILITY_TEMPLATE_REQUIRED" };
   }
 
-  const contexts = await loadContextsForUserIds([args.ctx.userId]);
+  const contexts = await loadContextsForUserIds([args.ctx.userId], args.locale);
   let renderCtx: TemplateContext | undefined = contexts.get(args.ctx.userId);
   if (!renderCtx) return { ok: false, reason: "CONTEXT_LOAD_FAILED" };
 
@@ -236,8 +240,10 @@ async function sendApprovedTemplateForDonor(args: {
   const rendered = await renderChannelTemplate("WHATSAPP", template.id, args.locale, renderCtx, "ar", expectedKind);
   if (!rendered) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
 
-  const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId);
-  if (!mapping) return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
+  const mapping = await resolveMetaTemplateMapping(template, args.locale, args.sender.businessAccountId, { exactLanguage: true });
+  if (!mapping || templateLocaleFromLanguage(mapping.language) !== args.locale) {
+    return { ok: false, reason: "META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE" };
+  }
   const providerCategory = String(mapping.category ?? "").toUpperCase();
   if (providerCategory && providerCategory !== args.expected) {
     return { ok: false, reason: "META_TEMPLATE_CATEGORY_MISMATCH", detail: `Meta: ${providerCategory} · Expected: ${args.expected}` };
@@ -252,6 +258,14 @@ async function sendApprovedTemplateForDonor(args: {
     headerLocation: mapping.headerLocation,
   });
   if (!built.ok) return { ok: false, reason: built.reason, detail: built.detail };
+  const whatsappPreview = buildWhatsappRenderedPreview({
+    componentsSchema: mapping.componentsSchema,
+    builtComponents: built.components,
+    fallbackBody: rendered.resolvedLocale === args.locale ? rendered.body : "",
+    providerTemplateName: mapping.name,
+    languageCode: mapping.language,
+  });
+  if (!whatsappPreview.body.trim()) return { ok: false, reason: "TEMPLATE_RENDER_FAILED" };
 
   const created = await createDeliveryRecord({
     channel: "WHATSAPP",
@@ -264,16 +278,10 @@ async function sendApprovedTemplateForDonor(args: {
     recipientName: args.ctx.name,
     recipientPhone: args.ctx.phone,
     locale: args.locale,
-    renderedBody: rendered.body,
+    renderedBody: whatsappPreview.body,
     variables: {
       snapshot: renderCtx,
-      whatsappPreview: buildWhatsappRenderedPreview({
-        componentsSchema: mapping.componentsSchema,
-        builtComponents: built.components,
-        fallbackBody: rendered.body,
-        providerTemplateName: mapping.name,
-        languageCode: mapping.language,
-      }),
+      whatsappPreview,
     } as never,
     senderId: args.sender.id,
     createdBy: args.actor?.actorId ?? null,

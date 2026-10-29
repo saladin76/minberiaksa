@@ -8897,5 +8897,7 @@
   "اختر نوع التمويل": "Finansman türünü seçin",
   "سعر الصرف غير متاح مؤقتًا. بياناتك محفوظة هنا؛ أعد المحاولة بعد قليل.": "Döviz kuru geçici olarak kullanılamıyor. Girdileriniz burada korunuyor; biraz sonra yeniden deneyin.",
   "تم استخدام هذا الطلب لتبرع آخر. حدّث قائمة التبرعات للتحقق قبل إضافة تبرع جديد.": "Bu istek başka bir bağış için kullanılmış. Yeni bağış eklemeden önce bağış listesini yenileyip kontrol edin.",
-  "تغيير العملة يُبقي الأرقام كما هي، ويعيد حساب قيمتها بالدولار وإجماليات المشاريع عند الحفظ.": "Para birimini değiştirmek girilen sayıları korur; kaydederken USD değerlerini ve proje toplamlarını yeniden hesaplar."
+  "تغيير العملة يُبقي الأرقام كما هي، ويعيد حساب قيمتها بالدولار وإجماليات المشاريع عند الحفظ.": "Para birimini değiştirmek girilen sayıları korur; kaydederken USD değerlerini ve proje toplamlarını yeniden hesaplar.",
+  "اختيار قالب معتمد": "Onaylı şablon seç",
+  "يُرسل القالب بلغة المتبرع فقط. لن تُستخدم لغة أخرى تلقائيًا.": "Şablon yalnızca bağışçının dilinde gönderilir. Başka bir dil otomatik olarak seçilmez."
 }

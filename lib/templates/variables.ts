@@ -249,7 +249,8 @@ export async function loadContextForDonation(
 }
 
 export async function loadContextsForUserIds(
-  ids: string[]
+  ids: string[],
+  localeOverride?: string | null,
 ): Promise<Map<string, TemplateContext>> {
   if (ids.length === 0) return new Map();
   const [users, donations] = await Promise.all([
@@ -270,16 +271,17 @@ export async function loadContextsForUserIds(
 
   const out = new Map<string, TemplateContext>();
   for (const u of users) {
+    const locale = donationMessageLocale(localeOverride, u.preferredLang);
     const ds = byDonor.get(u.id) ?? [];
     const usd = ds.map(donationUsdAmount);
     const totalUSD = usd.some((n) => n === null) ? null : usd.reduce<number>((s, n) => s + (n ?? 0), 0);
     const lastAt = ds[0]?.createdAt ?? null;
     out.set(u.id, {
-      user: userToContext(u),
-      donations: donationsToContext(ds, u.preferredLang),
+      user: userToContext(u, locale),
+      donations: donationsToContext(ds, locale),
       totals: {
         count: String(ds.length),
-        amountUSD: formatTemplateMoney(totalUSD, u.preferredLang, "USD"),
+        amountUSD: formatTemplateMoney(totalUSD, locale, "USD"),
         lastAt: formatDate(lastAt),
       },
     });

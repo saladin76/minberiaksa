@@ -538,12 +538,13 @@ export async function resolveMetaTemplateMapping(
   tpl: { id?: string | null; provider?: string | null; name?: string | null; variables?: unknown; header?: unknown; translations?: unknown },
   locale: string,
   businessAccountId?: string | null,
+  options?: { exactLanguage?: boolean },
 ): Promise<MetaTemplateMapping | null> {
   const provider = (tpl.provider ?? "").toUpperCase();
   if (provider !== "META" && provider !== "META_WHATSAPP") return null;
   if (!tpl.id) return null;
   const { getTemplateReadiness } = await import("./whatsapp-template-sync");
-  const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId);
+  const readiness = await getTemplateReadiness(tpl.id, locale, businessAccountId, options?.exactLanguage ?? false);
   if (!readiness.ready || !readiness.providerTemplateName || !readiness.languageCode) return null;
   const binding = variableBindingInfo(tpl.variables);
   const header = templateLocaleHeader(tpl, readiness.locale ?? readiness.languageCode);

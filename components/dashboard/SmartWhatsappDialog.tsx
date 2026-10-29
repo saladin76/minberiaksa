@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, Clock, ShieldCheck, Megaphone, Loader2, Send, History, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { localeMeta } from "@/lib/locales";
 
 type ReplyWindow = { open: boolean; lastInboundAt: string | null; remainingMs: number; lastInboundMessageId: string | null };
 type SmartContext = {
@@ -43,6 +44,7 @@ const ERROR_LABELS: Record<string, string> = {
   get NO_RECIPIENT_PHONE() { return dt("لا يوجد رقم واتساب صالح لهذا المتبرع."); },
   get MARKETING_TEMPLATE_REQUIRED() { return dt("اختر قالب Marketing معتمد."); },
   get META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE() { return dt("لا توجد نسخة معتمدة من القالب لهذا الرقم/اللغة."); },
+  get TEMPLATE_RENDER_FAILED() { return dt("تعذّر تجهيز إرسال واتساب لهذا المتبرع."); },
 };
 
 export function SmartWhatsappDialog({
@@ -222,6 +224,10 @@ export function SmartWhatsappDialog({
                 </span>
               </div>
 
+              <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                {dt("لغة المتبرع")}: <strong>{localeMeta(ctx.locale)?.nativeLabel ?? ctx.locale}</strong> <span dir="ltr">({ctx.locale})</span>
+              </div>
+
               {ctx.doNotContact && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                   {dt("المتبرع مفعّل عليه «عدم التواصل». الإرسال متوقف على كل مسارات واتساب حتى تُعدّل حالة التواصل.")}</div>
@@ -276,7 +282,10 @@ export function SmartWhatsappDialog({
                     ))}
                   </select>
                   <p className="text-[11px] leading-5 text-slate-500">
-                    {dt("خارج نافذة 24 ساعة لا تُرسل الرسائل التسويقية كنص حر. المنصة تستخدم نسخة Meta المعتمدة المناسبة للغة والرقم التجاري.")}</p>
+                    {dt("يُرسل القالب بلغة المتبرع فقط. لن تُستخدم لغة أخرى تلقائيًا.")}</p>
+                  {ctx.marketingTemplates.length === 0 && (
+                    <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{ERROR_LABELS.META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE}</p>
+                  )}
                 </div>
               ) : mode === "UTILITY" ? (
                 <div className="space-y-3">
@@ -315,6 +324,9 @@ export function SmartWhatsappDialog({
                         <option key={template.id} value={template.id}>{template.name}</option>
                       ))}
                     </select>
+                    {ctx.utilityTemplates.length === 0 && (
+                      <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{ERROR_LABELS.META_TEMPLATE_NOT_APPROVED_FOR_SENDER_LANGUAGE}</p>
+                    )}
                     <p className="text-[11px] leading-5 text-slate-500">
                       {dt("إذا تعذّر Direct Send، يرسل النظام القالب المعتمد بدل فقد الرسالة. محتوى القالب هو الذي سيصل عند استخدام fallback.")}</p>
                   </div>

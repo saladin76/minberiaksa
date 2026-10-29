@@ -72,7 +72,7 @@ test("history detail refuses a message outside the donor scope and access is che
 
 
 test("donor template choices use the routed WABA and Meta approval for the donor language", async () => {
-  const variant = {businessAccountId: "waba-a", languageCode: "ar", locale: "ar", approvalStatus: "APPROVED", category: "UTILITY", providerTemplateName: "receipt", componentsSchema: [], rejectionReason: null, lastSyncedAt: new Date()};
+  const variant = {businessAccountId: "waba-a", languageCode: "tr", locale: "tr", approvalStatus: "APPROVED", category: "UTILITY", providerTemplateName: "receipt", componentsSchema: [], rejectionReason: null, lastSyncedAt: new Date()};
   const templates = [{id: "eligible", name: "Receipt", kind: "SYSTEM", category: "UTILITY", wabaVariants: [variant]}, {id: "other-account", name: "Other", kind: "SYSTEM", category: "UTILITY", wabaVariants: [{...variant, businessAccountId: "waba-b"}]}];
   const service = load("lib/communication/smart-whatsapp-service.ts", {
     "@/lib/prisma": {prisma: {whatsappTemplate: {findMany: async () => templates}}},

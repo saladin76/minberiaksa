@@ -8,6 +8,7 @@ import * as localeMedia from "../../lib/communication/template-locale-media";
 import * as work from "../../lib/communication/template-sync-work";
 import * as status from "../../lib/communication/whatsapp-template-status";
 import * as syncResult from "../../lib/communication/template-sync-result";
+import * as readiness from "../../lib/communication/whatsapp-template-readiness";
 
 function harness(failRead=false) {
   let active=0, peak=0, deletes=0, exactWrites=0;
@@ -29,6 +30,7 @@ function harness(failRead=false) {
     "@/lib/locales":{SUPPORTED_LOCALES},"./template-locale-media":localeMedia,"./template-sync-work":work,
     "./whatsapp-template-status":status,"./meta-parameter-name":{schemaHasInvalidMetaParameterNames:()=>false},
     "./template-sync-result":syncResult,
+    "./whatsapp-template-readiness":readiness,
     "./providers/meta-whatsapp/templates":{listAllTemplates:async()=>({ok:true,templates:SUPPORTED_LOCALES.map(locale=>({name:"family",id:`id-${locale}`,language:localeMedia.META_TEMPLATE_LANGUAGES[locale],status:"APPROVED",category:"UTILITY",rejectedReason:null,qualityScore:null,components:[]}))})},
   };
   const output=ts.transpileModule(fs.readFileSync("lib/communication/whatsapp-template-sync.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
