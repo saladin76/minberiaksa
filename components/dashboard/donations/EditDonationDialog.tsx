@@ -354,6 +354,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
             </div>
 
             {/* Status */}
+            {currency !== donation.currency ? <p role="status" className="rounded-lg bg-amber-50 p-3 text-xs leading-6 text-amber-900">{dt("تغيير العملة يُبقي الأرقام كما هي، ويعيد حساب قيمتها بالدولار وإجماليات المشاريع عند الحفظ.")}</p> : null}
             <label className="flex items-center justify-between gap-3 text-sm"><span>{dt("مصدر التبرع")}</span><select aria-label={dt("مصدر التبرع")} value={provider} onChange={event => setProvider(event.target.value)} className="min-w-0 rounded border p-2">{Array.from(new Set([donation.provider ?? "MANUAL", "CASH", "BANK", "PAYFOR", "ALBARAKA", "STRIPE", "PAYPAL", "CHARITY_GIVING", "MANUAL"])).map(value => <option key={value} value={value}>{value === "CASH" ? dt("نقدي / كاش") : value}</option>)}</select></label>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700">{dt("الحالة")}</label>
@@ -518,7 +519,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                   className="w-full rounded border border-slate-300 px-3 py-2" />
                 {invalidSupport && <p className="text-xs text-rose-600">{dt("أدخل مبلغًا صحيحًا لدعم الفريق، صفر أو أكثر.")}</p>}
                 <p className="text-xs text-slate-500">{dt("تعديل السجل لا يخصم مبلغًا إضافيًا من المتبرع ولا يغيّر قيمة الاشتراك القادم.")}</p>
-                <div className="flex justify-between text-xs"><span>{dt("الرسوم المشمولة")}</span><span dir="ltr">{donation.coverFees ? donation.fees : 0} {donation.currency}</span></div>
+                <div className="flex justify-between text-xs"><span>{dt("الرسوم المشمولة")}</span><span dir="ltr">{donation.coverFees ? donation.fees : 0} {currency}</span></div>
                 <div className="flex justify-between font-bold"><span>{dt("الإجمالي الجديد شامل دعم الفريق والرسوم")}</span><span dir="ltr">{newTotal} {currency}</span></div>
               </div>
 
@@ -561,7 +562,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
               </div>
               <div className="mt-4 space-y-1 text-start">
                 <label className="block text-xs font-medium text-slate-700">
-                  {dt("للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (")}<span dir="ltr">{confirmExpected}</span>):
+                  {dt("للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (")}<span dir="ltr">{confirmExpected} {currency}</span>):
                 </label>
                 <input
                   type="text"

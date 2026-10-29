@@ -47,6 +47,17 @@ if grep -q -F 'activating lockfile-matched dependencies' "$BACKUP/deploy.log"; t
   mv "$ROOT/.node_modules-previous" "$ROOT/node_modules"
 fi
 if git diff --quiet && git diff --cached --quiet; then git switch --detach "$PREVIOUS"; fi
+if ! command -v pm2 >/dev/null 2>&1; then
+  for NVM_PATH in "${NVM_DIR:-/root/.nvm}" /root/.nvm; do
+    if [[ -s "$NVM_PATH/nvm.sh" ]]; then
+      export NVM_DIR="$NVM_PATH"
+      # shellcheck disable=SC1090
+      . "$NVM_DIR/nvm.sh"
+      nvm use --silent default >/dev/null 2>&1 || true
+      command -v pm2 >/dev/null 2>&1 && break
+    fi
+  done
+fi
 pm2 restart "$APP" --update-env
 echo "Previous runtime restored. Inspect $BACKUP before retrying." >&2
 exit 1

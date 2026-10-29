@@ -8904,5 +8904,6 @@
   "طول الوصف: {0} حرفًا؛ المقترح 70–160": "Description: {0} characters; suggested 70–160",
   "اختر نوع التمويل": "Choose funding type",
   "سعر الصرف غير متاح مؤقتًا. بياناتك محفوظة هنا؛ أعد المحاولة بعد قليل.": "The exchange rate is temporarily unavailable. Your entries are retained here; retry shortly.",
-  "تم استخدام هذا الطلب لتبرع آخر. حدّث قائمة التبرعات للتحقق قبل إضافة تبرع جديد.": "This request was used for a different donation. Refresh the donation list to verify before adding a new donation."
+  "تم استخدام هذا الطلب لتبرع آخر. حدّث قائمة التبرعات للتحقق قبل إضافة تبرع جديد.": "This request was used for a different donation. Refresh the donation list to verify before adding a new donation.",
+  "تغيير العملة يُبقي الأرقام كما هي، ويعيد حساب قيمتها بالدولار وإجماليات المشاريع عند الحفظ.": "Changing currency keeps the entered numbers and recalculates their USD values and project totals when saved."
 }
