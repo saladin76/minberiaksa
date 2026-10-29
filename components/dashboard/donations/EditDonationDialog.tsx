@@ -322,8 +322,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => (!open && !submitting ? onClose() : null)}>
-      <DialogContent className="w-[calc(100%-1rem)] min-w-0 max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
-        <DialogHeader className="text-start">
+      <DialogContent className="w-[calc(100%-1rem)] min-w-0 rounded-2xl max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
+        <DialogHeader className="pr-8 text-start">
           <DialogTitle>{dt("تعديل التبرع")}</DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
             {dt("أي تغيير في القيمة أو الحالة سيُحدّث تلقائيًا إجماليات المشاريع والحملات. تأكّد من القيم قبل الحفظ.")}</DialogDescription>
@@ -530,7 +530,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
           </div>
         )}
 
-        <DialogFooter className="!justify-between flex-row-reverse">
+        <DialogFooter className="sticky bottom-0 z-10 !justify-between flex-row-reverse border-t bg-white py-3">
           <Button
             type="button"
             onClick={() => {

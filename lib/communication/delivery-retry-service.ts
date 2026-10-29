@@ -87,14 +87,14 @@ const SELECT = {
 } as const;
 
 /** Preserve the existing manual/transactional policy; campaign retries also pass their shared guard. */
-async function consentBlockReason(userId: string | null, channel: CommunicationChannelId, purpose: string): Promise<string | null> {
+async function consentBlockReason(userId: string | null, channel: CommunicationChannelId, purpose: string, campaignId: string | null): Promise<string | null> {
   if (!userId) return null;
   const profile = await prisma.donorCommunicationProfile.findUnique({
     where: { userId }, select: { doNotContact: true, emailOptIn: true, smsOptIn: true },
   });
-  if (!profile) return channel === "WHATSAPP" ? null : (purpose === "MARKETING" ? "لا توجد موافقة مسجلة لهذا المستلم" : null);
+  if (!profile) return channel === "WHATSAPP" || (channel === "EMAIL" && campaignId) ? null : (purpose === "MARKETING" ? "لا توجد موافقة مسجلة لهذا المستلم" : null);
   if (profile.doNotContact) return "المستلم مفعّل عليه عدم التواصل";
-  if (purpose !== "MARKETING" || channel === "WHATSAPP") return null;
+  if (purpose !== "MARKETING" || channel === "WHATSAPP" || (channel === "EMAIL" && campaignId)) return null;
   const optedIn = channel === "EMAIL" ? profile.emailOptIn : profile.smsOptIn;
   return optedIn ? null : "رسالة تسويقية بدون موافقة على هذه القناة";
 }
@@ -153,7 +153,7 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   let recipient: string | null;
   try {
     recipient = await resolveRecipient(row);
-    const blocked = await consentBlockReason(row.recipientUserId, channel, row.purpose);
+    const blocked = await consentBlockReason(row.recipientUserId, channel, row.purpose, row.campaignId);
     if (blocked) return result(deliveryId, "CONSENT_BLOCKED", { detail: blocked, recipientName: row.recipientName });
   } catch {
     return result(deliveryId, "RECIPIENT_CHECK_UNAVAILABLE", { recipientName: row.recipientName });

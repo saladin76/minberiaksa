@@ -8897,5 +8897,12 @@
   "إعادة تحميل القائمة": "Reload list",
   "نقدي / كاش": "Cash",
   "تعذر حفظ التبرع. حاول مرة أخرى.": "Could not save the donation. Please retry.",
-  "تلقائي من بيانات المتبرع": "Automatic from donor details"
+  "تلقائي من بيانات المتبرع": "Automatic from donor details",
+  "جاهزية بيانات البحث": "Search metadata readiness",
+  "أكمل العنوان والوصف ثم راجع المعاينة لكل لغة. هذه فحوص تحريرية وليست ضمانًا للترتيب في Google.": "Complete the title and description, then review the preview in each language. These are editorial checks, not a guarantee of Google rankings.",
+  "طول العنوان: {0} حرفًا؛ المقترح 30–60": "Title: {0} characters; suggested 30–60",
+  "طول الوصف: {0} حرفًا؛ المقترح 70–160": "Description: {0} characters; suggested 70–160",
+  "اختر نوع التمويل": "Choose funding type",
+  "سعر الصرف غير متاح مؤقتًا. بياناتك محفوظة هنا؛ أعد المحاولة بعد قليل.": "The exchange rate is temporarily unavailable. Your entries are retained here; retry shortly.",
+  "تم استخدام هذا الطلب لتبرع آخر. حدّث قائمة التبرعات للتحقق قبل إضافة تبرع جديد.": "This request was used for a different donation. Refresh the donation list to verify before adding a new donation."
 }

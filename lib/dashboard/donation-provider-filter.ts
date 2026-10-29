@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 export const DONATION_PROVIDER_OPTIONS = [
+  { value: "CASH", label: "نقدي / كاش" },
   { value: "ALBARAKA", label: "Albaraka" },
   { value: "PAYPAL", label: "PayPal" },
   { value: "STRIPE", label: "Stripe" },

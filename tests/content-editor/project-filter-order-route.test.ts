@@ -8,9 +8,9 @@ import { z } from "zod";
 import * as options from "../../lib/minbar/project-filter-options";
 
 function load(file: string, dependencies: Record<string, unknown>) {
-  const module = { exports: {} as Record<string, (...args: unknown[]) => Promise<Record<string, unknown>>> };
-  new vm.Script(ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module, exports: module.exports, URL, require: (name: string) => { if (!(name in dependencies)) throw new Error(name); return dependencies[name]; } });
-  return module.exports;
+  const loaded = { exports: {} as Record<string, (...args: unknown[]) => Promise<Record<string, unknown>>> };
+  new vm.Script(ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, URL, require: (name: string) => { if (!(name in dependencies)) throw new Error(name); return dependencies[name]; } });
+  return loaded.exports;
 }
 function fixture() {
   const category = "a".repeat(24), programme = "b".repeat(24), keys = [`category:${category}`, `programme:${programme}`];

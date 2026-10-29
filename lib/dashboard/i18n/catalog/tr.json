@@ -8889,5 +8889,12 @@
   "إعادة تحميل القائمة": "Listeyi yeniden yükle",
   "نقدي / كاش": "Nakit",
   "تعذر حفظ التبرع. حاول مرة أخرى.": "Bağış kaydedilemedi. Tekrar deneyin.",
-  "تلقائي من بيانات المتبرع": "Bağışçı bilgilerinden otomatik"
+  "تلقائي من بيانات المتبرع": "Bağışçı bilgilerinden otomatik",
+  "جاهزية بيانات البحث": "Arama meta verisi hazırlığı",
+  "أكمل العنوان والوصف ثم راجع المعاينة لكل لغة. هذه فحوص تحريرية وليست ضمانًا للترتيب في Google.": "Başlığı ve açıklamayı tamamlayıp her dilde önizlemeyi inceleyin. Bunlar editoryal kontrollerdir; Google sıralaması garantisi değildir.",
+  "طول العنوان: {0} حرفًا؛ المقترح 30–60": "Başlık: {0} karakter; önerilen 30–60",
+  "طول الوصف: {0} حرفًا؛ المقترح 70–160": "Açıklama: {0} karakter; önerilen 70–160",
+  "اختر نوع التمويل": "Finansman türünü seçin",
+  "سعر الصرف غير متاح مؤقتًا. بياناتك محفوظة هنا؛ أعد المحاولة بعد قليل.": "Döviz kuru geçici olarak kullanılamıyor. Girdileriniz burada korunuyor; biraz sonra yeniden deneyin.",
+  "تم استخدام هذا الطلب لتبرع آخر. حدّث قائمة التبرعات للتحقق قبل إضافة تبرع جديد.": "Bu istek başka bir bağış için kullanılmış. Yeni bağış eklemeden önce bağış listesini yenileyip kontrol edin."
 }

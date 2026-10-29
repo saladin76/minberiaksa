@@ -1,5 +1,5 @@
 import {build} from "esbuild";
-import {chromium} from "@playwright/test";
+import {chromium, expect} from "@playwright/test";
 import {createServer} from "node:http";
 import {readFile, writeFile, mkdir} from "node:fs/promises";
 import {createRequire} from "node:module";
@@ -129,7 +129,7 @@ const server=createServer(async(request,response)=>{const url=new URL(request.ur
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const origin=`http://127.0.0.1:${server.address().port}`;let browser;const errors=[];let checks=0;
 try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,headless:true,args:["--no-sandbox","--disable-dev-shm-usage","--use-fake-ui-for-media-stream","--use-fake-device-for-media-stream"]});
- for(const locale of ["ar","en","tr"]){const page=await browser.newPage({viewport:{width:1440,height:1000}});page.on("pageerror",error=>{errors.push(error.message);console.error("fixture page error:",error.message)});page.setDefaultTimeout(20000);await page.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
+ for(const locale of (process.env.TEST_LOCALE ? [process.env.TEST_LOCALE] : ["ar","en","tr"])){const page=await browser.newPage({viewport:{width:1440,height:1000}});page.on("pageerror",error=>{errors.push(error.message);console.error("fixture page error:",error.message)});page.setDefaultTimeout(20000);await page.context().addCookies([{name:"dash-locale",value:locale,url:origin}]);
  const open=async(surface,suffix="")=>page.goto(`${origin}/?surface=${surface}&lang=${locale}${suffix}`,{waitUntil:"domcontentloaded"});
 
  // A failed list is not an empty list; the global account count is fetched independently.
@@ -267,7 +267,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByText("fixture.png",{exact:true}).waitFor();await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).click();await page.getByText(ui(locale,"أُرسل الردّ."),{exact:true}).waitFor();assert.equal(await page.getByText("fixture.png",{exact:true}).count(),0);checks++;
  await page.context().grantPermissions(["microphone"]);await page.getByRole("button",{name:ui(locale,"تسجيل رسالة صوتية"),exact:true}).click();await page.getByRole("button",{name:ui(locale,"إيقاف التسجيل"),exact:true}).waitFor();assert.equal(await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).isDisabled(),true);
  await page.waitForTimeout(350);await page.getByRole("button",{name:ui(locale,"إيقاف التسجيل"),exact:true}).click();await page.getByText(ui(locale,"رسالة صوتية جاهزة للإرسال"),{exact:true}).waitFor();assert.equal(await page.locator("audio[controls]").count(),1);checks++;
- await page.locator("textarea").fill("Text stays with audio");await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).click();await page.getByText(ui(locale,"أُرسل الردّ."),{exact:true}).waitFor();assert.equal(await page.locator("textarea").inputValue(),"Text stays with audio");checks++;
+ await page.bringToFront();await page.locator("textarea").click();await page.locator("textarea").fill("Text stays with audio");await expect(page.locator("textarea")).toHaveValue("Text stays with audio");await page.getByRole("button",{name:ui(locale,"إرسال"),exact:true}).click();await page.getByText(ui(locale,"أُرسل الردّ."),{exact:true}).waitFor();assert.equal(await page.locator("textarea").inputValue(),"Text stays with audio");checks++;
  failSenderLoad=true;await page.getByRole("button",{name:ui(locale,"تحديث"),exact:true}).click();await page.getByRole("alert").filter({hasText:ui(locale,"تعذّر تحميل أرقام واتساب. أعد المحاولة؛ الأرقام المحفوظة لم تُحذف.")}).waitFor();assert.equal(await page.getByRole("combobox",{name:ui(locale,"رقم واتساب"),exact:true}).getByRole("option").count(),4);checks++;
  await page.unroute("**/api/dashboard/communication/inbox**");
  trackingSettings={googleAdsConversionId:null,googleAdsConversionLabel:null};

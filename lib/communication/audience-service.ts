@@ -47,15 +47,15 @@ const DONOR_BASE = { role: "DONOR" as const };
 
 async function localeCounts(locale: SupportedLocale) {
   const base = { ...DONOR_BASE, preferredLang: locale };
-  const [total, withEmail, withPhone, emailEligible, smsEligible, whatsapp] = await Promise.all([
+  const [total, withEmail, withPhone, email, smsEligible, whatsapp] = await Promise.all([
     prisma.user.count({ where: base }),
     prisma.user.count({ where: { ...base, email: { not: null } } }),
     prisma.user.count({ where: { ...base, phone: { not: null } } }),
-    safeCountValue("audience.emailReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, email: { not: null }, emailOptIn: true, doNotContact: false } })),
+    previewSmartAudience({ version: 1, kind: "SMART", channel: "EMAIL", filters: { locales: [locale], hasContact: false } }, 0),
     safeCountValue("audience.smsReachable", () => prisma.donorCommunicationProfile.count({ where: { preferredLocale: locale, phone: { not: null }, smsOptIn: true, doNotContact: false } })),
     previewSmartAudience({ version: 1, kind: "SMART", channel: "WHATSAPP", filters: { locales: [locale], hasContact: false } }, 0),
   ]);
-  return { total, withEmail, withPhone, emailEligible, smsEligible, whatsappEligible: whatsapp.eligible, whatsappNeedsReview: whatsapp.needsReview };
+  return { total, withEmail, withPhone, emailEligible: email.eligible, smsEligible, whatsappEligible: whatsapp.eligible, whatsappNeedsReview: whatsapp.needsReview };
 }
 
 export async function getAudienceOverview(): Promise<AudienceOverview> {

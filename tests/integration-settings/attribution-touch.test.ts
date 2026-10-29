@@ -8,10 +8,10 @@ import * as sanitize from "../../lib/attribution/sanitize";
 function fixture() {
   const cookies = new Map<string, string>(), storage = new Map<string, string>();
   const document = { referrer: "", get cookie() { return [...cookies].map(([key, value]) => key + "=" + value).join("; "); }, set cookie(value: string) { const [pair] = value.split(";"), at = pair.indexOf("="), key = pair.slice(0, at); if (/Max-Age=0/i.test(value)) cookies.delete(key); else cookies.set(key, pair.slice(at + 1)); } };
-  const window = { location: { href: "", search: "" } }, module = { exports: {} as { captureAttributionFromUrl: () => void } };
+  const window = { location: { href: "", search: "" } }, loaded = { exports: {} as { captureAttributionFromUrl: () => void } };
   const source = ts.transpileModule(fs.readFileSync("lib/attribution/client-payload.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new vm.Script(source).runInNewContext({ module, exports: module.exports, window, document, URLSearchParams, sessionStorage: { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value) }, require: (name: string) => name === "./sanitize" ? sanitize : name === "@/lib/tracking/click-id-storage" ? { captureStoredClickIds: () => ({}) } : undefined });
-  return { visit: (url: string) => { const next = new URL(url); window.location = { href: next.href, search: next.search }; module.exports.captureAttributionFromUrl(); }, get: (key: string) => { const value = cookies.get("ala_attr_" + key); return value ? decodeURIComponent(value) : undefined; } };
+  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, window, document, URLSearchParams, sessionStorage: { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value) }, require: (name: string) => name === "./sanitize" ? sanitize : name === "@/lib/tracking/click-id-storage" ? { captureStoredClickIds: () => ({}) } : undefined });
+  return { visit: (url: string) => { const next = new URL(url); window.location = { href: next.href, search: next.search }; loaded.exports.captureAttributionFromUrl(); }, get: (key: string) => { const value = cookies.get("ala_attr_" + key); return value ? decodeURIComponent(value) : undefined; } };
 }
 test("a new campaign replaces stale exact identity instead of crediting the previous campaign", () => {
   const f = fixture(); f.visit("https://minberiaksa.org/ar/bagislar?utm_source=whatsapp&utm_medium=communication&utm_campaign=old&utm_id=old&campaign_id=old&language=ar");

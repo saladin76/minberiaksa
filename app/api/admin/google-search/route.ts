@@ -33,10 +33,12 @@ export async function GET(request: NextRequest) {
       }
       return response({ plan });
     }
+    const connectionId = request.nextUrl.searchParams.get("connectionId");
+    if (connectionId && !/^[a-f0-9]{24}$/i.test(connectionId)) return response({ error: "INVALID_ACCOUNT_ID" }, 400);
     const [accounts, projects, plans] = await Promise.all([
       prisma.marketingPlatformConnection.findMany({ where: { platform: "GOOGLE_ADS" }, orderBy: { name: "asc" } }),
       prisma.campaign.findMany({ where: { isActive: true, ...NOT_SOFT_DELETED }, select: { id: true, title: true, slug: true, translations: { select: { locale: true, title: true, slug: true } } }, orderBy: { priority: "asc" }, take: 1000 }),
-      prisma.googleSearchPlan.findMany({ orderBy: { createdAt: "desc" }, take: 30, select: { id: true, title: true, status: true, connectionId: true, version: true, automationEnabled: true, createdAt: true } }),
+      prisma.googleSearchPlan.findMany({ ...(connectionId ? { where: { connectionId } } : {}), orderBy: { createdAt: "desc" }, take: 30, select: { id: true, title: true, status: true, connectionId: true, version: true, automationEnabled: true, createdAt: true } }),
     ]);
     return response({ accounts: accounts.map(row => ({ id: row.id, name: row.name, customerId: row.accountId, enabled: row.enabled, ready: credentialsReady(searchCredentials(row)) })), projects, plans, projectLimitReached: projects.length === 1000 });
   } catch { return response({ error: "SEARCH_DATA_UNAVAILABLE" }, 502); }

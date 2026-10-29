@@ -711,7 +711,6 @@ export default function MonthlySubscriptionsDashboardPage() {
       dateTo,
       donationsSortBy,
       donationsSortOrder,
-      donationsStatusFilter,
       donationCountryFilter,
       donationsSearch,
       frequencyFilter,

@@ -31,8 +31,8 @@ export function ProjectFilterOrderDialog({ locale }: { locale: string }) {
   };
   return <>
     <Button variant="outline" className="gap-2" onClick={() => { setOpen(true); void load(); }}><ListOrdered size={16}/>{dt("ترتيب فلاتر صفحة المشاريع")}</Button>
-    <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value); }}><DialogContent className="max-h-[90vh] min-w-0 max-w-2xl grid-cols-[minmax(0,1fr)] overflow-y-auto">
-      <DialogHeader className="pe-6 text-start sm:text-start"><DialogTitle>{dt("ترتيب فلاتر صفحة المشاريع")}</DialogTitle></DialogHeader>
+    <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value); }}><DialogContent className="max-h-[90vh] rounded-2xl min-w-0 max-w-2xl grid-cols-[minmax(0,1fr)] overflow-y-auto">
+      <DialogHeader className="pr-8 text-start sm:text-start"><DialogTitle>{dt("ترتيب فلاتر صفحة المشاريع")}</DialogTitle></DialogHeader>
       <p className="text-sm leading-7 text-muted-foreground">{dt("قائمة واحدة للتصنيفات والمشاريع الكبرى المنشورة. اكتب رقم الموضع أو استخدم الأسهم؛ العناصر الجديدة تضاف تلقائيًا في النهاية.")}</p>
       {loading ? <p role="status" className="flex gap-2"><Loader2 className="animate-spin" size={18}/>{dt("جار التحميل…")}</p> : <ol className="space-y-2">{items.map((item, index) => <li key={item.key} className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border p-3">
         <div className="min-w-0 flex-1"><span className="block break-words font-medium">{item.name}</span><span className="text-xs text-muted-foreground">{item.kind === "category" ? dt("تصنيف") : dt("مشروع كبير")}</span></div>

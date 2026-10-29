@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GoogleSearchAccounts } from "@/components/dashboard/GoogleSearchAccounts";
 import { Bot, Search, Send, RefreshCw, CheckCircle2, Play, Pause, ShieldCheck, Sparkles, ArrowUpRight } from "lucide-react";
@@ -34,12 +34,20 @@ export function GoogleSearchManager() {
   const [political, setPolitical] = useState(""), [plan, setPlan] = useState<Plan | null>(null), [busy, setBusy] = useState(""), [error, setError] = useState("");
   const [confirm, setConfirm] = useState(""), [approved, setApproved] = useState(false), [newBudget, setNewBudget] = useState("");
   const [costLimit, setCostLimit] = useState(""), [clickLimit, setClickLimit] = useState(""), [report, setReport] = useState<{ report: GoogleAdsReport; ledger: { paid: number; revenueUSD: number; missingFx: number; complete: boolean } } | null>(null);
-  const load = useCallback(async () => {
-    try { const data = await api("/api/admin/google-search"); setAccounts(data.accounts); setProjects(data.projects); setPlans(data.plans); setAccountId(previous => previous || data.accounts.find((a: Account) => a.ready && a.enabled)?.id || ""); }
-    catch (failure) { setError((failure as Error).message); }
+  const loadSequence = useRef(0);
+  const load = useCallback(async (connectionId?: string) => {
+    const sequence = ++loadSequence.current;
+    try {
+      const data = await api("/api/admin/google-search" + (connectionId ? "?connectionId=" + encodeURIComponent(connectionId) : ""));
+      const selected = connectionId || data.accounts.find((account: Account) => account.ready && account.enabled)?.id || "";
+      const scoped = selected && !connectionId ? await api("/api/admin/google-search?connectionId=" + encodeURIComponent(selected)) : data;
+      if (sequence !== loadSequence.current) return;
+      setAccounts(data.accounts); setProjects(data.projects); setPlans(scoped.plans); setAccountId(selected);
+    } catch (failure) { if (sequence === loadSequence.current) setError((failure as Error).message); }
   }, []);
   useEffect(() => { void load(); }, [load]);
   const openPlan = async (id: string) => {
+    loadSequence.current++;
     setBusy("load"); setError("");
     try {
       const data = await api(`/api/admin/google-search?id=${id}`);
@@ -64,14 +72,14 @@ export function GoogleSearchManager() {
     try {
       const request: SearchPlanRequest = { connectionId: accountId, prompt, locales, projectIds, dailyBudget: Number(budget), countries: countries.toUpperCase().split(/[,،\s]+/).filter(Boolean), containsEuPoliticalAdvertising: political === "yes" };
       if (!political || !request.countries.length || !projectIds.length || !locales.length || !(request.dailyBudget > 0)) throw new Error(dt("حدد الحساب والميزانية والمشاريع واللغات والدول وتصنيف الإعلان أولًا."));
-      const data = await api("/api/admin/google-search", { action: "plan", request }); setPlan(data.plan); setReport(null); await load();
+      const data = await api("/api/admin/google-search", { action: "plan", request }); setPlan(data.plan); setReport(null); await load(accountId);
     } catch (failure) { setError((failure as Error).message); } finally { setBusy(""); }
   };
   const execute = async (action: string) => {
     if (!plan) return; setBusy(action); setError("");
     try {
       const data = await api("/api/admin/google-search", { id: plan.id, version: plan.version, action, ...(action === "create" ? { confirmation: "CREATE_PAUSED" } : action === "enable" ? { confirmation: "ENABLE_CAMPAIGNS" } : action === "budget" ? { confirmation: "CHANGE_BUDGET", newDailyBudget: Number(newBudget) } : action === "automation" ? { confirmation: "ENABLE_BOUNDED_OPTIMIZATION", policy: { enabled: !plan.automationEnabled, maxKeywordCost: Number(costLimit || plan.automationPolicy?.maxKeywordCost), minClicks: Number(clickLimit || plan.automationPolicy?.minClicks) } } : {}), ...(["create", "enable", "budget"].includes(action) ? { dailyBudget: plan.request.dailyBudget, currency: plan.evidence.report.currency } : {}) });
-      setPlan(data.plan); setConfirm(""); toast.success(dt("تم تنفيذ الإجراء والتحقق من الحالة")); await load();
+      setPlan(data.plan); setConfirm(""); toast.success(dt("تم تنفيذ الإجراء والتحقق من الحالة")); await load(accountId);
     } catch (failure) { const message = (failure as Error).message; try { const fresh = await api(`/api/admin/google-search?id=${plan.id}`); setPlan(fresh.plan); } catch {} setError(message); } finally { setBusy(""); }
   };
   const inspect = async () => { if (!plan) return; setBusy("report"); setError(""); try { setReport(await api(`/api/admin/google-search?id=${plan.id}&report=1`)); } catch (failure) { setError((failure as Error).message); } finally { setBusy(""); } };
@@ -81,12 +89,12 @@ export function GoogleSearchManager() {
     <PageHeader eyebrow={dt("التسويق")} title={dt("إدارة Google Search")} description={dt("خطط متعددة اللغات مبنية على صفحات المشاريع وتقارير الحساب، مع مراجعة الميزانية والإنشاء داخل Google ومتابعة الأداء.")} icon={Search} />
     <div className="flex flex-wrap gap-2"><Link href="/dashboard/google-analytics" className={button}><ArrowUpRight size={16} />{dt("تقارير Google Analytics")}</Link><Link href="/dashboard/platform-connections" className={button}>{dt("إدارة الحسابات والاتصالات")}</Link><button type="button" onClick={load} disabled={Boolean(busy)} className={button}><RefreshCw size={16} />{dt("تحديث")}</button></div>
     {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
-    <GoogleSearchAccounts onChanged={() => { void load(); }} />
+    <GoogleSearchAccounts onChanged={() => { void load(accountId); }} />
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="min-w-0 space-y-4">
         <section className="space-y-4 rounded-2xl border bg-white p-4">
           <h2 className="flex items-center gap-2 font-bold"><Bot size={20} />{dt("مساعد حملات البحث")}</h2>
-          <label className="block space-y-1 text-sm"><span>{dt("الحساب الإعلاني")}</span><select aria-label={dt("الحساب الإعلاني")} className={field} value={accountId} disabled={Boolean(busy)} onChange={e => { setAccountId(e.target.value); setPlan(null); setReport(null); setConfirm(""); setApproved(false); }}><option value="">{dt("اختر حسابًا")}</option>{accounts.map(a => <option key={a.id} value={a.id} disabled={!a.ready || !a.enabled}>{a.name} · {a.customerId} {a.ready && a.enabled ? "" : dt("(الاتصال غير جاهز)")}</option>)}</select></label>
+          <label className="block space-y-1 text-sm"><span>{dt("الحساب الإعلاني")}</span><select aria-label={dt("الحساب الإعلاني")} className={field} value={accountId} disabled={Boolean(busy)} onChange={e => { setAccountId(e.target.value); setPlan(null); setReport(null); setConfirm(""); setApproved(false); void load(e.target.value); }}><option value="">{dt("اختر حسابًا")}</option>{accounts.map(a => <option key={a.id} value={a.id} disabled={!a.ready || !a.enabled}>{a.name} · {a.customerId} {a.ready && a.enabled ? "" : dt("(الاتصال غير جاهز)")}</option>)}</select></label>
           {!accounts.some(a => a.ready && a.enabled) ? <p className="text-xs leading-6 text-amber-800">{dt("أضف تفويض Google Ads لكل حساب في الاتصالات. اتصال الحساب في أداة خارجية لا يزوّد الموقع بتفويض التنفيذ.")}</p> : null}
           <label className="block space-y-1 text-sm"><span>{dt("إجمالي متوسط الميزانية اليومية للحساب")}</span><input type="number" min="0.01" step="0.01" className={field} value={budget} onChange={e => setBudget(e.target.value)} /><small className="text-slate-500">{dt("تُقرأ العملة من Google قبل المراجعة. تُقسّم الميزانية على اللغات؛ لا تتكرر لكل لغة.")}</small></label>
           <label className="block space-y-1 text-sm"><span>{dt("دول الاستهداف")}</span><input dir="ltr" className={field} value={countries} onChange={e => setCountries(e.target.value)} placeholder="TR, SA, GB" /><small className="text-slate-500">{dt("رموز الدول مفصولة بفاصلة. الاستهداف للأشخاص الموجودين في الدول المحددة.")}</small></label>

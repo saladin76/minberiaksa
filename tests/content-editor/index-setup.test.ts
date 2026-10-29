@@ -50,6 +50,7 @@ async function runSetup(
       error: (message: unknown) => messages.push(String(message)),
     },
     require: (name: string) => {
+      if (name === "../lib/donations/optional-user-email-index") return { ensureOptionalUserEmailIndex: async () => true };
       if (name === "@next/env") return { loadEnvConfig() {} };
       if (name === "@prisma/client") return { PrismaClient: Client };
       throw new Error("Unexpected script dependency: " + name);

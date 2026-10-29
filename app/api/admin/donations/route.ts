@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
       const metadata = prior.providerRaw as { manualEntry?: { fingerprint?: string } } | null;
       return metadata?.manualEntry?.fingerprint === fingerprint
         ? NextResponse.json({ donationId: prior.id, donor: { id: prior.donorId }, replayed: true }, { status: 200 })
-        : NextResponse.json({ error: "Request identifier already used for a different donation" }, { status: 409 });
+        : NextResponse.json({ error: "Request identifier already used for a different donation", code: "MANUAL_DONATION_RETRY_CONFLICT" }, { status: 409 });
     };
     const priorResponse = await replay();
     if (priorResponse) return priorResponse;
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       console.error("[admin manual donation] usd conversion failed:", e);
       return NextResponse.json(
-        { error: "Exchange rate unavailable. Try again in a moment." },
+        { error: "Exchange rate unavailable. Try again in a moment.", code: "MANUAL_DONATION_FX_UNAVAILABLE" },
         { status: 503 }
       );
     }

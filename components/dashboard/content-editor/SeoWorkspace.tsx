@@ -45,6 +45,11 @@ export function SeoWorkspace({
   ] as const;
   return (
     <div className="space-y-5">
+      <section className="rounded-xl border border-sky-100 bg-sky-50 p-4" aria-label={dt("جاهزية بيانات البحث")}>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><strong>{dt("جاهزية بيانات البحث")}</strong><span>{checks.filter(([, passed]) => passed).length} / {checks.length}</span></div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" role="progressbar" aria-valuemin={0} aria-valuemax={checks.length} aria-valuenow={checks.filter(([, passed]) => passed).length} aria-label={dt("جاهزية بيانات البحث")}><div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${checks.filter(([, passed]) => passed).length / checks.length * 100}%` }} /></div>
+        <p className="mt-2 text-xs leading-6 text-slate-600">{dt("أكمل العنوان والوصف ثم راجع المعاينة لكل لغة. هذه فحوص تحريرية وليست ضمانًا للترتيب في Google.")}</p>
+      </section>
       <nav
         aria-label={dt("أقسام SEO")}
         className="flex flex-wrap gap-2 rounded-xl border bg-white p-2"
@@ -86,10 +91,12 @@ export function SeoWorkspace({
             <h3 className="mb-4 font-semibold">
               {dt("معاينة Google ·")} {locale.toUpperCase()}
             </h3>
-            <p className="text-xl text-blue-800">{title}</p>
-            <p className="mt-2 text-sm leading-7 text-slate-600">
+            <p dir="ltr" className="mb-2 text-start text-xs text-slate-500">minberiaksa.org</p>
+            <p className="max-w-2xl break-words text-xl text-blue-800">{title}</p>
+            <p className="mt-2 max-w-2xl break-words text-sm leading-7 text-slate-600">
               {description || dt("أضف وصف نتيجة البحث")}
             </p>
+            <div className="mt-4 grid gap-2 border-t pt-3 text-xs sm:grid-cols-2"><p>{dt("طول العنوان: {0} حرفًا؛ المقترح 30–60", [Array.from(title).length])}</p><p>{dt("طول الوصف: {0} حرفًا؛ المقترح 70–160", [Array.from(description).length])}</p></div>
           </section>
           <label className="flex items-center justify-between gap-3 rounded-xl border bg-white p-5">
             <span>{dt("السماح لمحركات البحث بفهرسة هذه اللغة")}</span>
