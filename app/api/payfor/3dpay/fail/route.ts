@@ -5,15 +5,19 @@ import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse } from "@/lib/payfor";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
+import { isValidLocale } from "@/lib/locales";
 
 export async function POST(req: NextRequest) {
-  const origin = new URL(req.url).origin;
+  const origin = paymentPublicOrigin(req.url);
+  const redirect = (url: URL) => NextResponse.redirect(url, 303);
   const { searchParams } = new URL(req.url);
   const donationId = searchParams.get("donationId") || "";
-  const locale = (searchParams.get("locale") || "en").toLowerCase();
+  const requestedLocale = (searchParams.get("locale") || "en").toLowerCase();
+  const locale = isValidLocale(requestedLocale) ? requestedLocale : "en";
 
   if (!donationId) {
-    return NextResponse.redirect(new URL(`/${locale}/donation-failed`, origin));
+    return redirect(new URL(`/${locale}/donation-failed`, origin));
   }
 
   const form = await req.formData();
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
     console.error("[PayFor FAIL] Callback error:", e);
   }
 
-  return NextResponse.redirect(
+  return redirect(
     new URL(
       `/${locale}/donation-failed?donationId=${encodeURIComponent(donationId)}`,
       origin

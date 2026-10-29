@@ -14,6 +14,8 @@ import {
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
 import { decryptCard } from "@/lib/card-crypto";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
+import { isValidLocale } from "@/lib/locales";
 
 /** Convert any amount to TRY using USD-base rates from the database (same as donations). */
 async function toTRY(amount: number, fromCurrency: string): Promise<number> {
@@ -88,8 +90,9 @@ export async function POST(req: NextRequest) {
 
     // Use APP_URL env var so OkUrl/FailUrl match the bank's registered MerchantHomeUrl.
     // Without this, localhost:3000 is sent and the bank's 3D auth server rejects it.
-    const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
-    const locale = (body.locale ?? donation.locale ?? "en").toString().toLowerCase();
+    const origin = paymentPublicOrigin(req.url);
+    const requestedLocale = (body.locale ?? donation.locale ?? "en").toString().toLowerCase();
+    const locale = isValidLocale(requestedLocale) ? requestedLocale : "en";
 
     const orderId = donation.id; // within 50 chars (ObjectId)
     const txnType = "Auth";
