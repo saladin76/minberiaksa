@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "prisma generate && prisma generate --schema prisma/integration-settings.schema.prisma",
-    "build": "prisma generate && prisma generate --schema prisma/integration-settings.schema.prisma && npm run test:content-editors && npm run typecheck:content-editor-service && npm run test:integration-settings && npm run typecheck:communication-runtime && npm run typecheck:integration-release && npm run typecheck:baseline && npm run lint:ci && next build && node --import tsx scripts/ensure-content-editor-indexes.ts --production",
+    "build": "prisma generate && prisma generate --schema prisma/integration-settings.schema.prisma && npm run preflight:release-metadata && npm run test:content-editors && npm run typecheck:content-editor-service && npm run test:integration-settings && npm run typecheck:communication-runtime && npm run typecheck:integration-release && npm run typecheck:baseline && npm run lint:ci && next build && node --import tsx scripts/ensure-content-editor-indexes.ts --production",
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -40,11 +40,12 @@
     "blog:seed:dry": "tsx prisma/seed/seed-posts.ts --dry",
     "blog:seed": "tsx prisma/seed/seed-posts.ts",
     "blog:seed:replace": "tsx prisma/seed/seed-posts.ts --replace",
-    "build:vercel": "npm run test:content-editors && npm run typecheck:content-editor-service && npm run typecheck:communication-runtime && npm run typecheck:integration-release && next build && node --import tsx scripts/ensure-content-editor-indexes.ts --production",
+    "build:vercel": "npm run preflight:release-metadata && npm run test:content-editors && npm run typecheck:content-editor-service && npm run typecheck:communication-runtime && npm run typecheck:integration-release && next build && node --import tsx scripts/ensure-content-editor-indexes.ts --production",
     "quality:ci": "npm run test:integration-settings && npm run typecheck:baseline && npm run lint:ci",
     "test:content-editors": "node --import tsx --test tests/content-editor/*.test.ts",
     "test:content-editors:browser": "node --import tsx scripts/content-editor-browser-test.mjs",
-    "typecheck:content-editor-service": "tsc -p tsconfig.content-editor.json"
+    "typecheck:content-editor-service": "tsc -p tsconfig.content-editor.json",
+    "preflight:release-metadata": "node scripts/finalize-reviewed-dashboard.mjs --check-runtime"
   },
   "prisma": {
     "seed": "tsx prisma/seed/seed.ts"
@@ -154,6 +155,7 @@
     "react-slugify": "^4.0.1",
     "react-use": "^17.6.0",
     "recharts": "^2.15.1",
+    "server-only": "0.0.1",
     "slick-carousel": "^1.8.1",
     "stripe": "^22.0.0",
     "tailwind-merge": "^3.0.1",

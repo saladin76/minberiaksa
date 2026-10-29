@@ -3,7 +3,7 @@ import test from "node:test";
 import http from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 const exec = promisify(execFile);
@@ -11,7 +11,8 @@ const exec = promisify(execFile);
 async function isolatedCronScript(dir: string) {
   await mkdir(join(dir, "scripts"));
   const script = join(dir, "scripts/vps-cron-run.sh");
-  await copyFile("scripts/vps-cron-run.sh", script);
+  // Scope lock files to the fixture rather than a shared or unavailable /tmp.
+  await writeFile(script, (await readFile("scripts/vps-cron-run.sh", "utf8")).replace("/tmp/minberiaksa-cron", join(dir, "minberiaksa-cron")));
   return script;
 }
 

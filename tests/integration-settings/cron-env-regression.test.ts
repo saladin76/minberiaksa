@@ -3,10 +3,15 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
 const exec = promisify(execFile);
+// Some isolated executors expose a basename rather than an absolute execPath.
+// A relative symlink named "node" would point to itself inside the NVM fixture.
+const fixtureNode = isAbsolute(process.execPath) ? process.execPath : (process.env.PATH || "").split(delimiter).map(dir => join(dir, process.execPath)).find(existsSync);
+assert.ok(fixtureNode, "The test's actual Node executable must be resolvable");
 
 for (const mode of ["production", "production-local", "inherited", "missing", "nvm"] as const) {
   test(`cron loads Next production configuration: ${mode}`, async () => {
@@ -23,7 +28,9 @@ for (const mode of ["production", "production-local", "inherited", "missing", "n
       await mkdir(join(dir, "node_modules/@next"), { recursive: true });
       await symlink(dirname(require.resolve("@next/env/package.json")), join(dir, "node_modules/@next/env"), "dir");
       const script = join(dir, "scripts/vps-cron-run.sh");
-      await copyFile("scripts/vps-cron-run.sh", script);
+      // Keep infrastructure locks inside this fixture, including executors
+      // where /tmp is unavailable; exercise the actual HTTP/env/lease logic.
+      await writeFile(script, (await readFile("scripts/vps-cron-run.sh", "utf8")).replace("/tmp/minberiaksa-cron", join(dir, "minberiaksa-cron")));
       if (mode !== "missing") {
         await writeFile(join(dir, ".env"), 'CRON_SECRET="wrong-base-fixture"\n');
         await writeFile(join(dir, ".env.production"), 'CRON_SECRET="production-$CRON_TEST_SUFFIX"\n');
@@ -37,7 +44,7 @@ for (const mode of ["production", "production-local", "inherited", "missing", "n
         const bin = join(dir, "bin");
         const nodeDir = join(dir, ".nvm/versions/node/v24.fixture/bin");
         await mkdir(bin); await mkdir(nodeDir, { recursive: true });
-        await symlink(process.execPath, join(nodeDir, "node"));
+        await symlink(fixtureNode, join(nodeDir, "node"));
         for (const tool of ["dirname", "date", "stat", "flock", "mktemp", "curl", "rm", "head", "tr", "env"]) await symlink("/usr/bin/" + tool, join(bin, tool));
         env.PATH = bin; env.HOME = dir;
       }
