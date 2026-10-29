@@ -16,6 +16,8 @@ import {
   parseKind,
   valuesFor,
   validateChanges,
+  contentFieldLimit,
+  changedTextValues,
 } from "@/lib/content-editor/contracts";
 import { translateItem } from "@/lib/content-localization/translate";
 import { contentStore } from "@/lib/content-editor/store";
@@ -52,8 +54,11 @@ export async function POST(
     const fields = fieldsFor(kind, row);
     const draftValues = (value: unknown, locale: string) => {
       if (value === undefined) return valuesFor(kind, row, locale);
-      try { return { ...valuesFor(kind, row, locale), ...validateChanges(fields, value) }; }
-      catch { throw new ContentError("حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
+      try {
+        const saved = valuesFor(kind, row, locale);
+        if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("حقول المسودة غير صالحة");
+        return { ...saved, ...validateChanges(fields, changedTextValues(value as Record<string, string>, saved)) };
+      } catch (error) { throw new ContentError(error instanceof Error ? error.message : "حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
     };
     const source = body.action === "translate" ? draftValues(body.sourceDraft, "ar") : valuesFor(kind, row, "ar");
     if (body.action === "proofread") {
@@ -113,6 +118,10 @@ export async function POST(
             selected.filter((f) => f.rich).map((f) => [f.key, source[f.key]]),
           ),
           itemLabel: CONFIG[kind].label,
+          fieldLimits: {
+            ...Object.fromEntries(selected.filter(field => !field.rich && field.group === "seo" && field.key !== "faqContent").map(field => [field.key, contentFieldLimit(field.key)])),
+            ...(selected.some(field => field.key === "faqContent") ? Object.fromEntries(Object.keys(faqTranslationFields(source.faqContent)).map(key => [key, key.endsWith("_q") ? 500 : 5000])) : {}),
+          },
           sourceLocale: "ar",
           signal: request.signal,
         },

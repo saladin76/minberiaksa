@@ -13,6 +13,7 @@ import {
   statuses,
   text,
   validateChanges,
+  changedTextValues,
   valuesFor,
   type ContentKind,
   type ContentRecord,
@@ -186,12 +187,15 @@ export async function saveContent(
       );
     let changes: TextValues, settings: ContentRecord;
     try {
-      changes = validateChanges(fieldsFor(kind, row), input.changes);
+      if (!input.changes || typeof input.changes !== "object" || Array.isArray(input.changes)) throw new Error("حقول غير صالحة");
+      // Historical metadata can exceed today's budgets. Preserve it untouched;
+      // validate only actual edits rather than blocking unrelated changes.
+      changes = validateChanges(fieldsFor(kind, row), changedTextValues(input.changes as TextValues, valuesFor(kind, row, locale)));
       settings = validateWorkspaceSettings(kind, row, input.settings);
       if (locale === "ar" && ["reports", "booklets"].includes(kind) && "fileUrl" in settings) changes.fileUrl = String(settings.fileUrl);
     } catch (error) {
       throw new ContentError(
-        error instanceof Error ? error.message : "حقول غير صالحة",
+        `${locale.toUpperCase()}: ${error instanceof Error ? error.message : "حقول غير صالحة"}`,
       );
     }
     const categorySet = settings.categories as

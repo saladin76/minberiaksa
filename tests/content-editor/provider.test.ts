@@ -3,6 +3,38 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { translateItem } from "../../lib/content-localization/translate";
 
+test("overlong translated SEO is repaired once within storage budgets without regenerating rich text", async () => {
+  const original = globalThis.fetch, key = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "test-only-not-a-real-key";
+  const rich = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", marks: [{ type: "bold" }], text: "دعم 15 طفلاً" }] }] };
+  let calls = 0;
+  try {
+    globalThis.fetch = async (_url, options) => {
+      calls++; const request = JSON.parse(String(options?.body));
+      if (calls === 1) assert.match(request.messages[1].content, /Hard maximum character counts/);
+      else { assert.match(request.messages[1].content, /Budgets/); assert.doesNotMatch(request.messages[1].content, /richTexts/); }
+      return Response.json({ choices: [{ message: { content: JSON.stringify(calls === 1
+        ? { fields: { seoDescription: "Help 15 children. " + "Long translated description. ".repeat(10), title: "Help children" }, richTexts: { description: ["Help 15 children"] } }
+        : { fields: { seoDescription: "Help 15 children continue their education in Gaza." } }) } }] });
+    };
+    const output = await translateItem({ fields: { title: "ساعد الأطفال", seoDescription: "ادعم 15 طفلاً لمواصلة التعليم في غزة" }, fieldLimits: { seoDescription: 170 }, richFields: { description: JSON.stringify(rich) } }, "en");
+    assert.equal(calls, 2); assert.equal(output.fields.seoDescription, "Help 15 children continue their education in Gaza.");
+    assert.equal(output.fields.title, "Help children");
+    const document = JSON.parse(output.richFields.description);
+    assert.deepEqual(document.content[0].content[0].marks, [{ type: "bold" }]); assert.equal(document.content[0].content[0].text, "Help 15 children");
+  } finally { globalThis.fetch = original; if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key; }
+});
+
+test("a still-overlong metadata repair is omitted with a warning, preserving other proposals", async () => {
+  const original = globalThis.fetch, key = process.env.OPENAI_API_KEY; process.env.OPENAI_API_KEY = "test-only-not-a-real-key";
+  let calls = 0;
+  try {
+    globalThis.fetch = async () => { calls++; return Response.json({ choices: [{ message: { content: JSON.stringify({ fields: { title: "Project", seoDescription: "Unsaveable description. ".repeat(15) }, richTexts: {} }) } }] }); };
+    const output = await translateItem({ fields: { title: "مشروع", seoDescription: "وصف قصير" }, fieldLimits: { seoDescription: 170 } }, "en");
+    assert.equal(calls, 2); assert.equal(output.fields.title, "Project"); assert.equal(output.fields.seoDescription, undefined); assert.match(output.warnings.join(" "), /170/);
+  } finally { globalThis.fetch = original; if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key; }
+});
+
 test("proofreading keeps the language, rich structure, links and protected amounts", async () => {
   const original = globalThis.fetch, key = process.env.OPENAI_API_KEY;
   process.env.OPENAI_API_KEY = "test-only-not-a-real-key";

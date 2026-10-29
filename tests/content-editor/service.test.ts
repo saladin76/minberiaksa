@@ -34,6 +34,15 @@ import {
   safeEditorUrl,
 } from "../../lib/content-editor/workspace-settings";
 const id = "111111111111111111111111";
+test("legacy overlong metadata never blocks an unrelated edit or gets silently rewritten", async () => {
+  const legacy = "Legacy description. ".repeat(15);
+  const m = memory("campaigns", { id, title: "Project", description: "Copy", seoDescription: legacy, images: [], translations: [] });
+  const unchanged = valuesFor("campaigns", m.read(), "ar");
+  const saved = await saveContent(m.store, { kind: "campaigns", id, locale: "ar", revision: fingerprint(m.read()), changes: { ...unchanged, title: "Updated project" } });
+  assert.equal(saved.values.ar.title, "Updated project"); assert.equal(saved.values.ar.seoDescription, legacy);
+  await assert.rejects(saveContent(m.store, { kind: "campaigns", id, locale: "ar", revision: saved.revision, changes: { seoDescription: "x".repeat(171) } }), /AR:.*وصف البحث.*170/);
+  assert.equal(m.read().seoDescription, legacy);
+});
 test("bulk URLs preserve excluded fallback-language URLs and existing financial data", async () => {
   const m = memory("campaigns", { id, title: "مشروع الماء", description: "محتوى المصدر", slug: "old-ar", currentAmount: 55, slugChanges: [], previousSlugs: [], translations: [{ locale: "en", title: "Water project", description: "Existing content", slug: "old-en" }] });
   const result = await changeEditorialSlugs(m.store, { kind: "campaigns", id, revision: fingerprint(m.read()), changes: { ar: "new-ar", en: "new-en" }, confirmation: "UPDATE_SLUGS", actor: "test-reviewer" });

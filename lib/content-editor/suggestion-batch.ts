@@ -24,7 +24,9 @@ export async function runSuggestionBatch<T>(input: {
   };
   if (targets.length && !input.signal.aborted) { next = 1; await run(0); }
   const worker = async () => { while (!stop && !input.signal.aborted && next < targets.length) { const index = next++; await run(index); } };
-  if (!stop && !input.signal.aborted) await Promise.all(Array.from({ length: Math.min(3, targets.length - next) }, worker));
+  // The durable queue accepts two active tasks per operator. A third worker
+  // rate-limited its own batch, then stopped every remaining language.
+  if (!stop && !input.signal.aborted) await Promise.all(Array.from({ length: Math.min(2, targets.length - next) }, worker));
   return { done: completed.size, skipped: targets.filter((_locale, index) => !completed.has(index)), sharedFailure: stop };
 }
 

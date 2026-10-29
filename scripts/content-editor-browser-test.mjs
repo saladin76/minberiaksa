@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 const require = createRequire(import.meta.url);
+const { contentReadiness } = require("../lib/content-editor/readiness.ts");
 const { documentFor } = require("../lib/content-editor/service.ts");
 const { CONTENT_KINDS } = require("../lib/content-editor/contracts.ts");
 const { EDITOR_SECTIONS } = require("../lib/content-editor/workspace.ts");
@@ -154,6 +155,10 @@ const server = createServer(async (req, res) => {
   } else if (req.url === "/bundle.js") {
     res.setHeader("Content-Type", "application/javascript");
     res.end(bundle.outputFiles[0].text);
+  } else if (req.url?.startsWith("/api/admin/content-editor/readiness?")) {
+    const kind = new URL(req.url, "http://fixture.test").searchParams.get("kind") || "campaigns";
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({items:[contentReadiness(kind,documents.get(kind).settings)],nextCursor:null,checkedAt:new Date().toISOString()}));
   } else if (req.url?.startsWith("/api/admin/content-editor/")) {
     if (req.url.endsWith("/catalog")) {
       res.setHeader("Content-Type", "application/json");
@@ -234,6 +239,11 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
+// A fixture-only server for manual/CUA review; never launches another browser.
+if (process.env.CONTENT_EDITOR_SERVE_ONLY === "1") {
+  console.log(JSON.stringify({fixtureUrl: origin, providerCalls: 0, productionWrites: 0}));
+  await new Promise(() => {});
+}
 let browser, page, richPage, plannerPage;
 const errors = [];
 try {

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+const ContentReadinessCenter = dynamic(() => import("@/components/dashboard/content-editor/ContentReadinessCenter").then(module => module.ContentReadinessCenter));
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
@@ -124,7 +126,7 @@ function completionPercent(total: number, incomplete: number): number {
   return Math.max(0, Math.round(((total - incomplete) / total) * 100));
 }
 
-export function ContentLocalizationAuditCard({ section }: { section: Section }) {
+function LegacyLocalizationAuditCard({ section }: { section: Section }) {
   const [data, setData] = useState<AuditResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(section === "campaigns");
@@ -396,4 +398,17 @@ function SmallMetric({ label, value }: { label: string; value: number }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+
+export function ContentLocalizationAuditCard({ section }: { section: Section }) {
+  const [open, setOpen] = useState(false);
+  if (section === "slides") return <LegacyLocalizationAuditCard section={section} />;
+  return <section className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
+    <header className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-l from-sky-50 to-white p-5">
+      <div className="flex items-start gap-3"><span className="rounded-xl bg-brand/10 p-3 text-brand"><Languages size={22} /></span><div><h2 className="font-bold">{dt("مركز SEO والترجمات")}</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">{dt("اكتشف المحتوى الناقص لكل لغة، راجع حقول البحث، وافتح المحرر مباشرة لاستكمالها.")}</p></div></div>
+      <div className="flex gap-2"><Button type="button" variant="outline" size="sm" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? dt("إخفاء القائمة") : dt("عرض الجاهزية")}</Button><Link className="inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm text-white" href={`/dashboard/seo-pages?tab=translations&kind=${section}`}>{dt("فتح المركز")}</Link></div>
+    </header>
+    {open ? <div className="p-4 sm:p-5"><ContentReadinessCenter initialKind={section} allowedKinds={[section]} /></div> : null}
+  </section>;
 }

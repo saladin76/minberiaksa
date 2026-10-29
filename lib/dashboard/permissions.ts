@@ -171,8 +171,10 @@ export function userCanEnterDashboard(user: UserLike | undefined): boolean {
   return user?.role === "ADMIN" || (user?.role === "STAFF" && hasAnyDashboardRoutePermission(user));
 }
 
-/** The shared content workspace contains separately protected SEO/blog tools. */
+/** Shared entry point; every tool and content section checks its own permission. */
 export function userCanOpenDashboardPath(user: UserLike | undefined, pathname: string): boolean {
+  if (pathname.replace(/\/$/, "") === "/dashboard/seo-pages")
+    return (["siteContent", "blog", "campaigns", "categories"] as const).some(key => userHasDashboardPermission(user, key));
   if (["/dashboard/seo-pages", "/dashboard/editorial-planner"].includes(pathname.replace(/\/$/, "")))
     return userHasDashboardPermission(user, "siteContent") || userHasDashboardPermission(user, "blog");
   const key = pathToDashboardPermission(pathname);

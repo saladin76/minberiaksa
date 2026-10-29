@@ -19,14 +19,15 @@ test("campaigns have no default internal daily ceiling; only an explicitly enabl
   assert.equal((await loaded.exports.evaluateCampaignSendControls({ channel: "WHATSAPP", metadata: { sendControls: { dailyCap: 3, dailyCapEnabled: true } } })).ok, false);
   assert.equal(capacityReads, 1);
 });
-test("translation probes one language then uses at most three concurrent requests while retaining all results", async () => {
+test("translation probes one language then uses at most two concurrent requests while retaining all results", async () => {
   const targets = ["en", "tr", "fr", "de", "ur", "ru"], releases = new Map<string, () => void>(), completed: string[] = [];
   let active = 0, maximum = 0;
   const task = runSuggestionBatch({ targets, signal: new AbortController().signal, request: async locale => { active++; maximum = Math.max(maximum, active); await new Promise<void>(resolve => releases.set(locale, resolve)); active--; return locale; }, onSuccess: locale => completed.push(locale), onError: () => assert.fail("unexpected failure"), onProgress() {} });
   const flush = () => new Promise<void>(resolve => setImmediate(resolve));
   await flush(); assert.equal(releases.size, 1); releases.get("en")!();
-  await flush(); assert.equal(active, 3); assert.equal(releases.size, 4);
-  for (const locale of ["tr", "fr", "de"]) releases.get(locale)!();
-  await flush(); for (const locale of ["ur", "ru"]) releases.get(locale)!();
-  await task; assert.equal(maximum, 3); assert.deepEqual([...completed].sort(), [...targets].sort());
+  await flush(); assert.equal(active, 2); assert.equal(releases.size, 3);
+  for (const locale of ["tr", "fr"]) releases.get(locale)!();
+  await flush(); for (const locale of ["de", "ur"]) releases.get(locale)!();
+  await flush(); releases.get("ru")!();
+  await task; assert.equal(maximum, 2); assert.deepEqual([...completed].sort(), [...targets].sort());
 });
