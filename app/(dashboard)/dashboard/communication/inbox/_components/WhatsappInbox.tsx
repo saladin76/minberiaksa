@@ -542,10 +542,10 @@ export function WhatsappInbox() {
                 title={dt("لا توجد محادثات")}
                 description={filter === "needsReply" ? dt("لا توجد محادثات بانتظار الرد حاليًا.") : dt("لم تصل أي محادثات مطابقة لهذا الفلتر.")}
               />
-              {filter !== "all" && (
+              {(filter !== "all" || query.trim().length > 0) && (
                 <button
                   type="button"
-                  onClick={() => setFilter("all")}
+                  onClick={() => { setFilter("all"); setQuery(""); }}
                   className="mx-auto mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {dt("عرض كل المحادثات")}</button>
