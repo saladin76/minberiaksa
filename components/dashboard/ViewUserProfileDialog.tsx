@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
@@ -652,6 +653,13 @@ export function ViewUserProfileDialog({
               </div>
 
               <div className="flex items-center gap-2">
+                {canOpenCommunication && (
+                  <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
+                    <Link href={`/dashboard/users/donors/${user.id}/communication`} onClick={() => onOpenChange(false)}>
+                      <Clock className="h-3.5 w-3.5" />{dt("سجل المحادثات")}
+                    </Link>
+                  </Button>
+                )}
                 {canOpenCommunication && (
                   <Button
                     size="sm"

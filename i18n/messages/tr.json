@@ -676,7 +676,9 @@
     "stripeMinDonation": "Minimum bağış: {amount} {currency}",
     "certificateNoteTitle": "Bağış sertifikanızı alın ✨",
     "certificateNoteBody": "Resmi bağış sertifikanızı ve makbuzunuzu gönderebilmemiz için gerçek e-posta adresinizi girin.",
-    "free": "Ücretsiz"
+    "free": "Ücretsiz",
+    "rememberCard": "Kartımı sonraki bağışlar için kaydet",
+    "rememberCardFailed": "Kart kaydedilemedi. Kaydetme seçeneğini kaldırıp devam edebilirsiniz."
   },
   "DonationSuccess": {
     "thankYou": "Çok teşekkür ederiz",

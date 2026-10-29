@@ -2494,5 +2494,11 @@
     "donated": "har doneret",
     "for": "til",
     "communitySupporter": "Fra vores fællesskab af støtter"
+  },
+  "DonationDialog": {
+    "rememberCard": "Gem mit kort til fremtidige donationer",
+    "rememberCardFailed": "Kortet kunne ikke gemmes. Fjern markeringen for at fortsætte.",
+    "savedCards": "Dine gemte kort",
+    "useNewCard": "Brug et nyt kort"
   }
 }

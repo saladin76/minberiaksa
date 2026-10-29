@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { IndexCommandClient } from "../database/mongo-index-client";
 
 type Index = { name: string; key?: Record<string, number>; unique?: boolean; sparse?: boolean; partialFilterExpression?: unknown; collation?: unknown };
 const name = "User_email_string_unique";
@@ -7,7 +7,7 @@ const filter = { email: { $type: "string" } };
  * Build and verify the replacement before dropping a recognized legacy index.
  * Never alter a custom filter or collation automatically.
  */
-export async function ensureOptionalUserEmailIndex(db: Pick<PrismaClient, "$runCommandRaw">, checkOnly = false) {
+export async function ensureOptionalUserEmailIndex(db: Pick<IndexCommandClient, "$runCommandRaw">, checkOnly = false) {
   const read = async () => {
     const result = await db.$runCommandRaw({ listIndexes: "User" });
     return (result.cursor as { firstBatch?: Index[] })?.firstBatch ?? [];

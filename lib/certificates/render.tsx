@@ -17,8 +17,6 @@ import type { ReceiptDocument, ThanksDocument, WaqfDocument } from "./documents"
  * same PNGs the pages use.
  */
 
-const FONTS_LINK = "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&display=swap";
-
 const BASE_CSS = `
   :root { --font-cairo: Cairo; --font-amiri: Amiri; --font-quran: Amiri; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -33,15 +31,19 @@ async function toMarkup(element: ReactElement): Promise<string> {
   return renderToStaticMarkup(element);
 }
 
-function page(lang: string, dir: "rtl" | "ltr", css: string, body: string): string {
+function page(lang: string, dir: "rtl" | "ltr", css: string, body: string, assetBase: string): string {
+  // Cairo/Amiri do not contain CJK or Devanagari glyphs. Request a script
+  // font only for those editions; the URL contains no donor/document data.
+  const scriptFonts: Record<string, { family: string; sample: string }> = { ja: { family: "Noto Sans JP", sample: "日本語" }, zh: { family: "Noto Sans SC", sample: "中文" }, hi: { family: "Noto Sans Devanagari", sample: "हिन्दी" } };
+  const scriptFont = scriptFonts[lang];
+  const scriptCss = scriptFont ? `:root{--font-cairo:Cairo,'${scriptFont.family}';--font-amiri:Amiri,'${scriptFont.family}'}body{font-family:var(--font-cairo),sans-serif}` : "";
   return `<!DOCTYPE html>
-<html lang="${lang}" dir="${dir}">
+<html lang="${lang}" dir="${dir}"${scriptFont ? ` data-document-font="${scriptFont.family}" data-document-font-sample="${scriptFont.sample}"` : ""}>
 <head>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="${FONTS_LINK}" rel="stylesheet">
-<style>${BASE_CSS}${css}</style>
+<link href="${assetBase}/fonts/certificates.css" rel="stylesheet">
+${scriptFont ? `<link href="https://fonts.googleapis.com/css2?family=${scriptFont.family.replaceAll(" ", "+")}:wght@400;700&amp;display=swap" rel="stylesheet">` : ""}
+<style>${BASE_CSS}${scriptCss}${css}</style>
 </head>
 <body>${body}</body>
 </html>`;
@@ -66,9 +68,9 @@ export async function renderThanksHtml(doc: ThanksDocument, assetBase: string, l
   .cert-body { grid-template-rows: auto auto 1fr auto !important; }
   .cert-main { align-content: center !important; }
   `;
-  const props = { donorName: doc.donorName, copy: doc.copy, verse: doc.verse, duaVerse: doc.duaVerse, dir: doc.dir, assetBase };
+  const props = { donorName: doc.donorName, copy: doc.copy, verse: doc.verse, duaVerse: doc.duaVerse, dir: doc.dir, assetBase, issuedDate: doc.issuedDate, serial: doc.serial };
   const body = await toMarkup(layout === "portrait" ? <ThanksCertificatePortrait {...props} /> : <ThanksCertificate {...props} />);
-  return page(doc.locale, doc.dir, css, body);
+  return page(doc.locale, doc.dir, css, body, assetBase);
 }
 
 /** `شهادة الاوقاف.dc.html`  both panels on one A4 landscape sheet, 4mm margin. */
@@ -88,13 +90,14 @@ export async function renderWaqfHtml(doc: WaqfDocument, assetBase: string): Prom
       onBehalf={doc.onBehalf}
       certNo={doc.certNo}
       certDate={doc.certDate}
+      details={doc.details}
       copy={doc.copy}
       locale={doc.locale}
       dir={doc.dir}
       assetBase={assetBase}
     />
   );
-  return page(doc.locale, doc.dir, css, body);
+  return page(doc.locale, doc.dir, css, body, assetBase);
 }
 
 /** `إيصال التبرع.dc.html`  A4 portrait, 8mm margin, one page per language copy. */
@@ -130,5 +133,5 @@ export async function renderReceiptHtml(pages: ReceiptDocument[], assetBase: str
     bodies.push(`<div class="rcp-page" lang="${doc.locale}" dir="${doc.dir}">${markup}</div>`);
   }
   const first = pages[0];
-  return page(first.locale, first.dir, css, bodies.join(""));
+  return page(first.locale, first.dir, css, bodies.join(""), assetBase);
 }

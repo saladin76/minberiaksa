@@ -676,7 +676,9 @@
     "stripeMinDonation": "Mindestspende: {amount} {currency}",
     "certificateNoteTitle": "Erhalte deine Spendenbescheinigung ✨",
     "certificateNoteBody": "Gib deine echte E-Mail-Adresse an, damit wir dir die offizielle Spendenbescheinigung und Quittung der Stiftung zusenden können.",
-    "free": "Kostenlos"
+    "free": "Kostenlos",
+    "rememberCard": "Meine Karte für weitere Spenden speichern",
+    "rememberCardFailed": "Die Karte konnte nicht gespeichert werden. Deaktivieren Sie diese Option, um fortzufahren."
   },
   "DonationSuccess": {
     "thankYou": "Vielen Dank",

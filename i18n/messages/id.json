@@ -676,7 +676,9 @@
     "stripeMinDonation": "Donasi minimum: {amount} {currency}",
     "certificateNoteTitle": "Dapatkan sertifikat donasi Anda ✨",
     "certificateNoteBody": "Masukkan email asli Anda agar kami dapat mengirimkan sertifikat donasi resmi dan kuitansi kepada Anda.",
-    "free": "Gratis"
+    "free": "Gratis",
+    "rememberCard": "Simpan kartu saya untuk donasi berikutnya",
+    "rememberCardFailed": "Kartu tidak dapat disimpan. Hapus centang opsi ini untuk melanjutkan."
   },
   "DonationSuccess": {
     "thankYou": "Terima kasih banyak",

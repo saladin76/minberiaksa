@@ -12,6 +12,7 @@ export function checkoutFieldIssue(details: {
   firstName: string; email: string; phone: string;
   requireName: boolean; requireCard: boolean;
   cardNumber: string; cardExpiry: string; cardCvc: string;
+  savedCard?: boolean;
 }): CheckoutFieldIssue | null {
   if (details.requireName && !details.firstName.trim()) return { field: "firstName", message: "required" };
   if (!details.email.trim()) return { field: "email", message: "required" };
@@ -20,6 +21,10 @@ export function checkoutFieldIssue(details: {
   if (!phone) return { field: "phone", message: "required" };
   if (phone.length < 7 || phone.length > 15) return { field: "phone", message: "invalidPhone" };
   if (details.requireCard) {
+    if (details.savedCard) {
+      if (!details.cardCvc.trim()) return { field: "cardCvc", message: "required" };
+      return /^\d{3,4}$/.test(details.cardCvc) ? null : { field: "cardCvc", message: "invalidCardCvc" };
+    }
     for (const field of ["cardNumber", "cardExpiry", "cardCvc"] as const) {
       if (!details[field].trim()) return { field, message: "required" };
     }

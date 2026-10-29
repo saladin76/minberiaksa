@@ -35,6 +35,8 @@ export interface ThanksCertificateProps {
   dir: "rtl" | "ltr";
   /** Origin to prefix asset paths with when the sheet renders outside the site. */
   assetBase?: string;
+  issuedDate?: string;
+  serial?: string;
 }
 
 const GOLD = "#D39A27";
@@ -67,7 +69,7 @@ const corner = (v: "top" | "bottom", h: "start" | "end"): CSSProperties => ({
   [h === "start" ? "borderInlineStart" : "borderInlineEnd"]: `6px solid ${GOLD}`,
 });
 
-export default function ThanksCertificate({ donorName, copy, verse, duaVerse, dir, assetBase = "" }: ThanksCertificateProps) {
+export default function ThanksCertificate({ donorName, copy, verse, duaVerse, dir, assetBase = "", issuedDate, serial }: ThanksCertificateProps) {
   const asset = (file: string) => `${assetBase}/minbar/assets/${file}`;
 
   return (
@@ -102,45 +104,45 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
       <div aria-hidden="true" style={corner("bottom", "end")} />
 
       <div className="cert-body" style={{ position: "relative", height: "100%", padding: "3.2% 9% 2.4%", display: "grid", gridTemplateRows: "auto auto 1fr auto", textAlign: "center", boxSizing: "border-box" }}>
-        <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
+        <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- sized as a share of the sheet, not in pixels */}
           <img src={asset("logo-horizontal.png")} alt={copy.orgName} style={{ width: "20%", maxWidth: 190, height: "auto" }} />
-          <span dir="rtl" style={{ marginTop: 14, fontFamily: SERIF, fontSize: "clamp(11px,1.5cqw,20px)", color: "#10212B", letterSpacing: ".02em" }}>
+          <span dir="rtl" style={{ marginTop: 6, fontFamily: SERIF, fontSize: "clamp(11px,1.5cqw,20px)", color: "#10212B", letterSpacing: ".02em" }}>
             بسم الله الرحمن الرحيم
           </span>
           <p dir="rtl" style={{ margin: 0, width: "100%", fontFamily: SERIF, fontSize: "clamp(12px,1.78cqw,25px)", fontWeight: 700, lineHeight: 1.9, color: "#7C2318", whiteSpace: "nowrap" }}>
             {verse.arabic}
           </p>
           {verse.translation ? (
-            <p style={{ margin: 0, width: "82%", fontSize: "clamp(9px,1.05cqw,14px)", lineHeight: 1.7, color: "#7C2318", opacity: 0.85 }}>{verse.translation}</p>
+            <p style={{ margin: 0, width: "94%", fontSize: "clamp(9px,1.05cqw,14px)", lineHeight: 1.7, color: "#7C2318", opacity: 0.85 }}>{verse.translation}</p>
           ) : null}
         </div>
 
-        <div style={{ display: "grid", justifyItems: "center", gap: 6, padding: "1.6% 0" }}>
-          <h1 style={{ margin: 0, fontFamily: SERIF, fontSize: "clamp(34px,5.4cqw,74px)", fontWeight: 700, letterSpacing: ".04em", color: "#A93428", lineHeight: 1.35, whiteSpace: "nowrap" }}>
+        <div style={{ display: "grid", justifyItems: "center", gap: 6, padding: "1% 0" }}>
+          <h1 style={{ margin: 0, fontFamily: SERIF, fontSize: "clamp(30px,4.4cqw,60px)", fontWeight: 700, letterSpacing: ".04em", color: "#A93428", lineHeight: 1.2, whiteSpace: "nowrap" }}>
             {copy.title}
           </h1>
         </div>
 
-        <div className="cert-main" style={{ display: "grid", alignContent: "center", justifyItems: "center", gap: 16 }}>
+        <div className="cert-main" style={{ display: "grid", alignContent: "center", justifyItems: "center", gap: 10 }}>
           <div style={{ display: "grid", justifyItems: "center", gap: 6, width: "100%" }}>
             <span style={{ fontSize: "clamp(11px,1.5cqw,20px)", fontWeight: 700, color: "#52616B", whiteSpace: "nowrap" }}>{copy.nameLabel}</span>
             {/* The name line keeps its height when empty, so a certificate
                 printed before the donor typed a name has a rule to write on. */}
-            <span style={{ display: "grid", placeItems: "center", width: "100%", minHeight: 44, padding: "4px 6px", fontSize: "clamp(18px,2.95cqw,40px)", fontWeight: 800, color: "#10212B", whiteSpace: "nowrap" }}>
+            <span style={{ display: "grid", placeItems: "center", width: "100%", minHeight: 44, padding: "4px 6px", fontSize: donorName.length > 45 ? "clamp(14px,1.8cqw,24px)" : "clamp(18px,2.95cqw,40px)", fontWeight: 800, color: "#10212B", overflowWrap: "anywhere" }}>
               {donorName}
             </span>
           </div>
 
-          <p style={{ margin: 0, width: "82%", fontSize: "clamp(11px,1.44cqw,19px)", lineHeight: 2.05, color: "#132C38" }}>{copy.body}</p>
+          <p style={{ margin: 0, width: "94%", fontSize: copy.body.length > 700 ? "clamp(11px,1.05cqw,14px)" : "clamp(11px,1.28cqw,17px)", lineHeight: copy.body.length > 700 ? 1.6 : 1.8, color: "#132C38", whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{copy.body}</p>
 
           <p dir="rtl" style={{ margin: "6px 0 0", width: "100%", fontFamily: SERIF, fontSize: "clamp(13px,2cqw,28px)", fontWeight: 700, lineHeight: 1.8, color: "#7C2318", whiteSpace: "nowrap" }}>
             {duaVerse.arabic}
           </p>
           {duaVerse.translation ? (
-            <p style={{ margin: 0, width: "82%", fontSize: "clamp(9px,1.05cqw,14px)", lineHeight: 1.7, color: "#7C2318", opacity: 0.85 }}>{duaVerse.translation}</p>
+            <p style={{ margin: 0, width: "94%", fontSize: "clamp(9px,1.05cqw,14px)", lineHeight: 1.7, color: "#7C2318", opacity: 0.85 }}>{duaVerse.translation}</p>
           ) : null}
-          <p style={{ margin: 0, width: "82%", fontSize: "clamp(12px,1.62cqw,21px)", lineHeight: 2.05, color: "#132C38" }}>{copy.duaText}</p>
+          <p style={{ margin: 0, width: "94%", fontSize: "clamp(11px,1.35cqw,18px)", lineHeight: 1.8, color: "#132C38" }}>{copy.duaText}</p>
         </div>
 
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, paddingBottom: "2.2%", alignSelf: "end" }}>
@@ -149,6 +151,7 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
           <div style={{ display: "grid", justifyItems: "end", gap: 6, textAlign: "end" }}>
             <span style={{ fontFamily: SERIF, fontSize: "clamp(13px,1.6cqw,23px)", fontWeight: 700, color: "#B8811C", whiteSpace: "nowrap" }}>{copy.motto}</span>
             <span style={{ fontSize: "clamp(10px,1.2cqw,16px)", fontWeight: 700, color: "#132C38", whiteSpace: "nowrap" }}>{copy.orgName}</span>
+            {issuedDate && <span style={{ fontSize: "clamp(9px,1cqw,12px)", color: "#52616B" }}><bdi>{serial}</bdi> · {issuedDate}</span>}
           </div>
         </div>
       </div>

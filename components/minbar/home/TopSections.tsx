@@ -271,7 +271,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
                 two read as a single run of text to crawlers and screen
                 readers  "…المرابطينحول المسجد…" (`DEPLOYED_VS_DESIGN_AUDIT.md`
                 § P2.2). The classes are unchanged, so the layout is. */}
-            <h1 className="mia-hero-h1">
+            <h1 className={`mia-hero-h1${locale === "ar" ? " mia-hero-h1--ar" : ""}`}>
               <span className="mia-hero-title">
                 <AccentedTitle text={t("heroTitle")} accent={t("heroTitleAccent")} />
               </span>

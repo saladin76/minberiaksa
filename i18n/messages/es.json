@@ -676,7 +676,9 @@
     "stripeMinDonation": "Donación mínima: {amount} {currency}",
     "certificateNoteTitle": "Reciba su certificado de donación ✨",
     "certificateNoteBody": "Añada su correo real para que podamos enviarle el certificado oficial de donación y su recibo.",
-    "free": "Gratis"
+    "free": "Gratis",
+    "rememberCard": "Guardar mi tarjeta para futuras donaciones",
+    "rememberCardFailed": "No se pudo guardar la tarjeta. Desmarca esta opción para continuar."
   },
   "DonationSuccess": {
     "thankYou": "Muchas gracias",

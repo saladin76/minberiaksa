@@ -362,7 +362,8 @@ export async function initiateBankPayment(
   locale: string,
   gateway: "PAYFOR" | "ALBARAKA",
   card?: { number: string; expiry: string; cvv: string; holder: string },
-  securityMode?: "2D" | "3D"
+  securityMode?: "2D" | "3D",
+  savedCardId?: string,
 ): Promise<GatewayForm> {
   const endpoint = gateway === "ALBARAKA" ? "/api/albaraka/3d/initiate" : "/api/payfor/3dpay/initiate";
 
@@ -372,6 +373,7 @@ export async function initiateBankPayment(
     body: JSON.stringify({
       donationId,
       locale,
+      ...(savedCardId ? { savedCardId } : {}),
       ...(gateway === "ALBARAKA" && card ? { card } : {}),
       ...(gateway === "ALBARAKA" && securityMode ? { securityMode } : {}),
     }),

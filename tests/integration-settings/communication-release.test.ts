@@ -220,6 +220,7 @@ function paypalFixture(paid = false, missing = false) {
     completePayPalReturn: (input: { donationId: string; orderId: string }) => Promise<{ kind: string; accessToken?: string }>;
     reconcilePayPalDonation: (id: string) => Promise<{ outcome: string }>;
   }>("lib/donations/paypal-donation.ts", {
+    "./mongo-null": { donationFieldEmpty: () => ({}), donationWhereAll: () => ({}) },
     "server-only": {}, "@/lib/events/after-response": {}, "@/lib/donations/recurring-schedule": {}, "@/lib/events/dispatch": {}, "@/lib/tracking/donation-conversion-server": {},
     "@/lib/prisma": { prisma: { donation: {
       findUnique: async () => ({ id: "donation", paidAt: paid ? new Date() : null, accessToken: "private-token", status: "PAID", paymentMethod: "PAYPAL", createdAt: new Date("2020-01-01"), paypalOrderId: "ORDER", providerRaw: { paypalRequest: { value: "10.00", currency: "USD" } } }),

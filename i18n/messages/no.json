@@ -2494,5 +2494,11 @@
     "donated": "har donert",
     "for": "til",
     "communitySupporter": "Fra vårt fellesskap av støttespillere"
+  },
+  "DonationDialog": {
+    "rememberCard": "Lagre kortet mitt for fremtidige donasjoner",
+    "rememberCardFailed": "Kortet kunne ikke lagres. Fjern avkrysningen for å fortsette.",
+    "savedCards": "Dine lagrede kort",
+    "useNewCard": "Bruk et nytt kort"
   }
 }

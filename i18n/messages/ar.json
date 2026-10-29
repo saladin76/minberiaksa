@@ -676,7 +676,9 @@
     "stripeMinDonation": "الحد الأدنى للتبرع: {amount} {currency}",
     "certificateNoteTitle": "احصل على شهادة تبرعك ✨",
     "certificateNoteBody": "أدخل بريدك الإلكتروني الصحيح حتى نتمكن من إرسال شهادة التبرع الرسمية والإيصال إليك.",
-    "free": "مجاني"
+    "free": "مجاني",
+    "rememberCard": "احفظ بطاقتي للتبرعات القادمة",
+    "rememberCardFailed": "تعذّر حفظ البطاقة. يمكنك إلغاء خيار الحفظ والمتابعة."
   },
   "DonationSuccess": {
     "thankYou": "شكرًا جزيلًا",

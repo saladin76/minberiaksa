@@ -822,6 +822,10 @@ model Donation {
   providerHostRefNum     String?
   providerErrorMessage   String?
   providerRaw            Json?
+  reconciliationCheckedAt DateTime?
+  reconciliationNextAt DateTime?
+  reconciliationLeaseToken String?
+  reconciliationLeaseUntil DateTime?
 
   /// PayPal Orders v2: the order created for this donation. Set when the order
   /// is created, before the donor leaves for PayPal; the return route refuses
@@ -1143,6 +1147,27 @@ model Certificate {
 /// The official receipt number for a confirmed donation. The donation id is
 /// the internal reference; this is the number the accounting document shows
 /// and the finance team files by.
+model IssuedCertificate {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  requestKey String @unique
+  inputHash String
+  kind String
+  locale String
+  donorName String
+  recipientName String
+  recipientEmail String?
+  recipientPhone String?
+  serial String
+  issuedAt DateTime
+  document Json
+  deliveryState Json?
+  deliveryLock String?
+  deliveryLockUntil DateTime?
+  createdById String @db.ObjectId
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+
 model DonationReceipt {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   receiptNo  String   @unique
@@ -1858,6 +1883,7 @@ model TrackingSettings {
 /// (currently for team-support quick-pick amounts in the donation flow);
 /// writable only from the admin dashboard.
 model GlobalSettings {
+  paypalWebhookId String?
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   /// { "amounts": number[], "byCurrency"?: Record<string, number[]> }  the
   /// team-support quick-pick amounts shown in the basket. Team support belongs

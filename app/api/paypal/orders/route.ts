@@ -6,6 +6,7 @@ import { isValidLocale } from "@/lib/locales";
 import { donationTokenMatches } from "@/lib/donations/access-token";
 import { startPayPalCheckout } from "@/lib/donations/paypal-donation";
 import { PayPalError } from "@/lib/paypal";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     const hasToken = donationTokenMatches(donation.accessToken, typeof body.t === "string" ? body.t : null);
     if (!isOwner && !hasToken) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
+    const origin = paymentPublicOrigin(req.url);
     const result = await startPayPalCheckout({ donationId, origin, locale });
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
     return NextResponse.json({ approveUrl: result.approveUrl });

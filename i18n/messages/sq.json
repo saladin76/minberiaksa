@@ -2494,5 +2494,11 @@
     "donated": "dhuroi",
     "for": "për",
     "communitySupporter": "Nga komuniteti ynë i mbështetësve"
+  },
+  "DonationDialog": {
+    "rememberCard": "Ruaj kartën time për dhurimet e ardhshme",
+    "rememberCardFailed": "Karta nuk mund të ruhej. Hiqni shenjën nga ky opsion për të vazhduar.",
+    "savedCards": "Kartat tuaja të ruajtura",
+    "useNewCard": "Përdor një kartë të re"
   }
 }

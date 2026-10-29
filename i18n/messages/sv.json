@@ -2494,5 +2494,11 @@
     "donated": "donerade",
     "for": "för",
     "communitySupporter": "Från vår gemenskap av supportrar"
+  },
+  "DonationDialog": {
+    "rememberCard": "Spara mitt kort för framtida donationer",
+    "rememberCardFailed": "Kortet kunde inte sparas. Avmarkera alternativet för att fortsätta.",
+    "savedCards": "Dina sparade kort",
+    "useNewCard": "Använd ett nytt kort"
   }
 }

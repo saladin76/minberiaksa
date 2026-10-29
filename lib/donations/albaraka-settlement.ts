@@ -7,6 +7,7 @@ import { albarakaIsoCode, type AlbarakaServiceResponse } from "@/lib/albaraka";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
+import { donationFieldEmpty, donationWhereAll } from "./mongo-null";
 
 /**
  * Settling an Albaraka charge, shared by the 2D sale (`/api/albaraka/3d/initiate`,
@@ -38,9 +39,9 @@ export async function failAlbarakaDonation(
   console.error("[Albaraka] donation failed:", donationId, reason);
   try {
     const donation = await prisma.donation.findUnique({ where: { id: donationId } });
-    if (!donation || donation.paidAt !== null) return;
-    await prisma.donation.update({
-      where: { id: donationId },
+    if (!donation || donation.paidAt != null) return;
+    const failed = await prisma.donation.updateMany({
+      where: donationWhereAll({ id: donationId, status: { not: "FAILED" } }, donationFieldEmpty("paidAt")),
       data: {
         status: "FAILED",
         provider: "ALBARAKA",
@@ -51,6 +52,7 @@ export async function failAlbarakaDonation(
         providerRaw: asJson({ ...rawObject(donation.providerRaw), ...extra }),
       },
     });
+    if (!failed.count) return;
     runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
     // Seed Meta with the failed attempt; the browser pixel sends the matching
     // DonateFailed hit with the same `${donationId}_failed` event id.
@@ -86,7 +88,7 @@ export async function settleAlbarakaDonation(
       include: { items: true, categoryItems: true },
     });
     if (!fresh) return false;
-    if (fresh.paidAt !== null) return true;
+    if (fresh.paidAt != null) return true;
 
     await tx.donation.update({
       where: { id: fresh.id },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { donationTokenMatches, withDonationToken } from "@/lib/donations/access-token";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
  * none (a signed-in donor, whose session opens the page).
  */
 async function handle(req: NextRequest) {
-  const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
+  const origin = paymentPublicOrigin(req.url);
   const { searchParams } = new URL(req.url);
   const donationId = searchParams.get("donationId") || "";
   const locale = (searchParams.get("locale") || "en").toLowerCase().replace(/[^a-z-]/g, "") || "en";
@@ -35,14 +36,14 @@ async function handle(req: NextRequest) {
 
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
-    select: { paidAt: true, accessToken: true },
+    select: { paidAt: true, accessToken: true, status: true },
   });
-  if (!donation?.paidAt) return redirect(failUrl);
+  if (!donation || (!donation.paidAt && donation.status === "FAILED")) return redirect(failUrl);
 
   if (donation.accessToken && !donationTokenMatches(donation.accessToken, presented)) {
-    return redirect(new URL(`/${locale}/success/${donationId}`, origin));
+    return redirect(new URL(donation.paidAt ? `/${locale}/success/${donationId}` : `/${locale}/payment-processing?donationId=${encodeURIComponent(donationId)}`, origin));
   }
-  return redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, donation.accessToken), origin));
+  return redirect(new URL(withDonationToken(donation.paidAt ? `/${locale}/success/${donationId}` : `/${locale}/payment-processing?donationId=${encodeURIComponent(donationId)}`, donation.accessToken), origin));
 }
 
 export const GET = handle;

@@ -28,6 +28,7 @@ export interface ThanksDocument {
   certificateId: string;
   donationId: string;
   serial: string;
+  issuedDate?: string;
   donorName: string;
   copy: ThanksCopy;
   verse: CertificateVerse;
@@ -48,6 +49,7 @@ export interface WaqfDocument {
   onBehalf: string;
   certNo: string;
   certDate: string;
+  details?: string;
   copy: WaqfCopy;
   locale: string;
   dir: "rtl" | "ltr";
@@ -82,7 +84,7 @@ function t(locale: string, ns: string, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
-function certificateVerse(locale: string, id: string): CertificateVerse {
+export function certificateVerse(locale: string, id: string): CertificateVerse {
   const quran = messagesFor(locale).quran as Parameters<typeof verseBlock>[0];
   const block = verseBlock(quran, id, locale);
   return { arabic: block.arabic, translation: block.translation };

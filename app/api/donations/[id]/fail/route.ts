@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
+import { donationFieldEmpty, donationWhereAll } from "@/lib/donations/mongo-null";
 
 /**
  * Mark a donation as FAILED.
@@ -54,18 +55,21 @@ export async function PATCH(
     // A server-side charge (the Albaraka 2D sale) is in flight; its own outcome
     // decides the status. A browser error must not record it failed while the
     // bank may be approving it.
-    if (donation.providerTxnResult === "Processing") {
+    if (["Processing", "PendingConfirmation"].includes(donation.providerTxnResult ?? "")) {
       return NextResponse.json({ ok: true, inProgress: true });
     }
 
-    await prisma.donation.update({
-      where: { id },
+    const changed = await prisma.donation.updateMany({
+      where: donationWhereAll({ id, status: { not: "FAILED" } }, donationFieldEmpty("paidAt"), {
+        OR: [{ providerTxnResult: null }, { providerTxnResult: { isSet: false } }, { providerTxnResult: { notIn: ["Processing", "PendingConfirmation"] } }],
+      }),
       data: {
         status: "FAILED",
         providerErrorMessage: reason,
         providerTxnResult: "Failed",
       },
     });
+    if (!changed.count) return NextResponse.json({ ok: true, stateChanged: true });
     runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId: id }));
     // Seed Meta with the failed attempt  browser pixel fires the matching
     // DonateFailed hit with event_id `${id}_failed` so the pair deduplicates.

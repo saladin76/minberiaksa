@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import { donationFieldEmpty, donationWhereAll } from "@/lib/donations/mongo-null";
 import { albaraka3DLinkageError } from "@/lib/donations/albaraka-3d-verification";
 import { isValidLocale } from "@/lib/locales";
@@ -61,7 +62,7 @@ function macEquals(a: string, b: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
+  const origin = paymentPublicOrigin(req.url);
   const { searchParams } = new URL(req.url);
   const donationId = searchParams.get("donationId") || "";
   const requestedLocale = (searchParams.get("locale") || "en").toLowerCase();

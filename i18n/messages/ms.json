@@ -2494,5 +2494,11 @@
     "donated": "menderma",
     "for": "untuk",
     "communitySupporter": "Daripada komuniti penyokong kami"
+  },
+  "DonationDialog": {
+    "rememberCard": "Simpan kad saya untuk sumbangan akan datang",
+    "rememberCardFailed": "Kad tidak dapat disimpan. Nyahpilih pilihan ini untuk meneruskan.",
+    "savedCards": "Kad tersimpan anda",
+    "useNewCard": "Gunakan kad baharu"
   }
 }

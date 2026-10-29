@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
  * restarting it. The thank-you and receipt counters run per calendar year.
  */
 
-export type SequenceKey = "waqf-share" | "waqf-meter" | `thanks-${number}` | `receipt-${number}`;
+export type SequenceKey = "waqf-share" | "waqf-meter" | `thanks-${number}` | `receipt-${number}` | `manual-${number}`;
 
 /** The first number each sequence hands out. */
 const FIRST_NUMBER: Record<string, number> = {

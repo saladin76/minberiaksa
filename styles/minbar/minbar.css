@@ -1335,6 +1335,10 @@
   .mia-scope .mia-hero-main { padding: 22px 0 22px; gap: 22px; }
   .mia-scope .mia-hero-copy { gap: 14px; }
   .mia-scope .mia-hero-h1 { font-size: 29px !important; line-height: 1.2 !important; gap: 4px; }
+  /* Preserve the full Arabic headline on one line from 320px upwards. Other
+     locales keep their own wrapping, and text remains accessible on zoom. */
+  .mia-scope .mia-hero-h1--ar { font-size: clamp(16px, 5.05vw, 28px) !important; line-height: 1.55 !important; text-wrap: nowrap; }
+  .mia-scope .mia-hero-h1--ar .mia-hero-title { white-space: nowrap; }
   .mia-scope .mia-hero-sub { font-size: 18px !important; gap: 9px; }
   .mia-scope .mia-hero-sub-mark { width: 24px; }
   .mia-scope .mia-hero-lead { font-size: 14.5px !important; line-height: 1.75 !important; }

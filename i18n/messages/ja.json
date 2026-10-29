@@ -2494,5 +2494,11 @@
     "donated": "寄付しました",
     "for": "へ",
     "communitySupporter": "支援者コミュニティより"
+  },
+  "DonationDialog": {
+    "rememberCard": "今後の寄付のためにカードを保存する",
+    "rememberCardFailed": "カードを保存できませんでした。このオプションを外すと続行できます。",
+    "savedCards": "保存済みのカード",
+    "useNewCard": "新しいカードを使う"
   }
 }

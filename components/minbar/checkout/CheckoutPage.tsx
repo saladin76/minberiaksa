@@ -5,6 +5,7 @@ import type { AlbarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mod
 import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { digitsOnly } from "@/lib/minbar/numeric-input";
 import { checkoutFieldIssue, type CheckoutField, type CheckoutFieldIssue } from "@/lib/minbar/checkout-validation";
+import { isFutureExpiry } from "@/lib/minbar/card-validation";
 
 /** Server refusal codes (`app/api/albaraka/3d/initiate`) → `validation` messages. */
 const CARD_ERROR_KEYS: Record<string, string> = {
@@ -150,6 +151,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
   const router = useRouter();
   const { data: session } = useSession();
+  const tCards = useTranslations("DonationDialog");
+  const [savedCards, setSavedCards] = useState<Array<{ id: string; last4: string; cardType: string; expiryDate: string; cardholderName?: string | null; isDefault: boolean }>>([]);
+  const [selectedCardId, setSelectedCardId] = useState("");
+  const [rememberCard, setRememberCard] = useState(false);
+  const cardInputTouched = useRef(false);
   const { currency } = useMinbarMoney();
   /* Whoever sent this donor here, if a campaign link set the cookie. Read at
      submit time so the attribution is the one in force when they gave. */
@@ -291,6 +297,22 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
   /* A card we never collect can't be validated, and the bank rails need one. */
   const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
+  useEffect(() => {
+    const abort = new AbortController();
+    setSavedCards([]); setSelectedCardId(""); setCardCvc("");
+    if (session?.user?.id && needsOwnCardForm && (gateway === "ALBARAKA" || gateway === "PAYFOR")) {
+      void fetch("/api/credit-cards", { signal: abort.signal, cache: "no-store" }).then(async response => {
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!abort.signal.aborted) {
+          const cards = (Array.isArray(data.cards) ? data.cards : []).filter((card: { last4?: string; expiryDate?: string }) => /^\d{4}$/.test(card.last4 ?? "") && isFutureExpiry(card.expiryDate ?? ""));
+          setSavedCards(cards);
+          if (!cardInputTouched.current) setSelectedCardId((cards.find((card: { isDefault?: boolean }) => card.isDefault) ?? cards[0])?.id ?? "");
+        }
+      }).catch(() => {});
+    }
+    return () => abort.abort();
+  }, [session?.user?.id, gateway, needsOwnCardForm]);
   const requiresVerificationChoice = method === "card" && gateway === "ALBARAKA" && !planFrequency;
   useEffect(() => { setVerificationMode(null); }, [planFrequency]);
   const selectedBank = banks.find((b) => b.id === bankId) ?? banks[0];
@@ -351,6 +373,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       firstName, email, phone, requireName: !signedIn,
       requireCard: method === "card" && needsOwnCardForm && gateway !== "STRIPE",
       cardNumber, cardExpiry, cardCvc,
+      savedCard: Boolean(selectedCardId),
     });
     if (issue) {
       setInvalidField(issue);
@@ -392,7 +415,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     }
 
     let donationId: string | null = null;
+    let cardToUse = selectedCardId;
     try {
+      if (method === "card" && needsOwnCardForm && gateway !== "STRIPE" && !cardToUse && rememberCard && signedIn) {
+        const saved = await fetch("/api/credit-cards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cardNumber: cardNumber.replace(/\D/g, ""), expiryDate: cardExpiry, cvc: cardCvc, cardholderName: cardName }) });
+        const result = await saved.json().catch(() => null);
+        if (!saved.ok || !result?.card?.id) { setError(tCards("rememberCardFailed")); setSubmitting(false); return; }
+        cardToUse = result.card.id;
+      }
       const donation = await createDonation({
         items,
         projects,
@@ -470,24 +500,25 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         gateway,
         sendCardToServer
           ? {
-              number: cardNumber.replace(/\D/g, ""),
-              expiry: cardExpiry,
+              number: cardToUse ? "" : cardNumber.replace(/\D/g, ""),
+              expiry: cardToUse ? "" : cardExpiry,
               cvv: cardCvc,
-              holder: cardName,
+              holder: cardToUse ? "" : cardName,
             }
           : undefined,
-        gateway === "ALBARAKA" ? (planFrequency ? "2D" : verificationMode || "2D") : undefined
+        gateway === "ALBARAKA" ? (planFrequency ? "2D" : verificationMode || "2D") : undefined,
+        cardToUse || undefined,
       );
 
       const browserFields: Record<string, string> =
-        gateway === "PAYFOR"
+        gateway === "PAYFOR" && !cardToUse
           ? {
               Pan: cardNumber.replace(/\D/g, ""),
               Expiry: `${expiryMonth}${expiryYear}`,
               Cvv2: cardCvc,
               CardHolderName: cardName,
             }
-          : {};
+          : gateway === "PAYFOR" ? { Cvv2: cardCvc } : {};
 
       /* The basket is cleared before the redirect: the order now exists on the
          server, and a donor returning from the bank must not find it still
@@ -530,6 +561,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     (gateway === "STRIPE" ? stripeReady : checkoutFieldIssue({
       firstName, email, phone, requireName: !session?.user, requireCard: needsOwnCardForm,
       cardNumber, cardExpiry, cardCvc,
+      savedCard: Boolean(selectedCardId),
     }) === null));
   const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete && (!requiresVerificationChoice || Boolean(verificationMode));
   const steps: CheckoutStep[] = [
@@ -853,10 +885,24 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
               {method === "card" && needsOwnCardForm && gateway !== "STRIPE" ? (
                 <div style={{ display: "grid", gap: 14 }}>
+                  {savedCards.length > 0 && (
+                    <fieldset className="grid gap-2 rounded-xl border border-[var(--border)] p-3">
+                      <legend className="px-1 text-sm font-bold">{tCards("savedCards")}</legend>
+                      {savedCards.map(card => (
+                        <label key={card.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3">
+                          <input type="radio" name="saved-payment-card" value={card.id} checked={selectedCardId === card.id} onChange={() => { setSelectedCardId(card.id); setCardCvc(""); setInvalidField(null); }} />
+                          <span dir="ltr" className="grow text-start">{card.cardType} •••• {card.last4} · {card.expiryDate}</span>
+                        </label>
+                      ))}
+                      <label className="flex cursor-pointer items-center gap-3 p-2">
+                        <input type="radio" name="saved-payment-card" checked={!selectedCardId} onChange={() => { setSelectedCardId(""); setCardCvc(""); setInvalidField(null); }} />{tCards("useNewCard")}
+                      </label>
+                    </fieldset>
+                  )}
                   {/* The live card, filling in as the donor types and flipping
                       for the CVC; the brand is detected from the number. Latin-
                       script data: always LTR. */}
-                  <div data-clarity-mask="True" data-hj-suppress="" data-private="" className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
+                  {!selectedCardId && <div data-clarity-mask="True" data-hj-suppress="" data-private="" className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
                     <Cards
                       number={cardNumber}
                       expiry={cardExpiry.replace("/", "")}
@@ -867,14 +913,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       // The library's own label is the English "valid thru" in every language.
                       locale={{ valid: t("cardExpiry") }}
                     />
-                  </div>
+                  </div>}
                   <div data-clarity-mask="True" data-hj-suppress="" data-private="" id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
-                    <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
+                    {!selectedCardId && <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardNumber")}</span>
                       <input
                         {...fieldProps("cardNumber")}
                         value={cardNumber}
-                        onChange={(e) => setCardNumber(digitsOnly(e.target.value, 19))}
+                        onChange={(e) => { cardInputTouched.current = true; setCardNumber(digitsOnly(e.target.value, 19)); }}
                         onFocus={() => setCardFocus("number")}
                         inputMode="numeric"
                         autoComplete="cc-number"
@@ -884,13 +930,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
                       {fieldFeedback("cardNumber")}
-                    </label>
-                    <label style={{ display: "grid", gap: 6 }}>
+                    </label>}
+                    {!selectedCardId && <label style={{ display: "grid", gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardExpiry")}</span>
                       <input
                         {...fieldProps("cardExpiry")}
                         value={cardExpiry}
                         onChange={(e) => {
+                          cardInputTouched.current = true;
                           const digits = digitsOnly(e.target.value, 4);
                           setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
                         }}
@@ -903,14 +950,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
                       {fieldFeedback("cardExpiry")}
-                    </label>
+                    </label>}
                     <label style={{ display: "grid", gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>CVC</span>
                       <input
                         {...fieldProps("cardCvc")}
                         type="password"
                         value={cardCvc}
-                        onChange={(e) => setCardCvc(digitsOnly(e.target.value, 4))}
+                        onChange={(e) => { cardInputTouched.current = true; setCardCvc(digitsOnly(e.target.value, 4)); }}
                         onFocus={() => setCardFocus("cvc")}
                         onBlur={() => setCardFocus(undefined)}
                         inputMode="numeric"
@@ -922,11 +969,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       />
                       {fieldFeedback("cardCvc")}
                     </label>
-                    <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
+                    {!selectedCardId && <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardHolder")}</span>
-                      <input value={cardName} onChange={(e) => setCardName(e.target.value)} onFocus={() => setCardFocus("name")} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
-                    </label>
+                      <input value={cardName} onChange={(e) => { cardInputTouched.current = true; setCardName(e.target.value); }} onFocus={() => setCardFocus("name")} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
+                    </label>}
                   </div>
+                  {!selectedCardId && session?.user?.id && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={rememberCard} onChange={event => setRememberCard(event.target.checked)} />{tCards("rememberCard")}</label>}
                 </div>
               ) : null}
 

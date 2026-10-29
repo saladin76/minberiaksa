@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isValidLocale } from "@/lib/locales";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import { cancelPayPalCheckout } from "@/lib/donations/paypal-donation";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const origin = process.env.APP_URL?.replace(/\/$/, "") ?? url.origin;
+  const origin = paymentPublicOrigin(req.url);
   const donationId = url.searchParams.get("donationId") ?? "";
   const localeIn = (url.searchParams.get("locale") ?? "").toLowerCase();
   const locale = isValidLocale(localeIn) ? localeIn : "ar";

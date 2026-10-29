@@ -676,7 +676,9 @@
     "stripeMinDonation": "Minimum donation: {amount} {currency}",
     "certificateNoteTitle": "Get your donation certificate ✨",
     "certificateNoteBody": "Add your real email address so we can send you the official donation certificate and receipt.",
-    "free": "Free"
+    "free": "Free",
+    "rememberCard": "Save my card for future donations",
+    "rememberCardFailed": "Your card could not be saved. You can untick this option and continue."
   },
   "DonationSuccess": {
     "thankYou": "Thank you very much",

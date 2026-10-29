@@ -133,7 +133,7 @@ export class PayPalError extends Error {
 }
 
 async function call<T>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PATCH",
   path: string,
   options: { body?: unknown; requestId?: string; cfg?: PayPalConfig } = {}
 ): Promise<T> {
@@ -176,6 +176,7 @@ export interface PayPalCapture {
   amount?: PayPalMoney;
   custom_id?: string;
   final_capture?: boolean;
+  status_details?: { reason?: string };
 }
 
 export interface PayPalOrder {
@@ -226,6 +227,9 @@ export function createPayPalOrder(input: {
           experience_context: {
             shipping_preference: "NO_SHIPPING",
             user_action: "PAY_NOW",
+            // Delayed funding (eChecks) otherwise creates genuine PENDING
+            // captures even for returning donors. Prefer instant funding.
+            payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
             return_url: input.returnUrl,
             cancel_url: input.cancelUrl,
             /* No `locale`: PayPal follows the donor's browser language, and a
@@ -250,6 +254,30 @@ export function capturePayPalOrder(orderId: string, requestId: string): Promise<
 
 export function getPayPalOrder(orderId: string): Promise<PayPalOrder> {
   return call<PayPalOrder>("GET", `/v2/checkout/orders/${encodeURIComponent(orderId)}`);
+}
+
+export async function verifyPayPalWebhook(headers: Headers, event: unknown, webhookId: string): Promise<boolean> {
+  const fields = ["paypal-auth-algo", "paypal-cert-url", "paypal-transmission-id", "paypal-transmission-sig", "paypal-transmission-time"];
+  if (!webhookId || fields.some(key => !headers.get(key))) return false;
+  // Only PayPal receives this verification request. Never fetch a caller's cert_url.
+  const response = await call<{ verification_status?: string }>("POST", "/v1/notifications/verify-webhook-signature", { body: {
+    auth_algo: headers.get(fields[0]), cert_url: headers.get(fields[1]), transmission_id: headers.get(fields[2]),
+    transmission_sig: headers.get(fields[3]), transmission_time: headers.get(fields[4]), webhook_id: webhookId, webhook_event: event,
+  } });
+  return response.verification_status === "SUCCESS";
+}
+
+export async function ensurePayPalWebhook(url: string): Promise<string> {
+  const required = ["CHECKOUT.ORDER.APPROVED", "PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.PENDING", "PAYMENT.CAPTURE.DENIED"];
+  const list = await call<{ webhooks?: Array<{ id: string; url: string; event_types?: Array<{ name: string }> }> }>("GET", "/v1/notifications/webhooks");
+  const existing = list.webhooks?.find(row => row.url === url);
+  if (existing) {
+    if (!required.every(type => existing.event_types?.some(row => row.name === type || row.name === "*"))) {
+      await call("PATCH", `/v1/notifications/webhooks/${encodeURIComponent(existing.id)}`, { body: [{ op: "replace", path: "/event_types", value: [...new Set([...(existing.event_types ?? []).map(row => row.name), ...required])].map(name => ({ name })) }] });
+    }
+    return existing.id;
+  }
+  return (await call<{ id: string }>("POST", "/v1/notifications/webhooks", { body: { url, event_types: required.map(name => ({ name })) } })).id;
 }
 
 /**

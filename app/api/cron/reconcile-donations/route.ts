@@ -8,16 +8,12 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * Daily safety net for donations whose Stripe webhook never landed.
+ * Half-hour confirmation polling for online donations. Provider uncertainty
+ * stays distinguishable from an authoritative unpaid result after 24 hours.
  *
- * A one-time donation row is created as `status=PAID, paidAt=null` before the donor reaches
- * Stripe; only the webhook sets `paidAt` and increments campaign `currentAmount`. If that webhook
- * is missed  a bad endpoint registration, an outage  the payment succeeds at Stripe and the
- * platform never records it. That failure is completely silent: no error anywhere, the money just
- * never appears. It went unnoticed long enough to strand five real payments.
- *
- * This asks Stripe what actually happened to every unconfirmed row, credits the ones that really
- * paid, and ages out the abandoned carts so they stop masquerading as pending.
+ * The existing provider settlement owns paidAt, revenue and subscription
+ * activation. This job asks the recorded provider and reuses that settlement;
+ * age by itself is never proof that an unknown bank response means unpaid.
  *
  * `?dryRun=1` reports the same summary without writing anything.
  */
@@ -36,9 +32,9 @@ export async function GET(request: NextRequest) {
     if (summary.credited.length > 0 && !dryRun) {
       await writeAuditLog({
         actorRole: "SYSTEM",
-        action: "DONATIONS_RECONCILED_FROM_STRIPE",
-        messageAr: `تم اعتماد ${summary.credited.length} تبرع مؤكد لدى بوابة الدفع (Stripe/PayPal) لم يصل إشعارها (${summary.creditedTotalUSD.toFixed(2)} دولار)`,
-        messageEn: `Credited ${summary.credited.length} donation(s) confirmed paid at Stripe/PayPal whose confirmation never arrived ($${summary.creditedTotalUSD.toFixed(2)})`,
+        action: "DONATIONS_RECONCILED_FROM_PROVIDERS",
+        messageAr: `تم اعتماد ${summary.credited.length} تبرع مؤكد لدى بوابة الدفع لم يصل إشعارها (${summary.creditedTotalUSD.toFixed(2)} دولار)`,
+        messageEn: `Credited ${summary.credited.length} donation(s) confirmed paid by their provider whose confirmation never arrived ($${summary.creditedTotalUSD.toFixed(2)})`,
         entityType: "Donation",
         metadata: { externalCall: true, donationIds: summary.credited.map((c) => c.donationId) },
         stream: "TEAM",
@@ -51,7 +47,7 @@ export async function GET(request: NextRequest) {
     await writeAuditLog({
       actorRole: "SYSTEM",
       action: "DONATIONS_RECONCILE_FAILED",
-      messageAr: "فشل تشغيل مطابقة التبرعات مع Stripe",
+        messageAr: "فشل تشغيل مطابقة التبرعات مع مزودي الدفع",
       messageEn: "Donation reconciliation cron run failed",
       entityType: "Donation",
       metadata: { externalCall: true },

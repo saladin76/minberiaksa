@@ -1,5 +1,5 @@
 import { loadEnvConfig } from "@next/env";
-import { PrismaClient } from "@prisma/client";
+import { createMongoIndexClient } from "../lib/database/mongo-index-client";
 import { ensureOptionalUserEmailIndex } from "../lib/donations/optional-user-email-index";
 
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
@@ -67,6 +67,9 @@ const indexes = [
   { collection: "CommunicationProviderEvent", key: { channel: 1, eventType: 1, receivedAt: -1 }, unique: false },
   { collection: "CommunicationDelivery", key: { channel: 1, senderId: 1, recipientPhone: 1, createdAt: -1, status: 1 }, unique: false },
   { collection: "Donation", key: { "attribution.utm_medium": 1, status: 1, _id: 1 }, unique: false },
+  { collection: "IssuedCertificate", key: { requestKey: 1 }, unique: true },
+  { collection: "IssuedCertificate", key: { createdAt: -1 }, unique: false },
+  { collection: "Donation", key: { status: 1, paidAt: 1, reconciliationNextAt: 1 }, unique: false },
 
 ];
 
@@ -85,7 +88,7 @@ async function run() {
     return;
   }
 
-  const prisma = new PrismaClient();
+  const prisma = await createMongoIndexClient();
   let missing = 0;
   try {
     if (!await ensureOptionalUserEmailIndex(prisma, checkOnly)) missing += 1;

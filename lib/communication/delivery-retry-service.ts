@@ -154,6 +154,13 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   if (!(RETRYABLE_STATUSES as readonly string[]).includes(row.status)) return result(deliveryId, "NOT_RETRYABLE_STATUS", { detail: row.status });
   if (row.retriedAt) return result(deliveryId, "ALREADY_RETRIED", { recipientName: row.recipientName });
   if (row.errorMessage === "EXACT_TEMPLATE_LANGUAGE_REQUIRED") return result(deliveryId, "EXACT_TEMPLATE_LANGUAGE_REQUIRED", { recipientName: row.recipientName });
+  const issuedDocumentId = row.variables && typeof row.variables === "object" ? (row.variables as { issuedDocumentId?: unknown }).issuedDocumentId : null;
+  if ((row.channel === "EMAIL" || row.channel === "WHATSAPP") && typeof issuedDocumentId === "string" && /^[a-f0-9]{24}$/i.test(issuedDocumentId)) {
+    const { deliverIssuedCertificate } = await import("@/lib/certificates/manual-delivery");
+    const delivered = await deliverIssuedCertificate(issuedDocumentId, row.channel);
+    if (delivered.ok) { await prisma.communicationDelivery.update({ where: { id: deliveryId }, data: { retriedAt: new Date() } }); return result(deliveryId, "SENT"); }
+    return result(deliveryId, delivered.reason === "DELIVERY_OUTCOME_UNCERTAIN" ? "DELIVERY_OUTCOME_UNCERTAIN" : "PROVIDER_REJECTED", { detail: delivered.reason });
+  }
   // Gift retries must update their per-channel state under the item lease.
   // Replaying only the archive payload would bypass gift idempotency.
   const giftItemId = row.variables && typeof row.variables === "object" ? (row.variables as { giftItemId?: unknown }).giftItemId : null;

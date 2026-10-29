@@ -2494,5 +2494,11 @@
     "donated": "heeft gedoneerd",
     "for": "voor",
     "communitySupporter": "Uit onze gemeenschap van supporters"
+  },
+  "DonationDialog": {
+    "rememberCard": "Mijn kaart bewaren voor toekomstige donaties",
+    "rememberCardFailed": "De kaart kon niet worden opgeslagen. Vink deze optie uit om verder te gaan.",
+    "savedCards": "Uw opgeslagen kaarten",
+    "useNewCard": "Een nieuwe kaart gebruiken"
   }
 }

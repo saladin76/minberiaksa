@@ -2494,5 +2494,11 @@
     "donated": "已捐赠",
     "for": "用于",
     "communitySupporter": "来自我们的支持者社区"
+  },
+  "DonationDialog": {
+    "rememberCard": "保存我的银行卡以便下次捐款",
+    "rememberCardFailed": "无法保存银行卡。取消勾选此选项即可继续。",
+    "savedCards": "已保存的银行卡",
+    "useNewCard": "使用新银行卡"
   }
 }

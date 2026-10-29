@@ -437,8 +437,9 @@ export async function albarakaInquireSale(orderId: string, cfg: AlbarakaConfig):
 
   const rows = Array.isArray(res.TransactionData) ? (res.TransactionData as Array<Record<string, unknown>>) : [];
   const sale = rows.find(
-    (r) => String(r.TransactionType ?? "").toLowerCase() === "sale" && String(r.AuthCode ?? "").trim() !== ""
+    (r) => String(r.TransactionType ?? "").toLowerCase() === "sale" && String(r.AuthCode ?? "").trim() !== "" && (!r.OrderId || r.OrderId === orderId)
   );
+  if (!sale && rows.some(row => String(row.TransactionType ?? "").toLowerCase() === "sale" && row.AuthCode)) return { state: "unknown", raw: res, error: "Order identity mismatch" };
   return sale ? { state: "approved", authCode: String(sale.AuthCode), raw: res } : { state: "absent", raw: res };
 }
 
