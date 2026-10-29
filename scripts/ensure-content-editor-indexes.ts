@@ -71,6 +71,9 @@ const indexes = [
   { collection: "IssuedCertificate", key: { createdAt: -1 }, unique: false },
   { collection: "Donation", key: { status: 1, paidAt: 1, reconciliationNextAt: 1 }, unique: false },
 
+  { collection: "SubscriptionServiceRequest", key: { activeKey: 1 }, unique: true },
+  { collection: "SubscriptionServiceRequest", key: { status: 1, createdAt: -1 }, unique: false },
+  { collection: "SubscriptionServiceRequest", key: { donorId: 1, subscriptionId: 1, createdAt: -1 }, unique: false },
 ];
 
 async function run() {

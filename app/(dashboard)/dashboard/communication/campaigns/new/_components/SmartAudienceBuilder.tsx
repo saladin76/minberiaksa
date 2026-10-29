@@ -21,6 +21,9 @@ export type SmartAudienceDraft = {
     projectIds?: string[];
     badgeIds?: string[];
     recurringOnly?: boolean;
+    oneTimeOnly?: boolean;
+    recurringFrequencies?: string[];
+    excludeRecurringFrequencies?: string[];
     minDonationAmountUSD?: number | null;
     hasContact?: boolean;
   };
@@ -268,6 +271,12 @@ export function SmartAudienceBuilder({
               placeholder={dt("مثال: 100")}
             />
           </label>
+
+          <fieldset className="space-y-2 rounded-lg border p-3">
+            <legend className="px-1 text-xs font-bold">{dt("الدورية في اختيار الجمهور")}</legend>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={value.filters.oneTimeOnly === true} onChange={event => updateFilters({ oneTimeOnly: event.target.checked, ...(event.target.checked ? { recurringOnly: false, recurringFrequencies: [] } : {}) })} />{dt("متبرعو المرة الواحدة فقط")}</label>
+            {(["recurringFrequencies", "excludeRecurringFrequencies"] as const).map(key => <div key={key} className="grid gap-2"><b className="text-xs">{key === "recurringFrequencies" ? dt("تضمين اشتراكات نشطة") : dt("استثناء اشتراكات نشطة")}</b><div className="flex flex-wrap gap-3">{[["DAILY", dt("يومي")], ["MONTHLY", dt("شهري")], ["FRIDAY", dt("كل جمعة")]].map(([frequency, label]) => <label key={frequency} className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={value.filters[key]?.includes(frequency) === true} onChange={event => updateFilters({ [key]: event.target.checked ? [...(value.filters[key] ?? []), frequency] : (value.filters[key] ?? []).filter(item => item !== frequency), ...(key === "recurringFrequencies" && event.target.checked ? { oneTimeOnly: false } : {}) })} />{label}</label>)}</div></div>)}
+          </fieldset>
 
           <div className="space-y-2 pt-5">
             <label className="flex items-center gap-2 text-xs text-slate-700">

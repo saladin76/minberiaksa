@@ -172,11 +172,11 @@ export async function publishWhatsappTemplateToMeta(
     orderBy: [{ isDefault: "desc" }, { priority: "asc" }],
   });
   const wabas: string[] = [];
-  if (opts.defaultOnly && senders.filter(sender => sender.isDefault).length !== 1) {
+  if (senders.filter(sender => sender.isDefault).length !== 1) {
     summary.errors.push({ businessAccountId: "", language: "", reason: "ONE_ACTIVE_DEFAULT_WHATSAPP_SENDER_REQUIRED" });
     return summary;
   }
-  for (const sender of opts.defaultOnly ? senders.filter(sender => sender.isDefault) : senders) {
+  for (const sender of senders.filter(sender => sender.isDefault)) {
     const waba = sender.businessAccountId?.trim();
     if (waba && !wabas.includes(waba)) wabas.push(waba);
   }
@@ -192,7 +192,7 @@ export async function publishWhatsappTemplateToMeta(
   // provider template name. The local editorial name may have changed, but using that changed name
   // here would create a second Meta template family instead of a new language variant.
   const existingProviderVariants = await prisma.whatsappTemplateWabaVariant.findMany({
-    where: { templateId, provider: "META_WHATSAPP" },
+    where: { templateId, provider: "META_WHATSAPP", businessAccountId: { in: wabas } },
     select: { providerTemplateName: true, componentsSchema: true },
     orderBy: { createdAt: "asc" },
   }).catch(() => []);

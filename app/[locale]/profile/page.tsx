@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import SubscriptionRequests from "@/components/minbar/account/SubscriptionRequests";
+import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { useSession, signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Toaster, toast } from "react-hot-toast";
@@ -256,46 +258,28 @@ const ProfilePage = () => {
 
   // ─────────────────────────── donations / subscriptions ───────────────────
 
+  const downloadReceipt = async (donationId: string) => {
+    saveDocument(await fetchDocument(`/api/receipts/${encodeURIComponent(donationId)}`, `receipt-${donationId.slice(-8)}.pdf`));
+  };
   const handleDownload = async (donationId: string) => {
+    setIsDownloading(donationId);
     try {
-      setIsDownloading(donationId);
-      const localeParam = typeof locale === "string" ? locale : "en";
-      const response = await axios.get(
-        `/api/donations/${donationId}/receipt?locale=${encodeURIComponent(localeParam)}`,
-        { responseType: "blob", timeout: 30000, validateStatus: (s) => s === 200 }
-      );
-      if (!(response.data instanceof Blob)) throw new Error("invalid response");
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `receipt-${donationId.slice(-8)}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }, 100);
+      await downloadReceipt(donationId);
       toast.success(t("toast.receiptDownloadSuccess"));
-    } catch {
-      toast.error(t("toast.receiptDownloadFailed"));
-    } finally {
-      setIsDownloading(null);
-    }
+    } catch { toast.error(t("toast.receiptDownloadFailed")); }
+    finally { setIsDownloading(null); }
   };
 
   const handleDownloadAll = async (donations: DonationForProfile[]) => {
+    setIsDownloading("all");
+    let failed = 0;
     try {
-      setIsDownloading("all");
       for (const donation of donations) {
-        await handleDownload(donation.id);
+        try { await downloadReceipt(donation.id); } catch { failed++; }
       }
-      toast.success(t("toast.allReceiptsDownloadSuccess"));
-    } catch {
-      toast.error(t("toast.allReceiptsDownloadFailed"));
-    } finally {
-      setIsDownloading(null);
-    }
+      if (failed) toast.error(t("toast.allReceiptsDownloadFailed"));
+      else toast.success(t("toast.allReceiptsDownloadSuccess"));
+    } finally { setIsDownloading(null); }
   };
 
   // ────────────────────────────── render helpers ───────────────────────────
@@ -865,9 +849,9 @@ const ProfilePage = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-xl font-bold text-gray-900">
-                            {formatDonationAmount(donation.totalAmount, donation.currency)}
+                            {formatDonationAmount(donation.planAmount ?? donation.totalAmount, donation.currency)}
                           </p>
-                          <span className="text-sm text-gray-500">{t("subscriptions.perMonth")}</span>
+                          <span className="text-sm text-gray-500">{tCommon(donation.frequency === "DAILY" ? "freqDaily" : donation.frequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</span>
                           <Badge
                             variant="outline"
                             className={
@@ -967,7 +951,7 @@ const ProfilePage = () => {
             <div className="p-4 bg-[#A5243D]/5 border border-[#A5243D]/10 rounded-xl">
               <p className="text-lg font-semibold text-gray-900">
                 {formatDonationAmount(sub.planAmount ?? sub.totalAmount, sub.currency)}{" "}
-                {t("subscriptions.perMonth")}
+                {tCommon(sub.frequency === "DAILY" ? "freqDaily" : sub.frequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}
               </p>
               {sub.items?.map((item) => (
                 <p key={item.id} className="text-sm text-gray-600 mt-1">
@@ -975,7 +959,7 @@ const ProfilePage = () => {
                 </p>
               ))}
             </div>
-            <p className="text-sm text-gray-600">لخفض التبرع الدوري أو إيقاف الخصومات أو إلغائها، يُرجى التواصل مع المؤسسة عبر قسم الدعم. ويمكنك كذلك إلغاء تفويض الدفع مباشرة لدى مزوّد الدفع.</p>
+            {sub.subscriptionId && <SubscriptionRequests key={sub.subscriptionId} subscriptionId={sub.subscriptionId} />}
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"

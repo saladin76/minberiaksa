@@ -5,7 +5,7 @@ import { readGiftDeliveryState, giftChannelsComplete, giftNotDelivered } from ".
 import { giftCertificateToken } from "./gift-certificate-token";
 import { sendGiftWhatsapp } from "./gift-whatsapp";
 import { createDeliveryRecord, markDeliveryStatus } from "@/lib/communication/delivery-log-service";
-import { applyAppFont } from "@/lib/templates/font";
+import { automaticEmailHtml } from "@/lib/templates/font";
 
 import { prisma } from "@/lib/prisma";
 import { messagesFor } from "@/i18n/locale-messages";
@@ -142,7 +142,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
             state[channel] = { status: "SENDING", at: new Date().toISOString() }; await save();
             providerStarted = true;
             const sent = await sendEmailMessage({ to: line.giftRecipientEmail, subject: fill(m.emailSubject, vars),
-              html: applyAppFont(giftEmailHtml(m, vars, line.giftShowAmount, line.giftMessage, projectUrl), locale),
+              html: automaticEmailHtml(giftEmailHtml(m, vars, line.giftShowAmount, line.giftMessage, projectUrl), locale),
               senderEmail: routed.sender.senderEmail, purpose: "TRANSACTIONAL", locale,
               attachments: [{ filename: pdf.filename, content: pdf.pdf.toString("base64"), contentType: "application/pdf" }] });
             if (!sent.ok) {

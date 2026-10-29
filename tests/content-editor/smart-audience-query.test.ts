@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as recurringAudience from "../../lib/communication/recurring-audience";
 import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
 
 function loadAudience(user: Record<string, unknown>, communicationDelivery: Record<string, unknown> = {}) {
@@ -11,6 +12,7 @@ function loadAudience(user: Record<string, unknown>, communicationDelivery: Reco
   const isolatedModule = { exports: {} as { previewSmartAudience: (definition: unknown) => Promise<{ matched: number }> } };
   const dependencies: Record<string, unknown> = {
     "@prisma/client": {},
+    "./recurring-audience": recurringAudience,
     "./recent-marketing-filter": { recentMarketingDeliveryWhere },
     "@/lib/prisma": { prisma: { user, communicationDelivery } },
     "@/lib/locales": { DEFAULT_LOCALE: "ar", isValidLocale: (locale: string) => ["ar", "en"].includes(locale) },
@@ -46,7 +48,7 @@ test("preview snapshots donors cheaply while retaining every date/project/amount
   assert.match(membership, /"campaignId":\{"in":\["000000000000000000000002"\]\}/);
   assert.match(membership, /"amountUSD":\{"gte":25\}/);
   assert.match(membership, /"donations":\{"none":/);
-  assert.match(membership, /"subscriptions":\{"some":\{"status":"ACTIVE"\}\}/);
+  assert.match(membership, /"subscriptions":\{"some":\{"status":"ACTIVE","donations":\{"some":\{"status":"PAID","paidAt":\{"not":null/);
 });
 
 test("a filtered page read failure rejects the preview instead of returning zero", async () => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { subscriptionRequestCopy } from "@/lib/donations/subscription-request-copy";
+import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { type ReactElement, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -104,10 +106,18 @@ const FIELD = {
 export default function AccountPage({ summary }: { summary: MinbarAccountSummary }) {
   const locale = useLocale();
   const t = useTranslations("account");
+  const tSystem = useTranslations("system");
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
+  const download = async (id: string, kind: "receipt" | "thanks") => {
+    setDownloading(`${id}:${kind}`); setDownloadError(false);
+    try { saveDocument(await fetchDocument(kind === "receipt" ? `/api/receipts/${id}` : `/api/certificates/thanks/${id}`, `${kind}-${id.slice(-8)}.pdf`)); }
+    catch { setDownloadError(true); } finally { setDownloading(null); }
+  };
   const tTransfer = useTranslations("transferReceipt");
-  const { format, formatNumber } = useMinbarMoney();
+  const { formatNumber } = useMinbarMoney();
 
-  const { profile, donations, pendingTransfers, totalDonatedUSD, donationCount, activeSubscriptions } = summary;
+  const { profile, donations, pendingTransfers, donationCount, activeSubscriptions } = summary;
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -172,7 +182,6 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
   };
 
   const stats: Array<{ icon: string; value: string; label: string }> = [
-    { icon: "wallet", value: format(totalDonatedUSD), label: t("totalDonated") },
     { icon: "list", value: formatNumber(donationCount), label: t("donationCount") },
     { icon: "refresh", value: formatNumber(activeSubscriptions), label: t("activeSubs") },
   ];
@@ -214,7 +223,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
       </section>
 
       <section style={{ padding: "34px 0 70px" }}>
-        <div className="acc-stats" style={{ ...SECTION, display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18, marginBottom: 34, marginTop: -30 }}>
+        <div className="acc-stats" style={{ ...SECTION, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 18, marginBottom: 34, marginTop: -30 }}>
           {stats.map((stat) => (
             <div key={stat.label} className="acc-row acc-card acc-in acc-in-1" style={{ display: "flex", alignItems: "center", gap: 12, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 12 }}>
               <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 38, height: 38, borderRadius: 10, background: "var(--sand)", color: "var(--gold)", flex: "0 0 auto" }}>
@@ -282,6 +291,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             ) : null}
 
             <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900 }}>{t("donationHistory")}</h2>
+            {downloadError && <p role="alert" className="text-sm text-red-700">{tSystem("techErrorLead")}</p>}
             <div style={{ display: "grid", gap: 10 }}>
               {donations.map((donation) => (
                 <div key={donation.id} className="acc-row acc-card acc-in" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 18px", background: "#fff", border: "1px solid var(--border)", borderRadius: 10 }}>
@@ -304,18 +314,15 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
                   <b dir="ltr" style={{ unicodeBidi: "isolate", whiteSpace: "nowrap" }}>
                     {chargedAmount(donation.amount, donation.currency)}
                   </b>
-                  {/* The receipt is the server-generated PDF, not a page: it is
-                      the document a donor keeps, and it is issued per donation. */}
-                  <a
-                    href={`/api/donations/${donation.id}/receipt?locale=${encodeURIComponent(locale)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="acc-receipt"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontSize: 12.5, fontWeight: 800, color: "var(--deep)", whiteSpace: "nowrap", transition: "all .18s ease" }}
-                  >
-                    <Icon name="receipt" size={13} />
-                    {t("receipt")}
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    {(["receipt", "thanks"] as const).map(kind => (
+                      <button key={kind} type="button" disabled={downloading !== null} aria-busy={downloading === `${donation.id}:${kind}`} onClick={() => void download(donation.id, kind)}
+                        className="acc-receipt inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 text-xs font-bold disabled:opacity-50">
+                        <Icon name="receipt" size={13} />
+                        {downloading === `${donation.id}:${kind}` ? tSystem("processing") : tSystem(kind === "receipt" ? "downloadReceipt" : "downloadThankYouCert")}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
 
@@ -390,8 +397,8 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
               <span style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>
                 {activeSubscriptions > 0 ? `${formatNumber(activeSubscriptions)} ${t("activeSubs")}` : t("noActivePlan")}
               </span>
-              <Button variant="light" href={miaPath("recurring", locale)} style={{ whiteSpace: "nowrap" }}>
-                {t("startRecurring")}
+              <Button variant="light" href={activeSubscriptions > 0 ? `/${locale}/profile?tab=donations` : miaPath("recurring", locale)} style={{ whiteSpace: "nowrap" }}>
+                {activeSubscriptions > 0 ? subscriptionRequestCopy(locale)[0] : t("startRecurring")}
               </Button>
             </div>
           </div>

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { GET as getReceipt } from "@/app/api/receipts/[donationId]/route";
 
 /**
  * GET /api/donations/:id/receipt  the receipt's old address.
@@ -10,9 +11,12 @@ import { NextRequest, NextResponse } from "next/server";
  * the query intact. The jsPDF drawing that used to live here  English-only,
  * because it had no Arabic font  is gone.
  */
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const url = new URL(`/api/receipts/${encodeURIComponent(id)}`, request.nextUrl.origin);
-  url.search = request.nextUrl.search;
-  return NextResponse.redirect(url, 307);
+  // A reverse proxy can expose localhost as nextUrl.origin. Reuse the handler
+  // directly so old profile/email links keep their cookies and never leave the site.
+  return getReceipt(request, { params: Promise.resolve({ donationId: id }) });
 }

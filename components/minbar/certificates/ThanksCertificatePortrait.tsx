@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { CERTIFICATE_GROUND } from "./sheet-style";
 import type { ThanksCertificateProps } from "./ThanksCertificate";
 
 /**
@@ -13,19 +14,7 @@ const GOLD = "#D39A27";
 const SERIF = "var(--font-amiri), Amiri, serif";
 const SANS = "var(--font-cairo), Cairo, system-ui, sans-serif";
 
-const GROUND: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  background: [
-    "radial-gradient(circle at 50% 34%, rgba(255,255,255,.9) 0 38%, rgba(247,242,234,.55) 100%)",
-    "repeating-conic-gradient(from 45deg at 0 0, rgba(211,154,39,.13) 0deg 90deg, transparent 90deg 180deg) 0 0/30px 30px",
-    "radial-gradient(circle at 0 0, transparent 68%, rgba(211,154,39,.16) 69% 71%, transparent 72%) 0 0/30px 30px",
-    "radial-gradient(circle at 100% 100%, transparent 68%, rgba(211,154,39,.16) 69% 71%, transparent 72%) 0 0/30px 30px",
-    "repeating-linear-gradient(45deg, rgba(211,154,39,.07) 0 1px, transparent 1px 15px)",
-    "repeating-linear-gradient(-45deg, rgba(211,154,39,.07) 0 1px, transparent 1px 15px)",
-  ].join(", "),
-};
+const GROUND = CERTIFICATE_GROUND;
 
 const corner = (v: "top" | "bottom", h: "start" | "end"): CSSProperties => ({
   position: "absolute",
@@ -37,14 +26,14 @@ const corner = (v: "top" | "bottom", h: "start" | "end"): CSSProperties => ({
   [h === "start" ? "borderInlineStart" : "borderInlineEnd"]: `6px solid ${GOLD}`,
 });
 
-export default function ThanksCertificatePortrait({ donorName, copy, verse, duaVerse, dir, assetBase = "" }: ThanksCertificateProps) {
+export default function ThanksCertificatePortrait({ donorName, copy, verse, duaVerse, dir, assetBase = "", issuedDate, serial }: ThanksCertificateProps) {
   const asset = (file: string) => `${assetBase}/minbar/assets/${file}`;
 
   return (
     <div
       className="cert-sheet cert-sheet-portrait"
       dir={dir}
-      style={{ position: "relative", width: "100%", maxWidth: 760, margin: "0 auto", aspectRatio: "1/1.414", containerType: "inline-size", background: "#FFFEFB", boxShadow: "0 26px 70px rgba(16,33,43,.18)", overflow: "hidden", fontFamily: SANS, color: "#10212B" }}
+      style={{ position: "relative", width: "100%", maxWidth: 760, margin: "0 auto", aspectRatio: "1/1.414", containerType: "inline-size", background: "#FFFEFB", boxShadow: "0 26px 70px rgba(16,33,43,.18)", overflow: "hidden", fontFamily: SANS, lineHeight: 1.5, colorScheme: "light", color: "#10212B" }}
     >
       <div aria-hidden="true" style={GROUND} />
       {/* eslint-disable-next-line @next/next/no-img-element -- decorative sheet artwork */}
@@ -74,7 +63,7 @@ export default function ThanksCertificatePortrait({ donorName, copy, verse, duaV
         <div style={{ display: "grid", alignContent: "center", justifyItems: "center", gap: "3.4%" }}>
           <div style={{ display: "grid", justifyItems: "center", gap: 10, width: "84%" }}>
             <span style={{ fontSize: "clamp(10px,1.9cqw,14px)", fontWeight: 700, color: "#52616B", whiteSpace: "nowrap" }}>{copy.nameLabel}</span>
-            <span style={{ display: "grid", placeItems: "center", width: "100%", minHeight: 46, padding: "4px 6px", fontSize: "clamp(14px,3.4cqw,27px)", fontWeight: 800, color: "#10212B", whiteSpace: "nowrap" }}>{donorName}</span>
+            <span style={{ display: "grid", placeItems: "center", width: "100%", minHeight: 46, padding: "4px 6px", fontSize: "clamp(14px,3.4cqw,27px)", fontWeight: 800, color: "#10212B", overflowWrap: "anywhere" }}>{donorName}</span>
           </div>
 
           <p style={{ margin: 0, width: "94%", fontSize: "clamp(10px,2cqw,15px)", lineHeight: 2.1, color: "#132C38" }}>{copy.body}</p>
@@ -90,6 +79,7 @@ export default function ThanksCertificatePortrait({ donorName, copy, verse, duaV
           <div style={{ display: "grid", justifyItems: "end", gap: 6, textAlign: "end" }}>
             <span style={{ fontFamily: SERIF, fontSize: "clamp(13px,2.7cqw,22px)", fontWeight: 700, color: "#B8811C", whiteSpace: "nowrap" }}>{copy.motto}</span>
             <span style={{ fontSize: "clamp(9px,1.6cqw,13px)", fontWeight: 700, color: "#132C38", whiteSpace: "nowrap" }}>{copy.orgName}</span>
+            {issuedDate && <span style={{ fontSize: "clamp(9px,1.3cqw,11px)", color: "#52616B" }}><bdi>{serial}</bdi> · {issuedDate}</span>}
           </div>
         </div>
       </div>

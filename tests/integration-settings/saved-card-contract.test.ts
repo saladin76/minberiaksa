@@ -3,6 +3,7 @@ import test from "node:test";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { maskedSavedCards } from "../../lib/donations/saved-card-display";
 import { checkCardFields } from "../../lib/minbar/card-validation";
 
 function fixture(signedIn = true, duplicate = false) {
@@ -13,6 +14,7 @@ function fixture(signedIn = true, duplicate = false) {
     "next-auth": { getServerSession: async () => signedIn ? { user: { id: "owner" } } : null }, "@/app/api/auth/[...nextauth]/options": {},
     "@/lib/card-crypto": { encryptCard: (number: string) => `encrypted:${number}`, decryptCard: (number: string) => number.replace("encrypted:", ""), detectCardType: () => "VISA" },
     "@/lib/minbar/card-validation": { checkCardFields },
+    "@/lib/donations/saved-card-display": { maskedSavedCards },
     "@/lib/prisma": { prisma: { creditCard: {
       findMany: async (args: { where: { userId: string } }) => { calls.push(args); return duplicate ? [{ id: "other-first", cardNumber: "encrypted:5555555555554444" }, { id: "existing", cardNumber: "encrypted:4242424242424242" }] : rows; },
       count: async () => rows.length, updateMany: async () => { throw new Error("Default mutation was not requested"); },

@@ -1,5 +1,6 @@
 "use client";
 
+import { SavedCardPicker } from "@/components/minbar/checkout/SavedCardPicker";
 import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
 
 import Image from "next/image";
@@ -979,47 +980,14 @@ const CartPaymentDialog = ({
             Hidden when Albaraka's hosted page owns the card step: the donor
             enters the card at the bank, so a stored PAN has nowhere to go. */}
         {savedCards.length > 0 && !(useAlbaraka && albarakaUseOOS) && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-gray-700">{t("savedCards")}</p>
-            <div className="space-y-2">
-              {savedCards.map((card) => {
-                const selected = selectedCardId === card.id;
-                const brandBadge: Record<string, string> = { visa: "VISA", mastercard: "MC", amex: "AMEX", troy: "TROY" };
-                return (
-                  <button key={card.id} type="button" data-clarity-mask="True" data-hj-suppress="" data-private=""
-                    onClick={() => {
-                      if (selected) { setSelectedCardId(null); setCardDetails({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" }); }
-                      else { setSelectedCardId(card.id); setCardDetails({ cardNumber: `**** **** **** ${card.last4}`, expiryDate: card.expiryDate, cvv: "", cardholderName: card.cardholderName ?? "" }); }
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm transition-all duration-200 ${selected ? "border-burgundy bg-burgundy/5 shadow-sm" : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"}`}
-                  >
-                    <span className={`w-10 h-7 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${card.cardType === "visa" ? "bg-blue-600" : card.cardType === "mastercard" ? "bg-orange-500" : card.cardType === "amex" ? "bg-green-600" : card.cardType === "troy" ? "bg-red-600" : "bg-gray-500"}`}>{brandBadge[card.cardType] ?? "💳"}</span>
-                    <div className="flex-1 text-start min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">{card.nickname || `${card.cardType.charAt(0).toUpperCase() + card.cardType.slice(1)} •••• ${card.last4}`}</p>
-                      <p className="text-xs text-gray-400">{t("expires")} {card.expiryDate}</p>
-                    </div>
-                    {selected
-                      ? <span className="w-5 h-5 rounded-full bg-burgundy flex items-center justify-center shrink-0"><svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
-                      : <span className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
-                    }
-                  </button>
-                );
-              })}
-              <button type="button"
-                onClick={() => { setSelectedCardId(null); setCardDetails({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" }); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm transition-all duration-200 ${!selectedCardId ? "border-burgundy bg-burgundy/5 shadow-sm" : "border-dashed border-gray-300 hover:border-gray-400 bg-white hover:shadow-sm"}`}
-              >
-                <span className="w-10 h-7 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-                </span>
-                <span className="font-medium text-gray-700">{t("useNewCard")}</span>
-                {!selectedCardId && <span className="w-5 h-5 rounded-full bg-burgundy flex items-center justify-center shrink-0"><svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>}
-              </button>
-            </div>
-          </div>
-        )}
+              <SavedCardPicker cards={savedCards} value={selectedCardId} onChange={id => {
+                const card = savedCards.find(item => item.id === id);
+                setSelectedCardId(card?.id ?? null);
+                setCardDetails({ cardNumber: card ? `**** **** **** ${card.last4}` : "", expiryDate: card?.expiryDate ?? "", cvv: "", cardholderName: card?.cardholderName ?? "" });
+              }} />
+            )}
 
-        {/* CVC-only when a saved card is selected */}
+            {/* CVC-only when a saved card is selected */}
         {selectedCardId && (
           <div className="space-y-2" dir="ltr" data-clarity-mask="True" data-hj-suppress="" data-private="">
             <label className="block text-sm font-medium text-gray-700 text-start">{t("cvc")}</label>

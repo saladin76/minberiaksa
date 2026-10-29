@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { track as vercelTrack } from "@vercel/analytics/server";
 import { loadContext, loadContextForDonation, mergeText, type TemplateContext } from "@/lib/templates/variables";
+import { automaticEmailHtml } from "@/lib/templates/font";
 import { renderEmailHtml, renderEmailSubject } from "@/lib/templates/render";
 import { writeAuditLog } from "@/lib/audit-log";
 import { triggerEventLabelAr } from "@/lib/dashboard/audit-log-display";
@@ -85,7 +86,7 @@ export async function sendTriggerMessage(
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
     const html = localizeDonationFailureLinks(
-      await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext, locale), ctx, variant.resolvedLocale),
+      automaticEmailHtml(await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext, locale), ctx, variant.resolvedLocale), locale),
       locale,
     );
     const subject = renderEmailSubject(donationNotificationText(variant.subject, moneyContext, locale), ctx);

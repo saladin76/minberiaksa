@@ -27,7 +27,8 @@ test("dashboard reductions require donor consent and do not prorate immediately"
 test("profile has no active pause or cancel subscription controls", () => {
   const source = read("app/[locale]/profile/page.tsx");
   assert.doesNotMatch(source, /handleCancelSubscription|handleConfirmToggle|handleToggleSubscription/);
-  assert.match(source, /التواصل مع المؤسسة/);
+  assert.match(source, /SubscriptionRequests/);
+  assert.doesNotMatch(source, /axios\.patch\([^\n]*users\/me\/subscriptions/);
 });
 test("institution-only reduction dialog is visible in monthly dashboard", () => {
   const source = read("app/(dashboard)/dashboard/monthly/page.tsx");

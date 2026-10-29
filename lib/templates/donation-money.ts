@@ -1,6 +1,6 @@
 import { formatTemplateMoney } from "./money";
 import { metaParameterName } from "../communication/meta-parameter-name";
-import { confirmedTryCharge, localizeReceiptFooter, receiptLocale, receiptMoney, RECEIPT_BANK_COPY, type ReceiptPaymentEvidence } from "./receipt-localization";
+import { localizeReceiptFooter, receiptMoney, type ReceiptPaymentEvidence } from "./receipt-localization";
 export { receiptDate } from "./receipt-localization";
 
 // These are labels, not generated donor content. All amounts use the stored
@@ -51,21 +51,14 @@ export function donationMoneyFields(donation: MoneySource, locale = "ar") {
   const totalLabel = donation.paidAt ? labels[3] : labels[4];
   const parts = [`${labels[0]}: ${projectsAmount}`, `${labels[1]}: ${teamSupport}`];
   if ((donation.fees ?? 0) > 0) parts.push(`${labels[2]}: ${fees}`);
-  const receiptParts = [`${labels[0]}: ${receiptMoney(donation.amount, donation.currency, locale)}`];
-  if ((donation.teamSupport ?? 0) > 0) receiptParts.push(`${labels[1]}: ${receiptMoney(donation.teamSupport!, donation.currency, locale)}`);
-  if ((donation.fees ?? 0) > 0) receiptParts.push(`${labels[2]}: ${receiptMoney(donation.fees!, donation.currency, locale)}`);
-  let receiptSummary = `${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
-  if (receiptParts.length > 1) receiptSummary += ` (${receiptParts.join("; ")})`;
-  const bank = donation.currency === "TRY" ? null : confirmedTryCharge(donation);
-  if (bank !== null) {
-    const [label, note] = RECEIPT_BANK_COPY[receiptLocale(locale)];
-    receiptSummary += `. ${label}: ${receiptMoney(bank, "TRY", locale)}. ${note}`;
-  }
+  const receiptSummary = `${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
   return {
     projectsAmount, teamSupport, fees,
     receiptSummary,
     // Single line also works inside an existing approved Meta text parameter.
-    notificationAmount: `${totalLabel}: ${total} (${parts.join("; ")})`,
+    // Legacy Meta bodies already contain a currency slot/literal. Keep this
+    // scalar to avoid repeating currencies; new families use receiptSummary.
+    notificationAmount: total,
     amountBreakdown: `${totalLabel}: ${total} ${donation.currency} (${parts.map(part => `${part} ${donation.currency}`).join("; ")})`,
   };
 }
@@ -85,7 +78,8 @@ export function donationReceiptText(text: string): string {
   return text
     .replace(/\{\{\s*donation\.(?:amount|totalAmount|amountUSD|notificationAmount)\s*\}\}\s*(?:\{\{\s*donation\.currency\s*\}\}|\b(?:USD|TRY|EUR|GBP|KWD|SAR|AED|QAR|JOD)\b)/g, "{{donation.receiptSummary}}")
     .replace(/\{\{\s*donation\.currency\s*\}\}\s*\{\{\s*donation\.(?:amount|totalAmount)\s*\}\}/g, "{{donation.receiptSummary}}")
-    .replace(/(?:\$\s*)?\{\{\s*donation\.amountUSD\s*\}\}/g, "{{donation.receiptSummary}}");
+    .replace(/(?:\$\s*)?\{\{\s*donation\.amountUSD\s*\}\}/g, "{{donation.receiptSummary}}")
+    .replace(/(?:المبلغ(?:\s+الإجمالي)?|مبلغ التبرع|Amount|Donation amount|Tutar|Bağış tutarı|Montant|Betrag|Importe|Valor|Jumlah|Amaun|Shuma|Importo|Bedrag|Belopp|Beløp|رقم|金額|金额|राशि)\s*[:：]\s*(\{\{\s*donation\.receiptSummary\s*\}\})/giu, "$1");
 }
 
 /** Upgrade display text only. Never rewrite links, identifiers, or canonical

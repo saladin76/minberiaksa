@@ -79,6 +79,10 @@ const server = createServer(async (request, response) => {
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
+if (process.argv.includes("--serve")) {
+  console.log(JSON.stringify({ base, fixture: true, productionCalls: 0 }));
+  await new Promise(() => {});
+}
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
 const errors = []; let cases = 0;
 async function pageAt(path, width) { const page = await browser.newPage({ viewport: { width, height: 1100 } }); page.on("pageerror", error => errors.push(error.message)); await page.route("https://**/*", route => route.abort()); await page.goto(base + path); return page; }

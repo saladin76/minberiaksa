@@ -1,3 +1,4 @@
+import * as font from "../../lib/templates/font";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -12,7 +13,7 @@ import { manualCertificateInput } from "../../lib/certificates/manual-input";
 function load<T>(file: string, deps: Record<string, unknown>, env: Record<string, string> = {}) {
   const mod = { exports: {} as T };
   const code = ts.transpileModule(readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
-  new vm.Script(code).runInNewContext({ module: mod, exports: mod.exports, Date, Buffer, structuredClone, process: { env }, console: { error() {} }, require: (id: string) => { assert.ok(id in deps, id); return deps[id]; } });
+  new vm.Script(code).runInNewContext({ module: mod, exports: mod.exports, Date, Buffer, structuredClone, process: { env }, console: { error() {} }, require: (id: string) => { if (id === "@/lib/templates/font" || id === "../templates/font") return font; assert.ok(id in deps, id); return deps[id]; } });
   return mod.exports;
 }
 function deliveryFixture(options: { unknown?: boolean; beforeProviderFailure?: boolean; blocked?: boolean } = {}) {

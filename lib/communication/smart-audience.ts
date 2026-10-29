@@ -1,3 +1,4 @@
+import { cleanAudienceFrequencies, recurringAudienceWhere } from "./recurring-audience";
 import { Prisma } from "@prisma/client";
 import { recentMarketingDeliveryWhere } from "./recent-marketing-filter";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +19,9 @@ export type SmartAudienceFilters = {
   projectIds?: string[];
   badgeIds?: string[];
   recurringOnly?: boolean;
+  oneTimeOnly?: boolean;
+  recurringFrequencies?: string[];
+  excludeRecurringFrequencies?: string[];
   minDonationAmountUSD?: number | null;
   hasContact?: boolean;
 };
@@ -87,6 +91,9 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
       projectIds: cleanList(f.projectIds).slice(0, 100),
       badgeIds: cleanList(f.badgeIds).slice(0, 20),
       recurringOnly: f.recurringOnly === true,
+      oneTimeOnly: f.oneTimeOnly === true,
+      recurringFrequencies: cleanAudienceFrequencies(f.recurringFrequencies),
+      excludeRecurringFrequencies: cleanAudienceFrequencies(f.excludeRecurringFrequencies),
       minDonationAmountUSD,
       hasContact: f.hasContact === true,
     },
@@ -159,7 +166,8 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
     ];
   }
 
-  if (f.recurringOnly) where.subscriptions = { some: { status: "ACTIVE" } };
+  const recurring = recurringAudienceWhere(f);
+  if (recurring.length) where.AND = [...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []), ...recurring];
 
   // Contact presence is an explicit audience choice, never an implicit default.
   if (f.hasContact === true) {

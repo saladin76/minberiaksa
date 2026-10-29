@@ -39,3 +39,23 @@ export function applyAppFont(html: string, locale?: string): string {
   } else out = out.replace(/<html[^>]*>/i, `$&<head>${linkTag}</head>`);
   return out;
 }
+
+/** Transactional mail has a restrained scale in every language. Explicit
+ * inline styles also work in email clients which discard head stylesheets. */
+export function automaticEmailHtml(html: string, locale?: string): string {
+  const font = locale?.toLowerCase().split(/[-_]/)[0] === "ar" ? ARABIC_EMAIL_FONT_STACK : APP_FONT_STACK;
+  const styled = html.replace(/<(body|main|table|td|div|p|span|a|strong|b|li|h[1-6])\b([^>]*)>/gi, (_tag, tag: string, attrs: string) => {
+    const heading = /^h[1-6]$/i.test(tag);
+    const baseSize = heading ? (/^h1$/i.test(tag) ? 22 : 18) : 14;
+    const styleMatch = /\bstyle\s*=\s*(["'])(.*?)\1/i.exec(attrs);
+    let css = (styleMatch?.[2] ?? "").replace(/&quot;/g, '"').replace(/&#(?:39|x27);/gi, "'").replace(/&amp;/g, "&");
+    const requested = /(?:^|;)\s*font-size\s*:\s*([\d.]+)px\b/i.exec(css);
+    const size = requested ? Math.min(Number(requested[1]), baseSize) : baseSize;
+    css = css.replace(/(?:^|;)\s*(?:font-family|font-size|line-height|-webkit-text-size-adjust)\s*:[^;]*/gi, "");
+    css = css.replace(/;{2,}/g, ";").replace(/^;|;$/g, "");
+    css += `${css ? ";" : ""}font-family:${font};font-size:${size}px;line-height:${heading ? "1.5" : "1.8"};-webkit-text-size-adjust:100%`;
+    const rest = attrs.replace(/\bstyle\s*=\s*(["'])(.*?)\1/i, "").trim();
+    return `<${tag}${rest ? ` ${rest}` : ""} style="${css.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}">`;
+  });
+  return applyAppFont(styled, locale);
+}

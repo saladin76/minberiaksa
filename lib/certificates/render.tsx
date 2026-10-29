@@ -20,8 +20,8 @@ import type { ReceiptDocument, ThanksDocument, WaqfDocument } from "./documents"
 const BASE_CSS = `
   :root { --font-cairo: Cairo; --font-amiri: Amiri; --font-quran: Amiri; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-  body { font-family: Cairo, system-ui, sans-serif; color: #10212B; }
+  html, body { margin: 0; padding: 0; background: #fff; color-scheme: light; }
+  body { font-family: Cairo, system-ui, sans-serif; color: #10212B; line-height: 1.5; }
 `;
 
 async function toMarkup(element: ReactElement): Promise<string> {
@@ -65,7 +65,7 @@ export async function renderThanksHtml(doc: ThanksDocument, assetBase: string, l
       : `
   @page { size: A4 landscape; margin: 0; }
   .cert-sheet { box-shadow: none !important; margin: 0 !important; width: 296mm !important; height: 209mm !important; max-width: none !important; aspect-ratio: auto !important; break-inside: avoid; overflow: hidden; }
-  .cert-body { grid-template-rows: auto auto 1fr auto !important; }
+  .cert-body { grid-template-rows: auto auto minmax(0,1fr) auto !important; }
   .cert-main { align-content: center !important; }
   `;
   const props = { donorName: doc.donorName, copy: doc.copy, verse: doc.verse, duaVerse: doc.duaVerse, dir: doc.dir, assetBase, issuedDate: doc.issuedDate, serial: doc.serial };

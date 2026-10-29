@@ -1,4 +1,5 @@
 "use client";
+import { SavedCardPicker } from "./SavedCardPicker";
 import { AlbarakaVerificationChoice } from "./AlbarakaVerificationChoice";
 import type { AlbarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
 
@@ -885,20 +886,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
               {method === "card" && needsOwnCardForm && gateway !== "STRIPE" ? (
                 <div style={{ display: "grid", gap: 14 }}>
-                  {savedCards.length > 0 && (
-                    <fieldset className="grid gap-2 rounded-xl border border-[var(--border)] p-3">
-                      <legend className="px-1 text-sm font-bold">{tCards("savedCards")}</legend>
-                      {savedCards.map(card => (
-                        <label key={card.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3">
-                          <input type="radio" name="saved-payment-card" value={card.id} checked={selectedCardId === card.id} onChange={() => { setSelectedCardId(card.id); setCardCvc(""); setInvalidField(null); }} />
-                          <span dir="ltr" className="grow text-start">{card.cardType} •••• {card.last4} · {card.expiryDate}</span>
-                        </label>
-                      ))}
-                      <label className="flex cursor-pointer items-center gap-3 p-2">
-                        <input type="radio" name="saved-payment-card" checked={!selectedCardId} onChange={() => { setSelectedCardId(""); setCardCvc(""); setInvalidField(null); }} />{tCards("useNewCard")}
-                      </label>
-                    </fieldset>
-                  )}
+                  <SavedCardPicker cards={savedCards} value={selectedCardId} disabled={submitting} onChange={id => { cardInputTouched.current = true; setSelectedCardId(id); setCardCvc(""); setInvalidField(null); }} />
                   {/* The live card, filling in as the donor types and flipping
                       for the CVC; the brand is detected from the number. Latin-
                       script data: always LTR. */}

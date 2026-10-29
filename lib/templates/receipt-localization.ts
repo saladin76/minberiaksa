@@ -33,7 +33,7 @@ export const RECEIPT_BANK_COPY: Record<SupportedLocale, readonly [string, string
 
 export function receiptLocale(locale: string): SupportedLocale {
   const key = locale.toLowerCase().split(/[-_]/)[0].replace(/^nb$/, "no");
-  return key in RECEIPT_BANK_COPY ? key as SupportedLocale : "en";
+  return key in RECEIPT_BRANDS ? key as SupportedLocale : "en";
 }
 
 /** Only replace the known legacy bilingual closing, never names, links or user content. */

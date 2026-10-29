@@ -451,7 +451,8 @@ async function recordFailure(
 
   runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
   void sendDonationFailedConversions(donationId);
-  if (!retryAt) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId }));
+  // Exhausted retries are PAYMENT_FAILED, not a donor cancellation.
+  // DONATION_FAILED above and the scheduler alert describe the actual result.
 
   return {
     subscriptionId: sub.id,

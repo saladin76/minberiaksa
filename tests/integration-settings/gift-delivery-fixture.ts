@@ -6,7 +6,7 @@ import ts from "typescript";
 import * as stateHelpers from "../../lib/donations/gift-delivery-state";
 import * as giftTokens from "../../lib/donations/gift-certificate-token";
 import * as projects from "../../lib/templates/donation-projects";
-import { applyAppFont } from "../../lib/templates/font";
+import { applyAppFont, automaticEmailHtml } from "../../lib/templates/font";
 
 export function fixtureModule<T>(path: string, modules: Record<string, unknown>): T {
   const compiled = ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
@@ -31,7 +31,7 @@ export function giftFixture(options: { paid?: boolean; locale?: string; emailFai
   const queries: unknown[] = [];
   const service = fixtureModule<{ deliverDonationGifts: (id: string) => Promise<{ lines: number; errors: number; emailsSent: number; whatsappSent: number }> }>("lib/donations/gift-delivery.ts", {
     "server-only": {}, "node:crypto": crypto, "@/lib/templates/donation-projects": projects,
-    "@/lib/templates/font": { applyAppFont },
+    "@/lib/templates/font": { applyAppFont, automaticEmailHtml },
     "./gift-delivery-state": stateHelpers, "./gift-certificate-token": giftTokens,
     "@/lib/prisma": { prisma: {
       donation: { findUnique: async () => ({ paidAt: options.paid === false ? null : new Date(), accessToken: "fixture-access-secret", currency: "TRY", locale: options.locale || "en", donor: { name: "Donor" } }) },

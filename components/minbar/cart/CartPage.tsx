@@ -254,6 +254,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   };
 
   const recurringOn = items.some((x) => x._autoMonthly);
+  const showRecurringNudge = items.length > 0 && items.every(item => item.freqKey === "once" || item._autoMonthly);
 
   /* One click converts every one-time row to monthly, and the same click undoes
      it. Only `freqKey` changes  no rows are created, removed or reordered. */
@@ -628,7 +629,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </span>
               </span>
 
-              <button
+              {showRecurringNudge && <button
                 type="button"
                 onClick={toggleRecurring}
                 data-on={recurringOn ? "1" : "0"}
@@ -671,7 +672,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 <span style={{ fontSize: "clamp(9.5px, 2.7vw, 11.5px)", fontWeight: 600, color: "rgba(255,255,255,.6)", lineHeight: 1.7, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
                   {t("recurringNudgeText")}
                 </span>
-              </button>
+              </button>}
 
               {/* Support the team  once per basket, before checkout. With a
                   recurring row it rides along with every instalment; with a

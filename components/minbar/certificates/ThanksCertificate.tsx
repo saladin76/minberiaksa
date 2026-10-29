@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { CERTIFICATE_GROUND } from "./sheet-style";
 import type { ThanksCopy } from "@/lib/certificates/copy-defaults";
 
 /**
@@ -45,19 +46,7 @@ const SANS = "var(--font-cairo), Cairo, system-ui, sans-serif";
 
 /* The woven gold ground of the sheet, as the template draws it. Inline rather
    than a class so the PDF renderer needs no stylesheet. */
-const GROUND: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  background: [
-    "radial-gradient(circle at 50% 40%, rgba(255,255,255,.9) 0 38%, rgba(247,242,234,.55) 100%)",
-    "repeating-conic-gradient(from 45deg at 0 0, rgba(211,154,39,.13) 0deg 90deg, transparent 90deg 180deg) 0 0/30px 30px",
-    "radial-gradient(circle at 0 0, transparent 68%, rgba(211,154,39,.16) 69% 71%, transparent 72%) 0 0/30px 30px",
-    "radial-gradient(circle at 100% 100%, transparent 68%, rgba(211,154,39,.16) 69% 71%, transparent 72%) 0 0/30px 30px",
-    "repeating-linear-gradient(45deg, rgba(211,154,39,.07) 0 1px, transparent 1px 15px)",
-    "repeating-linear-gradient(-45deg, rgba(211,154,39,.07) 0 1px, transparent 1px 15px)",
-  ].join(", "),
-};
+const GROUND = CERTIFICATE_GROUND;
 
 const corner = (v: "top" | "bottom", h: "start" | "end"): CSSProperties => ({
   position: "absolute",
@@ -86,7 +75,7 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
         background: "#FFFEFB",
         boxShadow: "0 26px 70px rgba(16,33,43,.18)",
         overflow: "hidden",
-        fontFamily: SANS,
+        fontFamily: SANS, lineHeight: 1.5, colorScheme: "light",
         color: "#10212B",
       }}
     >
@@ -103,7 +92,7 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
       <div aria-hidden="true" style={corner("bottom", "start")} />
       <div aria-hidden="true" style={corner("bottom", "end")} />
 
-      <div className="cert-body" style={{ position: "relative", height: "100%", padding: "3.2% 9% 2.4%", display: "grid", gridTemplateRows: "auto auto 1fr auto", textAlign: "center", boxSizing: "border-box" }}>
+      <div className="cert-body" style={{ position: "relative", height: "100%", padding: "3.6% 8% 4%", display: "grid", gridTemplateRows: "auto auto minmax(0,1fr) auto", textAlign: "center", boxSizing: "border-box" }}>
         <div style={{ display: "grid", justifyItems: "center", gap: 6 }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- sized as a share of the sheet, not in pixels */}
           <img src={asset("logo-horizontal.png")} alt={copy.orgName} style={{ width: "20%", maxWidth: 190, height: "auto" }} />
@@ -124,7 +113,7 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
           </h1>
         </div>
 
-        <div className="cert-main" style={{ display: "grid", alignContent: "center", justifyItems: "center", gap: 10 }}>
+        <div className="cert-main" style={{ display: "grid", alignContent: "center", justifyItems: "center", gap: "0.8cqw" }}>
           <div style={{ display: "grid", justifyItems: "center", gap: 6, width: "100%" }}>
             <span style={{ fontSize: "clamp(11px,1.5cqw,20px)", fontWeight: 700, color: "#52616B", whiteSpace: "nowrap" }}>{copy.nameLabel}</span>
             {/* The name line keeps its height when empty, so a certificate
@@ -145,7 +134,7 @@ export default function ThanksCertificate({ donorName, copy, verse, duaVerse, di
           <p style={{ margin: 0, width: "94%", fontSize: "clamp(11px,1.35cqw,18px)", lineHeight: 1.8, color: "#132C38" }}>{copy.duaText}</p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, paddingBottom: "2.2%", alignSelf: "end" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, paddingTop: "1.5%", alignSelf: "end" }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- sized in container units */}
           <img src={asset("cert-seal-alpha.png")} alt="" aria-hidden="true" style={{ width: "clamp(66px,7.4cqw,112px)", height: "auto" }} />
           <div style={{ display: "grid", justifyItems: "end", gap: 6, textAlign: "end" }}>

@@ -20,7 +20,7 @@ export async function prepareNotificationUpgrades(opts: { apply?: boolean; publi
   const sources = await prisma.whatsappTemplate.findMany({ where: { id: { in: [...new Set(triggers.map(row => row.templateId))] } } });
   const results: Array<{ source: string; template?: string; state: string; reason?: string }> = [];
   for (const source of sources) {
-    if (object(source.notificationUpgrade).version === 1) continue;
+    if (object(source.notificationUpgrade).version === 2) continue;
     try {
       const events = triggers.filter(row => row.templateId === source.id).map(row => row.event);
       const moneyEvents = events.filter(isDonationMoneyNotificationEvent);
@@ -33,7 +33,7 @@ export async function prepareNotificationUpgrades(opts: { apply?: boolean; publi
       const draftHash = notificationTemplateHash({ id: "", ...data });
       if (candidate && (object(candidate.notificationUpgrade).sourceId !== source.id || notificationTemplateHash(candidate) !== draftHash)) throw new Error("EXISTING_UPGRADE_HAS_EDITORIAL_CHANGES");
       if (!opts.apply) { results.push({ source: source.name, template: draft.name, state: candidate ? "STAGED" : "WOULD_CREATE" }); continue; }
-      candidate ??= await prisma.whatsappTemplate.create({ data: { ...data, language: "ar", status: "DRAFT", notificationUpgrade: { version: 1, sourceId: source.id, sourceHash: draft.sourceHash, draftHash, receipt, events, locales: [...SUPPORTED_LOCALES] } } });
+      candidate ??= await prisma.whatsappTemplate.create({ data: { ...data, language: "ar", status: "DRAFT", notificationUpgrade: { version: 2, sourceId: source.id, sourceHash: draft.sourceHash, draftHash, receipt, events, locales: [...SUPPORTED_LOCALES] } } });
       if (opts.publish) {
         const { publishWhatsappTemplateToMeta } = await import("./meta-template-publisher");
         const result = await publishWhatsappTemplateToMeta(candidate.id, { actorRole: "SYSTEM" }, { defaultOnly: true });
@@ -52,7 +52,7 @@ export async function activateApprovedNotificationUpgrades() {
   const results: Array<{ template: string; state: string; approved?: number; triggers?: number }> = [];
   for (const candidate of candidates) {
     const marker = object(candidate.notificationUpgrade);
-    if (marker.version !== 1 || marker.activatedAt || typeof marker.sourceId !== "string") continue;
+    if (![1, 2].includes(Number(marker.version)) || marker.activatedAt || typeof marker.sourceId !== "string") continue;
     const result = await prisma.$transaction(async tx => {
       const [senders, source, current] = await Promise.all([
         tx.communicationSender.findMany({ where: defaults }),

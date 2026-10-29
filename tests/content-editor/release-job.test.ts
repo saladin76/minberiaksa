@@ -20,8 +20,8 @@ function fixture(deployExit = 0, metadataExit = 0, wait = false) {
   git("init"); git("add", "."); git("commit", "-m", "Isolated release fixture");
   const sha = git("rev-parse", "HEAD");
   const env = { ...process.env, APP_DIR: app, RELEASE_JOBS_DIR: jobs };
-  function start() {
-    const out = spawnSync(process.execPath, [runner, "start", sha, "--publish", "--activate-approved"], { cwd: app, env, encoding: "utf8", timeout: 10_000 });
+  function start(target = sha) {
+    const out = spawnSync(process.execPath, [runner, "start", target, "--publish", "--activate-approved"], { cwd: app, env, encoding: "utf8", timeout: 10_000 });
     assert.equal(out.status, 0, out.stderr); return JSON.parse(out.stdout).job as string;
   }
   const state = (job: string) => JSON.parse(readFileSync(join(job, "status.json"), "utf8"));
@@ -58,12 +58,42 @@ test("a failed deployment never starts provider setup, and a setup failure recor
     } finally { rmSync(f.dir, { force: true, recursive: true }); }
   }
 });
-test("two concurrent jobs serialize the whole release including provider setup", async () => {
+test("repeating the same commit follows the existing release without creating another job", async () => {
   const f = fixture(0, 0, true);
   try {
     const first = f.start(); await f.until(first, value => value.phase === "DEPLOYING");
-    const second = f.start(), blocked = await f.until(second, value => terminal.has(value.phase));
-    assert.equal(blocked.phase, "BLOCKED_BY_RUNNING_RELEASE"); assert.equal(f.calls(), "deploy\n");
+    const second = f.start();
+    assert.equal(second, first); assert.equal(f.state(first).phase, "DEPLOYING"); assert.equal(f.calls(), "deploy\n");
+    writeFileSync(join(f.app, "continue"), "continue");
+    assert.equal((await f.until(first, value => terminal.has(value.phase))).phase, "SUCCEEDED");
+    assert.equal(f.calls().match(/metadata/g)?.length, 1);
+  } finally { rmSync(f.dir, { force: true, recursive: true }); }
+});
+
+test("status follows an original release when an older runner left latest pointing at a blocked duplicate", async () => {
+  const f = fixture(0, 0, true);
+  try {
+    const first = f.start(); await f.until(first, value => value.phase === "DEPLOYING");
+    const blocked = join(f.jobs, "blocked-duplicate"); mkdirSync(blocked);
+    writeFileSync(join(blocked, "status.json"), JSON.stringify({ target: f.sha, phase: "BLOCKED_BY_RUNNING_RELEASE", startedAt: new Date().toISOString() }));
+    writeFileSync(join(f.jobs, "latest"), blocked);
+    const status = () => {
+      const result = spawnSync(process.execPath, [runner, "status"], { cwd: f.app, env: f.env, encoding: "utf8" });
+      assert.equal(result.status, 0, result.stderr); return JSON.parse(result.stdout);
+    };
+    assert.equal(status().job, first); assert.equal(status().phase, "DEPLOYING");
+    writeFileSync(join(f.app, "continue"), "continue"); await f.until(first, value => terminal.has(value.phase));
+    assert.equal(status().phase, "SUCCEEDED"); assert.equal(status().latestAttempt.phase, "BLOCKED_BY_RUNNING_RELEASE");
+  } finally { rmSync(f.dir, { force: true, recursive: true }); }
+});
+
+test("different commits still share the deployment and provider setup lock", async () => {
+  const f = fixture(0, 0, true);
+  try {
+    const first = f.start(); await f.until(first, value => value.phase === "DEPLOYING");
+    const second = f.start("d".repeat(40));
+    assert.equal((await f.until(second, value => terminal.has(value.phase))).phase, "BLOCKED_BY_RUNNING_RELEASE");
+    assert.equal(f.calls(), "deploy\n");
     writeFileSync(join(f.app, "continue"), "continue");
     assert.equal((await f.until(first, value => terminal.has(value.phase))).phase, "SUCCEEDED");
     assert.equal(f.calls().match(/metadata/g)?.length, 1);

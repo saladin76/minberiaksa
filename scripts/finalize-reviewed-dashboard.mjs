@@ -14,6 +14,7 @@ const steps = [
   { name: "gift-templates", script: "scripts/prepare-gift-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "notification-templates", script: "scripts/upgrade-notification-templates.mjs", args: [...(publish ? ["--publish"] : []), ...(activate ? ["--activate-approved"] : [])] },
   { name: "document-templates", script: "scripts/prepare-document-whatsapp.mjs", args: publish ? ["--publish"] : [] },
+  { name: "retired-templates", script: "scripts/cleanup-retired-templates.mjs", args: [] },
   { name: "greeting-templates", script: "scripts/prepare-greeting-whatsapp.mjs", args: publish ? ["--publish"] : [] },
 ];
 if (!apply && !checkRuntime) {

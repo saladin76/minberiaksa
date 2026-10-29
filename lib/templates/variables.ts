@@ -39,7 +39,7 @@ export interface TemplateDonation {
   fees?: string;
   amountBreakdown?: string;
   notificationAmount?: string;
-  /** Original currency, and confirmed TRY equivalent when recorded by the bank. */
+  /** One total, in the original currency and notification language. */
   receiptSummary?: string;
   displayDate?: string;
   status: string;
@@ -244,9 +244,9 @@ export async function loadContextForDonation(
 ): Promise<TemplateContext | null> {
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
-    // Bank snapshots are needed for the focus receipt only, not every row in
-    // a donor's history or a large marketing audience.
-    select: { ...donationSelect, donorId: true, provider: true, providerOrderId: true, providerRaw: true },
+    // Notifications use the saved donor currency and total only; bank request
+    // snapshots are not needed and must not enter template rendering.
+    select: { ...donationSelect, donorId: true },
   });
   if (!donation) return null;
   const base = await loadContext(donation.donorId, localeOverride || donation.locale);

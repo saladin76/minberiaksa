@@ -1,5 +1,6 @@
 "use client";
 
+import { SubscriptionRequestsPanel } from "@/components/dashboard/SubscriptionRequestsPanel";
 import { RecurringHealthPanel } from "@/components/dashboard/RecurringHealthPanel";
 import { BILLING_READINESS_LABELS, type BillingReadiness } from "@/lib/donations/recurring-readiness";
 import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
@@ -982,6 +983,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         />
 
         <RecurringHealthPanel />
+        <SubscriptionRequestsPanel />
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>

@@ -210,7 +210,7 @@ test("a missing Stripe secret retains the external subscription link so retry ca
 test("one scheduler provider throwing does not stop the other provider", async () => {
   let paypalCalls = 0;
   const empty = { charged: [], failed: [], skipped: [], scanned: 0, enabled: true, dryRun: false };
-  const route = load("app/api/cron/recurring-charges/route.ts", { "next/server": next, "@/lib/communication/cron-auth": { isCronAuthorizationValid: () => true },
+  const route = load("app/api/cron/recurring-charges/route.ts", { "next/server": next, "@/lib/telegram/client": { tgNotify: async () => true }, "@/lib/events/after-response": { runAfterResponse: () => {} }, "@/lib/communication/cron-auth": { isCronAuthorizationValid: () => true },
     "@/lib/donations/albaraka-recurring": { chargeDueAlbarakaSubscriptions: async () => { throw new Error("fixture provider error"); } },
     "@/lib/donations/paypal-recurring": { chargeDuePayPalSubscriptions: async () => { paypalCalls++; return empty; } },
     "@/lib/audit-log": { writeAuditLog: async () => {} } });

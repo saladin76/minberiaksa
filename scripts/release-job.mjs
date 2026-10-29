@@ -1,7 +1,7 @@
 // VPS release runner: detaches from SSH, serializes releases, records every phase.
 // No billing, recipient sends or scheduler execution is performed here.
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const args = process.argv.slice(2), mode = args[0];
@@ -9,6 +9,18 @@ const root = resolve(process.env.APP_DIR || process.cwd());
 const jobs = resolve(process.env.RELEASE_JOBS_DIR || join(dirname(root), "minberi-release-jobs"));
 const stateFile = dir => join(dir, "status.json");
 const read = dir => JSON.parse(readFileSync(stateFile(dir), "utf8"));
+const terminalPhases = new Set(["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"]);
+function matchingJobs(target) {
+  if (!existsSync(jobs)) return [];
+  return readdirSync(jobs, { withFileTypes: true }).filter(item => item.isDirectory()).flatMap(item => {
+    const dir = join(jobs, item.name);
+    try { const state = read(dir); return state.target === target ? [{ dir, state }] : []; } catch { return []; }
+  }).sort((a, b) => String(b.state.startedAt).localeCompare(String(a.state.startedAt)));
+}
+function running(entry) {
+  if (terminalPhases.has(entry.state.phase) || !Number.isSafeInteger(entry.state.supervisorPid) || entry.state.supervisorPid <= 0) return false;
+  try { process.kill(entry.state.supervisorPid, 0); return true; } catch { return false; }
+}
 function save(dir, patch) {
   const state = { ...(existsSync(stateFile(dir)) ? read(dir) : {}), ...patch, updatedAt: new Date().toISOString() };
   const temp = `${stateFile(dir)}.${process.pid}.tmp`;
@@ -37,6 +49,11 @@ if (mode === "start") {
   if (flock.status !== 0) throw new Error("flock is required to serialize releases on this VPS.");
   if (!existsSync(join(root, ".git"))) throw new Error("APP_DIR must select the existing application checkout.");
   mkdirSync(jobs, { recursive: true, mode: 0o700 });
+  const existing = matchingJobs(target).find(running);
+  if (existing) {
+    console.log(JSON.stringify({ ...existing.state, job: existing.dir, alreadyRunning: true, note: "This commit already has a running release. No second job was started. Inspect this job's status." }, null, 2));
+    process.exit(0);
+  }
   const dir = join(jobs, `${new Date().toISOString().replace(/[:.]/g, "-")}-${target.slice(0, 8)}-${process.pid}`);
   mkdirSync(dir, { mode: 0o700 });
   const snapshot = join(dir, "runner.mjs"); copyFileSync(fileURLToPath(import.meta.url), snapshot);
@@ -49,6 +66,7 @@ if (mode === "start") {
   });
   await new Promise((accept, reject) => { child.once("spawn", accept); child.once("error", reject); });
   closeSync(fd); child.unref();
+  save(dir, { supervisorPid: child.pid });
   writeFileSync(join(jobs, "latest"), dir + "\n", { mode: 0o600 });
   console.log(JSON.stringify({ ...read(dir), job: dir, supervisorPid: child.pid, note: "Detached from SSH. STARTING is not proof of deployment. Use status to inspect the result." }, null, 2));
 } else if (mode === "supervise") {
@@ -82,12 +100,21 @@ if (mode === "start") {
     process.exitCode = 1;
   }
 } else if (mode === "status") {
-  const dir = args[1] ? resolve(args[1]) : readFileSync(join(jobs, "latest"), "utf8").trim();
+  let dir = args[1] ? resolve(args[1]) : readFileSync(join(jobs, "latest"), "utf8").trim();
+  let latestAttempt = null;
+  if (!args[1]) {
+    const attempted = read(dir);
+    if (attempted.phase === "BLOCKED_BY_RUNNING_RELEASE") {
+      const candidates = matchingJobs(attempted.target).filter(entry => entry.state.phase !== "BLOCKED_BY_RUNNING_RELEASE");
+      const relevant = candidates.find(running) ?? candidates[0];
+      if (relevant) { latestAttempt = { job: dir, phase: attempted.phase }; dir = relevant.dir; }
+    }
+  }
   const state = read(dir);
-  if (!["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"].includes(state.phase) && state.supervisorPid) {
+  if (!terminalPhases.has(state.phase) && state.supervisorPid) {
     try { process.kill(state.supervisorPid, 0); } catch { state.phase = "INTERRUPTED"; state.note = "The job process is no longer running. Inspect the log before restarting."; }
   }
-  console.log(JSON.stringify({ ...state, job: dir }, null, 2));
+  console.log(JSON.stringify({ ...state, job: dir, ...(latestAttempt ? { latestAttempt, note: "A duplicate attempt was blocked. This is the original release's current status." } : {}) }, null, 2));
 } else {
   console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved]\n       node scripts/release-job.mjs status [job-directory]");
   process.exitCode = 1;

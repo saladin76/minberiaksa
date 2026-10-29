@@ -23,12 +23,11 @@ test("TRY bank proof uses exact paid order, provider, currency and the provider'
   for (const purchAmount of ["0", "-1", "1.001", "1e3", "Infinity", "invalid"]) assert.equal(confirmedTryCharge({ ...evidence, provider: "PAYFOR", providerRaw: { payforRequest: { orderId: "order-a", currency: "949", purchAmount } } }), null);
 });
 
-for (const locale of SUPPORTED_LOCALES) test(`${locale}: original money, breakdown, bank explanation and date use one locale`, () => {
+for (const locale of SUPPORTED_LOCALES) test(`${locale}: only the stored total and native currency are shown in one locale`, () => {
   const value = donationMoneyFields(donation, locale).receiptSummary;
   assert.ok(value.includes(receiptMoney(103, "EUR", locale)));
-  assert.ok(value.indexOf(receiptMoney(103, "EUR", locale)) < value.indexOf(receiptMoney(4100.25, "TRY", locale)));
-  assert.ok(value.includes(receiptMoney(80, "EUR", locale)) && value.includes(receiptMoney(20, "EUR", locale)) && value.includes(receiptMoney(3, "EUR", locale)));
-  assert.ok(value.includes(RECEIPT_BANK_COPY[locale][0]) && value.includes(RECEIPT_BANK_COPY[locale][1]));
+  assert.equal(value, `${money.DONATION_MONEY_LABELS[locale][3]}: ${receiptMoney(103, "EUR", locale)}`);
+  assert.ok(!value.includes(RECEIPT_BANK_COPY[locale][0]) && !value.includes(RECEIPT_BANK_COPY[locale][1]));
   assert.ok(!/[\n\t]/.test(value));
   assert.equal(localizeReceiptFooter("Minbar Al-Aqsa | منبر الأقصى", locale), RECEIPT_BRANDS[locale]);
   assert.equal(receiptDate(evidence.paidAt, locale), new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(evidence.paidAt));
@@ -46,7 +45,7 @@ test("email/SMS replace legacy USD money without touching links, tags or explici
   const ctx = { donation: donationMoneyFields(donation, "tr") };
   const input = 'Tutar: {{donation.amountUSD}} USD <a href="/receipt?v={{donation.amountUSD}}">Belge</a> https://example.test/?v={{donation.amount}}';
   const prepared = donationNotificationText(input, ctx);
-  assert.ok(prepared.startsWith("Tutar: {{donation.receiptSummary}}"));
+  assert.ok(prepared.startsWith("{{donation.receiptSummary}}"));
   assert.ok(prepared.includes('href="/receipt?v={{donation.amountUSD}}"') && prepared.includes("https://example.test/?v={{donation.amount}}"));
   assert.equal(donationReceiptText("{{donation.currency}} {{donation.totalAmount}}"), "{{donation.receiptSummary}}");
   assert.equal(donationReceiptText("${{donation.amountUSD}}"), "{{donation.receiptSummary}}");
@@ -77,7 +76,7 @@ test("upgrade keeps every existing greeting, prayer, reference and document URL;
   const scopedNames = Object.fromEntries(canonical.bindings.map(row => [`${row.scope}.${row.position}`, row.key]));
   for (const locale of SUPPORTED_LOCALES) {
     const translated = draft.translations[locale];
-    assert.equal(translated.body, source.translations[locale].body.replace("{{donation.amount}} {{donation.currency}}", "{{donation.receiptSummary}}").replace("{{donation.createdAt}}", "{{donation.displayDate}}"));
+    assert.equal(translated.body, money.donationReceiptText(source.translations[locale].body).replace("{{donation.createdAt}}", "{{donation.displayDate}}"));
     assert.deepEqual(translated.buttons, locale === "ar" ? source.buttons : source.translations[locale].buttons);
     assert.equal(translated.footerText, RECEIPT_BRANDS[locale]);
     const values: Record<string, string> = { "user.name": "Supporter", "donation.campaignTitle": "Project", "donation.receiptSummary": donationMoneyFields(donation, locale).receiptSummary, "donation.displayDate": receiptDate(evidence.paidAt, locale), "donation.id": "fixture" };

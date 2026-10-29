@@ -23,20 +23,19 @@ test("all 19 locales show the stored total with project/support breakdown and di
     assert.ok(paid.amountBreakdown.startsWith(labels[3] + ":"));
     assert.ok(failed.amountBreakdown.startsWith(labels[4] + ":"));
     assert.ok(paid.amountBreakdown.includes(labels[0]) && paid.amountBreakdown.includes(labels[1]));
-    assert.ok(paid.notificationAmount.includes(paid.projectsAmount));
-    assert.ok(paid.notificationAmount.includes(paid.teamSupport));
+    assert.equal(paid.notificationAmount, money.formatTemplateMoney(order.totalAmount, locale, order.currency));
     assert.ok(!paid.notificationAmount.includes("\n"));
   }
   assert.equal(donationMoneyFields(order, "en").amountBreakdown, "Total: 300 USD (Projects: 250 USD; Team support: 50 USD)");
 });
 
 test("zero support, covered fees, fractions and zero-decimal currencies do not add support twice", () => {
-  assert.equal(donationMoneyFields({ ...order, teamSupport: 0, totalAmount: 250 }, "en").notificationAmount, "Total: 250 (Projects: 250; Team support: 0)");
+  assert.equal(donationMoneyFields({ ...order, teamSupport: 0, totalAmount: 250 }, "en").notificationAmount, "250");
   const fields = donationMoneyFields({ ...order, amount: 10.25, teamSupport: 1.5, fees: 0.35, totalAmount: 12.1 }, "en");
-  assert.equal(fields.notificationAmount, "Total: 12.1 (Projects: 10.25; Team support: 1.5; Fees: 0.35)");
+  assert.equal(fields.notificationAmount, "12.1");
   // The saved order total is authoritative even for legacy records that do not add up.
-  assert.ok(donationMoneyFields({ ...order, totalAmount: 299 }, "en").notificationAmount.startsWith("Total: 299 "));
-  assert.ok(donationMoneyFields({ ...order, currency: "JPY" }, "en").notificationAmount.startsWith("Total: 300 "));
+  assert.ok(donationMoneyFields({ ...order, totalAmount: 299 }, "en").notificationAmount === "299");
+  assert.ok(donationMoneyFields({ ...order, currency: "JPY" }, "en").notificationAmount === "300");
   assert.equal(donationMoneyFields({ ...order, totalAmount: NaN }, "en").notificationAmount, "");
   assert.equal(donationMoneyFields({ ...order, currency: "<img>" }, "en").notificationAmount, "");
 });
@@ -57,7 +56,7 @@ test("legacy body values are upgraded without modifying URL/HTML attributes or e
 test("email preparation clones the document and never rewrites button links", () => {
   const document = { root: { type: "EmailLayout", data: { childrenIds: ["text", "button"] } }, text: { type: "Text", data: { props: { text: "Amount: {{donation.amount}} USD" } } }, button: { type: "Button", data: { props: { text: "Donate", url: "/ar/checkout?amount={{donation.amount}}" } } } };
   const copy = donationNotificationDocument(document, { donation: donationMoneyFields(order, "en") });
-  assert.equal(copy.text.data.props.text, "Amount: {{donation.receiptSummary}}");
+  assert.equal(copy.text.data.props.text, "{{donation.receiptSummary}}");
   assert.equal(copy.button.data.props.url, document.button.data.props.url);
   assert.equal(document.text.data.props.text, "Amount: {{donation.amount}} USD");
 });
@@ -73,7 +72,7 @@ for (const named of [false, true]) {
     assert.equal(built.components.length, 3);
     const text = (i: number) => (built.components[i].parameters[0] as { text: string }).text;
     assert.equal(text(0), "250");
-    assert.equal(text(1), "Total: 300 (Projects: 250; Team support: 50)");
+    assert.equal(text(1), "300");
     assert.equal(text(2), "250");
   });
 }
@@ -101,9 +100,9 @@ test("the actual context loader reads support/fees/paid evidence and retains all
   assert.equal(selection.teamSupport, true);
   assert.equal(selection.fees, true);
   assert.equal(selection.paidAt, true);
-  assert.equal(selection.provider, true);
-  assert.equal(selection.providerOrderId, true);
-  assert.equal(selection.providerRaw, true);
+  assert.equal(selection.provider, undefined);
+  assert.equal(selection.providerOrderId, undefined);
+  assert.equal(selection.providerRaw, undefined);
   assert.equal(ctx.donation.amount, "250");
   assert.equal(ctx.donation.totalAmount, "300");
   assert.equal(ctx.donation.teamSupport, "50");
@@ -135,6 +134,7 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const source = ts.transpileModule(readFileSync("lib/events/dispatch.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const mod = { exports: {} as { sendTriggerMessage: (trigger: unknown, ctx: unknown, opts: unknown) => Promise<unknown> } };
   new vm.Script(source).runInNewContext({ module: mod, exports: mod.exports, require: (id: string) => {
+    if (id === "@/lib/templates/font") return { automaticEmailHtml: (html: string) => html };
     if (id in dependencies) return dependencies[id];
     // These imports belong to the uninvoked claim/settlement helpers, not the renderer.
     if (["@vercel/analytics/server", "@/lib/audit-log", "@/lib/dashboard/audit-log-display", "@/lib/telegram/notify", "@/lib/tracking/donation-conversion-server", "@/lib/communication/donor-communication-profile-service", "@/lib/certificates/generate", "@/lib/certificates/issue", "@/lib/server-base-url"].includes(id)) return {};
@@ -143,9 +143,9 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const ctx = { user: { id: "donor", name: "Supporter", email: "supporter@example.test", phone: "+15555555555" }, donation: { id: "donation", amount: "250", totalAmount: "300", currency: "USD", ...donationMoneyFields({ ...order, paidAt: null }, "en") } };
   for (const channel of ["EMAIL", "SMS", "WHATSAPP"]) await mod.exports.sendTriggerMessage({ channel, templateId: channel }, ctx, { event: "DONATION_FAILED", donationId: "donation", locale: "en", config: {} });
   assert.equal(sent.length, 3);
-  for (const message of sent.slice(0, 2)) assert.equal(message.renderedBody, `Amount: ${ctx.donation.receiptSummary}`);
+  for (const message of sent.slice(0, 2)) assert.equal(message.renderedBody, ctx.donation.receiptSummary);
   // An approved legacy Meta schema still uses a numeric body slot + currency.
-  assert.equal(sent[2].renderedBody, "Amount: Attempted total — collection not confirmed: 300 (Projects: 250; Team support: 50) USD");
+  assert.equal(sent[2].renderedBody, "Amount: 300 USD");
   const values = sent[2].templateValues as Record<string, string>;
   assert.equal(values["body.1"], ctx.donation.notificationAmount);
   assert.equal(values["body.2"], undefined);

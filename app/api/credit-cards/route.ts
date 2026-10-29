@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { encryptCard, detectCardType, decryptCard } from "@/lib/card-crypto";
+import { maskedSavedCards } from "@/lib/donations/saved-card-display";
 import { checkCardFields } from "@/lib/minbar/card-validation";
 
 // GET /api/credit-cards  list user's saved cards (masked)
@@ -16,23 +17,7 @@ export async function GET() {
     select: { id: true, cardNumber: true, cardType: true, expiryDate: true, cardholderName: true, isDefault: true, nickname: true, createdAt: true },
   });
 
-  const masked = cards.map((c) => {
-    let last4 = "****";
-    try {
-      const plain = decryptCard(c.cardNumber);
-      last4 = plain.replace(/\s/g, "").slice(-4);
-    } catch {}
-    return {
-      id: c.id,
-      last4,
-      cardType: c.cardType,
-      expiryDate: c.expiryDate,
-      cardholderName: c.cardholderName,
-      isDefault: c.isDefault,
-      nickname: c.nickname,
-      createdAt: c.createdAt,
-    };
-  });
+  const masked = maskedSavedCards(cards, decryptCard);
 
   return NextResponse.json({ cards: masked }, { headers: { "Cache-Control": "no-store, private" } });
 }

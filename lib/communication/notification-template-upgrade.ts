@@ -50,7 +50,8 @@ export function notificationUpgradeDraft(source: NotificationTemplateSource, rec
   // Content-addressed name makes reruns idempotent and avoids reusing an old
   // provider name after the administrator changes the source template.
   const sourceHash = notificationTemplateHash(source);
-  const name = `${source.name.replace(/_v\d+$/, "").slice(0, 90)}_notice_${sourceHash.slice(0, 12)}`;
+  const policyHash = createHash("sha256").update(`concise-receipt-v2:${sourceHash}`).digest("hex");
+  const name = `${source.name.replace(/_v\d+$/, "").slice(0, 90)}_notice_${policyHash.slice(0, 12)}`;
   return { name, body: upgraded.ar.body, header: upgraded.ar.header, footerText: upgraded.ar.footerText, buttons: upgraded.ar.buttons, translations: upgraded, sourceHash };
 }
 

@@ -36,7 +36,7 @@ export function mapMetaTemplateStatus(status: string | null | undefined): Templa
     case "IN_APPEAL":
       return { providerStatus, internalStatus: "IN_APPEAL", labelAr: "قيد الاستئناف" };
     case "MISSING_IN_WABA":
-      return { providerStatus, internalStatus: "MISSING_IN_WABA", labelAr: "غير متاح في كل الحسابات" };
+      return { providerStatus, internalStatus: "MISSING_IN_WABA", labelAr: "غير متاح في الحساب المحدد" };
     default:
       return { providerStatus, internalStatus: "UNKNOWN", labelAr: "غير معروف" };
   }
