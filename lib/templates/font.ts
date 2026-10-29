@@ -43,7 +43,7 @@ export function applyAppFont(html: string, locale?: string): string {
 /** Transactional mail has a restrained scale in every language. Explicit
  * inline styles also work in email clients which discard head stylesheets. */
 export function automaticEmailHtml(html: string, locale?: string): string {
-  const font = locale?.toLowerCase().split(/[-_]/)[0] === "ar" ? ARABIC_EMAIL_FONT_STACK : APP_FONT_STACK;
+  const font = ARABIC_EMAIL_FONT_STACK;
   const styled = html.replace(/<(body|main|table|td|div|p|span|a|strong|b|li|h[1-6])\b([^>]*)>/gi, (_tag, tag: string, attrs: string) => {
     const heading = /^h[1-6]$/i.test(tag);
     const baseSize = heading ? (/^h1$/i.test(tag) ? 22 : 18) : 14;

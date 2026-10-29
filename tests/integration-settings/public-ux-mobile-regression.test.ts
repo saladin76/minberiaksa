@@ -245,7 +245,7 @@ test("responsive public catalogue and donor account preserve readable narrow gri
   const css = read("styles/minbar/minbar.css");
   assert.match(css, /\.blog-layout \{ grid-template-columns: minmax\(0,1fr\) !important/);
   assert.match(css, /\.mia-site-search-page__grid \{ grid-template-columns: minmax\(0,1fr\)/);
-  assert.match(css, /\.acc-page \.acc-stats \{ grid-template-columns: repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.acc-page \.acc-stats \{ grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test("mobile project hero keeps photography visible under a light overlay", () => {

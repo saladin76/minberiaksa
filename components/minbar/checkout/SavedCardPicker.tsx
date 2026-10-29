@@ -24,7 +24,8 @@ export function SavedCardPicker({ cards, value, onChange, disabled = false }: {
               <CreditCard size={18} aria-hidden="true" className="shrink-0 text-[#a93428]" />
               <input type="radio" name={name} value={card.id} checked={value === card.id} onChange={() => onChange(card.id)} className="size-4 shrink-0 accent-[#a93428]" />
             </span>
-            <span dir="ltr" className="truncate text-start text-xs font-bold uppercase">{card.cardType} <bdi>•••• {card.last4}</bdi></span>
+            <span dir="ltr" className="truncate text-start text-[10px] font-bold uppercase">{card.cardType}</span>
+            <bdi dir="ltr" className="whitespace-nowrap text-start text-sm font-bold tracking-wider">•••• {card.last4}</bdi>
             <span className="text-xs text-slate-500">{t("expires")} <bdi>{card.expiryDate}</bdi></span>
           </label>
         ))}

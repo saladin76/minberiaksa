@@ -36,6 +36,7 @@ test("automatic email uses Cairo for Arabic and a compact inline scale without c
   assert.match(html, /font-size:22px/); assert.match(html, /font-size:11px/);
   assert.ok(html.includes('href="https://example.test/document?t=private"') && html.includes("Total: 1.00 USD") && html.includes("color:#123"));
   assert.equal(automaticEmailHtml(html, "ar"), html);
+  for (const locale of SUPPORTED_LOCALES) assert.match(automaticEmailHtml(input, locale), /font-family:&quot;Cairo&quot;, Tahoma, Arial, sans-serif/);
 });
 test("checkout loads the saved-card language namespace in every supported language", () => {
   const source = readFileSync("app/[locale]/checkout/page.tsx", "utf8");
@@ -64,4 +65,26 @@ test("the legacy receipt URL reuses the authorized handler without a localhost r
   } });
   const result = await mod.exports.GET(request, { params: Promise.resolve({ id: "fixture" }) });
   assert.equal(calls, 1); assert.equal(result.status, 200); assert.equal(result.headers.get("Location"), null);
+});
+
+test("account history and receipt eligibility agree even when an unconfirmed order has a recurring plan reference", async () => {
+  const now = new Date(), rows = [
+    { id: "confirmed", donorId: "owner", status: "PAID", paidAt: now, createdAt: now, subscriptionId: null, totalAmount: 1, currency: "USD", items: [] },
+    { id: "not-confirmed", donorId: "owner", status: "PAID", paidAt: null, createdAt: now, subscriptionId: "existing-plan", totalAmount: 1, currency: "USD", items: [] },
+    { id: "another-donor", donorId: "other", status: "PAID", paidAt: now, createdAt: now, subscriptionId: null, totalAmount: 1, currency: "USD", items: [] },
+  ];
+  const select = (where: Record<string, unknown>) => rows.filter(row => row.donorId === where.donorId && row.status === where.status && (!(where.paidAt as { not?: unknown }) || row.paidAt !== null));
+  const mod = { exports: {} as { getAccountSummary: (id: string, locale: string) => Promise<{ donations: Array<{ id: string }>; donationCount: number }> } };
+  const deps: Record<string, unknown> = {
+    "server-only": {}, "@/lib/i18n/translation-fallback": { translationLocaleWhere: () => ({}), pickTranslation: () => null }, "@/lib/donations/bank-transfer-shared": {},
+    "@/lib/prisma": { prisma: {
+      user: { findUnique: async () => ({ id: "owner", name: "Fixture", createdAt: now }) },
+      donation: { findMany: async ({ where }: { where: Record<string, unknown> }) => select(where), aggregate: async ({ where }: { where: Record<string, unknown> }) => ({ _sum: { amountUSD: select(where).length }, _count: { _all: select(where).length } }) },
+      subscription: { count: async () => 0 }, bankTransferClaim: { findMany: async () => [] },
+    } },
+  };
+  const source = ts.transpileModule(readFileSync("lib/minbar/account.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  new vm.Script(source).runInNewContext({ module: mod, exports: mod.exports, console, require: (name: string) => { assert.ok(name in deps, name); return deps[name]; } });
+  const result = await mod.exports.getAccountSummary("owner", "en");
+  assert.equal(result.donationCount, 1); assert.equal(result.donations.length, 1); assert.equal(result.donations[0].id, "confirmed");
 });
