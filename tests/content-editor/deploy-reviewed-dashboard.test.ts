@@ -13,6 +13,7 @@ for (const scenario of ["healthy", "mismatch", "dirty", "build-failed", "rollbac
     writeFileSync(join(app, "scripts", "deploy-reviewed-dashboard.sh"), readFileSync("scripts/deploy-reviewed-dashboard.sh"));
     const executable = (name: string, contents: string) => writeFileSync(join(bin, name), "#!/bin/bash\n" + contents, { mode: 0o755 });
     executable("git", [
+      'if [[ "$PWD" != "$FIXTURE_APP" ]]; then echo "Git escaped the fixture" >&2; exit 90; fi',
       'printf "git %s\\n" "$*" >> "$FIXTURE_LOG"',
       'if [[ "$1" == diff && "$SCENARIO" == dirty ]]; then exit 1; fi',
       `if [[ "$1" == rev-parse ]]; then if [[ "$2" == FETCH_HEAD && "$SCENARIO" != mismatch ]]; then printf '${target}'; else printf '${previous}'; fi; fi`,
@@ -20,17 +21,27 @@ for (const scenario of ["healthy", "mismatch", "dirty", "build-failed", "rollbac
     ].join("\n"));
     executable("curl", 'printf "curl\\n" >> "$FIXTURE_LOG"\n[[ "$SCENARIO" != rollback* ]]');
     executable("sleep", "exit 0"); executable("pm2", 'printf "pm2 %s\\n" "$*" >> "$FIXTURE_LOG"');
+    executable("npm", 'echo "Unexpected npm call inside deployment fixture" >&2; exit 91');
     writeFileSync(join(app, "scripts", "deploy-vps.sh"), [
-      '#!/bin/bash', 'printf "deploy %s\\n" "$BRANCH" >> "$FIXTURE_LOG"',
+      '#!/bin/bash',
+      '[[ -v APP_DIR ]] && { echo "APP_DIR leaked into the build" >&2; exit 92; }',
+      '[[ -v DATABASE_URL || -v NEXT_DIST_DIR ]] && { echo "Production environment leaked into the fixture" >&2; exit 93; }',
+      'printf "deploy %s\\n" "$BRANCH" >> "$FIXTURE_LOG"',
       '[[ "$SCENARIO" == build-failed ]] && exit 31',
       'mv .next .next-previous', 'mkdir .next', 'echo new-build > .next/version',
       'if [[ "$SCENARIO" == rollback-dependencies ]]; then echo "▶ activating lockfile-matched dependencies"; mv node_modules .node_modules-previous; mkdir node_modules; echo new-dependencies > node_modules/version; fi',
       'exit 0',
     ].join("\n"));
     try {
-      const result = spawnSync("bash", [join(app, "scripts", "deploy-reviewed-dashboard.sh"), target], { cwd: app, encoding: "utf8", env: { ...process.env, PATH: `${bin}:/usr/bin:/bin`, SCENARIO: scenario, FIXTURE_LOG: log, RELEASE_BACKUPS_DIR: join(root, "backups") } });
+      const result = spawnSync("bash", [join(app, "scripts", "deploy-reviewed-dashboard.sh"), target], {
+        cwd: app, encoding: "utf8", timeout: 10_000,
+        // Do not inherit the real APP_DIR, credentials, dist dir or PM2 settings.
+        // Explicitly set APP_DIR to the fixture to exercise the wrapper entry point.
+        env: { PATH: `${bin}:/usr/bin:/bin`, APP_DIR: app, SCENARIO: scenario, FIXTURE_LOG: log, FIXTURE_APP: app, RELEASE_BACKUPS_DIR: join(root, "backups") },
+      });
+      assert.equal(result.error, undefined, result.error?.message);
       const calls = readFileSync(log, "utf8");
-      if (scenario === "healthy") { assert.equal(result.status, 0, result.stderr); assert.equal(readFileSync(join(app, ".next", "version"), "utf8").trim(), "new-build"); assert.match(calls, /curl/); }
+      if (scenario === "healthy") { assert.equal(result.status, 0, result.stdout + result.stderr); assert.equal(readFileSync(join(app, ".next", "version"), "utf8").trim(), "new-build"); assert.match(calls, /curl/); }
       else {
         assert.notEqual(result.status, 0); assert.equal(readFileSync(join(app, ".next", "version"), "utf8").trim(), "old-build");
         if (scenario.startsWith("rollback")) {

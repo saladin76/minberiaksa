@@ -4,6 +4,9 @@
 set -euo pipefail
 cd "${APP_DIR:-$(dirname "$0")/..}"
 ROOT="$PWD"
+# APP_DIR selects this wrapper's working directory only. Keeping it exported
+# would redirect nested deployment fixtures into the live repository during build.
+unset APP_DIR
 TARGET="${1:-}"
 SOURCE_BRANCH="${SOURCE_BRANCH:-fix/dashboard-release-recovery-20261029}"
 APP="${PM2_APP:-minberiaksa}"

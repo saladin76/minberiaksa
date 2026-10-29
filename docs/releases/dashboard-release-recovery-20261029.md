@@ -1,5 +1,15 @@
 # Dashboard source recovery — 29 October 2026
 
+## Deployment environment correction — 29 October 2026
+
+The production attempt at `61b10d9e574d4109c61ce72d25cd226c9e817209` stopped with three deployment-fixture failures during the content tests. The supplied terminal log contains no runtime activation message for that attempt. Its previous local validation did not exercise the exported `APP_DIR` used by the real invocation.
+
+That variable selected the live directory inside the child test wrapper, overriding its temporary fixture directory. The wrapper now consumes and unsets `APP_DIR` before starting the build. Fixture subprocesses use an explicit environment with their own directory and mock executables, rather than inheriting production configuration. They reject Git calls outside the fixture, reject an unexpected npm call, check for leaked build variables and have a 10-second timeout.
+
+Regression evidence: the previous script fails immediately with the explicit APP_DIR-leak guard, without invoking a real deployment. The corrected script passes all six scenarios with production-like APP_DIR/NEXT_DIST_DIR/PM2/SOURCE_BRANCH/DATABASE_URL values in the parent process. The complete content suite also passes **193/193** under the APP_DIR and NEXT_DIST_DIR used by the server build, in approximately six seconds. Focused ESLint, Bash syntax and patch-whitespace checks pass.
+
+This correction changes the deployment wrapper and its tests. The application source and dependencies remain those of the previously built release. Production deployment of the correction is still for the owner to execute using the new full reviewed commit; do not repeat the `61b10d9` command.
+
 The owner explicitly approved source upload to `saladin76/minberiaksa` on 29 October. Production deployment remains held for the owner to execute from their SSH terminal. The earlier sandbox checkout and its `1a0f0c1` release bundle are unavailable in the current environment and absent from the remote. That earlier snapshot and its test results are not being represented as this recovery's source or validation.
 
 Recovery starts from remote production-source base `1af576bb4edf10cea2075b6c2ff1d0ed5bb10a87` on an isolated branch. Source checkpoints are retained remotely, without merging main or deploying.
