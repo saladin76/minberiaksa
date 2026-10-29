@@ -58,6 +58,7 @@ export function resolveTriggerSender(
     locale: request.locale ?? null,
     country: request.country ?? null,
     purpose: request.purpose ?? "TRANSACTIONAL",
+    template: channel === "WHATSAPP",
   });
 }
 
@@ -84,14 +85,16 @@ export async function sendTriggerMessage(
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
     const html = localizeDonationFailureLinks(
-      await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext), ctx, variant.resolvedLocale),
+      await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext, locale), ctx, variant.resolvedLocale),
       locale,
     );
-    const subject = renderEmailSubject(variant.subject, ctx);
+    const subject = renderEmailSubject(donationNotificationText(variant.subject, moneyContext, locale), ctx);
+    const exactEmail = (tpl.translations as Record<string, { subject?: string; document?: unknown }> | null)?.[locale];
+    const renderingError = locale !== "ar" && (!exactEmail?.subject?.trim() || !exactEmail?.document) ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined;
     const routed = resolveTriggerSender(config, "EMAIL", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     /* A routing refusal is the answer, not a prompt to fall back to the default identity. */
     if (!routed.ok) return { channel: "EMAIL", outcome: "SKIPPED", reason: routed.reason };
-    const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: routed.sender.senderEmail, variables, donationId, purpose: opts.purpose, attachments: opts.attachments });
+    const response = await sendAutomaticEmailMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientEmail: ctx.user.email ?? null, renderedSubject: subject, renderedBody: html, senderEmail: routed.sender.senderEmail, variables, donationId, purpose: opts.purpose, attachments: opts.attachments, renderingError });
     return { channel: "EMAIL", outcome: response.outcome, reason: response.reason };
   }
 
@@ -99,7 +102,7 @@ export async function sendTriggerMessage(
     const tpl = await prisma.smsTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, moneyContext), ctx), locale);
+    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, moneyContext, locale), ctx), locale);
     const response = await sendAutomaticSmsMessage({
       triggerEvent: event,
       templateId: tpl.id,
@@ -110,6 +113,7 @@ export async function sendTriggerMessage(
       recipientPhone: ctx.user.phone || null,
       country: ctx.user.countryCode || null,
       renderedBody: body,
+      renderingError: variant.resolvedLocale && variant.resolvedLocale !== locale ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined,
       variables,
       donationId,
       purpose: opts.purpose,
@@ -121,10 +125,13 @@ export async function sendTriggerMessage(
     const tpl = await prisma.whatsappTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, moneyContext), ctx), locale);
+    // Existing approved Meta schemas still have separate numeric/currency slots.
+    // New receipt families carry the complete summary in one approved slot.
+    const legacyMoney = { donation: { amountBreakdown: moneyContext.donation?.amountBreakdown, notificationAmount: moneyContext.donation?.notificationAmount } };
+    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, legacyMoney), ctx), locale);
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
-    const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId);
+    const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId, { exactLanguage: true });
     /* Meta's placeholders are positional, and the local template's variable catalog says which
        token each position carries. Each one is rendered against this recipient's context through
        the same merge the body uses, so the parameters and the body cannot disagree. */
@@ -135,7 +142,7 @@ export async function sendTriggerMessage(
       templateValues[String(index + 1)] = value;
     });
     const notificationValues = metaTemplate ? donationNotificationParameters({ values: templateValues, scopedNames: metaTemplate.scopedNames, positionalNames: metaTemplate.positionalNames, componentsSchema: metaTemplate.componentsSchema, notificationAmount: moneyContext.donation?.notificationAmount }) : templateValues;
-    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues: notificationValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose });
+    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues: notificationValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose, renderingError: variant.resolvedLocale && variant.resolvedLocale !== locale ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined });
     return { channel: "WHATSAPP", outcome: response.outcome, reason: response.reason };
   }
 

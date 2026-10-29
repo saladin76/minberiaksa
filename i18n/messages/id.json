@@ -3214,6 +3214,7 @@
     "chooseFirst": "Pilih jumlah dukungan tim atau “Tidak, terima kasih” untuk melanjutkan"
   },
   "Gift": {
+    "validationError": "Masukkan nama penerima dan detail pengiriman yang valid. Sertakan kode negara pada nomor WhatsApp.",
     "emailSubject": "Hadiah atas nama Anda: donasi untuk {project}",
     "emailTitle": "{recipientName}, Anda menerima hadiah",
     "emailBody": "{donorName} berdonasi atas nama Anda untuk proyek “{project}” melalui Minbar Al-Aqsa.",

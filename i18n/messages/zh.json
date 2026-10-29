@@ -2174,6 +2174,7 @@
     "chooseFirst": "请选择团队支持金额或“不用了，谢谢”以继续"
   },
   "Gift": {
+    "validationError": "请输入收件人姓名和有效联系方式。WhatsApp号码须包含国家代码。",
     "emailSubject": "以您的名义捐赠：{project}",
     "emailTitle": "{recipientName}，您收到一份礼物",
     "emailBody": "{donorName} 通过阿克萨讲坛以您的名义向“{project}”项目捐款。",

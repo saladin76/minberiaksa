@@ -1,4 +1,10 @@
 {
+  "النسخة المحفوظة ليست بلغة المستلم؛ أكمل ترجمة القالب وأنشئ رسالة جديدة قبل الإرسال": "Kaydedilen mesaj alıcının dilinde değil. Göndermeden önce şablonun çevirisini tamamlayın ve yeni bir mesaj oluşturun.",
+  "إجمالي بعملة المتبرع والمقابل البنكي المؤكد بلغة الرسالة": "Mesaj dilinde, bağışçının para biriminde toplam ve doğrulanmış banka karşılığı",
+  "الإجمالي: 55 دولار أمريكي. المقابل البنكي لنفس التبرع: 2,000 ليرة تركية.": "Toplam: 55 ABD doları. Aynı bağışın bankada tahsil edilen karşılığı: 2.000 Türk lirası.",
+  "تاريخ ووقت التبرع بلغة الرسالة (توقيت إسطنبول)": "Mesaj dilinde bağış tarihi ve saati (İstanbul saati)",
+  "29 أكتوبر 2026، 12:00": "29 Ekim 2026, 12:00",
+  "قوالب واتساب تخرج من الرقم الافتراضي فقط. الأرقام الأخرى تبقى للردود المباشرة في محادثاتها.": "WhatsApp şablonları yalnızca varsayılan numaradan gönderilir. Diğer numaralar kendi sohbetlerindeki doğrudan yanıtlar için kullanılabilir.",
   "# ===== الملخص =====": "# ===== Özet =====",
   "# الاشتراكات ({0})": "# Abonelikler ({0})",
   "# المعايير المطبقة:": "# Uygulanan filtreler:",

@@ -1,4 +1,10 @@
 {
+  "النسخة المحفوظة ليست بلغة المستلم؛ أكمل ترجمة القالب وأنشئ رسالة جديدة قبل الإرسال": "The saved message is not in the recipient’s language. Complete the template translation and create a new message before sending.",
+  "إجمالي بعملة المتبرع والمقابل البنكي المؤكد بلغة الرسالة": "Total in the donor’s currency and confirmed bank equivalent, in the message language",
+  "الإجمالي: 55 دولار أمريكي. المقابل البنكي لنفس التبرع: 2,000 ليرة تركية.": "Total: 55 US dollars. Bank charge for this same donation: 2,000 Turkish lira.",
+  "تاريخ ووقت التبرع بلغة الرسالة (توقيت إسطنبول)": "Donation date and time in the message language (Istanbul time)",
+  "29 أكتوبر 2026، 12:00": "29 October 2026, 12:00",
+  "قوالب واتساب تخرج من الرقم الافتراضي فقط. الأرقام الأخرى تبقى للردود المباشرة في محادثاتها.": "WhatsApp templates use only the default number. Other numbers remain available for direct replies in their own conversations.",
   "# ===== الملخص =====": "# ===== Summary =====",
   "# الاشتراكات ({0})": "# Subscriptions ({0})",
   "# المعايير المطبقة:": "# Applied filters:",

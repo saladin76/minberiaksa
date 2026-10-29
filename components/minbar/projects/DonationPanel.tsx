@@ -1,6 +1,7 @@
 "use client";
 
 import { decimalAmount, digitsOnly } from "@/lib/minbar/numeric-input";
+import { parseGiftOrder } from "@/lib/donations/gift-order";
 import { useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -55,6 +56,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
   const { format, formatNumber } = useMinbarMoney();
   const { fromLocal, fromChip, labelOf, tooSmall, minLabel } = useDonationAmount();
   const tGive = useTranslations("CardGive");
+  const tGift = useTranslations("Gift");
   const shares = project.shares;
   const { t: tShares, unitWord, countLabel } = useShareWording(shares);
 
@@ -72,6 +74,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<CartFreqKey>("once");
   const [giftOpen, setGiftOpen] = useState(false);
+  const [giftError, setGiftError] = useState(false);
   const [giftName, setGiftName] = useState("");
   const [channels, setChannels] = useState<{ whatsapp: boolean; email: boolean }>({
     whatsapp: false,
@@ -101,7 +104,10 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
   const hasFinancials = project.goal != null && project.goal > 0;
   const pct = hasFinancials ? Math.min((project.raised / (project.goal as number)) * 100, 100) : 0;
   const progress = shares ? shareProgress(shares, project.raised, hasFinancials ? project.goal : null) : null;
-  const giftReady = giftName.trim().length > 0 && (channels.whatsapp ? giftPhone.trim() : true) && (channels.email ? giftEmail.trim() : true);
+  const giftConfigured = giftOpen || Boolean(giftName.trim()) || channels.whatsapp || channels.email;
+  const giftParsed = parseGiftOrder({ recipientName: giftName, recipientPhone: channels.whatsapp ? giftPhone : null,
+    recipientEmail: channels.email ? giftEmail : null, channels: [...(channels.whatsapp ? ["WHATSAPP"] : []), ...(channels.email ? ["EMAIL"] : [])] });
+  const giftReady = giftParsed.ok && giftParsed.gift !== null;
 
   const chip = (active: boolean, height: number, radius: number): CSSProperties => ({
     height,
@@ -162,6 +168,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
 
   const onDonate = () => {
     if (!(amount > 0)) return;
+    if (giftConfigured && !giftReady) { setGiftError(true); setGiftOpen(true); return; }
     if (belowMinimum) return setMinHint(true);
     addToCart(buildItem());
     router.push(miaPath("cart", locale));
@@ -169,6 +176,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
 
   const onAddToBasket = () => {
     if (!(amount > 0)) return;
+    if (giftConfigured && !giftReady) { setGiftError(true); setGiftOpen(true); return; }
     if (belowMinimum) return setMinHint(true);
     addToCart(buildItem());
     setAdded(true);
@@ -351,6 +359,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
           </span>
         </button>
 
+        {giftError && !giftReady ? <p role="alert" style={{ color: "#a93428", fontSize: 13 }}>{tGift("validationError")}</p> : null}
         {giftOpen ? (
           <div style={{ display: "grid", gap: 12, padding: 16, background: "var(--sand)", border: "1px solid rgba(211,154,39,.42)", borderRadius: 11 }}>
             <span style={{ display: "grid", gap: 5 }}>

@@ -285,6 +285,7 @@ export async function receiptPagesFor(docs: IssuedDocuments): Promise<ReceiptDoc
  * serials, and the download links wait for the records.
  */
 export interface SuccessDocuments {
+  gifts?: Array<{ id: string; recipientName: string }>;
   /** Whether the records exist yet. */
   issued: boolean;
   receiptNo: string | null;
@@ -295,12 +296,13 @@ export interface SuccessDocuments {
 
 export async function successDocumentsFor(donationId: string, docs: IssuedDocuments | null): Promise<SuccessDocuments | null> {
   if (docs) {
-    const [thanks, waqf, receipt] = await Promise.all([
+    const [thanks, waqf, receipt, gifts] = await Promise.all([
       thanksDocumentFor(docs),
       waqfDocumentsFor(docs),
       receiptDocumentFor(docs, docs.locale, { index: 1, total: docs.locale === "tr" ? 1 : 2 }),
+      prisma.donationItem.findMany({ where: { donationId, giftRecipientName: { not: null } }, select: { id: true, giftRecipientName: true } }),
     ]);
-    return { issued: true, receiptNo: docs.receipt.receiptNo, thanks, waqf, receipt };
+    return { issued: true, receiptNo: docs.receipt.receiptNo, thanks, waqf, receipt, gifts: gifts.filter(gift => Boolean(gift.giftRecipientName)).map(gift => ({ id: gift.id, recipientName: gift.giftRecipientName! })) };
   }
 
   if (!/^[0-9a-fA-F]{24}$/.test(donationId)) return null;

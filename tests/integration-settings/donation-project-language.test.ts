@@ -7,6 +7,7 @@ import * as locales from "../../lib/locales";
 import * as projects from "../../lib/templates/donation-projects";
 import * as money from "../../lib/templates/money";
 import * as donationMoney from "../../lib/templates/donation-money";
+import { giftFixture } from "./gift-delivery-fixture";
 import type { TemplateContext } from "../../lib/templates/variables";
 
 const arabicTitle = "دعم الأسر المتعففة في القدس";
@@ -158,34 +159,13 @@ test("real event dispatch renders Turkish project names in email, SMS and Meta p
 });
 
 test("gift email and WhatsApp use the same translated project name without changing the donation", async () => {
-  const bodies: string[] = [];
-  let selection: unknown;
-  let delivered = 0;
-  const gift = load<{ deliverDonationGifts: (id: string) => Promise<{ emailsSent: number; whatsappSent: number; errors: number }> }>("lib/donations/gift-delivery.ts", {
-    "server-only": {}, "@/lib/templates/donation-projects": projects,
-    "@/lib/prisma": { prisma: {
-      donationItem: {
-        findMany: async (query: { include: unknown }) => { selection = query.include; return [{ id: "gift", campaign: { ...campaign, slug: "family-support" }, amount: 498.56, giftRecipientName: "Gift Recipient", giftRecipientEmail: "gift@example.test", giftRecipientPhone: "+905550000001", giftChannels: ["EMAIL", "WHATSAPP"], giftShowAmount: false, giftMessage: null }]; },
-        update: async () => { delivered += 1; },
-      },
-      donation: { findUnique: async () => ({ currency: "TRY", locale: "tr", donor: { name: "Fixture Donor" } }) },
-    } },
-    "@/i18n/locale-messages": { messagesFor: () => ({ Gift: { emailTitle: "Hediye bağış", emailSubject: "Hediye bağış", emailBody: "Proje: {project}", whatsappBody: "Proje: {project}" } }) },
-    "@/lib/certificates/generate": { generateThanksPdf: async () => ({ filename: "fixture.pdf", pdf: { toString: () => "fixture" } }) },
-    "@/lib/certificates/issue": { ensureDonationDocuments: async () => ({ locale: "tr", thanks: {} }) },
-    "@/lib/communication/providers/email/client": { sendEmailMessage: async (input: { html: string }) => { bodies.push(input.html); return { ok: true }; } },
-    "@/lib/communication/providers/meta-whatsapp/client": { getMetaConfig: async () => ({ defaultPhoneNumberId: "sender" }), graphFetch: async (_config: unknown, _path: string, input: { body: string }) => { bodies.push(JSON.parse(input.body).text.body); return { ok: true }; } },
-    "@/lib/events/dispatch": { resolveTriggerSendConfig: async () => ({}), resolveTriggerSender: () => ({ ok: true, sender: {} }) },
-    "@/lib/server-base-url": { getServerBaseUrl: async () => "https://donation.example.test" },
-    "@/lib/minbar/routes": { miaPath: () => "/tr/projects/family-support" },
-    "@/lib/audit-log": { writeAuditLog: async () => undefined },
-  });
-  const result = await gift.deliverDonationGifts("donation");
+  const f = giftFixture({ locale: "tr", campaign: { ...campaign, slug: "family-support" } });
+  const result = await f.deliver();
   assert.equal(result.errors, 0);
   assert.equal(result.emailsSent + result.whatsappSent, 2);
-  assert.equal(delivered, 1);
-  assert.match(JSON.stringify(selection), /translations/);
-  for (const body of bodies) {
+  assert.ok(f.line.giftDeliveredAt);
+  assert.match(JSON.stringify(f.queries), /translations/);
+  for (const body of [...f.emails.map(m => m.html), ...f.whatsapps.map(m => m.body)]) {
     assert.ok(body.replace(/&#39;/g, "'").includes(turkishTitle));
     assert.doesNotMatch(body, /[\u0600-\u06ff]/);
   }

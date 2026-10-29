@@ -2174,6 +2174,7 @@
     "chooseFirst": "Kies een bedrag voor het team of “Nee, bedankt” om verder te gaan"
   },
   "Gift": {
+    "validationError": "Vul de naam en geldige contactgegevens van de ontvanger in. Vermeld de landcode bij het WhatsApp-nummer.",
     "emailSubject": "Een geschenk op uw naam: een gift voor {project}",
     "emailTitle": "{recipientName}, u heeft een geschenk",
     "emailBody": "{donorName} heeft op uw naam gedoneerd aan “{project}” via Minbar Al-Aqsa.",

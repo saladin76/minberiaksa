@@ -3283,6 +3283,7 @@
     "chooseFirst": "Devam etmek için bir ekip desteği tutarı ya da “Hayır, teşekkürler” seçin"
   },
   "Gift": {
+    "validationError": "Alıcının adını ve geçerli iletişim bilgilerini girin. WhatsApp numarasına ülke kodunu ekleyin.",
     "emailSubject": "Adınıza bir hediye: {project} projesine bağış",
     "emailTitle": "{recipientName}, size bir hediye var",
     "emailBody": "{donorName}, Minber-i Aksa aracılığıyla “{project}” projesine sizin adınıza bağış yaptı.",

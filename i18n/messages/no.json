@@ -2174,6 +2174,7 @@
     "chooseFirst": "Velg et beløp til teamet eller «Nei takk» for å fortsette"
   },
   "Gift": {
+    "validationError": "Oppgi mottakerens navn og gyldige kontaktopplysninger. Ta med landskoden i WhatsApp-nummeret.",
     "emailSubject": "En gave i ditt navn: en donasjon til {project}",
     "emailTitle": "{recipientName}, du har fått en gave",
     "emailBody": "{donorName} har gitt i ditt navn til «{project}» via Minbar Al-Aqsa.",

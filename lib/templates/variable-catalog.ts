@@ -53,6 +53,8 @@ export const VARIABLE_CATALOG: VariableGroup[] = [
       { token: "{{donation.amountUSD}}", label: "المبلغ (USD)", exampleValue: "50" },
       { token: "{{donation.currency}}", label: "العملة", exampleValue: "USD" },
       { token: "{{donation.totalAmount}}", label: "الإجمالي", exampleValue: "55" },
+      { token: "{{donation.receiptSummary}}", label: "إجمالي بعملة المتبرع والمقابل البنكي المؤكد بلغة الرسالة", exampleValue: "الإجمالي: 55 دولار أمريكي. المقابل البنكي لنفس التبرع: 2,000 ليرة تركية." },
+      { token: "{{donation.displayDate}}", label: "تاريخ ووقت التبرع بلغة الرسالة (توقيت إسطنبول)", exampleValue: "29 أكتوبر 2026، 12:00" },
       { token: "{{donation.itemCount}}", label: "عدد البنود", exampleValue: "2" },
       { token: "{{donation.createdAt}}", label: "تاريخ التبرّعة", exampleValue: "2026-04-12" },
       { token: "{{donation.campaignTitle}}", label: "أسماء الحملات (مفصولة)", exampleValue: "حملة العيون، حملة الشتاء" },

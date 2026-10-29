@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorizationValid } from "@/lib/communication/cron-auth";
 import { syncMetaWhatsappTemplates } from "@/lib/communication/whatsapp-template-sync";
 import { repairInvalidMetaParameterTemplates } from "@/lib/communication/meta-template-publisher";
+import { activateApprovedNotificationUpgrades } from "@/lib/communication/notification-template-upgrade-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,5 +34,8 @@ export async function GET(request: NextRequest) {
     error: error instanceof Error ? error.message : String(error),
   }));
 
-  return NextResponse.json({ ok: true, summary, repair });
+  const notificationUpgrades = await activateApprovedNotificationUpgrades().catch((error) => ({
+    error: error instanceof Error ? error.message : "NOTIFICATION_UPGRADE_FAILED",
+  }));
+  return NextResponse.json({ ok: true, summary, repair, notificationUpgrades });
 }

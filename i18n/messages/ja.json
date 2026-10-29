@@ -2174,6 +2174,7 @@
     "chooseFirst": "続けるには、チーム支援の金額か「結構です」を選んでください"
   },
   "Gift": {
+    "validationError": "受取人の名前と有効な連絡先を入力してください。WhatsApp番号には国番号を含めてください。",
     "emailSubject": "あなたの名前で贈られた寄付：{project}",
     "emailTitle": "{recipientName} さん、贈り物が届いています",
     "emailBody": "{donorName} さんが、ミンバル・アル＝アクサを通じて「{project}」にあなたの名前で寄付をされました。",

@@ -36,6 +36,8 @@ export type AutomaticOutcome = "SENT" | "SKIPPED" | "FAILED";
 export type AutomaticResult = { outcome: AutomaticOutcome; reason?: string; providerMessageId?: string | null };
 
 type CommonInput = {
+  /** Archived refusal, so missing translations cannot silently become Arabic sends. */
+  renderingError?: string;
   triggerEvent: MessageTriggerEvent;
   templateId: string;
   templateName: string;
@@ -161,6 +163,13 @@ export async function sendAutomaticEmailMessage(
     variables: deliveryVariables(input),
   };
 
+  if (input.renderingError) {
+    const created = await createDeliveryRecord({ ...base, recipientEmail: input.recipientEmail, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: input.renderingError });
+    await mirrorSentMessage("EMAIL", input, "SKIPPED", { recipientEmail: input.recipientEmail, renderedSubject: input.renderedSubject, renderedBody: input.renderedBody, errorMessage: input.renderingError });
+    return { outcome: created.ok ? "SKIPPED" : "FAILED", reason: created.ok ? input.renderingError : "ARCHIVE_FAILED" };
+  }
+
   const consentBlock = await automaticConsentBlock(input.recipientUserId, "EMAIL", input.purpose);
   if (consentBlock) {
     const created = await createDeliveryRecord({ ...base, recipientEmail: input.recipientEmail, status: "RENDERED" });
@@ -246,6 +255,13 @@ export async function sendAutomaticWhatsappMessage(
     variables: deliveryVariables(input),
     senderId: input.sender?.id ?? null,
   };
+
+  if (input.renderingError) {
+    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: input.renderingError });
+    await mirrorSentMessage("WHATSAPP", input, "SKIPPED", { recipientPhone: input.recipientPhone, renderedBody: input.renderedBody, errorMessage: input.renderingError });
+    return { outcome: created.ok ? "SKIPPED" : "FAILED", reason: created.ok ? input.renderingError : "ARCHIVE_FAILED" };
+  }
 
   if (!input.recipientPhone) {
     const created = await createDeliveryRecord({ ...base, recipientPhone: null, status: "RENDERED" });
@@ -461,6 +477,12 @@ export async function sendAutomaticSmsMessage(
     renderedBody: input.renderedBody,
     variables: deliveryVariables(input),
   };
+
+  if (input.renderingError) {
+    const created = await createDeliveryRecord({ ...base, recipientPhone: input.recipientPhone, status: "RENDERED" });
+    if (created.ok) await markDeliveryStatus(created.data.id, "SKIPPED", { errorMessage: input.renderingError });
+    return { outcome: created.ok ? "SKIPPED" : "FAILED", reason: created.ok ? input.renderingError : "ARCHIVE_FAILED" };
+  }
 
   const consentBlock = await automaticConsentBlock(input.recipientUserId, "SMS", input.purpose);
   if (consentBlock) {

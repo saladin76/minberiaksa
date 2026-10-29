@@ -379,7 +379,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
         outcome.skipped++; bump(outcome.reasons, "LANGUAGE_EXCLUDED"); return outcome;
       }
       rendered.body = trackCampaignBody(rendered.body, { id: campaignId, channel });
-      const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose });
+      const routed = resolveSenderFromSnapshot(senderSnapshot, { locale: recipient.locale, country: recipient.country, purpose, template: senderSnapshot.channel === "WHATSAPP" });
       const sender = routed.ok ? routed.sender : null;
       const routingReason = routed.ok ? null : routed.reason;
       const routing = routed.ok ? { matchedBy: routed.matchedBy, ruleId: routed.ruleId ?? null, fallbackUsed: routed.fallbackUsed ?? false } : { reason: routed.reason };

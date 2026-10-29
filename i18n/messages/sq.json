@@ -2174,6 +2174,7 @@
     "chooseFirst": "Zgjidhni një shumë për ekipin ose “Jo, faleminderit” për të vazhduar"
   },
   "Gift": {
+    "validationError": "Shkruani emrin e marrësit dhe të dhëna të vlefshme kontakti. Përfshini kodin e shtetit në numrin WhatsApp.",
     "emailSubject": "Një dhuratë në emrin tuaj: një dhurim për {project}",
     "emailTitle": "{recipientName}, keni një dhuratë",
     "emailBody": "{donorName} dhuroi në emrin tuaj për projektin “{project}” përmes Minbar Al-Aqsa.",

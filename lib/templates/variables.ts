@@ -1,7 +1,7 @@
 import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
 import { donationMessageLocale, donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
-import { donationMoneyFields } from "./donation-money";
+import { donationMoneyFields, receiptDate } from "./donation-money";
 
 /** ---------------- types ---------------- */
 
@@ -39,6 +39,9 @@ export interface TemplateDonation {
   fees?: string;
   amountBreakdown?: string;
   notificationAmount?: string;
+  /** Original currency, and confirmed TRY equivalent when recorded by the bank. */
+  receiptSummary?: string;
+  displayDate?: string;
   status: string;
   createdAt: string;
   campaignTitle: string;
@@ -148,6 +151,9 @@ type RawDonation = DonationProjectSource & {
   paidAt?: Date | null;
   status: string;
   createdAt: Date;
+  provider?: string | null;
+  providerOrderId?: string | null;
+  providerRaw?: unknown;
 };
 
 function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
@@ -170,6 +176,7 @@ function donationToContext(d: RawDonation, locale?: string | null): TemplateDona
     totalAmount: formatTemplateMoney(d.totalAmount, locale || d.locale, d.currency),
     status: d.status,
     createdAt: formatDate(d.createdAt),
+    displayDate: receiptDate(d.createdAt, locale),
     campaignTitle: projects.campaignTitle,
     itemCount: String(items.length),
     items,
@@ -237,7 +244,9 @@ export async function loadContextForDonation(
 ): Promise<TemplateContext | null> {
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
-    select: { ...donationSelect, donorId: true },
+    // Bank snapshots are needed for the focus receipt only, not every row in
+    // a donor's history or a large marketing audience.
+    select: { ...donationSelect, donorId: true, provider: true, providerOrderId: true, providerRaw: true },
   });
   if (!donation) return null;
   const base = await loadContext(donation.donorId, localeOverride || donation.locale);

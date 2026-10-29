@@ -31,6 +31,7 @@ export type RetryOutcomeCode = RetryRecipientCode
   | "NO_SENDER_IDENTITY" | "TEMPLATE_PARAMETER_MISSING" | "TEMPLATE_HEADER_MEDIA_MISSING"
   | "ARCHIVE_FAILED" | "PROVIDER_REJECTED" | "RETRY_ORIGINAL_REQUIRED"
   | "DELIVERY_OUTCOME_UNCERTAIN" | "ACCEPTED_UNRECORDED"
+  | "EXACT_TEMPLATE_LANGUAGE_REQUIRED"
   | "WHATSAPP_MARKETING_COOLDOWN" | "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE"
   | "DONATION_WAQF_LINK_REQUIRES_CERTIFICATE_ID" | "DONATION_DOCUMENT_CONTEXT_MISSING"
   | "DONATION_DOCUMENT_RECIPIENT_MISMATCH" | "DONATION_DOCUMENT_ACCESS_TOKEN_UNAVAILABLE";
@@ -40,6 +41,7 @@ export type RetryResult = {
   recipientName?: string | null; newDeliveryId?: string | null;
 };
 const MESSAGES: Record<RetryOutcomeCode, string> = {
+  EXACT_TEMPLATE_LANGUAGE_REQUIRED: "النسخة المحفوظة ليست بلغة المستلم؛ أكمل ترجمة القالب وأنشئ رسالة جديدة قبل الإرسال",
   SENT: "قبل المزوّد الرسالة؛ تُتابَع حالة التسليم في السجل",
   NOT_FOUND: "لم يُعثر على الرسالة",
   NOT_RETRYABLE_STATUS: "الرسالة ليست في حالة تسمح بإعادة الإرسال",
@@ -78,12 +80,14 @@ type DeliveryRow = {
   recipientPhone: string | null; recipientName: string | null;
   renderedSubject: string | null; renderedBody: string | null; variables: unknown;
   campaignId: string | null; retriedAt: Date | null; retryOfDeliveryId: string | null;
+  errorMessage?: string | null;
 };
 const SELECT = {
   id: true, channel: true, status: true, origin: true, purpose: true, locale: true,
   templateId: true, templateName: true, recipientUserId: true, recipientEmail: true,
   recipientPhone: true, recipientName: true, renderedSubject: true, renderedBody: true,
   variables: true, campaignId: true, retriedAt: true, retryOfDeliveryId: true,
+  errorMessage: true,
 } as const;
 
 /** Preserve the existing manual/transactional policy; campaign retries also pass their shared guard. */
@@ -133,7 +137,7 @@ async function resolveMetaTemplate(row: DeliveryRow, businessAccountId: string |
   const tpl = await prisma.whatsappTemplate.findUnique({
     where: { id: row.templateId }, select: { id: true, provider: true, name: true, variables: true, header: true, translations: true },
   });
-  return tpl ? resolveMetaTemplateMapping(tpl, row.locale || "ar", businessAccountId) : null;
+  return tpl ? resolveMetaTemplateMapping(tpl, row.locale || "ar", businessAccountId, { exactLanguage: true }) : null;
 }
 
 export async function retryDelivery(deliveryId: string, opts: { actorId?: string | null; config?: TriggerSendConfig } = {}): Promise<RetryResult> {
@@ -149,6 +153,26 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   if ((NON_RETRYABLE_TERMINAL as readonly string[]).includes(row.status)) return result(deliveryId, "NOT_RETRYABLE_BOUNCED", { recipientName: row.recipientName });
   if (!(RETRYABLE_STATUSES as readonly string[]).includes(row.status)) return result(deliveryId, "NOT_RETRYABLE_STATUS", { detail: row.status });
   if (row.retriedAt) return result(deliveryId, "ALREADY_RETRIED", { recipientName: row.recipientName });
+  if (row.errorMessage === "EXACT_TEMPLATE_LANGUAGE_REQUIRED") return result(deliveryId, "EXACT_TEMPLATE_LANGUAGE_REQUIRED", { recipientName: row.recipientName });
+  // Gift retries must update their per-channel state under the item lease.
+  // Replaying only the archive payload would bypass gift idempotency.
+  const giftItemId = row.variables && typeof row.variables === "object" ? (row.variables as { giftItemId?: unknown }).giftItemId : null;
+  if ((row.channel === "EMAIL" || row.channel === "WHATSAPP") && typeof giftItemId === "string" && /^[a-f0-9]{24}$/i.test(giftItemId)) {
+    if (row.retriedAt) return result(deliveryId, "ALREADY_RETRIED");
+    const gift = await prisma.donationItem.findUnique({ where: { id: giftItemId }, select: { donationId: true, giftDeliveryState: true } });
+    if (!gift) return result(deliveryId, "NOT_FOUND");
+    const { deliverDonationGifts } = await import("@/lib/donations/gift-delivery");
+    await deliverDonationGifts(gift.donationId);
+    const refreshed = await prisma.donationItem.findUnique({ where: { id: giftItemId }, select: { giftDeliveryState: true } });
+    const { readGiftDeliveryState } = await import("@/lib/donations/gift-delivery-state");
+    const state = readGiftDeliveryState(refreshed?.giftDeliveryState);
+    const channelState = row.channel === "EMAIL" ? state.EMAIL : state.WHATSAPP;
+    if (channelState?.status === "SENT") {
+      await prisma.communicationDelivery.update({ where: { id: deliveryId }, data: { retriedAt: new Date() } });
+      return result(deliveryId, "SENT");
+    }
+    return result(deliveryId, channelState?.status === "SENDING" ? "DELIVERY_OUTCOME_UNCERTAIN" : "PROVIDER_REJECTED", { detail: channelState?.reason || "GIFT_DELIVERY_PENDING" });
+  }
   const channel = row.channel;
   let recipient: string | null;
   try {

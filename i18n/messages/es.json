@@ -3214,6 +3214,7 @@
     "chooseFirst": "Elige un importe de apoyo al equipo o «No, gracias» para continuar"
   },
   "Gift": {
+    "validationError": "Introduce el nombre del destinatario y datos válidos. Incluye el prefijo del país en el número de WhatsApp.",
     "emailSubject": "Un regalo en tu nombre: una donación a {project}",
     "emailTitle": "{recipientName}, tienes un regalo",
     "emailBody": "{donorName} ha donado en tu nombre al proyecto «{project}» a través de Minbar Al-Aqsa.",

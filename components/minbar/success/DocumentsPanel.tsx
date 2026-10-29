@@ -139,6 +139,10 @@ export default function DocumentsPanel({
           {t("thankYouCertTitle")}
         </button>
 
+        {documents?.gifts?.map(gift => <a key={gift.id} href={withDonationToken(`/api/gifts/${gift.id}/certificate`, accessToken)} style={rowButton("gold")} className="succ-link2">
+          {DownloadIcon}{t("thankYouCertTitle")} — {tCart("inNameOf", { name: gift.recipientName })}
+        </a>)}
+
         {waqf.map((doc, index) => {
           const key = waqfKey(index);
           return (

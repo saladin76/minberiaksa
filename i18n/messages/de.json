@@ -3214,6 +3214,7 @@
     "chooseFirst": "Wählen Sie einen Betrag für das Team oder „Nein danke“, um fortzufahren"
   },
   "Gift": {
+    "validationError": "Geben Sie den Namen und gültige Kontaktdaten ein. Die WhatsApp-Nummer muss die Ländervorwahl enthalten.",
     "emailSubject": "Ein Geschenk in Ihrem Namen: eine Spende für {project}",
     "emailTitle": "{recipientName}, Sie haben ein Geschenk",
     "emailBody": "{donorName} hat in Ihrem Namen über Minbar Al-Aqsa für „{project}“ gespendet.",

@@ -51,7 +51,7 @@ export type MetaPublishSummary = {
 export async function publishWhatsappTemplateToMeta(
   templateId: string,
   actor?: Actor,
-  opts: { category?: "UTILITY" | "MARKETING" | "AUTHENTICATION"; locales?: string[] } = {},
+  opts: { category?: "UTILITY" | "MARKETING" | "AUTHENTICATION"; locales?: string[]; defaultOnly?: boolean } = {},
 ): Promise<MetaPublishSummary> {
   const summary: MetaPublishSummary = {
     ok: false, templateId, targets: 0, created: 0, existing: 0, failed: 0,
@@ -172,7 +172,11 @@ export async function publishWhatsappTemplateToMeta(
     orderBy: [{ isDefault: "desc" }, { priority: "asc" }],
   });
   const wabas: string[] = [];
-  for (const sender of senders) {
+  if (opts.defaultOnly && senders.filter(sender => sender.isDefault).length !== 1) {
+    summary.errors.push({ businessAccountId: "", language: "", reason: "ONE_ACTIVE_DEFAULT_WHATSAPP_SENDER_REQUIRED" });
+    return summary;
+  }
+  for (const sender of opts.defaultOnly ? senders.filter(sender => sender.isDefault) : senders) {
     const waba = sender.businessAccountId?.trim();
     if (waba && !wabas.includes(waba)) wabas.push(waba);
   }

@@ -82,6 +82,8 @@ export const SAMPLE_TEMPLATE_CONTEXT = (() => {
       fees: get("donation.fees"),
       amountBreakdown: get("donation.amountBreakdown"),
       notificationAmount: "الإجمالي: 55 (المشاريع: 50; دعم الفريق: 5)",
+      receiptSummary: get("donation.receiptSummary"),
+      displayDate: get("donation.displayDate"),
       status: "PAID",
       createdAt: get("createdAt"),
       campaignTitle: get("campaignTitle"),

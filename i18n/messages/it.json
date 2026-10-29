@@ -2174,6 +2174,7 @@
     "chooseFirst": "Scegli un importo di sostegno al team o “No, grazie” per continuare"
   },
   "Gift": {
+    "validationError": "Inserisci il nome del destinatario e recapiti validi. Includi il prefisso internazionale nel numero WhatsApp.",
     "emailSubject": "Un regalo a tuo nome: una donazione per {project}",
     "emailTitle": "{recipientName}, hai ricevuto un regalo",
     "emailBody": "{donorName} ha donato a tuo nome al progetto “{project}” tramite Minbar Al-Aqsa.",

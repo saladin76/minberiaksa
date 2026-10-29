@@ -1,5 +1,7 @@
 import { formatTemplateMoney } from "./money";
 import { metaParameterName } from "../communication/meta-parameter-name";
+import { confirmedTryCharge, localizeReceiptFooter, receiptLocale, receiptMoney, RECEIPT_BANK_COPY, type ReceiptPaymentEvidence } from "./receipt-localization";
+export { receiptDate } from "./receipt-localization";
 
 // These are labels, not generated donor content. All amounts use the stored
 // order currency/snapshot; rendering must never change a payment or fetch FX.
@@ -25,7 +27,7 @@ export const DONATION_MONEY_LABELS = {
   hi: ["परियोजनाएँ", "टीम सहायता", "शुल्क", "कुल", "भुगतान प्रयास का कुल — प्राप्ति की पुष्टि नहीं हुई"],
 } as const;
 
-type MoneySource = {
+type MoneySource = ReceiptPaymentEvidence & {
   amount: number;
   teamSupport?: number | null;
   fees?: number | null;
@@ -44,50 +46,72 @@ export function donationMoneyFields(donation: MoneySource, locale = "ar") {
   // Missing/invalid historical money must not become a plausible zero receipt.
   if (!projectsAmount || !teamSupport || !fees || !total || !/^[A-Z]{3}$/.test(donation.currency)
     || [donation.amount, donation.teamSupport ?? 0, donation.fees ?? 0, donation.totalAmount].some(value => !Number.isFinite(value) || value < 0)) {
-    return { projectsAmount, teamSupport, fees, amountBreakdown: "", notificationAmount: "" };
+    return { projectsAmount, teamSupport, fees, amountBreakdown: "", notificationAmount: "", receiptSummary: "" };
   }
   const totalLabel = donation.paidAt ? labels[3] : labels[4];
   const parts = [`${labels[0]}: ${projectsAmount}`, `${labels[1]}: ${teamSupport}`];
   if ((donation.fees ?? 0) > 0) parts.push(`${labels[2]}: ${fees}`);
+  const receiptParts = [`${labels[0]}: ${receiptMoney(donation.amount, donation.currency, locale)}`];
+  if ((donation.teamSupport ?? 0) > 0) receiptParts.push(`${labels[1]}: ${receiptMoney(donation.teamSupport!, donation.currency, locale)}`);
+  if ((donation.fees ?? 0) > 0) receiptParts.push(`${labels[2]}: ${receiptMoney(donation.fees!, donation.currency, locale)}`);
+  let receiptSummary = `${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
+  if (receiptParts.length > 1) receiptSummary += ` (${receiptParts.join("; ")})`;
+  const bank = donation.currency === "TRY" ? null : confirmedTryCharge(donation);
+  if (bank !== null) {
+    const [label, note] = RECEIPT_BANK_COPY[receiptLocale(locale)];
+    receiptSummary += `. ${label}: ${receiptMoney(bank, "TRY", locale)}. ${note}`;
+  }
   return {
     projectsAmount, teamSupport, fees,
+    receiptSummary,
     // Single line also works inside an existing approved Meta text parameter.
     notificationAmount: `${totalLabel}: ${total} (${parts.join("; ")})`,
     amountBreakdown: `${totalLabel}: ${total} ${donation.currency} (${parts.map(part => `${part} ${donation.currency}`).join("; ")})`,
   };
 }
 
-type MoneyContext = { donation?: { amountBreakdown?: string; notificationAmount?: string } };
+type MoneyContext = { donation?: { amountBreakdown?: string; notificationAmount?: string; receiptSummary?: string } };
 export function isDonationMoneyNotificationEvent(event: string): boolean {
   // Subscription signup/cancellation templates can describe FUTURE instalments;
   // the first order's one-off support must never become a promised future charge.
   return ["DONATION_PAID", "DONATION_FAILED", "FIRST_DONATION", "SUBSCRIPTION_PAYMENT"].includes(event);
 }
 const LEGACY_AMOUNT = /\{\{\s*donation\.(?:amount|totalAmount)\s*\}\}/g;
-const EXPLICIT_BREAKDOWN = /\{\{\s*donation\.(?:projectsAmount|teamSupport|fees|amountBreakdown)\s*\}\}/;
+const EXPLICIT_BREAKDOWN = /\{\{\s*donation\.(?:projectsAmount|teamSupport|fees|amountBreakdown|receiptSummary)\s*\}\}/;
+
+/** A full currency-bearing value needs one slot in new Meta templates. Legacy
+ * approved schemas stay intact until their replacement is approved. */
+export function donationReceiptText(text: string): string {
+  return text
+    .replace(/\{\{\s*donation\.(?:amount|totalAmount|amountUSD|notificationAmount)\s*\}\}\s*(?:\{\{\s*donation\.currency\s*\}\}|\b(?:USD|TRY|EUR|GBP|KWD|SAR|AED|QAR|JOD)\b)/g, "{{donation.receiptSummary}}")
+    .replace(/\{\{\s*donation\.currency\s*\}\}\s*\{\{\s*donation\.(?:amount|totalAmount)\s*\}\}/g, "{{donation.receiptSummary}}")
+    .replace(/(?:\$\s*)?\{\{\s*donation\.amountUSD\s*\}\}/g, "{{donation.receiptSummary}}");
+}
 
 /** Upgrade display text only. Never rewrite links, identifiers, or canonical
  * amount values in the context used by other templates and manual campaigns. */
-export function donationNotificationText(text: string, ctx: MoneyContext): string {
+export function donationNotificationText(text: string, ctx: MoneyContext, locale?: string): string {
+  if (locale) text = localizeReceiptFooter(text, locale);
   if (!ctx.donation?.amountBreakdown || EXPLICIT_BREAKDOWN.test(text)) return text;
   return text.split(/(<[^>]*>|(?:https?:\/\/|\/)[^\s<>]+)/g).map(part => {
     if (part.startsWith("<") || /^(?:https?:\/\/|\/)/.test(part)) return part;
-    return part.replace(LEGACY_AMOUNT, "{{donation.notificationAmount}}");
+    const receipt = ctx.donation?.receiptSummary ? donationReceiptText(part) : part;
+    return receipt.replace(LEGACY_AMOUNT, "{{donation.notificationAmount}}");
   }).join("");
 }
 
 /** Only human-readable email content is upgraded, not URLs or style props. */
-export function donationNotificationDocument<T>(document: T, ctx: MoneyContext): T {
-  if (!ctx.donation?.amountBreakdown) return document;
+export function donationNotificationDocument<T>(document: T, ctx: MoneyContext, locale?: string): T {
+  if (!ctx.donation?.amountBreakdown && !locale) return document;
   const serialized = JSON.stringify(document);
-  if (EXPLICIT_BREAKDOWN.test(serialized)) return document;
+  const upgradeMoney = !EXPLICIT_BREAKDOWN.test(serialized);
   const visit = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(visit);
     if (!value || typeof value !== "object") return value;
     const result = Object.fromEntries(Object.entries(value).map(([key, child]) => [key, visit(child)]));
     const prop = result.type === "Html" ? "contents" : result.type === "Text" || result.type === "Heading" ? "text" : null;
     const props = (result.data as { props?: Record<string, unknown> } | undefined)?.props;
-    if (prop && props && typeof props[prop] === "string") props[prop] = donationNotificationText(props[prop] as string, ctx);
+    if (prop && props && typeof props[prop] === "string") props[prop] = donationNotificationText(props[prop] as string, upgradeMoney ? ctx : {}, locale);
     return result;
   };
   return visit(document) as T;

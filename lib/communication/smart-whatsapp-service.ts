@@ -146,7 +146,7 @@ export async function getSmartWhatsappContext(userId: string): Promise<SmartWhat
   ]);
   const classified = await classifyEventTemplates("WHATSAPP", templates);
   const routedWaba = (purpose: "UTILITY" | "MARKETING") => {
-    const result = resolveSenderFromSnapshot(routing, {locale: d.locale, country: d.country, purpose});
+    const result = resolveSenderFromSnapshot(routing, {locale: d.locale, country: d.country, purpose, template: true});
     return result.ok ? result.sender.businessAccountId : null;
   };
   const {marketingTemplates, utilityTemplates} = smartWhatsappTemplateChoices(classified, d.locale, {UTILITY: routedWaba("UTILITY"), MARKETING: routedWaba("MARKETING")});
@@ -413,6 +413,7 @@ export async function sendSmartWhatsapp(input: {
     locale,
     country: ctx.country,
     purpose: mode === "MARKETING" ? "MARKETING" : "UTILITY",
+    template: true,
   });
   if (!routed.ok) return { ok: false, reason: routed.reason };
   const sender = routed.sender;

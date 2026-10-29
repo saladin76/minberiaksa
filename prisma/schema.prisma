@@ -1030,6 +1030,11 @@ model DonationItem {
   giftShowAmount     Boolean   @default(true)
   /// Set when the recipient was told; a replayed webhook does not tell them twice.
   giftDeliveredAt    DateTime?
+  /// Per-channel accepted/failed/uncertain outcomes; old records may omit it.
+  giftDeliveryState Json?
+  giftDeliveryLock String?
+  giftDeliveryLockUntil DateTime?
+  giftDeliveryError String?
 
   donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
   campaign Campaign @relation(fields: [campaignId], references: [id])
@@ -1550,6 +1555,9 @@ model WhatsappTemplate {
   body         String
   /// Per-locale overrides: Record<locale, { body?: string }>.
   translations Json?
+  /// Staged notification replacement: source id/hash, draft hash and required locales.
+  /// Separate from providerRaw because provider sync/publish owns that payload.
+  notificationUpgrade Json?
   createdById  String?  @db.ObjectId
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

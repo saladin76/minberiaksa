@@ -2174,6 +2174,7 @@
     "chooseFirst": "Pilih jumlah sokongan pasukan atau “Tidak, terima kasih” untuk meneruskan"
   },
   "Gift": {
+    "validationError": "Masukkan nama penerima dan butiran hubungan yang sah. Sertakan kod negara dalam nombor WhatsApp.",
     "emailSubject": "Hadiah atas nama anda: derma untuk {project}",
     "emailTitle": "{recipientName}, anda menerima hadiah",
     "emailBody": "{donorName} menderma atas nama anda untuk projek “{project}” melalui Minbar Al-Aqsa.",

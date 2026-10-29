@@ -3283,6 +3283,7 @@
     "chooseFirst": "Choisissez un montant de soutien à l'équipe ou « Non merci » pour continuer"
   },
   "Gift": {
+    "validationError": "Saisissez le nom du destinataire et des coordonnées valides. Incluez l’indicatif du pays dans le numéro WhatsApp.",
     "emailSubject": "Un cadeau en votre nom : un don pour {project}",
     "emailTitle": "{recipientName}, vous avez reçu un cadeau",
     "emailBody": "{donorName} a fait un don en votre nom au projet « {project} » via Minbar Al-Aqsa.",
