@@ -5,7 +5,7 @@ import { getTemplateAvailableLocales } from "./template-compat";
 import { computeLanguageCoverage } from "./language-coverage";
 import { isCommunicationChannel } from "./communication-runtime-types";
 
-/** Approval requires template coverage or an explicit fallback/exclude decision. No sends here. */
+/** Approval requires exact language coverage or an explicit exclusion. No sends here. */
 type Actor = { actorId?: string | null; actorName?: string | null; actorRole?: string | null } | null;
 
 export type CoverageGate = {
@@ -39,7 +39,7 @@ export async function evaluateCoverageGate(campaignId: string, batchLocaleCounts
   const coverage = computeLanguageCoverage(recipientLocaleCounts, available);
   const decisions = ((campaign.metadata as Record<string, unknown> | null)?.coverageDecisions ?? {}) as CoverageDecisions;
   const missing = coverage.missingWithRecipients.map((m) => ({ locale: m.locale, label: m.label, recipientCount: m.recipientCount }));
-  const undecided = missing.filter((m) => !decisions[m.locale]).map((m) => m.locale);
+  const undecided = missing.filter((m) => decisions[m.locale] !== "EXCLUDE").map((m) => m.locale);
   return { ok: undecided.length === 0, missingWithRecipients: missing, undecided };
 }
 
@@ -58,7 +58,7 @@ export async function approveCampaign(campaignId: string, actor?: Actor): Promis
     return {
       ok: false,
       status: 409,
-      error: "لا يمكن الاعتماد قبل تغطية كل اللغات أو اختيار بديل/استبعاد لكل لغة ناقصة.",
+      error: "لا يمكن الاعتماد قبل توفير نسخة كاملة بلغة كل متبرع أو استبعاد اللغة الناقصة صراحةً.",
       undecided: gate.undecided,
     };
   }

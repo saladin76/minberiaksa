@@ -243,7 +243,8 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
             <div style={{ display: "grid", gap: 12, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 12 }}>
               <b style={{ fontSize: 15.5 }}>{t("projectFaq")}</b>
               {[
-                { q: t("faqZakatQ"), a: t("faqZakatYes") },
+                // Eligibility must come from reviewed project content. The
+                // generic page cannot assert that every project accepts Zakat.
                 { q: t("faqTrackQ"), a: t("faqTrackA") },
                 { q: t("faqRecurringQ"), a: t("faqRecurringA") },
               ].map((faq) => (

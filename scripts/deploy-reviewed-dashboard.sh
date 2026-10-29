@@ -11,6 +11,15 @@ TARGET="${1:-}"
 SOURCE_BRANCH="${SOURCE_BRANCH:-fix/dashboard-release-recovery-20261029}"
 APP="${PM2_APP:-minberiaksa}"
 if [[ ! "$TARGET" =~ ^[a-f0-9]{40}$ ]]; then echo "Pass the reviewed full commit SHA." >&2; exit 1; fi
+# Manual invocations share the detached runner's lock. The runner already holds
+# it for deployment AND provider setup, so only its child skips reacquisition.
+if [[ "${MINBER_RELEASE_JOB_LOCK_HELD:-}" != "1" ]]; then
+  LOCK_ROOT="${RELEASE_JOBS_DIR:-$(dirname "$ROOT")/minberi-release-jobs}"
+  mkdir -p "$LOCK_ROOT"
+  exec 9>"$LOCK_ROOT/release.lock"
+  if ! flock --nonblock 9; then echo "Another reviewed release is running; nothing deployed." >&2; exit 75; fi
+fi
+unset MINBER_RELEASE_JOB_LOCK_HELD
 if ! git diff --quiet || ! git diff --cached --quiet; then echo "Tracked local edits need to be preserved before deployment." >&2; exit 1; fi
 git fetch origin "$SOURCE_BRANCH"
 if [[ "$(git rev-parse FETCH_HEAD)" != "$TARGET" ]]; then echo "Remote head differs from the reviewed commit; nothing deployed." >&2; exit 1; fi

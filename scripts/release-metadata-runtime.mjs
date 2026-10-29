@@ -48,7 +48,8 @@ export function checkMetadataImports(root, executable) {
         ["lib/communication/meta-template-publisher.ts", ["publishWhatsappTemplateToMeta"]],
         ["lib/communication/notification-template-upgrade-service.ts", ["prepareNotificationUpgrades", "activateApprovedNotificationUpgrades"]],
         ["lib/certificates/manual-copy.ts", ["manualDocumentTemplate"]],
-        ["lib/donations/gift-template-draft.ts", ["giftTemplateBody"]]
+        ["lib/donations/gift-template-draft.ts", ["giftTemplateBody"]],
+        ["lib/communication/greeting-template-draft.ts", ["greetingTemplateDraft", "greetingTemplateMatches"]]
       ]) {
         const loaded = await loadReleaseModule(file);
         for (const name of names) if (typeof loaded[name] !== "function") throw new Error("METADATA_EXPORT_MISSING: " + name);

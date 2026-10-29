@@ -1,3 +1,4 @@
+import * as readiness from "../../lib/communication/whatsapp-template-readiness";
 import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
 import { templateLocaleHeader } from "../../lib/communication/template-locale-media";
@@ -25,7 +26,7 @@ type Progress = { cursor: string | null; total: number; sent: number; skipped: n
 type State = { id: string; name: string; status: string; channel: string; purpose: string; templateGroupId: string; audienceSegmentKey: null; scheduledAt: Date; metadata: Dict };
 type Recipient = { cursorId: string; userId: string; name: string; email: string; phone: string; locale: string; country: string };
 type Delivery = Dict & { id: string; status: string; recipientUserId: string; recipientEmail?: string; recipientPhone?: string; providerMessageId?: string; errorMessage?: string };
-type Options = { trackingBody?: string; denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
+type Options = { renderedLocale?: string; trackingBody?: string; denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
 type Result = { ok: boolean; status: string; sent: number; skipped: number; failed: number; total: number; hasMore?: boolean; blocked?: string };
 type Engine = {
   executeCampaignSend: (id: string, opts?: { mode?: string; maxBatches?: number; batchSize?: number; timeBudgetMs?: number }) => Promise<Result>;
@@ -84,7 +85,7 @@ function engineHarness(options: Options = {}) {
         nextCursor: page.at(-1)?.cursorId ?? opts.cursor ?? null, exhausted: page.length < opts.batchSize, truncated: page.length >= opts.batchSize,
         ...(page.length ? {} : { blocked: "AUDIENCE_EXHAUSTED" }) };
     } },
-    "./template-compat": { renderChannelTemplate: async () => ({ templateName: "template", subject: "Subject", body: options.trackingBody ?? "Body", usedFallback: false }) },
+    "./template-compat": { renderChannelTemplate: async () => ({ templateName: "template", subject: "Subject", body: options.trackingBody ?? "Body", resolvedLocale: options.renderedLocale ?? "en", usedFallback: options.renderedLocale ? options.renderedLocale !== "en" : false }) },
     "@/lib/templates/variables": { loadContextsForUserIds: async (ids: string[]) => { if (options.failContext) throw new Error("CONTEXT_READ_FAILED"); return new Map(ids.map((id) => [id, { user: { name: id } }])); } },
     "./update-campaign": { sourceUpdateOf: () => null, loadUpdateSource: async () => null, updateContextFor: () => ({}) },
     "./delivery-log-service": {
@@ -98,7 +99,7 @@ function engineHarness(options: Options = {}) {
     "./providers/email/client": { EMAIL_PROVIDER_ID: "ELASTIC_EMAIL" },
     "./runtime-config": { getActiveCommunicationRuntimeBundle: async () => ({}) },
     "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
-    "./whatsapp-template-sync": {}, "./providers/meta-whatsapp/parameters": {}, "./whatsapp-rendered-preview": {},
+    "./whatsapp-template-readiness": readiness, "./whatsapp-template-sync": {}, "./providers/meta-whatsapp/parameters": {}, "./whatsapp-rendered-preview": {},
     "./audience-list-service": { resolveAudienceOrigin: async () => "CAMPAIGN" },
     "./campaign-counter-service": { ...counter, recomputeCampaignCounters: async () => ({ ok: !options.failCounter, status: campaign.status }) },
     "./campaign-send-controls": { autoSpeedMode: () => "BALANCED", campaignPriorityRank: () => 1, campaignSendControls: controls,
@@ -282,3 +283,11 @@ for (const channel of ["EMAIL", "SMS"]) test(`${channel} executor never bypasses
     assert.equal(payload.html, h.deliveries.find(row => row.recipientEmail === payload.to)?.renderedBody);
   }
 });
+
+ test("legacy campaign fallback decisions never send another donor language", async () => {
+  const h = engineHarness({ renderedLocale: "ar" });
+  h.campaign.metadata.coverageDecisions = { en: "FALLBACK" };
+  const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(h.state().calls, 0); assert.equal(result.skipped, 2);
+  assert.ok(h.deliveries.every(row => row.errorMessage === "EXACT_TEMPLATE_LANGUAGE_REQUIRED"));
+ });

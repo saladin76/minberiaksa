@@ -1,3 +1,4 @@
+import * as unsubscribe from "../../lib/communication/whatsapp-template-unsubscribe";
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
@@ -39,6 +40,7 @@ function automaticHarness(
       donationTemplateValues: async (input: { values: Record<string, unknown> }) => ({ ok: true, values: input.values }),
     },
     "./template-locale-media": { templateLocaleHeader: () => null },
+    "./whatsapp-template-unsubscribe": unsubscribe,
     "./delivery-log-service": {
       createDeliveryRecord: async () => ({ ok: true, data: { id: "delivery" } }),
       markDeliveryStatus: async (_id: string, status: string, detail?: { errorMessage?: string }) => {
@@ -149,6 +151,7 @@ function inboundWebhookHarness(options: { failProfileRead?: boolean; profileCoun
   const consentUpdates: Array<Record<string, unknown>> = [];
   const eventWrites: Array<Record<string, unknown>> = [];
   const dependencies: Record<string, unknown> = {
+    "./whatsapp-template-unsubscribe": unsubscribe,
     "./delivery-log-service": { markDeliveryStatus: async () => ({ ok: true }) },
     "./delivery-status-progress": { shouldApplyDeliveryStatus: () => true },
     "./phone": {
@@ -204,7 +207,7 @@ test("clear WhatsApp STOP requests revoke channel consent before the event is ac
 });
 
 test("localized marketing unsubscribe quick replies revoke WhatsApp consent", async () => {
-  for (const title of ["Stop", "إيقاف", "Dur"]) {
+  for (const title of Object.values((await import("../../lib/locales")).SUPPORTED_LOCALES).map(locale => unsubscribe.whatsappUnsubscribeCopy(locale).button)) {
     const harness = inboundWebhookHarness();
     const result = await harness.process("", { title, id: "" });
     assert.equal(result.persistenceErrors, 0);

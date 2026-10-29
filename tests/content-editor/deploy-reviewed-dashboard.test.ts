@@ -5,10 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 const target = "a".repeat(40), previous = "b".repeat(40);
-for (const scenario of ["healthy", "mismatch", "dirty", "build-failed", "rollback", "rollback-dependencies"] as const) {
+for (const scenario of ["healthy", "mismatch", "dirty", "build-failed", "rollback", "rollback-dependencies", "locked"] as const) {
   test(`reviewed deployment: ${scenario} uses only fixture git, PM2 and HTTP`, () => {
     const root = mkdtempSync(join(tmpdir(), "reviewed-deploy-")), app = join(root, "app"), bin = join(root, "bin"), log = join(root, "calls");
     mkdirSync(join(app, "scripts"), { recursive: true }); mkdirSync(bin); mkdirSync(join(app, ".next")); mkdirSync(join(app, "node_modules"));
+    writeFileSync(log, "");
     writeFileSync(join(app, ".next", "version"), "old-build"); writeFileSync(join(app, "node_modules", "version"), "old-dependencies");
     writeFileSync(join(app, "scripts", "deploy-reviewed-dashboard.sh"), readFileSync("scripts/deploy-reviewed-dashboard.sh"));
     const executable = (name: string, contents: string) => writeFileSync(join(bin, name), "#!/bin/bash\n" + contents, { mode: 0o755 });
@@ -33,7 +34,10 @@ for (const scenario of ["healthy", "mismatch", "dirty", "build-failed", "rollbac
       'exit 0',
     ].join("\n"));
     try {
-      const result = spawnSync("bash", [join(app, "scripts", "deploy-reviewed-dashboard.sh"), target], {
+      const argv = [join(app, "scripts", "deploy-reviewed-dashboard.sh"), target];
+      const lockRoot = join(root, "minberi-release-jobs");
+      if (scenario === "locked") mkdirSync(lockRoot);
+      const result = spawnSync(scenario === "locked" ? "flock" : "bash", scenario === "locked" ? [join(lockRoot, "release.lock"), "bash", ...argv] : argv, {
         cwd: app, encoding: "utf8", timeout: 10_000,
         // Do not inherit the real APP_DIR, credentials, dist dir or PM2 settings.
         // Explicitly set APP_DIR to the fixture to exercise the wrapper entry point.

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { getServerBaseUrl } from "@/lib/server-base-url";
+import { emailUnsubscribeCopy } from "./unsubscribe-copy";
 
 function normalized(email: string): string {
   return email.trim().toLowerCase();
@@ -44,17 +45,9 @@ export async function buildEmailUnsubscribeUrl(email: string, locale?: string | 
   return url.toString();
 }
 
-const LABELS: Record<string, string> = {
-  ar: "إلغاء الاشتراك من الرسائل التسويقية",
-  tr: "Pazarlama e-postalarından aboneliği iptal et",
-  en: "Unsubscribe from marketing emails",
-  fr: "Se désabonner des e-mails marketing",
-};
-
 export function appendMarketingUnsubscribeFooter(html: string, url: string, locale?: string | null): string {
-  const lang = String(locale ?? "ar").toLowerCase().split(/[-_]/)[0];
-  const label = LABELS[lang] ?? LABELS.en;
+  const { label } = emailUnsubscribeCopy(locale);
   const safeUrl = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  const footer = `<div style="margin:28px auto 0;padding:16px 8px;border-top:1px solid #e5e7eb;text-align:center;font:12px/1.6 Arial,sans-serif;color:#64748b"><a href="${safeUrl}" style="color:#64748b;text-decoration:underline">${label}</a></div>`;
+  const footer = `<div style="margin:28px auto 0;padding:16px 8px;border-top:1px solid #e5e7eb;text-align:center;font-family:inherit;font-size:12px;line-height:1.6;color:#64748b"><a href="${safeUrl}" style="color:#64748b;text-decoration:underline">${label}</a></div>`;
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${footer}</body>`) : `${html}${footer}`;
 }

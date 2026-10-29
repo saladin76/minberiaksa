@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { markDeliveryStatus } from "./delivery-log-service";
+import { isWhatsappUnsubscribeQuickReply } from "./whatsapp-template-unsubscribe";
 import { shouldApplyDeliveryStatus } from "./delivery-status-progress";
 import { normalizePhoneE164, phoneMatchVariants } from "./phone";
 import type { NormalizedWebhookEvent } from "./providers/meta-whatsapp/types";
@@ -66,7 +67,7 @@ function isWhatsappOptOut(event: NormalizedWebhookEvent): event is Extract<Norma
   if (event.kind !== "inbound") return false;
   return [event.text, event.buttonReply?.title, event.buttonReply?.id]
     .filter((value): value is string => Boolean(value))
-    .some((value) => WHATSAPP_OPTOUT_TERMS.has(normalizeOptOutText(value)));
+    .some((value) => WHATSAPP_OPTOUT_TERMS.has(normalizeOptOutText(value)) || isWhatsappUnsubscribeQuickReply(value));
 }
 
 /** Apply a donor's clear STOP request before acknowledging the inbound webhook event. */

@@ -28,6 +28,7 @@ import { listCategories, type NavCategory } from "@/lib/minbar/categories";
 import { listNavSuperCategories } from "@/lib/minbar/super-category";
 import "@/styles/minbar/minbar.css";
 import "@/styles/minbar/locale-fonts.css";
+import { LOCALE_FONT_STYLESHEETS } from "@/lib/locale-fonts";
 
 // Valid public locales derive from the single source of truth (enabled set).
 const VALID_LOCALES = SUPPORTED_LOCALES;
@@ -43,11 +44,6 @@ const RTL_TEXT_FONTS = ["/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2", "/f
 const LTR_TEXT_FONTS = ["/fonts/poppins/poppins-400-latin-ac6d71b4.woff2"];
 
 /** The non-Latin faces `styles/minbar/locale-fonts.css` names, one per locale that needs one. */
-const LOCALE_FONT_STYLESHEETS: Partial<Record<string, string>> = {
-  ja: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap",
-  zh: "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap",
-  hi: "https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700;900&display=swap",
-};
 
 /**
  * A first path segment that is not a locale is NOT a page in Arabic.

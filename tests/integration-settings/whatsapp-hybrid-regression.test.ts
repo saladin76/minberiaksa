@@ -36,7 +36,7 @@ test("WhatsApp interval control is visible and defaults to unlimited sending", (
   requires(controlsPath, [/DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS = 0/, /whatsappMarketingCooldownConfigured/]);
 });
 test("WhatsApp campaigns continue to use Meta-approved language/category truth before send", () => {
-  requires(executorPath, [/resolveVariantForLocale/, /META_TEMPLATE_CATEGORY_MISMATCH/, /readiness\.providerTemplateName/, /readiness\.languageCode/]);
+  requires(executorPath, [/resolveExactVariantForLocale/, /META_TEMPLATE_CATEGORY_MISMATCH/, /readiness\.providerTemplateName/, /readiness\.languageCode/]);
 });
 test("dashboard keeps the simple operator-facing Smart WhatsApp flow", () => {
   requires(smartDialog, [/رد مباشر/, /رسالة خدمة/, /رسالة تسويقية/, /سجل المحادثة/, /Direct Send/, /Utility/, /Marketing/]);

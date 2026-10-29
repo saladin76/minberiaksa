@@ -1,3 +1,4 @@
+import * as unsubscribe from "../../lib/communication/whatsapp-template-unsubscribe";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -48,7 +49,8 @@ test("echo webhook redelivery archives once, never opts out the donor or attribu
       communicationProviderEvent: { findMany: async () => [], create: async ({ data }: { data: Record<string, unknown> }) => {
         if (records.length) throw { code: "P2002" }; records.push(data);
       } },
-    } }, "./phone": phone, "./delivery-log-service": {}, "./delivery-status-progress": {},
+    } }, "./phone": phone, "./whatsapp-template-unsubscribe": unsubscribe,
+    "./delivery-log-service": {}, "./delivery-status-progress": {},
   });
   const events = parser().parseWebhookPayload(payload());
   const first = await service.processWhatsappEvents(events); const duplicate = await service.processWhatsappEvents(events);
@@ -61,7 +63,8 @@ test("archive errors request webhook retry instead of claiming successful persis
   const service = load<{ processWhatsappEvents: (events: NormalizedWebhookEvent[]) => Promise<{ persistenceErrors: number }> }>("lib/communication/webhook-service.ts", {
     "@/lib/prisma": { prisma: { communicationSender: { findFirst: async () => ({ id: "sender" }) }, communicationDelivery: { findFirst: async () => null },
       communicationProviderEvent: { findMany: async () => [], create: async () => { throw new Error("database unavailable"); } } } },
-    "./phone": phone, "./delivery-log-service": {}, "./delivery-status-progress": {},
+    "./phone": phone, "./whatsapp-template-unsubscribe": unsubscribe,
+    "./delivery-log-service": {}, "./delivery-status-progress": {},
   });
   assert.equal((await service.processWhatsappEvents(parser().parseWebhookPayload(payload()))).persistenceErrors, 1);
 });
@@ -78,7 +81,8 @@ test("app message status persists monotonically even when receipts precede the e
           for (const row of rows) if (row.eventType === "outbound_echo" && where.status.in.includes(String(row.status))) Object.assign(row, data);
         },
       },
-    } }, "./phone": phone, "./delivery-log-service": {}, "./delivery-status-progress": statusProgress,
+    } }, "./phone": phone, "./whatsapp-template-unsubscribe": unsubscribe,
+    "./delivery-log-service": {}, "./delivery-status-progress": statusProgress,
   });
   const event = parser().parseWebhookPayload(payload())[0];
   const receipt = (status: "SENT" | "DELIVERED" | "READ"): NormalizedWebhookEvent => ({ kind: "status", providerMessageId: event.providerMessageId, status,

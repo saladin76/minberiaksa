@@ -14,6 +14,7 @@ const steps = [
   { name: "gift-templates", script: "scripts/prepare-gift-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "notification-templates", script: "scripts/upgrade-notification-templates.mjs", args: [...(publish ? ["--publish"] : []), ...(activate ? ["--activate-approved"] : [])] },
   { name: "document-templates", script: "scripts/prepare-document-whatsapp.mjs", args: publish ? ["--publish"] : [] },
+  { name: "greeting-templates", script: "scripts/prepare-greeting-whatsapp.mjs", args: publish ? ["--publish"] : [] },
 ];
 if (!apply && !checkRuntime) {
   console.log(JSON.stringify({ readOnly: true, steps: steps.map(step => step.name), providerCalls: 0, databaseWrites: 0, paymentCaptures: 0, recipientMessages: 0 }));
