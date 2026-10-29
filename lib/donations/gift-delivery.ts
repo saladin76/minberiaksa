@@ -10,6 +10,7 @@ import { resolveTriggerSendConfig, resolveTriggerSender } from "@/lib/events/dis
 import { getServerBaseUrl } from "@/lib/server-base-url";
 import { miaPath } from "@/lib/minbar/routes";
 import { writeAuditLog } from "@/lib/audit-log";
+import { donationCampaignTitle } from "@/lib/templates/donation-projects";
 
 /**
  * Telling the recipient of a gifted donation.
@@ -89,7 +90,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
   const result: GiftDeliveryResult = { lines: 0, emailsSent: 0, whatsappSent: 0, errors: 0 };
   const lines = await prisma.donationItem.findMany({
     where: { donationId, giftRecipientName: { not: null }, giftDeliveredAt: null },
-    include: { campaign: { select: { title: true, slug: true } } },
+    include: { campaign: { select: { title: true, slug: true, translations: { select: { locale: true, title: true } } } } },
   });
   if (!lines.length) return result;
   result.lines = lines.length;
@@ -117,7 +118,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
     const vars = {
       recipientName,
       donorName,
-      project: line.campaign.title,
+      project: donationCampaignTitle(line.campaign, locale),
       amount: formatAmount(line.amount, donation.currency, locale),
     };
     let reached = false;

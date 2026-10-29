@@ -85,7 +85,7 @@ test("an explicit Meta breakdown keeps each numeric binding unchanged", () => {
 
 test("the actual context loader reads support/fees/paid evidence and retains all project lines", async () => {
   let selection: Record<string, unknown> = {};
-  const row = { ...order, id: "donation", donorId: "donor", locale: "ar", status: "FAILED", paidAt: null, createdAt: new Date(), amountUSD: 250, items: [{ amount: 100, amountUSD: 100, campaign: { title: "Project A" } }, { amount: 150, amountUSD: 150, campaign: { title: "Project B" } }], categoryItems: [] };
+  const row = { ...order, id: "donation", donorId: "donor", locale: "en", status: "FAILED", paidAt: null, createdAt: new Date(), amountUSD: 250, items: [{ amount: 100, amountUSD: 100, campaign: { title: "Project A" } }, { amount: 150, amountUSD: 150, campaign: { title: "Project B" } }], categoryItems: [] };
   const prisma = { user: { findUnique: async () => ({ id: "donor", name: "Supporter", preferredLang: "en" }) }, donation: { findMany: async () => [], findUnique: async (input: { select: Record<string, unknown> }) => { selection = input.select; return row; } } };
   const mod = { exports: {} as { loadContextForDonation: (id: string) => Promise<{ donation: Record<string, unknown> }> } };
   const output = ts.transpileModule(readFileSync("lib/templates/variables.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;

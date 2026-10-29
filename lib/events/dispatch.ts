@@ -274,7 +274,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
       claimToken = claim.token;
     }
 
-    const locale = pickLocale({ recipientLang: ctx.user.preferredLang });
+    const locale = pickLocale({ override: ctx.donation?.locale, recipientLang: ctx.user.preferredLang });
     const config = await resolveTriggerSendConfig();
 
     let attachments: EmailAttachment[] | undefined;

@@ -37,7 +37,7 @@ for (const scenario of ["healthy", "mismatch", "dirty", "build-failed", "rollbac
         cwd: app, encoding: "utf8", timeout: 10_000,
         // Do not inherit the real APP_DIR, credentials, dist dir or PM2 settings.
         // Explicitly set APP_DIR to the fixture to exercise the wrapper entry point.
-        env: { PATH: `${bin}:/usr/bin:/bin`, APP_DIR: app, SCENARIO: scenario, FIXTURE_LOG: log, FIXTURE_APP: app, RELEASE_BACKUPS_DIR: join(root, "backups") },
+        env: { NODE_ENV: "test", PATH: `${bin}:/usr/bin:/bin`, APP_DIR: app, SCENARIO: scenario, FIXTURE_LOG: log, FIXTURE_APP: app, RELEASE_BACKUPS_DIR: join(root, "backups") },
       });
       assert.equal(result.error, undefined, result.error?.message);
       const calls = readFileSync(log, "utf8");

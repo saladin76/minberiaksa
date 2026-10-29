@@ -1,6 +1,6 @@
 import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
-import { donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
+import { donationMessageLocale, donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
 import { donationMoneyFields } from "./donation-money";
 
 /** ---------------- types ---------------- */
@@ -27,6 +27,8 @@ export interface TemplateDonationItem {
 
 export interface TemplateDonation {
   id: string;
+  /** Effective language of this donation's notification, independent of the account preference. */
+  locale?: string;
   amount: string;
   amountUSD: string;
   currency: string;
@@ -126,12 +128,12 @@ const donationSelect = {
       amount: true,
       amountUSD: true,
       shareCount: true,
-      campaign: { select: { title: true } },
+      campaign: { select: { title: true, translations: { select: { locale: true, title: true } } } },
     },
   },
   waqfItems: {select:{amount:true,amountUSD:true,unit:true,count:true}},
   categoryItems: {
-    select: { amount: true, amountUSD: true, category: { select: { name: true } } },
+    select: { amount: true, amountUSD: true, category: { select: { name: true, translations: { select: { locale: true, name: true } } } } },
   },
 } as const;
 
@@ -149,7 +151,8 @@ type RawDonation = DonationProjectSource & {
 };
 
 function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
-  const projects = donationProjectSummary({ ...d, locale: locale || d.locale });
+  locale = donationMessageLocale(locale, d.locale);
+  const projects = donationProjectSummary({ ...d, locale });
   const items: TemplateDonationItem[] = projects.lines.map((it) => ({
     campaignTitle: it.campaignTitle,
     amount: formatTemplateMoney(it.amount, locale || d.locale, d.currency),
@@ -159,6 +162,7 @@ function donationToContext(d: RawDonation, locale?: string | null): TemplateDona
   }));
   return {
     id: d.id,
+    locale,
     ...donationMoneyFields(d, locale || d.locale || "ar"),
     amount: formatTemplateMoney(d.amount, locale || d.locale, d.currency),
     amountUSD: formatTemplateMoney(donationUsdAmount(d), locale || d.locale, "USD"),
@@ -177,11 +181,12 @@ function donationsToContext(donations: RawDonation[], locale?: string | null): T
 }
 
 function userToContext(
-  u: { id: string; name: string | null; email: string | null; phone: string | null; countryName: string | null; country: string | null; countryCode: string | null; city: string | null; region: string | null; preferredLang: string | null }
+  u: { id: string; name: string | null; email: string | null; phone: string | null; countryName: string | null; country: string | null; countryCode: string | null; city: string | null; region: string | null; preferredLang: string | null },
+  locale?: string | null,
 ): TemplateUser {
   return {
     id: u.id,
-    name: templateDonorName(u.name,u.preferredLang),
+    name: templateDonorName(u.name, locale || u.preferredLang),
     email: u.email ?? "",
     phone: u.phone ?? "",
     countryName: u.countryName ?? u.country ?? "",
@@ -192,12 +197,13 @@ function userToContext(
   };
 }
 
-export async function loadContext(userId: string): Promise<TemplateContext | null> {
+export async function loadContext(userId: string, localeOverride?: string | null): Promise<TemplateContext | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: userSelect,
   });
   if (!user) return null;
+  const locale = donationMessageLocale(localeOverride, user.preferredLang);
 
   const donations = await prisma.donation.findMany({
     where: { donorId: userId, status: "PAID" },
@@ -210,11 +216,11 @@ export async function loadContext(userId: string): Promise<TemplateContext | nul
   const lastAt = donations[0]?.createdAt ?? null;
 
   return {
-    user: userToContext(user),
-    donations: donationsToContext(donations as RawDonation[], user.preferredLang),
+    user: userToContext(user, locale),
+    donations: donationsToContext(donations as RawDonation[], locale),
     totals: {
       count: String(donations.length),
-      amountUSD: formatTemplateMoney(totalUSD, user.preferredLang, "USD"),
+      amountUSD: formatTemplateMoney(totalUSD, locale, "USD"),
       lastAt: formatDate(lastAt),
     },
   };
@@ -226,18 +232,19 @@ export async function loadContext(userId: string): Promise<TemplateContext | nul
  * built for manual sends still work in trigger flows.
  */
 export async function loadContextForDonation(
-  donationId: string
+  donationId: string,
+  localeOverride?: string | null,
 ): Promise<TemplateContext | null> {
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
     select: { ...donationSelect, donorId: true },
   });
   if (!donation) return null;
-  const base = await loadContext(donation.donorId);
+  const base = await loadContext(donation.donorId, localeOverride || donation.locale);
   if (!base) return null;
   return {
     ...base,
-    donation: donationToContext(donation as RawDonation, base.user.preferredLang),
+    donation: donationToContext(donation as RawDonation, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)),
   };
 }
 

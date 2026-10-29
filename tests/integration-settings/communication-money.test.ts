@@ -24,7 +24,7 @@ test("template money keeps cents and currency precision rather than rounding to 
 
 test("actual context loader supports category-only donations and this site's Prisma relations", async () => {
   const donor = { id: "user", name: "Donor", email: "donor@example.test", phone: null, countryName: "Türkiye", country: "TR", countryCode: "TR", city: "", region: "", preferredLang: "en" };
-  const donation = { id: "donation", donorId: "user", locale: "en", amount: 1234.56, amountUSD: 35.27, totalAmount: 1250.56, currency: "TRY", status: "PAID", createdAt: new Date("2026-10-19"), items: [], categoryItems: [{ amount: 1234.56, amountUSD: 35.27, category: { name: "Medical relief" } }] };
+  const donation = { id: "donation", donorId: "user", locale: "en", amount: 1234.56, amountUSD: 35.27, totalAmount: 1250.56, currency: "TRY", status: "PAID", createdAt: new Date("2026-10-19"), items: [], categoryItems: [{ amount: 1234.56, amountUSD: 35.27, category: { name: "الإغاثة الطبية", translations: [{ locale: "en", name: "Medical relief" }] } }] };
   const prisma = {
     user: { findUnique: async () => donor, findMany: async () => [donor] },
     donation: {

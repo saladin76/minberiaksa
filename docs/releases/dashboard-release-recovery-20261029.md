@@ -1,5 +1,17 @@
 # Dashboard source recovery — 29 October 2026
 
+## Donation message language and project TypeScript gate — 29 October 2026
+
+The screenshot supplied by the owner shows a Turkish payment confirmation with an Arabic project name. Template context queries selected only the canonical campaign/category names, so even a fully translated template received Arabic variables. They now select saved locale/name translations and project every line and summary in the notification language. Donation-triggered email, SMS and WhatsApp use the checkout locale before the account's older preference; manual WhatsApp resend can explicitly select its language. Gift email/WhatsApp use the same project-name resolver. This does not change a donor's preference, payment amounts, currency or settlement state.
+
+A missing or blank translation uses a localized project/category label, retaining the donation reference, rather than borrowing an Arabic or English name. It does not invent a translation or generate content during payment notification. Authors must save an exact-language project title for the full title to appear.
+
+The supplied `6f14117` server log passed **193/193** content tests, then stopped in `typecheck:content-editor-service` before activation: Next.js augments `NodeJS.ProcessEnv` with a required `NODE_ENV`. The isolated deployment fixture now explicitly sets `NODE_ENV=test`, preserving its allowlist and all isolation guards. The actual project configurations are checked in addition to the isolated test-file compiler invocation that missed this issue previously.
+
+Fresh validation for this follow-up: **1,158/1,158** integration tests (including 30 language regressions), **193/193** content/deployment tests under the server-like APP_DIR/NEXT_DIST_DIR environment, content-editor/communication-runtime/integration-release type checks, a full type baseline with **0 errors**, targeted ESLint and repository lint baseline with **0 new findings**, Bash syntax and whitespace checks. The old project-summary implementation was confirmed to fail the Turkish-name regression before restoring the fix. Regression coverage includes all 19 locales, checkout/account language disagreement, regional locale tags, missing translations, batch/history and manual overrides, the real event dispatch to mocked email/SMS/Meta transports and mocked gift delivery. No production message was sent or financial record modified.
+
+The final `next build` also completed successfully into `.next-build`, using the VPS TypeScript configuration: compilation, TypeScript and all **151** static pages passed. This local build used dummy authentication/Stripe values and an empty database URL. Caught Prisma datasource warnings therefore exercised metadata/sitemap fallbacks; this is not evidence of production database connectivity. The production index installer and live provider endpoints were not invoked.
+
 ## Deployment environment correction — 29 October 2026
 
 The production attempt at `61b10d9e574d4109c61ce72d25cd226c9e817209` stopped with three deployment-fixture failures during the content tests. The supplied terminal log contains no runtime activation message for that attempt. Its previous local validation did not exercise the exported `APP_DIR` used by the real invocation.

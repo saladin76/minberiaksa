@@ -260,7 +260,7 @@ export async function runDonationLapsedReminders(
         // "your last gift of $X on <date>"  alongside {{user.*}} and {{totals.*}}.
         const ctx = await loadContextForDonation(donationId);
         if (!ctx) { row.skipped += 1; summary.skipped += 1; bump(row.reasons, "NO_CONTEXT"); continue; }
-        const locale = pickLocale({ recipientLang: ctx.user.preferredLang });
+        const locale = pickLocale({ override: ctx.donation?.locale, recipientLang: ctx.user.preferredLang });
         const result = await sendTriggerMessage(trigger, ctx, { event: "DONATION_LAPSED", locale, config, donationId, purpose: "MARKETING" });
         if (!result) { row.skipped += 1; summary.skipped += 1; bump(row.reasons, "TEMPLATE_MISSING"); continue; }
         if (result.outcome === "SENT") { row.sent += 1; summary.sent += 1; bump(row.reasons, "SENT"); }

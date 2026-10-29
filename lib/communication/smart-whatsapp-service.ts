@@ -228,7 +228,7 @@ async function sendApprovedTemplateForDonor(args: {
       select: { id: true },
     }).catch(() => null);
     if (focus?.id) {
-      const focused = await loadContextForDonation(focus.id);
+      const focused = await loadContextForDonation(focus.id, args.locale);
       if (focused) renderCtx = focused;
     }
   }
