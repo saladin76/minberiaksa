@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, ExternalLink, Menu, MessagesSquare, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Menu, MessagesSquare, Search, Settings2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import type { Crumb } from '@/lib/dashboard/breadcrumbs';
 import CurrencySelector from '@/components/CurrencySelector';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DashboardLanguageToggle } from './DashboardLanguageToggle';
 import { dt } from "@/lib/dashboard/i18n";
 
@@ -14,6 +15,7 @@ type Props = {
   onOpenSidebar: () => void;
   onOpenSearch: () => void;
   dir: 'rtl' | 'ltr';
+  sidebarOpen?: boolean;
   showWhatsappInbox?: boolean;
   whatsappInboxCount?: number;
   showGeneralInbox?: boolean;
@@ -28,120 +30,32 @@ function WhatsappMark() {
   );
 }
 
-export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, showWhatsappInbox = false, whatsappInboxCount = 0, showGeneralInbox = false, generalInboxCount = 0 }: Props) {
-  // Chevrons are directional: in RTL the trail reads right-to-left, so the separator must
-  // point left. The old shell used ChevronLeft unconditionally.
+export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, sidebarOpen = false, showWhatsappInbox = false, whatsappInboxCount = 0, showGeneralInbox = false, generalInboxCount = 0 }: Props) {
   const Separator = dir === 'rtl' ? ChevronLeft : ChevronRight;
-
-  return (
-    <header
-      className={cn(
-        'sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-2 px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0 lg:px-6',
-        'bg-white/85 backdrop-blur-md border-b border-slate-200',
-      )}
-    >
-      <div className="flex min-w-0 max-w-full shrink-0 items-center gap-2 sm:shrink">
-        <button
-          type="button"
-          onClick={onOpenSidebar}
-          aria-label={dt("فتح القائمة")}
-          aria-controls="dashboard-sidebar"
-          className="lg:hidden w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
-        <nav aria-label={dt("مسار التنقل")} className="min-w-0">
-          <ol className="flex items-center gap-1 text-[13px] min-w-0">
-            {crumbs.map((crumb, i) => {
-              const last = i === crumbs.length - 1;
-              return (
-                <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
-                  {i > 0 && <Separator className="w-3.5 h-3.5 text-slate-300 shrink-0" aria-hidden />}
-                  {crumb.href && !last ? (
-                    <Link
-                      href={crumb.href}
-                      className="text-slate-500 hover:text-brand transition-colors truncate max-w-[9rem] sm:max-w-none"
-                    >
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span
-                      aria-current={last ? 'page' : undefined}
-                      className={cn(
-                        'truncate max-w-[9rem] sm:max-w-none',
-                        last ? 'font-semibold text-slate-900' : 'text-slate-400',
-                      )}
-                    >
-                      {crumb.label}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-      </div>
-
-      <div className="flex max-w-full flex-wrap items-center gap-1.5 sm:shrink-0 sm:flex-nowrap sm:gap-2">
-        <button
-          type="button"
-          onClick={onOpenSearch}
-          aria-label={dt("بحث")}
-          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-        {showWhatsappInbox && (
-          <Link
-            href="/dashboard/communication/inbox"
-            className={cn(
-              "relative inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
-              whatsappInboxCount > 0
-                ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                : "border-slate-200 bg-white text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50",
-            )}
-            aria-label={whatsappInboxCount > 0 ? dt("واتساب، {0} محادثة غير مقروءة", [whatsappInboxCount]) : dt("محادثات واتساب")}
-            title={whatsappInboxCount > 0 ? dt("{0} محادثة واتساب غير مقروءة", [whatsappInboxCount]) : dt("محادثات واتساب")}
-          >
-            <WhatsappMark />
-            {whatsappInboxCount > 0 && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold tabular-nums text-white">
-                {whatsappInboxCount > 99 ? "99+" : whatsappInboxCount}
-              </span>
-            )}
-          </Link>
-        )}
-        {showGeneralInbox && (
-          <Link
-            href="/dashboard/inbox"
-            className={cn(
-              "relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2",
-              generalInboxCount > 0
-                ? "border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100"
-                : "border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700",
-            )}
-            aria-label={generalInboxCount > 0 ? dt("الرسائل الواردة، {0} غير مقروءة", [generalInboxCount]) : dt("الرسائل الواردة")}
-            title={dt("الرسائل الواردة")}
-          >
-            <MessagesSquare className="h-[18px] w-[18px]" aria-hidden="true" />
-            {generalInboxCount > 0 && (
-              <span className="absolute -end-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold tabular-nums text-white ring-2 ring-white">
-                {generalInboxCount > 99 ? "99+" : generalInboxCount}
-              </span>
-            )}
-          </Link>
-        )}
-        <DashboardLanguageToggle />
-        <CurrencySelector showDefaultCurrencyOption onDark={false} />
-        <Link
-          href="/"
-          target="_blank"
-          className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:text-brand hover:border-brand-200 transition-colors whitespace-nowrap"
-        >
-          {dt("عرض الموقع")}<ExternalLink className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-    </header>
-  );
+  const iconButton = "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
+  return <header className="sticky top-0 z-20 flex h-16 min-w-0 items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-3 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-6">
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <button type="button" onClick={onOpenSidebar} aria-expanded={sidebarOpen} aria-label={dt("فتح القائمة")} aria-controls="dashboard-sidebar" className={cn(iconButton, "lg:hidden")}><Menu size={20} /></button>
+      <nav aria-label={dt("مسار التنقل")} className="min-w-0"><ol className="flex min-w-0 items-center gap-1 text-[13px]">{crumbs.map((crumb, index) => {
+        const last = index === crumbs.length - 1;
+        return <li key={`${crumb.label}-${index}`} className={cn("min-w-0 items-center gap-1", last ? "flex" : "hidden sm:flex")}>
+          {index > 0 ? <Separator className="hidden h-3.5 w-3.5 shrink-0 text-slate-300 sm:block" aria-hidden="true" /> : null}
+          {crumb.href && !last ? <Link href={crumb.href} className="truncate text-slate-500 transition-colors hover:text-brand">{crumb.label}</Link> : <span aria-current={last ? "page" : undefined} className={cn("truncate", last ? "font-semibold text-slate-900" : "text-slate-400")}>{crumb.label}</span>}
+        </li>;
+      })}</ol></nav>
+    </div>
+    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <button type="button" onClick={onOpenSearch} aria-label={dt("بحث")} className={cn(iconButton, "lg:hidden")}><Search size={18} /></button>
+      {showWhatsappInbox ? <Link href="/dashboard/communication/inbox" className={cn("relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:w-auto sm:gap-1.5 sm:px-2", whatsappInboxCount > 0 ? "border-emerald-300 bg-emerald-50 hover:bg-emerald-100" : "border-slate-200 bg-white hover:bg-emerald-50")} aria-label={whatsappInboxCount > 0 ? dt("واتساب، {0} محادثة غير مقروءة", [whatsappInboxCount]) : dt("محادثات واتساب")}>
+        <WhatsappMark />{whatsappInboxCount > 0 ? <span className="absolute -end-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold tabular-nums text-white ring-2 ring-white sm:static sm:ring-0">{whatsappInboxCount > 99 ? "99+" : whatsappInboxCount}</span> : null}
+      </Link> : null}
+      {showGeneralInbox ? <Link href="/dashboard/inbox" className={cn(iconButton, "relative", generalInboxCount > 0 && "border-sky-300 bg-sky-50 text-sky-800")} aria-label={generalInboxCount > 0 ? dt("الرسائل الواردة، {0} غير مقروءة", [generalInboxCount]) : dt("الرسائل الواردة")}><MessagesSquare size={18} />{generalInboxCount > 0 ? <span className="absolute -end-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold tabular-nums text-white ring-2 ring-white">{generalInboxCount > 99 ? "99+" : generalInboxCount}</span> : null}</Link> : null}
+      <div className="sm:hidden"><Popover><PopoverTrigger asChild><button type="button" className={iconButton} aria-label={dt("إعدادات العرض")}><Settings2 size={18} /></button></PopoverTrigger><PopoverContent dir={dir} align="end" className="w-72 max-w-[calc(100vw-2rem)] space-y-4 rounded-xl p-4">
+        <div className="space-y-2"><p className="text-xs font-semibold text-slate-500">{dt("لغة لوحة التحكم")}</p><DashboardLanguageToggle /></div>
+        <div className="space-y-2"><p className="text-xs font-semibold text-slate-500">{dt("عملة العرض")}</p><CurrencySelector showDefaultCurrencyOption onDark={false} /></div>
+        <Link href="/" target="_blank" className="inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm text-brand">{dt("عرض الموقع")}<ExternalLink size={14} /></Link>
+      </PopoverContent></Popover></div>
+      <div className="hidden items-center gap-2 sm:flex"><DashboardLanguageToggle /><CurrencySelector showDefaultCurrencyOption onDark={false} /><Link href="/" target="_blank" className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition-colors hover:text-brand">{dt("عرض الموقع")}<ExternalLink size={14} /></Link></div>
+    </div>
+  </header>;
 }

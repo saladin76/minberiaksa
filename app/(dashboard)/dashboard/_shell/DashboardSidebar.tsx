@@ -65,6 +65,10 @@ export function DashboardSidebar({
   // to tab straight through the overlay into the page behind it.
   useEffect(() => {
     if (!isOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    asideRef.current?.querySelector<HTMLButtonElement>("[data-drawer-close]")?.focus();
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return; }
       if (e.key !== 'Tab') return;
@@ -80,7 +84,7 @@ export function DashboardSidebar({
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('keydown', onKeyDown); document.body.style.overflow = previousOverflow; if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true }); };
   }, [isOpen, onClose]);
 
   const userInitials = (user?.name || user?.email || 'U').slice(0, 2).toUpperCase();
@@ -90,12 +94,14 @@ export function DashboardSidebar({
       ref={asideRef}
       id="dashboard-sidebar"
       aria-label={dt("التنقل الرئيسي")}
+      role={isOpen ? "dialog" : undefined}
+      aria-modal={isOpen ? true : undefined}
       className={cn(
-        'fixed top-0 z-40 h-full w-[268px] flex flex-col transition-transform duration-300 ease-out',
+        'fixed top-0 z-40 h-dvh max-w-[calc(100vw-2.5rem)] w-[268px] flex flex-col transition-transform duration-300 ease-out lg:max-w-none lg:visible',
         'bg-white border-slate-200',
         dir === 'rtl' ? 'right-0 border-l' : 'left-0 border-r',
         'lg:translate-x-0',
-        isOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full',
+        isOpen ? 'visible translate-x-0' : dir === 'rtl' ? 'invisible translate-x-full' : 'invisible -translate-x-full',
       )}
     >
       {/* Brand bar */}
@@ -105,6 +111,7 @@ export function DashboardSidebar({
           </Link>
         <button
           type="button"
+          data-drawer-close
           onClick={onClose}
           aria-label={dt("إغلاق القائمة")}
           className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
@@ -128,7 +135,7 @@ export function DashboardSidebar({
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4 sidebar-scroll-light">
+      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-4 sidebar-scroll-light">
         {navigation.map((section) => {
           const collapsed = collapsedGroups[section.group] ?? false;
           // A count hidden inside a folded group is a count nobody sees, so the group header

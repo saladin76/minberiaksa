@@ -3,7 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Eye, RefreshCw, SlashIcon, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { dt } from "@/lib/dashboard/i18n";
+import { dt, dashIntl } from "@/lib/dashboard/i18n";
 
 /**
  * Visual language shared by the البريد / واتساب / SMS channel pages.
@@ -47,8 +47,8 @@ export function fmtDateTime(value: string | null): { date: string; time: string 
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return {
-    date: d.toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "Europe/Istanbul" }),
-    time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Europe/Istanbul" }),
+    date: d.toLocaleDateString(dashIntl("ar-EG"), { dateStyle: "medium", timeZone: "Europe/Istanbul" }),
+    time: d.toLocaleTimeString(dashIntl("ar-EG"), { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" }),
   };
 }
 

@@ -5,7 +5,7 @@ import { mergeProjectPriorityGroups } from "../../lib/minbar/project-order";
 
 test("globally ranked projects precede newest unranked projects and limits preserve that order", () => {
   const source = readFileSync("lib/minbar/projects.ts", "utf8");
-  assert.match(source, /NOT: \{ priority: null \}/);
+  assert.match(source, /RANKED_CAMPAIGNS/);
   assert.match(source, /where: unprioritizedWhere,[\s\S]*?orderBy: \{ createdAt: "desc" \}/);
 
   const prioritized = [{ id: "rank-1" }, { id: "rank-2" }];

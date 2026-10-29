@@ -14,6 +14,7 @@ import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
 import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
 import { mergeProjectPriorityGroups } from "@/lib/minbar/project-order";
+import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "@/lib/campaign/priority-filter";
 import type { CartFreqKey } from "@/lib/minbar/cart";
 import type { Prisma } from "@prisma/client";
 
@@ -171,10 +172,10 @@ async function findPublishedCampaignRows(
     ],
   };
   const prioritizedWhere: Prisma.CampaignWhereInput = {
-    AND: [baseWhere, { NOT: { priority: null } }],
+    AND: [baseWhere, RANKED_CAMPAIGNS],
   };
   const unprioritizedWhere: Prisma.CampaignWhereInput = {
-    AND: [baseWhere, { priority: null }],
+    AND: [baseWhere, UNRANKED_CAMPAIGNS],
   };
   const limit = Number.isInteger(options.limit) && Number(options.limit) > 0
     ? Number(options.limit)

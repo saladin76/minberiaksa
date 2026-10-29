@@ -1,2 +1,15 @@
 @config "../tailwind.config.ts";
 @tailwind utilities;
+
+/* Scoped to the dashboard, including its portalled dialogs. Keep mobile form
+   controls readable and avoid Safari's automatic zoom on sub-16px inputs. */
+@media (max-width: 639px) {
+  .dash-vivid :where(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea) {
+    font-size: 16px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  [data-dashboard-content] {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}

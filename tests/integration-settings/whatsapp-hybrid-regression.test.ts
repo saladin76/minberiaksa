@@ -78,7 +78,7 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
   requires("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignControlsDialog.tsx", [/max-h-\[calc\(100dvh-2rem\)\]/, /overflow-y-auto/, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/]);
 });
 test("WhatsApp inbox defaults to all conversations and remembers an available sender", () => {
-  requires(inboxPath, [/useState\("all"\)/, /communication:whatsapp:senderId/, /nextSenders\.length === 1/, /nextConversations\[0\]\.id/, /selectConversation\(nextConversations\[0\]\.id\)/, /عرض كل المحادثات/]);
+  requires(inboxPath, [/useState\("all"\)/, /communication:whatsapp:senderId/, /nextSenders\.length === 1/, /عرض كل المحادثات/], [/selectConversation\(nextConversations\[0\]\.id\)/]);
 });
 test("WhatsApp inbox accurately labels its approved-template picker outside the 24-hour window", () => {
   requires(inboxPath, [/اختيار قالب معتمد/, /initialMode=\{smartInitialMode\}/], [/إرسال قالب تحية/]);

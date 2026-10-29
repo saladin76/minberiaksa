@@ -262,12 +262,19 @@ function DashboardContent({
   }, [wantsReceiptsBadge]);
 
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  useEffect(() => { setIsSidebarOpen(false); }, [pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) setIsSidebarOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   const openSearch = useCallback(() => { setIsSidebarOpen(false); setIsSearchOpen(true); }, []);
 
   if (status === 'loading') return <LoadingSkeleton />;
 
   return (
-    <div className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
+    <div data-dashboard-shell="true" className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
       {locale !== "ar" && <DashboardTextTranslator />}
       <DashboardAutoEnhancements />
       <ProjectEditorSectionsEnhancer />
@@ -301,10 +308,12 @@ function DashboardContent({
       />
 
       <main
+        inert={isSidebarOpen}
         className={`flex-1 min-w-0 ${dir === 'rtl' ? 'lg:mr-[268px]' : 'lg:ml-[268px]'}`}
       >
         <DashboardTopbar
           crumbs={crumbs}
+          sidebarOpen={isSidebarOpen}
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onOpenSearch={openSearch}
           dir={dir}
@@ -317,7 +326,7 @@ function DashboardContent({
         {/* Content well. Pages own their own surfaces (Card, PageHeader, …)  the shell no
             longer wraps every route in a white rounded card, which produced a box-inside-a-box
             with doubled padding on every one of the 151 routes. */}
-        <div className="p-3 sm:p-4 lg:p-6 min-h-[calc(100vh-4rem)]">{children}</div>
+        <div data-dashboard-content="true" className="min-h-[calc(100dvh-4rem)] min-w-0 p-3 sm:p-4 lg:p-6">{children}</div>
       </main>
     </div>
   );

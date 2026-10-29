@@ -1,3 +1,4 @@
+import { RANKED_CAMPAIGNS } from "@/lib/campaign/priority-filter";
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -81,7 +82,7 @@ export async function GET(
         ...amountConditions,
         activeOnly ? { isActive: true } : {},
         NOT_SOFT_DELETED,
-        hasPriority ? { NOT: { priority: null } } : {}
+        hasPriority ? RANKED_CAMPAIGNS : {}
       ].filter(Boolean)
     };
 
