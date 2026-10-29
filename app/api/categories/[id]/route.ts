@@ -1,3 +1,4 @@
+import { categoryProjectCounts } from "@/lib/campaign/category-project-counts";
 import { contentWriteWhere, contentVersionPatch, isContentWriteConflict } from "@/lib/content-editor/legacy-write";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
@@ -55,7 +56,7 @@ export async function GET(
               take: 2,
               select: { locale: true, name: true, description: true, slug: true },
             },
-        ...(includeCounts ? { _count: { select: { campaigns: true } } } : {})
+
       }
     });
 
@@ -65,11 +66,14 @@ export async function GET(
 
     const isActive = category.isActive ?? true;
 
+    const counts = includeCounts ? (await categoryProjectCounts(prisma, [category.id])).get(category.id) : null;
     if (allTranslations) {
       return NextResponse.json({
         ...category,
         isActive,
-        campaignCount: (category as any)._count?.campaigns ?? undefined
+        campaignCount: counts?.published,
+        archivedCampaignCount: counts?.archived,
+        linkedCampaignCount: counts?.total
       });
     }
 
@@ -84,7 +88,9 @@ export async function GET(
       icon: category.icon,
       order: category.order,
       isActive,
-      campaignCount: (category as any)._count?.campaigns ?? undefined
+      campaignCount: counts?.published,
+        archivedCampaignCount: counts?.archived,
+        linkedCampaignCount: counts?.total
     });
   } catch (error) {
     console.error('Error fetching category:', error);

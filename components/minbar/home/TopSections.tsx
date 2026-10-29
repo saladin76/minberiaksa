@@ -1,5 +1,7 @@
 "use client";
 
+import { heroPosterSources } from "@/lib/minbar/hero-poster";
+export { heroPoster } from "@/lib/minbar/hero-poster";
 import Link from "next/link";
 import { useQuietFloatingButtonsWhileVisible } from "@/hooks/useQuietFloatingButtons";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -242,24 +244,12 @@ function AccentedTitle({ text, accent }: { text: string; accent: string }) {
   );
 }
 
-/** The 0:03 frame of the intro film for this edition. */
-export function heroPoster(locale: string): string {
-  // Named after the film they belong to (see `introVideoId`), so a new film
-  // gets a new file and no cache keeps showing the old one.
-  if (locale === "ar") return "/minbar/assets/hero/intro-ar-E_TZglHItoY.webp";
-  if (locale === "tr") return "/minbar/assets/hero/intro-tr-G7mgN6jux2s.webp";
-  return "/minbar/assets/hero/intro-intl-3VVMdV5c_RU.webp";
-}
-
 export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) {
   useQuietFloatingButtonsWhileVisible(".mia-hero-actions--mobile");
   const locale = useLocale();
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
-  const poster = heroPoster(locale);
-  // Each still has a 768px copy beside it for phones, where the card is ~380px
-  // wide and the poster is the Largest Contentful Paint.
-  const posterSmall = poster.replace(/\.webp$/, "-768.webp");
+  const poster = heroPosterSources(locale);
 
   return (
     <section id="hero" className="mia-hero">
@@ -314,7 +304,7 @@ export function Hero({ onPlayIntro }: { onPlayIntro: (embed: string) => void }) 
                 onClick={() => onPlayIntro(youtubeEmbed(introVideoId(locale), { autoplay: true }))}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- the poster is a local, per-edition frame */}
-                <img src={poster} srcSet={`${posterSmall} 768w, ${poster} 1280w`} sizes="(max-width: 900px) calc(100vw - 32px), 600px" alt="" className="mia-hero-poster" width={1280} height={720} decoding="async" fetchPriority="high" />
+                <img src={poster.src} srcSet={poster.srcSet} sizes={poster.sizes} alt="" className="mia-hero-poster" width={1280} height={720} decoding="async" fetchPriority="high" />
                 <span aria-hidden="true" className="mia-hero-shade" />
 
                 <span className="mia-hero-chip">

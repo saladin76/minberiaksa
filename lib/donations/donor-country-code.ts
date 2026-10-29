@@ -22,7 +22,7 @@ export function countryCodeFromPhone(phone: string | null | undefined): string |
 }
 
 export async function getDonorCountryCodeForSnapshot(
-  prisma: PrismaClient,
+  prisma: Pick<PrismaClient, "user">,
   donorId: string
 ): Promise<string | null> {
   const u = await prisma.user.findUnique({

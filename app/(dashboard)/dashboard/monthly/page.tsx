@@ -374,7 +374,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [dateTo, setDateTo] = useState("");
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
-  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "PENDING" | "FAILED">("all");
+  const donationsStatusFilter = "PAID" as const;
   /** Applied donor search (name or email) for أحدث الدفعات المتكررة  server-side. */
   const [donationsSearch, setDonationsSearch] = useState("");
   /** Applied donor search (name or email) for قائمة الاشتراكات  server-side, independent of the table above. */
@@ -682,7 +682,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         if (end) params.set("end", end);
         params.set("subscriptionOnly", "1");
         if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
-        if (donationsStatusFilter !== "all") params.set("status", donationsStatusFilter);
+        params.set("status", "PAID");
         if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
@@ -2045,15 +2045,12 @@ export default function MonthlySubscriptionsDashboardPage() {
   <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
       {dt("حالة الدفعة")}</label>
-    <Select value={donationsStatusFilter} onValueChange={(v) => setDonationsStatusFilter(v as typeof donationsStatusFilter)}>
+    <Select value={donationsStatusFilter} disabled>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
         <SelectValue placeholder={dt("الحالة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
         <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
-        <SelectItem value="PENDING" className="text-xs">{dt("قيد التأكيد")}</SelectItem>
-        <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
   </div>

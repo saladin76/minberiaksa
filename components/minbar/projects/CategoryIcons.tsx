@@ -1,3 +1,4 @@
+import CmsCategoryIcon from "@/components/CategoryIcon";
 import type { ReactElement } from "react";
 
 /**
@@ -105,10 +106,11 @@ const PATHS: Record<CategoryIconName, ReactElement> = {
   ),
 };
 
-export default function CategoryIcon({ name }: { name: CategoryIconName }) {
+export default function CategoryIcon({ name }: { name: string }) {
+  if (!Object.prototype.hasOwnProperty.call(PATHS, name)) return <CmsCategoryIcon name={name} className="h-[15px] w-[15px]" />;
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {PATHS[name] ?? PATHS["layout-grid"]}
+      {PATHS[name as CategoryIconName]}
     </svg>
   );
 }

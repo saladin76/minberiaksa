@@ -5,7 +5,7 @@ export type CampaignUtmLink = {
   url: string;
   source?: string | null;
   medium?: string | null;
-  origin?: "whatsapp-template";
+  origin?: "whatsapp-template" | "archived-email";
 };
 
 export type CampaignTemplateRef = {

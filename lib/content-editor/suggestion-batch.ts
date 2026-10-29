@@ -9,22 +9,23 @@ export class SuggestionRequestError extends Error {
 export function suggestionResponseError(body: { error?: unknown; reason?: unknown }, fallback: string) {
   return new SuggestionRequestError(typeof body.error === "string" ? body.error : fallback, isSuggestionFailureCode(body.reason) || (typeof body.reason === "string" && RESPONSE_FAILURES.has(body.reason)) ? body.reason as string : undefined);
 }
-/** Process one locale at a time and stop a shared provider failure before spending on other locales. */
+/** Probe the first locale, then process a bounded batch; retain every completed proposal. */
 export async function runSuggestionBatch<T>(input: {
   targets: readonly string[]; signal: AbortSignal; request: (locale: string) => Promise<T>;
   onSuccess: (locale: string, result: T) => void; onError: (locale: string, error: unknown) => void;
   onProgress: (done: number, total: number) => void;
 }) {
-  let done = 0;
-  for (const locale of input.targets) {
-    if (input.signal.aborted) break;
-    let stop = false;
-    try { const result = await input.request(locale); if (!input.signal.aborted) input.onSuccess(locale, result); }
-    catch (error) { if (!input.signal.aborted) { input.onError(locale, error); stop = error instanceof SuggestionRequestError && (stopsSuggestionBatch(error.reason) || RESPONSE_FAILURES.has(error.reason || "")); } }
-    finally { if (!input.signal.aborted) { done++; input.onProgress(done, input.targets.length); } }
-    if (stop || input.signal.aborted) return { done, skipped: input.targets.slice(done), sharedFailure: stop };
-  }
-  return { done, skipped: input.targets.slice(done), sharedFailure: false };
+  const targets = [...input.targets], completed = new Set<number>();
+  let next = 0, stop = false;
+  const run = async (index: number) => {
+    try { const result = await input.request(targets[index]); if (!input.signal.aborted) input.onSuccess(targets[index], result); }
+    catch (error) { if (!input.signal.aborted) { input.onError(targets[index], error); if (error instanceof SuggestionRequestError && (stopsSuggestionBatch(error.reason) || RESPONSE_FAILURES.has(error.reason || ""))) stop = true; } }
+    finally { if (!input.signal.aborted) { completed.add(index); input.onProgress(completed.size, targets.length); } }
+  };
+  if (targets.length && !input.signal.aborted) { next = 1; await run(0); }
+  const worker = async () => { while (!stop && !input.signal.aborted && next < targets.length) { const index = next++; await run(index); } };
+  if (!stop && !input.signal.aborted) await Promise.all(Array.from({ length: Math.min(3, targets.length - next) }, worker));
+  return { done: completed.size, skipped: targets.filter((_locale, index) => !completed.has(index)), sharedFailure: stop };
 }
 
 /** Proxies and expired sessions can return HTML. Never expose or parse that as a proposal. */

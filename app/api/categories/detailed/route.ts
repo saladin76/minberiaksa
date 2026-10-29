@@ -1,3 +1,4 @@
+import { categoryProjectCounts } from "@/lib/campaign/category-project-counts";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     const categories = await prisma.category.findMany({
       take: limit + 1,
       ...(cursor && { skip: 1, cursor: { id: cursor } }),
-      orderBy: { order: 'asc' },
+      orderBy: [{ order: 'asc' }, { id: 'asc' }],
       where: includeInactive ? undefined : CATEGORY_ACTIVE_OR_UNSET,
       select: {
         id: true,
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
         order: true,
         isActive: true,
         translations: { where: translationLocaleWhere(locale), take: 2, select: { locale: true, name: true, description: true } },
-        ...(includeCounts ? { _count: { select: { campaigns: true } } } : {})
+
       }
     });
 
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
           where: {
             AND: [
               { categoryIds: { has: cat.id } },
+              { isActive: true },
               NOT_SOFT_DELETED,
             ],
           },
@@ -104,6 +106,7 @@ export async function GET(request: NextRequest) {
       }, {} as Record<string, DetailedCampaignRow[]>);
     }
 
+    const counts = includeCounts ? await categoryProjectCounts(prisma, page.map(row => row.id)) : null;
     const transformed = page.map(cat => {
       const tCat = pickTranslation(cat.translations, locale);
       return {
@@ -115,7 +118,9 @@ export async function GET(request: NextRequest) {
         icon: cat.icon,
         order: cat.order,
         isActive: cat.isActive ?? true,
-        campaignCount: cat._count?.campaigns ?? undefined,
+        campaignCount: counts?.get(cat.id)?.published,
+        archivedCampaignCount: counts?.get(cat.id)?.archived,
+        linkedCampaignCount: counts?.get(cat.id)?.total,
         campaigns: includeCampaigns ? (campaignsByCategory[cat.id] || []).map(c => {
           const tC = pickTranslation(c.translations, locale);
           return {

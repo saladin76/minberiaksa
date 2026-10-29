@@ -61,6 +61,7 @@ type CampaignSendControlsDraft = {
   autoSpeed: boolean;
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   dailyCap: number;
+  dailyCapEnabled: boolean;
   scheduledStopAt: string | null;
   resumeAt: string | null;
   quietHours: { enabled: boolean; start: string; end: string; timezoneMode: "RECIPIENT" | "FIXED"; timezone: string };
@@ -71,7 +72,8 @@ const DEFAULT_SEND_CONTROLS: CampaignSendControlsDraft = {
   speedMode: "BALANCED",
   autoSpeed: true,
   priority: "NORMAL",
-  dailyCap: 100000,
+  dailyCap: 0,
+  dailyCapEnabled: false,
   scheduledStopAt: null,
   resumeAt: null,
   quietHours: { enabled: false, start: "00:00", end: "08:00", timezoneMode: "RECIPIENT", timezone: "Europe/Istanbul" },
@@ -237,7 +239,7 @@ export function NewCampaignWizard() {
         .then((data) => {
           const cap = Number(data.dailyCap);
           if (Number.isFinite(cap) && cap > 0) {
-            setSendControls((current) => ({ ...current, dailyCap: cap }));
+            // Provider capacity is informational; it does not create an internal campaign limit.
             setDailyCapSource(data.source === "META" ? "META" : "FALLBACK");
           }
         })
@@ -724,18 +726,18 @@ export function NewCampaignWizard() {
             <div className="flex flex-wrap items-center gap-3">
               <input
                 type="number"
-                min={1}
+                min={0}
                 max={1_000_000}
                 value={sendControls.dailyCap}
                 onChange={(e) => {
                   setDailyCapSource("FALLBACK");
-                  setSendControls((current) => ({ ...current, dailyCap: Math.max(1, Number(e.target.value) || 1) }));
+                  setSendControls((current) => ({ ...current, dailyCap: Math.max(0, Number(e.target.value) || 0), dailyCapEnabled: Number(e.target.value) > 0 }));
                 }}
                 className="h-10 w-full max-w-sm rounded-lg border border-slate-200 px-3"
                 dir="ltr"
               />
               <span className={cn("rounded-full px-2 py-1 text-[11px]", dailyCapSource === "META" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>
-                {dailyCapSource === "META" ? dt("مقروء تلقائيًا من Meta") : dt("قيمة احتياطية / تعديل يدوي")}
+                {dt("صفر يعني بلا حد داخلي")}
               </span>
             </div>
           </section>

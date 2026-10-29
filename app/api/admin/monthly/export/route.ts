@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const endParam = sp.get("end");
     const sortBy = (sp.get("sortBy") || "date") as "date" | "amount";
     const sortOrder = (sp.get("sortOrder") || "desc") as "asc" | "desc";
-    const status = sp.get("status");                  // donation status
+    const status = "PAID";                  // donation status
     const subStatusRaw = (sp.get("subStatus") || "all").toUpperCase();
     const locale = sp.get("locale")?.trim() ?? null;
     const country = sp.get("country")?.trim() ?? null;
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     const chargeAggregates = subIds.length
       ? await prisma.donation.groupBy({
           by: ["subscriptionId"],
-          where: { subscriptionId: { in: subIds }, status: "PAID" },
+          where: { subscriptionId: { in: subIds }, status: "PAID", paidAt: { not: null } },
           _count: { _all: true },
           _sum: { amount: true, amountUSD: true },
         })
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
     if (categoryId && categoryId !== "all") filters.push({ label: dt("القسم"), value: categoryId });
     if (campaignId && campaignId !== "all") filters.push({ label: dt("الحملة"), value: campaignId });
     if (userId && userId !== "all") filters.push({ label: dt("المتبرع"), value: userId });
-    if (status && status !== "all") filters.push({ label: dt("حالة التبرع"), value: status });
+    if (status) filters.push({ label: dt("حالة التبرع"), value: status });
     if (subStatusRaw && subStatusRaw !== "ALL") filters.push({ label: dt("حالة الاشتراك"), value: subStatusRaw });
     filters.push({ label: dt("الدورية"), value: frequency ? FREQUENCY_LABEL_AR[frequency] : dt("كل الدوريات") });
     if (locale && locale !== "all") filters.push({ label: dt("اللغة"), value: locale });

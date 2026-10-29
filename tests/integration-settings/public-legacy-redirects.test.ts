@@ -5,6 +5,9 @@ import { redirectLegacyPath } from "../../lib/minbar/slug-routing";
 test("legacy Gaza campaign URLs redirect exactly to the Arabic project catalogue", () => {
   assert.equal(redirectLegacyPath("/ar/relief-in-gaza"), "/ar/bagislar");
   assert.equal(redirectLegacyPath("/ar/bagis/ar/project"), "/ar/bagislar");
+  assert.equal(redirectLegacyPath("/ar/bagis/ar/project/94"), "/ar/bagislar");
+  assert.equal(redirectLegacyPath("/ar/bagis/ar/project/94/"), "/ar/bagislar");
+  assert.equal(redirectLegacyPath("/ar/bagis/ar/project/not-a-number"), null);
   assert.equal(redirectLegacyPath("/ar/relief-in-gaza/updates"), null);
 });
 

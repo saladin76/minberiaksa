@@ -89,6 +89,8 @@ export function redirectLegacyPath(pathname: string): string | null {
 
   if (locale === "ar") {
     const exactPath = decoded.filter(Boolean).join("/");
+    // Old numeric ids have no verified current recipient mapping: preserve entry to the live catalogue.
+    if (/^bagis\/ar\/project\/\d+$/.test(exactPath)) return `/${locale}/bagislar`;
     const exactTarget = ARABIC_EXACT_REDIRECTS[exactPath];
     if (exactTarget) return `/${locale}/${exactTarget}`;
   }

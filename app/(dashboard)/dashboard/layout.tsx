@@ -1,3 +1,4 @@
+import "@/styles/dashboard-utilities.css";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

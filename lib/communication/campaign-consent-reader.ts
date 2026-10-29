@@ -32,7 +32,7 @@ export async function readCampaignConsentUserIds(channel: AudienceChannel, signa
     cursor = next;
     if (rows.length < 1000) break;
   }
-  if (channel === "WHATSAPP") {
+  if (channel === "WHATSAPP" || channel === "EMAIL") {
     let userCursor: string | null = null;
     while (true) {
       signal?.throwIfAborted();

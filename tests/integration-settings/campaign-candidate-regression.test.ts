@@ -96,7 +96,9 @@ function harness(opts: { denied?: boolean; failedRead?: boolean; failedConsent?:
           reads += 1; queries.push(args);
           if (opts.failedRead) throw new Error("read failed");
           if ((args.select as RecordValue).communicationProfile) return [{ id: "user", name: "Donor", email: "donor@example.test", phone: "+905551112233", image: null, preferredLang: "ar", countryCode: "TR", communicationProfile: profile }];
-          return Array.from({ length: Math.min(opts.size ?? 1, args.take as number) }, (_, i) => ({ id: String(i) }));
+          const cursor = args.cursor as { id: string } | undefined;
+          const offset = cursor ? Number(cursor.id) + 1 : 0;
+          return Array.from({ length: Math.max(0, Math.min((opts.size ?? 1) - offset, args.take as number)) }, (_, i) => ({ id: String(offset + i) }));
         }, groupBy: async () => [],
       }, badge: { findMany: async () => [], findUnique: async () => null },
     } },
@@ -155,11 +157,16 @@ test("bad filters and malformed pagination fail without querying donors", async 
   for (const body of [null, [], "bad", { channel: "WHATSAPP", search: {} }, { channel: "INVALID" }]) assert.equal((await h.route.POST(request("", body))).status, 400);
   assert.equal(h.state().reads, 0);
 });
-test("select-all truncation is true only when more than the ceiling exists", async () => {
-  assert.equal((await harness({ size: 5 }).route.POST(request())).body.truncated, false);
-  const large = await harness({ size: 6 }).route.POST(request());
-  assert.equal(large.body.truncated, true); assert.equal((large.body.ids as string[]).length, 5);
+test("select-all includes all 14,842 matching donors in bounded pages", async () => {
+  const h = harness({ size: 14842 });
+  const result = await h.route.POST(request());
+  assert.equal(result.body.truncated, false);
+  assert.equal((result.body.ids as string[]).length, 14842);
+  assert.equal(new Set(result.body.ids as string[]).size, 14842);
+  assert.equal(h.state().queries.length, 15);
+  assert.ok(h.state().queries.every(query => query.take === 1000));
 });
+
 test("explicit eligibility precedes GET count/pagination and matches POST select-all", async () => {
   const h = harness();
   await h.route.GET(request("channel=WHATSAPP&eligibility=eligible"));

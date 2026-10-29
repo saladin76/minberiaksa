@@ -52,8 +52,8 @@ export function recipientExclusionReason(
   // This definition deliberately matches the database's null/missing/empty filter.
   if (contact == null || contact === "") return "MISSING_CONTACT";
   if (channel === "WHATSAPP") return isWhatsappExplicitlyUnsubscribed(profile) ? "DO_NOT_CONTACT" : null;
+  if (channel === "EMAIL") return /^elastic-email:(?:unsubscribe|complaint|hard-bounce)$|email-unsubscribe/i.test(profile?.consentSource || "") ? "DO_NOT_CONTACT" : null;
   if (!profile) return "NEEDS_CONSENT_REVIEW";
-  if (channel === "EMAIL" && profile.emailOptIn !== true) return "EMAIL_OPT_IN_REQUIRED";
   if (channel === "SMS" && profile.smsOptIn !== true) return "SMS_OPT_IN_REQUIRED";
   return null;
 }

@@ -1,4 +1,6 @@
-'use client';
+"use client";
+
+import { ProjectFilterOrderDialog } from "@/components/dashboard/ProjectFilterOrderDialog";
 
 import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useEffect, useState } from 'react';
@@ -60,6 +62,7 @@ interface Category {
     id: string;
   }[];
   campaignCount?: number;
+  archivedCampaignCount?: number;
   order: number;
   isActive: boolean;
 }
@@ -109,17 +112,17 @@ export default function CategoriesPage() {
       // Request localized categories and counts only for performance.
       // isActiveFalse=true returns archived categories too  the dashboard
       // needs both the active table and the archive viewer.
-      const response = await axios.get('/api/categories/detailed', {
-        params: {
-          locale: locale || 'ar',
-          counts: true,
-          includeCampaigns: false,
-          limit: 200,
-          isActiveFalse: true,
-        }
-      });
-
-      const payload = response.data?.items || response.data || [];
+      const payload: Category[] = [];
+      let cursor: string | null = null;
+      const seen = new Set<string>();
+      do {
+        const response: { data: { items: Category[]; hasMore: boolean; nextCursor: string | null } } = await axios.get('/api/categories/detailed', { params: { locale: locale || 'ar', counts: true, includeCampaigns: false, limit: 100, isActiveFalse: true, ...(cursor ? { cursor } : {}) } });
+        payload.push(...response.data.items);
+        if (response.data.hasMore && !response.data.nextCursor) throw new Error('CATEGORY_CURSOR_MISSING');
+        cursor = response.data.hasMore ? response.data.nextCursor : null;
+        if (cursor && seen.has(cursor)) throw new Error('CATEGORY_CURSOR_STALLED');
+        if (cursor) seen.add(cursor);
+      } while (cursor);
 
       // Normalize categories to ensure `campaigns` array exists (may be omitted for performance)
       const normalized: Category[] = payload.map((c: any) => ({
@@ -132,7 +135,8 @@ export default function CategoriesPage() {
         // If full campaigns were not returned, keep an empty array and preserve the aggregate count.
         campaigns: Array.isArray(c.campaigns) ? c.campaigns : [],
         // attach a readable campaignCount for display when available
-        ...(typeof c.campaignCount === 'number' ? { campaignCount: c.campaignCount } : {})
+        ...(typeof c.campaignCount === 'number' ? { campaignCount: c.campaignCount } : {}),
+        archivedCampaignCount: typeof c.archivedCampaignCount === 'number' ? c.archivedCampaignCount : 0
       }));
 
       setCategories(normalized);
@@ -334,6 +338,7 @@ export default function CategoriesPage() {
             )}
             <DashboardLocaleSwitcher value={locale} onChange={setLocale} className="h-10 w-[190px]" />
             <ReorderDialog categories={categories} onReorder={fetchCategories} />
+            <ProjectFilterOrderDialog locale={locale} />
             <Button
               variant="outline"
               className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
@@ -434,7 +439,7 @@ export default function CategoriesPage() {
               </TableCell>
               <TableCell className="font-medium">{category.name}</TableCell>
                 <TableCell className='max-w-[300px] truncate pe-12'>{category.description || dt("لا يوجد وصف")}</TableCell>
-                <TableCell>{category.campaignCount ?? category.campaigns.length}</TableCell>
+                <TableCell>{category.campaignCount ?? category.campaigns.length}{category.archivedCampaignCount ? <span className="ms-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{dt("{0} مشاريع مؤرشفة", [category.archivedCampaignCount])}</span> : null}</TableCell>
                 <TableCell>
                   {category.image ? (
                     <img
@@ -599,7 +604,7 @@ export default function CategoriesPage() {
                 ) : filteredArchive.map(category => (
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.campaignCount ?? category.campaigns.length}</TableCell>
+                    <TableCell>{category.campaignCount ?? category.campaigns.length}{category.archivedCampaignCount ? <span className="ms-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{dt("{0} مشاريع مؤرشفة", [category.archivedCampaignCount])}</span> : null}</TableCell>
                     <TableCell>
                       <Button
                         size="sm"

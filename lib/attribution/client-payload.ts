@@ -101,6 +101,12 @@ export function captureAttributionFromUrl(): void {
   if (typeof window === "undefined") return;
   const storedClickIds = captureStoredClickIds();
   const params = new URLSearchParams(window.location.search);
+  const identityKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_id", "campaign_id"] as const;
+  const newTouch = identityKeys.some(key => { const value = params.get(key)?.trim(); return value && !hasMacro(value) && value !== getCookie(PREFIX + key); });
+  if (newTouch) for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_id", "utm_content", "utm_term", "campaign_id", "campaign_name", "twilioCampaignId", "twilioTemplateId", "channel", "language", "locale"]) {
+    for (const suffix of ["", "_unresolved"]) document.cookie = `${encodeURIComponent(PREFIX + key + suffix)}=; Max-Age=0; path=/; SameSite=Lax; Secure`;
+  }
+
   const keys: DonationAttributionKey[] = [...DONATION_ATTRIBUTION_KEYS];
   for (const key of keys) {
     const fromUrl = params.get(key) || storedClickIds[key as keyof typeof storedClickIds];

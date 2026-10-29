@@ -1,5 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
+import { ensureOptionalUserEmailIndex } from "../lib/donations/optional-user-email-index";
 
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
 
@@ -87,6 +88,7 @@ async function run() {
   const prisma = new PrismaClient();
   let missing = 0;
   try {
+    if (!await ensureOptionalUserEmailIndex(prisma, checkOnly)) missing += 1;
     for (const spec of indexes) {
       const collection = await prisma.$runCommandRaw({
         listCollections: 1,

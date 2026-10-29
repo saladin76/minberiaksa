@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as emailHistory from "../../lib/communication/campaign-email-history";
 import * as donationScan from "../../lib/communication/campaign-donation-scan";
 import {
   buildUniqueCampaignUtmAliases,
@@ -107,6 +108,7 @@ test("campaign reporting credits a paid donation through its unique registered l
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
+      communicationDelivery: { aggregateRaw: async () => [] },
       donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-1", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 75, amountUSD: 75, totalAmount: 75,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
@@ -132,6 +134,7 @@ test("campaign reporting can recover the UTM from the approved template when no 
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
+      communicationDelivery: { aggregateRaw: async () => [] },
       donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-2", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 125, amountUSD: 125, totalAmount: 125,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
@@ -180,12 +183,13 @@ test("new and attached links replace generic campaign UTMs with a campaign-speci
 type ServiceDependencies = Record<string, unknown>;
 
 type Outcome = { donationCount: number; revenue: number; unpricedPaidCount: number; failedDonationCount?: number };
-function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void> }) {
+function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void>; history?: unknown[]; historyFailure?: boolean }) {
   let calls = 0, scans = 0;
   const service = isolated<{
     getCampaignOutcomeSummary: (ids: string[]) => Promise<{ metrics: Map<string, Outcome>; unattributed: Outcome }>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
+      communicationDelivery: { aggregateRaw: async () => { if (input.historyFailure) throw new Error("email archive offline"); return input.history ?? []; } },
       donation: { findRaw: async () => {
         scans++;
         if (input.fail) throw new Error("database offline");
@@ -290,6 +294,7 @@ function isolated<T>(file: string, dependencies: ServiceDependencies): T {
     URL,
     require: (id: string) => {
       if (id === "./campaign-donation-scan") return donationScan;
+      if (id === "./campaign-email-history") return emailHistory;
       if (!(id in dependencies)) throw new Error(`Unexpected dependency: ${id}`);
       return dependencies[id];
     },
@@ -313,3 +318,13 @@ for (const nested of [false, true]) {
     assert.match(await result, nested ? /links offline/ : /database offline/);
   });
 }
+
+test("the full report recovers archived email income, exposes ambiguity, and propagates a history-read error", async () => {
+  const donation = { ...confirmed, attribution: { utm_source: "email", utm_medium: "email", utm_campaign: "hotmeals" } };
+  const row = { _id: { campaignId: { $oid: campaignA }, url: "https://minberiaksa.org/ar/bagislar/fixture?utm_source=email&amp;utm_medium=email&amp;utm_campaign=hotmeals" } };
+  const unique = await reportingHarness({ donations: [donation], history: [row] }).service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(unique.metrics.get(campaignA)?.revenue, 10.25); assert.equal(unique.unattributed.donationCount, 0);
+  const shared = await reportingHarness({ donations: [donation], history: [row, { _id: { ...row._id, campaignId: { $oid: campaignB } } }] }).service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(shared.metrics.size, 0); assert.equal(shared.unattributed.revenue, 10.25);
+  await assert.rejects(reportingHarness({ donations: [donation], historyFailure: true }).service.getCampaignOutcomeSummary([campaignA]), /email archive offline/);
+});

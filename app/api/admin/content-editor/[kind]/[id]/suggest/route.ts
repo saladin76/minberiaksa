@@ -20,7 +20,6 @@ import {
 import { translateItem } from "@/lib/content-localization/translate";
 import { contentStore } from "@/lib/content-editor/store";
 import { ContentError, documentFor, fingerprint, readContent } from "@/lib/content-editor/service";
-import { translateResearchedItem } from "@/lib/content-localization/research-translate";
 import { isValidLocale } from "@/lib/locales";
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -104,7 +103,7 @@ export async function POST(
           { status: 400 },
         );
       const target = body.locales[0] as string;
-      const researched = await translateResearchedItem(
+      const translation = await translateItem(
         {
           fields: {
             ...Object.fromEntries(selected.filter((f) => !f.rich && f.key !== "faqContent").map((f) => [f.key, source[f.key]])),
@@ -115,12 +114,11 @@ export async function POST(
           ),
           itemLabel: CONFIG[kind].label,
           sourceLocale: "ar",
+          signal: request.signal,
         },
         target,
-        request.signal,
-        typeof body.market === "string" ? body.market : undefined,
       );
-      const result = { translations: { [target]: researched.translation }, errors: {} };
+      const result = { translations: { [target]: translation }, errors: {} };
       return NextResponse.json(
         {
           id,
@@ -137,7 +135,7 @@ export async function POST(
                   ...(selected.some((field) => field.key === "faqContent") && translatedFaq(source.faqContent, t.fields)
                     ? { faqContent: translatedFaq(source.faqContent, t.fields)! } : {}),
                 },
-                research: researched.research,
+                research: { sources: [] },
                 warnings: [
                   ...t.warnings,
                   ...selected

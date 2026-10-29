@@ -25,7 +25,8 @@ const sendControlsSchema = z.object({
   speedMode: z.enum(["SAFE", "BALANCED", "FAST", "MAX"]).optional(),
   autoSpeed: z.boolean().optional(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
-  dailyCap: z.number().int().min(1).max(1_000_000).optional(),
+  dailyCap: z.number().int().min(0).max(1_000_000).optional(),
+  dailyCapEnabled: z.boolean().optional(),
   scheduledStopAt: z.string().datetime().nullable().optional(),
   resumeAt: z.string().datetime().nullable().optional(),
   quietHours: z.object({

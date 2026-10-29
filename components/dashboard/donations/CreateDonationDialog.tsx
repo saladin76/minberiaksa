@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { getCountries } from "libphonenumber-js";
 import { toast } from "react-hot-toast";
 import { AlertTriangle, Loader2, Plus, Search, X } from "lucide-react";
 import Image from "next/image";
@@ -63,6 +64,7 @@ const MANUAL_PROVIDER_OPTIONS: Array<{
   label: string;
   logo?: string;
 }> = [
+  { value: "CASH", label: "نقدي / كاش" },
   { value: "BANK", label: "حساب بنكي" },
   { value: "PAYFOR", label: "Ziraat Payfor" },
   { value: "ALBARAKA", label: "Albaraka Türk" },
@@ -94,6 +96,10 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
   const [newDonorPhone, setNewDonorPhone] = useState("");
   const [newDonorEmail, setNewDonorEmail] = useState("");
 
+  const requestId = useRef<string | null>(null);
+  const [donorCountryCode, setDonorCountryCode] = useState("");
+  const [submissionError, setSubmissionError] = useState("");
+  const countryNames = useMemo(() => new Intl.DisplayNames([dashDir() === "rtl" ? "ar" : "en"], { type: "region" }), []);
   const [currency, setCurrency] = useState("USD");
   // These values label the external source of a donation already collected.
   // Saving this form records the donation; it never creates a gateway charge.
@@ -253,7 +259,11 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
               }
             : { mode: "UNKNOWN" as const };
 
+      requestId.current ??= Array.from(crypto.getRandomValues(new Uint8Array(12)), value => value.toString(16).padStart(2, "0")).join("");
+      setSubmissionError("");
       const res = await axios.post(`/api/admin/donations`, {
+        requestId: requestId.current,
+        donorCountryCode: donorCountryCode || null,
         donor: donorPayload,
         items,
         categoryItems,
@@ -275,9 +285,9 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
       onCreated();
       onClose();
     } catch (err) {
-      console.error("[Create Donation] save failed:", err);
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      toast.error(message || dt("فشل في إضافة التبرع"));
+      const message = axios.isAxiosError(err) && typeof err.response?.data?.error === "string" ? err.response.data.error : dt("تعذر حفظ التبرع. حاول مرة أخرى.");
+      setSubmissionError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
       setShowConfirm(false);
@@ -286,7 +296,7 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => (!open && !submitting ? onClose() : null)}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
+      <DialogContent className="w-[calc(100%-1rem)] min-w-0 max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
         <DialogHeader className="text-start">
           <DialogTitle>{dt("إضافة تبرع يدوي")}</DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
@@ -443,6 +453,8 @@ export function CreateDonationDialog({ onClose, onCreated }: Props) {
           </div>
 
           {/* Currency + payment + team support */}
+          <label className="block space-y-2 text-sm"><span>{dt("دولة المتبرع")}</span><select aria-label={dt("دولة المتبرع")} value={donorCountryCode} onChange={event => setDonorCountryCode(event.target.value)} className="w-full rounded-md border p-2"><option value="">{dt("تلقائي من بيانات المتبرع")}</option>{getCountries().map(code => <option key={code} value={code}>{countryNames.of(code)} ({code})</option>)}</select></label>
+          {submissionError ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{submissionError}</p> : null}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700">{dt("العملة")}</label>

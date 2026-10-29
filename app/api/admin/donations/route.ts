@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { getCountries } from "libphonenumber-js";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -43,13 +45,13 @@ const UNKNOWN_DONOR_NAME = "متبرع غير معروف";
  * unknown donations share this one User row so the donor list stays clean.
  * Identified by a reserved internal email so we can `findUnique` reliably.
  */
-async function getOrCreateUnknownDonor(): Promise<{ id: string; name: string | null }> {
-  const existing = await prisma.user.findUnique({
+async function getOrCreateUnknownDonor(db: Pick<Prisma.TransactionClient, "user">): Promise<{ id: string; name: string | null }> {
+  const existing = await db.user.findUnique({
     where: { email: UNKNOWN_DONOR_EMAIL },
     select: { id: true, name: true },
   });
   if (existing) return existing;
-  return prisma.user.create({
+  return db.user.create({
     data: {
       name: UNKNOWN_DONOR_NAME,
       email: UNKNOWN_DONOR_EMAIL,
@@ -85,6 +87,8 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as {
       donor?: DonorInput;
+      requestId?: string;
+      donorCountryCode?: string | null;
       /** @deprecated use `donor: { mode: "EXISTING", id }` */
       donorId?: string;
       items?: CampaignLineInput[];
@@ -97,6 +101,7 @@ export async function POST(request: NextRequest) {
       notes?: string | null;
     };
 
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     // Resolve the donor input into a discriminated union. Keeps backward compat
     // with the original `donorId` shape so older clients keep working.
     const donorInput: DonorInput | null = (() => {
@@ -105,9 +110,17 @@ export async function POST(request: NextRequest) {
       if (legacyId) return { mode: "EXISTING", id: legacyId };
       return null;
     })();
-    const currency = body.currency?.trim().toUpperCase();
+    const currency = typeof body.currency === "string" ? body.currency.trim().toUpperCase() : "";
+    const requestId = body.requestId;
+    const country = typeof body.donorCountryCode === "string" ? body.donorCountryCode.trim().toUpperCase() : null;
+    if ((requestId !== undefined && !/^[a-f0-9]{24}$/.test(requestId)) || (country && !getCountries().includes(country as ReturnType<typeof getCountries>[number]))) {
+      return NextResponse.json({ error: "Invalid request identifier or country" }, { status: 400 });
+    }
+    if (donorInput?.mode === "NEW" && ((donorInput.email != null && (typeof donorInput.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(donorInput.email.trim()))) || (donorInput.phone != null && typeof donorInput.phone !== "string"))) return NextResponse.json({ error: "Invalid donor contact" }, { status: 400 });
+    if ((body.provider != null && (typeof body.provider !== "string" || !["CASH", "BANK", "PAYFOR", "ALBARAKA", "STRIPE", "PAYPAL", "CHARITY_GIVING", "MANUAL"].includes(body.provider))) || (body.notes != null && (typeof body.notes !== "string" || body.notes.length > 10000))) return NextResponse.json({ error: "Invalid provider or notes" }, { status: 400 });
     const paymentMethod = body.paymentMethod ?? "CARD";
-    const teamSupport = Math.max(0, Number(body.teamSupport ?? 0)) || 0;
+    const teamSupport = Number(body.teamSupport ?? 0);
+    if (!Number.isFinite(teamSupport) || teamSupport < 0 || teamSupport > 1e9) return NextResponse.json({ error: "Invalid team support" }, { status: 400 });
     const coverFees = Boolean(body.coverFees);
     const items = Array.isArray(body.items) ? body.items : [];
     const categoryItems = Array.isArray(body.categoryItems) ? body.categoryItems : [];
@@ -125,16 +138,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (donorInput.mode === "EXISTING" && !donorInput.id?.trim()) {
+    if (donorInput.mode === "EXISTING" && ! /^[a-f0-9]{24}$/i.test(donorInput.id ?? "")) {
       return NextResponse.json({ error: "donor.id is required for EXISTING" }, { status: 400 });
     }
-    if (donorInput.mode === "NEW" && !donorInput.name?.trim()) {
+    if (donorInput.mode === "NEW" && (typeof donorInput.name !== "string" || !donorInput.name.trim())) {
       return NextResponse.json(
         { error: "donor.name is required for NEW" },
         { status: 400 }
       );
     }
-    if (!currency) {
+    if (!/^[A-Z]{3}$/.test(currency)) {
       return NextResponse.json({ error: "currency is required" }, { status: 400 });
     }
     if (paymentMethod !== "CARD" && paymentMethod !== "PAYPAL") {
@@ -150,12 +163,12 @@ export async function POST(request: NextRequest) {
       );
     }
     for (const it of items) {
-      if (!it.campaignId || !Number.isFinite(Number(it.amount)) || Number(it.amount) <= 0) {
+      if (! /^[a-f0-9]{24}$/i.test(it.campaignId) || !Number.isFinite(Number(it.amount)) || Number(it.amount) <= 0 || Number(it.amount) > 1e9) {
         return NextResponse.json({ error: "Invalid campaign line" }, { status: 400 });
       }
     }
     for (const it of categoryItems) {
-      if (!it.categoryId || !Number.isFinite(Number(it.amount)) || Number(it.amount) <= 0) {
+      if (! /^[a-f0-9]{24}$/i.test(it.categoryId) || !Number.isFinite(Number(it.amount)) || Number(it.amount) <= 0 || Number(it.amount) > 1e9) {
         return NextResponse.json({ error: "Invalid category line" }, { status: 400 });
       }
     }
@@ -188,61 +201,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve the donor input into an actual User row. EXISTING fetches;
-    // NEW creates a fresh DONOR with whatever contact info the admin supplied;
-    // UNKNOWN routes to the shared singleton.
-    let donor: { id: string; name: string | null };
-    let donorCreated = false;
-    if (donorInput.mode === "EXISTING") {
-      const found = await prisma.user.findUnique({
-        where: { id: donorInput.id.trim() },
-        select: { id: true, name: true },
-      });
-      if (!found) {
-        return NextResponse.json({ error: "Donor not found" }, { status: 404 });
-      }
-      donor = found;
-    } else if (donorInput.mode === "NEW") {
-      const trimmedName = donorInput.name.trim();
-      const trimmedEmail = donorInput.email?.trim() || null;
-      const trimmedPhone = donorInput.phone?.trim() || null;
-      // If admin supplied an email, reuse a matching existing row instead of
-      // erroring on the unique constraint  this is the same lenient behavior
-      // resolveGuestDonor uses on the public donation flow.
-      if (trimmedEmail) {
-        const existing = await prisma.user.findUnique({
-          where: { email: trimmedEmail },
-          select: { id: true, name: true },
-        });
-        if (existing) {
-          donor = existing;
-        } else {
-          donor = await prisma.user.create({
-            data: {
-              name: trimmedName,
-              email: trimmedEmail,
-              phone: trimmedPhone ?? undefined,
-              role: "DONOR",
-            },
-            select: { id: true, name: true },
-          });
-          donorCreated = true;
-        }
-      } else {
-        donor = await prisma.user.create({
-          data: {
-            name: trimmedName,
-            phone: trimmedPhone ?? undefined,
-            role: "DONOR",
-          },
-          select: { id: true, name: true },
-        });
-        donorCreated = true;
-      }
-    } else {
-      donor = await getOrCreateUnknownDonor();
-    }
-    const donorId = donor.id;
 
     if (items.length > 0) {
       const ids = [...new Set(items.map((it) => it.campaignId))];
@@ -272,6 +230,19 @@ export async function POST(request: NextRequest) {
     const fees = coverFees ? (amount + teamSupport) * 0.03 : 0;
     const totalAmount = amount + teamSupport + fees;
 
+    const fingerprint = createHash("sha256").update(JSON.stringify({ actor: session.user.id, donor: donorInput, currency, country, items, categoryItems, teamSupport, coverFees, provider: body.provider ?? "MANUAL", paymentMethod, notes: body.notes ?? null })).digest("hex");
+    const replay = async () => {
+      if (!requestId) return null;
+      const prior = await prisma.donation.findUnique({ where: { id: requestId }, select: { id: true, donorId: true, providerRaw: true } });
+      if (!prior) return null;
+      const metadata = prior.providerRaw as { manualEntry?: { fingerprint?: string } } | null;
+      return metadata?.manualEntry?.fingerprint === fingerprint
+        ? NextResponse.json({ donationId: prior.id, donor: { id: prior.donorId }, replayed: true }, { status: 200 })
+        : NextResponse.json({ error: "Request identifier already used for a different donation" }, { status: 409 });
+    };
+    const priorResponse = await replay();
+    if (priorResponse) return priorResponse;
+
     let amountUSD: number;
     try {
       amountUSD = await convertAmountInCurrencyToUsd(totalAmount, currencyNorm);
@@ -298,12 +269,70 @@ export async function POST(request: NextRequest) {
       }))
     );
 
-    const donorCountrySnapshot =
-      (await getDonorCountryCodeForSnapshot(prisma, donorId)) ?? undefined;
-
     const paidAt = new Date();
-    const created = await prisma.$transaction(async (tx) => {
+    const transaction = async () => prisma.$transaction(async (tx) => {
+    // Resolve the donor input into an actual User row. EXISTING fetches;
+    // NEW creates a fresh DONOR with whatever contact info the admin supplied;
+    // UNKNOWN routes to the shared singleton.
+    let donor: { id: string; name: string | null };
+    let donorCreated = false;
+    if (donorInput.mode === "EXISTING") {
+      const found = await tx.user.findUnique({
+        where: { id: donorInput.id.trim() },
+        select: { id: true, name: true },
+      });
+      if (!found) {
+        throw new Error("DONOR_NOT_FOUND");
+      }
+      donor = found;
+    } else if (donorInput.mode === "NEW") {
+      const trimmedName = donorInput.name.trim();
+      const trimmedEmail = donorInput.email?.trim() || null;
+      const trimmedPhone = donorInput.phone?.trim() || null;
+      // If admin supplied an email, reuse a matching existing row instead of
+      // erroring on the unique constraint  this is the same lenient behavior
+      // resolveGuestDonor uses on the public donation flow.
+      if (trimmedEmail) {
+        const existing = await tx.user.findUnique({
+          where: { email: trimmedEmail },
+          select: { id: true, name: true },
+        });
+        if (existing) {
+          donor = existing;
+        } else {
+          donor = await tx.user.create({
+            data: {
+              name: trimmedName,
+              email: trimmedEmail,
+              phone: trimmedPhone ?? undefined,
+              role: "DONOR",
+              countryCode: country ?? undefined,
+            },
+            select: { id: true, name: true },
+          });
+          donorCreated = true;
+        }
+      } else {
+        donor = await tx.user.create({
+          data: {
+            name: trimmedName,
+            phone: trimmedPhone ?? undefined,
+            role: "DONOR",
+            countryCode: country ?? undefined,
+          },
+          select: { id: true, name: true },
+        });
+        donorCreated = true;
+      }
+    } else {
+      donor = await getOrCreateUnknownDonor(tx);
+    }
+    const donorId = donor.id;
+
+      const donorCountrySnapshot = country ?? (await getDonorCountryCodeForSnapshot(tx, donorId)) ?? undefined;
       const data: Prisma.DonationCreateInput = {
+        ...(requestId ? { id: requestId } : {}),
+        providerRaw: { manualEntry: { fingerprint, actorId: session.user.id } },
         amount,
         amountUSD,
         currency,
@@ -340,8 +369,20 @@ export async function POST(request: NextRequest) {
           data: { currentAmount: { increment: line.amountUSD ?? line.amount } },
         });
       }
-      return d;
-    });
+      return { ...d, donor, donorCreated };
+    }, { maxWait: 10000, timeout: 30000 });
+    let created: Awaited<ReturnType<typeof transaction>>;
+    try { created = await transaction(); }
+    catch (error) {
+      if ((error as { code?: string }).code === "P2002") {
+        const response = await replay();
+        if (response) return response;
+        return NextResponse.json({ error: "This donor contact is already registered. Select the existing donor." }, { status: 409 });
+      }
+      throw error;
+    }
+    const { donor, donorCreated } = created;
+    const donorId = donor.id;
 
     const donorLabel =
       donorInput.mode === "UNKNOWN"
@@ -381,11 +422,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("[admin manual donation] failed:", error);
+    if (error instanceof SyntaxError) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    if (error instanceof Error && error.message === "DONOR_NOT_FOUND") return NextResponse.json({ error: "Donor not found" }, { status: 404 });
+    console.error("[admin manual donation] failed", { code: (error as { code?: string }).code });
     return NextResponse.json(
       {
         error: "Failed to create donation",
-        details: error instanceof Error ? error.message : String(error),
+
       },
       { status: 500 }
     );

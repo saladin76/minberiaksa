@@ -1,7 +1,8 @@
+import { categoryProjectCounts } from "@/lib/campaign/category-project-counts";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
-import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
+import { CATEGORY_ACTIVE_OR_UNSET } from "@/lib/campaign/soft-delete-filter";
 
 /**
  * Server-side reader for the public category index  the header's projects
@@ -29,6 +30,7 @@ export interface MinbarCategory {
   icon: string;
   /** Published, non-deleted campaigns filed under this category. */
   projectCount: number;
+  order?: number | null;
 }
 
 /** The slice the header and footer need, kept small because it ships on every page. */
@@ -54,9 +56,6 @@ async function readCategories(locale: string): Promise<MinbarCategory[]> {
         take: 2,
         select: { locale: true, name: true, slug: true, description: true },
       },
-      _count: {
-        select: { campaigns: { where: { AND: [{ isActive: true }, NOT_SOFT_DELETED] } } },
-      },
     },
   });
 
@@ -68,6 +67,7 @@ async function readCategories(locale: string): Promise<MinbarCategory[]> {
     return ao !== bo ? ao - bo : a.name.localeCompare(b.name);
   });
 
+  const counts = await categoryProjectCounts(prisma, rows.map(row => row.id));
   return rows.map((row) => {
     const t = pickTranslation(row.translations, locale);
     const slug = t?.slug || row.slug || row.id;
@@ -80,7 +80,8 @@ async function readCategories(locale: string): Promise<MinbarCategory[]> {
       description: t?.description || row.description || "",
       image: row.image || row.heroImage || "",
       icon: row.icon ?? "",
-      projectCount: row._count.campaigns,
+      projectCount: counts.get(row.id)?.published ?? 0,
+      order: row.order,
     };
   });
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { GoogleSearchAccounts } from "@/components/dashboard/GoogleSearchAccounts";
 import { Bot, Search, Send, RefreshCw, CheckCircle2, Play, Pause, ShieldCheck, Sparkles, ArrowUpRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -12,7 +13,7 @@ import type { GoogleAdsReport } from "@/lib/marketing/google-ads-report";
 type Account = { id: string; name: string; customerId: string | null; ready: boolean; enabled: boolean };
 type Project = { id: string; title: string };
 type Plan = { id: string; title: string; status: string; version: number; request: SearchPlanRequest; proposal: SearchProposal; evidence: { report: { currency: string; timezone: string }; researchWarnings?: string[]; completedLocales?: string[]; optimization?: { at: string; reviewedKeywords: number; pausedKeywords: { text: string; cost: number; clicks: number }[] } }; lastError?: string; automationEnabled: boolean; automationPolicy?: { maxKeywordCost: number; minClicks: number }; lastReviewAt?: string };
-type PlanListItem = Pick<Plan, "id" | "title" | "status" | "version" | "automationEnabled">;
+type PlanListItem = Pick<Plan, "id" | "title" | "status" | "version" | "automationEnabled"> & { connectionId: string };
 const button = "inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40";
 const field = "w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20";
 const statusLabel: Record<string, string> = { PLANNING: "جار إعداد اللغات", PLANNING_FAILED: "توقف التخطيط؛ يمكن استكماله", DRAFT: "مسودة", VALIDATED: "اجتازت فحص Google", CREATING: "جار الإنشاء", PAUSED: "موقوفة للمراجعة", ACTIVE: "مفعّلة", MIXED: "حالات مختلفة", CHANGING: "جار تنفيذ التعديل", RECONCILE_REQUIRED: "تحتاج مطابقة مع Google" };
@@ -80,11 +81,12 @@ export function GoogleSearchManager() {
     <PageHeader eyebrow={dt("التسويق")} title={dt("إدارة Google Search")} description={dt("خطط متعددة اللغات مبنية على صفحات المشاريع وتقارير الحساب، مع مراجعة الميزانية والإنشاء داخل Google ومتابعة الأداء.")} icon={Search} />
     <div className="flex flex-wrap gap-2"><Link href="/dashboard/google-analytics" className={button}><ArrowUpRight size={16} />{dt("تقارير Google Analytics")}</Link><Link href="/dashboard/platform-connections" className={button}>{dt("إدارة الحسابات والاتصالات")}</Link><button type="button" onClick={load} disabled={Boolean(busy)} className={button}><RefreshCw size={16} />{dt("تحديث")}</button></div>
     {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
+    <GoogleSearchAccounts onChanged={() => { void load(); }} />
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="min-w-0 space-y-4">
         <section className="space-y-4 rounded-2xl border bg-white p-4">
           <h2 className="flex items-center gap-2 font-bold"><Bot size={20} />{dt("مساعد حملات البحث")}</h2>
-          <label className="block space-y-1 text-sm"><span>{dt("الحساب الإعلاني")}</span><select aria-label={dt("الحساب الإعلاني")} className={field} value={accountId} onChange={e => setAccountId(e.target.value)}><option value="">{dt("اختر حسابًا")}</option>{accounts.map(a => <option key={a.id} value={a.id} disabled={!a.ready || !a.enabled}>{a.name} · {a.customerId} {a.ready && a.enabled ? "" : dt("(الاتصال غير جاهز)")}</option>)}</select></label>
+          <label className="block space-y-1 text-sm"><span>{dt("الحساب الإعلاني")}</span><select aria-label={dt("الحساب الإعلاني")} className={field} value={accountId} disabled={Boolean(busy)} onChange={e => { setAccountId(e.target.value); setPlan(null); setReport(null); setConfirm(""); setApproved(false); }}><option value="">{dt("اختر حسابًا")}</option>{accounts.map(a => <option key={a.id} value={a.id} disabled={!a.ready || !a.enabled}>{a.name} · {a.customerId} {a.ready && a.enabled ? "" : dt("(الاتصال غير جاهز)")}</option>)}</select></label>
           {!accounts.some(a => a.ready && a.enabled) ? <p className="text-xs leading-6 text-amber-800">{dt("أضف تفويض Google Ads لكل حساب في الاتصالات. اتصال الحساب في أداة خارجية لا يزوّد الموقع بتفويض التنفيذ.")}</p> : null}
           <label className="block space-y-1 text-sm"><span>{dt("إجمالي متوسط الميزانية اليومية للحساب")}</span><input type="number" min="0.01" step="0.01" className={field} value={budget} onChange={e => setBudget(e.target.value)} /><small className="text-slate-500">{dt("تُقرأ العملة من Google قبل المراجعة. تُقسّم الميزانية على اللغات؛ لا تتكرر لكل لغة.")}</small></label>
           <label className="block space-y-1 text-sm"><span>{dt("دول الاستهداف")}</span><input dir="ltr" className={field} value={countries} onChange={e => setCountries(e.target.value)} placeholder="TR, SA, GB" /><small className="text-slate-500">{dt("رموز الدول مفصولة بفاصلة. الاستهداف للأشخاص الموجودين في الدول المحددة.")}</small></label>
@@ -95,7 +97,7 @@ export function GoogleSearchManager() {
           <button type="button" onClick={createPlan} disabled={Boolean(busy) || !currentAccount?.ready || !prompt.trim()} className={button + " w-full bg-brand text-white"}><Send size={16} />{busy === "plan" ? dt("جار تحليل الحساب وإعداد الخطة…") : dt("تجهيز خطة للمراجعة")}</button>
           <p className="text-xs leading-6 text-slate-500">{dt("التخطيط لا ينشئ إعلانًا. بعد المراجعة تُفحص الخطة داخل Google ثم تُنشأ موقوفة، والتفعيل خطوة مستقلة.")}</p>
         </section>
-        <section className="space-y-2 rounded-2xl border bg-white p-4"><h2 className="mb-3 font-bold">{dt("الخطط الأخيرة")}</h2>{plans.map(item => <button type="button" key={item.id} disabled={Boolean(busy)} onClick={() => openPlan(item.id)} className={`block w-full rounded-lg border p-3 text-start ${plan?.id === item.id ? "border-brand bg-brand/5" : "hover:bg-slate-50"}`}><span className="line-clamp-2 text-sm font-semibold">{item.title}</span><small className="text-slate-500">{dt(statusLabel[item.status] || item.status)}{item.automationEnabled ? " · " + dt("المتابعة مفعّلة") : ""}</small></button>)}</section>
+        <section className="space-y-2 rounded-2xl border bg-white p-4"><h2 className="mb-3 font-bold">{dt("الخطط الأخيرة")}</h2>{plans.filter(item => item.connectionId === accountId).map(item => <button type="button" key={item.id} disabled={Boolean(busy)} onClick={() => openPlan(item.id)} className={`block w-full rounded-lg border p-3 text-start ${plan?.id === item.id ? "border-brand bg-brand/5" : "hover:bg-slate-50"}`}><span className="line-clamp-2 text-sm font-semibold">{item.title}</span><small className="text-slate-500">{dt(statusLabel[item.status] || item.status)}{item.automationEnabled ? " · " + dt("المتابعة مفعّلة") : ""}</small></button>)}</section>
       </aside>
       <div className="min-w-0 space-y-4">
         {!plan ? <section className="flex min-h-96 flex-col items-center justify-center rounded-2xl border border-dashed bg-white p-6 text-center"><Sparkles className="mb-4 text-brand" size={36} /><h2 className="font-bold">{dt("من الفكرة إلى حملة قابلة للمراجعة")}</h2><p className="mt-3 max-w-lg text-sm leading-7 text-slate-500">{dt("اختر الحساب والمشاريع واللغات والميزانية، واكتب هدف الحملة. ستظهر بنية الحملات والكلمات والنصوص وصفحات الهبوط وأساس الاختيار هنا.")}</p></section> : <>

@@ -159,7 +159,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [section, setSection] = useState(EDITOR_SECTIONS[kind].some(item => item.id === initialSection) ? initialSection : "content");
   const [settingsDraft, setSettingsDraft] = useState<ContentRecord>({});
   const [assistAction, setAssistAction] = useState<"translate" | "seo" | "proofread" | "faq">("translate");
-  const [assistScope, setAssistScope] = useState("auto");
+  const [assistScope, setAssistScope] = useState("current");
   const assistTargetScope = assistScope === "auto" ? (assistAction === "translate" && locale === "ar" ? "missing" : "current") : assistScope;
   const [languageReview, setLanguageReview] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -647,10 +647,10 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
             <option value="translate">{dt("ترجمة المحتوى")}</option><option value="seo">{dt("تحسين الظهور في البحث")}</option><option value="proofread">{dt("تدقيق النصوص")}</option>{!isBanner ? <option value="faq">{dt("إعداد أسئلة شائعة")}</option> : null}
           </select></label>
           <label className="space-y-1 text-sm"><span>{dt("اللغات المستهدفة")}</span><select aria-label={dt("اللغات المستهدفة")} className="w-full rounded-lg border bg-white p-3" value={assistTargetScope} disabled={Boolean(busy)} onChange={event => setAssistScope(event.target.value)}>
-            <option value="current" disabled={assistAction === "translate" && locale === "ar"}>{LOCALES[locale as keyof typeof LOCALES]?.nativeLabel}</option><option value="missing">{dt("اللغات غير المكتملة")}</option><option value="all">{dt("كل اللغات")}</option>
+            <option value="current">{LOCALES[(assistAction === "translate" && locale === "ar" ? "en" : locale) as keyof typeof LOCALES]?.nativeLabel}</option>{SUPPORTED_LOCALES.filter(code => code !== locale && !(assistAction === "translate" && code === "ar") && !(assistAction === "translate" && locale === "ar" && code === "en")).map(code => <option key={code} value={code}>{LOCALES[code as keyof typeof LOCALES]?.nativeLabel}</option>)}<option value="missing">{dt("اللغات غير المكتملة")}</option><option value="all">{dt("كل اللغات")}</option>
           </select></label>
-          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0 || id === "new" || (assistAction === "translate" && assistTargetScope === "current" && locale === "ar")} onClick={() => {
-            const targets = (assistTargetScope === "current" ? [locale] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
+          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0 || id === "new"} onClick={() => {
+            const targets = (assistTargetScope === "current" ? [assistAction === "translate" && locale === "ar" ? "en" : locale] : SUPPORTED_LOCALES.includes(assistTargetScope as typeof SUPPORTED_LOCALES[number]) ? [assistTargetScope] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
             void suggest(assistAction, false, targets);
           }}>{assistAction === "translate" ? assistTargetScope === "missing" ? dt("ترجمة اللغات الناقصة") : assistTargetScope === "all" ? dt("ترجمة كل اللغات") : dt("ترجمة الحقول المحددة") : dt("إعداد الاقتراحات")}</button>
         </div>

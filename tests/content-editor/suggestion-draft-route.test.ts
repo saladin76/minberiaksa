@@ -19,7 +19,7 @@ function fixture(mode = "ok") {
     "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
     "@/lib/content-editor/service": { ContentError, readContent: async () => { calls.reads++; return row; }, fingerprint: () => "revision", documentFor: () => ({ slugs: {} }) },
     "@/lib/content-editor/store": { contentStore: {} }, "@/lib/locales": { isValidLocale: (value: string) => ["ar", "en", "fr"].includes(value) },
-    "@/lib/content-localization/translate": { translateItem: async () => ({ fields: {}, richFields: {}, warnings: [] }) },
+    "@/lib/content-localization/translate": { translateItem: async (input: unknown) => { calls.translations.push(input); if (mode === "quota") throw new OpenAiResponseError("AI_QUOTA_EXCEEDED"); return { fields: { title: "Reviewed translation" }, richFields: {}, warnings: [] }; } },
     "@/lib/content-localization/research-translate": { translateResearchedItem: async (input: unknown) => { calls.translations.push(input); if (mode === "quota") throw new OpenAiResponseError("AI_QUOTA_EXCEEDED"); return { translation: { fields: { title: "Reviewed translation" }, richFields: {}, warnings: [] }, research: { sources: [] } }; } },
     "@/lib/content-editor/seo-research": { SeoResearchError, generateResearchedSeo: async (input: Record<string, unknown>) => { calls.research.push(input); return { suggestion: { seoTitle: "Proposal", metaDescription: "Proposal description", primaryKeyword: "Keyword", altText: "Alt", faq: [], notes: [] }, research: { sources: [] } }; } },
     "@/lib/content-editor/faq": { faqTranslationFields: () => ({}), translatedFaq: () => null },

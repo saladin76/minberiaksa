@@ -506,6 +506,8 @@ export async function PATCH(
 
     const body = (await request.json()) as {
       status?: 'PAID' | 'FAILED';
+      currency?: string;
+      provider?: string;
       confirmPaidAt?: boolean;
       teamSupport?: number;
       items?: { campaignId: string; amount: number }[];
@@ -514,12 +516,14 @@ export async function PATCH(
 
     const existing = await prisma.donation.findUnique({
       where: { id },
-      include: { items: true, categoryItems: true, waqfItems: { select: { amount: true } } },
+      include: { items: true, categoryItems: true, waqfItems: { select: { id: true, amount: true, amountUSD: true } } },
     });
     if (!existing) {
       return NextResponse.json({ error: 'Donation not found' }, { status: 404 });
     }
 
+    if ((body.currency !== undefined && (typeof body.currency !== "string" || !/^[A-Z]{3}$/.test(body.currency))) || (body.provider !== undefined && (typeof body.provider !== "string" || !["CASH", "BANK", "BANK_TRANSFER", "PAYFOR", "ALBARAKA", "STRIPE", "PAYPAL", "CHARITY_GIVING", "MANUAL"].includes(body.provider)))) return NextResponse.json({ error: "Invalid currency or provider" }, { status: 400 });
+    const currencyChanged = body.currency !== undefined && body.currency !== existing.currency;
     if (body.teamSupport !== undefined &&
       (typeof body.teamSupport !== "number" || !Number.isFinite(body.teamSupport) || body.teamSupport < 0 || body.teamSupport > 1_000_000_000)) {
       return NextResponse.json({ error: 'Invalid team support; use a non-negative amount' }, { status: 400 });
@@ -534,8 +538,8 @@ export async function PATCH(
       );
     }
 
-    const itemsInput = Array.isArray(body.items) ? body.items : null;
-    const catItemsInput = Array.isArray(body.categoryItems) ? body.categoryItems : null;
+    let itemsInput = Array.isArray(body.items) ? body.items : null;
+    let catItemsInput = Array.isArray(body.categoryItems) ? body.categoryItems : null;
 
     if (itemsInput) {
       for (const it of itemsInput) {
@@ -556,7 +560,7 @@ export async function PATCH(
       const nextLineCount =
         (itemsInput ?? existing.items).length +
         (catItemsInput ?? existing.categoryItems).length;
-      if (nextLineCount === 0) {
+      if (nextLineCount === 0 && existing.waqfItems.length === 0) {
         return NextResponse.json(
           { error: 'Donation must keep at least one item' },
           { status: 400 }
@@ -600,7 +604,14 @@ export async function PATCH(
       }
     }
 
-    const currencyCode = normalizeDonationCurrencyCode(existing.currency);
+    const sameLines = (next: { amount: number }[] | null, previous: { amount: number }[], key: string) => next !== null && JSON.stringify(next.map(row => [Reflect.get(row, key), Number(row.amount)]).sort()) === JSON.stringify(previous.map(row => [Reflect.get(row, key), Number(row.amount)]).sort());
+    if (!currencyChanged && sameLines(itemsInput, existing.items, "campaignId")) itemsInput = null;
+    if (!currencyChanged && sameLines(catItemsInput, existing.categoryItems, "categoryId")) catItemsInput = null;
+    if (currencyChanged) {
+      itemsInput ??= existing.items.map(({ campaignId, amount }) => ({ campaignId, amount }));
+      catItemsInput ??= existing.categoryItems.map(({ categoryId, amount }) => ({ categoryId, amount }));
+    }
+    const currencyCode = normalizeDonationCurrencyCode(body.currency ?? existing.currency);
     const itemAmountUSD = async (amount: number) =>
       convertAmountInCurrencyToUsd(amount, currencyCode);
 
@@ -625,6 +636,8 @@ export async function PATCH(
         )
       : null;
 
+    const newWaqfItems = currencyChanged ? await Promise.all(existing.waqfItems.map(async row => ({ id: row.id, amountUSD: await itemAmountUSD(row.amount) }))) : [];
+
     // Derived donation-level fields (only if items/categoryItems changed).
     // Waqf lines are not edited here, but they are part of the donation's
     // amount: leaving them out would shrink the donation by their value.
@@ -633,7 +646,7 @@ export async function PATCH(
       + existing.waqfItems.reduce((s, i) => s + i.amount, 0);
 
     const newAmount = (newItems || newCatItems) ? newLineSum : existing.amount;
-    const moneyChanged = !!(newItems || newCatItems) || nextTeamSupport !== existing.teamSupport;
+    const moneyChanged = currencyChanged || !!(newItems || newCatItems) || nextTeamSupport !== existing.teamSupport;
     const newTotalAmount = moneyChanged
       ? donationEditTotals(newAmount, nextTeamSupport, existing.fees, existing.coverFees).totalAmount
       : existing.totalAmount;
@@ -732,9 +745,12 @@ export async function PATCH(
         }
       }
 
+      for (const row of newWaqfItems) await tx.donationWaqfItem.update({ where: { id: row.id }, data: { amountUSD: row.amountUSD } });
       await tx.donation.update({
         where: { id },
         data: {
+          currency: currencyCode,
+          ...(body.provider !== undefined ? { provider: body.provider } : {}),
           amount: newAmount,
           amountUSD: newAmountUSD,
           totalAmount: newTotalAmount,
@@ -795,6 +811,8 @@ export async function PATCH(
           categoryItems: existing.categoryItems.map((i) => ({ categoryId: i.categoryId, amount: i.amount })),
         },
         after: {
+          currency: currencyCode,
+          ...(body.provider !== undefined ? { provider: body.provider } : {}),
           amount: newAmount,
           teamSupport: nextTeamSupport,
           totalAmount: newTotalAmount,

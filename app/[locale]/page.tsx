@@ -1,3 +1,5 @@
+import { preload } from "react-dom";
+import { heroPosterSources } from "@/lib/minbar/hero-poster";
 import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
@@ -71,6 +73,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Home({ params }: Props) {
   const { locale } = await params;
+  const poster = heroPosterSources(locale);
+  preload(poster.src, { as: "image", imageSrcSet: poster.srcSet, imageSizes: poster.sizes, fetchPriority: "high" });
 
   // Every section's content is read here, in parallel, so the whole homepage is
   // in the first HTML response rather than filled in by client fetches. Which

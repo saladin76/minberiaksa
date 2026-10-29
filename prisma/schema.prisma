@@ -1872,6 +1872,8 @@ model GlobalSettings {
   /// items show and how they rank. Shape and defaults in `lib/minbar/home-layout.ts`;
   /// null means "the homepage as designed".
   homeLayout           Json?
+  /// Stable category:/programme: identities; new published items append automatically.
+  projectFilterOrder   Json?
   /// Dashboard overrides for the certificate / receipt wording, per template and
   /// per locale: `{ thanks: { ar: { title, body, … } }, waqf: {…}, receipt: {…} }`.
   /// Shape and defaults in `lib/certificates/copy.ts`; null means "the i18n text".

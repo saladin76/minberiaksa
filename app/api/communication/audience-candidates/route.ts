@@ -14,13 +14,12 @@ import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import { getCountryDisplayNameFromCode } from "@/lib/dashboard/country-display-name";
 import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
 import { birthdateRangeForAges, genderQueryValues, parseAgeParam, parseGenderParam } from "@/lib/dashboard/user-demographics";
-import { AUDIENCE_SELECTION_MAX } from "@/lib/communication/audience-limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** All matching donors remain selectable; readiness filtering is opt-in and read-only. */
-const SELECT_ALL_CEILING = AUDIENCE_SELECTION_MAX;
+const SELECT_ALL_PAGE_SIZE = 1000;
 const donorSelect = {
   id: true, name: true, email: true, phone: true, image: true, preferredLang: true,
   country: true, countryCode: true, countryName: true,
@@ -183,10 +182,15 @@ export async function POST(request: NextRequest) {
   try {
     const baseWhere = await buildWhere(filters);
     const where = await channelEligibilityWhere(baseWhere, channel, eligibilityFilter, request.signal);
-    const rows = await prisma.user.findMany({
-      where, select: { id: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: SELECT_ALL_CEILING + 1,
-    });
-    return reply({ ok: true, ids: rows.slice(0, SELECT_ALL_CEILING).map((row) => row.id), truncated: rows.length > SELECT_ALL_CEILING });
+    const ids: string[] = []; let cursor: string | null = null;
+    for (;;) {
+      request.signal?.throwIfAborted();
+      const rows: Array<{ id: string }> = await prisma.user.findMany({ where, select: { id: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: SELECT_ALL_PAGE_SIZE, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
+      ids.push(...rows.map(row => row.id));
+      if (rows.length < SELECT_ALL_PAGE_SIZE) break;
+      const next = rows.at(-1)?.id; if (!next || next === cursor) throw new Error("AUDIENCE_CURSOR_STALLED"); cursor = next;
+    }
+    return reply({ ok: true, ids, truncated: false });
   } catch {
     return reply({ ok: false, error: "تعذّر تحديد جمهور الحملة. لم يتم اعتماد قائمة بديلة؛ أعد المحاولة." }, 503);
   }

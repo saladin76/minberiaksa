@@ -11,6 +11,7 @@ import { isValidLocale } from "@/lib/locales";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { resolveReferralId } from "@/lib/referral-server";
+import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { isRevenueDashboardUser } from "@/lib/dashboard/api-auth";
 import { writeAuditLog, auditStreamForRole } from "@/lib/audit-log";
 import {
@@ -80,23 +81,26 @@ export async function GET(request: NextRequest) {
     }
 
     const isAdmin = isRevenueDashboardUser(session);
+    const recurringStaff = !isAdmin && userHasDashboardPermission(session.user, "monthly");
+    const dashboardReader = isAdmin || recurringStaff;
     const subscriptionOnly =
-      isAdmin &&
+      dashboardReader &&
       (searchParams.get("subscriptionOnly") === "true" || searchParams.get("subscriptionOnly") === "1");
+    if (recurringStaff && !subscriptionOnly) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const donationTypeFilter = isAdmin ? searchParams.get("donationType") : null;
-    const statusFilter = isAdmin ? searchParams.get("status") : null;
-    const localeFilter = isAdmin ? searchParams.get("locale")?.trim() : null;
-    const countryFilter = isAdmin ? searchParams.get("country")?.trim() : null;
+    const statusFilter = dashboardReader ? searchParams.get("status") : null;
+    const localeFilter = dashboardReader ? searchParams.get("locale")?.trim() : null;
+    const countryFilter = dashboardReader ? searchParams.get("country")?.trim() : null;
     // Recurring cadence of the plan behind the charge (DAILY | FRIDAY | MONTHLY)  implies
     // subscription-only, since a one-time gift has no plan.
-    const frequencyFilter = isAdmin ? parseFrequencyParam(searchParams.get("frequency")) : null;
+    const frequencyFilter = dashboardReader ? parseFrequencyParam(searchParams.get("frequency")) : null;
 
     const baseWhere: Record<string, unknown> = {
       ...(userId && { donorId: userId }),
       ...(referralId && isAdmin && { referralId }),
       ...(subscriptionOnly && { subscriptionId: { not: null } }),
       ...(donationTypeFilter === "MONTHLY" && { subscriptionId: { not: null } }),
-      ...(!isAdmin && { donorId: session.user.id }),
+      ...(!dashboardReader && { donorId: session.user.id }),
       ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
     };
 
@@ -106,7 +110,7 @@ export async function GET(request: NextRequest) {
     const relatedFilters: Record<string, unknown>[] = [];
     const relationIds = await resolveDonationRelationFilterIds({
       campaignId,
-      categoryId: isAdmin ? categoryId : null,
+      categoryId: dashboardReader ? categoryId : null,
     });
     if (campaignId && campaignId !== "all") {
       const donationIds = relationIds.campaignDonationIds ?? [];
@@ -220,7 +224,7 @@ export async function GET(request: NextRequest) {
     const frequencyWhere = donationFrequencyWhere(frequencyFilter);
 
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
-    const statusWhere = donationStatusWhere(statusFilter);
+    const statusWhere = donationStatusWhere(subscriptionOnly ? "PAID" : statusFilter);
 
     const providerWhere = isAdmin ? donationProviderWhere(searchParams.get("provider")) : null;
     const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere].filter(
@@ -259,7 +263,7 @@ export async function GET(request: NextRequest) {
     const cycleById = new Map<string, number>();
     if (pageSubscriptionIds.length > 0) {
       const siblings = await prisma.donation.findMany({
-        where: { subscriptionId: { in: pageSubscriptionIds }, status: "PAID" },
+        where: { subscriptionId: { in: pageSubscriptionIds }, status: "PAID", paidAt: { not: null } },
         select: { id: true, subscriptionId: true, paidAt: true, createdAt: true },
       });
       const bySubscription = new Map<string, typeof siblings>();

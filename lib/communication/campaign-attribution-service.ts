@@ -1,3 +1,4 @@
+import { emailHistoryLinks, emailHistoryLinkScan } from "./campaign-email-history";
 import { prisma } from "@/lib/prisma";
 import { communicationDonationScan, communicationDonationPageIds, COMMUNICATION_DONATION_PAGE_SIZE } from "./campaign-donation-scan";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -202,7 +203,7 @@ export async function loadCommunicationDonations(): Promise<DonationRow[]> {
  * be the source of a donation after its campaign was archived. */
 async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
   if (!process.env.DATABASE_URL) return [];
-  const [rows, campaigns] = await completeAttributionReads([
+  const [rows, campaigns, emailLinks] = await completeAttributionReads([
     prisma.communicationCampaignTrackingLink.findMany({
       select: { campaignId: true, url: true, source: true, medium: true },
       take: 10_000,
@@ -212,6 +213,7 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
       select: { id: true, channel: true, templateGroupId: true },
       take: 10_000,
     }),
+    prisma.communicationDelivery.aggregateRaw(emailHistoryLinkScan()).then(emailHistoryLinks),
   ]);
   // Do not claim an alias is unique when a campaign/link scan reached its safety bound.
   if (rows.length >= 10_000 || campaigns.length >= 10_000) throw new Error("COMMUNICATION_ATTRIBUTION_LINK_SCAN_INCOMPLETE");
@@ -233,7 +235,7 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
       );
     }
   }
-  return [...rows, ...templateLinks];
+  return [...rows, ...templateLinks, ...emailLinks];
 }
 
 export type AttributionConfidence = "دقيق" | "جزئي" | "غير متاح";
