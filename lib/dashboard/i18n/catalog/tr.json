@@ -7946,7 +7946,6 @@
   "يتحقق من صيغة الرابط ومعرّف المجلد فقط  لا يتصل بـ Google Drive": "Yalnızca bağlantı biçimini ve klasör kimliğini kontrol eder  Google Drive'a bağlanmaz",
   "يتضمن فيديو  يظهر في البريد كصورة وزر «شاهد الفيديو»": "Video içerir. E-postada bir görsel ve “Videoyu izle” düğmesi olarak görünür",
   "يتطلّب قالبًا معتمدًا من Meta": "Meta onaylı bir şablon gerektirir",
-  "يتطلّب قالبًا معتمدًا من Meta وموافقة صريحة من المتبرع.": "Meta tarafından onaylanmış bir şablon ve bağışçının açık onayını gerektirir.",
   "يتم إنشاؤه وتدويره آليًا من السيرفر.": "Sunucu tarafından otomatik olarak oluşturulur ve yenilenir.",
   "يتم ضبط هذا الربط من إعدادات السيرفر حاليًا.": "Bu bağlantı şu anda sunucu ayarlarından yapılandırılıyor.",
   "يتوسطه خط": "Üstü çizili",
@@ -9038,5 +9037,16 @@
   "تأكيد إنجاز الطلب": "İsteğin tamamlandığını onayla",
   "طلب تغيير المبلغ": "Tutar değişikliği isteği",
   "طلب الإيقاف مؤقتاً": "Ara verme isteği",
-  "طلب الإلغاء": "İptal isteği"
+  "طلب الإلغاء": "İptal isteği",
+  "يستخدم قالبًا معتمدًا من Meta على الرقم الافتراضي، حسب لغة المتبرع.": "Bağışçının dilinde, varsayılan numarada Meta tarafından onaylanmış bir şablon kullanır.",
+  "أضف قالب حملة من صفحة القوالب والمحفّزات. في واتساب تظهر اللغات المعتمدة على الرقم الافتراضي فقط.": "Şablonlar ve tetikleyiciler sayfasından bir kampanya şablonu ekleyin. WhatsApp’ta yalnızca varsayılan numarada onaylı diller gösterilir.",
+  "تُحفظ كل السجلات المطابقة كجمهور للحملة. تُراجع بيانات الاتصال وحالة إيقاف التواصل عند التنفيذ؛ الأهلية المبدئية ليست ضمانًا للتسليم.": "Eşleşen tüm kayıtlar kampanya kitlesinde tutulur. Gönderimde iletişim bilgileri ve iletişim engelleri kontrol edilir; ön uygunluk teslimatı garanti etmez.",
+  "إيقاف التواصل: {0}؛ مراجعة بيانات الاتصال: {1}": "İletişim engelli: {0}; incelenecek iletişim bilgileri: {1}",
+  "تُحفظ كل السجلات المطابقة. إيقاف التواصل: {0}؛ مراجعة بيانات الاتصال: {1}. تُراجع الحالة مجددًا عند التنفيذ.": "Eşleşen tüm kayıtlar tutulur. İletişim engelli: {0}; incelenecek iletişim bilgileri: {1}. Durum gönderimde yeniden kontrol edilir.",
+  "تعذّر تحميل القوالب الجاهزة لهذه القناة. راجع اتصال المزوّد والرقم الافتراضي ثم أعد المحاولة.": "Bu kanalın hazır şablonları yüklenemedi. Sağlayıcı bağlantısını ve varsayılan numarayı kontrol edip yeniden deneyin.",
+  "إعدادات الإرسال العامة": "Genel gönderim ayarları",
+  "تم حفظ إعدادات الإرسال العامة": "Genel gönderim ayarları kaydedildi",
+  "عدد الأيام": "Gün sayısı",
+  "هذه المدة عامة لكل الحملات؛ الساعات والحد اليومي واستثناءات الجمهور تُضبط داخل كل حملة.": "Bu süre tüm kampanyalara uygulanır. Saatler, günlük sınırlar ve kitle istisnaları her kampanyada ayrı ayarlanır.",
+  "إيقاف الطوارئ العام مفعّل": "Genel acil durdurma etkin"
 }

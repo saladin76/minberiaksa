@@ -3,6 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { readDashboardJson } from "@/lib/dashboard/read-json";
+import { readCampaignOutcomes } from "@/lib/dashboard/read-campaign-outcomes";
+import { CampaignGlobalControlsDialog } from "./CampaignGlobalControlsDialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -47,7 +49,7 @@ export function CampaignsListClient() {
       setCampaigns(base.campaigns.map(row => ({ ...row, donationCount: null, revenue: null, unpricedPaidCount: null })));
       setHasLoaded(true); setLoading(false); listLoaded = true;
       if (!base.campaigns.length) { setUnattributed({donationCount:0,revenue:0,unpricedPaidCount:0}); setOutcomesReady(true); return; }
-      const report = await readDashboardJson<{ campaigns: CampaignRow[]; unattributed: typeof unattributed }>("/api/communication/campaigns?includeArchived=true", controller.signal);
+      const report = await readCampaignOutcomes<{ outcomesReady: boolean; campaigns: CampaignRow[]; unattributed: typeof unattributed }>("/api/communication/campaigns?includeArchived=true&outcomesMode=poll", controller.signal);
       if (!current()) return;
       if (!Array.isArray(report.campaigns) || !report.unattributed) throw new Error("INVALID_CAMPAIGN_REPORT");
       setCampaigns(report.campaigns); setUnattributed(report.unattributed); setOutcomesReady(true);
@@ -107,6 +109,7 @@ export function CampaignsListClient() {
         searchPlaceholder={dt("ابحث باسم الحملة…")}
         actions={
           <>
+            <CampaignGlobalControlsDialog />
             <Button aria-label={dt("تحديث")} variant="outline" size="sm" className="gap-1.5" onClick={load} disabled={loading}>
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
               <span className="hidden sm:inline">{dt("تحديث")}</span>

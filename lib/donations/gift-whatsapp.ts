@@ -9,7 +9,7 @@ import { sendTextMessage, sendTemplateMessage } from "@/lib/communication/provid
 import { resolveMetaTemplateMapping } from "@/lib/communication/automatic-message-dispatcher";
 import { buildMetaComponents } from "@/lib/communication/providers/meta-whatsapp/parameters";
 import type { ResolvedSender } from "@/lib/communication/sender-resolution";
-import { GIFT_WHATSAPP_TEMPLATE } from "./gift-template-draft";
+import { GIFT_WHATSAPP_TEMPLATE, GIFT_WHATSAPP_SUCCESSOR } from "./gift-template-draft";
 import { normalizeGiftPhone } from "./gift-order";
 
 export async function sendGiftWhatsapp(input: {
@@ -25,8 +25,17 @@ export async function sendGiftWhatsapp(input: {
   const profiles = await prisma.donorCommunicationProfile.findMany({ where: { phone: { in: phoneMatchVariants(to) } } });
   if (profiles.some(p => p.doNotContact || isWhatsappExplicitlyUnsubscribed(p))) return { ok: false, reason: "RECIPIENT_UNSUBSCRIBED" };
   const window = await replyWindowFor(conversationId(input.sender.id, to));
-  const template = !window.open ? await prisma.whatsappTemplate.findFirst({ where: { name: input.templateName ?? GIFT_WHATSAPP_TEMPLATE, OR: [{ status: { not: "ARCHIVED" } }, { status: null }, { status: { isSet: false } }] } }) : null;
-  const mapping = template ? await resolveMetaTemplateMapping(template, input.locale, input.sender.businessAccountId, { exactLanguage: true }) : null;
+  let template: { id: string; name: string } | null = null;
+  let mapping: Awaited<ReturnType<typeof resolveMetaTemplateMapping>> = null;
+  if (!window.open) {
+    for (const name of input.templateName ? [input.templateName] : [GIFT_WHATSAPP_SUCCESSOR, GIFT_WHATSAPP_TEMPLATE]) {
+      const candidate = await prisma.whatsappTemplate.findFirst({ where: { name, OR: [{ status: { not: "ARCHIVED" } }, { status: null }, { status: { isSet: false } }] }, select: { id: true, name: true } });
+      if (!candidate) continue;
+      template ??= candidate;
+      const ready = await resolveMetaTemplateMapping(candidate, input.locale, input.sender.businessAccountId, { exactLanguage: true });
+      if (ready) { template = candidate; mapping = ready; break; }
+    }
+  }
   const created = await createDeliveryRecord({ channel: "WHATSAPP", provider: "META_WHATSAPP", senderId: input.sender.id,
     origin: input.origin ?? "TRIGGER", purpose: "TRANSACTIONAL", recipientPhone: to, recipientName: input.name, locale: input.locale,
     templateId: template?.id, templateName: mapping?.name, renderedBody: input.body, variables: input.archiveVariables ?? { giftItemId: input.itemId, snapshot: { gift: input.values } }, status: "RENDERED" });

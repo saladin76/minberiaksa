@@ -7954,7 +7954,6 @@
   "يتحقق من صيغة الرابط ومعرّف المجلد فقط  لا يتصل بـ Google Drive": "Checks the link format and folder ID only  doesn't connect to Google Drive",
   "يتضمن فيديو  يظهر في البريد كصورة وزر «شاهد الفيديو»": "Includes a video. It appears in the email as an image and a “Watch the video” button",
   "يتطلّب قالبًا معتمدًا من Meta": "Requires a Meta-approved template",
-  "يتطلّب قالبًا معتمدًا من Meta وموافقة صريحة من المتبرع.": "Requires a Meta-approved template and explicit consent from the donor.",
   "يتم إنشاؤه وتدويره آليًا من السيرفر.": "Generated and rotated automatically by the server.",
   "يتم ضبط هذا الربط من إعدادات السيرفر حاليًا.": "This connection is currently configured from the server settings.",
   "يتوسطه خط": "Strikethrough",
@@ -9046,5 +9045,16 @@
   "تأكيد إنجاز الطلب": "Confirm request completion",
   "طلب تغيير المبلغ": "Amount change request",
   "طلب الإيقاف مؤقتاً": "Pause request",
-  "طلب الإلغاء": "Cancellation request"
+  "طلب الإلغاء": "Cancellation request",
+  "يستخدم قالبًا معتمدًا من Meta على الرقم الافتراضي، حسب لغة المتبرع.": "Uses a Meta-approved template on the default number, in the donor’s language.",
+  "أضف قالب حملة من صفحة القوالب والمحفّزات. في واتساب تظهر اللغات المعتمدة على الرقم الافتراضي فقط.": "Add a campaign template in Templates and triggers. WhatsApp lists only languages approved on the default number.",
+  "تُحفظ كل السجلات المطابقة كجمهور للحملة. تُراجع بيانات الاتصال وحالة إيقاف التواصل عند التنفيذ؛ الأهلية المبدئية ليست ضمانًا للتسليم.": "All matching records are kept in the campaign audience. Contact details and communication blocks are checked at execution; preliminary eligibility does not guarantee delivery.",
+  "إيقاف التواصل: {0}؛ مراجعة بيانات الاتصال: {1}": "Communication blocked: {0}; contact details to review: {1}",
+  "تُحفظ كل السجلات المطابقة. إيقاف التواصل: {0}؛ مراجعة بيانات الاتصال: {1}. تُراجع الحالة مجددًا عند التنفيذ.": "All matching records are kept. Communication blocked: {0}; contact details to review: {1}. Status is checked again at execution.",
+  "تعذّر تحميل القوالب الجاهزة لهذه القناة. راجع اتصال المزوّد والرقم الافتراضي ثم أعد المحاولة.": "Could not load ready templates for this channel. Check the provider connection and default number, then retry.",
+  "إعدادات الإرسال العامة": "Global sending settings",
+  "تم حفظ إعدادات الإرسال العامة": "Global sending settings saved",
+  "عدد الأيام": "Number of days",
+  "هذه المدة عامة لكل الحملات؛ الساعات والحد اليومي واستثناءات الجمهور تُضبط داخل كل حملة.": "This interval applies across campaigns. Hours, daily caps and audience exclusions are configured per campaign.",
+  "إيقاف الطوارئ العام مفعّل": "The global emergency stop is enabled"
 }

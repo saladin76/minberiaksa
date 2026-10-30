@@ -16,6 +16,7 @@ function endpoint(mode = "ok") {
     "@/lib/communication/communication-runtime-types":{COMMUNICATION_CHANNELS:["EMAIL","WHATSAPP","SMS"],COMMUNICATION_PURPOSES:["MARKETING"]},
     "@/lib/communication/campaign-service":{listCampaigns:async()=>{lists++;if(mode==="database")throw new Error("unavailable");return [{id:"campaign",donationCount:999,revenue:999}];}},
     "@/lib/communication/campaign-attribution-service":{getCampaignOutcomeSummary:async()=>{reports++;throw new Error("unavailable");}},
+    "@/lib/communication/campaign-outcome-snapshot":{getCampaignOutcomeSnapshot:()=>{reports++;return {ready:false};}},
   };
   const code=ts.transpileModule(fs.readFileSync("app/api/communication/campaigns/route.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const loaded={exports:{} as {GET:(request:unknown)=>Promise<{status:number;body:{ok?:boolean;campaigns?:Array<{donationCount:number|null;revenue:number|null}>}}>}};
@@ -33,4 +34,9 @@ test("database and attribution failures are unavailable responses rather than em
 });
 test("the independent list path preserves authorization before all campaign and financial reads",async()=>{
   const h=endpoint("denied");assert.equal((await h.get("?includeOutcomes=false")).status,403);assert.deepEqual(h.calls(),{lists:0,reports:0});
+});
+test("pending lifetime income responds immediately without returning fictitious counters",async()=>{
+  const h=endpoint();const result=await h.get("?outcomesMode=poll");
+  assert.equal(result.status,200); assert.equal(result.body.ok,true); assert.equal(result.body.campaigns,undefined);
+  assert.deepEqual(h.calls(),{lists:1,reports:1});
 });

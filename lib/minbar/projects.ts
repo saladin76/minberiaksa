@@ -15,6 +15,8 @@ import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/projec
 import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
 import { mergeProjectPriorityGroups } from "@/lib/minbar/project-order";
 import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "@/lib/campaign/priority-filter";
+import { getRestorationProgrammeProjectIds } from "./restoration-programme";
+import { selectProgrammeRelatedProjects } from "./project-filter-options";
 import type { CartFreqKey } from "@/lib/minbar/cart";
 import type { Prisma } from "@prisma/client";
 
@@ -50,6 +52,8 @@ import type { Prisma } from "@prisma/client";
 export interface MinbarProject {
   id: string;
   slug: string;
+  /** Stable Arabic/base slug, independent of the visitor's translated URL. */
+  baseSlug?: string;
   /** Set only when an old saved URL was resolved; the page redirects it. */
   redirectedFrom?: string;
   title: string;
@@ -318,6 +322,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
   return {
     id: row.id,
     slug: t?.slug || row.slug || row.id,
+    baseSlug: row.slug || row.id,
     title: t?.title || row.title,
     text,
     body: detail ? (body.length ? body : [{ kind: "p", text }]) : [],
@@ -571,7 +576,11 @@ export async function listRelatedProjects(
   locale: string,
   count = 3
 ): Promise<MinbarProject[]> {
-  const all = await listProjects(locale);
+  const [all, programmeIds] = await Promise.all([
+    listProjects(locale),
+    project.baseSlug === "al-quds-home-restoration" ? getRestorationProgrammeProjectIds() : Promise.resolve(undefined),
+  ]);
+  if (programmeIds !== undefined) return selectProgrammeRelatedProjects(all, programmeIds, project.id);
   const others = all.filter((p) => p.slug !== project.slug);
   const sameRegion = others.filter((p) => p.region && p.region === project.region);
   const rest = others.filter((p) => !p.region || p.region !== project.region);

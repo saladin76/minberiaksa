@@ -158,6 +158,8 @@ export function NewCampaignWizard() {
   const [channel, setChannel] = React.useState<string>("");
   const [templates, setTemplates] = React.useState<TemplateSummary[]>([]);
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
+  const [templatesError, setTemplatesError] = React.useState<string | null>(null);
+  const [templateReload, setTemplateReload] = React.useState(0);
   const [templateId, setTemplateId] = React.useState("");
   const [name, setName] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -199,17 +201,21 @@ export function NewCampaignWizard() {
   // coming back, which also resets the choice below.
   React.useEffect(() => {
     if (!channel) return;
+    const controller = new AbortController();
     setTemplatesLoading(true);
+    setTemplatesError(null);
+    setTemplates([]);
     setTemplateId("");
-    fetch(`/api/communication/templates?channel=${channel}`, { cache: "no-store" })
+    fetch(`/api/communication/templates?channel=${channel}`, { cache: "no-store", signal: controller.signal })
       .then((response) => readApiJson(response, dt("تعذّر تحميل القوالب")))
       .then((j) => {
         if (!j.ok) throw new Error(String(j.error || dt("تعذّر تحميل القوالب")));
-        setTemplates(j.templates ?? []);
+        if (!controller.signal.aborted) setTemplates(j.templates ?? []);
       })
-      .catch((e) => toast.error((e as Error).message))
-      .finally(() => setTemplatesLoading(false));
-  }, [channel]);
+      .catch((e) => { if (!controller.signal.aborted) setTemplatesError((e as Error).message); })
+      .finally(() => { if (!controller.signal.aborted) setTemplatesLoading(false); });
+    return () => controller.abort();
+  }, [channel, templateReload]);
 
   const chosenTemplate = templates.find((t) => t.id === templateId) ?? null;
 
@@ -399,7 +405,7 @@ export function NewCampaignWizard() {
                 <span className="text-sm font-semibold text-slate-900">{m.label}</span>
                 <span className="text-[11px] leading-5 text-slate-500">
                   {id === "EMAIL" && dt("موضوع ومحتوى كامل، ويدعم الفتح والنقر في التقارير.")}
-                  {id === "WHATSAPP" && dt("يتطلّب قالبًا معتمدًا من Meta وموافقة صريحة من المتبرع.")}
+                  {id === "WHATSAPP" && dt("يستخدم قالبًا معتمدًا من Meta على الرقم الافتراضي، حسب لغة المتبرع.")}
                   {id === "SMS" && dt("نص فقط، ويُحاسب بالمقطع  العربية ٧٠ حرفًا للمقطع.")}
                 </span>
               </button>
@@ -410,7 +416,12 @@ export function NewCampaignWizard() {
 
       {step === 1 && (
         <div className="space-y-3">
-          {templatesLoading ? (
+          {templatesError ? (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p>{templatesError}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setTemplateReload(value => value + 1)}>{dt("إعادة المحاولة")}</Button>
+            </div>
+          ) : templatesLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-16 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
@@ -420,7 +431,7 @@ export function NewCampaignWizard() {
             <EmptyState
               icon={FileText}
               title={dt("لا توجد قوالب لهذه القناة")}
-              description={dt("أنشئ قالبًا من صفحة «قوالب البريد والمحفّزات» أولًا، ثم عُد لإنشاء الحملة.")}
+              description={dt("أضف قالب حملة من صفحة القوالب والمحفّزات. في واتساب تظهر اللغات المعتمدة على الرقم الافتراضي فقط.")}
               action={
                 <Button variant="outline" size="sm" onClick={() => setStep(0)}>
                   {dt("اختر قناة أخرى")}</Button>

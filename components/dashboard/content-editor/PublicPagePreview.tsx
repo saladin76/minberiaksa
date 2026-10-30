@@ -7,7 +7,8 @@ import { localeDirection } from "@/lib/locales";
 import { preparePublicPreviewFrame } from "@/lib/content-editor/preview-frame";
 import type { ContentKind, ContentRecord, TextValues } from "@/lib/content-editor/contracts";
 import { readSuggestionJson } from "@/lib/content-editor/suggestion-batch";
-import type { MinbarProject, MinbarProjectUpdate } from "@/lib/minbar/projects";
+import type { MinbarProject } from "@/lib/minbar/projects";
+import type { ProjectPageContent } from "@/lib/minbar/project-page-content";
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
 import type { SuperCategoryContent } from "@/lib/minbar/super-category";
 import type { MinbarArticleDetail } from "@/lib/minbar/posts";
@@ -25,7 +26,7 @@ import Footer from "@/components/minbar/shell/Footer";
 import "@/styles/minbar/minbar.css";
 import "@/styles/minbar/locale-fonts.css";
 
-type Preview = { detail?:{donorCount:number;updates:MinbarProjectUpdate[]}|null; kind: ContentKind; page: MinbarProject | CategoryPageContent | SuperCategoryContent | MinbarArticleDetail; messages: AbstractIntlMessages };
+type Preview = { detail?: ProjectPageContent | null; kind: ContentKind; page: MinbarProject | CategoryPageContent | SuperCategoryContent | MinbarArticleDetail; messages: AbstractIntlMessages };
 export function PublicPagePreview({ kind, id, locale, changes, settings }: { kind: ContentKind; id: string; locale: string; changes: TextValues; settings: ContentRecord }) {
   const [mobile, setMobile] = useState(false), [data, setData] = useState<Preview | null>(null), [error, setError] = useState(""), [attempt, setAttempt] = useState(0), [mount, setMount] = useState<HTMLElement | null>(null);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -49,7 +50,7 @@ export function PublicPagePreview({ kind, id, locale, changes, settings }: { kin
     <div className="overflow-x-auto rounded-xl border bg-slate-100 p-1" dir="ltr"><iframe ref={frame} title={dt("معاينة الصفحة الفعلية")} srcDoc="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'></head><body></body></html>" onLoad={prepareFrame} className="mx-auto h-[72vh] border-0 bg-white" style={{ width: mobile ? 390 : "100%", maxWidth: "100%" }} /></div>
     {mount && data ? createPortal(<NextIntlClientProvider locale={locale} messages={data.messages} timeZone="Europe/Istanbul"><div className="mia-scope" dir={localeDirection(locale)} onClickCapture={event => { if ((event.target as Element).closest("a")) event.preventDefault(); }} onSubmitCapture={event => event.preventDefault()}>
       <div inert><Header /></div>
-      {data.kind === "campaigns" ? <ProjectDetail preview project={data.page as MinbarProject} gallery={(data.page as MinbarProject).images} related={[]} comments={[]} updates={data.detail?.updates || []} donorCount={data.detail?.donorCount || 0} /> : <fieldset disabled style={{border:0,padding:0,margin:0,minWidth:0}}>{data.kind === "super-categories" ? <SuperCategoryPage page={data.page as SuperCategoryContent} /> : data.kind === "categories" ? (data.page as CategoryPageContent).pageTemplate === "aqsa" ? <AqsaPage category={data.page as CategoryPageContent} projects={(data.page as CategoryPageContent).projects} verse={verseBlock(data.messages.quran as Parameters<typeof verseBlock>[0], "isra_1", locale)} isra={verseBlock(data.messages.quran as Parameters<typeof verseBlock>[0], "isra_1", locale)} /> : (data.page as CategoryPageContent).pageTemplate === "zakat" ? <ZakatPage category={data.page as CategoryPageContent} /> : <CategoryLandingPage page={data.page as CategoryPageContent} /> : <ArticleDetail article={data.page as MinbarArticleDetail} ctaKey={ctaKeyFor((data.page as MinbarArticleDetail).category?.slug, (data.page as MinbarArticleDetail).category?.name)} />}</fieldset>}
+      {data.kind === "campaigns" ? <ProjectDetail preview project={data.page as MinbarProject} gallery={data.detail?.gallery || []} related={data.detail?.related || []} comments={data.detail?.comments || []} updates={data.detail?.updates || []} donorCount={data.detail?.donorCount || 0} /> : <fieldset disabled style={{border:0,padding:0,margin:0,minWidth:0}}>{data.kind === "super-categories" ? <SuperCategoryPage page={data.page as SuperCategoryContent} /> : data.kind === "categories" ? (data.page as CategoryPageContent).pageTemplate === "aqsa" ? <AqsaPage category={data.page as CategoryPageContent} projects={(data.page as CategoryPageContent).projects} verse={verseBlock(data.messages.quran as Parameters<typeof verseBlock>[0], "isra_1", locale)} isra={verseBlock(data.messages.quran as Parameters<typeof verseBlock>[0], "isra_1", locale)} /> : (data.page as CategoryPageContent).pageTemplate === "zakat" ? <ZakatPage category={data.page as CategoryPageContent} /> : <CategoryLandingPage page={data.page as CategoryPageContent} /> : <ArticleDetail article={data.page as MinbarArticleDetail} ctaKey={ctaKeyFor((data.page as MinbarArticleDetail).category?.slug, (data.page as MinbarArticleDetail).category?.name)} />}</fieldset>}
       {readFaqDraft(changes.faqContent).length ? <section className="mx-auto my-10 max-w-5xl space-y-4 px-4">{readFaqDraft(changes.faqContent).map((item,index) => <details key={index} className="rounded-xl border p-5"><summary>{item.q}</summary><p className="mt-4 whitespace-pre-wrap leading-8">{item.a}</p></details>)}</section> : null}
       <div inert><Footer /></div>
     </div></NextIntlClientProvider>, mount) : null}

@@ -8,7 +8,8 @@ import { emptyWorkspace } from "@/lib/content-editor/create";
 import { contentStore } from "@/lib/content-editor/store";
 import { preparePreviewDraft } from "@/lib/content-editor/preview-draft";
 import { isValidLocale } from "@/lib/locales";
-import { getProject, getProjectDonorCount, listProjectUpdates } from "@/lib/minbar/projects";
+import { getProject, type MinbarProject } from "@/lib/minbar/projects";
+import { getProjectPageContent } from "@/lib/minbar/project-page-content";
 import { getSuperCategory } from "@/lib/minbar/super-category";
 import { getCategoryPage } from "@/lib/minbar/category-page";
 import { getArticle } from "@/lib/minbar/posts";
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ki
     if (categoryWrite?.set) draft.settings.categories = await prisma.category.findMany({ where: { id: { in: categoryWrite.set.map(item => item.id) } }, select: { id: true, slug: true, name: true, translations: { select: { locale: true, name: true } } } });
     const page = kind === "campaigns" ? await getProject(id, body.locale, draft) : kind === "super-categories" ? await getSuperCategory(id, body.locale, draft) : kind === "categories" ? await getCategoryPage(id, body.locale, draft) : await getArticle(id, body.locale, draft);
     if (!page) return NextResponse.json({ error: "تعذر قراءة الصفحة للمعاينة" }, { status: 404 });
-    const detail = kind === "campaigns" && id !== "new" ? await Promise.all([getProjectDonorCount(id), listProjectUpdates(id, body.locale)]).then(([donorCount, updates]) => ({donorCount, updates})) : null;
+    const detail = kind === "campaigns" ? await getProjectPageContent(page as MinbarProject, body.locale) : null;
     return NextResponse.json({ kind, page, detail, messages: pickNamespaces(body.locale, [...SHELL_NAMESPACES, "cart", "homepage", "ProjectExtras", "blog", "CampaignsPage", "certificates", "CategoryLanding", "aqsa", "zakat", "quran"]) }, { headers: { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow" } });
   } catch {
     return NextResponse.json({ error: "تعذر تجهيز المعاينة. راجع الحقول وأعد المحاولة؛ لم تُحفظ أي تغييرات." }, { status: 400, headers: { "Cache-Control": "no-store" } });

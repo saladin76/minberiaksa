@@ -3,13 +3,9 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { SITE_URL, buildPageMetadata, buildLocalizedAlternates, clipSeoDescription } from "@/lib/seo";
 import {
   getProject,
-  getProjectDonorCount,
   getProjectSeo,
-  listProjectComments,
-  listProjectUpdates,
-  listRelatedProjects,
 } from "@/lib/minbar/projects";
-import { galleryFor } from "@/lib/minbar/content/media";
+import { getProjectPageContent } from "@/lib/minbar/project-page-content";
 import { miaPath, slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ProjectDetail from "@/components/minbar/projects/ProjectDetail";
@@ -109,19 +105,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     ));
   }
 
-  const [updates, related, donorCount, comments] = await Promise.all([
-    listProjectUpdates(project.id, locale),
-    listRelatedProjects(project, locale),
-    getProjectDonorCount(project.id),
-    listProjectComments(project.id),
-  ]);
-
-  /* The campaign's own photos first (the cover is already the hero), then
-     the region's field photography to fill the tab. A campaign with neither
-     has no Gallery tab. */
-  const own = project.images.slice(1);
-  const regional = project.region ? galleryFor(project.region, 6) : [];
-  const gallery = [...new Set([...own, ...regional])].slice(0, Math.max(6, own.length));
+  const { updates, related, donorCount, comments, gallery } = await getProjectPageContent(project, locale);
 
   const breadcrumb = {
     "@context": "https://schema.org",

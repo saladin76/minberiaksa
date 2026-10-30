@@ -29,6 +29,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "channel must be EMAIL, WHATSAPP or SMS" }, { status: 400 });
   }
 
-  const templates = await listChannelTemplates(channel);
-  return NextResponse.json({ ok: true, templates });
+  try {
+    const templates = await listChannelTemplates(channel);
+    return NextResponse.json({ ok: true, templates });
+  } catch {
+    return NextResponse.json({ ok: false, error: "تعذّر تحميل القوالب الجاهزة لهذه القناة. راجع اتصال المزوّد والرقم الافتراضي ثم أعد المحاولة." }, { status: 503 });
+  }
 }

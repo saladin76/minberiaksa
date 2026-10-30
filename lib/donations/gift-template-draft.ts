@@ -1,7 +1,23 @@
 import { RECEIPT_BRANDS, receiptLocale } from "../templates/receipt-localization";
 import type { SupportedLocale } from "../locales";
+import { whatsappUnsubscribeCopy } from "../communication/whatsapp-template-unsubscribe";
 
 export const GIFT_WHATSAPP_TEMPLATE = "mia_gift_donation_v1";
+// Meta accepted only part of v1 as UTILITY and classifies other translations
+// as MARKETING. Keep those submissions intact and use a consistently classified
+// successor. The send path retains an approved exact-language v1 during review.
+export const GIFT_WHATSAPP_SUCCESSOR = "mia_gift_donation_v2";
+
+export function giftTemplateVariant(raw: unknown, locale: SupportedLocale) {
+  const unsubscribe = whatsappUnsubscribeCopy(locale);
+  return {
+    body: giftTemplateBody(raw, locale),
+    header: { type: "NONE" as const },
+    headerText: "",
+    footerText: unsubscribe.footer,
+    buttons: [{ type: "QUICK_REPLY" as const, text: unsubscribe.button }],
+  };
+}
 
 const GIFT_COPY: Record<SupportedLocale, [string, string, string, string]> = {
   ar: ["إشعار بإهداء تبرع خيري\n\nيسعدنا إبلاغك بوصول إهداء باسمك. تجد أدناه تفاصيل التبرع ورسالة المُهدي ورابط شهادة الإهداء الخاصة بك.", "رسالة المُهدي:", "لفتح شهادة الإهداء وتنزيلها، استخدم الرابط التالي:", "يمكنك الاحتفاظ بالشهادة ومشاركتها مع من تحب. إذا احتجت إلى مساعدة بشأن هذا الإهداء، تواصل معنا عبر الموقع الرسمي للمؤسسة."],

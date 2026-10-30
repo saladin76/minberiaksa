@@ -230,7 +230,11 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
             backgroundPosition: "center",
           }}
         />
-      ) : null}
+      ) : (
+        <span aria-hidden="true" style={{ position: "absolute", inset: "48px 24px 148px", zIndex: 1, display: "grid", placeItems: "center", pointerEvents: "none" }}>
+          <span style={{ width: 96, height: 96, borderRadius: "50%", border: "1px solid rgba(211,154,39,.5)", background: "#fff center/72% no-repeat url('/minbar/assets/logo-mark.png')", boxShadow: "0 0 0 20px rgba(211,154,39,.05), 0 0 0 42px rgba(211,154,39,.025)" }} />
+        </span>
+      )}
       <span
         style={{
           position: "absolute",

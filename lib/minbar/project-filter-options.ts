@@ -22,3 +22,10 @@ export function programmeProjectIds(items: readonly { kind: string; refId: strin
   if (!grids.length) return linked;
   return [...new Set(grids.filter(block => block.isActive !== false).flatMap(block => block.maxItems && block.maxItems > 0 ? linked.slice(0, block.maxItems) : linked))];
 }
+
+/** Use the public pool for visibility, CMS order for selection, and never link
+ * the aggregate donation project to itself as one of its child cards. */
+export function selectProgrammeRelatedProjects<T extends { id: string }>(pool: readonly T[], ids: readonly string[], currentId: string): T[] {
+  const publicRows = new Map(pool.map(row => [row.id, row]));
+  return [...new Set(ids)].filter(id => id !== currentId).flatMap(id => publicRows.has(id) ? [publicRows.get(id)!] : []);
+}

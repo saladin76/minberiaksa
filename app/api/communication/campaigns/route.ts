@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -6,6 +6,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { listCampaigns, createCampaign } from "@/lib/communication/campaign-service";
 import { getCampaignOutcomeSummary } from "@/lib/communication/campaign-attribution-service";
+import { getCampaignOutcomeSnapshot } from "@/lib/communication/campaign-outcome-snapshot";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -74,7 +75,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, campaigns: campaigns.map(campaign => ({ ...campaign, donationCount: null, revenue: null, unpricedPaidCount: null })), outcomesReady: false });
   }
   let outcomes: Awaited<ReturnType<typeof getCampaignOutcomeSummary>>;
-  try { outcomes = await getCampaignOutcomeSummary(campaigns.map((campaign) => campaign.id)); }
+  let outcomesComputedAt: string | undefined;
+  try {
+    const ids = campaigns.map(campaign => campaign.id);
+    if (request.nextUrl.searchParams.get("outcomesMode") === "poll") {
+      const snapshot = getCampaignOutcomeSnapshot(ids, work => after(() => work));
+      if (!snapshot.ready) return NextResponse.json({ ok: true, outcomesReady: false });
+      outcomes = snapshot.summary; outcomesComputedAt = snapshot.computedAt;
+    } else outcomes = await getCampaignOutcomeSummary(ids);
+  }
   catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة." }, { status: 503 }); }
   const outcomeMetrics = outcomes.metrics;
   const enriched = campaigns.map((campaign) => {
@@ -88,7 +97,7 @@ export async function GET(request: NextRequest) {
       failedDonationCount: outcome?.failedDonationCount ?? 0,
     };
   });
-  return NextResponse.json({ ok: true, campaigns: enriched, unattributed: outcomes.unattributed });
+  return NextResponse.json({ ok: true, outcomesReady: true, outcomesComputedAt, campaigns: enriched, unattributed: outcomes.unattributed });
 }
 
 export async function POST(request: NextRequest) {

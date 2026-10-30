@@ -6,6 +6,7 @@ import ts from "typescript";
 import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "../../lib/campaign/priority-filter";
 import { NOT_SOFT_DELETED } from "../../lib/campaign/soft-delete-filter";
 import { mergeProjectPriorityGroups } from "../../lib/minbar/project-order";
+import { selectProgrammeRelatedProjects } from "../../lib/minbar/project-filter-options";
 
 type Row = Record<string, unknown>;
 /** Model Prisma/Mongo's distinction between explicit null and an absent field. */
@@ -23,9 +24,10 @@ function matches(row: Row, where: Row): boolean {
     return present && value === condition;
   });
 }
-function fixture() {
+function fixture(restoration = false) {
   const make = (index: number, fields: Row) => ({ id: String(index).repeat(24), title: "Project " + index, description: "Copy", slug: "project-" + index, isActive: true, goalType: "OPEN", fundraisingMode: "AMOUNT", currentAmount: 15, targetAmount: 0, createdAt: new Date("2026-10-" + (10 + index)), images: [], translations: [], categories: [], _count: { donations: 1 }, ...fields });
   const rows = [make(1, { priority: 0, isDeleted: false }), make(2, { priority: null }), make(3, {}), make(4, { isActive: false }), make(5, { isDeleted: true })];
+  if (restoration) rows[0].slug = "al-quds-home-restoration";
   const initial = structuredClone(rows), reads: Row[] = [];
   const db = { campaign: {
     count: async ({ where }: { where: Row }) => rows.filter(row => matches(row, where)).length,
@@ -51,10 +53,13 @@ function fixture() {
     "@/lib/i18n/translation-fallback": { translationLocaleWhere: () => ({}), pickTranslation: () => null }, "@/lib/campaign/categories": { parseCategoryPriorities: () => ({}) },
     "@/lib/content-editor/public-preview": {}, "@/lib/content/video-platform": {}, "@/lib/slug": {}, "@/lib/dashboard/donation-usd-revenue": {}, "@/lib/campaign/project-seo": {},
     "@/lib/blog/rich-text": { contentToBlocks: (text: string) => [{ kind: "p", text }] }, "@/lib/minbar/recommended-frequency": { parseRecommendedFrequency: () => null }, "@/lib/minbar/project-order": { mergeProjectPriorityGroups },
+    "./project-filter-options": { selectProgrammeRelatedProjects },
+    "./restoration-programme": { getRestorationProgrammeProjectIds: async () => [rows[3].id, rows[2].id, rows[0].id, rows[1].id, rows[2].id] },
   };
   function load<T>(file: string): T { const loaded = { exports: {} }; const source = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText; new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, console, require: (name: string) => { if (!(name in deps)) throw new Error(name); return deps[name]; } }); return loaded.exports as T; }
   const api = load<{ GET: (request: { nextUrl: URL }) => Promise<Response> }>("app/api/campaigns/route.ts");
-  const cms = load<{ listProjects: (locale: string, limit?: number) => Promise<{ id: string }[]> }>("lib/minbar/projects.ts");
+  type Project = { id: string; slug: string; baseSlug?: string };
+  const cms = load<{ listProjects: (locale: string, limit?: number) => Promise<Project[]>; listRelatedProjects: (project: Project, locale: string) => Promise<Project[]> }>("lib/minbar/projects.ts");
   return { rows, initial, reads, get: async (query: string) => (await api.GET({ nextUrl: new URL("https://fixture.test/?" + query) })).json(), cms };
 }
 test("public project pages include legacy unset priority across offset and cursor pagination without publishing inactive or deleted projects", async () => {
@@ -64,6 +69,13 @@ test("public project pages include legacy unset priority across offset and curso
   const ids: string[] = []; let cursor = "";
   do { const page = await h.get("limit=1" + (cursor ? "&cursor=" + cursor : "")); ids.push(...page.items.map((row: { id: string }) => row.id)); cursor = page.nextCursor || ""; } while (cursor && ids.length < 10);
   assert.deepEqual(ids, expected); assert.deepEqual(h.rows, h.initial);
+});
+test("the established restoration donation page uses the CMS selection in order without itself or unpublished projects", async () => {
+  const h = fixture(true), projects = await h.cms.listProjects("ar");
+  assert.equal(projects[0].baseSlug, "al-quds-home-restoration");
+  const cards = await h.cms.listRelatedProjects(projects[0], "ar");
+  assert.deepEqual(cards.map(row => row.id), [h.rows[2].id, h.rows[1].id]);
+  assert.deepEqual(h.rows, h.initial);
 });
 test("CMS project cards include missing-priority rows while explicit zero remains ranked", async () => {
   const h = fixture();

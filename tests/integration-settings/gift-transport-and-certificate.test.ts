@@ -10,10 +10,10 @@ import { SUPPORTED_LOCALES } from "../../lib/locales";
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
 import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
 
-function transport(options: { open?: boolean; approved?: boolean; blocked?: boolean; uncertain?: boolean } = {}) {
-  const calls = { text: 0, template: 0, built: 0, mapping: [] as unknown[], statuses: [] as string[] };
+function transport(options: { open?: boolean; approved?: boolean; blocked?: boolean; uncertain?: boolean; legacyOnly?: boolean } = {}) {
+  const calls = { text: 0, template: 0, built: 0, lookup: [] as string[], mapping: [] as unknown[], statuses: [] as string[] };
   const service = fixtureModule<{ sendGiftWhatsapp: (input: unknown) => Promise<{ ok: boolean; reason?: string; uncertain?: boolean }> }>("lib/donations/gift-whatsapp.ts", {
-    "server-only": {}, "@/lib/prisma": { prisma: { donorCommunicationProfile: { findMany: async () => options.blocked ? [{ doNotContact: true }] : [] }, whatsappTemplate: { findFirst: async () => options.approved ? { id: "template", name: "mia_gift_donation_v1" } : null } } },
+    "server-only": {}, "@/lib/prisma": { prisma: { donorCommunicationProfile: { findMany: async () => options.blocked ? [{ doNotContact: true }] : [] }, whatsappTemplate: { findFirst: async (query: { where: { name: string } }) => { calls.lookup.push(query.where.name); return options.approved ? { id: "template", name: query.where.name } : null; } } } },
     "./gift-template-draft": giftDraft,
     "./gift-order": { normalizeGiftPhone },
     "@/lib/communication/delivery-log-service": { createDeliveryRecord: async () => ({ ok: true, data: { id: "archive" } }), markDeliveryStatus: async (_id: string, status: string) => { calls.statuses.push(status); return { ok: true }; } },
@@ -21,7 +21,7 @@ function transport(options: { open?: boolean; approved?: boolean; blocked?: bool
     "@/lib/communication/conversation-reply-service": { replyWindowFor: async () => ({ open: options.open === true }) },
     "@/lib/communication/phone": { phoneMatchVariants: (p: string) => [p] },
     "@/lib/communication/campaign-audience-accounting": { isWhatsappExplicitlyUnsubscribed: () => false },
-    "@/lib/communication/automatic-message-dispatcher": { resolveMetaTemplateMapping: async (...args: unknown[]) => { calls.mapping.push(args); return { name: "mia_gift_donation_v1", language: "tr", componentsSchema: [] }; } },
+    "@/lib/communication/automatic-message-dispatcher": { resolveMetaTemplateMapping: async (...args: unknown[]) => { calls.mapping.push(args); const candidate = args[0] as { name: string }; return options.legacyOnly && candidate.name === giftDraft.GIFT_WHATSAPP_SUCCESSOR ? null : { name: candidate.name, language: "tr", componentsSchema: [] }; } },
     "@/lib/communication/providers/meta-whatsapp/parameters": { buildMetaComponents: () => { calls.built++; return { ok: true, components: [] }; } },
     "@/lib/communication/providers/meta-whatsapp/messages": {
       sendTextMessage: async () => { calls.text++; return { ok: true, providerMessageId: "text-accepted" }; },
@@ -43,7 +43,13 @@ test("a new recipient without an approved gift template is skipped before any pr
 test("a gift template must be approved in the exact language on the default WABA", async () => {
   const f = transport({ approved: true }); assert.equal((await f.send()).ok, true);
   assert.equal(f.calls.template, 1); assert.equal(f.calls.text, 0); assert.equal(f.calls.built, 1);
-  assert.deepEqual(JSON.parse(JSON.stringify(f.calls.mapping[0])), [{ id: "template", name: "mia_gift_donation_v1" }, "tr", "waba-default", { exactLanguage: true }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.calls.mapping[0])), [{ id: "template", name: giftDraft.GIFT_WHATSAPP_SUCCESSOR }, "tr", "waba-default", { exactLanguage: true }]);
+});
+test("an approved legacy gift language remains usable while its successor awaits approval", async () => {
+  const f = transport({ approved: true, legacyOnly: true }); assert.equal((await f.send()).ok, true);
+  assert.deepEqual(f.calls.lookup, [giftDraft.GIFT_WHATSAPP_SUCCESSOR, giftDraft.GIFT_WHATSAPP_TEMPLATE]);
+  assert.equal(f.calls.template, 1);
+  for (const call of f.calls.mapping) assert.deepEqual(JSON.parse(JSON.stringify(call)).slice(1), ["tr", "waba-default", { exactLanguage: true }]);
 });
 test("gift recipients with an explicit communication block are not contacted", async () => {
   const f = transport({ blocked: true, open: true }); assert.equal((await f.send()).reason, "RECIPIENT_UNSUBSCRIBED");
@@ -107,4 +113,10 @@ for (const locale of SUPPORTED_LOCALES) test(`${locale}: the gift draft contains
   const values = { "gift.recipientName": "Recipient", "gift.donorName": "Donor", "gift.project": "Project", "gift.amount": "20 TRY", "gift.message": "For you", "gift.certificateUrl": "https://minberiaksa.org/api/gifts/fixture/certificate?giftToken=fixture" };
   const prepared = buildMetaComponents({ componentsSchema: variant.components, values, positionalNames: canonical.bindings.map(binding => binding.key), scopedNames });
   assert.equal(prepared.ok, true, JSON.stringify(prepared));
+  const successor = giftDraft.giftTemplateVariant(messagesFor(locale).Gift, locale);
+  assert.equal(successor.body, body);
+  assert.equal(successor.buttons[0].type, "QUICK_REPLY"); assert.ok(successor.buttons[0].text.length <= 25);
+  assert.ok(successor.footerText.length <= 60);
+  const successorSchema = buildStandardMetaComponents(successor);
+  assert.equal(successorSchema.bindings.length, 6);
 });
