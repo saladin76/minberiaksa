@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "../../lib/campaign/priority-filter";
-import { NOT_SOFT_DELETED } from "../../lib/campaign/soft-delete-filter";
+import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "../../lib/campaign/soft-delete-filter";
 import { mergeProjectPriorityGroups } from "../../lib/minbar/project-order";
 import { selectProgrammeRelatedProjects } from "../../lib/minbar/project-filter-options";
 
@@ -39,13 +39,16 @@ function fixture(restoration = false) {
       result.sort((a, b) => { for (const rule of order) for (const [key, direction] of Object.entries(rule)) { const av = a[key as keyof typeof a], bv = b[key as keyof typeof b]; if (av !== bv) { const difference = av instanceof Date && bv instanceof Date ? av.getTime() - bv.getTime() : Number(av) - Number(bv); if (difference) return direction === "desc" ? -difference : difference; } } return 0; });
       const cursor = args.cursor as { id: string } | undefined;
       const start = cursor ? result.findIndex(row => row.id === cursor.id) + Number(args.skip || 0) : Number(args.skip || 0);
-      result = result.slice(start); return args.take ? result.slice(0, Number(args.take)) : result;
+      result = result.slice(start);
+      const categoryWhere = (args.select as { categories?: { where?: Row } } | undefined)?.categories?.where;
+      if (categoryWhere) result = result.map(row => ({ ...row, categories: row.categories.filter(category => matches(category, categoryWhere)) }));
+      return args.take ? result.slice(0, Number(args.take)) : result;
     },
   } };
   const deps: Record<string, unknown> = {
     "next/server": { NextResponse: { json: Response.json } }, "@prisma/client": {}, "@/lib/prisma": { prisma: db }, "server-only": {},
     "next-auth": {}, "../auth/[...nextauth]/options": {}, "@/lib/dashboard/api-auth": {}, "@/lib/audit-log": {}, "@/lib/dashboard/write-error-message": {}, "@/lib/campaign/admin-create-core": {}, "@/lib/campaign/admin-create": {},
-    "@/lib/campaign/priority-filter": { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS }, "@/lib/campaign/soft-delete-filter": { NOT_SOFT_DELETED },
+    "@/lib/campaign/priority-filter": { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS }, "@/lib/campaign/soft-delete-filter": { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED },
     "@/lib/campaign/include-inactive-query": { parseIncludeInactive: () => false },
     "@/lib/campaign/suggested-donations": { parseSuggestedDonations: () => ({ byCurrency: {} }), cardDonationAmounts: () => [] },
     "@/lib/campaign/suggested-team-support": { parseSuggestedTeamSupport: () => ({}) }, "@/lib/campaign/share-labels": { parseShareLabels: () => ({}) },
@@ -83,4 +86,21 @@ test("CMS project cards include missing-priority rows while explicit zero remain
   assert.deepEqual((await h.cms.listProjects("ar", 2)).map(row => row.id), [h.rows[0].id, h.rows[2].id]);
   const ranked = await h.get("hasPriority=true&page=1"); assert.deepEqual(ranked.items.map((row: { id: string }) => row.id), [h.rows[0].id]);
   assert.deepEqual(h.rows, h.initial);
+});
+
+test("archived category badges disappear while their shared project and legacy active categories remain public", async () => {
+  const h = fixture();
+  Object.assign(h.rows[0], { categories: [
+    { id: "archived", name: "Archived", slug: "archived", isActive: false, translations: [] },
+    { id: "active", name: "Active", slug: "active", isActive: true, translations: [] },
+    { id: "legacy-null", name: "Legacy null", slug: "legacy-null", isActive: null, translations: [] },
+    { id: "legacy-unset", name: "Legacy unset", slug: "legacy-unset", translations: [] },
+  ] });
+  const before = structuredClone(h.rows);
+  const projects = await h.cms.listProjects("ar");
+  const project = projects.find(row => row.id === h.rows[0].id) as unknown as { categories: { id: string }[]; region: string; raised: number };
+  assert.deepEqual(project.categories.map(row => row.id), ["active", "legacy-null", "legacy-unset"]);
+  assert.equal(project.region, "active");
+  assert.equal(project.raised, 15);
+  assert.deepEqual(h.rows, before);
 });

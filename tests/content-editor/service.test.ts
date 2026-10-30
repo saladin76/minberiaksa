@@ -446,6 +446,29 @@ test("nested card and block copy participates in completion", () => {
     statuses("categories", row).en.missing.includes("infoCards.c.body"),
   );
 });
+
+test("a block translation can be saved before the page translation without creating a parent or a slug", async () => {
+  const initial = { id, title: "مشاريع الترميم", intro: "المقدمة", slug: "restoration", translations: [], items: [], blocks: [{ id: "222222222222222222222222", kind: "CAMPAIGNS", title: "المشاريع", translations: [] }] };
+  const db = memory("super-categories", initial);
+  const key = "blocks.222222222222222222222222.title";
+  const saved = await saveWorkspace(db.store, { kind: "super-categories", id, revision: fingerprint(db.read()), locale: "fr", changes: { [key]: "Projets de restauration" } });
+  assert.equal(saved.values.fr[key], "Projets de restauration");
+  assert.deepEqual(db.read().translations, []);
+  assert.equal(saved.values.fr.title, "");
+  assert.equal(saved.statuses.fr.complete, false);
+  assert.equal(db.read().slug, "restoration");
+  const before = db.read();
+  await assert.rejects(saveWorkspace(db.store, { kind: "super-categories", id, revision: saved.revision, locale: "fr", changes: { intro: "Page copy without its required title" } }), /العنوان مطلوب/);
+  assert.deepEqual(db.read(), before);
+});
+
+test("saving shared settings while viewing an untranslated language does not fabricate a page translation", async () => {
+  const db = memory("super-categories", { id, title: "المشروع", intro: "المقدمة", translations: [], items: [], blocks: [], isActive: true });
+  const saved = await saveWorkspace(db.store, { kind: "super-categories", id, revision: fingerprint(db.read()), locale: "fr", changes: {}, settings: { isActive: false } });
+  assert.equal(db.read().isActive, false);
+  assert.deepEqual(db.read().translations, []);
+  assert.equal(saved.statuses.fr.complete, false);
+});
 test("SEO and editorial review are independent of content completion", () => {
   const doc = documentFor("blog", article());
   assert.equal(doc.statuses.en.complete, true);

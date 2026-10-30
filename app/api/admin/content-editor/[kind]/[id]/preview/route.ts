@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ki
     const draft = preparePreviewDraft(kind, row, body.locale, body.changes, body.settings);
     if (id === "new") draft.seed = row;
     const categoryWrite = draft.settings.categories as { set?: Array<{ id: string }> } | undefined;
-    if (categoryWrite?.set) draft.settings.categories = await prisma.category.findMany({ where: { id: { in: categoryWrite.set.map(item => item.id) } }, select: { id: true, slug: true, name: true, translations: { select: { locale: true, name: true } } } });
+    if (categoryWrite?.set) draft.settings.categories = await prisma.category.findMany({ where: { id: { in: categoryWrite.set.map(item => item.id) } }, select: { id: true, slug: true, name: true, isActive: true, translations: { select: { locale: true, name: true } } } });
     const page = kind === "campaigns" ? await getProject(id, body.locale, draft) : kind === "super-categories" ? await getSuperCategory(id, body.locale, draft) : kind === "categories" ? await getCategoryPage(id, body.locale, draft) : await getArticle(id, body.locale, draft);
     if (!page) return NextResponse.json({ error: "تعذر قراءة الصفحة للمعاينة" }, { status: 404 });
     const detail = kind === "campaigns" ? await getProjectPageContent(page as MinbarProject, body.locale) : null;

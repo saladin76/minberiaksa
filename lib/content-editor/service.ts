@@ -244,8 +244,14 @@ export async function saveContent(
           throw new ContentError("أحد عناصر المحتوى المرتبط غير موجود");
       }
     }
+    const parentChanges = Object.fromEntries(
+      Object.entries(changes).filter(([key]) => !key.includes(".")),
+    );
     const titleKey = titleKeyFor(kind);
-    if (!hasText(next[titleKey]))
+    // Child translations are independent of the page translation. Editing a
+    // block or shared settings must not require creating a placeholder parent
+    // title/slug; actual parent text writes still require their locale's title.
+    if ((locale === "ar" || Object.keys(parentChanges).length > 0) && !hasText(next[titleKey]))
       throw new ContentError("العنوان مطلوب قبل الحفظ");
     // Touch the parent in the same transaction as every translation/child write.
     // A concurrent legacy form therefore conflicts with this save too.
@@ -259,9 +265,6 @@ export async function saveContent(
         next,
       ]);
     else delete reviews[locale];
-    const parentChanges = Object.fromEntries(
-      Object.entries(changes).filter(([key]) => !key.includes(".")),
-    );
     // The campaign's Arabic gallery remains the sole source of its base cover.
     // `image` is a translation-only override, not a Campaign database column.
     if (kind === "campaigns" && locale === "ar") {

@@ -3,7 +3,7 @@ import "server-only";
 
 import { describeVideoSource } from "@/lib/content/video-platform";
 import { prisma } from "@/lib/prisma";
-import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
+import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { FUNDRAISING_SHARES, cardShareCounts, parseSuggestedShareCounts } from "@/lib/campaign/campaign-modes";
@@ -39,7 +39,7 @@ import type { Prisma } from "@prisma/client";
  *   image       ← per-locale cover when set, else images[0]
  *   images      ← the whole gallery, with the per-locale cover first
  *   videoUrl    ← per-locale video when set, else Campaign.videoUrl
- *   categories  ← every category the campaign is filed under, in order
+ *   categories  ← active categories the campaign is filed under, in order
  *   shares      ← set only for a سهوم campaign (fundraisingMode SHARES with a
  *                 positive sharePriceUSD): the donor gives whole shares and
  *                 the amount is always count × price
@@ -145,10 +145,12 @@ function selectFor(locale: string) {
     categoryPriorities: true,
     createdAt: true,
     categories: {
+      where: CATEGORY_ACTIVE_OR_UNSET,
       select: {
         id: true,
         slug: true,
         name: true,
+        isActive: true,
         translations: { where: translationLocaleWhere(locale), select: { locale: true, name: true } },
       },
     },
@@ -246,6 +248,7 @@ type CampaignRow = {
     id: string;
     slug: string | null;
     name: string;
+    isActive?: boolean | null;
     translations: Array<{ locale: string; name: string }>;
   }>;
   translations: Array<{
@@ -283,7 +286,10 @@ function sharesFor(row: CampaignRow, locale: string): MinbarProjectShares | null
 
 function toProject(row: CampaignRow, locale: string, detail = false): MinbarProject {
   const t = pickTranslation(row.translations, locale);
-  const category = row.categories?.[0];
+  // Preview drafts can supply their own category rows; apply the same public
+  // visibility rule here as in the database selection, without changing links.
+  const categories = (row.categories ?? []).filter(category => category.isActive !== false);
+  const category = categories[0];
   const categoryT = pickTranslation(category?.translations ?? [], locale);
 
   // An OPEN campaign has no fixed target, so the design shows no bar and no
@@ -330,7 +336,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
     imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,
     images,
     videoUrl: t?.videoUrl || row.videoUrl || null,
-    categories: (row.categories ?? []).map((c) => ({
+    categories: categories.map((c) => ({
       id: c.id,
       slug: c.slug,
       label: pickTranslation(c.translations ?? [], locale)?.name || c.name,
