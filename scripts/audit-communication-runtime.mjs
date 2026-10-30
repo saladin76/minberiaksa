@@ -59,6 +59,8 @@ async function main() {
   const { prisma } = prismaModule.default ?? prismaModule;
   const attributionModule = await import(pathToFileURL(resolve(cwd, "lib/communication/campaign-attribution-service.ts")).href);
   const { getCampaignOutcomeSummary } = attributionModule.default ?? attributionModule;
+  const diagnosticsModule = await import(pathToFileURL(resolve(cwd, "lib/communication/campaign-attribution-diagnostics.ts")).href);
+  const { campaignAttributionDiagnostic } = diagnosticsModule.default ?? diagnosticsModule;
   const report = { checkedAt: new Date().toISOString(), readOnly: true, environmentSource: "CLI and Next production env files; PM2/listener environment is not read", databaseWrites: 0, providerCalls: 0, messagesSent: 0, cronRequests: 0, runtime: runtimeEvidence(cwd) };
   try {
     const since = new Date(Date.now() - 24 * 60 * 60_000);
@@ -76,8 +78,8 @@ async function main() {
     report.campaignRevenue = { campaignCount: campaigns.length, campaignsWithConfirmedDonations: [...outcomes.metrics.values()].filter(row => row.donationCount > 0).length, attributed: [...outcomes.metrics.values()].reduce((out, row) => ({ donationCount: out.donationCount + row.donationCount, revenueUSD: Math.round((out.revenueUSD + row.revenue) * 100) / 100, unpricedPaidCount: out.unpricedPaidCount + row.unpricedPaidCount }), { donationCount: 0, revenueUSD: 0, unpricedPaidCount: 0 }), unattributed: outcomes.unattributed };
     report.notes = ["No donor identifiers, contacts, keys, tokens or message bodies are included.", "Shared historical UTMs are not assigned to a campaign by guesswork.", "META_ECOSYSTEM_LIMIT is a provider delivery rejection, separate from the retired internal opt-in guard."];
     console.log(JSON.stringify(report, null, 2));
-  } catch {
-    console.log(JSON.stringify({ ...report, dataStatus: "READ_FAILED_OR_INCOMPLETE", notes: ["Revenue is unavailable; a failed read is not zero income. No private error body was printed."] }, null, 2));
+  } catch (error) {
+    console.log(JSON.stringify({ ...report, dataStatus: "READ_FAILED_OR_INCOMPLETE", diagnostic: campaignAttributionDiagnostic(error), notes: ["Revenue is unavailable; a failed read is not zero income. No private error body was printed."] }, null, 2));
     process.exitCode = 1;
   } finally { await prisma.$disconnect(); }
 }

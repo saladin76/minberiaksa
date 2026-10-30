@@ -33,10 +33,12 @@ export function campaignUtmLinksFromWhatsAppTemplates(
   campaigns: readonly CampaignTemplateRef[],
   templates: readonly WhatsAppTemplateSchema[],
 ): CampaignUtmLink[] {
-  const urlsByTemplate = new Map<string, string[]>();
+  const urlsByTemplate = new Map<string, Set<string>>();
   for (const template of templates) {
     const components = Array.isArray(template.componentsSchema) ? template.componentsSchema : [];
-    const urls: string[] = [];
+    // A template family has one row per language and WABA. All destinations
+    // are historical attribution evidence, including those from earlier rows.
+    const urls = urlsByTemplate.get(template.templateId) ?? new Set<string>();
     for (const rawComponent of components) {
       if (!rawComponent || typeof rawComponent !== "object") continue;
       const component = rawComponent as { type?: unknown; buttons?: unknown };
@@ -45,7 +47,7 @@ export function campaignUtmLinksFromWhatsAppTemplates(
         if (!rawButton || typeof rawButton !== "object") continue;
         const button = rawButton as { type?: unknown; url?: unknown };
         const url = text(button.url);
-        if (String(button.type ?? "").toUpperCase() === "URL" && url) urls.push(url);
+        if (String(button.type ?? "").toUpperCase() === "URL" && url) urls.add(url);
       }
     }
     urlsByTemplate.set(template.templateId, urls);

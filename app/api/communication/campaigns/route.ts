@@ -7,6 +7,7 @@ import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { listCampaigns, createCampaign } from "@/lib/communication/campaign-service";
 import { getCampaignOutcomeSummary } from "@/lib/communication/campaign-attribution-service";
 import { getCampaignOutcomeSnapshot } from "@/lib/communication/campaign-outcome-snapshot";
+import { campaignAttributionDiagnostic } from "@/lib/communication/campaign-attribution-diagnostics";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       outcomes = snapshot.summary; outcomesComputedAt = snapshot.computedAt;
     } else outcomes = await getCampaignOutcomeSummary(ids);
   }
-  catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة." }, { status: 503 }); }
+  catch (error) { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة.", diagnostic: campaignAttributionDiagnostic(error) }, { status: 503 }); }
   const outcomeMetrics = outcomes.metrics;
   const enriched = campaigns.map((campaign) => {
     const outcome = outcomeMetrics.get(campaign.id);

@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as emailHistory from "../../lib/communication/campaign-email-history";
 import * as donationScan from "../../lib/communication/campaign-donation-scan";
+import * as attributionDiagnostics from "../../lib/communication/campaign-attribution-diagnostics";
 import {
   buildUniqueCampaignUtmAliases,
   campaignUtmLinksFromWhatsAppTemplates,
@@ -100,6 +101,19 @@ test("approved WhatsApp template links map to campaigns and shared aliases remai
   assert.equal(resolveCommunicationCampaignId({
     utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign",
   }, new Set([campaignA, campaignB]), aliases), null);
+});
+
+test("WhatsApp attribution retains every language and WABA variant, regardless of row order", () => {
+  const campaigns = [{ campaignId: campaignA, channel: "WHATSAPP", templateId: "family" }];
+  const destination = (name: string) => `https://minberiaksa.org/ar/bagislar?utm_source=whatsapp&utm_medium=communication&utm_campaign=${name}`;
+  const variant = (name?: string) => ({ templateId: "family", componentsSchema: name ? [{ type: "BUTTONS", buttons: [{ type: "URL", url: destination(name) }] }] : [] });
+  const variants = [variant("arabic-link"), variant("turkish-link"), variant("arabic-link"), variant()];
+  for (const rows of [variants, [...variants].reverse()]) {
+    const links = campaignUtmLinksFromWhatsAppTemplates(campaigns, rows);
+    assert.equal(links.length, 2, "duplicate destinations collapse and empty variants cannot erase earlier URLs");
+    const aliases = buildUniqueCampaignUtmAliases(links);
+    for (const name of ["arabic-link", "turkish-link"]) assert.equal(resolveCommunicationCampaignId({ utm_source: "whatsapp", utm_medium: "communication", utm_campaign: name }, new Set([campaignA]), aliases), campaignA);
+  }
 });
 
 test("campaign reporting credits a paid donation through its unique registered legacy UTM", async () => {
@@ -242,7 +256,7 @@ test("campaign income survives the donation display cap and database failure nev
   const { service, calls } = reportingHarness({ donations: [confirmed], paged: true });
   assert.equal((await service.getCampaignOutcomeSummary([campaignA])).metrics.get(campaignA)?.revenue, 10.25);
   assert.equal(calls(), 2);
-  await assert.rejects(reportingHarness({ fail: true }).service.getCampaignOutcomeSummary([campaignA]), /database offline/);
+  await assert.rejects(reportingHarness({ fail: true }).service.getCampaignOutcomeSummary([campaignA]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "DONATIONS");
 });
 
 test("a reply without click evidence never increments campaign click totals", () => {
@@ -295,6 +309,7 @@ function isolated<T>(file: string, dependencies: ServiceDependencies): T {
     require: (id: string) => {
       if (id === "./campaign-donation-scan") return donationScan;
       if (id === "./campaign-email-history") return emailHistory;
+      if (id === "./campaign-attribution-diagnostics") return attributionDiagnostics;
       if (!(id in dependencies)) throw new Error(`Unexpected dependency: ${id}`);
       return dependencies[id];
     },
@@ -310,12 +325,12 @@ for (const nested of [false, true]) {
       ? { linksRead: async () => { throw new Error("links offline"); }, waitForCampaigns: pending }
       : { fail: true, linksRead: async () => { await pending; return []; } });
     let finished = false;
-    const result = service.getCampaignOutcomeSummary([campaignA]).then(() => { finished = true; return "unexpected success"; }, error => { finished = true; return String(error); });
+    const result = service.getCampaignOutcomeSummary([campaignA]).then(() => { finished = true; return { stage: "unexpected success" }; }, error => { finished = true; return attributionDiagnostics.campaignAttributionDiagnostic(error); });
     try {
       await new Promise<void>(resolve => setImmediate(resolve));
       assert.equal(finished, false, "the CLI must not disconnect while sibling reads are active");
     } finally { release(); }
-    assert.match(await result, nested ? /links offline/ : /database offline/);
+    assert.equal((await result).stage, nested ? "TRACKING_LINKS" : "DONATIONS");
   });
 }
 
@@ -326,5 +341,5 @@ test("the full report recovers archived email income, exposes ambiguity, and pro
   assert.equal(unique.metrics.get(campaignA)?.revenue, 10.25); assert.equal(unique.unattributed.donationCount, 0);
   const shared = await reportingHarness({ donations: [donation], history: [row, { _id: { ...row._id, campaignId: { $oid: campaignB } } }] }).service.getCampaignOutcomeSummary([campaignA, campaignB]);
   assert.equal(shared.metrics.size, 0); assert.equal(shared.unattributed.revenue, 10.25);
-  await assert.rejects(reportingHarness({ donations: [donation], historyFailure: true }).service.getCampaignOutcomeSummary([campaignA]), /email archive offline/);
+  await assert.rejects(reportingHarness({ donations: [donation], historyFailure: true }).service.getCampaignOutcomeSummary([campaignA]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "EMAIL_HISTORY");
 });

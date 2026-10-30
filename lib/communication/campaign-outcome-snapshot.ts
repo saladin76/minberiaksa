@@ -1,7 +1,7 @@
 import { getCampaignOutcomeSummary, type CampaignOutcomeSummary } from "./campaign-attribution-service";
 
 type Snapshot = { ready: false } | { ready: true; computedAt: string; summary: CampaignOutcomeSummary };
-type Entry = { startedAt: number; finishedAt?: number; summary?: CampaignOutcomeSummary; failed?: boolean };
+type Entry = { startedAt: number; finishedAt?: number; summary?: CampaignOutcomeSummary; failed?: boolean; error?: unknown };
 
 /** Long lifetime reports outlive a short browser request. Coalesce their reads
  * and let the UI poll a small authenticated response until the full scan settles.
@@ -20,7 +20,7 @@ export function createCampaignOutcomeSnapshotReader(
     if (entry?.finishedAt !== undefined && time - entry.finishedAt >= (entry.failed ? 5_000 : ttlMs)) {
       entries.delete(key); entry = undefined;
     }
-    if (entry?.failed) throw new Error("CAMPAIGN_OUTCOMES_READ_FAILED");
+    if (entry?.failed) throw entry.error ?? new Error("CAMPAIGN_OUTCOMES_READ_FAILED");
     if (entry?.summary && entry.finishedAt !== undefined) return { ready: true, computedAt: new Date(entry.finishedAt).toISOString(), summary: entry.summary };
     if (entry) return { ready: false };
     // Remove only settled work; a refresh must never duplicate an in-flight scan.
@@ -31,7 +31,7 @@ export function createCampaignOutcomeSnapshotReader(
     const next: Entry = { startedAt: time }; entries.set(key, next);
     const work = Promise.resolve().then(() => load(normalized)).then(
       summary => { next.summary = summary; next.finishedAt = now(); },
-      () => { next.failed = true; next.finishedAt = now(); },
+      error => { next.failed = true; next.error = error; next.finishedAt = now(); },
     );
     keepAlive?.(work);
     return { ready: false };

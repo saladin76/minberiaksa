@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { z } from "zod";
+import { campaignAttributionDiagnostic } from "../../lib/communication/campaign-attribution-diagnostics";
 
 function endpoint(mode = "ok") {
   let lists = 0, reports = 0;
@@ -17,6 +18,7 @@ function endpoint(mode = "ok") {
     "@/lib/communication/campaign-service":{listCampaigns:async()=>{lists++;if(mode==="database")throw new Error("unavailable");return [{id:"campaign",donationCount:999,revenue:999}];}},
     "@/lib/communication/campaign-attribution-service":{getCampaignOutcomeSummary:async()=>{reports++;throw new Error("unavailable");}},
     "@/lib/communication/campaign-outcome-snapshot":{getCampaignOutcomeSnapshot:()=>{reports++;return {ready:false};}},
+    "@/lib/communication/campaign-attribution-diagnostics":{campaignAttributionDiagnostic},
   };
   const code=ts.transpileModule(fs.readFileSync("app/api/communication/campaigns/route.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
   const loaded={exports:{} as {GET:(request:unknown)=>Promise<{status:number;body:{ok?:boolean;campaigns?:Array<{donationCount:number|null;revenue:number|null}>}}>}};

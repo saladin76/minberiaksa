@@ -25,7 +25,7 @@ test("read failures remain unavailable and may be retried after the short error 
   let calls = 0, time = 1;
   const read = createCampaignOutcomeSnapshotReader(async () => { calls++; if (calls === 1) throw new Error("database unavailable"); return result(); }, () => time);
   assert.equal(read(["a"]).ready, false); await settle();
-  assert.throws(() => read(["a"]), /READ_FAILED/);
+  assert.throws(() => read(["a"]), /database unavailable/);
   time = 5002; assert.equal(read(["a"]).ready, false); await settle(); assert.equal(read(["a"]).ready, true);
 });
 test("different audiences do not reuse a financial snapshot and pending scans cannot be evicted", async () => {
@@ -33,6 +33,12 @@ test("different audiences do not reuse a financial snapshot and pending scans ca
   assert.equal(read(["a"]).ready, false);
   assert.throws(() => read(["b"]), /BUSY/);
   assert.equal(read(["a"]).ready, false);
+});
+test("a failed background read retains its diagnostic cause for the authenticated report", async () => {
+  const failure = Object.assign(new Error("CAMPAIGN_ATTRIBUTION_READ_FAILED"), { stage: "EMAIL_HISTORY" });
+  const read = createCampaignOutcomeSnapshotReader(async () => { throw failure; });
+  read(["a"]); await settle();
+  assert.throws(() => read(["a"]), error => error === failure);
 });
 test("Next keeps a newly started scan alive once, while later polls reuse it", async () => {
   const tracked: Promise<void>[] = [];
