@@ -1,5 +1,10 @@
 // Repair only an exact previous managed seed, never submitted or operator-edited content.
 const CONTENT_FIELDS = ["body", "translations", "header", "footerText", "buttons", "authentication", "category", "purpose", "kind"];
+// Locale/editor variants also contain headerText, which is valid inside the
+// translations JSON but is not a WhatsappTemplate column. Persist only owned
+// schema fields; root header text belongs to header.text, provider truth to sync.
+const CREATE_FIELDS = ["name", "provider", "channel", "language", ...CONTENT_FIELDS];
+const createData = draft => ({ ...Object.fromEntries(CREATE_FIELDS.filter(key => Object.hasOwn(draft, key)).map(key => [key, draft[key]])), status: "DRAFT" });
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === "object"
   ? Object.fromEntries(Object.entries(value).filter(([, child]) => child !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, stable(child)])) : value ?? null;
 const normalized = (row, key) => key === "buttons" ? row[key] ?? [] : key === "header" ? row[key] ?? { type: "NONE" }
@@ -11,12 +16,16 @@ const localeOf = row => {
   return locale === "nb" ? "no" : locale;
 };
 
-export async function ensureManagedWhatsappDraft(prisma, { draft, previousDraft, mutableLocales }) {
+/**
+ * @param {*} prisma
+ * @param {{ draft: Record<string, unknown>, previousDraft?: Record<string, unknown> | null, mutableLocales: readonly string[] }} options
+ */
+export async function ensureManagedWhatsappDraft(prisma, { draft, previousDraft = null, mutableLocales }) {
   return prisma.$transaction(async tx => {
     const matches = await tx.whatsappTemplate.findMany({ where: { name: draft.name }, take: 2 });
     if (matches.length > 1) throw new Error("MANAGED_TEMPLATE_NAME_AMBIGUOUS");
     const current = matches[0];
-    if (!current) return { template: await tx.whatsappTemplate.create({ data: { ...draft, status: "DRAFT" } }), created: true, repairedLocales: [] };
+    if (!current) return { template: await tx.whatsappTemplate.create({ data: createData(draft) }), created: true, repairedLocales: [] };
     if (current.status === "ARCHIVED") throw new Error("MANAGED_TEMPLATE_ARCHIVED");
     if (sameManagedWhatsappDraft(current, draft)) return { template: current, created: false, repairedLocales: [] };
     if (!previousDraft || !sameManagedWhatsappDraft(current, previousDraft)) throw new Error("MANAGED_TEMPLATE_EDITORIAL_CHANGES_REQUIRE_REVIEW");

@@ -14,6 +14,7 @@ const jobs = resolve(process.env.RELEASE_JOBS_DIR || join(dirname(root), "minber
 const stateFile = dir => join(dir, "status.json");
 const read = dir => JSON.parse(readFileSync(stateFile(dir), "utf8"));
 const terminalPhases = new Set(["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"]);
+const recoveryMetadataSteps = ["gift-templates", "notification-templates", "greeting-templates"];
 const activeFile = join(jobs, "active");
 function recordedJobs() {
   if (!existsSync(jobs)) return [];
@@ -135,7 +136,11 @@ if (mode === "start" || mode === "recover-providers") {
   const recovering = mode === "recover-providers";
   if (!/^[a-f0-9]{40}$/.test(target || "")) throw new Error("Pass the reviewed full commit SHA.");
   if (recovering && (!args[2] || args[2].startsWith("--"))) throw new Error("Pass the failed provider-setup job directory.");
-  if (args.slice(recovering ? 3 : 2).some(arg => !["--publish", "--activate-approved", "--wait"].includes(arg))) throw new Error("Unknown release option.");
+  const flags = args.slice(recovering ? 3 : 2);
+  if (flags.some(arg => !["--publish", "--activate-approved", "--wait"].includes(arg) && !(recovering && arg.startsWith("--steps=")))) throw new Error("Unknown release option.");
+  const selectors = flags.filter(arg => arg.startsWith("--steps="));
+  const steps = selectors.length ? selectors[0].slice("--steps=".length).split(",") : recoveryMetadataSteps;
+  if (selectors.length > 1 || new Set(steps).size !== steps.length || steps.some(step => !recoveryMetadataSteps.includes(step))) throw new Error("Unknown or duplicate recovery metadata step; nothing was started.");
   const flock = spawnSync("flock", ["--version"], { encoding: "utf8" });
   if (flock.status !== 0) throw new Error("flock is required to serialize releases on this VPS.");
   if (!existsSync(join(root, ".git"))) throw new Error("APP_DIR must select the existing application checkout.");
@@ -143,12 +148,13 @@ if (mode === "start" || mode === "recover-providers") {
   if (recovering) {
     const previousJob = resolve(args[2]), previous = read(previousJob);
     if (previous.phase !== "FAILED" || previous.failedPhase !== "CONFIGURING_PROVIDERS" || previous.runtimeActivated !== true || !/^[a-f0-9]{40}$/.test(previous.target || "")) throw new Error("Recovery requires an activated runtime with failed provider setup.");
-    recovery = { previousJob, runtimeTarget: previous.target };
+    recovery = { previousJob, runtimeTarget: previous.target, steps };
   }
   mkdirSync(jobs, { recursive: true, mode: 0o700 });
   // A metadata-only repair may use a newer source SHA while the older runtime
   // stays active. Its success cannot stand in for a full deployment of that SHA.
-  const existing = matchingJobs(target).find(entry => (entry.state.metadataOnly === true) === recovering && running(entry));
+  const sameRecoveryScope = entry => !recovering || [...(entry.state.metadataSteps ?? recoveryMetadataSteps)].sort().join(",") === [...steps].sort().join(",");
+  const existing = matchingJobs(target).find(entry => (entry.state.metadataOnly === true) === recovering && sameRecoveryScope(entry) && running(entry));
   if (existing) {
     console.log(JSON.stringify({ ...existing.state, job: existing.dir, alreadyRunning: true, note: "This commit already has a running release. No second job was started. Inspect this job's status." }, null, 2));
     if (args.includes("--wait")) await followJob(existing.dir);
@@ -158,7 +164,7 @@ if (mode === "start" || mode === "recover-providers") {
     const snapshot = join(dir, "runner.mjs"); copyFileSync(fileURLToPath(import.meta.url), snapshot);
     const options = { target, root, publish: args.includes("--publish"), activate: args.includes("--activate-approved"), ...(recovery ? { recovery } : {}) };
     writeFileSync(join(dir, "options.json"), JSON.stringify(options), { mode: 0o600 });
-    save(dir, { target, phase: "STARTING", startedAt: new Date().toISOString(), log: join(dir, "release.log"), paymentCaptures: 0, recipientMessages: 0, ...(recovery ? { metadataOnly: true, recoveryOf: recovery.previousJob, runtimeTarget: recovery.runtimeTarget, runtimeActivated: true } : {}) });
+    save(dir, { target, phase: "STARTING", startedAt: new Date().toISOString(), log: join(dir, "release.log"), paymentCaptures: 0, recipientMessages: 0, ...(recovery ? { metadataOnly: true, recoveryOf: recovery.previousJob, runtimeTarget: recovery.runtimeTarget, metadataSteps: recovery.steps, runtimeActivated: true } : {}) });
     const fd = openSync(join(dir, "release.log"), "a", 0o600);
     const child = spawn(nodePath(), [snapshot, "supervise", dir], {
       cwd: root, env: { ...process.env, APP_DIR: root, RELEASE_JOBS_DIR: jobs }, detached: true, stdio: ["ignore", fd, fd],
@@ -215,7 +221,7 @@ if (mode === "start" || mode === "recover-providers") {
         symlinkSync(join(options.root, folder), join(snapshot, folder), "dir");
       }
       createRequire(join(options.root, "package.json"))("@next/env").loadEnvConfig(options.root, false, { info() {}, error() {} });
-      run(nodePath(), ["scripts/finalize-reviewed-dashboard.mjs", "--apply", "--steps=gift-templates,notification-templates,greeting-templates", ...(options.publish ? ["--publish"] : []), ...(options.activate ? ["--activate-approved"] : [])], snapshot);
+      run(nodePath(), ["scripts/finalize-reviewed-dashboard.mjs", "--apply", `--steps=${(options.recovery.steps ?? recoveryMetadataSteps).join(",")}`, ...(options.publish ? ["--publish"] : []), ...(options.activate ? ["--activate-approved"] : [])], snapshot);
       save(dir, { phase: "SUCCEEDED", exitCode: 0, finishedAt: new Date().toISOString(), note: "Provider metadata recovery completed. The application runtime was not rebuilt or restarted. Meta approval and message delivery are separate." });
     } else {
     save(dir, { phase: "DEPLOYING" });
@@ -238,7 +244,7 @@ if (mode === "start" || mode === "recover-providers") {
     const entries = recordedJobs();
     console.log(JSON.stringify({ readOnly: true, activeJob: activeJob()?.dir ?? null, jobs: entries.map(entry => ({
       job: entry.dir, target: entry.state.target, phase: visibleState(entry).phase,
-      recordedPhase: entry.state.phase, metadataOnly: entry.state.metadataOnly === true,
+      recordedPhase: entry.state.phase, metadataOnly: entry.state.metadataOnly === true, metadataSteps: entry.state.metadataSteps,
       runtimeActivated: entry.state.runtimeActivated === true, runtimeTarget: entry.state.runtimeTarget,
       startedAt: entry.state.startedAt, finishedAt: entry.state.finishedAt, log: entry.state.log,
       processRunning: running(entry), blockedBy: entry.state.blockedBy,
@@ -260,6 +266,6 @@ if (mode === "start" || mode === "recover-providers") {
     }, null, 2));
   }
 } else {
-  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved] [--wait]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--publish] [--activate-approved] [--wait]\n       node scripts/release-job.mjs follow [job-directory]\n       node scripts/release-job.mjs status [job-directory]\n       node scripts/release-job.mjs status --all");
+  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved] [--wait]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--steps=gift-templates,notification-templates,greeting-templates] [--publish] [--activate-approved] [--wait]\n       node scripts/release-job.mjs follow [job-directory]\n       node scripts/release-job.mjs status [job-directory]\n       node scripts/release-job.mjs status --all");
   process.exitCode = 1;
 }

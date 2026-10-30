@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const runner = resolve("scripts/release-job.mjs");
-function fixture(options: { changedLock?: boolean; dirty?: boolean; inactive?: boolean } = {}) {
+function fixture(options: { changedLock?: boolean; dirty?: boolean; inactive?: boolean; hold?: boolean } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "provider-recovery-")), app = join(dir, "app"), jobs = join(dir, "jobs"), previous = join(jobs, "previous");
   for (const child of ["scripts", "lib", "i18n", ".next"]) mkdirSync(join(app, child), { recursive: true });
   mkdirSync(previous, { recursive: true });
@@ -14,7 +14,7 @@ function fixture(options: { changedLock?: boolean; dirty?: boolean; inactive?: b
   writeFileSync(join(app, "package-lock.json"), '{"lockfileVersion":3}');
   writeFileSync(join(app, "tsconfig.json"), "{}"); writeFileSync(join(app, "lib/marker.ts"), "export const marker='live';");
   writeFileSync(join(app, "i18n/marker.json"), "{}"); writeFileSync(join(app, ".next/runtime"), "existing-runtime");
-  const finalizer = (source: string) => `import{appendFileSync}from'node:fs';appendFileSync(process.env.FIXTURE_RECORD,JSON.stringify({source:${JSON.stringify(source)},args:process.argv.slice(2),cwd:process.cwd(),configLoaded:process.env.FIXTURE_PRIVATE_CONFIG==='fixture-secret',appDirRemoved:!process.env.APP_DIR})+'\\n');`;
+  const finalizer = (source: string) => `import{appendFileSync,existsSync}from'node:fs';appendFileSync(process.env.FIXTURE_RECORD,JSON.stringify({source:${JSON.stringify(source)},args:process.argv.slice(2),cwd:process.cwd(),configLoaded:process.env.FIXTURE_PRIVATE_CONFIG==='fixture-secret',appDirRemoved:!process.env.APP_DIR})+'\\n');${options.hold ? `while(!existsSync(${JSON.stringify(join(app, "continue"))}))await new Promise(done=>setTimeout(done,50));` : ""}`;
   writeFileSync(join(app, "scripts/finalize-reviewed-dashboard.mjs"), finalizer("wrong-live-source"));
   const git = (...args: string[]) => {
     const r = spawnSync("git", args, { cwd: app, encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "Fixture", GIT_AUTHOR_EMAIL: "fixture@example.test", GIT_COMMITTER_NAME: "Fixture", GIT_COMMITTER_EMAIL: "fixture@example.test" } });
@@ -30,7 +30,7 @@ function fixture(options: { changedLock?: boolean; dirty?: boolean; inactive?: b
   writeFileSync(join(previous, "status.json"), JSON.stringify({ target: base, phase: "FAILED", failedPhase: "CONFIGURING_PROVIDERS", runtimeActivated: !options.inactive }));
   if (options.dirty) writeFileSync(join(app, "lib/marker.ts"), "export const marker='operator-edited';");
   const env = { ...process.env, APP_DIR: app, RELEASE_JOBS_DIR: jobs, FIXTURE_RECORD: join(dir, "calls") };
-  const launch = (wait = false) => spawnSync(process.execPath, [runner, "recover-providers", target, previous, "--publish", "--activate-approved", ...(wait ? ["--wait"] : [])], { cwd: app, env, encoding: "utf8", timeout: 10_000 });
+  const launch = (wait = false, steps?: string) => spawnSync(process.execPath, [runner, "recover-providers", target, previous, "--publish", "--activate-approved", ...(wait ? ["--wait"] : []), ...(steps === undefined ? [] : ["--steps=" + steps])], { cwd: app, env, encoding: "utf8", timeout: 10_000 });
   const state = (job: string) => JSON.parse(readFileSync(join(job, "status.json"), "utf8"));
   const until = async (job: string) => {
     for (let i = 0; i < 100; i++) { const s = state(job); if (["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"].includes(s.phase)) return s; await new Promise(resolve => setTimeout(resolve, 50)); }
@@ -84,4 +84,48 @@ test("metadata-only --wait finishes provider recovery without rebuilding or rest
     assert.equal(f.git("rev-parse", "HEAD"), f.base);
     assert.equal(readFileSync(join(f.app, ".next/runtime"), "utf8"), "existing-runtime");
   } finally { rmSync(f.dir, { recursive: true, force: true }); }
+});
+
+test("gift-only recovery runs the selected step without rerunning successful notification or greeting setup", () => {
+  const f = fixture();
+  try {
+    const result = f.launch(true, "gift-templates");
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /"metadataSteps": \[\s*"gift-templates"\s*\]/);
+    assert.equal(f.calls().length, 1);
+    assert.deepEqual(f.calls()[0].args, ["--apply", "--steps=gift-templates", "--publish", "--activate-approved"]);
+    assert.equal(f.git("rev-parse", "HEAD"), f.base);
+    assert.equal(readFileSync(join(f.app, ".next/runtime"), "utf8"), "existing-runtime");
+  } finally { rmSync(f.dir, { recursive: true, force: true }); }
+});
+for (const steps of ["", "gift-templates,unknown", "gift-templates,gift-templates"]) test(`invalid recovery selector cannot start a job or fall back to every step: ${JSON.stringify(steps)}`, () => {
+  const f = fixture();
+  try {
+    const result = f.launch(false, steps);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Unknown or duplicate recovery metadata step/);
+    assert.equal(f.calls().length, 0);
+    assert.equal(f.git("rev-parse", "HEAD"), f.base);
+  } finally { rmSync(f.dir, { recursive: true, force: true }); }
+});
+
+test("a gift repair cannot attach to another running metadata scope for the same source commit", async () => {
+  const f = fixture({ hold: true });
+  let firstJob: string | undefined;
+  try {
+    const first = f.launch(false, "greeting-templates");
+    assert.equal(first.status, 0, first.stderr); firstJob = JSON.parse(first.stdout).job;
+    for (let i = 0; i < 100 && f.calls().length === 0; i++) await new Promise(done => setTimeout(done, 50));
+    assert.equal(f.calls().length, 1);
+    const second = f.launch(true, "gift-templates");
+    assert.equal(second.status, 75, second.stderr);
+    assert.match(second.stdout, /"phase": "BLOCKED_BY_RUNNING_RELEASE"/);
+    assert.ok(!second.stdout.includes('"alreadyRunning": true'));
+    assert.equal(f.calls().length, 1);
+    assert.equal(f.git("rev-parse", "HEAD"), f.base);
+  } finally {
+    writeFileSync(join(f.app, "continue"), "continue");
+    if (firstJob) await f.until(firstJob);
+    rmSync(f.dir, { recursive: true, force: true });
+  }
 });
