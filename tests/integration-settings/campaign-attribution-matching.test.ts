@@ -122,7 +122,7 @@ test("campaign reporting credits a paid donation through its unique registered l
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
-      communicationDelivery: { aggregateRaw: async () => [] },
+      communicationDelivery: { aggregateRaw: async () => [{ page: [], links: [] }] },
       donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-1", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 75, amountUSD: 75, totalAmount: 75,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
@@ -148,7 +148,7 @@ test("campaign reporting can recover the UTM from the approved template when no 
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
-      communicationDelivery: { aggregateRaw: async () => [] },
+      communicationDelivery: { aggregateRaw: async () => [{ page: [], links: [] }] },
       donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-2", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 125, amountUSD: 125, totalAmount: 125,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
@@ -197,13 +197,19 @@ test("new and attached links replace generic campaign UTMs with a campaign-speci
 type ServiceDependencies = Record<string, unknown>;
 
 type Outcome = { donationCount: number; revenue: number; unpricedPaidCount: number; failedDonationCount?: number };
-function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void>; history?: unknown[]; historyFailure?: boolean }) {
-  let calls = 0, scans = 0;
+function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void>; history?: unknown[]; historyFailure?: boolean; historyPages?: unknown[]; historyFailureAt?: number }) {
+  let calls = 0, scans = 0, historyScans = 0;
   const service = isolated<{
     getCampaignOutcomeSummary: (ids: string[]) => Promise<{ metrics: Map<string, Outcome>; unattributed: Outcome }>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
-      communicationDelivery: { aggregateRaw: async () => { if (input.historyFailure) throw new Error("email archive offline"); return input.history ?? []; } },
+      communicationDelivery: { aggregateRaw: async () => {
+        historyScans++;
+        if (input.historyFailure || input.historyFailureAt === historyScans) throw new Error("email archive offline");
+        if (input.historyPages) return input.historyPages[historyScans - 1];
+        const links = input.history ?? [];
+        return [{ page: links.length ? [{ count: 1, lastId: { $oid: campaignA } }] : [], links }];
+      } },
       donation: { findRaw: async () => {
         scans++;
         if (input.fail) throw new Error("database offline");
@@ -223,7 +229,7 @@ function reportingHarness(input: { donations?: Record<string, unknown>[]; links?
     "@/lib/marketing/campaign-links/campaign-link-registry-service": {},
     "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignUtmLinksFromWhatsAppTemplates, campaignsNeedingTrackedTemplate, isCommunicationUtmMedium, resolveCommunicationCampaignId },
   });
-  return { service, calls: () => calls };
+  return { service, calls: () => calls, historyCalls: () => historyScans };
 }
 const confirmed = { id: "paid", status: "PAID", paidAt: new Date("2026-10-01"), amount: 10.25, amountUSD: 10.25, totalAmount: 12, currency: "USD", attribution: { utm_source: "whatsapp", utm_medium: "messaging", utm_campaign: campaignA } };
 
@@ -342,4 +348,18 @@ test("the full report recovers archived email income, exposes ambiguity, and pro
   const shared = await reportingHarness({ donations: [donation], history: [row, { _id: { ...row._id, campaignId: { $oid: campaignB } } }] }).service.getCampaignOutcomeSummary([campaignA, campaignB]);
   assert.equal(shared.metrics.size, 0); assert.equal(shared.unattributed.revenue, 10.25);
   await assert.rejects(reportingHarness({ donations: [donation], historyFailure: true }).service.getCampaignOutcomeSummary([campaignA]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "EMAIL_HISTORY");
+});
+
+test("the full financial report cannot credit an alias before checking the last historical email page", async () => {
+  const donation = { ...confirmed, attribution: { utm_source: "email", utm_medium: "email", utm_campaign: "hotmeals" } };
+  const destination = "https://minberiaksa.org/ar/bagislar/fixture?utm_source=email&utm_medium=email&utm_campaign=hotmeals";
+  const page = (id: string, count: number, owner: string) => [{ page: [{ count, lastId: { $oid: id } }], links: [{ _id: { campaignId: { $oid: owner }, url: destination } }] }];
+  const historyPages = [page(campaignA, emailHistory.EMAIL_HISTORY_PAGE_SIZE, campaignA), page(campaignB, 1, campaignB)];
+  const f = reportingHarness({ donations: [donation], historyPages });
+  const result = await f.service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(f.historyCalls(), 2); assert.equal(result.metrics.size, 0);
+  assert.equal(result.unattributed.revenue, 10.25);
+  const failed = reportingHarness({ donations: [donation], historyPages, historyFailureAt: 2 });
+  await assert.rejects(failed.service.getCampaignOutcomeSummary([campaignA, campaignB]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "EMAIL_HISTORY");
+  assert.equal(failed.historyCalls(), 2);
 });

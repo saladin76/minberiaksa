@@ -1,4 +1,4 @@
-import { emailHistoryLinks, emailHistoryLinkScan } from "./campaign-email-history";
+import { loadEmailHistoryLinks } from "./campaign-email-history";
 import { readAttributionStage } from "./campaign-attribution-diagnostics";
 import { prisma } from "@/lib/prisma";
 import { communicationDonationScan, communicationDonationPageIds, COMMUNICATION_DONATION_PAGE_SIZE } from "./campaign-donation-scan";
@@ -218,7 +218,7 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
       select: { id: true, channel: true, templateGroupId: true },
       take: 10_000,
     })),
-    readAttributionStage("EMAIL_HISTORY", () => prisma.communicationDelivery.aggregateRaw(emailHistoryLinkScan()).then(emailHistoryLinks)),
+    readAttributionStage("EMAIL_HISTORY", () => loadEmailHistoryLinks(scan => prisma.communicationDelivery.aggregateRaw(scan))),
   ]);
   // Do not claim an alias is unique when a campaign/link scan reached its safety bound.
   if (rows.length >= 10_000 || campaigns.length >= 10_000) throw new Error("COMMUNICATION_ATTRIBUTION_LINK_SCAN_INCOMPLETE");
