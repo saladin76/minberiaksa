@@ -1,7 +1,8 @@
 // VPS release runner: detaches from SSH, serializes releases, records every phase.
 // No billing, recipient sends or scheduler execution is performed here.
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const args = process.argv.slice(2), mode = args[0];
@@ -41,13 +42,21 @@ function nodePath() {
   if (result.status !== 0 || !isAbsolute(result.stdout.trim())) throw new Error("Cannot resolve the Node executable.");
   return result.stdout.trim();
 }
-if (mode === "start") {
+if (mode === "start" || mode === "recover-providers") {
   const target = args[1];
+  const recovering = mode === "recover-providers";
   if (!/^[a-f0-9]{40}$/.test(target || "")) throw new Error("Pass the reviewed full commit SHA.");
-  if (args.slice(2).some(arg => !["--publish", "--activate-approved"].includes(arg))) throw new Error("Unknown release option.");
+  if (recovering && (!args[2] || args[2].startsWith("--"))) throw new Error("Pass the failed provider-setup job directory.");
+  if (args.slice(recovering ? 3 : 2).some(arg => !["--publish", "--activate-approved"].includes(arg))) throw new Error("Unknown release option.");
   const flock = spawnSync("flock", ["--version"], { encoding: "utf8" });
   if (flock.status !== 0) throw new Error("flock is required to serialize releases on this VPS.");
   if (!existsSync(join(root, ".git"))) throw new Error("APP_DIR must select the existing application checkout.");
+  let recovery = null;
+  if (recovering) {
+    const previousJob = resolve(args[2]), previous = read(previousJob);
+    if (previous.phase !== "FAILED" || previous.failedPhase !== "CONFIGURING_PROVIDERS" || previous.runtimeActivated !== true || !/^[a-f0-9]{40}$/.test(previous.target || "")) throw new Error("Recovery requires an activated runtime with failed provider setup.");
+    recovery = { previousJob, runtimeTarget: previous.target };
+  }
   mkdirSync(jobs, { recursive: true, mode: 0o700 });
   const existing = matchingJobs(target).find(running);
   if (existing) {
@@ -57,9 +66,9 @@ if (mode === "start") {
   const dir = join(jobs, `${new Date().toISOString().replace(/[:.]/g, "-")}-${target.slice(0, 8)}-${process.pid}`);
   mkdirSync(dir, { mode: 0o700 });
   const snapshot = join(dir, "runner.mjs"); copyFileSync(fileURLToPath(import.meta.url), snapshot);
-  const options = { target, root, publish: args.includes("--publish"), activate: args.includes("--activate-approved") };
+  const options = { target, root, publish: args.includes("--publish"), activate: args.includes("--activate-approved"), ...(recovery ? { recovery } : {}) };
   writeFileSync(join(dir, "options.json"), JSON.stringify(options), { mode: 0o600 });
-  save(dir, { target, phase: "STARTING", startedAt: new Date().toISOString(), log: join(dir, "release.log"), paymentCaptures: 0, recipientMessages: 0 });
+  save(dir, { target, phase: "STARTING", startedAt: new Date().toISOString(), log: join(dir, "release.log"), paymentCaptures: 0, recipientMessages: 0, ...(recovery ? { metadataOnly: true, recoveryOf: recovery.previousJob, runtimeTarget: recovery.runtimeTarget, runtimeActivated: true } : {}) });
   const fd = openSync(join(dir, "release.log"), "a", 0o600);
   const child = spawn(nodePath(), [snapshot, "supervise", dir], {
     cwd: root, env: { ...process.env, APP_DIR: root, RELEASE_JOBS_DIR: jobs }, detached: true, stdio: ["ignore", fd, fd],
@@ -85,6 +94,29 @@ if (mode === "start") {
   const dir = resolve(args[1]);
   const options = JSON.parse(readFileSync(join(dir, "options.json"), "utf8"));
   try {
+    if (options.recovery) {
+      save(dir, { phase: "CONFIGURING_PROVIDERS" });
+      // A separate source snapshot repairs metadata without changing HEAD, .next,
+      // node_modules, PM2 or cron. The normal release lock is held throughout.
+      const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: options.root, encoding: "utf8" });
+      const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", options.recovery.runtimeTarget, options.target], { cwd: options.root });
+      const clean = [[], ["--cached"]].every(flags => spawnSync("git", ["diff", ...flags, "--quiet"], { cwd: options.root }).status === 0);
+      if (head.status !== 0 || head.stdout.trim() !== options.recovery.runtimeTarget || ancestor.status !== 0 || !clean) throw new Error("Recovery source does not match the activated runtime; no provider setup started.");
+      const snapshot = join(dir, "source"); mkdirSync(snapshot, { mode: 0o700 });
+      const archive = spawnSync("git", ["archive", options.target, "scripts", "lib", "i18n", "package.json", "package-lock.json", "tsconfig.json"], { cwd: options.root, maxBuffer: 64 * 1024 * 1024 });
+      if (archive.error || archive.status !== 0) throw new Error("Reviewed metadata source snapshot is unavailable.");
+      const unpack = spawnSync("tar", ["-x", "-C", snapshot], { input: archive.stdout });
+      if (unpack.error || unpack.status !== 0) throw new Error("Cannot prepare the metadata source snapshot.");
+      if (readFileSync(join(snapshot, "package-lock.json"), "utf8") !== readFileSync(join(options.root, "package-lock.json"), "utf8")) throw new Error("Metadata recovery requires unchanged dependencies; use a normal release for a dependency change.");
+      for (const folder of ["node_modules", "generated"]) {
+        if (!existsSync(join(options.root, folder))) throw new Error(`Existing runtime ${folder} is unavailable.`);
+        symlinkSync(join(options.root, folder), join(snapshot, folder), "dir");
+      }
+      createRequire(join(options.root, "package.json"))("@next/env").loadEnvConfig(options.root, false, { info() {}, error() {} });
+      run(nodePath(), ["scripts/finalize-reviewed-dashboard.mjs", "--apply", "--steps=gift-templates,notification-templates,greeting-templates", ...(options.publish ? ["--publish"] : []), ...(options.activate ? ["--activate-approved"] : [])], snapshot);
+      save(dir, { phase: "SUCCEEDED", exitCode: 0, finishedAt: new Date().toISOString(), note: "Provider metadata recovery completed. The application runtime was not rebuilt or restarted. Meta approval and message delivery are separate." });
+      process.exit(0);
+    }
     save(dir, { phase: "DEPLOYING" });
     // Read the reviewed wrapper from Git, not a possibly older working tree.
     const wrapper = spawnSync("git", ["show", `${options.target}:scripts/deploy-reviewed-dashboard.sh`], { cwd: options.root, encoding: "utf8" });
@@ -116,6 +148,6 @@ if (mode === "start") {
   }
   console.log(JSON.stringify({ ...state, job: dir, ...(latestAttempt ? { latestAttempt, note: "A duplicate attempt was blocked. This is the original release's current status." } : {}) }, null, 2));
 } else {
-  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved]\n       node scripts/release-job.mjs status [job-directory]");
+  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--publish] [--activate-approved]\n       node scripts/release-job.mjs status [job-directory]");
   process.exitCode = 1;
 }

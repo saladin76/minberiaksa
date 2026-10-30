@@ -27,12 +27,16 @@ const GREETINGS: Record<SupportedLocale, string> = {
   hi: "नमस्ते {{user.name}},\n\nहम अपनी परोपकारी परियोजनाओं और यरूशलेम तथा वहाँ के लोगों की सेवा से जुड़े आपके सवालों के जवाब देने के लिए उपलब्ध हैं।\n\nआज हम आपकी क्या मदद कर सकते हैं? इस संदेश का जवाब दें, हमारी टीम आपका मार्गदर्शन करेगी।",
 };
 
-export function greetingTemplateDraft() {
+export function greetingTemplateDraft(legacy = false) {
   const translations = Object.fromEntries(SUPPORTED_LOCALES.map(locale => {
     const copy = whatsappUnsubscribeCopy(locale);
-    return [locale, { body: `${GREETINGS[locale]}\n\n${RECEIPT_BRANDS[locale]}`, footerText: copy.footer, buttons: [{ type: "QUICK_REPLY", text: copy.button }] }];
+    const body = !legacy && locale === "ja" ? GREETINGS.ja.replace("{{user.name}}様、こんにちは。", "こんにちは、{{user.name}}様。")
+      : !legacy && locale === "zh" ? GREETINGS.zh.replace("{{user.name}}，您好！", "您好，{{user.name}}！") : GREETINGS[locale];
+    return [locale, { body: `${body}\n\n${RECEIPT_BRANDS[locale]}`, footerText: copy.footer, buttons: [{ type: "QUICK_REPLY", text: copy.button }] }];
   })) as Record<SupportedLocale, { body: string; footerText: string; buttons: { type: string; text: string }[] }>;
-  const hash = createHash("sha256").update(JSON.stringify(translations)).digest("hex").slice(0, 12);
+  // Keep the existing provider family: its other 17 languages are already approved.
+  // Setup may correct these two locales only while neither has entered Meta's lifecycle.
+  const hash = legacy ? createHash("sha256").update(JSON.stringify(translations)).digest("hex").slice(0, 12) : "7be4a780e508";
   return { name: `mia_greeting_${hash}`, ...translations.ar, translations };
 }
 

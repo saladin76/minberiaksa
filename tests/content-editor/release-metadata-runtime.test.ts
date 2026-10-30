@@ -61,6 +61,27 @@ test("metadata retries use the correct Node and flags, attempt every independent
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test("selected metadata retries never rerun deployment, cleanup or successful provider steps", () => {
+  const root = fixture();
+  try {
+    const result = spawnSync(process.execPath, [join(root, "scripts/finalize-reviewed-dashboard.mjs"), "--apply", "--publish", "--activate-approved", "--steps=gift-templates,notification-templates,greeting-templates"], { encoding: "utf8", timeout: 20_000 });
+    assert.equal(result.status, 1, result.stderr);
+    const calls = readFileSync(join(root, "calls"), "utf8").trim().split("\n").map(line => JSON.parse(line));
+    assert.deepEqual(calls.map(call => call.step), [1, 2, 5]);
+    assert.ok(calls.every(call => call.args.includes("--publish")));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a misspelled or empty metadata selector never falls back to running every setup step", () => {
+  for (const selector of ["--steps=", "--steps=gift-template", "--steps=gift-templates,gift-templates", "--step=gift-templates"]) {
+    const root = fixture();
+    try {
+      const result = spawnSync(process.execPath, [join(root, "scripts/finalize-reviewed-dashboard.mjs"), "--apply", selector], { encoding: "utf8", timeout: 20_000 });
+      assert.notEqual(result.status, 0); assert.match(result.stderr, /metadata (?:step|option)/); assert.equal(existsSync(join(root, "calls")), false);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
 test("a Node 22 login shell can select the installed project-engine Node from NVM", () => {
   const root = mkdtempSync(join(tmpdir(), "minberi-node-selector-"));
   try {

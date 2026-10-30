@@ -21,6 +21,7 @@ test("all 19 greeting variants have one donor parameter, a localized brand and a
   for (const locale of locales.SUPPORTED_LOCALES) {
     const variant = draft.translations[locale];
     assert.deepEqual(variableOrder(variant.body), ["user.name"]);
+    assert.doesNotMatch(variant.body.trim(), /^\{\{|\}\}[\s.!،。！]*$/);
     assert.ok(variant.body.length < 1024); assert.ok(variant.footerText.length <= 60);
     assert.ok(variant.buttons[0].text.length <= 25);
     assert.equal(isWhatsappUnsubscribeQuickReply(variant.buttons[0].text), true, locale);

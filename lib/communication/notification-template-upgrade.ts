@@ -5,6 +5,7 @@ import { RECEIPT_BRANDS } from "../templates/receipt-localization";
 import { buildStandardMetaComponents, sameVariables, sameVariableSet, variableOrder, type ButtonDraft, type HeaderDraft } from "./meta-template-components";
 import { templateLocaleFromLanguage } from "./template-locale-media";
 import { resolveExactVariantForLocale, type VariantRow } from "./whatsapp-template-readiness";
+import { hasWhatsappUnsubscribeQuickReply, whatsappUnsubscribeCopy } from "./whatsapp-template-unsubscribe";
 
 export type NotificationTemplateSource = {
   id: string; name: string; body: string; translations?: unknown; header?: unknown;
@@ -23,7 +24,8 @@ export function notificationTemplateHash(source: NotificationTemplateSource): st
 
 /** Clone each real locale verbatim except the receipt slots and closing. No
  * translation generation, no deletion, and no silent Arabic fallback. */
-export function notificationUpgradeDraft(source: NotificationTemplateSource, receipt: boolean) {
+export function notificationUpgradeDraft(source: NotificationTemplateSource, receipt: boolean, welcomeMarketing = false) {
+  if (receipt && welcomeMarketing) throw new Error("WELCOME_MARKETING_CANNOT_BE_A_RECEIPT");
   const translations = record(source.translations);
   const rootHeader = record(source.header) as HeaderDraft;
   const rootButtons = (Array.isArray(source.buttons) ? source.buttons : []) as ButtonDraft[];
@@ -39,7 +41,13 @@ export function notificationUpgradeDraft(source: NotificationTemplateSource, rec
     let nextBody = receipt ? donationReceiptText(body) : body;
     if (receipt && /\{\{\s*donation\.(?:amount|totalAmount|amountUSD|notificationAmount)\s*\}\}/.test(nextBody)) throw new Error(`NOTIFICATION_AMOUNT_REVIEW_REQUIRED:${locale}`);
     nextBody = nextBody.replace(/\{\{\s*donation\.createdAt\s*\}\}/g, "{{donation.displayDate}}");
-    upgraded[locale] = { body: nextBody, header, headerText, footerText: RECEIPT_BRANDS[locale], buttons: locale === "ar" ? rootButtons : (own.buttons ?? []) as ButtonDraft[] };
+    const buttons = [...(locale === "ar" ? rootButtons : (own.buttons ?? []) as ButtonDraft[])];
+    if (welcomeMarketing && !nextBody.includes(whatsappUnsubscribeCopy(locale).footer)) nextBody += `\n\n${whatsappUnsubscribeCopy(locale).footer}`;
+    if (welcomeMarketing && !hasWhatsappUnsubscribeQuickReply(buttons)) {
+      if (buttons.length >= 10) throw new Error(`WELCOME_UNSUBSCRIBE_BUTTON_LIMIT:${locale}`);
+      buttons.push({ type: "QUICK_REPLY", text: whatsappUnsubscribeCopy(locale).button });
+    }
+    upgraded[locale] = { body: nextBody, header, headerText, footerText: RECEIPT_BRANDS[locale], buttons };
   }
   const canonical = buildStandardMetaComponents(upgraded.ar);
   for (const locale of SUPPORTED_LOCALES) {
@@ -50,9 +58,9 @@ export function notificationUpgradeDraft(source: NotificationTemplateSource, rec
   // Content-addressed name makes reruns idempotent and avoids reusing an old
   // provider name after the administrator changes the source template.
   const sourceHash = notificationTemplateHash(source);
-  const policyHash = createHash("sha256").update(`concise-receipt-v2:${sourceHash}`).digest("hex");
+  const policyHash = createHash("sha256").update(`${welcomeMarketing ? "welcome-marketing-v3" : "concise-receipt-v2"}:${sourceHash}`).digest("hex");
   const name = `${source.name.replace(/_v\d+$/, "").slice(0, 90)}_notice_${policyHash.slice(0, 12)}`;
-  return { name, body: upgraded.ar.body, header: upgraded.ar.header, footerText: upgraded.ar.footerText, buttons: upgraded.ar.buttons, translations: upgraded, sourceHash };
+  return { name, body: upgraded.ar.body, header: upgraded.ar.header, footerText: upgraded.ar.footerText, buttons: upgraded.ar.buttons, translations: upgraded, sourceHash, ...(welcomeMarketing ? { category: "MARKETING" as const, purpose: "MARKETING" as const } : {}) };
 }
 
 /** Approval alone is insufficient: the provider must have the exact schema
@@ -60,7 +68,7 @@ export function notificationUpgradeDraft(source: NotificationTemplateSource, rec
 export function approvedNotificationLocales(draft: ReturnType<typeof notificationUpgradeDraft>, variants: VariantRow[]): string[] {
   return SUPPORTED_LOCALES.filter(locale => {
     const variant = resolveExactVariantForLocale(variants, locale);
-    if (!variant.ready || variant.providerTemplateName !== draft.name || templateLocaleFromLanguage(variant.languageCode ?? "") !== locale) return false;
+    if (!variant.ready || variant.providerTemplateName !== draft.name || templateLocaleFromLanguage(variant.languageCode ?? "") !== locale || draft.category && variant.category !== draft.category) return false;
     const expected = buildStandardMetaComponents(draft.translations[locale]).components;
     const shape = (value: unknown): unknown => Array.isArray(value) ? value.map(shape)
       : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "example").map(([key, child]) => [key, shape(child)])) : value;

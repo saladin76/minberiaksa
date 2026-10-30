@@ -10,6 +10,7 @@ import * as money from "../../lib/templates/donation-money";
 import * as upgrades from "../../lib/communication/notification-template-upgrade";
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
 import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
+import { hasWhatsappUnsubscribeQuickReply, whatsappUnsubscribeCopy } from "../../lib/communication/whatsapp-template-unsubscribe";
 
 const evidence = { provider: "ALBARAKA", providerOrderId: "order-a", paidAt: new Date("2026-10-29T09:00:00Z"), status: "PAID", providerRaw: { albarakaRequest: { orderId: "order-a", amount: 410025, currencyCode: "TL" } } };
 const donation = { ...evidence, currency: "EUR", amount: 80, teamSupport: 20, fees: 3, totalAmount: 103 };
@@ -64,7 +65,7 @@ const sourceTemplate = () => {
   return { id: "source", name: "mia_donation_success_v2", body, buttons, translations, header: { type: "NONE" }, footerText: "Minbar Al-Aqsa | منبر الأقصى", kind: "SYSTEM", category: "UTILITY", purpose: "UTILITY" };
 };
 function providerVariants(draft: ReturnType<typeof upgrades.notificationUpgradeDraft>) {
-  return SUPPORTED_LOCALES.map(locale => ({ languageCode: locale === "no" ? "nb" : locale, locale, approvalStatus: "APPROVED", category: "UTILITY", providerTemplateName: draft.name, componentsSchema: buildStandardMetaComponents(draft.translations[locale]).components, rejectionReason: null, lastSyncedAt: new Date() }));
+  return SUPPORTED_LOCALES.map(locale => ({ languageCode: locale === "no" ? "nb" : locale, locale, approvalStatus: "APPROVED", category: draft.category ?? "UTILITY", providerTemplateName: draft.name, componentsSchema: buildStandardMetaComponents(draft.translations[locale]).components, rejectionReason: null, lastSyncedAt: new Date() }));
 }
 
 test("upgrade keeps every existing greeting, prayer, reference and document URL; actual Meta send schema accepts all 19", () => {
@@ -105,28 +106,35 @@ test("missing translations/buttons and unsupported monetary copy need review; fu
   assert.notEqual(upgrades.notificationUpgradeDraft(source, true).name, upgrades.notificationUpgradeDraft({ ...source, body: source.body + " Updated" }, true).name);
 });
 
-function serviceFixture(options: { pending?: boolean; changed?: boolean; duplicateDefault?: boolean } = {}) {
+function serviceFixture(options: { pending?: boolean; changed?: boolean; duplicateDefault?: boolean; welcome?: boolean; wrongCategory?: boolean; mixedWelcome?: boolean } = {}) {
   const source = sourceTemplate();
-  const draft = upgrades.notificationUpgradeDraft(source, true);
+  if (options.welcome) {
+    source.name = "mia_user_registered_v2";
+    source.body = "Welcome {{user.name}}. Your account is ready. Please contact our team if this was not you.";
+    source.buttons = [];
+    for (const locale of SUPPORTED_LOCALES) source.translations[locale] = { ...source.translations[locale], body: source.body, buttons: [] };
+  }
+  const draft = upgrades.notificationUpgradeDraft(source, !options.welcome, options.welcome);
   const candidate = { ...source, ...draft, id: "replacement", status: "DRAFT", notificationUpgrade: {} as Record<string, unknown> };
-  candidate.notificationUpgrade = { version: 1, sourceId: source.id, sourceHash: draft.sourceHash, draftHash: upgrades.notificationTemplateHash(candidate), receipt: true, events: ["DONATION_PAID"] };
+  candidate.notificationUpgrade = { version: options.welcome ? 3 : 1, ...(options.welcome ? { policy: "WELCOME_MARKETING_V3" } : {}), sourceId: source.id, sourceHash: draft.sourceHash, draftHash: upgrades.notificationTemplateHash(candidate), receipt: !options.welcome, events: [options.welcome ? "USER_REGISTERED" : "DONATION_PAID"] };
   const variants = providerVariants(draft);
   if (options.pending) variants[0].approvalStatus = "PENDING";
+  if (options.wrongCategory) variants[0].category = "UTILITY";
   if (options.changed) source.body += " Editorial change";
-  let triggerTarget = "source", writes = 0;
+  let triggerTarget = "source", writes = 0, createdData: Record<string, unknown> | undefined;
   const sender = { id: "default", enabled: true, status: "ACTIVE", businessAccountId: "default-waba" };
   const db = {
     communicationSender: { findMany: async () => options.duplicateDefault ? [sender, sender] : [sender] },
-    whatsappTemplate: { findMany: async (args: { where: { name?: unknown } }) => args.where.name ? [candidate] : [source], findUnique: async (args: { where: { id: string } }) => args.where.id === source.id ? source : candidate, findFirst: async () => null, create: async () => { writes++; return candidate; }, update: async () => { writes++; } },
+    whatsappTemplate: { findMany: async (args: { where: { name?: unknown } }) => args.where.name ? [candidate] : [source], findUnique: async (args: { where: { id: string } }) => args.where.id === source.id ? source : candidate, findFirst: async () => null, create: async ({ data }: { data: Record<string, unknown> }) => { writes++; createdData = data; return candidate; }, update: async () => { writes++; } },
     whatsappTemplateWabaVariant: { findMany: async (args: { where: { businessAccountId: string } }) => { assert.equal(args.where.businessAccountId, "default-waba"); return variants; } },
-    messageTrigger: { findMany: async () => [{ id: "trigger", event: "DONATION_PAID", templateId: triggerTarget }], updateMany: async (args: { data: { templateId: string } }) => { writes++; triggerTarget = args.data.templateId; return { count: 1 }; } },
+    messageTrigger: { findMany: async () => [{ id: "trigger", event: options.welcome ? "USER_REGISTERED" : "DONATION_PAID", templateId: triggerTarget }, ...(options.mixedWelcome ? [{ id: "other", event: "DONATION_PAID", templateId: triggerTarget }] : [])], updateMany: async (args: { data: { templateId: string } }) => { writes++; triggerTarget = args.data.templateId; return { count: 1 }; } },
   };
   const prisma = { ...db, $transaction: async (run: (tx: typeof db) => Promise<unknown>) => run(db) };
   const mod = { exports: {} as { prepareNotificationUpgrades: (opts?: unknown) => Promise<{ results: Array<{ state: string }> }>; activateApprovedNotificationUpgrades: () => Promise<{ results: Array<{ state: string }> }> } };
   const dependencies: Record<string, unknown> = { "server-only": {}, "@prisma/client": { Prisma: {} }, "../prisma": { prisma }, "../locales": { SUPPORTED_LOCALES }, "../audit-log": { writeAuditLog: async () => {} }, "../templates/donation-money": money, "./notification-template-upgrade": upgrades };
   const js = ts.transpileModule(readFileSync("lib/communication/notification-template-upgrade-service.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(js).runInNewContext({ module: mod, exports: mod.exports, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; } });
-  return { api: mod.exports, target: () => triggerTarget, writes: () => writes };
+  return { api: mod.exports, target: () => triggerTarget, writes: () => writes, created: () => createdData };
 }
 test("actual staging service dry-run cannot mutate templates, triggers or call a provider", async () => {
   const f = serviceFixture();
@@ -144,6 +152,36 @@ test("actual activation only switches fully approved, unchanged drafts on the un
   const f = serviceFixture();
   const activated = await f.api.activateApprovedNotificationUpgrades();
   assert.equal(activated.results[0].state, "ACTIVATED"); assert.equal(f.target(), "replacement");
+});
+
+test("the registration successor starts as MARKETING with a localized stop button in every language", async () => {
+  const f = serviceFixture({ welcome: true });
+  await f.api.prepareNotificationUpgrades({ apply: true });
+  const created = f.created()!;
+  assert.equal(created.category, "MARKETING"); assert.equal(created.purpose, "MARKETING");
+  assert.equal((created.notificationUpgrade as { version: number }).version, 3);
+  const translations = created.translations as Record<string, { body: string; buttons: Array<{ text: string }> }>;
+  for (const locale of SUPPORTED_LOCALES) {
+    assert.equal(hasWhatsappUnsubscribeQuickReply(translations[locale].buttons), true, locale);
+    assert.equal(translations[locale].buttons.at(-1)?.text, whatsappUnsubscribeCopy(locale).button);
+    assert.ok(translations[locale].body.endsWith(whatsappUnsubscribeCopy(locale).footer));
+  }
+  assert.equal(f.target(), "source", "staging never switches an active trigger");
+});
+
+test("welcome activation requires all exact schemas approved as MARKETING", async () => {
+  for (const options of [{ welcome: true, pending: true }, { welcome: true, wrongCategory: true }, { welcome: true, changed: true }]) {
+    const f = serviceFixture(options); await f.api.activateApprovedNotificationUpgrades(); assert.equal(f.target(), "source"); assert.equal(f.writes(), 0);
+  }
+  const f = serviceFixture({ welcome: true });
+  assert.equal((await f.api.activateApprovedNotificationUpgrades()).results[0].state, "ACTIVATED");
+  assert.equal(f.target(), "replacement");
+});
+
+test("a mixed welcome and financial trigger cannot be reclassified as marketing automatically", async () => {
+  const f = serviceFixture({ welcome: true, mixedWelcome: true });
+  assert.equal((await f.api.prepareNotificationUpgrades({ apply: true })).results[0].state, "REVIEW_REQUIRED");
+  assert.equal(f.writes(), 0); assert.equal(f.target(), "source");
 });
 
 test("actual email, SMS and WhatsApp helpers archive language refusals before any provider call", async () => {

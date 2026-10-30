@@ -95,6 +95,8 @@ test("renderer failure returns a controlled certificate error without changing t
 for (const locale of SUPPORTED_LOCALES) test(`${locale}: the gift draft contains the same six fields and fits Meta's body limit`, () => {
   const body = giftDraft.giftTemplateBody(messagesFor(locale).Gift, locale);
   assert.ok(body.length <= 1024);
+  assert.doesNotMatch(body.trim(), /^\{\{|\}\}[\s.!،。！]*$/);
+  assert.ok(body.replace(/\{\{[^}]+\}\}/g, "").trim().split(/\s+/).length >= 20, locale + ": gift details need enough fixed explanatory text");
   const fields = [...body.matchAll(/\{\{([^}]+)\}\}/g)].map(match => match[1]).sort();
   assert.deepEqual(fields, ["gift.recipientName", "gift.donorName", "gift.project", "gift.amount", "gift.message", "gift.certificateUrl"].sort());
   assert.ok(body.endsWith(RECEIPT_BRANDS[locale]));
