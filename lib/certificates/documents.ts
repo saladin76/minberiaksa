@@ -12,6 +12,7 @@ import type { ReceiptLine } from "@/components/minbar/certificates/ReceiptSheet"
 import { getReceiptCopy, getThanksCopy, getWaqfCopy, loadCopyOverrides } from "./copy";
 import type { ReceiptCopy, ReceiptOrgData, ThanksCopy, WaqfCopy } from "./copy-defaults";
 import type { IssuedDocuments, IssuedWaqfCertificate } from "./issue";
+import { documentDate } from "./date";
 
 /**
  * From the persisted records to the props each sheet renders  the one place
@@ -91,13 +92,7 @@ export function certificateVerse(locale: string, id: string): CertificateVerse {
 }
 
 /** Numeric date with Latin digits in every locale  a number on a document, not prose. */
-export function documentDate(date: Date, locale: string): string {
-  try {
-    return new Intl.DateTimeFormat(`${locale}-u-nu-latn`, { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
+export { documentDate } from "./date";
 
 function money(amount: number, currency: string, locale: string): string {
   try {
