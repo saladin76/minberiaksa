@@ -8,7 +8,10 @@ ROOT="$PWD"
 # would redirect nested deployment fixtures into the live repository during build.
 unset APP_DIR
 TARGET="${1:-}"
-SOURCE_BRANCH="${SOURCE_BRANCH:-fix/dashboard-release-recovery-20261029}"
+# The same runner is used for releases from different branches. Fetch the
+# immutable reviewed commit by default, never an unrelated legacy branch.
+# An explicit SOURCE_BRANCH still requires its remote head to match TARGET.
+SOURCE_BRANCH="${SOURCE_BRANCH:-$TARGET}"
 APP="${PM2_APP:-minberiaksa}"
 if [[ ! "$TARGET" =~ ^[a-f0-9]{40}$ ]]; then echo "Pass the reviewed full commit SHA." >&2; exit 1; fi
 # Manual invocations share the detached runner's lock. The runner already holds
@@ -21,6 +24,7 @@ if [[ "${MINBER_RELEASE_JOB_LOCK_HELD:-}" != "1" ]]; then
 fi
 unset MINBER_RELEASE_JOB_LOCK_HELD
 if ! git diff --quiet || ! git diff --cached --quiet; then echo "Tracked local edits need to be preserved before deployment." >&2; exit 1; fi
+echo "▶ verifying reviewed source $TARGET from origin ($SOURCE_BRANCH)"
 git fetch origin "$SOURCE_BRANCH"
 if [[ "$(git rev-parse FETCH_HEAD)" != "$TARGET" ]]; then echo "Remote head differs from the reviewed commit; nothing deployed." >&2; exit 1; fi
 if ! git merge-base --is-ancestor HEAD "$TARGET"; then echo "Current source is not an ancestor; no merge or reset performed." >&2; exit 1; fi
