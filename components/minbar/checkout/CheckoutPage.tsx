@@ -359,11 +359,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitting || !items.length) return;
-    if (requiresVerificationChoice && !verificationMode) {
-      setError(t("verificationRequired"));
-      document.getElementById("albaraka-2d")?.focus();
-      return;
-    }
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
       return;
@@ -386,6 +381,13 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       return;
     }
     setInvalidField(null);
+    if (requiresVerificationChoice && !verificationMode) {
+      setError(t("verificationRequired"));
+      const choice = document.getElementById("albaraka-2d");
+      choice?.focus();
+      choice?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
 
     /* Guard the card rail before an order exists. Creating a donation we then
        can't charge leaves a FAILED row behind for no reason. */
@@ -973,7 +975,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
-            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} /> : null}
+            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : null}
 
             {belowMinimum ? (
               <div role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>
@@ -1006,7 +1008,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable) || (requiresVerificationChoice && !verificationMode)}
+                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
