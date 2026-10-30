@@ -1,7 +1,7 @@
 // VPS release runner: detaches from SSH, serializes releases, records every phase.
 // No billing, recipient sends or scheduler execution is performed here.
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,16 +11,67 @@ const jobs = resolve(process.env.RELEASE_JOBS_DIR || join(dirname(root), "minber
 const stateFile = dir => join(dir, "status.json");
 const read = dir => JSON.parse(readFileSync(stateFile(dir), "utf8"));
 const terminalPhases = new Set(["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"]);
-function matchingJobs(target) {
+const activeFile = join(jobs, "active");
+function recordedJobs() {
   if (!existsSync(jobs)) return [];
   return readdirSync(jobs, { withFileTypes: true }).filter(item => item.isDirectory()).flatMap(item => {
     const dir = join(jobs, item.name);
-    try { const state = read(dir); return state.target === target ? [{ dir, state }] : []; } catch { return []; }
+    try { return [{ dir, state: read(dir) }]; } catch { return []; }
   }).sort((a, b) => String(b.state.startedAt).localeCompare(String(a.state.startedAt)));
+}
+function matchingJobs(target) { return recordedJobs().filter(entry => entry.state.target === target); }
+function procMatchesNodeNamespace() {
+  try { return Number(readFileSync("/proc/self/stat", "utf8").split(" ", 1)[0]) === process.pid; }
+  catch { return false; }
 }
 function running(entry) {
   if (terminalPhases.has(entry.state.phase) || !Number.isSafeInteger(entry.state.supervisorPid) || entry.state.supervisorPid <= 0) return false;
-  try { process.kill(entry.state.supervisorPid, 0); return true; } catch { return false; }
+  try { process.kill(entry.state.supervisorPid, 0); } catch { return false; }
+  // PID numbers can be reused after a long-running job has died. A different
+  // process must not keep an interrupted release apparently alive forever.
+  // Hosted JS runtimes may virtualize Node PIDs while /proc exposes host PIDs.
+  // Do not use that unrelated namespace to pronounce a live job interrupted.
+  if (process.platform === "linux" && procMatchesNodeNamespace()) try {
+    const argv = readFileSync(`/proc/${entry.state.supervisorPid}/cmdline`, "utf8").split("\0");
+    return argv.includes(join(entry.dir, "runner.mjs")) && argv.includes("supervise") && argv.includes(entry.dir);
+  } catch (error) {
+    if (error?.code === "ENOENT") return false; // Exited between kill(0) and the identity read.
+    /* Keep an inaccessible live PID conservative; never force-unlock. */
+  }
+  return true;
+}
+function jobAt(dir) {
+  if (typeof dir !== "string" || dirname(resolve(dir)) !== jobs) return null;
+  try { return { dir: resolve(dir), state: read(resolve(dir)) }; } catch { return null; }
+}
+function activeJob() {
+  try { const entry = jobAt(readFileSync(activeFile, "utf8").trim()); return entry && running(entry) ? entry : null; }
+  catch { return null; }
+}
+function blockersFor(attempt, includeHistorical = true) {
+  const recorded = jobAt(attempt.state.blockedBy?.job);
+  if (recorded && recorded.dir !== attempt.dir) return { entry: recorded, evidence: "recorded-lock-owner" };
+  const active = activeJob();
+  // A later unrelated release cannot explain an old blocked attempt.
+  const at = Date.parse(attempt.state.finishedAt || attempt.state.startedAt);
+  const overlaps = entry => {
+    const start = Date.parse(entry.state.startedAt), end = Date.parse(entry.state.finishedAt);
+    return entry.dir !== attempt.dir && entry.state.phase !== "BLOCKED_BY_RUNNING_RELEASE" &&
+      Number.isFinite(at) && Number.isFinite(start) && start <= at &&
+      (Number.isFinite(end) ? end >= at : running(entry));
+  };
+  if (active && overlaps(active)) return { entry: active, evidence: "active-lock-owner" };
+  const candidates = recordedJobs().filter(entry => overlaps(entry) && (includeHistorical || running(entry)));
+  return candidates.length === 1 ? { entry: candidates[0], evidence: "overlapping-job-record" } : { candidates };
+}
+function clearActive(dir) {
+  try { if (readFileSync(activeFile, "utf8").trim() === dir) rmSync(activeFile); } catch { /* Status must never release the OS lock. */ }
+}
+function visibleState(entry) {
+  if (!terminalPhases.has(entry.state.phase) && entry.state.supervisorPid && !running(entry)) {
+    return { ...entry.state, phase: "INTERRUPTED", note: "The recorded job process is no longer running. Inspect its log before restarting." };
+  }
+  return entry.state;
 }
 function save(dir, patch) {
   const state = { ...(existsSync(stateFile(dir)) ? read(dir) : {}), ...patch, updatedAt: new Date().toISOString() };
@@ -85,15 +136,21 @@ if (mode === "start" || mode === "recover-providers") {
     cwd: root, env: process.env, stdio: "inherit",
   });
   const state = read(dir);
+  const blocker = result.status === 75 ? blockersFor({ dir, state: { ...state, finishedAt: new Date().toISOString() } }, false) : null;
   if (result.error || result.status !== 0) save(dir, {
     phase: result.status === 75 ? "BLOCKED_BY_RUNNING_RELEASE" : "FAILED", failedPhase: state.phase,
     exitCode: result.status, finishedAt: new Date().toISOString(),
+    ...(blocker?.entry ? { blockedBy: { job: blocker.entry.dir, target: blocker.entry.state.target, evidence: blocker.evidence } } : {}),
   });
   process.exitCode = result.status === 0 ? 0 : 1;
 } else if (mode === "run") {
   const dir = resolve(args[1]);
   const options = JSON.parse(readFileSync(join(dir, "options.json"), "utf8"));
   try {
+    // This branch is entered only inside flock. Record the owner across target
+    // SHAs so a blocked metadata repair can find the actual deployment job.
+    const activeTemp = `${activeFile}.${process.pid}.tmp`;
+    writeFileSync(activeTemp, dir + "\n", { mode: 0o600 }); renameSync(activeTemp, activeFile);
     if (options.recovery) {
       save(dir, { phase: "CONFIGURING_PROVIDERS" });
       // A separate source snapshot repairs metadata without changing HEAD, .next,
@@ -115,8 +172,7 @@ if (mode === "start" || mode === "recover-providers") {
       createRequire(join(options.root, "package.json"))("@next/env").loadEnvConfig(options.root, false, { info() {}, error() {} });
       run(nodePath(), ["scripts/finalize-reviewed-dashboard.mjs", "--apply", "--steps=gift-templates,notification-templates,greeting-templates", ...(options.publish ? ["--publish"] : []), ...(options.activate ? ["--activate-approved"] : [])], snapshot);
       save(dir, { phase: "SUCCEEDED", exitCode: 0, finishedAt: new Date().toISOString(), note: "Provider metadata recovery completed. The application runtime was not rebuilt or restarted. Meta approval and message delivery are separate." });
-      process.exit(0);
-    }
+    } else {
     save(dir, { phase: "DEPLOYING" });
     // Read the reviewed wrapper from Git, not a possibly older working tree.
     const wrapper = spawnSync("git", ["show", `${options.target}:scripts/deploy-reviewed-dashboard.sh`], { cwd: options.root, encoding: "utf8" });
@@ -127,27 +183,38 @@ if (mode === "start" || mode === "recover-providers") {
     save(dir, { phase: "CONFIGURING_PROVIDERS", runtimeActivated: true });
     run(nodePath(), ["scripts/finalize-reviewed-dashboard.mjs", "--apply", ...(options.publish ? ["--publish"] : []), ...(options.activate ? ["--activate-approved"] : [])], options.root);
     save(dir, { phase: "SUCCEEDED", exitCode: 0, finishedAt: new Date().toISOString(), note: "Deployment and metadata commands completed. Template submission is not Meta approval or proof of message delivery." });
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Release job failed.");
     process.exitCode = 1;
-  }
+  } finally { clearActive(dir); }
 } else if (mode === "status") {
-  let dir = args[1] ? resolve(args[1]) : readFileSync(join(jobs, "latest"), "utf8").trim();
-  let latestAttempt = null;
-  if (!args[1]) {
-    const attempted = read(dir);
-    if (attempted.phase === "BLOCKED_BY_RUNNING_RELEASE") {
-      const candidates = matchingJobs(attempted.target).filter(entry => entry.state.phase !== "BLOCKED_BY_RUNNING_RELEASE");
-      const relevant = candidates.find(running) ?? candidates[0];
-      if (relevant) { latestAttempt = { job: dir, phase: attempted.phase }; dir = relevant.dir; }
+  if (args[1] === "--all" && args.length === 2) {
+    const entries = recordedJobs();
+    console.log(JSON.stringify({ readOnly: true, activeJob: activeJob()?.dir ?? null, jobs: entries.map(entry => ({
+      job: entry.dir, target: entry.state.target, phase: visibleState(entry).phase,
+      recordedPhase: entry.state.phase, metadataOnly: entry.state.metadataOnly === true,
+      runtimeActivated: entry.state.runtimeActivated === true, runtimeTarget: entry.state.runtimeTarget,
+      startedAt: entry.state.startedAt, finishedAt: entry.state.finishedAt, log: entry.state.log,
+      processRunning: running(entry), blockedBy: entry.state.blockedBy,
+    })) }, null, 2));
+  } else {
+    if (args.length > 2 || args[1]?.startsWith("--")) throw new Error("Usage: status [job-directory] or status --all");
+    const requested = args[1] ? resolve(args[1]) : readFileSync(join(jobs, "latest"), "utf8").trim();
+    let entry = { dir: requested, state: read(requested) }, latestAttempt = null, evidence = null, candidates = [];
+    if (entry.state.phase === "BLOCKED_BY_RUNNING_RELEASE") {
+      const blocker = blockersFor(entry);
+      if (blocker.entry) {
+        latestAttempt = { job: requested, phase: entry.state.phase, target: entry.state.target };
+        entry = blocker.entry; evidence = blocker.evidence;
+      } else candidates = blocker.candidates || [];
     }
+    console.log(JSON.stringify({ ...visibleState(entry), job: entry.dir,
+      ...(latestAttempt ? { latestAttempt, followEvidence: evidence, note: "The requested attempt was blocked. This is the current status of its recorded or uniquely overlapping release; targets may differ." } : {}),
+      ...(candidates.length ? { blockingCandidates: candidates.map(candidate => ({ job: candidate.dir, target: candidate.state.target, phase: visibleState(candidate).phase })), note: "More than one job overlaps this attempt. No owner was guessed; inspect status --all and the logs." } : {}),
+    }, null, 2));
   }
-  const state = read(dir);
-  if (!terminalPhases.has(state.phase) && state.supervisorPid) {
-    try { process.kill(state.supervisorPid, 0); } catch { state.phase = "INTERRUPTED"; state.note = "The job process is no longer running. Inspect the log before restarting."; }
-  }
-  console.log(JSON.stringify({ ...state, job: dir, ...(latestAttempt ? { latestAttempt, note: "A duplicate attempt was blocked. This is the original release's current status." } : {}) }, null, 2));
 } else {
-  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--publish] [--activate-approved]\n       node scripts/release-job.mjs status [job-directory]");
+  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--publish] [--activate-approved]\n       node scripts/release-job.mjs status [job-directory]\n       node scripts/release-job.mjs status --all");
   process.exitCode = 1;
 }

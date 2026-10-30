@@ -1608,12 +1608,12 @@ model WhatsappTemplate {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // ── Twilio / WhatsApp Content metadata (all optional for back-compat)
-  /// "TWILIO" when imported from Twilio Content API, "MANUAL" otherwise.
+  // ── Historical WhatsApp content metadata (all optional for back-compat)
+  /// Provider identifier for historical imports, or "MANUAL" for a local draft.
   provider           String?
   /// "WHATSAPP"  kept explicit for the future Marketing Intelligence module.
   channel            String?
-  /// Twilio Content SID (HX-prefixed) or other provider id.
+  /// Historical external template identifier.
   externalTemplateId String?
   /// "text" | "media" | "card" | "quick_reply" | "call_to_action" | "list_picker" | "location"
   templateType       String?
@@ -1621,7 +1621,7 @@ model WhatsappTemplate {
   language           String?
   /// WhatsApp template category  MARKETING / UTILITY / AUTHENTICATION (etc.)
   category           String?
-  /// "approved" | "pending" | "rejected" | "unknown"  Twilio whatsapp/approval state.
+  /// "approved" | "pending" | "rejected" | "unknown"  provider approval state.
   approvalStatus     String?
   /// Header descriptor when the template has a header.
   /// Shape: { type, text?, mediaUrl?, mediaSid?, mimeType?, fileName?, previewUrl?, latitude?, longitude?, address? }
@@ -1634,7 +1634,7 @@ model WhatsappTemplate {
   authentication     Json?
   /// Template variable catalog. Shape: Array<{ key, exampleValue?, mapping?, validationStatus? }>
   variables          Json?
-  /// Last successful sync from Twilio.
+  /// Last successful provider synchronization.
   lastImportedAt     DateTime?
   /// "ok" | "missing_config" | "not_implemented" | "failed"
   lastSyncStatus     String?
@@ -1903,6 +1903,13 @@ model TrackingSettings {
 /// Single-record settings collection for site-wide defaults. Read by clients
 /// (currently for team-support quick-pick amounts in the donation flow);
 /// writable only from the admin dashboard.
+model RecurringPageSettings {
+  id            String   @id @map("_id")
+  configuration Json
+  revision      String
+  updatedAt     DateTime @updatedAt
+}
+
 model GlobalSettings {
   paypalWebhookId String?
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -1963,7 +1970,7 @@ model MarketingPlatformConnection {
   id                  String  @id @default(auto()) @map("_id") @db.ObjectId
   /// "ADS" | "ANALYTICS" | "MESSAGING" | "EMAIL" | "CUSTOM"
   category            String
-  /// "META" | "GOOGLE_ADS" | "TIKTOK" | "X" | "GA4" | "TWILIO" |
+  /// "META" | "GOOGLE_ADS" | "TIKTOK" | "X" | "GA4" |
   /// "EMAIL_PROVIDER" | "WHATSAPP_PROVIDER" | "SMS_PROVIDER" | "CUSTOM"
   platform            String
   name                String
@@ -2138,15 +2145,15 @@ model AdSnapshot {
   @@index([adId, date])
 }
 
-/// Daily messaging-campaign snapshot. Used by Twilio campaign analytics and
+/// Daily messaging-campaign snapshot. Used by historical messaging analytics and
 /// any future email/SMS analytics aggregation. SentMessage stays the
 /// per-recipient log  this model is for fast dashboard rollups.
 model MarketingCampaignSnapshot {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   connectionId    String?  @db.ObjectId
-  /// "TWILIO" | "CUSTOM" | "EMAIL_PROVIDER" | "OTHER"
+  /// "CUSTOM" | "EMAIL_PROVIDER" | "OTHER"
   provider        String
-  /// "TWILIO_EMAIL" | "TWILIO_WHATSAPP" | "TWILIO_SMS" | "EMAIL" | "WHATSAPP" | "SMS"
+  /// "EMAIL" | "WHATSAPP" | "SMS"
   channel         String
   campaignId      String?
   campaignName    String?
@@ -2329,7 +2336,7 @@ model OperationTask {
 model CommunicationSender {
   id                 String    @id @default(auto()) @map("_id") @db.ObjectId
   channel            String // WHATSAPP | EMAIL | SMS
-  provider           String // META_WHATSAPP | TWILIO | SENDGRID | NETGSM | CUSTOM
+  provider           String // META_WHATSAPP | ELASTIC_EMAIL | NETGSM_SMS | BREVO_SMS
   name               String
   displayName        String?
   phoneNumberId      String? // Meta WhatsApp Cloud API phone number id
@@ -2460,7 +2467,7 @@ model CommunicationGlobalControl {
 model CommunicationDelivery {
   id                     String    @id @default(auto()) @map("_id") @db.ObjectId
   channel                String // WHATSAPP | EMAIL | SMS
-  provider               String? // META_WHATSAPP | TWILIO | SENDGRID | NETGSM | CUSTOM
+  provider               String? // META_WHATSAPP | ELASTIC_EMAIL | NETGSM_SMS | BREVO_SMS
   senderId               String?   @db.ObjectId
   campaignId             String?   @db.ObjectId
   templateId             String?

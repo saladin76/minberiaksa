@@ -1,4 +1,5 @@
 import { isKnownLocale } from "@/lib/locales";
+import { isActiveSenderProvider } from "./communication-runtime-types";
 import type { CommunicationChannel, CommunicationPurpose } from "./communication-types";
 
 /**
@@ -16,7 +17,7 @@ export type SenderHealth = "HEALTHY" | "DEGRADED" | "UNKNOWN";
 export type CommunicationSenderConfig = {
   id: string;
   channel: CommunicationChannel;
-  provider: string; // runtime provider id (META_WHATSAPP | TWILIO | SENDGRID | NETGSM | CUSTOM)
+  provider: string;
   name: string;
   supportedLocales?: string[] | null; // empty/undefined = any locale
   supportedCountries?: string[] | null; // empty/undefined = any country
@@ -62,7 +63,7 @@ function normCountry(value?: string | null): string | null {
 }
 
 function isUsable(sender: CommunicationSenderConfig): boolean {
-  return sender.enabled && sender.status === "ACTIVE" && sender.health !== "DEGRADED";
+  return isActiveSenderProvider(sender.channel, sender.provider) && sender.enabled && sender.status === "ACTIVE" && sender.health !== "DEGRADED";
 }
 
 function supportsLocale(sender: CommunicationSenderConfig, locale: string | null): boolean {

@@ -22,7 +22,7 @@ import {
  * Every automatic donation/subscription message now flows through the FINAL provider architecture:
  *   - EMAIL    → Elastic Email (via ProviderRouter). Never SendGrid, never Brevo.
  *   - WHATSAPP → Meta Cloud API. Utility/Auth prefers Direct Send when the beta is enabled, then
- *                falls back to an approved Meta template. Marketing stays template-only. Never Twilio.
+ *                falls back to an approved Meta template. Marketing stays template-only.
  *   - SMS      → TR (+90) → Netgsm, international → Brevo SMS. Automatic SMS triggers use the
  *                same delivery archive, consent gates and provider router as SMS campaigns.
  *
@@ -62,8 +62,7 @@ function isTerminalConfigReason(reason: string): boolean {
     reason.endsWith("_NOT_IMPLEMENTED") ||
     reason === "EMAIL_SUPPRESSED" ||
     reason.includes("SENDER_MISSING") ||
-    reason.includes("REQUIRED_FOR_AUTOMATIC") ||
-    reason === "TWILIO_LEGACY_DISABLED"
+    reason.includes("REQUIRED_FOR_AUTOMATIC")
   );
 }
 
@@ -551,7 +550,7 @@ export type MetaTemplateMapping = {
  * perfectly good Arabic variant existed. The language now comes from the variant that was chosen,
  * which is the only language that variant can be sent in.
  *
- * Returns null when nothing is sendable  a free-text MANUAL template, a Twilio import, a template
+ * Returns null when nothing is sendable  a free-text MANUAL template, a retired-provider import, a template
  * whose variants Meta has not approved, or one the sync has never seen. Automatic WhatsApp is then
  * SKIPPED, which is the honest outcome: Meta refuses business-initiated free text, so there is no
  * legal payload to fall back to.

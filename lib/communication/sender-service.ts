@@ -15,7 +15,7 @@ import {
 } from "./sender-verification";
 import {
   isCommunicationChannel,
-  isCommunicationProvider,
+  isActiveSenderProvider,
   type CommunicationChannelId,
   type SenderStatusId,
 } from "./communication-runtime-types";
@@ -23,7 +23,7 @@ import {
 /**
  * SenderService  CRUD for CommunicationSender rows and a bridge that maps a stored sender
  * into the pure `CommunicationSenderConfig` the sender-router consumes. Server-side only.
- * No provider tokens are stored here; Meta/Twilio credentials live in the provider connection
+ * No provider tokens are stored here; credentials live in the provider connection
  * / environment and are read by the (future) provider adapters  never surfaced to the client.
  */
 
@@ -71,7 +71,11 @@ export async function listSenders(strict = false): Promise<CommunicationSender[]
     return [];
   }
   try {
-    return await prisma.communicationSender.findMany({ orderBy: [{ enabled: "desc" }, { priority: "asc" }, { name: "asc" }] });
+    const rows = await prisma.communicationSender.findMany({
+      where: { OR: [{ channel: "WHATSAPP", provider: "META_WHATSAPP" }, { channel: "EMAIL", provider: "ELASTIC_EMAIL" }, { channel: "SMS", provider: { in: ["NETGSM_SMS", "BREVO_SMS"] } }] },
+      orderBy: [{ enabled: "desc" }, { priority: "asc" }, { name: "asc" }],
+    });
+    return rows.filter(row => isActiveSenderProvider(row.channel, row.provider));
   } catch (error) {
     console.error("listSenders failed", error);
     if (strict) throw new Error("ROUTING_DATABASE_UNAVAILABLE");
@@ -96,7 +100,7 @@ export async function getSender(id: string): Promise<CommunicationSender | null>
 export async function createSender(input: SenderInput, actor?: Actor): Promise<ServiceResult<CommunicationSender>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   if (!isCommunicationChannel(input.channel)) return { ok: false, status: 400, error: "Invalid channel." };
-  if (!isCommunicationProvider(input.provider)) return { ok: false, status: 400, error: "Invalid provider." };
+  if (!isActiveSenderProvider(input.channel, input.provider)) return { ok: false, status: 400, error: "اختر مزوّدًا نشطًا يدعم قناة الإرسال." };
   if (!input.name?.trim()) return { ok: false, status: 400, error: "Name is required." };
   try {
     if (input.channel === "WHATSAPP" && input.phoneNumberId) {
@@ -152,6 +156,7 @@ export async function updateSender(id: string, patch: Partial<SenderInput>, acto
   try {
     const current = await prisma.communicationSender.findUnique({ where: { id } });
     if (!current) return { ok: false, status: 404, error: "Sender not found." };
+    if (!isActiveSenderProvider(patch.channel ?? current.channel, patch.provider ?? current.provider)) return { ok: false, status: 410, error: "مزوّد الإرسال متقاعد ولا يمكن إعادة تفعيله." };
 
     if (patch.phoneNumberId) {
       const duplicate = await prisma.communicationSender.findFirst({
@@ -389,6 +394,7 @@ export async function setDefaultSender(id: string, actor?: Actor): Promise<Servi
   try {
     const sender = await prisma.communicationSender.findUnique({ where: { id } });
     if (!sender) return { ok: false, status: 404, error: "Sender not found." };
+    if (!isActiveSenderProvider(sender.channel, sender.provider)) return { ok: false, status: 410, error: "مزوّد الإرسال متقاعد ولا يمكن إعادة تفعيله." };
     if (!sender.enabled || sender.status !== "ACTIVE") {
       return { ok: false, status: 409, error: "لا يمكن تعيين مُرسِل غير نشط كافتراضي. فعّله وتأكد من سلامة حالته أولًا." };
     }

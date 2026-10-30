@@ -112,7 +112,7 @@ async function preflightWhatsappTrigger(templateId: string, purpose: "TRANSACTIO
 
   const provider = (tpl.provider ?? "").toUpperCase();
   if (provider !== "META" && provider !== "META_WHATSAPP") {
-    /* A Twilio import or a MANUAL free-text template can never go out automatically: Meta refuses
+    /* A retired-provider import or a MANUAL free-text template can never go out automatically: Meta refuses
        business-initiated free text, so there is no payload this trigger could ever send. */
     problems.push({
       code: "TEMPLATE_NOT_META",

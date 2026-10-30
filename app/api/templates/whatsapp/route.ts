@@ -36,7 +36,7 @@ export async function GET() {
   });
   const defaultWaba = defaults.length === 1 ? defaults[0].businessAccountId : null;
   const rows = await prisma.whatsappTemplate.findMany({
-    where: { OR: [{ provider: null }, { provider: { isSet: false } }, { provider: { not: "TWILIO" } }] },
+    where: { OR: [{ provider: null }, { provider: { isSet: false } }, { provider: { in: ["META_WHATSAPP", "MANUAL"] } }] },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,

@@ -19,7 +19,6 @@ export type ActiveCommunicationProviderId = (typeof ACTIVE_COMMUNICATION_PROVIDE
 
 export const HISTORICAL_COMMUNICATION_PROVIDERS = [
   "BREVO_EMAIL",
-  "TWILIO",
   "SENDGRID",
   "NETGSM",
   "CUSTOM",
@@ -116,6 +115,10 @@ export function isCommunicationChannel(value: unknown): value is CommunicationCh
 
 export function isActiveCommunicationProvider(value: unknown): value is ActiveCommunicationProviderId {
   return typeof value === "string" && (ACTIVE_COMMUNICATION_PROVIDERS as readonly string[]).includes(value);
+}
+
+export function isActiveSenderProvider(channel: string, provider: unknown): provider is ActiveCommunicationProviderId {
+  return channel === "WHATSAPP" ? provider === "META_WHATSAPP" : channel === "EMAIL" ? provider === "ELASTIC_EMAIL" : channel === "SMS" && (provider === "NETGSM_SMS" || provider === "BREVO_SMS");
 }
 
 export function isCommunicationProvider(value: unknown): value is CommunicationProviderId {

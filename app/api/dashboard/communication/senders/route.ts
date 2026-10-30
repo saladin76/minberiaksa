@@ -7,7 +7,7 @@ import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { createSender, listSenders } from "@/lib/communication/sender-service";
 import { publicSender } from "@/lib/communication/public-sender";
 import { listRoutingRules } from "@/lib/communication/routing-rule-service";
-import { COMMUNICATION_CHANNELS, COMMUNICATION_PROVIDERS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
+import { COMMUNICATION_CHANNELS, ACTIVE_COMMUNICATION_PROVIDERS, COMMUNICATION_PURPOSES, isActiveSenderProvider } from "@/lib/communication/communication-runtime-types";
 import { getActiveCommunicationRuntimeBundle } from "@/lib/communication/runtime-config";
 
 /**
@@ -24,7 +24,7 @@ import { getActiveCommunicationRuntimeBundle } from "@/lib/communication/runtime
 
 const senderSchema = z.object({
   channel: z.enum(COMMUNICATION_CHANNELS),
-  provider: z.enum(COMMUNICATION_PROVIDERS),
+  provider: z.enum(ACTIVE_COMMUNICATION_PROVIDERS),
   name: z.string().min(1).max(120),
   displayName: z.string().max(120).nullable().optional(),
   phoneNumberId: z.string().regex(/^\d+$/).max(64).nullable().optional(),
@@ -40,6 +40,7 @@ const senderSchema = z.object({
   enabled: z.boolean().optional(),
   priority: z.number().int().min(0).max(999).optional(),
 }).superRefine((value, ctx) => {
+  if (!isActiveSenderProvider(value.channel, value.provider)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["provider"], message: "اختر مزوّدًا نشطًا يدعم قناة الإرسال." });
   if (value.channel === "WHATSAPP") {
     if (value.provider !== "META_WHATSAPP") {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["provider"], message: "WhatsApp sender must use META_WHATSAPP." });

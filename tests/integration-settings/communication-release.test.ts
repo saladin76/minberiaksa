@@ -7,6 +7,7 @@ import ts from "typescript";
 import * as metaErrors from "../../lib/communication/providers/meta-whatsapp/errors";
 import * as phone from "../../lib/communication/phone";
 import * as locales from "../../lib/locales";
+import * as runtimeTypes from "../../lib/communication/communication-runtime-types";
 import { donorAccountStatus } from "../../lib/dashboard/donor-account";
 import { donorProfileSchema } from "../../lib/dashboard/donor-profile";
 import type { NormalizedWebhookEvent } from "../../lib/communication/providers/meta-whatsapp/types";
@@ -110,7 +111,7 @@ test("app replies resolve only their conversation and old timeline pages retain 
   assert.equal(detail.timeline[0].kind, "outbound"); assert.equal(detail.timeline[0].status, "READ");
 });
 
-const router = load<{ resolveSender: (request: SenderRoutingRequest, senders: CommunicationSenderConfig[], rules: SenderRoutingRuleConfig[]) => SenderRoutingResult }>("lib/communication/sender-router.ts", { "@/lib/locales": locales });
+const router = load<{ resolveSender: (request: SenderRoutingRequest, senders: CommunicationSenderConfig[], rules: SenderRoutingRuleConfig[]) => SenderRoutingResult }>("lib/communication/sender-router.ts", { "@/lib/locales": locales, "./communication-runtime-types": runtimeTypes });
 const sender = (id: string, patch: Partial<CommunicationSenderConfig> = {}): CommunicationSenderConfig => ({ id, name: id, channel: "WHATSAPP", provider: "META_WHATSAPP", status: "ACTIVE", enabled: true, ...patch });
 const request: SenderRoutingRequest = { channel: "WHATSAPP", locale: "ar", country: "TR", purpose: "MARKETING" };
 const rule: SenderRoutingRuleConfig = { id: "rule", channel: "WHATSAPP", locale: "ar", senderId: "primary", fallbackSenderId: "fallback", enabled: true };

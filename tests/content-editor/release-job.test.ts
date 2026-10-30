@@ -29,7 +29,11 @@ function fixture(deployExit = 0, metadataExit = 0, wait = false) {
     for (let attempt = 0; attempt < 100; attempt++) { const value = state(job); if (predicate(value)) return value; await delay(50); }
     assert.fail(`Release fixture did not reach expected phase: ${JSON.stringify(state(job))}`);
   }
-  return { dir, app, jobs, sha, env, start, state, until, calls: () => existsSync(join(app, "calls")) ? readFileSync(join(app, "calls"), "utf8") : "" };
+  const status = (...args: string[]) => {
+    const r = spawnSync(process.execPath, [runner, "status", ...args], { cwd: app, env, encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout);
+  };
+  return { dir, app, jobs, sha, env, start, state, until, status, calls: () => existsSync(join(app, "calls")) ? readFileSync(join(app, "calls"), "utf8") : "" };
 }
 test("detached release completes after its SSH-like parent receives SIGHUP", async () => {
   const f = fixture(0, 0, true);
@@ -93,9 +97,45 @@ test("different commits still share the deployment and provider setup lock", asy
     const first = f.start(); await f.until(first, value => value.phase === "DEPLOYING");
     const second = f.start("d".repeat(40));
     assert.equal((await f.until(second, value => terminal.has(value.phase))).phase, "BLOCKED_BY_RUNNING_RELEASE");
+    assert.equal(f.state(second).blockedBy.job, first);
+    for (const args of [[], [second]]) {
+      const current = f.status(...args);
+      assert.equal(current.job, first); assert.equal(current.phase, "DEPLOYING");
+      assert.equal(current.latestAttempt.target, "d".repeat(40));
+    }
     assert.equal(f.calls(), "deploy\n");
     writeFileSync(join(f.app, "continue"), "continue");
     assert.equal((await f.until(first, value => terminal.has(value.phase))).phase, "SUCCEEDED");
     assert.equal(f.calls().match(/metadata/g)?.length, 1);
+    assert.equal(f.status(second).phase, "SUCCEEDED");
+    assert.equal(f.state(second).phase, "BLOCKED_BY_RUNNING_RELEASE", "status must retain the failed attempt's history");
+    assert.ok(!existsSync(join(f.jobs, "active")));
+  } finally { rmSync(f.dir, { force: true, recursive: true }); }
+});
+
+test("historical blocked jobs follow a different overlapping target, not the newest unrelated release", () => {
+  const f = fixture();
+  try {
+    mkdirSync(f.jobs);
+    const record = (name: string, data: Record<string, unknown>) => { const dir = join(f.jobs, name); mkdirSync(dir); writeFileSync(join(dir, "status.json"), JSON.stringify(data)); return dir; };
+    const original = record("original", { target: "a".repeat(40), phase: "FAILED", failedPhase: "CONFIGURING_PROVIDERS", runtimeActivated: true, startedAt: "2026-10-30T04:34:56Z", finishedAt: "2026-10-30T04:49:00Z" });
+    const blocked = record("blocked", { target: "b".repeat(40), phase: "BLOCKED_BY_RUNNING_RELEASE", startedAt: "2026-10-30T04:42:27Z", finishedAt: "2026-10-30T04:42:28Z" });
+    record("unrelated", { target: "c".repeat(40), phase: "SUCCEEDED", startedAt: "2026-10-30T05:00:00Z", finishedAt: "2026-10-30T05:10:00Z" });
+    writeFileSync(join(f.jobs, "latest"), blocked);
+    const before = readFileSync(join(blocked, "status.json"), "utf8");
+    for (const args of [[], [blocked]]) {
+      const result = f.status(...args);
+      assert.equal(result.job, original); assert.equal(result.phase, "FAILED");
+      assert.equal(result.failedPhase, "CONFIGURING_PROVIDERS");
+      assert.equal(result.followEvidence, "overlapping-job-record");
+    }
+    assert.equal(readFileSync(join(blocked, "status.json"), "utf8"), before);
+    const all = f.status("--all"); assert.equal(all.readOnly, true); assert.equal(all.jobs.length, 3);
+    assert.equal(all.jobs.filter((s: { processRunning: boolean }) => s.processRunning).length, 0);
+    assert.ok(!existsSync(join(f.jobs, "release.lock")), "read-only status must not create or remove a lock");
+    record("ambiguous", { target: "e".repeat(40), phase: "FAILED", startedAt: "2026-10-30T04:35:00Z", finishedAt: "2026-10-30T04:50:00Z" });
+    const ambiguous = f.status(blocked);
+    assert.equal(ambiguous.job, blocked); assert.equal(ambiguous.phase, "BLOCKED_BY_RUNNING_RELEASE");
+    assert.equal(ambiguous.blockingCandidates.length, 2);
   } finally { rmSync(f.dir, { force: true, recursive: true }); }
 });

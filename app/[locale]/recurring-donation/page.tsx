@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { listProjects } from "@/lib/minbar/projects";
+import { recurringPageProjects } from "@/lib/minbar/recurring-page-settings";
+import { publicRecurringPageSettings } from "@/lib/minbar/recurring-page-settings-service";
 import { slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import RecurringPage from "@/components/minbar/recurring/RecurringPage";
@@ -30,12 +32,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Recurring({ params }: Props) {
   const { locale } = await params;
-  const projects = await listProjects(locale);
+  const [published, settings] = await Promise.all([listProjects(locale), publicRecurringPageSettings()]);
+  const projects = recurringPageProjects(published, settings);
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="recurring" slot="top" />
-      <RecurringPage projects={projects} />
+      <RecurringPage projects={projects} settings={settings} />
       <PageBanners locale={locale} page="recurring" slot="bottom" />
     </MinbarMessages>
   );

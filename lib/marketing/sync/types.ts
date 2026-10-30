@@ -78,11 +78,8 @@ export interface SyncAdSnapshot {
 }
 
 export interface SyncMessagingSnapshot {
-  provider: "TWILIO" | "CUSTOM" | "EMAIL_PROVIDER" | "OTHER";
+  provider: "CUSTOM" | "EMAIL_PROVIDER" | "OTHER";
   channel:
-    | "TWILIO_EMAIL"
-    | "TWILIO_WHATSAPP"
-    | "TWILIO_SMS"
     | "EMAIL"
     | "WHATSAPP"
     | "SMS";

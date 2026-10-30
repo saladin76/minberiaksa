@@ -982,6 +982,7 @@ export default function MonthlySubscriptionsDashboardPage() {
           }
         />
 
+        <div className="flex justify-end"><Link href="/dashboard/monthly/settings" className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold text-brand">{dt("إعدادات صفحة التبرع الدوري")}</Link></div>
         <RecurringHealthPanel />
         <SubscriptionRequestsPanel />
 

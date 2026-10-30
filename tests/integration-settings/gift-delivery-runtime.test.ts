@@ -4,6 +4,7 @@ import { giftFixture, fixtureModule } from "./gift-delivery-fixture";
 import { giftCertificateToken, giftCertificateTokenMatches } from "../../lib/donations/gift-certificate-token";
 import { giftChannelsComplete, readGiftDeliveryState } from "../../lib/donations/gift-delivery-state";
 import * as locales from "../../lib/locales";
+import * as runtimeTypes from "../../lib/communication/communication-runtime-types";
 
 test("legacy gifts with missing Mongo fields are found, sent once per channel and completed", async () => {
   const f = giftFixture(); const result = await f.deliver();
@@ -71,7 +72,7 @@ test("gift certificate tokens are scoped to one item and never equal the donatio
 });
 
 test("templates use only the default WhatsApp sender while direct routing keeps other numbers available", () => {
-  const router = fixtureModule<{ resolveSender: unknown }>("lib/communication/sender-router.ts", { "@/lib/locales": locales });
+  const router = fixtureModule<{ resolveSender: unknown }>("lib/communication/sender-router.ts", { "@/lib/locales": locales, "./communication-runtime-types": runtimeTypes });
   const service = fixtureModule<{ resolveSenderFromSnapshot: (snapshot: unknown, request: unknown) => { ok: boolean; sender?: { id: string }; reason?: string } }>("lib/communication/sender-resolution.ts", {
     "server-only": {}, "./sender-service": {}, "./routing-rule-service": {}, "./runtime-config": {}, "./sender-router": router,
   });
