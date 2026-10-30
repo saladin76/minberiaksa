@@ -9085,5 +9085,10 @@
   "أدخل مبلغًا مقترحًا واحدًا على الأقل": "Enter at least one suggested amount",
   "احذف المبالغ المكررة": "Remove duplicate amounts",
   "اختر عملة مدعومة للمبالغ المقترحة": "Choose a supported currency for the suggested amounts",
-  "المشروع مكرر في القائمة": "This project appears more than once in the list"
+  "المشروع مكرر في القائمة": "This project appears more than once in the list",
+  "تغطية لغات الجمهور": "Audience language coverage",
+  "نسخة متاحة": "Version available",
+  "نسخة غير متاحة؛ يلزم تجهيزها أو استبعاد اللغة صراحةً قبل الإرسال.": "No version available. Prepare it or explicitly exclude this language before sending.",
+  "تُراجع لغات القائمة كاملة عند اعتماد الحملة. إنشاء المسودة لا يرسل رسائل.": "All audience languages are checked when the campaign is approved. Creating a draft does not send messages.",
+  "يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.": "The template is sent only in the donor’s language. A known language is never replaced when its translation is missing."
 }

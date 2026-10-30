@@ -13,6 +13,7 @@ import { CHANNEL_META } from "../../_components/campaign-ui";
 import { SmartAudienceBuilder, type SmartAudienceDraft, type SmartAudiencePreview } from "./SmartAudienceBuilder";
 import { DonorPicker } from "./DonorPicker";
 import { campaignAudienceSelectionCount } from "@/lib/communication/campaign-audience-accounting";
+import { computeLanguageCoverage, type CampaignLanguageCoverage } from "@/lib/communication/language-coverage";
 import { dashDir, dt, dtList, dtx } from "@/lib/dashboard/i18n";
 
 interface TemplateSummary {
@@ -137,6 +138,28 @@ function Stepper({ step, steps }: { step: number; steps: readonly string[] }) {
         );
       })}
     </ol>
+  );
+}
+
+function CampaignCoveragePreview({ coverage }: { coverage: CampaignLanguageCoverage | null }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4">
+      <h4 className="text-sm font-semibold text-slate-900">{dt("تغطية لغات الجمهور")}</h4>
+      {coverage ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {coverage.locales.filter((locale) => locale.recipientCount > 0).map((locale) => (
+            <div key={locale.locale} className={cn("rounded-lg border p-3 text-xs", locale.status === "EXISTS" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900")}>
+              <div className="flex items-center justify-between gap-3 font-semibold">
+                <span>{LOCALE_LABELS[locale.locale] ?? locale.label}</span>
+                <span dir="ltr">{locale.recipientCount.toLocaleString("en-US")}</span>
+              </div>
+              <p className="mt-1">{locale.status === "EXISTS" ? dt("نسخة متاحة") : dt("نسخة غير متاحة؛ يلزم تجهيزها أو استبعاد اللغة صراحةً قبل الإرسال.")}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <p className="mt-3 text-xs text-slate-500">{dt("تُراجع لغات القائمة كاملة عند اعتماد الحملة. إنشاء المسودة لا يرسل رسائل.")}</p>
+    </section>
   );
 }
 
@@ -290,6 +313,9 @@ export function NewCampaignWizard() {
   const audienceReady = smartAudienceReady || badgeAudienceReady || savedAudienceReady || specificAudienceReady;
   const selectedSavedList = savedLists.find((list) => list.id === savedListId) ?? null;
   const activePreview = audienceMode === "BADGE" ? badgePreview : smartPreview;
+  const languageCoverage = (audienceMode === "SMART" || audienceMode === "BADGE") && activePreview && chosenTemplate
+    ? computeLanguageCoverage(activePreview.eligibleLanguages ?? activePreview.languages, chosenTemplate.availableLocales)
+    : null;
   const reviewMatched = audienceMode === "SMART" || audienceMode === "BADGE"
     ? (activePreview?.matched ?? 0)
     : audienceMode === "SAVED"
@@ -581,24 +607,9 @@ export function NewCampaignWizard() {
             <p className="mt-1 text-xs text-slate-500">
               {dt("النظام يختار نسخة القالب حسب لغة كل متبرع تلقائيًا. لا تحتاج إلى إنشاء حملة منفصلة لكل لغة.")}</p>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
-                <p className="font-semibold">{dt("تلقائي حسب لغة المتبرع ✓")}</p>
-                <p className="mt-1">{dt("Arabic / Turkish / English / French وغيرها تُرسل من نفس Template Family حسب preferredLang.")}</p>
-              </div>
-              <label className="space-y-1 text-xs text-slate-600">
-                <span>{dt("Fallback عند عدم وجود نسخة مطابقة")}</span>
-                <select
-                  value={smartAudience.fallbackLocale ?? "ar"}
-                  onChange={(e) => setSmartAudience((current) => ({ ...current, fallbackLocale: e.target.value }))}
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-                >
-                  {Object.entries(LOCALE_LABELS).map(([locale, label]) => (
-                    <option key={locale} value={locale}>{label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+              {dt("يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.")}
+            </p>
 
             {chosenTemplate && (
               <div className="mt-4">
@@ -613,6 +624,7 @@ export function NewCampaignWizard() {
               </div>
             )}
           </section>
+          <CampaignCoveragePreview coverage={languageCoverage} />
         </div>
       )}
 
@@ -770,7 +782,7 @@ export function NewCampaignWizard() {
               <p className="mt-2 text-xs text-slate-600">{dtx("القناة: {0}", [CHANNEL_META[channel as keyof typeof CHANNEL_META]?.label ?? channel])}</p>
               <p className="mt-1 text-xs text-slate-600">{dtx("القالب: {0}", [chosenTemplate?.name ?? "—"])}</p>
               <p className="mt-1 text-xs text-slate-600">{dt("نوع الجمهور: ")}{audienceMode === "SMART" ? dt("جمهور ذكي") : audienceMode === "BADGE" ? dt("شارة") : audienceMode === "SAVED" ? dt("قائمة محفوظة") : dt("أشخاص محددون")}</p>
-              <p className="mt-1 text-xs text-slate-600">Fallback: {LOCALE_LABELS[(smartAudience.fallbackLocale ?? "ar") as keyof typeof LOCALE_LABELS] ?? smartAudience.fallbackLocale ?? "ar"}</p>
+              <p className="mt-1 text-xs text-slate-600">{dt("يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.")}</p>
             </section>
 
             <section className="rounded-xl border border-slate-200 bg-white p-4">
@@ -808,6 +820,7 @@ export function NewCampaignWizard() {
               </div>
             </section>
           )}
+          <CampaignCoveragePreview coverage={languageCoverage} />
 
           {channel === "WHATSAPP" && (
             <section className="rounded-xl border border-slate-200 bg-white p-4">

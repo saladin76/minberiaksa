@@ -9077,5 +9077,10 @@
   "أدخل مبلغًا مقترحًا واحدًا على الأقل": "En az bir önerilen tutar girin",
   "احذف المبالغ المكررة": "Yinelenen tutarları kaldırın",
   "اختر عملة مدعومة للمبالغ المقترحة": "Önerilen tutarlar için desteklenen bir para birimi seçin",
-  "المشروع مكرر في القائمة": "Bu proje listede birden fazla kez yer alıyor"
+  "المشروع مكرر في القائمة": "Bu proje listede birden fazla kez yer alıyor",
+  "تغطية لغات الجمهور": "Hedef kitlenin dil kapsamı",
+  "نسخة متاحة": "Dil sürümü mevcut",
+  "نسخة غير متاحة؛ يلزم تجهيزها أو استبعاد اللغة صراحةً قبل الإرسال.": "Dil sürümü yok. Göndermeden önce sürümü hazırlayın veya bu dili açıkça hariç tutun.",
+  "تُراجع لغات القائمة كاملة عند اعتماد الحملة. إنشاء المسودة لا يرسل رسائل.": "Kampanya onaylanırken hedef kitlenin tüm dilleri kontrol edilir. Taslak oluşturmak mesaj göndermez.",
+  "يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.": "Şablon yalnızca bağışçının dilinde gönderilir. Çevirisi eksik olsa da bilinen bir dil başka bir dille değiştirilmez."
 }
