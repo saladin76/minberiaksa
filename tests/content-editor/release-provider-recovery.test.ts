@@ -30,7 +30,7 @@ function fixture(options: { changedLock?: boolean; dirty?: boolean; inactive?: b
   writeFileSync(join(previous, "status.json"), JSON.stringify({ target: base, phase: "FAILED", failedPhase: "CONFIGURING_PROVIDERS", runtimeActivated: !options.inactive }));
   if (options.dirty) writeFileSync(join(app, "lib/marker.ts"), "export const marker='operator-edited';");
   const env = { ...process.env, APP_DIR: app, RELEASE_JOBS_DIR: jobs, FIXTURE_RECORD: join(dir, "calls") };
-  const launch = () => spawnSync(process.execPath, [runner, "recover-providers", target, previous, "--publish", "--activate-approved"], { cwd: app, env, encoding: "utf8", timeout: 10_000 });
+  const launch = (wait = false) => spawnSync(process.execPath, [runner, "recover-providers", target, previous, "--publish", "--activate-approved", ...(wait ? ["--wait"] : [])], { cwd: app, env, encoding: "utf8", timeout: 10_000 });
   const state = (job: string) => JSON.parse(readFileSync(join(job, "status.json"), "utf8"));
   const until = async (job: string) => {
     for (let i = 0; i < 100; i++) { const s = state(job); if (["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"].includes(s.phase)) return s; await new Promise(resolve => setTimeout(resolve, 50)); }
@@ -69,4 +69,19 @@ test("a failed or unactivated application deployment is never treated as metadat
   const f = fixture({ inactive: true });
   try { const launch = f.launch(); assert.notEqual(launch.status, 0); assert.match(launch.stderr, /activated runtime/); assert.equal(f.calls().length, 0); }
   finally { rmSync(f.dir, { recursive: true, force: true }); }
+});
+
+
+test("metadata-only --wait finishes provider recovery without rebuilding or restarting the application", () => {
+  const f = fixture();
+  try {
+    const result = f.launch(true);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /"phase": "SUCCEEDED"/);
+    assert.match(result.stdout, /"metadataOnly": true/);
+    assert.equal(f.calls().length, 1);
+    assert.equal(f.calls()[0].source, "reviewed-snapshot");
+    assert.equal(f.git("rev-parse", "HEAD"), f.base);
+    assert.equal(readFileSync(join(f.app, ".next/runtime"), "utf8"), "existing-runtime");
+  } finally { rmSync(f.dir, { recursive: true, force: true }); }
 });

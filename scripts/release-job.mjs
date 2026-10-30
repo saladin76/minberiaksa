@@ -1,7 +1,10 @@
 // VPS release runner: detaches from SSH, serializes releases, records every phase.
 // No billing, recipient sends or scheduler execution is performed here.
+// --wait/follow only view the detached job; disconnecting a viewer leaves it running.
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, createReadStream, existsSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { once } from "node:events";
+import { StringDecoder } from "node:string_decoder";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,6 +76,40 @@ function visibleState(entry) {
   }
   return entry.state;
 }
+async function followJob(dir) {
+  const log = join(dir, "release.log");
+  let offset = 0, decoder = new StringDecoder("utf8"), previousPhase = null;
+  const output = async text => {
+    if (text && !process.stdout.write(text)) await once(process.stdout, "drain");
+  };
+  const streamLog = async () => {
+    let size;
+    try { size = statSync(log).size; }
+    catch (error) { if (error?.code === "ENOENT") return; throw error; }
+    if (size < offset) { offset = 0; decoder = new StringDecoder("utf8"); }
+    if (size === offset) return;
+    // Read only the appended bytes. Keep partial UTF-8 characters between polls.
+    for await (const chunk of createReadStream(log, { start: offset, end: size - 1 })) {
+      offset += chunk.length;
+      await output(decoder.write(chunk));
+    }
+  };
+  for (;;) {
+    const entry = { dir, state: read(dir) }, state = visibleState(entry);
+    if (state.phase !== previousPhase) {
+      await output(`\n[release] ${state.phase} — ${dir}\n`);
+      previousPhase = state.phase;
+    }
+    await streamLog();
+    if (terminalPhases.has(state.phase) || state.phase === "INTERRUPTED") {
+      await output(decoder.end());
+      await output("\n" + JSON.stringify({ ...state, job: dir }, null, 2) + "\n");
+      process.exitCode = state.phase === "SUCCEEDED" ? 0 : Number.isInteger(state.exitCode) && state.exitCode > 0 ? state.exitCode : 1;
+      return;
+    }
+    await new Promise(accept => setTimeout(accept, 1000));
+  }
+}
 function save(dir, patch) {
   const state = { ...(existsSync(stateFile(dir)) ? read(dir) : {}), ...patch, updatedAt: new Date().toISOString() };
   const temp = `${stateFile(dir)}.${process.pid}.tmp`;
@@ -98,7 +135,7 @@ if (mode === "start" || mode === "recover-providers") {
   const recovering = mode === "recover-providers";
   if (!/^[a-f0-9]{40}$/.test(target || "")) throw new Error("Pass the reviewed full commit SHA.");
   if (recovering && (!args[2] || args[2].startsWith("--"))) throw new Error("Pass the failed provider-setup job directory.");
-  if (args.slice(recovering ? 3 : 2).some(arg => !["--publish", "--activate-approved"].includes(arg))) throw new Error("Unknown release option.");
+  if (args.slice(recovering ? 3 : 2).some(arg => !["--publish", "--activate-approved", "--wait"].includes(arg))) throw new Error("Unknown release option.");
   const flock = spawnSync("flock", ["--version"], { encoding: "utf8" });
   if (flock.status !== 0) throw new Error("flock is required to serialize releases on this VPS.");
   if (!existsSync(join(root, ".git"))) throw new Error("APP_DIR must select the existing application checkout.");
@@ -109,26 +146,34 @@ if (mode === "start" || mode === "recover-providers") {
     recovery = { previousJob, runtimeTarget: previous.target };
   }
   mkdirSync(jobs, { recursive: true, mode: 0o700 });
-  const existing = matchingJobs(target).find(running);
+  // A metadata-only repair may use a newer source SHA while the older runtime
+  // stays active. Its success cannot stand in for a full deployment of that SHA.
+  const existing = matchingJobs(target).find(entry => (entry.state.metadataOnly === true) === recovering && running(entry));
   if (existing) {
     console.log(JSON.stringify({ ...existing.state, job: existing.dir, alreadyRunning: true, note: "This commit already has a running release. No second job was started. Inspect this job's status." }, null, 2));
-    process.exit(0);
+    if (args.includes("--wait")) await followJob(existing.dir);
+  } else {
+    const dir = join(jobs, `${new Date().toISOString().replace(/[:.]/g, "-")}-${target.slice(0, 8)}-${process.pid}`);
+    mkdirSync(dir, { mode: 0o700 });
+    const snapshot = join(dir, "runner.mjs"); copyFileSync(fileURLToPath(import.meta.url), snapshot);
+    const options = { target, root, publish: args.includes("--publish"), activate: args.includes("--activate-approved"), ...(recovery ? { recovery } : {}) };
+    writeFileSync(join(dir, "options.json"), JSON.stringify(options), { mode: 0o600 });
+    save(dir, { target, phase: "STARTING", startedAt: new Date().toISOString(), log: join(dir, "release.log"), paymentCaptures: 0, recipientMessages: 0, ...(recovery ? { metadataOnly: true, recoveryOf: recovery.previousJob, runtimeTarget: recovery.runtimeTarget, runtimeActivated: true } : {}) });
+    const fd = openSync(join(dir, "release.log"), "a", 0o600);
+    const child = spawn(nodePath(), [snapshot, "supervise", dir], {
+      cwd: root, env: { ...process.env, APP_DIR: root, RELEASE_JOBS_DIR: jobs }, detached: true, stdio: ["ignore", fd, fd],
+    });
+    await new Promise((accept, reject) => { child.once("spawn", accept); child.once("error", reject); });
+    closeSync(fd); child.unref();
+    save(dir, { supervisorPid: child.pid });
+    writeFileSync(join(jobs, "latest"), dir + "\n", { mode: 0o600 });
+    console.log(JSON.stringify({ ...read(dir), job: dir, supervisorPid: child.pid, note: "Detached from SSH. STARTING is not proof of deployment. Use --wait or follow to watch the result." }, null, 2));
+    if (args.includes("--wait")) await followJob(dir);
   }
-  const dir = join(jobs, `${new Date().toISOString().replace(/[:.]/g, "-")}-${target.slice(0, 8)}-${process.pid}`);
-  mkdirSync(dir, { mode: 0o700 });
-  const snapshot = join(dir, "runner.mjs"); copyFileSync(fileURLToPath(import.meta.url), snapshot);
-  const options = { target, root, publish: args.includes("--publish"), activate: args.includes("--activate-approved"), ...(recovery ? { recovery } : {}) };
-  writeFileSync(join(dir, "options.json"), JSON.stringify(options), { mode: 0o600 });
-  save(dir, { target, phase: "STARTING", startedAt: new Date().toISOString(), log: join(dir, "release.log"), paymentCaptures: 0, recipientMessages: 0, ...(recovery ? { metadataOnly: true, recoveryOf: recovery.previousJob, runtimeTarget: recovery.runtimeTarget, runtimeActivated: true } : {}) });
-  const fd = openSync(join(dir, "release.log"), "a", 0o600);
-  const child = spawn(nodePath(), [snapshot, "supervise", dir], {
-    cwd: root, env: { ...process.env, APP_DIR: root, RELEASE_JOBS_DIR: jobs }, detached: true, stdio: ["ignore", fd, fd],
-  });
-  await new Promise((accept, reject) => { child.once("spawn", accept); child.once("error", reject); });
-  closeSync(fd); child.unref();
-  save(dir, { supervisorPid: child.pid });
-  writeFileSync(join(jobs, "latest"), dir + "\n", { mode: 0o600 });
-  console.log(JSON.stringify({ ...read(dir), job: dir, supervisorPid: child.pid, note: "Detached from SSH. STARTING is not proof of deployment. Use status to inspect the result." }, null, 2));
+} else if (mode === "follow") {
+  if (args.length > 2 || args[1]?.startsWith("--")) throw new Error("Usage: follow [job-directory]");
+  const dir = args[1] ? resolve(args[1]) : readFileSync(join(jobs, "latest"), "utf8").trim();
+  await followJob(dir);
 } else if (mode === "supervise") {
   const dir = resolve(args[1]);
   save(dir, { supervisorPid: process.pid });
@@ -215,6 +260,6 @@ if (mode === "start" || mode === "recover-providers") {
     }, null, 2));
   }
 } else {
-  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--publish] [--activate-approved]\n       node scripts/release-job.mjs status [job-directory]\n       node scripts/release-job.mjs status --all");
+  console.error("Usage: node scripts/release-job.mjs start <reviewed SHA> [--publish] [--activate-approved] [--wait]\n       node scripts/release-job.mjs recover-providers <reviewed SHA> <failed-job-directory> [--publish] [--activate-approved] [--wait]\n       node scripts/release-job.mjs follow [job-directory]\n       node scripts/release-job.mjs status [job-directory]\n       node scripts/release-job.mjs status --all");
   process.exitCode = 1;
 }

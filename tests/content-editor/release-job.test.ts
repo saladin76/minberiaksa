@@ -139,3 +139,120 @@ test("historical blocked jobs follow a different overlapping target, not the new
     assert.equal(ambiguous.blockingCandidates.length, 2);
   } finally { rmSync(f.dir, { force: true, recursive: true }); }
 });
+
+function viewer(f: ReturnType<typeof fixture>, ...args: string[]) {
+  const child = spawn(process.execPath, [runner, ...args], { cwd: f.app, env: f.env, stdio: ["ignore", "pipe", "pipe"] });
+  let output = "", errors = "";
+  child.stdout.on("data", chunk => { output += chunk.toString(); });
+  child.stderr.on("data", chunk => { errors += chunk.toString(); });
+  const closed = new Promise<{ code: number | null; signal: string | null }>(accept => child.once("close", (code, signal) => accept({ code, signal })));
+  return { child, closed, output: () => output, errors: () => errors };
+}
+async function waitFor(predicate: () => boolean) {
+  for (let i = 0; i < 100; i++) { if (predicate()) return; await delay(50); }
+  assert.fail("Expected viewer progress did not appear");
+}
+async function cleanViewerFixture(f: ReturnType<typeof fixture>, v: ReturnType<typeof viewer>) {
+  if (existsSync(f.app)) writeFileSync(join(f.app, "continue"), "continue");
+  const latest = join(f.jobs, "latest");
+  if (existsSync(latest)) await f.until(readFileSync(latest, "utf8").trim(), value => terminal.has(value.phase));
+  v.child.kill();
+  await v.closed;
+  rmSync(f.dir, { force: true, recursive: true });
+}
+test("--wait streams live UTF-8 logs and stays open until its own deployment succeeds", async () => {
+  const f = fixture(0, 0, true), v = viewer(f, "start", f.sha, "--publish", "--activate-approved", "--wait");
+  try {
+    await waitFor(() => existsSync(join(f.jobs, "latest")));
+    const job = readFileSync(join(f.jobs, "latest"), "utf8").trim();
+    await f.until(job, value => value.phase === "DEPLOYING");
+    const text = "x".repeat(65_535) + "تقدم النشر المباشر\n";
+    writeFileSync(join(job, "release.log"), text, { flag: "a" });
+    await waitFor(() => v.output().includes("تقدم النشر المباشر"));
+    assert.equal(v.child.exitCode, null, "viewer must not return while the worker is waiting");
+    assert.ok(!v.output().includes("�"), "Arabic must survive stream chunk boundaries");
+    writeFileSync(join(f.app, "continue"), "continue");
+    assert.equal((await v.closed).code, 0, v.errors());
+    assert.match(v.output(), /"phase": "SUCCEEDED"/);
+    assert.equal(f.calls(), "deploy\nmetadata --apply --publish --activate-approved\n");
+  } finally { await cleanViewerFixture(f, v); }
+});
+test("--wait attaches to the same running commit without launching another release", async () => {
+  const f = fixture(0, 0, true), job = f.start();
+  await f.until(job, value => value.phase === "DEPLOYING");
+  const v = viewer(f, "start", f.sha, "--wait");
+  try {
+    await waitFor(() => v.output().includes('"alreadyRunning": true'));
+    assert.equal(f.calls(), "deploy\n");
+    assert.equal(readFileSync(join(f.jobs, "latest"), "utf8").trim(), job);
+    writeFileSync(join(f.app, "continue"), "continue");
+    assert.equal((await v.closed).code, 0, v.errors());
+    assert.equal(f.calls().match(/deploy/g)?.length, 1);
+    assert.equal(f.calls().match(/metadata/g)?.length, 1);
+  } finally { await cleanViewerFixture(f, v); }
+});
+test("disconnecting a waiting viewer leaves deployment running and follow resumes without restarting it", async () => {
+  const f = fixture(0, 0, true), v = viewer(f, "start", f.sha, "--wait");
+  try {
+    await waitFor(() => existsSync(join(f.jobs, "latest")));
+    const job = readFileSync(join(f.jobs, "latest"), "utf8").trim();
+    await f.until(job, value => value.phase === "DEPLOYING");
+    v.child.kill("SIGHUP"); await v.closed;
+    assert.equal(f.state(job).phase, "DEPLOYING");
+    writeFileSync(join(f.app, "continue"), "continue");
+    await f.until(job, value => terminal.has(value.phase));
+    const result = spawnSync(process.execPath, [runner, "follow", job], { cwd: f.app, env: f.env, encoding: "utf8", timeout: 10_000 });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /"phase": "SUCCEEDED"/);
+    assert.equal(f.calls(), "deploy\nmetadata --apply\n");
+  } finally { await cleanViewerFixture(f, v); }
+});
+test("--wait returns failure for build or provider setup failures, preserving runtime activation evidence", () => {
+  for (const [deployExit, metadataExit] of [[13, 0], [0, 17]]) {
+    const f = fixture(deployExit, metadataExit);
+    try {
+      const result = spawnSync(process.execPath, [runner, "start", f.sha, "--wait"], { cwd: f.app, env: f.env, encoding: "utf8", timeout: 10_000 });
+      assert.equal(result.status, 1, result.stderr);
+      assert.match(result.stdout, /"phase": "FAILED"/);
+      const state = f.state(readFileSync(join(f.jobs, "latest"), "utf8").trim());
+      assert.equal(state.failedPhase, deployExit ? "DEPLOYING" : "CONFIGURING_PROVIDERS");
+      assert.equal(state.runtimeActivated === true, !deployExit);
+      assert.equal(f.calls().includes("metadata"), !deployExit);
+    } finally { rmSync(f.dir, { force: true, recursive: true }); }
+  }
+});
+test("follow is read-only and cannot turn a blocked or interrupted attempt into another release's success", () => {
+  const f = fixture();
+  try {
+    mkdirSync(f.jobs);
+    for (const [phase, exitCode, expected] of [["BLOCKED_BY_RUNNING_RELEASE", 75, 75], ["DEPLOYING", null, 1]] as const) {
+      const job = join(f.jobs, phase); mkdirSync(job);
+      const before = JSON.stringify({ target: f.sha, phase, exitCode, supervisorPid: 999999999 });
+      writeFileSync(join(job, "status.json"), before); writeFileSync(join(job, "release.log"), "Saved diagnostic\n");
+      const result = spawnSync(process.execPath, [runner, "follow", job], { cwd: f.app, env: f.env, encoding: "utf8", timeout: 10_000 });
+      assert.equal(result.status, expected, result.stderr);
+      assert.match(result.stdout, /Saved diagnostic/);
+      assert.match(result.stdout, new RegExp(phase === "DEPLOYING" ? "INTERRUPTED" : phase));
+      assert.equal(readFileSync(join(job, "status.json"), "utf8"), before);
+    }
+    assert.equal(f.calls(), ""); assert.ok(!existsSync(join(f.jobs, "release.lock")));
+  } finally { rmSync(f.dir, { force: true, recursive: true }); }
+});
+
+test("a full deployment never treats a running metadata-only job for the same source SHA as its own deployment", async () => {
+  const f = fixture(0, 0, true), first = f.start();
+  try {
+    await f.until(first, value => value.phase === "DEPLOYING");
+    writeFileSync(join(first, "status.json"), JSON.stringify({ ...f.state(first), metadataOnly: true, runtimeTarget: "a".repeat(40) }));
+    const result = spawnSync(process.execPath, [runner, "start", f.sha, "--wait"], { cwd: f.app, env: f.env, encoding: "utf8", timeout: 10_000 });
+    assert.equal(result.status, 75, result.stderr);
+    assert.match(result.stdout, /"phase": "BLOCKED_BY_RUNNING_RELEASE"/);
+    assert.ok(!result.stdout.includes('"alreadyRunning": true'));
+    assert.equal(f.calls(), "deploy\n");
+    assert.equal(f.state(first).phase, "DEPLOYING");
+  } finally {
+    writeFileSync(join(f.app, "continue"), "continue");
+    await f.until(first, value => terminal.has(value.phase));
+    rmSync(f.dir, { force: true, recursive: true });
+  }
+});
