@@ -4,6 +4,8 @@ import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { once } from "node:events";
+import { PassThrough, type Readable } from "node:stream";
 const runner = resolve("scripts/release-job.mjs");
 const delay = (ms: number) => new Promise(accept => setTimeout(accept, ms));
 const terminal = new Set(["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"]);
@@ -140,14 +142,27 @@ test("historical blocked jobs follow a different overlapping target, not the new
   } finally { rmSync(f.dir, { force: true, recursive: true }); }
 });
 
+function collectViewerOutput(stream: Readable) {
+  let text = "";
+  // A pipe can split a UTF-8 character anywhere, independently of the writer's
+  // chunks. Decode across data events instead of corrupting each Buffer alone.
+  stream.setEncoding("utf8");
+  stream.on("data", (chunk: string) => { text += chunk; });
+  return () => text;
+}
 function viewer(f: ReturnType<typeof fixture>, ...args: string[]) {
   const child = spawn(process.execPath, [runner, ...args], { cwd: f.app, env: f.env, stdio: ["ignore", "pipe", "pipe"] });
-  let output = "", errors = "";
-  child.stdout.on("data", chunk => { output += chunk.toString(); });
-  child.stderr.on("data", chunk => { errors += chunk.toString(); });
+  const output = collectViewerOutput(child.stdout), errors = collectViewerOutput(child.stderr);
   const closed = new Promise<{ code: number | null; signal: string | null }>(accept => child.once("close", (code, signal) => accept({ code, signal })));
-  return { child, closed, output: () => output, errors: () => errors };
+  return { child, closed, output, errors };
 }
+test("viewer capture preserves Arabic and emoji even when the pipe splits every UTF-8 character", async () => {
+  const stream = new PassThrough(), output = collectViewerOutput(stream), finished = once(stream, "end");
+  const text = "تقدم النشر المباشر 🙂 — تم الحفظ\n";
+  for (const byte of Buffer.from(text, "utf8")) stream.write(Buffer.from([byte]));
+  stream.end(); await finished;
+  assert.equal(output(), text);
+});
 async function waitFor(predicate: () => boolean) {
   for (let i = 0; i < 100; i++) { if (predicate()) return; await delay(50); }
   assert.fail("Expected viewer progress did not appear");
