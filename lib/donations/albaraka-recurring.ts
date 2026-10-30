@@ -10,6 +10,7 @@ import {
   albarakaCurrencyCode,
   albarakaExpiryFromStored,
   albarakaInquireSale,
+  albarakaIsoCode,
   albarakaMinorUnits,
   albarakaReverseSale,
   albarakaRecurringConfig,
@@ -399,17 +400,22 @@ async function holdUnresolved(
   reason: string,
   amountUSD: number | null
 ): Promise<RecurringChargeOutcome> {
-  console.error("[albaraka-recurring] unresolved sale, plan paused", { subscriptionId: sub.id, orderId });
-  await prisma.$transaction([
-    prisma.donation.update({
+  const held = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.donation.findUnique({ where: { id: donationId }, select: { paidAt: true } });
+    if (!fresh) throw new Error("Recurring donation no longer exists");
+    if (fresh.paidAt) return false;
+    await tx.donation.update({
       where: { id: donationId },
       data: { status: "FAILED", providerTxnResult: "Unknown", providerErrorMessage: reason.slice(0, 500) },
-    }),
-    prisma.subscription.update({
+    });
+    await tx.subscription.update({
       where: { id: sub.id },
       data: { status: "PAUSED", lastChargeError: reason.slice(0, 300) },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!held) return { subscriptionId: sub.id, donationId, result: "already_attempted", amountUSD };
+  console.error("[albaraka-recurring] unresolved sale, plan paused", { subscriptionId: sub.id, orderId });
   return { subscriptionId: sub.id, donationId, result: "unreachable", amountUSD, error: reason };
 }
 
@@ -431,23 +437,39 @@ async function recordFailure(
   if (err) console.error("[albaraka-recurring]", reason, sub.id, err);
   const retryAt = nextRetryAt(attempt, now);
 
-  await prisma.$transaction([
-    prisma.donation.update({
+  const recorded = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.donation.findUnique({ where: { id: donationId }, select: { paidAt: true, providerRaw: true } });
+    if (!fresh) throw new Error("Recurring donation no longer exists");
+    // Reconciliation may have confirmed this order while its original bank
+    // request was still in flight. Never undo that settlement or its schedule.
+    if (fresh.paidAt) return false;
+    const previousRaw = typeof fresh.providerRaw === "object" && fresh.providerRaw && !Array.isArray(fresh.providerRaw)
+      ? fresh.providerRaw as Record<string, unknown>
+      : {};
+    const response = raw?.ServiceResponseData;
+    const code = typeof response === "object" && response && !Array.isArray(response)
+      ? (response as Record<string, unknown>).ResponseCode
+      : undefined;
+    const responseCode = typeof code === "string" || typeof code === "number" ? String(code).trim() : "";
+    await tx.donation.update({
       where: { id: donationId },
       data: {
         status: "FAILED",
         providerTxnResult: txnResult,
         providerErrorMessage: reason.slice(0, 500),
-        ...(raw ? { providerRaw: { albarakaSale: raw } as Prisma.InputJsonValue } : {}),
+        ...(responseCode ? { providerProcReturnCode: albarakaIsoCode(responseCode) } : {}),
+        ...(raw ? { providerRaw: { ...previousRaw, albarakaSale: raw } as Prisma.InputJsonValue } : {}),
       },
-    }),
-    prisma.subscription.update({
+    });
+    await tx.subscription.update({
       where: { id: sub.id },
       data: retryAt
         ? { chargeAttempts: attempt, nextBillingDate: retryAt, lastChargeError: reason.slice(0, 300) }
         : { status: "PAYMENT_FAILED", chargeAttempts: attempt, lastChargeError: reason.slice(0, 300) },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!recorded) return { subscriptionId: sub.id, donationId, result: "already_attempted", amountUSD };
 
   runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
   void sendDonationFailedConversions(donationId);

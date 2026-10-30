@@ -9,6 +9,8 @@ import * as albaraka from "../../lib/albaraka";
 import * as clientIp from "../../lib/tracking/client-ip";
 import * as gifts from "../../lib/donations/gift-order";
 import { toStripeMinorUnits } from "../../lib/stripe-amount";
+import { gatewayDisplayAmounts } from "../../lib/donations/gateway-diagnostics";
+import { resolvePaymentError } from "../../lib/donations/payment-error-catalog";
 
 // A VM module boundary has no shared runtime type; all provider calls are replaced below.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -160,6 +162,84 @@ test("unavailable recurring card checkout creates neither plan nor donation", as
   const result = await f.checkout.POST(request({ items: [{ campaignId: "project", amount: 100 }], type: "DAILY", currency: "USD", paymentMethod: "CARD" }));
   assert.equal(result.status, 400); assert.equal(result.data.code, "RECURRING_UNAVAILABLE");
   assert.equal(f.plans.size, 0); assert.equal(f.donations.size, 0); assert.equal(f.calls(), 0);
+});
+
+async function paidDailyCardPlan() {
+  const f = fixture();
+  const checkout = await f.driver.createDonation({ items: [{ projectId: "fixture-project", amount: 1, freqKey: "daily", schedule: { hour: 9, minute: 30 } }], projects: [{ id: "project", slug: "fixture-project" }], currency: "USD", locale: "ar", method: "CARD", guest: null, teamSupport: 0, teamSupportRecurring: false });
+  const plan = f.plans.get(checkout.subscriptionId)!;
+  Object.assign(plan, { paymentCardId: "card", paymentCard: { expiryDate: "12/29", cardNumber: "encrypted" } });
+  await f.settlement.settleAlbarakaDonation(checkout.id, { ServiceResponseData: { ResponseCode: "00" } });
+  return { ...f, plan, dueAt: new Date(plan.nextBillingDate) };
+}
+
+for (const code of ["05", "0005"]) test(`a declined renewal (${code}) retains the attempted bank amount and cycle and explains the actual decline`, async () => {
+  const f = await paidDailyCardPlan();
+  let calls = 0;
+  const reply = { ServiceResponseData: { ResponseCode: code, ResponseDescription: "Onaylanmadi" } };
+  f.dependencies["@/lib/albaraka"].albarakaService = async (_type: string, body: Row) => {
+    calls++;
+    assert.equal(body.CardInformationData.Cvc2, "");
+    const renewal = [...f.donations.values()].find(row => row.providerTxnType === "RecurringSale")!;
+    renewal.providerRaw.otherEvidence = "retain-existing-metadata";
+    return reply;
+  };
+  const run = await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: f.dueAt });
+  assert.equal(run.failed.length, 1); assert.equal(run.charged.length, 0); assert.equal(calls, 1);
+  const renewal = f.donations.get(run.failed[0].donationId)!;
+  assert.equal(renewal.status, "FAILED"); assert.equal(renewal.paidAt, null);
+  assert.equal(renewal.amount, 1); assert.equal(renewal.totalAmount, 1); assert.equal(renewal.currency, "USD");
+  assert.equal(renewal.providerRaw.albarakaRecurring?.cycle, f.dueAt.toISOString());
+  assert.equal(renewal.providerRaw.albarakaRecurring?.attempt, 1);
+  assert.equal(renewal.providerRaw.otherEvidence, "retain-existing-metadata");
+  assert.deepEqual(gatewayDisplayAmounts({ provider: renewal.provider, providerRaw: renewal.providerRaw, paidAt: renewal.paidAt, paidAmount: null, paidCurrency: null }), { paidAmount: null, paidCurrency: null, requestedGatewayAmount: 1, requestedGatewayCurrency: "USD" });
+  assert.equal(renewal.providerProcReturnCode, "05");
+  assert.equal(resolvePaymentError(renewal).key, "cardDeclined");
+  assert.equal(f.increments(), 1, "a declined renewal never increases project income");
+  assert.equal(f.plan.lastBillingDate.getTime(), signupAt.getTime());
+  assert.equal(f.plan.nextBillingDate.getTime(), f.dueAt.getTime() + 3_600_000);
+  await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: f.dueAt });
+  assert.equal(calls, 1, "the declined cycle is not retried before the configured retry time");
+});
+
+for (const response of ["decline", "unknown"]) test(`a late ${response} cannot overwrite a renewal already settled by another worker or schedule another charge`, async () => {
+  const f = await paidDailyCardPlan();
+  let notifications = 0, conversions = 0;
+  f.dependencies["@/lib/events/after-response"].runAfterResponse = () => { notifications++; };
+  f.dependencies["@/lib/tracking/donation-conversion-server"].sendDonationFailedConversions = async () => { conversions++; };
+  const settledNext = new Date(f.dueAt.getTime() + 86_400_000);
+  f.dependencies["@/lib/albaraka"].albarakaService = async () => {
+    const renewal = [...f.donations.values()].find(row => row.providerTxnType === "RecurringSale")!;
+    Object.assign(renewal, { status: "PAID", paidAt: f.dueAt, providerProcReturnCode: "00" });
+    Object.assign(f.plan, { lastBillingDate: f.dueAt, nextBillingDate: settledNext, chargeAttempts: 0 });
+    if (response === "unknown") throw new Error("Bank connection closed before its answer arrived");
+    return { ServiceResponseData: { ResponseCode: "05", ResponseDescription: "Late inconsistent response" } };
+  };
+  f.dependencies["@/lib/albaraka"].albarakaInquireSale = async () => ({ state: "unknown" });
+  f.dependencies["@/lib/albaraka"].albarakaReverseSale = async () => ({ ServiceResponseData: { ResponseCode: "05" } });
+  const run = await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: f.dueAt });
+  const renewal = [...f.donations.values()].find(row => row.providerTxnType === "RecurringSale")!;
+  assert.equal(renewal.status, "PAID"); assert.equal(renewal.providerProcReturnCode, "00");
+  assert.equal(f.plan.nextBillingDate.getTime(), settledNext.getTime());
+  assert.equal(f.plan.chargeAttempts, 0); assert.equal(notifications, 0); assert.equal(conversions, 0);
+  assert.equal(run.failed.length, 0); assert.equal(run.skipped[0].result, "already_attempted");
+});
+
+test("an unsettled renewal with an unknown bank outcome remains paused without another debit or failure notification", async () => {
+  const f = await paidDailyCardPlan();
+  let notifications = 0, calls = 0;
+  f.dependencies["@/lib/events/after-response"].runAfterResponse = () => { notifications++; };
+  f.dependencies["@/lib/albaraka"].albarakaService = async () => { calls++; throw new Error("Bank timeout"); };
+  f.dependencies["@/lib/albaraka"].albarakaInquireSale = async () => ({ state: "unknown" });
+  f.dependencies["@/lib/albaraka"].albarakaReverseSale = async () => ({ ServiceResponseData: { ResponseCode: "05" } });
+  const run = await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: f.dueAt });
+  const renewal = f.donations.get(run.failed[0].donationId)!;
+  assert.equal(run.failed[0].result, "unreachable"); assert.equal(renewal.paidAt, null);
+  assert.equal(renewal.providerTxnResult, "Unknown"); assert.equal(f.plan.status, "PAUSED");
+  assert.equal(renewal.providerRaw.albarakaRecurring.cycle, f.dueAt.toISOString());
+  assert.equal(notifications, 0); assert.equal(f.increments(), 1);
+  await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: new Date(f.dueAt.getTime() + 86_400_000) });
+  assert.equal(calls, 1, "an uncertain charge cannot be debited again by the scheduler");
 });
 
 for (const frequency of ["DAILY", "FRIDAY", "MONTHLY"]) {
