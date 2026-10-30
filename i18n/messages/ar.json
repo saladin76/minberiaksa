@@ -2606,6 +2606,16 @@
     "sentText": "سيتواصل معكم فريق الشراكات على بريدكم الإلكتروني قريبًا."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "غزة",
+      "aqsa": "المسجد الأقصى",
+      "jerusalem": "القدس",
+      "waqf": "أوقف في القدس",
+      "zakat": "أخرج زكاتك لفلسطين",
+      "restoration": "ترميم منازل القدس",
+      "ibadan": "عبادًا لنا",
+      "recurring": "التبرع الدوري"
+    },
     "allProjects": "كل المشاريع",
     "filterByRegion": "حسب المنطقة",
     "filterByType": "حسب نوع التبرع",

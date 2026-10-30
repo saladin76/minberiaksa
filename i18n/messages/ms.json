@@ -1560,6 +1560,16 @@
     "sentText": "Pasukan Perkongsian kami akan menghubungi anda melalui e-mel tidak lama lagi."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Masjid Al-Aqsa",
+      "jerusalem": "Al-Quds",
+      "waqf": "Berwakaf di Al-Quds",
+      "zakat": "Tunaikan Zakat untuk Palestin",
+      "restoration": "Pemulihan Rumah di Al-Quds",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Sumbangan Berkala"
+    },
     "allProjects": "Semua Projek",
     "filterByRegion": "Wilayah",
     "filterByType": "Jenis Sumbangan",

@@ -1,4 +1,18 @@
-export type ProjectFilterOption = { key: string; id: string; kind: "category" | "programme"; name: string; slug: string; icon: string; order: number | null; projectIds: string[] };
+export type ProjectFilterOption = {
+  key: string;
+  id: string;
+  kind: "category" | "programme" | "page";
+  name: string;
+  slug: string;
+  baseSlug?: string | null;
+  previousSlugs?: string[];
+  /** Old category/programme hash links continue to resolve after linking a page. */
+  hashes?: string[];
+  href?: string;
+  icon: string;
+  order: number | null;
+  projectIds: string[];
+};
 
 export function sortProjectFilters<T extends { key: string; order: number | null }>(rows: readonly T[]): T[] {
   return [...rows].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.key.localeCompare(b.key));

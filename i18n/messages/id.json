@@ -2602,6 +2602,16 @@
     "sentText": "Tim Kemitraan kami akan segera menghubungi Anda melalui email."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Masjid Al-Aqsa",
+      "jerusalem": "Al-Quds",
+      "waqf": "Berwakaf di Al-Quds",
+      "zakat": "Tunaikan Zakat untuk Palestina",
+      "restoration": "Renovasi Rumah di Al-Quds",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Donasi Rutin"
+    },
     "allProjects": "Semua Proyek",
     "filterByRegion": "Menurut Wilayah",
     "filterByType": "Menurut Jenis Donasi",

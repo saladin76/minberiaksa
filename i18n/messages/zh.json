@@ -1560,6 +1560,16 @@
     "sentText": "我们的合作团队将很快通过电子邮件与您联系。"
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "加沙",
+      "aqsa": "阿克萨清真寺",
+      "jerusalem": "耶路撒冷",
+      "waqf": "在耶路撒冷设立瓦克夫",
+      "zakat": "向巴勒斯坦缴纳天课",
+      "restoration": "修复耶路撒冷住宅",
+      "ibadan": "伊巴丹·拉纳",
+      "recurring": "定期捐赠"
+    },
     "allProjects": "全部项目",
     "filterByRegion": "地区",
     "filterByType": "捐赠类型",

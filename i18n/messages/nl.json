@@ -1560,6 +1560,16 @@
     "sentText": "Ons partnershipteam neemt binnenkort per e-mail contact met u op."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-moskee",
+      "jerusalem": "Jeruzalem",
+      "waqf": "Sticht een waqf in Jeruzalem",
+      "zakat": "Geef zakat aan Palestina",
+      "restoration": "Herstel huizen in Jeruzalem",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Periodieke donatie"
+    },
     "allProjects": "Alle Projecten",
     "filterByRegion": "Per Regio",
     "filterByType": "Per Donatietype",

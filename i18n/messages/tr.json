@@ -2602,6 +2602,16 @@
     "sentText": "Ortaklıklar ekibi yakında e-postanız üzerinden sizinle iletişime geçecek."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gazze",
+      "aqsa": "Mescid-i Aksâ",
+      "jerusalem": "Kudüs",
+      "waqf": "Kudüs’te Vakfet",
+      "zakat": "Filistin’e Zekât Ver",
+      "restoration": "Kudüs Evlerini Restore Et",
+      "ibadan": "İbâden Lenâ",
+      "recurring": "Düzenli Bağış"
+    },
     "allProjects": "Tüm Projeler",
     "filterByRegion": "Bölgeye Göre",
     "filterByType": "Bağış Türüne Göre",

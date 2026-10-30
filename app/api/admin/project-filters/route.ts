@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const { session, denied } = await authorize(); if (denied) return denied;
   try {
-    const body = z.object({ revision: z.string().regex(/^[a-f0-9]{64}$/), keys: z.array(z.string().regex(/^(category|programme):[a-f0-9]{24}$/i)).refine(keys => new Set(keys).size === keys.length) }).parse(await request.json());
+    const body = z.object({ revision: z.string().regex(/^[a-f0-9]{64}$/), keys: z.array(z.string().regex(/^(?:(?:category|programme):[a-f0-9]{24}|page:(?:waqf|zakat|restoration|ibadan|recurring))$/i)).refine(keys => new Set(keys).size === keys.length) }).parse(await request.json());
     await prisma.$transaction(async tx => {
       const registry = await readProjectFilterRegistry("ar", [], tx);
       if (body.revision !== revision(registry) || body.keys.length !== registry.items.length || registry.items.some(item => !body.keys.includes(item.key))) throw new Error("PROJECT_FILTER_ORDER_CONFLICT");

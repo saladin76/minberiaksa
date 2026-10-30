@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import type { ProjectFilterOption } from "@/lib/minbar/project-filter-options";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
@@ -27,8 +28,8 @@ import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
  * detaches the filter from its state the moment the labels are translated (the
  * same trap the handoff calls out for the FAQ and frequency chips).
  *
- * The chip set comes from published CMS categories and major projects, ordered
- * together by their stable identities; counts reflect the actual displayed pool.
+ * Regional chips filter the published pool. Giving programmes link to their
+ * locale's dedicated page; they must not look like empty category filters.
  */
 
 const PAGE_SIZE = 6;
@@ -46,10 +47,16 @@ export default function ProjectsPage({ projects, slides, filters }: ProjectsPage
   const [category, setCategory] = useState("all");
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const categories = useMemo(() => [{ key: "all", id: "all", name: tSystem("allFilter"), icon: "layout-grid", projectIds: projects.map(project => project.id) }, ...filters], [filters, projects, tSystem]);
+  const categories: ProjectFilterOption[] = useMemo(() => [{ key: "all", id: "all", kind: "category", slug: "all", order: -1, name: tSystem("allFilter"), icon: "layout-grid", projectIds: projects.map(project => project.id) }, ...filters], [filters, projects, tSystem]);
   useEffect(() => {
     let hash: string; try { hash = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
-    const match = filters.find(option => option.slug === hash || option.slug === `region-${hash}` || option.key === hash);
+    const match = filters.find(option => option.slug === hash || option.slug === `region-${hash}` || option.key === hash || option.hashes?.includes(hash));
+    if (match?.href) {
+      const target = new URL(match.href, window.location.origin);
+      target.search = window.location.search;
+      window.location.replace(target.pathname + target.search);
+      return;
+    }
     if (match) { setCategory(match.key); setLimit(PAGE_SIZE); }
   }, [filters]);
   const filtered = useMemo(() => {
@@ -131,6 +138,20 @@ export default function ProjectsPage({ projects, slides, filters }: ProjectsPage
                 textDecoration: "none",
               };
 
+              const content = <>
+                <span style={{ display: "inline-flex", width: 15, height: 15 }}>
+                  <CategoryIcon name={c.icon} />
+                </span>
+                {c.name}
+                {!c.href ? <span className="proj-cat-count" style={{ fontSize: 11, opacity: .7 }} aria-hidden="true">{c.projectIds.length}</span> : null}
+              </>;
+
+              if (c.href) return (
+                <Link key={c.key} href={c.href} prefetch={false} data-filter-key={c.key} className="proj-cat" style={style}>
+                  {content}
+                </Link>
+              );
+
               return (
                 <button
                   key={c.key}
@@ -146,10 +167,7 @@ export default function ProjectsPage({ projects, slides, filters }: ProjectsPage
                   className="proj-cat"
                   style={style}
                 >
-                  <span style={{ display: "inline-flex", width: 15, height: 15 }}>
-                    <CategoryIcon name={c.icon} />
-                  </span>
-                  {c.name}<span className="proj-cat-count" style={{ fontSize: 11, opacity: .7 }} aria-hidden="true">{c.projectIds.length}</span>
+                  {content}
                 </button>
               );
             })}

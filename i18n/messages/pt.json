@@ -2602,6 +2602,16 @@
     "sentText": "A nossa equipa de parcerias entrará em contacto consigo brevemente por e-mail."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Mesquita de Al-Aqsa",
+      "jerusalem": "Jerusalém",
+      "waqf": "Criar um waqf em Jerusalém",
+      "zakat": "Dar zakat à Palestina",
+      "restoration": "Restaurar casas em Jerusalém",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Doação recorrente"
+    },
     "allProjects": "Todos os Projetos",
     "filterByRegion": "Por Região",
     "filterByType": "Por Tipo de Doação",

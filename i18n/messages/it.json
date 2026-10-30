@@ -1560,6 +1560,16 @@
     "sentText": "Il nostro team Partnership vi contatterà presto via email."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Moschea di Al-Aqsa",
+      "jerusalem": "Gerusalemme",
+      "waqf": "Crea un waqf a Gerusalemme",
+      "zakat": "Dona la zakat alla Palestina",
+      "restoration": "Restauro delle case di Gerusalemme",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Donazione ricorrente"
+    },
     "allProjects": "Tutti i Progetti",
     "filterByRegion": "Per Regione",
     "filterByType": "Per Tipo di Donazione",

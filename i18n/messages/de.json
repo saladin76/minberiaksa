@@ -2602,6 +2602,16 @@
     "sentText": "Unser Partnerschaftsteam wird sich in Kürze per E-Mail bei Ihnen melden."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-Moschee",
+      "jerusalem": "Jerusalem",
+      "waqf": "Waqf in Jerusalem",
+      "zakat": "Zakat für Palästina",
+      "restoration": "Häuser in Jerusalem restaurieren",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Regelmäßige Spende"
+    },
     "allProjects": "Alle Projekte",
     "filterByRegion": "Nach Region",
     "filterByType": "Nach Spendenart",

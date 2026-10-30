@@ -1560,6 +1560,16 @@
     "sentText": "Ekipi ynë i Partneriteteve do t'ju kontaktojë së shpejti me email."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Xhamia Al-Aksa",
+      "jerusalem": "Kudsi",
+      "waqf": "Krijo vakëf në Kuds",
+      "zakat": "Jep zekatin për Palestinën",
+      "restoration": "Restaurimi i shtëpive në Kuds",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Dhurim periodik"
+    },
     "allProjects": "Të Gjitha Projektet",
     "filterByRegion": "Sipas Regjionit",
     "filterByType": "Sipas Tipit të Donacionit",

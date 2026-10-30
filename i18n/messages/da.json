@@ -1560,6 +1560,16 @@
     "sentText": "Vores partnerskabsteam kontakter jer snart via e-mail."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-moskéen",
+      "jerusalem": "Jerusalem",
+      "waqf": "Opret en waqf i Jerusalem",
+      "zakat": "Giv zakat til Palæstina",
+      "restoration": "Restaurer hjem i Jerusalem",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Fast donation"
+    },
     "allProjects": "Alle Projekter",
     "filterByRegion": "Region",
     "filterByType": "Donationstype",

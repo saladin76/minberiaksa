@@ -1560,6 +1560,16 @@
     "sentText": "شراکت داری کی ٹیم جلد آپ سے ای میل کے ذریعے رابطہ کرے گی۔"
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "غزہ",
+      "aqsa": "مسجد اقصیٰ",
+      "jerusalem": "القدس",
+      "waqf": "القدس میں وقف کریں",
+      "zakat": "فلسطین کے لیے زکوٰۃ دیں",
+      "restoration": "القدس کے گھروں کی بحالی",
+      "ibadan": "عبادًا لنا",
+      "recurring": "باقاعدہ عطیہ"
+    },
     "allProjects": "تمام منصوبے",
     "filterByRegion": "علاقے کے مطابق",
     "filterByType": "عطیہ کی قسم کے مطابق",
