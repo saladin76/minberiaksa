@@ -9124,5 +9124,19 @@
   "يمكن تنقيح المسودة قبل إنشاء الحملات فقط. أنشئ خطة جديدة لتغيير نطاق حملات منشورة.": "Draft refinement is available before campaign creation. Create a new plan to change the scope of deployed campaigns.",
   "طلب التنقيح أطول من المساحة المتبقية في تعليمات الخطة. اختصره أو أنشئ خطة جديدة.": "The refinement request exceeds the remaining plan instruction space. Shorten it or create a new plan.",
   "حُفظت محادثة خطة Google Search دون تعديل الإعلانات.": "The Google Search plan conversation was saved without changing ads.",
-  "أعيد تجهيز مسودة Google Search مع حفظ نطاقها وميزانيتها.": "The Google Search draft was revised with its scope and budget preserved."
+  "أعيد تجهيز مسودة Google Search مع حفظ نطاقها وميزانيتها.": "The Google Search draft was revised with its scope and budget preserved.",
+  "حذف الحملة التي لم تُرسل": "Delete unsent campaign",
+  "حذف حملة لم تُرسل": "Delete an unsent campaign",
+  "تم حذف الحملة التي لم تُرسل": "The unsent campaign was deleted",
+  "تعذّر حذف الحملة": "Could not delete the campaign",
+  "حذف الحملة «{0}» نهائيًا؟ سيُلغى موعدها، ويتحقق النظام من عدم وجود سجلات إرسال قبل الحذف. لن تُحذف رسائل أو تبرعات.": "Permanently delete “{0}”? Its schedule will be cancelled. The system checks for sending history before deletion. Messages and donations will be preserved.",
+  "يمكن حذف الحملات التي لم يبدأ إرسالها فقط. استخدم الأرشفة للحملات ذات السجل.": "Only campaigns that have not started sending can be deleted. Archive campaigns with sending history.",
+  "للحملة عملية إرسال قائمة أو سابقة؛ راجع سجلها قبل الأرشفة.": "The campaign has an active or previous send operation; review its history before archiving.",
+  "للحملة سجلات محاولة إرسال؛ يمكن أرشفتها مع الاحتفاظ بالسجل.": "The campaign has send-attempt records. Archive it to preserve the history.",
+  "تغيرت الحملة أثناء الحذف؛ حدّث القائمة ثم أعد المحاولة.": "The campaign changed during deletion. Refresh the list and try again.",
+  "تعذّر التحقق من سجل الحملة؛ لم يتم حذفها. أعد المحاولة.": "Campaign history could not be verified; it was not deleted. Try again.",
+  "تغيرت الحملة؛ حدّثها قبل تأكيد الإجراء.": "The campaign changed. Refresh it before confirming the action.",
+  "حذف الحملة": "Delete campaign",
+  "طول الوصف: {0} حرفًا؛ الحد المعروض لهذه اللغة {1}": "Description length: {0} characters; displayed limit for this language: {1}",
+  "تعرض المعاينة الوصف المنشور بعد تنسيقه واختصاره. اختصر النص لرؤيته كاملًا.": "The preview shows the published description after formatting and shortening. Shorten your text to display it in full."
 }

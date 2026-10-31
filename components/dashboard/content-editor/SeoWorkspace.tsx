@@ -1,4 +1,5 @@
 "use client";
+import { clipSeoDescription } from "@/lib/seo-description";
 import { dt } from "@/lib/dashboard/i18n";
 import { useState, useEffect, type ReactNode } from "react";
 import { contentFieldLimit, type ContentField, type TextValues } from "@/lib/content-editor/contracts";
@@ -42,6 +43,8 @@ export function SeoWorkspace({
   const title =
       values.seoTitle || values.metaTitle || values.title || values.name || "",
     description = values.seoDescription || values.metaDescription || "";
+  const publishedDescription = clipSeoDescription(description, locale);
+  const descriptionLimit = locale === "ja" || locale === "zh" ? 90 : 160;
   const writeFaq = (next: Faq[]) =>
     onChange("faqContent", JSON.stringify(next));
   const checks = [
@@ -109,9 +112,10 @@ export function SeoWorkspace({
             <p dir="ltr" className="mb-2 text-start text-xs text-slate-500">minberiaksa.org</p>
             <p className="max-w-2xl break-words text-xl text-blue-800">{title}</p>
             <p className="mt-2 max-w-2xl break-words text-sm leading-7 text-slate-600">
-              {description || dt("أضف وصف نتيجة البحث")}
+              {publishedDescription || dt("أضف وصف نتيجة البحث")}
             </p>
-            <div className="mt-4 grid gap-2 border-t pt-3 text-xs sm:grid-cols-2"><p>{dt("طول العنوان: {0} حرفًا؛ المقترح 30–60", [Array.from(title).length])}</p><p>{dt("طول الوصف: {0} حرفًا؛ المقترح 70–160", [Array.from(description).length])}</p></div>
+            <div className="mt-4 grid gap-2 border-t pt-3 text-xs sm:grid-cols-2"><p>{dt("طول العنوان: {0} حرفًا؛ المقترح 30–60", [Array.from(title).length])}</p><p>{dt("طول الوصف: {0} حرفًا؛ الحد المعروض لهذه اللغة {1}", [Array.from(description).length, descriptionLimit])}</p></div>
+            {publishedDescription !== description.trim() ? <p role="status" className="mt-3 text-xs text-amber-800">{dt("تعرض المعاينة الوصف المنشور بعد تنسيقه واختصاره. اختصر النص لرؤيته كاملًا.")}</p> : null}
           </section>
           <label className="flex items-center justify-between gap-3 rounded-xl border bg-white p-5">
             <span>{dt("السماح لمحركات البحث بفهرسة هذه اللغة")}</span>

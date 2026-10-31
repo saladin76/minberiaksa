@@ -3544,6 +3544,7 @@
     "orContinue": "ile devam et",
     "noAccount": "Hesabınız yok mu?",
     "createOne": "Üye ol",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Google ile giriş yap"
   }
 }

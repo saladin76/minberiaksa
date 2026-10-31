@@ -2489,7 +2489,8 @@
     "orContinue": "के साथ जारी रखें",
     "noAccount": "खाता नहीं है?",
     "createOne": "खाता बनाएँ",
-    "logoAlt": "लोगो"
+    "logoAlt": "लोगो",
+    "signInWithGoogle": "Google से साइन इन करें"
   },
   "DonationFailed": {
     "alternate": {

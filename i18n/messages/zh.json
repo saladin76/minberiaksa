@@ -2489,7 +2489,8 @@
     "orContinue": "继续使用",
     "noAccount": "还没有账户？",
     "createOne": "立即注册",
-    "logoAlt": "标志"
+    "logoAlt": "标志",
+    "signInWithGoogle": "使用 Google 登录"
   },
   "DonationFailed": {
     "alternate": {

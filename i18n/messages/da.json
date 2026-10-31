@@ -2489,7 +2489,8 @@
     "orContinue": "fortsæt med",
     "noAccount": "Har du ikke en konto?",
     "createOne": "Opret en",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Log ind med Google"
   },
   "DonationFailed": {
     "alternate": {

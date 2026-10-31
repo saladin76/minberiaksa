@@ -2489,7 +2489,8 @@
     "orContinue": "vazhdo me",
     "noAccount": "Nuk keni llogari?",
     "createOne": "Krijo një",
-    "logoAlt": "Logoja"
+    "logoAlt": "Logoja",
+    "signInWithGoogle": "Hyr me Google"
   },
   "DonationFailed": {
     "alternate": {

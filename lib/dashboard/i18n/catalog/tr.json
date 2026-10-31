@@ -9116,5 +9116,19 @@
   "يمكن تنقيح المسودة قبل إنشاء الحملات فقط. أنشئ خطة جديدة لتغيير نطاق حملات منشورة.": "Taslak yalnızca kampanyalar oluşturulmadan önce düzenlenebilir. Yayındaki kampanyaların kapsamını değiştirmek için yeni bir plan oluşturun.",
   "طلب التنقيح أطول من المساحة المتبقية في تعليمات الخطة. اختصره أو أنشئ خطة جديدة.": "Düzenleme isteği, plan talimatlarında kalan alanı aşıyor. Kısaltın veya yeni bir plan oluşturun.",
   "حُفظت محادثة خطة Google Search دون تعديل الإعلانات.": "Google Search planı sohbeti, reklamlar değiştirilmeden kaydedildi.",
-  "أعيد تجهيز مسودة Google Search مع حفظ نطاقها وميزانيتها.": "Google Search taslağı, kapsamı ve bütçesi korunarak yeniden hazırlandı."
+  "أعيد تجهيز مسودة Google Search مع حفظ نطاقها وميزانيتها.": "Google Search taslağı, kapsamı ve bütçesi korunarak yeniden hazırlandı.",
+  "حذف الحملة التي لم تُرسل": "Gönderilmemiş kampanyayı sil",
+  "حذف حملة لم تُرسل": "Gönderilmemiş kampanyayı sil",
+  "تم حذف الحملة التي لم تُرسل": "Gönderilmemiş kampanya silindi",
+  "تعذّر حذف الحملة": "Kampanya silinemedi",
+  "حذف الحملة «{0}» نهائيًا؟ سيُلغى موعدها، ويتحقق النظام من عدم وجود سجلات إرسال قبل الحذف. لن تُحذف رسائل أو تبرعات.": "“{0}” kalıcı olarak silinsin mi? Zamanlaması iptal edilir. Sistem silmeden önce gönderim geçmişini kontrol eder. Mesajlar ve bağışlar korunur.",
+  "يمكن حذف الحملات التي لم يبدأ إرسالها فقط. استخدم الأرشفة للحملات ذات السجل.": "Yalnızca gönderimi başlamamış kampanyalar silinebilir. Gönderim geçmişi olan kampanyaları arşivleyin.",
+  "للحملة عملية إرسال قائمة أو سابقة؛ راجع سجلها قبل الأرشفة.": "Kampanyanın etkin veya önceki bir gönderim işlemi var; arşivlemeden önce geçmişini inceleyin.",
+  "للحملة سجلات محاولة إرسال؛ يمكن أرشفتها مع الاحتفاظ بالسجل.": "Kampanyanın gönderim denemesi kayıtları var. Geçmişi korumak için arşivleyin.",
+  "تغيرت الحملة أثناء الحذف؛ حدّث القائمة ثم أعد المحاولة.": "Silme sırasında kampanya değişti. Listeyi yenileyip tekrar deneyin.",
+  "تعذّر التحقق من سجل الحملة؛ لم يتم حذفها. أعد المحاولة.": "Kampanya geçmişi doğrulanamadı; silinmedi. Tekrar deneyin.",
+  "تغيرت الحملة؛ حدّثها قبل تأكيد الإجراء.": "Kampanya değişti. İşlemi onaylamadan önce yenileyin.",
+  "حذف الحملة": "Kampanyayı sil",
+  "طول الوصف: {0} حرفًا؛ الحد المعروض لهذه اللغة {1}": "Açıklama uzunluğu: {0} karakter; bu dil için gösterilen sınır: {1}",
+  "تعرض المعاينة الوصف المنشور بعد تنسيقه واختصاره. اختصر النص لرؤيته كاملًا.": "Önizleme, biçimlendirilip kısaltılmış yayımlanan açıklamayı gösterir. Tamamını göstermek için metni kısaltın."
 }

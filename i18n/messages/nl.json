@@ -2489,7 +2489,8 @@
     "orContinue": "doorgaan met",
     "noAccount": "Nog geen account?",
     "createOne": "Maak er een aan",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Inloggen met Google"
   },
   "DonationFailed": {
     "alternate": {

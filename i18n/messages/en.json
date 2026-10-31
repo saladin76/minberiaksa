@@ -3544,6 +3544,7 @@
     "orContinue": "continue with",
     "noAccount": "Don't have an account?",
     "createOne": "Create one",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Sign in with Google"
   }
 }

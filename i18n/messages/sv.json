@@ -2489,7 +2489,8 @@
     "orContinue": "fortsätt med",
     "noAccount": "Har du inget konto?",
     "createOne": "Skapa ett",
-    "logoAlt": "Logotyp"
+    "logoAlt": "Logotyp",
+    "signInWithGoogle": "Logga in med Google"
   },
   "DonationFailed": {
     "alternate": {

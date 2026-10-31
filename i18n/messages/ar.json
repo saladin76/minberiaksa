@@ -3542,6 +3542,7 @@
     "orContinue": "تابع باستخدام",
     "noAccount": "ليس لديك حساب؟",
     "createOne": "أنشئ حساباً",
-    "logoAlt": "الشعار"
+    "logoAlt": "الشعار",
+    "signInWithGoogle": "تسجيل الدخول باستخدام Google"
   }
 }

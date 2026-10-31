@@ -3,7 +3,8 @@
 import * as React from "react";
 import { RetryDialog } from "../../_shared/RetryDialog";
 import { toast } from "react-hot-toast";
-import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play, RefreshCw } from "lucide-react";
+import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play, RefreshCw, Trash2 } from "lucide-react";
+import { canDeleteUnsentCampaign } from "@/lib/communication/campaign-lifecycle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +73,7 @@ export function CampaignRowActions({
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [controlsOpen, setControlsOpen] = React.useState(false);
   const [retryOpen, setRetryOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
   const canSend = campaign.status === "APPROVED";
@@ -79,7 +81,19 @@ export function CampaignRowActions({
   const canControl = campaign.channel === "WHATSAPP" && !isCampaignControlTerminalStatus(campaign.status);
   const canArchive = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED", "CANCELLED"].includes(campaign.status);
   const canReviewFailures = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED"].includes(campaign.status) && (campaign.failedCount > 0 || campaign.status === "SENT_WITH_ISSUES" || campaign.status === "FAILED");
-  if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive) return null;
+  const canDelete = canDeleteUnsentCampaign(campaign);
+  if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive && !canDelete) return null;
+
+  const remove = async () => {
+    setDeleteOpen(false); setBusy(true);
+    try {
+      const res = await fetch(`/api/communication/campaigns/${campaign.id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok || !json.deleted) throw new Error(json?.error || dt("تعذّر حذف الحملة"));
+      toast.success(dt("تم حذف الحملة التي لم تُرسل")); onChanged();
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setBusy(false); }
+  };
 
   const togglePause = async () => {
     const currentlyPaused = campaign.metadata?.sendControls?.paused === true;
@@ -253,8 +267,16 @@ export function CampaignRowActions({
               <Archive className="me-2 h-3.5 w-3.5" />
               {dt("أرشفة الحملة")}</DropdownMenuItem>
           )}
+          {canDelete ? <DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-rose-600 focus:text-rose-700"><Trash2 className="me-2 h-3.5 w-3.5" />{dt("حذف الحملة التي لم تُرسل")}</DropdownMenuItem> : null}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent dir={dashDir()}>
+          <AlertDialogHeader><AlertDialogTitle>{dt("حذف حملة لم تُرسل")}</AlertDialogTitle><AlertDialogDescription>{dt("حذف الحملة «{0}» نهائيًا؟ سيُلغى موعدها، ويتحقق النظام من عدم وجود سجلات إرسال قبل الحذف. لن تُحذف رسائل أو تبرعات.", [campaign.name])}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={busy}>{dt("إلغاء")}</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={() => { void remove(); }} className="bg-rose-600 hover:bg-rose-700">{dt("حذف الحملة")}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {canReviewFailures && ["WHATSAPP", "EMAIL", "SMS"].includes(campaign.channel) ? <RetryDialog open={retryOpen} channel={campaign.channel as "WHATSAPP" | "EMAIL" | "SMS"} ids={null} days={30} campaignId={campaign.id} campaignName={campaign.name} purposeGroup="MARKETING" onOpenChange={setRetryOpen} onFinished={onChanged} /> : null}
       <CampaignControlsDialog

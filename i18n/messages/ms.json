@@ -2489,7 +2489,8 @@
     "orContinue": "teruskan dengan",
     "noAccount": "Tiada akaun?",
     "createOne": "Cipta akaun",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Log masuk dengan Google"
   },
   "DonationFailed": {
     "alternate": {

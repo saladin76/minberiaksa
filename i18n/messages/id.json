@@ -3544,6 +3544,7 @@
     "orContinue": "lanjutkan dengan",
     "noAccount": "Belum punya akun?",
     "createOne": "Buat akun",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Masuk dengan Google"
   }
 }

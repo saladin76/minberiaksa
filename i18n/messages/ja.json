@@ -2489,7 +2489,8 @@
     "orContinue": "で続行",
     "noAccount": "アカウントをお持ちでないですか？",
     "createOne": "新規登録",
-    "logoAlt": "ロゴ"
+    "logoAlt": "ロゴ",
+    "signInWithGoogle": "Google でログイン"
   },
   "DonationFailed": {
     "alternate": {
