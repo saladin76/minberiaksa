@@ -127,6 +127,9 @@ const nextConfig: NextConfig = {
      Prisma modules, "client reference manifest does not exist", no 500 page. */
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   experimental: {
+    // First-load visitors otherwise wait for four render-blocking stylesheets.
+    // Inline route CSS with the HTML; compare mobile measurements after release.
+    inlineCss: true,
     optimizePackageImports: ["lucide-react", "framer-motion", "motion", "@radix-ui/react-icons", "date-fns", "react-use"],
     optimizeCss: true,
   },

@@ -12,7 +12,8 @@ export const credentialsReady = (c: GoogleAdsCredentials) => /^\d{10}$/.test(c.c
 export type SearchRow = {
   customer: { currencyCode: string; timeZone: string };
   campaign: { resourceName: string; name: string; status: string; campaignBudget: string };
-  campaignBudget: { amountMicros: string; explicitlyShared: boolean };
+  campaignBudget: { amountMicros: string; explicitlyShared: boolean; recommendedBudgetAmountMicros?: string };
+  searchTermView?: { searchTerm?: string };
   adGroupCriterion: { resourceName: string; keyword: { text: string }; status: string };
   metrics: Record<string, string | number>;
   languageConstant: { code: string; resourceName: string };

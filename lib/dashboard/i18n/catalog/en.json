@@ -9090,5 +9090,18 @@
   "نسخة متاحة": "Version available",
   "نسخة غير متاحة؛ يلزم تجهيزها أو استبعاد اللغة صراحةً قبل الإرسال.": "No version available. Prepare it or explicitly exclude this language before sending.",
   "تُراجع لغات القائمة كاملة عند اعتماد الحملة. إنشاء المسودة لا يرسل رسائل.": "All audience languages are checked when the campaign is approved. Creating a draft does not send messages.",
-  "يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.": "The template is sent only in the donor’s language. A known language is never replaced when its translation is missing."
+  "يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.": "The template is sent only in the donor’s language. A known language is never replaced when its translation is missing.",
+  "فرص مبنية على نتائج Google الفعلية": "Opportunities based on actual Google results",
+  "تعذر تحديث بيانات فرص التوسع. حدّث تقرير الأداء؛ لا تُعرض تقديرات قديمة على أنها نتيجة جديدة.": "Could not refresh growth evidence. Refresh the performance report; old estimates are not presented as new results.",
+  "آخر 7 أيام بتوقيت {0}. مبالغ التكلفة والميزانية بعملة الحساب {1}.": "Last 7 days in {0}. Costs and budgets are in the account currency, {1}.",
+  "اقتراحات الميزانية مصدرها Google لحملات لها 30 نقرة و3 تحويلات إعلانية على الأقل. هي تقديرات للمراجعة؛ تحويلات Google لا تثبت تحصيل تبرعات الموقع.": "Budget suggestions come from Google for campaigns with at least 30 clicks and 3 advertising conversions. They are estimates for review; Google conversions do not prove that site donations were collected.",
+  "الميزانية اليومية الحالية {0}؛ اقتراح Google {1} {2}.": "Current daily budget: {0}; Google suggestion: {1} {2}.",
+  "{0} نقرة، {1} تحويل Google، تكلفة {2} {3}.": "{0} clicks, {1} Google conversions, cost {2} {3}.",
+  "حصة الظهور المفقودة: بسبب الميزانية {0}؛ بسبب الترتيب {1}.": "Lost impression share: budget {0}; rank {1}.",
+  "راجع التبرعات المؤكدة وتكلفة التحصيل قبل الزيادة. تعديل إجمالي الخطة يوزّع الميزانية على لغاتها؛ لا يطبّق اقتراح حملة واحدة تلقائيًا.": "Review confirmed donations and acquisition costs before increasing spend. Changing the plan total distributes the budget across its languages; it does not automatically apply a single campaign suggestion.",
+  "لا يوجد اقتراح ميزانية يستوفي بيانات المراجعة حاليًا.": "No budget suggestion currently meets the review criteria.",
+  "عبارات بحث حققت تحويلات للمراجعة والتوسع": "Converting search terms to review for expansion",
+  "تُجمع العبارة داخل الحملة عبر مجموعاتها. راجع ملاءمتها للمشروع واللغة قبل إضافتها؛ لم تُضف كلمات أو إعلانات تلقائيًا.": "Terms are aggregated across ad groups within each campaign. Review relevance to the project and language before adding them; no keywords or ads have been added automatically.",
+  "عبارة البحث": "Search term",
+  "عرض عبارات البحث محدود بأول 1000 صف من Google؛ ليس حصرًا كاملًا ولا إجماليًا ماليًا.": "Search terms are limited to the first 1,000 Google rows; this is neither a complete inventory nor a financial total."
 }

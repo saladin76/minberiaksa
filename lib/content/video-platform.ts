@@ -13,6 +13,11 @@ export interface VideoPresentation {
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const VIMEO_ID = /^\d{6,15}$/;
 const DIRECT_MEDIA = /\.(?:mp4|webm|ogg)(?:$|[?#])/i;
+// A historical Facebook share link resolves to this verified public institution
+// video. Keep persisted short links/iframes working without a runtime lookup.
+const FACEBOOK_VIDEO_ALIASES: Record<string, string> = {
+  "/share/v/1AsqfoELTb": "https://www.facebook.com/MinberAqsa/videos/1762295867563749/",
+};
 
 function safeHttpUrl(value: string): URL | null {
   try {
@@ -95,10 +100,15 @@ export function describeVideoSource(input: {
 
   const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
   if (["facebook.com", "m.facebook.com"].includes(host) && parsed.protocol === "https:") {
-    const source = parsed.pathname === "/plugins/video.php" ? safeHttpUrl(parsed.searchParams.get("href") || "") : parsed;
+    let source = parsed.pathname === "/plugins/video.php" ? safeHttpUrl(parsed.searchParams.get("href") || "") : parsed;
     const sourceHost = source?.hostname.toLowerCase().replace(/^www\./, "");
-    if (source && source.protocol === "https:" && ["facebook.com", "m.facebook.com"].includes(sourceHost || "") &&
-      (/\/(?:videos|reel)\/[A-Za-z0-9._-]+/.test(source.pathname) || /^\/share\/v\/[A-Za-z0-9_-]+\/?$/.test(source.pathname) || (source.pathname === "/watch/" && /^\d+$/.test(source.searchParams.get("v") || "")) || (source.pathname === "/video.php" && /^\d+$/.test(source.searchParams.get("v") || "")))) {
+    const sourceIsFacebook = source && source.protocol === "https:" && ["facebook.com", "m.facebook.com"].includes(sourceHost || "");
+    if (sourceIsFacebook && source) {
+      const alias = FACEBOOK_VIDEO_ALIASES[source.pathname.replace(/\/$/, "")];
+      if (alias) source = new URL(alias);
+    }
+    if (sourceIsFacebook && source &&
+      (/\/(?:videos\/(?:[^/]+\/)?|reel\/)\d+\/?$/.test(source.pathname) || /^\/share\/v\/[A-Za-z0-9_-]+\/?$/.test(source.pathname) || (source.pathname === "/watch/" && /^\d+$/.test(source.searchParams.get("v") || "")) || (source.pathname === "/video.php" && /^\d+$/.test(source.searchParams.get("v") || "")))) {
       const embed = new URL("https://www.facebook.com/plugins/video.php");
       embed.searchParams.set("href", source.toString());
       embed.searchParams.set("show_text", "false");

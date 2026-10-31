@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { manualCertificateInput } from "../../lib/certificates/manual-input";
+import { manualCertificateInput, manualCertificatePreviewInput } from "../../lib/certificates/manual-input";
 import { MANUAL_DOCUMENT_TEXT, manualDocumentTemplate } from "../../lib/certificates/manual-copy";
 import { SUPPORTED_LOCALES } from "../../lib/locales";
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
@@ -19,6 +19,13 @@ test("a manual financial receipt requires a positive amount, stated purpose and 
   const valid = { ...input, kind: "RECEIPT", amount: 20, projectTitle: "Winter relief", received: true };
   assert.equal(manualCertificateInput.safeParse(valid).success, true);
   for (const change of [{ amount: 0 }, { received: false }, { projectTitle: "" }]) assert.equal(manualCertificateInput.safeParse({ ...valid, ...change }).success, false);
+});
+test("an unissued receipt can be previewed before funds confirmation, while issuance and invalid receipt data remain rejected", () => {
+  const draft = { ...input, kind: "RECEIPT", amount: 1, currency: "TRY", projectTitle: "Preview only", received: false };
+  assert.equal(manualCertificatePreviewInput.safeParse(draft).success, true);
+  assert.equal(manualCertificateInput.safeParse(draft).success, false);
+  assert.equal(manualCertificateInput.safeParse({ ...draft, received: true }).success, true);
+  for (const change of [{ amount: 0 }, { projectTitle: "" }]) assert.equal(manualCertificatePreviewInput.safeParse({ ...draft, ...change }).success, false);
 });
 for (const locale of SUPPORTED_LOCALES) test(`${locale}: manual-document WhatsApp copy accepts the actual provider schema and exact same five fields`, () => {
   const body = manualDocumentTemplate(locale);

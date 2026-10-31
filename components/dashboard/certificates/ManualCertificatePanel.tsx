@@ -47,6 +47,7 @@ export function ManualCertificatePanel({ canSendEmail, canSendWhatsapp }: { canS
     setForm(previous => ({ ...previous, [key]: value })); setPrepared(null); setPreview(""); setPreviewBundle(null); setRequestKey(crypto.randomUUID());
   };
   const kinds: Record<string, string> = { THANKS: dt("شهادة تبرع وشكر"), SHARE: dt("شهادة سهم وقفي"), METER: dt("شهادة متر وقفي"), RECEIPT: dt("إيصال تبرع يدوي") };
+  const readyToIssue = Boolean(prepared || (previewBundle && (form.kind !== "RECEIPT" || form.received)));
   const generatePreview = async () => {
     setBusy("preview");
     try { const response = prepared ? await axios.get(`/api/certificates/issued/${prepared.id}/preview`) : await axios.post("/api/certificates/issued/preview", form); setPreview(response.data.html); setPreviewBundle(response.data.preview ?? null); }
@@ -91,8 +92,8 @@ export function ManualCertificatePanel({ canSendEmail, canSendWhatsapp }: { canS
         <p className="mt-4 rounded-lg bg-muted p-3 text-xs leading-6 text-muted-foreground">{dt("إصدار المستند وإرساله لا يضيف تبرعًا إلى الحسابات. لتسجيل المبلغ ماليًا استخدم إضافة تبرع.")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="outline" disabled={Boolean(busy)} onClick={() => void generatePreview()}>{busy === "preview" ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Eye className="me-2 h-4 w-4" />}{dt("معاينة المستند")}</Button>
-          {canSendWhatsapp && <Button disabled={Boolean(busy) || !form.phone} onClick={() => void send("WHATSAPP")} className="bg-emerald-600 text-white hover:bg-emerald-700">{busy === "WHATSAPP" ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <MessageCircle className="me-2 h-4 w-4" />}{dt("إرسال واتساب")}</Button>}
-          {canSendEmail && <Button disabled={Boolean(busy) || !form.email} onClick={() => void send("EMAIL")}>{busy === "EMAIL" ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Mail className="me-2 h-4 w-4" />}{dt("إرسال بريد")}</Button>}
+          {canSendWhatsapp && <Button disabled={Boolean(busy) || !form.phone || !readyToIssue} onClick={() => void send("WHATSAPP")} className="bg-emerald-600 text-white hover:bg-emerald-700">{busy === "WHATSAPP" ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <MessageCircle className="me-2 h-4 w-4" />}{dt("إرسال واتساب")}</Button>}
+          {canSendEmail && <Button disabled={Boolean(busy) || !form.email || !readyToIssue} onClick={() => void send("EMAIL")}>{busy === "EMAIL" ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Mail className="me-2 h-4 w-4" />}{dt("إرسال بريد")}</Button>}
           {prepared && <Button asChild variant="outline"><a href={prepared.url} target="_blank" rel="noreferrer"><Download className="me-2 h-4 w-4" />{dt("تحميل النسخة الصادرة")}</a></Button>}
         </div>
       </CardContent></Card>

@@ -88,6 +88,7 @@ test("issued download tokens are scoped and preview signatures bind the exact in
   const preview = mod.signManualPreview(input, { kind: "thanks", copy: { body: "Approved wording" } });
   assert.equal(mod.verifyManualPreview(input, preview), true);
   assert.equal(mod.verifyManualPreview({ ...input, donorName: "Another" }, preview), false);
+  assert.equal(mod.verifyManualPreview({ ...input, received: !input.received }, preview), false);
   assert.equal(mod.verifyManualPreview(input, { ...preview, document: { kind: "receipt" } }), false);
   assert.equal(mod.verifyManualPreview(input, { ...preview, expiresAt: Date.now() - 1 }), false);
   assert.equal(mod.verifyManualPreview(input, { ...preview, signature: null }), false);

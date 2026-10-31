@@ -4,7 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
-import { searchCredentials, credentialsReady, SearchApiError } from "@/lib/marketing/google-search/client";
+import { googleSearchClient, searchCredentials, credentialsReady, SearchApiError } from "@/lib/marketing/google-search/client";
+import { collectSearchGrowth, type SearchGrowthResult } from "@/lib/marketing/google-search/growth";
 import { searchPlanRequest } from "@/lib/marketing/google-search/contracts";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { prepareSearchPlan, continueSearchPlanning } from "@/lib/marketing/google-search/planner";
@@ -28,8 +29,18 @@ export async function GET(request: NextRequest) {
         const connection = await prisma.marketingPlatformConnection.findFirst({ where: { id: plan.connectionId, platform: "GOOGLE_ADS", enabled: true } });
         if (!connection) return response({ error: "ACCOUNT_NOT_AVAILABLE" }, 409);
         const report = await fetchGoogleAdsReport(searchCredentials(connection), { range: "28d" }, fetch, new Date(), `Minber ${plan.id} | `);
-        const ledger = await searchPlanRevenue(plan.id, searchReportWindow(report.period, report.timezone));
-        return response({ report, ledger });
+        const [ledger, growth] = await Promise.all([
+          searchPlanRevenue(plan.id, searchReportWindow(report.period, report.timezone)),
+          (async (): Promise<SearchGrowthResult> => {
+            try {
+              const client = await googleSearchClient(searchCredentials(connection));
+              return await collectSearchGrowth(client, (plan.resources as { campaigns?: string[] } | null)?.campaigns || []);
+            } catch (error) {
+              return { status: "UNAVAILABLE", at: new Date().toISOString(), reason: error instanceof SearchApiError ? error.code : "GROWTH_EVIDENCE_UNAVAILABLE" };
+            }
+          })(),
+        ]);
+        return response({ report, ledger, growth });
       }
       return response({ plan });
     }

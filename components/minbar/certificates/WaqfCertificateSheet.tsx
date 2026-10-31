@@ -168,10 +168,10 @@ export default function WaqfCertificateSheet({
               </span>
             </div>
 
-            <div style={{ ...line, display: "flex", alignItems: "baseline", gap: 6 }}>
+            {onBehalf.trim() ? <div style={{ ...line, display: "flex", alignItems: "baseline", gap: 6 }}>
               <span style={{ whiteSpace: "nowrap" }}>{copy.onBehalfLabel}</span>
               <span style={{ flex: 1, borderBottom: `1px solid ${RULE}`, textAlign: "center", fontWeight: 800 }}>{onBehalf}</span>
-            </div>
+            </div> : null}
 
             {/* The waqf's legal wording  reviewed content, never paraphrased. */}
             <p style={{ margin: "1.6cqw 0 0", fontFamily: SERIF, fontSize: "clamp(8px,1.72cqw,15px)", fontWeight: 400, lineHeight: 2.3, color: "#1a1a1a", textAlign: "center" }}>{copy.legalText}</p>

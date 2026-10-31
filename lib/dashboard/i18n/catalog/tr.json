@@ -9082,5 +9082,18 @@
   "نسخة متاحة": "Dil sürümü mevcut",
   "نسخة غير متاحة؛ يلزم تجهيزها أو استبعاد اللغة صراحةً قبل الإرسال.": "Dil sürümü yok. Göndermeden önce sürümü hazırlayın veya bu dili açıkça hariç tutun.",
   "تُراجع لغات القائمة كاملة عند اعتماد الحملة. إنشاء المسودة لا يرسل رسائل.": "Kampanya onaylanırken hedef kitlenin tüm dilleri kontrol edilir. Taslak oluşturmak mesaj göndermez.",
-  "يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.": "Şablon yalnızca bağışçının dilinde gönderilir. Çevirisi eksik olsa da bilinen bir dil başka bir dille değiştirilmez."
+  "يُرسل القالب بلغة المتبرع فقط. لا تُستبدل لغة معروفة بلغة أخرى عند نقص الترجمة.": "Şablon yalnızca bağışçının dilinde gönderilir. Çevirisi eksik olsa da bilinen bir dil başka bir dille değiştirilmez.",
+  "فرص مبنية على نتائج Google الفعلية": "Gerçek Google sonuçlarına dayalı fırsatlar",
+  "تعذر تحديث بيانات فرص التوسع. حدّث تقرير الأداء؛ لا تُعرض تقديرات قديمة على أنها نتيجة جديدة.": "Büyüme verileri güncellenemedi. Performans raporunu yenileyin; eski tahminler yeni sonuçlar olarak gösterilmez.",
+  "آخر 7 أيام بتوقيت {0}. مبالغ التكلفة والميزانية بعملة الحساب {1}.": "{0} saat diliminde son 7 gün. Maliyet ve bütçeler hesabın para birimi olan {1} cinsindedir.",
+  "اقتراحات الميزانية مصدرها Google لحملات لها 30 نقرة و3 تحويلات إعلانية على الأقل. هي تقديرات للمراجعة؛ تحويلات Google لا تثبت تحصيل تبرعات الموقع.": "Bütçe önerileri, en az 30 tıklama ve 3 reklam dönüşümü olan kampanyalar için Google’dan alınır. Bunlar incelemeye yönelik tahminlerdir; Google dönüşümleri sitedeki bağışların tahsil edildiğini kanıtlamaz.",
+  "الميزانية اليومية الحالية {0}؛ اقتراح Google {1} {2}.": "Güncel günlük bütçe: {0}; Google önerisi: {1} {2}.",
+  "{0} نقرة، {1} تحويل Google، تكلفة {2} {3}.": "{0} tıklama, {1} Google dönüşümü, maliyet {2} {3}.",
+  "حصة الظهور المفقودة: بسبب الميزانية {0}؛ بسبب الترتيب {1}.": "Kaybedilen gösterim payı: bütçe nedeniyle {0}; sıralama nedeniyle {1}.",
+  "راجع التبرعات المؤكدة وتكلفة التحصيل قبل الزيادة. تعديل إجمالي الخطة يوزّع الميزانية على لغاتها؛ لا يطبّق اقتراح حملة واحدة تلقائيًا.": "Harcamayı artırmadan önce doğrulanmış bağışları ve edinme maliyetini inceleyin. Planın toplamını değiştirmek bütçeyi diller arasında dağıtır; tek bir kampanyanın önerisini otomatik olarak uygulamaz.",
+  "لا يوجد اقتراح ميزانية يستوفي بيانات المراجعة حاليًا.": "Şu anda inceleme ölçütlerini karşılayan bir bütçe önerisi yok.",
+  "عبارات بحث حققت تحويلات للمراجعة والتوسع": "Büyüme için incelenecek dönüşüm getiren arama terimleri",
+  "تُجمع العبارة داخل الحملة عبر مجموعاتها. راجع ملاءمتها للمشروع واللغة قبل إضافتها؛ لم تُضف كلمات أو إعلانات تلقائيًا.": "Terimler her kampanyanın reklam grupları arasında birleştirilir. Eklemeden önce projeye ve dile uygunluklarını inceleyin; otomatik olarak anahtar kelime veya reklam eklenmemiştir.",
+  "عبارة البحث": "Arama terimi",
+  "عرض عبارات البحث محدود بأول 1000 صف من Google؛ ليس حصرًا كاملًا ولا إجماليًا ماليًا.": "Arama terimleri Google’dan gelen ilk 1.000 satırla sınırlıdır; tam bir liste veya finansal toplam değildir."
 }

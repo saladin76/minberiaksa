@@ -301,6 +301,7 @@ const rich = (value: string) =>
     content: [{ type: "paragraph", content: [{ type: "text", text: value }] }],
   });
 function memory(kind: ContentKind, initial: ContentRecord) {
+  let parentReads = 0, parentWrites = 0, translationWrites = 0;
   let state = structuredClone(initial),
     fail = "",
     collision = false;
@@ -309,7 +310,7 @@ function memory(kind: ContentKind, initial: ContentRecord) {
     model(name) {
       const delegate = {
         async findUnique() {
-          if (name === cfg.model) return structuredClone(state);
+          if (name === cfg.model) { parentReads++; return structuredClone(state); }
           return null;
         },
         async findFirst() {
@@ -320,7 +321,7 @@ function memory(kind: ContentKind, initial: ContentRecord) {
         },
         async update(args: { where: { id: string }; data: ContentRecord }) {
           if (fail === "update") throw new Error("offline");
-          if (name === cfg.model) Object.assign(state, args.data);
+          if (name === cfg.model) { parentWrites++; Object.assign(state, args.data); }
           else {
             for (const group of ["values", "infoCards", "blocks"])
               for (const child of (state[group] as ContentRecord[]) || [])
@@ -331,6 +332,7 @@ function memory(kind: ContentKind, initial: ContentRecord) {
         async upsert(args: { create: ContentRecord; update: ContentRecord }) {
           if (fail === "upsert") throw new Error("translation write failed");
           if (name === cfg.translationModel) {
+            translationWrites++;
             const list = state.translations as ContentRecord[];
             const old = list.find((t) => t.locale === args.create.locale);
             if (old) Object.assign(old, args.update);
@@ -371,6 +373,7 @@ function memory(kind: ContentKind, initial: ContentRecord) {
   };
   return {
     store,
+    counts: () => ({ parentReads, parentWrites, translationWrites }),
     read: () => structuredClone(state),
     fail: (value: string) => {
       fail = value;
@@ -857,4 +860,23 @@ test("campaign language covers persist independently without inventing a base im
   doc = await saveContent(m.store, { kind: "campaigns", id, locale: "ar", revision: doc.revision, changes: { title: "مشروع مراجع", image: "" } });
   assert.deepEqual(m.read().images, ["https://example.org/base.jpg"]); assert.equal(m.read().currentAmount, 25); assert.equal("image" in m.read(), false);
   await assert.rejects(saveContent(m.store, { kind: "campaigns", id, locale: "ar", revision: doc.revision, changes: { image: "https://example.org/replacement.jpg" } }));
+});
+
+test('bulk save of thirteen new languages reads the parent twice and touches it once, preserving untouched reviews', async () => {
+  const initial = { ...article(), editorReviews: { en: 'preserved-review' } };
+  const db = memory('blog', initial);
+  const locales = ['fr', 'de', 'id', 'pt', 'ur', 'sq', 'it', 'sv', 'nl', 'no', 'da', 'ms', 'ja'];
+  const saved = await saveWorkspace(db.store, { kind: 'blog', id, locale: 'ar', revision: fingerprint(initial), changes: {}, localeChanges: { en: {}, ...Object.fromEntries(locales.map((locale, i) => [locale, { title: `Localized title ${i}` }])) } });
+  assert.deepEqual(db.counts(), { parentReads: 2, parentWrites: 1, translationWrites: 13 });
+  for (const [i, locale] of locales.entries()) assert.equal(saved.values[locale].title, `Localized title ${i}`);
+  assert.equal((db.read().editorReviews as Record<string, string>).en, 'preserved-review');
+});
+test('bulk final readback loss rolls back every language and a stale version writes nothing', async () => {
+  const initial = article(), db = memory('blog', initial);
+  db.fail('readback');
+  await assert.rejects(saveWorkspace(db.store, { kind: 'blog', id, locale: 'ar', revision: fingerprint(initial), changes: {}, localeChanges: { fr: { title: 'French title' }, de: { title: 'German title' } } }), { status: 500 });
+  assert.deepEqual(db.read(), initial);
+  const stale = memory('blog', initial);
+  await assert.rejects(saveWorkspace(stale.store, { kind: 'blog', id, locale: 'ar', revision: 'stale', changes: { title: 'Changed' } }), { status: 409 });
+  assert.equal(stale.counts().parentWrites, 0); assert.equal(stale.counts().translationWrites, 0);
 });
