@@ -474,9 +474,9 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByText("Fixture category",{exact:true}).waitFor();
  assert.equal(requests.filter(row=>row.path==="/api/admin/content-editor/readiness").length,initialQualityRequests);
  await page.getByRole("button",{name:ui(locale,"عرض الجاهزية"),exact:true}).click();
- const readiness=page.getByLabel(ui(locale,"مركز SEO والترجمات"),{exact:true});
- await readiness.getByRole("link",{name:"Fixture category",exact:true}).waitFor();
- await readiness.getByRole("button",{name:ui(locale,"تحديث الفحص"),exact:true}).waitFor();
+ const readinessCenter=page.getByLabel(ui(locale,"مركز SEO والترجمات"),{exact:true});
+ await readinessCenter.getByRole("link",{name:"Fixture category",exact:true}).waitFor();
+ await readinessCenter.getByRole("button",{name:ui(locale,"تحديث الفحص"),exact:true}).waitFor();
  assert.equal(requests.filter(row=>row.path==="/api/admin/content-editor/readiness").length,initialQualityRequests+1);
  assert.equal(requests.filter(row=>row.path==="/api/admin/content-editor/categories").length,initialOverviewRequests+1);
  await page.locator("details > summary").first().click();await page.locator("details > summary").first().click();
