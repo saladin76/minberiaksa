@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import type { CommunicationCampaign } from "@prisma/client";
 import { getCampaign } from "./campaign-service";
+import { evaluateCoverageGate } from "./campaign-approval-service";
 import { planCampaignSend, type SendPlan } from "./campaign-send-planner";
 import { renderChannelTemplate } from "./template-compat";
 import { loadContextsForUserIds } from "@/lib/templates/variables";
@@ -253,6 +254,13 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
     if (leaseIsFresh(leaseOf(campaign))) return { ...base, blocked: "ALREADY_RUNNING" };
   }
   const resuming = mode === "RESUME";
+  if (!resuming) {
+    const coverage = await evaluateCoverageGate(campaignId);
+    if (!coverage.ok) {
+      await auditBlocked(campaign, "LANGUAGE_COVERAGE_INCOMPLETE", actor, mode);
+      return { ...base, blocked: "LANGUAGE_COVERAGE_INCOMPLETE" };
+    }
+  }
   const observedProgress = JSON.stringify(metaOf(campaign).sendProgress ?? null);
   const progress: SendProgress = progressOf(campaign) ?? { cursor: null, batches: 0, total: 0, sent: 0, skipped: 0, failed: 0, reasons: {}, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), done: false, blockedRuns: 0 };
   let firstPlan = await planCampaignSend(campaignId, { batchSize, cursor: resuming ? progress.cursor : null });
@@ -264,7 +272,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
   if (firstPlan.blocked) {
     await auditBlocked(campaign, firstPlan.blocked, actor, mode, firstPlan);
     const giveUp = resuming && progress.blockedRuns + 1 >= MAX_BLOCKED_RESUMES;
-    const lastRun = { ranAt: new Date().toISOString(), mode, blocked: firstPlan.blocked, reasons: firstPlan.reasons, truncated: true };
+    const lastRun = { ranAt: new Date().toISOString(), mode, blocked: firstPlan.blocked, undecidedLocales: firstPlan.coverage.undecided, reasons: firstPlan.reasons, truncated: true };
     await mutateCampaignMetadata(campaignId, (current) => {
       if (leaseIsFresh(leaseFromMetadata(current)) || JSON.stringify(current.sendProgress ?? null) !== observedProgress) return null;
       return { ...current, lastRun, ...(resuming ? { sendProgress: { ...progress, done: false, blockedRuns: progress.blockedRuns + 1, updatedAt: new Date().toISOString() }, sendLease: null } : {}) };

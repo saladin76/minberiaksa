@@ -15,13 +15,14 @@ function endpoint(mode = "ok") {
     "@/lib/dashboard/api-auth":{requireAdminOrDashboardPermission:()=>mode==="denied"?{status:403}:null},
     "@/lib/audit-log":{auditActorFromDashboardSession:()=>({})},
     "@/lib/communication/communication-runtime-types":{COMMUNICATION_CHANNELS:["EMAIL","WHATSAPP","SMS"],COMMUNICATION_PURPOSES:["MARKETING"]},
-    "@/lib/communication/campaign-service":{listCampaigns:async()=>{lists++;if(mode==="database")throw new Error("unavailable");return [{id:"campaign",donationCount:999,revenue:999}];}},
+    "@/lib/communication/campaign-service":{listCampaigns:async()=>{lists++;if(mode==="database")throw new Error("unavailable");return [{id:"campaign",status:"BLOCKED",sentCount:3571,failedCount:1370,donationCount:999,revenue:999}];}},
+    "@/lib/communication/campaign-counter-service":{readCampaignDeliveryCounters:async()=>{if(mode==="counters")throw new Error("counter read unavailable");return new Map([["campaign",{sent:4196,delivered:2508,read:1207,clicked:0,replied:25,failed:1645}]]);}},
     "@/lib/communication/campaign-attribution-service":{getCampaignOutcomeSummary:async()=>{reports++;throw new Error("unavailable");}},
     "@/lib/communication/campaign-outcome-snapshot":{getCampaignOutcomeSnapshot:()=>{reports++;return {ready:false};}},
     "@/lib/communication/campaign-attribution-diagnostics":{campaignAttributionDiagnostic},
   };
   const code=ts.transpileModule(fs.readFileSync("app/api/communication/campaigns/route.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  const loaded={exports:{} as {GET:(request:unknown)=>Promise<{status:number;body:{ok?:boolean;campaigns?:Array<{donationCount:number|null;revenue:number|null}>}}>}};
+  const loaded={exports:{} as {GET:(request:unknown)=>Promise<{status:number;body:{ok?:boolean;deliveryCountersReady?:boolean;campaigns?:Array<{donationCount:number|null;revenue:number|null;status:string;sentCount:number;failedCount:number}>}}>}};
   new vm.Script(code).runInNewContext({module:loaded,exports:loaded.exports,Date,require:(id:string)=>{if(!(id in deps))throw new Error(id);return deps[id];}});
   return {get:(query="")=>loaded.exports.GET({nextUrl:new URL("https://example.test/api/communication/campaigns"+query)}),calls:()=>({lists,reports})};
 }
@@ -41,4 +42,11 @@ test("pending lifetime income responds immediately without returning fictitious 
   const h=endpoint();const result=await h.get("?outcomesMode=poll");
   assert.equal(result.status,200); assert.equal(result.body.ok,true); assert.equal(result.body.campaigns,undefined);
   assert.deepEqual(h.calls(),{lists:1,reports:1});
+});
+test("a blocked campaign list reads accepted retries and webhook failures without changing the workflow status",async()=>{
+  const result=await endpoint().get("?includeOutcomes=false");
+  assert.equal(result.body.deliveryCountersReady,true);assert.equal(result.body.campaigns?.[0].status,"BLOCKED");
+  assert.equal(result.body.campaigns?.[0].sentCount,4196);assert.equal(result.body.campaigns?.[0].failedCount,1645);
+  const failed=await endpoint("counters").get("?includeOutcomes=false");
+  assert.equal(failed.body.deliveryCountersReady,false);assert.equal(failed.body.campaigns?.[0].sentCount,3571);
 });

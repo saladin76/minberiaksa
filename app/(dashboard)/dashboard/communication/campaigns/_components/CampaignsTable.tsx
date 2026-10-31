@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { LOCALE_LABELS } from "@/lib/locales";
 import { type CampaignRow, channelMeta, statusMeta, hasResults, audienceLabel } from "./campaign-ui";
 import { CampaignRowActions } from "./CampaignRowActions";
+import { campaignBlockLabel } from "./CampaignRecoveryDialog";
 import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 /**
@@ -191,6 +192,7 @@ export function CampaignsTable({
                       <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium", st.tone)}>
                         {st.label}
                       </span>
+                      {c.status === "BLOCKED" && c.metadata?.lastRun?.blocked ? <p className="max-w-56 whitespace-normal text-[11px] leading-5 text-rose-700">{campaignBlockLabel(c.metadata.lastRun.blocked)}</p> : null}
                       {c.metadata?.sendControls?.paused && (
                         <span className="inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
                           {dt("متوقفة مؤقتًا")}</span>

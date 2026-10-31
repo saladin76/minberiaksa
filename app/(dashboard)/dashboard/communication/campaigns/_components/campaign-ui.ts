@@ -24,6 +24,8 @@ export interface CampaignRow {
   trackingRequiresTemplateUpdate?: boolean;
   failedDonationCount?: number;
   metadata?: {
+    lastRun?: { blocked?: string; undecidedLocales?: string[] };
+    sendProgress?: { done?: boolean };
     sendControls?: {
       paused?: boolean;
       speedMode?: string;

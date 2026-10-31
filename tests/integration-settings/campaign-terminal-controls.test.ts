@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { isCampaignControlTerminalStatus } from "../../lib/communication/communication-runtime-types";
+import { isCampaignControlTerminalStatus, isResumableBlockedCampaign } from "../../lib/communication/communication-runtime-types";
 
 test("completed campaign statuses cannot expose pause controls", () => {
   for (const status of ["SENT", "SENT_WITH_ISSUES", "BLOCKED", "CANCELLED", "FAILED", "ARCHIVED"]) {
@@ -19,6 +19,8 @@ test("campaign rows show sent-with-issues accurately and hide controls for termi
   assert.match(ui, /SENT_WITH_ISSUES:\s*\{\s*get label\(\)\s*\{\s*return dt\("تم الإرسال مع إخفاقات"\)/);
   assert.match(ui, /BLOCKED:\s*\{\s*get label\(\)\s*\{\s*return dt\("تعذّر استكمال الإرسال"\)/);
   assert.match(ui, /statusMeta = \(s: string\) => STATUS_META\[s\] \?\? \{/);
-  assert.match(actions, /campaign\.channel === "WHATSAPP" && !isCampaignControlTerminalStatus\(campaign\.status\)/);
-  assert.match(route, /if \(isCampaignControlTerminalStatus\(campaign\.status\)\)/);
+  assert.match(actions, /isCampaignControlTerminalStatus\(campaign\.status\).*isResumableBlockedCampaign\(campaign\)/);
+  assert.match(route, /isCampaignControlTerminalStatus\(campaign\.status\) && !isResumableBlockedCampaign\(campaign\)/);
+  assert.equal(isResumableBlockedCampaign({ status: "BLOCKED", metadata: { sendProgress: { done: false } } }), true);
+  for (const campaign of [{ status: "BLOCKED" }, { status: "BLOCKED", metadata: { sendProgress: { done: true } } }, { status: "CANCELLED", metadata: { sendProgress: { done: false } } }]) assert.equal(isResumableBlockedCampaign(campaign), false);
 });

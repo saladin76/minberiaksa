@@ -8,6 +8,7 @@ import { listCampaigns, createCampaign } from "@/lib/communication/campaign-serv
 import { getCampaignOutcomeSummary } from "@/lib/communication/campaign-attribution-service";
 import { getCampaignOutcomeSnapshot } from "@/lib/communication/campaign-outcome-snapshot";
 import { campaignAttributionDiagnostic } from "@/lib/communication/campaign-attribution-diagnostics";
+import { readCampaignDeliveryCounters } from "@/lib/communication/campaign-counter-service";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -71,9 +72,21 @@ export async function GET(request: NextRequest) {
   let campaigns: Awaited<ReturnType<typeof listCampaigns>>;
   try { campaigns = await listCampaigns({ includeArchived }); }
   catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل الحملات" }, { status: 503 }); }
+  let deliveryCountersReady = true;
+  // Outcome polling only returns financial attribution. The initial/refresh read
+  // gets current delivery evidence once; it must not repeat on every revenue poll.
+  if (request.nextUrl.searchParams.get("outcomesMode") !== "poll") {
+    try {
+      const counters = await readCampaignDeliveryCounters(campaigns.map(campaign => campaign.id));
+      campaigns = campaigns.map(campaign => {
+        const live = counters.get(campaign.id)!;
+        return { ...campaign, sentCount: live.sent, deliveredCount: live.delivered, readCount: live.read, clickedCount: live.clicked, repliedCount: live.replied, failedCount: live.failed };
+      });
+    } catch { deliveryCountersReady = false; }
+  }
   // Show the campaign workflow immediately; lifetime income is an independent read.
   if (request.nextUrl.searchParams.get("includeOutcomes") === "false") {
-    return NextResponse.json({ ok: true, campaigns: campaigns.map(campaign => ({ ...campaign, donationCount: null, revenue: null, unpricedPaidCount: null })), outcomesReady: false });
+    return NextResponse.json({ ok: true, campaigns: campaigns.map(campaign => ({ ...campaign, donationCount: null, revenue: null, unpricedPaidCount: null })), deliveryCountersReady, outcomesReady: false });
   }
   let outcomes: Awaited<ReturnType<typeof getCampaignOutcomeSummary>>;
   let outcomesComputedAt: string | undefined;
@@ -98,7 +111,7 @@ export async function GET(request: NextRequest) {
       failedDonationCount: outcome?.failedDonationCount ?? 0,
     };
   });
-  return NextResponse.json({ ok: true, outcomesReady: true, outcomesComputedAt, campaigns: enriched, unattributed: outcomes.unattributed });
+  return NextResponse.json({ ok: true, outcomesReady: true, outcomesComputedAt, deliveryCountersReady, campaigns: enriched, unattributed: outcomes.unattributed });
 }
 
 export async function POST(request: NextRequest) {

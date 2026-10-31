@@ -76,6 +76,7 @@ function engineHarness(options: Options = {}) {
     } },
     "@/lib/audit-log": { writeAuditLog: async () => {} },
     "./campaign-service": { getCampaign: async () => clone(campaign) },
+    "./campaign-approval-service": { evaluateCoverageGate: async () => ({ ok: !(options as Options & { missingLanguage?: boolean }).missingLanguage }) },
     "./campaign-send-planner": { planCampaignSend: async (_id: string, opts: { cursor?: string | null; batchSize: number }) => {
       const page = recipients.filter((row) => !opts.cursor || row.cursorId > opts.cursor).slice(0, opts.batchSize);
       const skippedList = options.allSkipped ? page.map((r) => ({ cursorId: r.cursorId, userId: r.userId, locale: r.locale, reason: "DO_NOT_CONTACT" })) : [];
@@ -123,6 +124,12 @@ function engineHarness(options: Options = {}) {
     releaseQuiet: () => { options.quiet = false; for (const row of queue) row.nextAttemptAt = new Date(0); } };
 }
 
+test("a full-audience language missing beyond the first page prevents any provider call", async () => {
+  const h = engineHarness({ ...({ missingLanguage: true } as Options), size: 2 });
+  const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(result.blocked, "LANGUAGE_COVERAGE_INCOMPLETE");
+  assert.equal(h.campaign.status, "APPROVED"); assert.equal(h.state().calls, 0); assert.equal(h.state().creates, 0);
+});
 test("executor sends each recipient once and checkpoints done only with final status", async () => {
   const h = engineHarness(); const result = await h.engine.executeCampaignSend("campaign");
   assert.equal(result.ok, true); assert.equal(result.status, "SENT"); assert.equal(result.total, 2); assert.equal(result.sent, 2);

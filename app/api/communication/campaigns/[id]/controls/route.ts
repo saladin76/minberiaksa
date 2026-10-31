@@ -8,7 +8,7 @@ import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { getCampaign } from "@/lib/communication/campaign-service";
 import { campaignSendControls, isValidTimeZone, readCampaignGlobalControls, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
 import { mutateCampaignMetadata } from "@/lib/communication/campaign-metadata-store";
-import { isCampaignControlTerminalStatus } from "@/lib/communication/communication-runtime-types";
+import { isCampaignControlTerminalStatus, isResumableBlockedCampaign } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,7 +86,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const campaign = await getCampaign(id);
   if (!campaign) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  if (isCampaignControlTerminalStatus(campaign.status)) {
+  if (isCampaignControlTerminalStatus(campaign.status) && !isResumableBlockedCampaign(campaign)) {
     return NextResponse.json({ ok: false, error: "لا يمكن تعديل تحكمات حملة منتهية." }, { status: 409 });
   }
 
@@ -111,7 +111,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } as Pick<CommunicationCampaign, "metadata">);
   const next = normalized;
 
-  const saved = await mutateCampaignMetadata(id, (latest) => ({ ...latest, sendControls: next }));
+  const saved = await mutateCampaignMetadata(id, (latest) => campaign.status === "BLOCKED" && !isResumableBlockedCampaign({ status: campaign.status, metadata: latest }) ? null : ({ ...latest, sendControls: next }), { expectedStatus: campaign.status });
   if (!saved) {
     return NextResponse.json({ ok: false, error: "تعذّر حفظ التحكمات بسبب تعديل متزامن. أعد المحاولة." }, { status: 409 });
   }

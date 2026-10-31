@@ -74,6 +74,13 @@ export function isCampaignControlTerminalStatus(status: string): boolean {
   return (CAMPAIGN_CONTROL_TERMINAL_STATUSES as readonly string[]).includes(status);
 }
 
+/** An unfinished, blocked audience walk can be diagnosed and explicitly requeued. */
+export function isResumableBlockedCampaign(campaign: { status: string; metadata?: unknown }): boolean {
+  if (campaign.status !== "BLOCKED" || !campaign.metadata || typeof campaign.metadata !== "object") return false;
+  const progress = (campaign.metadata as { sendProgress?: unknown }).sendProgress;
+  return !!progress && typeof progress === "object" && (progress as { done?: unknown }).done === false;
+}
+
 export const DELIVERY_ORIGINS = ["MANUAL", "CAMPAIGN", "TRIGGER", "TEST", "REACTIVATION", "SYSTEM"] as const;
 export type DeliveryOriginId = (typeof DELIVERY_ORIGINS)[number];
 

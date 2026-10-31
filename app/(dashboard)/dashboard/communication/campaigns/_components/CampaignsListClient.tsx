@@ -23,6 +23,7 @@ export function CampaignsListClient() {
   const [hasLoaded, setHasLoaded] = React.useState(false);
   const [outcomesReady, setOutcomesReady] = React.useState(false);
   const [outcomeError, setOutcomeError] = React.useState(false);
+  const [deliveryError, setDeliveryError] = React.useState(false);
   const activeRead = React.useRef<AbortController | null>(null);
   const [search, setSearch] = React.useState("");
   const [channel, setChannel] = React.useState("all");
@@ -43,16 +44,20 @@ export function CampaignsListClient() {
     setLoading(true); setLoadError(false); setOutcomeError(false); setOutcomesReady(false);
     let listLoaded = false;
     try {
-      const base = await readDashboardJson<{ campaigns: CampaignRow[] }>("/api/communication/campaigns?includeArchived=true&includeOutcomes=false", controller.signal);
+      const base = await readDashboardJson<{ campaigns: CampaignRow[]; deliveryCountersReady?: boolean }>("/api/communication/campaigns?includeArchived=true&includeOutcomes=false", controller.signal);
       if (!current()) return;
       if (!Array.isArray(base.campaigns)) throw new Error("INVALID_CAMPAIGN_LIST");
       setCampaigns(base.campaigns.map(row => ({ ...row, donationCount: null, revenue: null, unpricedPaidCount: null })));
+      setDeliveryError(base.deliveryCountersReady === false);
       setHasLoaded(true); setLoading(false); listLoaded = true;
       if (!base.campaigns.length) { setUnattributed({donationCount:0,revenue:0,unpricedPaidCount:0}); setOutcomesReady(true); return; }
       const report = await readCampaignOutcomes<{ outcomesReady: boolean; campaigns: CampaignRow[]; unattributed: typeof unattributed }>("/api/communication/campaigns?includeArchived=true&outcomesMode=poll", controller.signal);
       if (!current()) return;
       if (!Array.isArray(report.campaigns) || !report.unattributed) throw new Error("INVALID_CAMPAIGN_REPORT");
-      setCampaigns(report.campaigns); setUnattributed(report.unattributed); setOutcomesReady(true);
+      // A slower financial report must not replace current send/retry counters
+      // with the campaign's older persisted snapshot.
+      setCampaigns(current => report.campaigns.map(row => ({ ...row, ...current.find(live => live.id === row.id), donationCount: row.donationCount, revenue: row.revenue, unpricedPaidCount: row.unpricedPaidCount, trackingRequiresTemplateUpdate: row.trackingRequiresTemplateUpdate, failedDonationCount: row.failedDonationCount })));
+      setUnattributed(report.unattributed); setOutcomesReady(true);
     } catch {
       if (!current()) return;
       if (listLoaded) setOutcomeError(true);
@@ -103,6 +108,7 @@ export function CampaignsListClient() {
 
   return (
     <div dir={dashDir()}>
+      {deliveryError ? <p role="alert" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{dt("تعذّر تحديث إحصاءات الإرسال؛ الأرقام المعروضة هي آخر نسخة محفوظة. اضغط تحديث لإعادة المحاولة.")}</p> : null}
       <FilterBar
         searchValue={search}
         onSearchChange={setSearch}

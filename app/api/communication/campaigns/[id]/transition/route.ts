@@ -5,9 +5,11 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { transitionCampaign, getCampaign } from "@/lib/communication/campaign-service";
+import { evaluateCoverageGate } from "@/lib/communication/campaign-approval-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const schema = z.object({
   // CONFIRM is a compound of SUBMIT_REVIEW + APPROVE  see below.
@@ -40,6 +42,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const actor = auditActorFromDashboardSession(session!);
+
+  // Confirming once still belongs to one operator. Check the WHOLE audience
+  // before the first state change, not only the first outgoing batch.
+  if (["CONFIRM", "APPROVE", "SCHEDULE"].includes(parsed.data.action)) {
+    try {
+      const coverage = await evaluateCoverageGate(id);
+      if (!coverage.ok) return NextResponse.json({ ok: false, code: "LANGUAGE_COVERAGE_INCOMPLETE", error: "أكمل لغات القالب للجمهور قبل الإرسال؛ راجع تفاصيل اللغات الناقصة.", coverage }, { status: 409 });
+    } catch {
+      return NextResponse.json({ ok: false, code: "COVERAGE_UNAVAILABLE", error: "تعذّر فحص لغات الجمهور؛ لم تُعتمد الحملة. أعد المحاولة." }, { status: 503 });
+    }
+  }
 
   /**
    * CONFIRM collapses مراجعة and اعتماد into the single "are you sure" step the operator actually
