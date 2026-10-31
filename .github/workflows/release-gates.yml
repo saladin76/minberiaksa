@@ -105,10 +105,42 @@ jobs:
       - run: npm run locale:audit:strict
 
   content-browser:
-    name: Content editor browser fixtures
+    name: Browser · ${{ matrix.name }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Content editors
+            artifact: editors
+            script: scripts/content-editor-browser-test.mjs
+          - name: Major projects and previews
+            artifact: major-projects
+            script: scripts/major-projects-browser-test.mjs
+          - name: Inbox media
+            artifact: inbox-media
+            script: scripts/inbox-media-browser-test.mjs
+          - name: Inbox microphone
+            artifact: inbox-microphone
+            script: scripts/inbox-permissions-browser-test.mjs
+          - name: Public media
+            artifact: public-media
+            script: scripts/public-media-browser-test.mjs
+          - name: Dashboard flows
+            artifact: dashboard
+            script: scripts/dashboard-followup-browser-test.mjs
+          - name: Operations and Search
+            artifact: operations
+            script: scripts/operations-review-browser-test.mjs
+          - name: Scheduling and routing
+            artifact: scheduling
+            script: scripts/saudi-mobile-browser-test.mjs
+          - name: Checkout
+            artifact: checkout
+            script: scripts/checkout-readiness-browser-test.mjs
     env:
-      CONTENT_EDITOR_ARTIFACTS: .artifacts/content-editor
+      CONTENT_EDITOR_ARTIFACTS: .artifacts/${{ matrix.artifact }}
       DATABASE_URL: mongodb://127.0.0.1:27017/minberiaksa_ci
     steps:
       - uses: actions/checkout@v4
@@ -118,39 +150,14 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
-      # This hosted image already has Chromium runtime libraries; fixtures serve bundled Cairo.
-      # Keep the Playwright-pinned browser without unrelated apt/font upgrades.
       - run: npx playwright install chromium
-      - run: npm run test:content-editors:browser
-      - name: Major projects, private previews and live ticker
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/major-projects-browser-test.mjs
-      - name: Inbox media playback and download
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/inbox-media-browser-test.mjs
-      - name: Inbox microphone with production permission headers
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/inbox-permissions-browser-test.mjs
-      - name: Public programme and course playback
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/public-media-browser-test.mjs
-      - name: Dashboard donation, communication and analytics flows
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/dashboard-followup-browser-test.mjs
-      - name: Operations editors, gallery, cart, Search and renewal readiness
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/operations-review-browser-test.mjs
-      - name: Currency isolation, campaign scheduling and Saudi routing fixtures
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/saudi-mobile-browser-test.mjs
-      - name: Checkout validation, privacy and gateway handoff
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/checkout-readiness-browser-test.mjs
+      - name: Run read-only browser fixtures
+        run: node --import tsx ${{ matrix.script }}
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: content-editor-browser-fixtures
-          path: .artifacts/content-editor/
+          name: browser-${{ matrix.artifact }}
+          path: .artifacts/
           retention-days: 7
 
   e2e:
