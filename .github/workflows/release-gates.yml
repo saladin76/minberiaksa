@@ -3,16 +3,18 @@ name: Release gates
 # The checks that must pass before a change can ship. Each one is a separate job so a failure names
 # itself in the PR list rather than hiding behind "build failed".
 #
-# `next build` is deliberately NOT run here. It needs the full environment (database, provider
-# credentials, blob token) and Vercel already runs it on every push; duplicating it in CI would either
-# need those secrets or give a false green. What CI owns is everything that can be judged from the
-# source alone.
+# The fixture build below has no production credentials and performs no live payment or message.
+# Passing it verifies compilation and public styles; VPS activation and provider acceptance are
+# separate release checks.
 
 on:
   push:
     branches: [main, master]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: release-gates-${{ github.ref }}
@@ -138,6 +140,9 @@ jobs:
       - name: Operations editors, gallery, cart, Search and renewal readiness
         if: ${{ !cancelled() }}
         run: node --import tsx scripts/operations-review-browser-test.mjs
+      - name: Currency isolation, campaign scheduling and Saudi routing fixtures
+        if: ${{ !cancelled() }}
+        run: node --import tsx scripts/saudi-mobile-browser-test.mjs
       - name: Checkout validation, privacy and gateway handoff
         if: ${{ !cancelled() }}
         run: node --import tsx scripts/checkout-readiness-browser-test.mjs
@@ -189,4 +194,38 @@ jobs:
         with:
           name: playwright-report
           path: e2e/.artifacts/
+          retention-days: 7
+
+  fixture-build:
+    name: Production build and public style fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      DATABASE_URL: mongodb://127.0.0.1:27018/minberi_fixture?serverSelectionTimeoutMS=500&connectTimeoutMS=500
+      GOOGLE_CLIENT_ID: fixture-client
+      GOOGLE_CLIENT_SECRET: fixture-secret
+      NEXTAUTH_SECRET: fixture-auth-build-secret
+      NEXTAUTH_URL: http://127.0.0.1:3106
+      STRIPE_SECRET_KEY: sk_test_fixture_no_network
+      CONTENT_EDITOR_ARTIFACTS: .artifacts/public-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - run: npm run preflight:release-metadata
+      # Deliberately bypass the package build's post-build production index writes.
+      - run: npx --no-install next build
+      - run: npx playwright install chromium
+      - run: node --import tsx scripts/public-style-build-test.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-build-fixtures
+          path: .artifacts/public-build/
           retention-days: 7
