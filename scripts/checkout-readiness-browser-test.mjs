@@ -16,11 +16,13 @@ import {NextIntlClientProvider} from "next-intl";
 import DonationDialog from "./components/DonationDialog";
 import CheckoutPage from "./components/minbar/checkout/CheckoutPage";
 import {PayForCardForm} from "./components/PayForCardForm";
+import {submitGatewayForm} from "./lib/minbar/checkout";
+window.fixtureResult=submitGatewayForm;
 import {writeCart} from "./lib/minbar/cart";
 import ar from "./i18n/messages/ar.json";import en from "./i18n/messages/en.json";import tr from "./i18n/messages/tr.json";
 const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
-writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:"USD"}]);
+writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:new URLSearchParams(location.search).get("currency")||"USD"}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
 createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={null} defaultCountry="tr"/><Legacy/></>}</NextIntlClientProvider>);`;
 const mocks = {
@@ -35,10 +37,10 @@ const mocks = {
   "next/navigation": 'export function useParams(){return {locale:new URLSearchParams(location.search).get("lang")||"en"}} export function useRouter(){return {push(url){document.getElementById("navigation").textContent=url}}}',
   "next-auth/react": 'export function useSession(){return {data:new URLSearchParams(location.search).has("signed")?{user:{id:"fixture-user"}}:null}} export function signIn(){}',
   "@/hooks/useQuietFloatingButtons": 'export function useQuietFloatingButtons(){}',
-  "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return {currency:"USD"}}',
+  "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return {currency:new URLSearchParams(location.search).get("currency")||"USD"}}',
   "@/hooks/useDonationAmount": 'export function useDonationAmount(){return {lineTooSmall:()=>false,minLabel:"$1"}} export function useHealLegacyRows(){}',
   "@/hooks/useReferralCode": 'export function useReferralCode(){return ()=>null}',
-  "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}} export function getCachedGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}}',
+  "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:new URLSearchParams(location.search).has("payfor"),albarakaUseOOS:new URLSearchParams(location.search).has("oos"),albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}} export function getCachedGlobalSettings(){return {mainGateway:"ALBARAKA",payforEnabled:new URLSearchParams(location.search).has("payfor"),albarakaUseOOS:new URLSearchParams(location.search).has("oos"),albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}}',
   "@/lib/stripe-client": 'export function getStripePromise(){return null}',
   "@stripe/react-stripe-js": 'export function Elements({children}){return children}',
   "@/components/StripePaymentStep": 'import React from "react";export const StripePaymentStep=React.forwardRef(function Step(){return null})',
@@ -88,7 +90,7 @@ try {
    const submit=page.locator(".pay-form button[type=submit]");
    const before=requests.length;
    assert.equal(await page.locator('input[name="albaraka-verification"]:checked').count(),0);
-   assert.equal(await submit.isDisabled(),true);
+   assert.equal(await submit.isDisabled(),false,"missing fields remain actionable so validation can explain them");
    assert.equal(requests.length,before);
    const mode=width===390?"2D":"3D";
    await page.locator('#albaraka-'+mode.toLowerCase()).check();
@@ -113,7 +115,7 @@ try {
    await page.locator("#checkout-cardExpiry").fill("1239");await checkField("cardCvc");
    await page.locator("#checkout-cardCvc").fill("123");
    assert.equal(await page.locator("#checkout-cardCvc").getAttribute("type"),"password");
-   assert.equal((await page.locator(".pay-card-preview .rccs__cvc").textContent()).includes("123"),false);
+   assert.equal((await page.locator(".pay-card-preview").textContent()).includes("123"),false);
    assert.ok(await page.locator(".pay-card-preview").evaluate(node=>node.closest('[data-clarity-mask="True"]')!==null));
    assert.equal(await page.locator("#card-fields [autocomplete^=cc-]").evaluateAll(nodes=>nodes.every(node=>node.closest('[data-clarity-mask="True"]'))),true);
    assert.equal(await page.locator("#legacy .rccs").evaluate(node=>!!node.closest('[data-clarity-mask="True"]')),true);checks++;
@@ -160,8 +162,23 @@ try {
  await page.locator("#albaraka-2d").check();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
  for(const frequency of ["daily","monthly","friday"]){
   const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=ar&frequency="+frequency);await page.locator("#checkout-cardNumber").waitFor();
-  assert.equal(await page.locator('input[name="albaraka-verification"]').count(),0,"recurring checkout must hide 2D/3D options");checks++;await page.close();
+  assert.equal(await page.locator('input[name="albaraka-verification"]').count(),1,"recurring checkout explains its fixed 2D route");assert.equal(await page.locator("#albaraka-2d").isChecked(),true);assert.equal(await page.locator("#albaraka-2d").isDisabled(),true);checks++;await page.close();
  }
+ // TRY keeps PayFor 3D; switching an OOS-enabled Albaraka checkout to 2D must collect the card locally.
+ for (const query of ["lang=tr&currency=TRY&payfor=1", "lang=tr&oos=1"]) {
+  const page=await browser.newPage({viewport:{width:390,height:900}});await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?"+query);
+  if(query.includes("payfor")) {
+   await page.locator("#checkout-cardNumber").waitFor();assert.equal(await page.locator("#albaraka-3d").isChecked(),true);assert.equal(await page.locator("#albaraka-3d").isDisabled(),true);assert.equal(await page.locator("#albaraka-2d").count(),0);
+  } else {
+   await page.locator("#albaraka-2d").waitFor();assert.equal(await page.locator("#checkout-cardNumber").count(),0);await page.locator("#albaraka-2d").check();await page.locator("#checkout-cardNumber").waitFor();await page.locator("#albaraka-3d").check();assert.equal(await page.locator("#checkout-cardNumber").count(),0);
+  }
+  checks++;await page.close();
+ }
+ const resultPage=await browser.newPage();await resultPage.route("https://**/*",route=>route.abort());await resultPage.goto(origin+"/?lang=tr");
+ const resultPath="/api/albaraka/2d/result?donationId=fixture&locale=tr&t=fixture-token";
+ await resultPage.route("**/api/albaraka/2d/result?**",route=>route.fulfill({contentType:"text/html",body:"Fixture result"}));
+ await resultPage.evaluate(path=>window.fixtureResult({actionUrl:location.origin+path,method:"GET",fields:{}},{Pan:"4111111111111111"}),resultPath);
+ await resultPage.waitForURL(origin+resultPath);assert.equal(new URL(resultPage.url()).searchParams.get("t"),"fixture-token");checks++;await resultPage.close();
  assert.deepEqual(errors,[]);
  await writeFile(path.join(out,"verification.json"),JSON.stringify({checks,locales:["ar","en","tr"],widths:[390,1440],pageErrors:errors,scope:"Real client components with synthetic HTTP/auth/settings and intercepted gateway navigation. No payment, production database, analytics upload or message."},null,2));
  console.log(`Checkout readiness browser checks: ${checks} passed.`);

@@ -1,3 +1,4 @@
+import * as cardTrace from "../../lib/donations/card-last-four";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -80,6 +81,8 @@ test("bank request currency conversion remains an attempted amount and never bec
 function routeHarness({ session = { user: { role: "ADMIN" } } as unknown, allowed = true, row = donation as typeof donation | null } = {}) {
   const reads: string[] = [];
   const dependencies: Record<string, unknown> = {
+    "@/lib/donations/card-last-four": cardTrace,
+    "@/lib/card-crypto": { decryptCard: () => { throw new Error("unexpected fixture decryption"); } },
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number; headers?: Record<string, string> }) => ({ body, status: options?.status ?? 200, headers: options?.headers }) } },
     "next-auth": { getServerSession: async () => session },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
@@ -90,7 +93,7 @@ function routeHarness({ session = { user: { role: "ADMIN" } } as unknown, allowe
     "@/lib/paypal": { isPayPalConfigured: () => true, getPayPalOrder: async () => { reads.push("paypal-order-get"); return order("APPROVED"); } },
     "@/lib/prisma": { prisma: { donation: new Proxy({ findUnique: async () => { reads.push("donation-get"); return row; } }, { get(target, key) { assert.equal(key, "findUnique", "Gateway inspection attempted a database mutation"); return target.findUnique; } }) } },
   };
-  type Reply = { status: number; headers?: Record<string, string>; body: { paypalInspection?: { outcome: string }; paidAmount: number | null; requestedGatewayAmount: number | null } };
+  type Reply = { status: number; headers?: Record<string, string>; body: { refs: {cardLast4: string | null}; paypalInspection?: { outcome: string }; paidAmount: number | null; requestedGatewayAmount: number | null } };
   const loaded = { exports: {} as { GET(request: unknown, context: { params: Promise<{ id: string }> }): Promise<Reply> } };
   const code = ts.transpileModule(readFileSync("app/api/admin/donations/[id]/gateway/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(code).runInNewContext({ exports: loaded.exports, module: loaded, console, Date, require: (name: string) => { assert.ok(name in dependencies, `Unexpected dependency ${name}`); return dependencies[name]; } });
@@ -113,4 +116,9 @@ test("gateway permissions and reference validation prevent every database and pr
   const missing = routeHarness({ row: null }); assert.equal((await missing.get()).status, 404); assert.deepEqual(missing.reads, ["donation-get"]);
   const confirmed = routeHarness({ row: { ...donation, paidAt: new Date() } as unknown as typeof donation });
   assert.equal((await confirmed.get()).status, 200); assert.deepEqual(confirmed.reads, ["donation-get"]);
+});
+
+test("authorized donation inspection exposes last four digits without the underlying card number", async () => {
+ const reply = await routeHarness({ row: { ...donation, providerRaw: { cardSummary: {last4:"4242"} }, cardDetails:{cardNumber:"4242424242424242"} } as unknown as typeof donation }).get();
+ assert.equal(reply.body.refs.cardLast4,"4242");assert.doesNotMatch(JSON.stringify(reply.body),/4242424242424242/);
 });

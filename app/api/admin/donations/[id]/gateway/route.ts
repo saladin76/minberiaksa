@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
+import { donationCardLastFour } from "@/lib/donations/card-last-four";
+import { decryptCard } from "@/lib/card-crypto";
 import { flattenGatewayRaw } from "@/lib/donations/gateway-raw";
 import { getPayPalOrder, isPayPalConfigured } from "@/lib/paypal";
 import { gatewayDisplayAmounts, inspectPayPalCheckout } from "@/lib/donations/gateway-diagnostics";
@@ -50,10 +52,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       providerHostRefNum: true,
       providerErrorMessage: true,
       providerRaw: true,
+      cardDetails: { select: { cardNumber: true } },
       paypalOrderId: true,
       paypalCaptureId: true,
       billingReason: true,
-      subscription: { select: { id: true, stripeSubscriptionId: true, payforMaskedPan: true, frequency: true } },
+      subscription: { select: { id: true, stripeSubscriptionId: true, payforMaskedPan: true, frequency: true, paymentCard: { select: { cardNumber: true } } } },
     },
   });
   if (!donation) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -90,6 +93,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       paypalCaptureId: donation.paypalCaptureId,
       stripeSubscriptionId: donation.subscription?.stripeSubscriptionId ?? null,
       subscriptionId: donation.subscription?.id ?? null,
+      cardLast4: donationCardLastFour({ providerRaw: donation.providerRaw, legacyPan: donation.cardDetails?.cardNumber, maskedPan: donation.subscription?.payforMaskedPan, encryptedPan: donation.subscription?.paymentCard?.cardNumber }, decryptCard),
       maskedPan: donation.subscription?.payforMaskedPan ?? null,
     },
     txn: {

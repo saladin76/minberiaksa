@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import crypto from "node:crypto";
 import ts from "typescript";
+import { convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd } from "../../lib/exchange/convert";
 import * as bank from "../../lib/albaraka";
 import * as nulls from "../../lib/donations/mongo-null";
 import { albarakaCheckoutMode } from "../../lib/donations/albaraka-checkout-mode";
@@ -26,10 +27,10 @@ function matches(row: Record<string, unknown>, filter: Record<string, unknown>):
   });
 }
 
-function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
+function fixture(options: { fresh?: boolean; recurring?: boolean; currency?: string; totalAmount?: number; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
   const state: Record<string, unknown> = {
     id, donorId: "222222222222222222222222", status: "PAID", paidAt: null, accessToken: "test-guest-token",
-    currency: "USD", totalAmount: 25, locale: "ar", provider: "ALBARAKA",
+    currency: options.currency ?? "USD", totalAmount: options.totalAmount ?? 25, locale: "ar", provider: "ALBARAKA",
     providerOrderId: options.fresh ? null : order, providerTxnResult: options.fresh ? null : "Processing",
     providerRaw: options.fresh ? null : { albarakaRequest: { orderId: order, amount: 125000, currencyCode: "TL", transactionType: "Sale", mode: "3D" } },
     subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: "444444444444444444444444" } : null,
@@ -78,7 +79,7 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "app
     "@/lib/payment-gateway": { parseMainGateway: (value: string) => value },
     "@/lib/security/card-attempts": { checkCardAttempt: async () => ({ ok: true }) },
     "@/lib/exchange/convert": { normalizeCurrencyCode: (currency: string) => currency },
-    "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => ({}), convertAmountInCurrencyToTry: (amount: number) => amount * 50, convertAmountInCurrencyToUsd: (amount: number) => amount },
+    "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => ({USD:1,TRY:50}), convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd },
     "@/lib/card-crypto": { encryptCard: () => "encrypted-test", decryptCard: () => pan, detectCardType: () => "visa" },
     "@/lib/donations/albaraka-settlement": {
       async settleAlbarakaDonation() { calls.settles++; if (options.settlementFails) throw new Error("simulated database failure"); state.paidAt = new Date(); state.providerTxnResult = "Success"; return true; },
@@ -138,6 +139,8 @@ test("one-time 3D initiation returns a signed bank form without a Sale or storin
 
 for (const mode of [undefined, "2D"]) test(`2D initiation preserves the existing terminal, sale contract and settlement (${String(mode)})`, async () => {
   const f = fixture({ fresh: true }); const response = await f.initiate(mode); const result = await response.json();
+  assert.equal(result.method, "GET", "settled 2D checkout navigates to the local result with GET");
+  assert.deepEqual((f.state.providerRaw as unknown as { cardSummary: unknown }).cardSummary, { last4: "4242", brand: "visa" });
   assert.equal(response.status, 200); assert.match(result.actionUrl, /\/api\/albaraka\/2d\/result/);
   assert.equal(f.calls.sales, 1); assert.equal(f.calls.settles, 1); assert.equal(f.calls.terminals[0], twoCfg.terminalNo);
   const body = f.calls.saleBodies[0]; assert.match(String(body.OrderId), /^[A-F0-9]{24}$/);
@@ -208,4 +211,11 @@ test("a recorded bank decline retains code59 without successful settlement", asy
 test("a database failure after bank approval cannot mark the payment declined or recapture", async () => {
   const f = fixture({ settlementFails: true }); await f.callback(); await f.callback();
   assert.equal(f.calls.sales, 1); assert.equal(f.calls.failures, 0); assert.equal(f.state.paidAt, null); assert.equal(f.state.providerTxnResult, "Capturing3D");
+});
+
+test("one Turkish lira remains 100 minor units and uses the same safe result handoff", async () => {
+  const f = fixture({ fresh: true, recurring: true, currency: "TRY", totalAmount: 1 });
+  const response = await f.initiate("2D"); const result = await response.json();
+  assert.equal(response.status, 200); assert.equal(result.method, "GET");
+  assert.equal(String(f.calls.saleBodies[0].Amount), "100"); assert.equal(f.calls.saleBodies[0].CurrencyCode, "TL");
 });

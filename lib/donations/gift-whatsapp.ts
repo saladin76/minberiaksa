@@ -29,7 +29,7 @@ export async function sendGiftWhatsapp(input: {
   let mapping: Awaited<ReturnType<typeof resolveMetaTemplateMapping>> = null;
   if (!window.open) {
     for (const name of input.templateName ? [input.templateName] : [GIFT_WHATSAPP_SUCCESSOR, GIFT_WHATSAPP_TEMPLATE]) {
-      const candidate = await prisma.whatsappTemplate.findFirst({ where: { name, OR: [{ status: { not: "ARCHIVED" } }, { status: null }, { status: { isSet: false } }] }, select: { id: true, name: true } });
+      const candidate = await prisma.whatsappTemplate.findFirst({ where: { name, OR: [{ status: { not: "ARCHIVED" } }, { status: null }, { status: { isSet: false } }] }, select: { id: true, name: true, provider: true, variables: true, header: true, translations: true } });
       if (!candidate) continue;
       template ??= candidate;
       const ready = await resolveMetaTemplateMapping(candidate, input.locale, input.sender.businessAccountId, { exactLanguage: true });

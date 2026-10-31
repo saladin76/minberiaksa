@@ -99,6 +99,7 @@ export interface CreatedDonation {
 /** Everything a bank's 3-D Secure page needs, as the initiate route returns it. */
 export interface GatewayForm {
   actionUrl: string;
+  method?: "GET" | "POST";
   fields: Record<string, string>;
 }
 
@@ -364,6 +365,7 @@ export async function initiateBankPayment(
   card?: { number: string; expiry: string; cvv: string; holder: string },
   securityMode?: "2D" | "3D",
   savedCardId?: string,
+  cardLast4?: string,
 ): Promise<GatewayForm> {
   const endpoint = gateway === "ALBARAKA" ? "/api/albaraka/3d/initiate" : "/api/payfor/3dpay/initiate";
 
@@ -374,6 +376,7 @@ export async function initiateBankPayment(
       donationId,
       locale,
       ...(savedCardId ? { savedCardId } : {}),
+      ...(/^\d{4}$/.test(cardLast4 ?? "") ? { cardLast4 } : {}),
       ...(gateway === "ALBARAKA" && card ? { card } : {}),
       ...(gateway === "ALBARAKA" && securityMode ? { securityMode } : {}),
     }),
@@ -385,7 +388,7 @@ export async function initiateBankPayment(
     throw new OrderRejectedError(payload?.error || "gateway-failed", response.status, payload?.code);
   }
 
-  return { actionUrl: payload.actionUrl, fields: payload.fields ?? {} };
+  return { actionUrl: payload.actionUrl, method: payload.method === "GET" ? "GET" : "POST", fields: payload.fields ?? {} };
 }
 
 /**
@@ -396,6 +399,12 @@ export async function initiateBankPayment(
  * nothing there.
  */
 export function submitGatewayForm(form: GatewayForm, browserFields: Record<string, string> = {}): void {
+  if (form.method === "GET") {
+    const target = new URL(form.actionUrl, window.location.origin);
+    if (target.origin !== window.location.origin || !(target.pathname === "/api/albaraka/2d/result" || /\/(success|donation-failed|payment-processing)(\/|$)/.test(target.pathname))) throw new Error("invalid-payment-result-url");
+    window.location.assign(target.href);
+    return;
+  }
   const element = document.createElement("form");
   element.setAttribute("data-clarity-mask", "True");
   element.setAttribute("data-hj-suppress", "");

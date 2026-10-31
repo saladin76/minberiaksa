@@ -53,8 +53,7 @@ import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
-import Cards, { type Focused } from "react-credit-cards-2";
-import "react-credit-cards-2/dist/es/styles-compiled.css";
+import { CardPreview } from "./CardPreview";
 import { PhoneInput } from "react-international-phone";
 import "react-international-phone/style.css";
 
@@ -125,8 +124,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
   const [cardName, setCardName] = useState("");
-  /* Which card field has focus  the card preview highlights it and flips for the CVC. */
-  const [cardFocus, setCardFocus] = useState<Focused | undefined>(undefined);
 
   /* Stripe's own card fields, when Stripe is the rail. The card never touches
      this origin: the step confirms the intent in the browser, and the handle
@@ -286,7 +283,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      Not for a plan: the scheduler charges the card the donor authorised, so it
      has to pass through this origin to be stored. A recurring basket always
      collects the card here, whatever the OOS switch says. */
-  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true && !planFrequency;
+  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true && !planFrequency && verificationMode !== "2D";
 
   /* Albaraka signs everything with ALBARAKA_ENC_KEY. Without it the initiate
      route refuses, and the donor would only find out after an order had been
@@ -511,6 +508,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
           : undefined,
         gateway === "ALBARAKA" ? (planFrequency ? "2D" : verificationMode || "2D") : undefined,
         cardToUse || undefined,
+        cardToUse ? savedCards.find(card => card.id === cardToUse)?.last4 : cardNumber.replace(/\D/g, "").slice(-4),
       );
 
       const browserFields: Record<string, string> =
@@ -890,19 +888,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                 <div style={{ display: "grid", gap: 14 }}>
                   <SavedCardPicker cards={savedCards} value={selectedCardId} disabled={submitting} onChange={id => { cardInputTouched.current = true; setSelectedCardId(id); setCardCvc(""); setInvalidField(null); }} />
                   {/* The live card, filling in as the donor types and flipping
-                      for the CVC; the brand is detected from the number. Latin-
+                      the secure fields; the brand is detected from the number. Latin-
                       script data: always LTR. */}
                   {!selectedCardId && <div data-clarity-mask="True" data-hj-suppress="" data-private="" className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
-                    <Cards
-                      number={cardNumber}
-                      expiry={cardExpiry.replace("/", "")}
-                      cvc={"•".repeat(cardCvc.length)}
-                      name={cardName || `${firstName} ${lastName}`.trim()}
-                      focused={cardFocus}
-                      placeholders={{ name: "" }}
-                      // The library's own label is the English "valid thru" in every language.
-                      locale={{ valid: t("cardExpiry") }}
-                    />
+                    <CardPreview number={cardNumber} expiry={cardExpiry} name={cardName || `${firstName} ${lastName}`.trim()} expiryLabel={t("cardExpiry")} />
                   </div>}
                   <div data-clarity-mask="True" data-hj-suppress="" data-private="" id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
                     {!selectedCardId && <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
@@ -911,7 +900,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         {...fieldProps("cardNumber")}
                         value={cardNumber}
                         onChange={(e) => { cardInputTouched.current = true; setCardNumber(digitsOnly(e.target.value, 19)); }}
-                        onFocus={() => setCardFocus("number")}
                         inputMode="numeric"
                         autoComplete="cc-number"
                         dir="ltr"
@@ -931,7 +919,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                           const digits = digitsOnly(e.target.value, 4);
                           setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
                         }}
-                        onFocus={() => setCardFocus("expiry")}
                         inputMode="numeric"
                         autoComplete="cc-exp"
                         dir="ltr"
@@ -948,8 +935,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         type="password"
                         value={cardCvc}
                         onChange={(e) => { cardInputTouched.current = true; setCardCvc(digitsOnly(e.target.value, 4)); }}
-                        onFocus={() => setCardFocus("cvc")}
-                        onBlur={() => setCardFocus(undefined)}
                         inputMode="numeric"
                         autoComplete="cc-csc"
                         dir="ltr"
@@ -961,7 +946,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                     </label>
                     {!selectedCardId && <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardHolder")}</span>
-                      <input value={cardName} onChange={(e) => { cardInputTouched.current = true; setCardName(e.target.value); }} onFocus={() => setCardFocus("name")} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
+                      <input value={cardName} onChange={(e) => { cardInputTouched.current = true; setCardName(e.target.value); }} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
                     </label>}
                   </div>
                   {!selectedCardId && session?.user?.id && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={rememberCard} onChange={event => setRememberCard(event.target.checked)} />{tCards("rememberCard")}</label>}
@@ -975,7 +960,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
-            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : null}
+            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : method === "card" && (gateway === "PAYFOR" || (gateway === "ALBARAKA" && planFrequency)) ? <AlbarakaVerificationChoice value={gateway === "PAYFOR" ? "3D" : "2D"} onChange={() => {}} fixed /> : null}
 
             {belowMinimum ? (
               <div role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>

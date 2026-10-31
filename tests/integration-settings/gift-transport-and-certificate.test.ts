@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+import ts from "typescript";
+import { templateLocaleHeader } from "../../lib/communication/template-locale-media";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fixtureModule } from "./gift-delivery-fixture";
@@ -10,10 +14,24 @@ import { SUPPORTED_LOCALES } from "../../lib/locales";
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
 import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
 
-function transport(options: { open?: boolean; approved?: boolean; blocked?: boolean; uncertain?: boolean; legacyOnly?: boolean } = {}) {
+// Exercise the actual exported mapper and its binding helper, with only the
+// database-backed readiness reader replaced. Its provider guard is real.
+function realMapping() {
+  const source = ts.createSourceFile("dispatcher.ts", readFileSync("lib/communication/automatic-message-dispatcher.ts", "utf8"), ts.ScriptTarget.Latest, true);
+  const functions = source.statements.filter(node => ts.isFunctionDeclaration(node) && ["resolveMetaTemplateMapping", "variableBindingInfo"].includes(node.name?.text ?? "")).map(node => node.getFullText(source)).join("\n");
+  const loaded = { exports: {} as { resolveMetaTemplateMapping: (...args: unknown[]) => Promise<unknown> } };
+  const code = ts.transpileModule(functions, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  new vm.Script(code).runInNewContext({ module: loaded, exports: loaded.exports, templateLocaleHeader, require: (name: string) => {
+    assert.equal(name, "./whatsapp-template-sync");
+    return { getTemplateReadiness: async () => ({ ready: true, providerTemplateName: "gift-approved", languageCode: "tr", locale: "tr", componentsSchema: [] }) };
+  } });
+  return loaded.exports.resolveMetaTemplateMapping;
+}
+
+function transport(options: { open?: boolean; approved?: boolean; blocked?: boolean; uncertain?: boolean; legacyOnly?: boolean; realMapper?: boolean } = {}) {
   const calls = { text: 0, template: 0, built: 0, lookup: [] as string[], mapping: [] as unknown[], statuses: [] as string[] };
   const service = fixtureModule<{ sendGiftWhatsapp: (input: unknown) => Promise<{ ok: boolean; reason?: string; uncertain?: boolean }> }>("lib/donations/gift-whatsapp.ts", {
-    "server-only": {}, "@/lib/prisma": { prisma: { donorCommunicationProfile: { findMany: async () => options.blocked ? [{ doNotContact: true }] : [] }, whatsappTemplate: { findFirst: async (query: { where: { name: string } }) => { calls.lookup.push(query.where.name); return options.approved ? { id: "template", name: query.where.name } : null; } } } },
+    "server-only": {}, "@/lib/prisma": { prisma: { donorCommunicationProfile: { findMany: async () => options.blocked ? [{ doNotContact: true }] : [] }, whatsappTemplate: { findFirst: async (query: { where: { name: string }; select: Record<string, boolean> }) => { calls.lookup.push(query.where.name); if (!options.approved) return null; const row = { id: "template", name: query.where.name, provider: "META_WHATSAPP", variables: [], header: { type: "NONE" }, translations: {} }; return options.realMapper ? Object.fromEntries(Object.entries(row).filter(([key]) => query.select[key])) : { id: row.id, name: row.name }; } } } },
     "./gift-template-draft": giftDraft,
     "./gift-order": { normalizeGiftPhone },
     "@/lib/communication/delivery-log-service": { createDeliveryRecord: async () => ({ ok: true, data: { id: "archive" } }), markDeliveryStatus: async (_id: string, status: string) => { calls.statuses.push(status); return { ok: true }; } },
@@ -21,7 +39,7 @@ function transport(options: { open?: boolean; approved?: boolean; blocked?: bool
     "@/lib/communication/conversation-reply-service": { replyWindowFor: async () => ({ open: options.open === true }) },
     "@/lib/communication/phone": { phoneMatchVariants: (p: string) => [p] },
     "@/lib/communication/campaign-audience-accounting": { isWhatsappExplicitlyUnsubscribed: () => false },
-    "@/lib/communication/automatic-message-dispatcher": { resolveMetaTemplateMapping: async (...args: unknown[]) => { calls.mapping.push(args); const candidate = args[0] as { name: string }; return options.legacyOnly && candidate.name === giftDraft.GIFT_WHATSAPP_SUCCESSOR ? null : { name: candidate.name, language: "tr", componentsSchema: [] }; } },
+    "@/lib/communication/automatic-message-dispatcher": { resolveMetaTemplateMapping: async (...args: unknown[]) => { calls.mapping.push(args); if (options.realMapper) return realMapping()(...args); const candidate = args[0] as { name: string }; return options.legacyOnly && candidate.name === giftDraft.GIFT_WHATSAPP_SUCCESSOR ? null : { name: candidate.name, language: "tr", componentsSchema: [] }; } },
     "@/lib/communication/providers/meta-whatsapp/parameters": { buildMetaComponents: () => { calls.built++; return { ok: true, components: [] }; } },
     "@/lib/communication/providers/meta-whatsapp/messages": {
       sendTextMessage: async () => { calls.text++; return { ok: true, providerMessageId: "text-accepted" }; },
@@ -119,4 +137,11 @@ for (const locale of SUPPORTED_LOCALES) test(`${locale}: the gift draft contains
   assert.ok(successor.footerText.length <= 60);
   const successorSchema = buildStandardMetaComponents(successor);
   assert.equal(successorSchema.bindings.length, 6);
+});
+
+test("gift transport supplies provider identity and bindings to the real approved-template mapper", async () => {
+  const f = transport({ approved: true, realMapper: true });
+  assert.equal((await f.send()).ok, true);
+  assert.equal(f.calls.template, 1);
+  assert.equal(f.calls.text, 0);
 });

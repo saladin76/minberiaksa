@@ -9263,5 +9263,6 @@
   "أُعدت نسخة مستقلة للمراجعة: {0} رابط تبرع بتتبع الحملة، و{1} رابط بقي كما هو. لم تُحفظ أو تُرسل إلى Meta بعد.": "A separate copy is ready for review: {0} campaign-tracked donation links; {1} links unchanged. It has not been saved or submitted to Meta.",
   "قياس إيرادات الحملات": "Campaign revenue tracking",
   "جهّز نسخة مستقلة بأزرار تبرع تحمل معرّف كل حملة تلقائيًا. تبقى النسخة الأصلية والحملات السابقة كما هي. راجع كل لغة ثم احفظ النسخة وأرسلها إلى Meta للاعتماد قبل اختيارها في حملة جديدة.": "Prepare a separate copy with donation buttons that automatically carry each campaign ID. The original template and previous campaigns stay intact. Review every language, then save and submit the copy to Meta for approval before selecting it in a new campaign.",
-  "إعداد نسخة بتتبع إيرادات الحملات": "Prepare a copy with campaign revenue tracking"
+  "إعداد نسخة بتتبع إيرادات الحملات": "Prepare a copy with campaign revenue tracking",
+  "آخر أربعة أرقام للبطاقة": "Last four card digits"
 }

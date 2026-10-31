@@ -53,3 +53,10 @@ test("Arabic delivery uses Cairo with valid escaped CSS and preserves unrelated 
   assert.equal(applyAppFont(result, "ar"), result, "re-rendering is idempotent");
   assert.ok(applyAppFont(input, "en").includes("font-family:&quot;Arial&quot;,sans-serif"));
 });
+
+test("automatic email logo class repairs the embedded logo without changing other embedded pictures", () => {
+  const html = '<html class="mia-auto-mail"><img class="logo" alt="" src="data:image/png;base64,ZmFrZQ=="><img alt="Project" src="data:image/png;base64,a2VlcA=="></html>';
+  const result = normalizeEmailAssets(html);
+  assert.ok(result.includes("https://minberiaksa.org/minbar/assets/logo-horizontal.png"));
+  assert.ok(result.includes("data:image/png;base64,a2VlcA=="));
+});

@@ -3,12 +3,12 @@ import { useTranslations } from "next-intl";
 import type { AlbarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
 
 /** Adds one compact field without moving or replacing any checkout inputs. */
-export function AlbarakaVerificationChoice({ value, onChange, disabled, invalid = false }: { value: AlbarakaCheckoutMode | null; onChange: (value: AlbarakaCheckoutMode) => void; disabled?: boolean; invalid?: boolean }) {
+export function AlbarakaVerificationChoice({ value, onChange, disabled, invalid = false, fixed = false }: { value: AlbarakaCheckoutMode | null; onChange: (value: AlbarakaCheckoutMode) => void; disabled?: boolean; invalid?: boolean; fixed?: boolean }) {
   const t = useTranslations("cart");
-  return <fieldset disabled={disabled} className="ab-verification" data-choice={value || ""} data-invalid={invalid || undefined} aria-invalid={invalid || undefined} aria-describedby={!value ? "albaraka-verification-hint" : undefined}>
-    <legend>{t("verificationChoice")}</legend>
+  return <fieldset disabled={disabled || fixed} className="ab-verification" data-choice={value || ""} data-invalid={invalid || undefined} aria-invalid={invalid || undefined} aria-describedby={!value ? "albaraka-verification-hint" : undefined}>
+    <legend>{t(fixed ? "paymentMethod" : "verificationChoice")}</legend>
     <div className="ab-verification-options">
-      {(["2D", "3D"] as const).map(mode => <label key={mode} className={`ab-verification-option${mode === "2D" ? " ab-verification-direct" : ""}`}>
+      {(["2D", "3D"] as const).filter(mode => !fixed || mode === value).map(mode => <label key={mode} className={`ab-verification-option${mode === "2D" ? " ab-verification-direct" : ""}`}>
         <input id={`albaraka-${mode.toLowerCase()}`} type="radio" name="albaraka-verification" value={mode} required checked={value === mode} onChange={() => onChange(mode)} />
         <span className="ab-verification-copy"><span className="ab-verification-title"><strong>{t(mode === "2D" ? "verificationDirect" : "verificationSecure")}</strong><bdi>{mode}</bdi></span><small>{t(mode === "2D" ? "verificationDirectHelp" : "verificationSecureHelp")}</small></span>
       </label>)}

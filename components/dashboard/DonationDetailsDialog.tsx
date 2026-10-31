@@ -396,6 +396,7 @@ type GatewayDetails = {
     paypalCaptureId: string | null;
     stripeSubscriptionId: string | null;
     subscriptionId: string | null;
+    cardLast4?: string | null;
     maskedPan: string | null;
   };
   txn: { type: string | null; result: string | null; returnCode: string | null; errorMessage: string | null };
@@ -477,6 +478,7 @@ function gatewayReferences(d: GatewayDetails): RefRow[] {
       add(dt("رقم المرجع لدى البنك"), r.providerHostRefNum);
       add(dt("رمز الموافقة (AuthCode)"), r.providerAuthCode);
   }
+  add(dt("آخر أربعة أرقام للبطاقة"), r.cardLast4 ? `•••• ${r.cardLast4}` : null);
   add(dt("البطاقة (مقنّعة)"), r.maskedPan, dt("آخر أرقام البطاقة كما أرجعها البنك"));
   add(dt("رقم التبرع لدينا"), d.id, dt("يُرسل غالبًا للبوابة كرقم الطلب"));
   return rows;

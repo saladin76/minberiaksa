@@ -352,6 +352,7 @@ export async function POST(req: NextRequest) {
         // Snapshot of what we actually asked the bank to charge.
         providerRaw: {
           ...(typeof donation.providerRaw === "object" && donation.providerRaw ? (donation.providerRaw as object) : {}),
+          cardSummary: { last4: cardNo.slice(-4), brand: detectCardType(cardNo) },
           albarakaRequest: {
             merchantNo: cfg.merchantNo,
             terminalNo: cfg.terminalNo,
@@ -439,7 +440,7 @@ export async function POST(req: NextRequest) {
        pending for scheduled confirmation. */
     if (transportError || isAlbarakaTransportFailure(sale)) {
       const paid = await resolveUnknownOutcome(donation.id, orderId, cfg, transportError ?? sale);
-      return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid });
+      return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid });
     }
 
     const approved = isAlbarakaApproved(sale);
@@ -449,11 +450,11 @@ export async function POST(req: NextRequest) {
       const inquiry = await albarakaInquireSale(orderId, cfg);
       if (inquiry.state === "approved") {
         await settleAlbarakaDonation(donation.id, { ...inquiry.raw, AuthCode: inquiry.authCode }, { authenticationRecovery: "confirmed-original-sale" });
-        return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: true });
+        return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: true });
       }
       if (inquiry.state === "unknown") {
         await prisma.donation.updateMany({ where: donationWhereAll({ id: donation.id, providerOrderId: orderId }, donationFieldEmpty("paidAt")), data: { providerTxnResult: "PendingConfirmation", providerErrorMessage: "AUTHENTICATION_OUTCOME_UNCONFIRMED", reconciliationNextAt: new Date(Date.now() + 1_800_000) } });
-        return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: false });
+        return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: false });
       }
       const secureConfig = albarakaConfig();
       if (!plan && isAlbarakaConfigured(secureConfig)) {
@@ -464,6 +465,7 @@ export async function POST(req: NextRequest) {
         const changed = await prisma.donation.updateMany({ where: donationWhereAll({ id: donation.id, providerOrderId: orderId, providerTxnResult: "Processing" }, donationFieldEmpty("paidAt")), data: {
           providerOrderId: secureOrderId, providerTxnResult: "Processing", providerErrorMessage: null,
           providerRaw: { ...(typeof donation.providerRaw === "object" && donation.providerRaw ? donation.providerRaw as object : {}),
+            cardSummary: { last4: cardNo.slice(-4), brand: detectCardType(cardNo) },
             authenticationRecovery: { from: "2D", to: "3D", previousOrderId: orderId, reason: responseDescription, bankConfirmedNoSale: true },
             albarakaRequest: { orderId: secureOrderId, amount, currencyCode, merchantNo: secureConfig.merchantNo, terminalNo: secureConfig.terminalNo, transactionType: "Sale", mode: "3D", createdAt: new Date().toISOString() } } as Prisma.InputJsonValue,
         } });
@@ -499,7 +501,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: approved });
+    return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: approved });
   } catch (error) {
     console.error("Albaraka initiate error:", error);
     if (unsentClaim) {

@@ -24,6 +24,7 @@ async function toTRY(amount: number, fromCurrency: string): Promise<number> {
 }
 
 type InitiateBody = {
+  cardLast4?: string;
   donationId: string;
   locale?: string;
   /** Optional saved-card id. When provided, the server fills Pan/Expiry/CardHolderName
@@ -160,6 +161,7 @@ export async function POST(req: NextRequest) {
           ...(typeof donation.providerRaw === "object" && donation.providerRaw
             ? (donation.providerRaw as Record<string, unknown>)
             : {}),
+          ...(/^\d{4}$/.test(String(body.cardLast4 ?? "")) ? { cardSummary: { last4: body.cardLast4 } } : {}),
           payforRequest: {
             orderId,
             purchAmount,

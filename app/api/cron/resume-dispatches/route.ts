@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorizationValid } from "@/lib/communication/cron-auth";
+import { resumeApprovedGifts } from "@/lib/donations/resume-approved-gifts";
 import { resumeStaleDispatches } from "@/lib/events/resume-stale-dispatches";
 
 export const runtime = "nodejs";
@@ -13,7 +14,8 @@ export async function GET(request: NextRequest) {
   }
   try {
     const result = await resumeStaleDispatches();
-    return NextResponse.json({ ok: true, ...result });
+    const gifts = await resumeApprovedGifts();
+    return NextResponse.json({ ok: true, ...result, gifts });
   } catch (error) {
     console.error("[cron/resume-dispatches] failed:", error);
     return NextResponse.json({ ok: false, error: "run failed" }, { status: 500 });

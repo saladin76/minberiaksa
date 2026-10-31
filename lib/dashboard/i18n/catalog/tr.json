@@ -9255,5 +9255,6 @@
   "أُعدت نسخة مستقلة للمراجعة: {0} رابط تبرع بتتبع الحملة، و{1} رابط بقي كما هو. لم تُحفظ أو تُرسل إلى Meta بعد.": "İnceleme için ayrı bir kopya hazırlandı: kampanya takibi olan {0} bağış bağlantısı; değişmeyen {1} bağlantı. Henüz kaydedilmedi veya Meta’ya gönderilmedi.",
   "قياس إيرادات الحملات": "Kampanya gelir takibi",
   "جهّز نسخة مستقلة بأزرار تبرع تحمل معرّف كل حملة تلقائيًا. تبقى النسخة الأصلية والحملات السابقة كما هي. راجع كل لغة ثم احفظ النسخة وأرسلها إلى Meta للاعتماد قبل اختيارها في حملة جديدة.": "Her kampanyanın kimliğini otomatik taşıyan bağış düğmeleriyle ayrı bir kopya hazırlayın. Özgün şablon ve önceki kampanyalar korunur. Her dili inceleyin; yeni bir kampanyada seçmeden önce kopyayı kaydedip onay için Meta’ya gönderin.",
-  "إعداد نسخة بتتبع إيرادات الحملات": "Kampanya gelir takibi olan kopya hazırla"
+  "إعداد نسخة بتتبع إيرادات الحملات": "Kampanya gelir takibi olan kopya hazırla",
+  "آخر أربعة أرقام للبطاقة": "Kartın son dört hanesi"
 }

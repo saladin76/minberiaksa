@@ -73,7 +73,7 @@ import {
   getCurrencyCodeForLinks,
 } from "@/lib/currency-link";
 import { getDonationAttributionPayload } from "@/lib/attribution/client-payload";
-import { shouldSkipPopup } from "@/lib/in-app-browser";
+import { submitGatewayForm, type GatewayForm } from "@/lib/minbar/checkout";
 import { gatewayAnalyticsName, resolveGateway } from "@/lib/payment-gateway";
 import { useTranslations, useLocale } from "next-intl";
 import { useSession } from "next-auth/react";
@@ -325,8 +325,6 @@ const DonationDialog = ({
   const paymentInfoTrackedRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-  const payforPopupRef = useRef<Window | null>(null);
-  const payforPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [mounted, setMounted] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
   const [guestFirstName, setGuestFirstName] = useState("");
@@ -2159,6 +2157,7 @@ const DonationDialog = ({
               donationId,
               locale,
               savedCardId: selectedCardId ?? undefined,
+              cardLast4: newPan.length >= 4 ? newPan.slice(-4) : undefined,
               ...(useAlbaraka && useOwnCardForm
                 ? {
                     card: {
@@ -2173,24 +2172,7 @@ const DonationDialog = ({
                 : {}),
             },
           );
-          const { actionUrl, fields } = init.data as {
-            actionUrl: string;
-            fields: Record<string, string>;
-          };
-
-          const form = document.createElement("form");
-          form.setAttribute("data-clarity-mask", "True");
-          form.setAttribute("data-hj-suppress", "");
-          form.setAttribute("data-private", "");
-          form.method = "POST";
-          form.action = actionUrl;
-          Object.entries(fields).forEach(([name, value]) => {
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = name;
-            input.value = String(value ?? "");
-            form.appendChild(input);
-          });
+          const bankForm = init.data as GatewayForm;
 
           // Card fields the browser still has to add  PayFor only. Albaraka's
           // fields are already signed into `fields` server-side (or collected on
@@ -2208,109 +2190,11 @@ const DonationDialog = ({
               browserCardFields.CardHolderName = cardDetails.cardholderName;
             }
           }
-          Object.entries(browserCardFields).forEach(([name, value]) => {
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = name;
-            input.value = value;
-            form.appendChild(input);
-          });
-
-          // Skip the popup attempt entirely on mobile / in-app browsers (FB, IG, TikTok,
-          // etc.). In those WebViews window.open often returns a truthy-but-invisible
-          // Window object  the form would silently submit to a hidden frame and the
-          // user would see nothing happen. Going straight to a full-page redirect
-          // (target=_self) lets the bank's 3DS page own the screen and redirect back
-          // to the gateway's callback → /success on completion. Desktop keeps the popup
-          // so the dialog can poll and show the success state in-place.
-          const skipPopup = shouldSkipPopup();
-          const popupName = useAlbaraka ? "albaraka3d" : "payfor3d";
-          const pw = 600,
-            ph = 700;
-          const pl = Math.round((screen.width - pw) / 2);
-          const pt = Math.round((screen.height - ph) / 2);
-          const popup = skipPopup
-            ? null
-            : window.open(
-                "about:blank",
-                popupName,
-                `width=${pw},height=${ph},left=${pl},top=${pt},scrollbars=yes,resizable=yes`,
-              );
-
-          form.target = popup ? popupName : "_self";
-          document.body.appendChild(form);
-          form.submit();
-          document.body.removeChild(form);
-
-          if (!popup) return;
-
-          payforPopupRef.current = popup;
+          // A bank or a local result page must own this tab. A hidden or
+          // blocked popup must never leave the donor waiting on a spinner.
           isRedirecting = true;
           setRedirecting(true);
-
-          let polls = 0;
-          // 60 polls × 2s = 120s. Mobile users routinely need >50s for the SMS-OTP step
-          // of 3D Secure; the previous 25-poll ceiling was firing the failure redirect
-          // while the bank popup was still authenticating.
-          const FALLBACK_AFTER_POLLS = 60;
-
-          payforPollRef.current = setInterval(async () => {
-            polls++;
-            try {
-              const res = await fetch(withDonationToken(`/api/donations/${donationId}`, donationToken));
-              if (!res.ok) return;
-              const data = await res.json();
-
-              if (data.status === "PAID" && data.paidAt) {
-                clearInterval(payforPollRef.current!);
-                payforPollRef.current = null;
-                if (payforPopupRef.current && !payforPopupRef.current.closed) {
-                  payforPopupRef.current.close();
-                }
-                router.push(
-                  appendCurrencyQuery(
-                    `/success/${donationId}`,
-                    getCurrencyCodeForLinks(),
-                  ),
-                );
-                return;
-              }
-              if (
-                data.status === "FAILED" ||
-                payforPopupRef.current?.closed ||
-                polls >= FALLBACK_AFTER_POLLS
-              ) {
-                clearInterval(payforPollRef.current!);
-                payforPollRef.current = null;
-                if (payforPopupRef.current && !payforPopupRef.current.closed) {
-                  payforPopupRef.current.close();
-                }
-                // Browser-side DonateFailed pixel  server CAPI fires the
-                // matching hit from /api/payfor/3dpay/fail; same event_id
-                // (`${donationId}_failed`) lets Meta dedup the pair.
-                tracking?.trackPaymentFailed({
-                  value: donationAmount,
-                  currency: getCurrency(),
-                  causeId: campaignId || categoryId || undefined,
-                  reason:
-                    data.providerErrorMessage ??
-                    data.status ??
-                    `${gatewayAnalyticsName(gateway)}_failed`,
-                  gateway: gatewayAnalyticsName(gateway),
-                  donationId,
-                });
-                router.push(
-                  appendCurrencyQuery(
-                    `/donation-failed?donationId=${encodeURIComponent(donationId)}`,
-                    getCurrencyCodeForLinks(),
-                  ),
-                );
-              }
-            } catch {
-              // Ignore transient errors
-            }
-          }, 2000);
-
+          submitGatewayForm(bankForm, browserCardFields);
           return;
         }
 
@@ -2352,14 +2236,6 @@ const DonationDialog = ({
       <Dialog
         open={isOpen}
         onOpenChange={() => {
-          // Clean up PayFor polling if dialog is closed mid-flow
-          if (payforPollRef.current) {
-            clearInterval(payforPollRef.current);
-            payforPollRef.current = null;
-          }
-          if (payforPopupRef.current && !payforPopupRef.current.closed) {
-            payforPopupRef.current.close();
-          }
           onClose();
         }}
       >
