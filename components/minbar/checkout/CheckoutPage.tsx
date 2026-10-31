@@ -1,4 +1,6 @@
 "use client";
+import { usePaymentRouting } from "@/hooks/usePaymentRouting";
+import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
 import { SavedCardPicker } from "./SavedCardPicker";
 import { AlbarakaVerificationChoice } from "./AlbarakaVerificationChoice";
 import type { AlbarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
@@ -36,7 +38,6 @@ import {
   chargeWithStripe,
   createDonation,
   initiateBankPayment,
-  markDonationFailed,
   OrderRejectedError,
   orderSchedule,
   orderType,
@@ -106,7 +107,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
   const tCert = useTranslations("certificates");
-  const { lineTooSmall, minLabel } = useDonationAmount();
+  const { lineTooSmall, minLabel, lineValue, inLocal } = useDonationAmount();
   const tGive = useTranslations("CardGive");
   const { items, hydrated, replace } = useMinbarCart();
   useHealLegacyRows(items, replace, hydrated);
@@ -152,9 +153,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const tCards = useTranslations("DonationDialog");
   const [savedCards, setSavedCards] = useState<Array<{ id: string; last4: string; cardType: string; expiryDate: string; cardholderName?: string | null; isDefault: boolean }>>([]);
   const [selectedCardId, setSelectedCardId] = useState("");
-  const [rememberCard, setRememberCard] = useState(false);
   const cardInputTouched = useRef(false);
-  const { currency } = useMinbarMoney();
+  const money = useMinbarMoney();
+  const currency = money.code || (money.currency === "DEFAULT" ? "USD" : money.currency) || "USD";
   /* Whoever sent this donor here, if a campaign link set the cookie. Read at
      submit time so the attribution is the one in force when they gave. */
   const readReferralCode = useReferralCode();
@@ -180,6 +181,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
        order, from the currency and the admin switch. */
     mainGateway: MainGateway;
     payforEnabled: boolean;
+    payforSaudiRoutingEnabled: boolean;
     albarakaUseOOS: boolean;
     albarakaConfigured: boolean;
     albarakaRecurringReady: boolean;
@@ -194,6 +196,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         setGatewayConfig({
           mainGateway: settings.mainGateway,
           payforEnabled: settings.payforEnabled,
+          payforSaudiRoutingEnabled: settings.payforSaudiRoutingEnabled === true,
           albarakaUseOOS: settings.albarakaUseOOS,
           albarakaConfigured: settings.albarakaConfigured,
           albarakaRecurringReady: settings.albarakaRecurringReady === true,
@@ -268,12 +271,15 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      it, so the card step can render what that rail actually needs. Before the
      settings arrive this is Stripe, which collects the card on our page  the
      same thing the design shows, so nothing flickers. */
-  const gateway = resolveGateway({
+  const fallbackGateway = resolveGateway({
     mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
     payforEnabled: gatewayConfig?.payforEnabled ?? true,
     currency,
     donationType: orderTypeForCart,
   });
+  const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: gatewayConfig?.payforSaudiRoutingEnabled === true && orderTypeForCart === "ONE_TIME", currency, phone, fallback: fallbackGateway });
+  const payableDisplayTotal = items.reduce((sum, item) => sum + lineValue(item), 0) + teamSupportCharged * (money.rate ?? 1);
+
 
   /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
      page. Asking for it here too would make the donor type it twice, and the
@@ -414,20 +420,21 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       void fetch("/api/users/me/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) }).catch(() => undefined);
     }
 
-    let donationId: string | null = null;
     let cardToUse = selectedCardId;
     try {
-      if (method === "card" && needsOwnCardForm && gateway !== "STRIPE" && !cardToUse && rememberCard && signedIn) {
-        const saved = await fetch("/api/credit-cards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cardNumber: cardNumber.replace(/\D/g, ""), expiryDate: cardExpiry, cvc: cardCvc, cardholderName: cardName }) });
-        const result = await saved.json().catch(() => null);
-        if (!saved.ok || !result?.card?.id) { setError(tCards("rememberCardFailed")); setSubmitting(false); return; }
-        cardToUse = result.card.id;
+      if (method === "card" && needsOwnCardForm && gateway !== "STRIPE" && !cardToUse && signedIn) {
+        try {
+          const saved = await fetch("/api/credit-cards", { method: "POST", signal: AbortSignal.timeout(5000), headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cardNumber: cardNumber.replace(/\D/g, ""), expiryDate: cardExpiry, cvc: cardCvc, cardholderName: cardName }) });
+          const result = await saved.json().catch(() => null);
+          if (saved.ok && result?.card?.id) cardToUse = result.card.id;
+        } catch { /* A temporary wallet failure must not prevent a new-card payment. */ }
       }
       const donation = await createDonation({
         items,
         projects,
         projectAliases,
         currency,
+        routingPhone: phone, expectedGateway: method === "card" ? gateway : undefined,
         locale,
         method: methodForServer,
         teamSupport: teamSupportCharged,
@@ -441,7 +448,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
            in their own profile (an imported account often lacks a phone). */
         guest: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
       });
-      donationId = donation.id;
       if (method !== "bank") rememberCheckoutAttempt(donation.id);
 
       if (method === "bank") {
@@ -475,7 +481,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         if (!handle) throw new Error("stripe-not-ready");
         const result = await handle.confirmPayment(charge.clientSecret);
         if (result.error) {
-          await markDonationFailed(donation.id, result.error.message ?? "stripe_confirm_failed");
           setError(result.error.message ?? tSystem("techErrorLead"));
           setSubmitting(false);
           return;
@@ -529,13 +534,15 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       clearCart();
       submitGatewayForm(form, browserFields);
     } catch (cause) {
-      if (donationId) await markDonationFailed(donationId, String(cause));
       console.error("[checkout] payment could not complete");
       /* Say what actually went wrong. Every failure used to read "we are
          fixing the problem", which hid both a basket the order cannot carry
          and the server's own reason for refusing it. */
       const knownCode = cause instanceof OrderRejectedError ? CARD_ERROR_KEYS[cause.code ?? ""] : undefined;
-      if (cause instanceof UnpayableItemsError) {
+      if (cause instanceof OrderRejectedError && cause.code === "PAYMENT_ROUTING_CHANGED") {
+        acceptServerRoute(cause.gateway);
+        setError(tCards("paymentRoutingChanged"));
+      } else if (cause instanceof UnpayableItemsError) {
         setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
       } else if (cause instanceof OrderRejectedError && cause.code === "RECURRING_UNAVAILABLE") {
         setError(t("recurringCardUnavailable"));
@@ -949,7 +956,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       <input value={cardName} onChange={(e) => { cardInputTouched.current = true; setCardName(e.target.value); }} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
                     </label>}
                   </div>
-                  {!selectedCardId && session?.user?.id && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={rememberCard} onChange={event => setRememberCard(event.target.checked)} />{tCards("rememberCard")}</label>}
                 </div>
               ) : null}
 
@@ -960,6 +966,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
+            {method === "card" && (currency === "USD" || inLocal) ? <PaymentCurrencyNotice gateway={gateway} currency={currency} amount={payableDisplayTotal} phone={phone} /> : null}
             {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : method === "card" && (gateway === "PAYFOR" || (gateway === "ALBARAKA" && planFrequency)) ? <AlbarakaVerificationChoice value={gateway === "PAYFOR" ? "3D" : "2D"} onChange={() => {}} fixed /> : null}
 
             {belowMinimum ? (

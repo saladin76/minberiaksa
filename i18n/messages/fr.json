@@ -519,7 +519,7 @@
     "and": "et",
     "privacyPolicy": "Politique de confidentialité",
     "skipAndDonate": "Passer",
-    "donateAsGuest": "Donner en tant qu'invité",
+    "donateAsGuest": "Continuer le don sans compte",
     "withoutLoginBadge": "sans connexion",
     "googleFastestWay": "Le plus rapide",
     "orContinueWith": "ou",
@@ -563,7 +563,12 @@
     "genderMale": "Homme",
     "genderFemale": "Femme",
     "genderPreferNotToSay": "Je préfère ne pas le préciser",
-    "noPasswordYet": "Vous avez déjà un compte avec cet e-mail, mais pas encore de mot de passe. Inscrivez-vous avec le même e-mail pour en définir un, ou continuez avec Google."
+    "noPasswordYet": "Vous avez déjà un compte avec cet e-mail, mais pas encore de mot de passe. Inscrivez-vous avec le même e-mail pour en définir un, ou continuez avec Google.",
+    "authErrorTitle": "Connexion impossible",
+    "authAccessDenied": "L’autorisation de connexion n’a pas abouti. Réessayez ou faites un don sans compte.",
+    "authAccountConflict": "Cette adresse utilise une autre méthode de connexion. Utilisez la méthode précédente ou donnez sans compte.",
+    "authUnavailable": "La connexion est indisponible. Vous pouvez donner sans compte.",
+    "authUnknown": "La connexion n’a pas abouti. Réessayez ou continuez sans compte."
   },
   "SharePopup": {
     "shareCampaign": "Partager le projet avec d'autres",
@@ -678,7 +683,10 @@
     "certificateNoteBody": "Indiquez votre vraie adresse e-mail afin que nous puissions vous envoyer le certificat officiel de don et votre reçu.",
     "free": "Gratuit",
     "rememberCard": "Enregistrer ma carte pour mes prochains dons",
-    "rememberCardFailed": "Impossible d’enregistrer la carte. Décochez cette option pour continuer."
+    "rememberCardFailed": "Impossible d’enregistrer la carte. Décochez cette option pour continuer.",
+    "bankChargeEstimate": "Votre don est de {original}. Le débit bancaire estimé est de {amount} en livres turques ; le taux définitif est fixé au début du paiement.",
+    "bankChargeCurrency": "La banque encaisse ce don en livres turques. Le montant converti est affiché avant confirmation.",
+    "paymentRoutingChanged": "La passerelle a changé pour cette tentative. Vérifiez la méthode, ressaisissez le code de sécurité et confirmez."
   },
   "DonationSuccess": {
     "thankYou": "Merci beaucoup",

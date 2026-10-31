@@ -1,3 +1,5 @@
+import { usePaymentRouting } from "@/hooks/usePaymentRouting";
+import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
 import { SavedCardPicker } from "@/components/minbar/checkout/SavedCardPicker";
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripePromise } from "@/lib/stripe-client";
@@ -300,13 +302,16 @@ const DonationDialog = ({
   // admin switch on); everything else goes to whichever main gateway the admin picked,
   // except monthly which is Stripe-only. A fallback secret means a 3D attempt already
   // failed and the donor was handed a Stripe intent, so Stripe wins from then on.
-  const gateway = resolveGateway({
+  const [phoneValue, setPhoneValue] = useState("");
+  const fallbackGateway = resolveGateway({
     mainGateway,
     payforEnabled,
     currency: getCurrency(),
     donationType,
     forceStripe: Boolean(fallbackClientSecret),
   });
+  const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: globalSettings?.payforSaudiRoutingEnabled === true && donationType === "ONE_TIME" && !fallbackClientSecret, currency: getCurrency(), phone: phoneValue, fallback: fallbackGateway });
+
   const use3D = gateway === "PAYFOR";
   const useAlbaraka = gateway === "ALBARAKA";
   /** Both 3D rails post an HTML form to the bank instead of confirming via stripe.js. */
@@ -326,7 +331,6 @@ const DonationDialog = ({
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [phoneValue, setPhoneValue] = useState("");
   const [guestFirstName, setGuestFirstName] = useState("");
   const [guestLastName, setGuestLastName] = useState("");
   const [birthdateValue, setBirthdateValue] = useState("");
@@ -1797,7 +1801,8 @@ const DonationDialog = ({
               </div>
             )}
 
-            {paymentIssue ? <p id={paymentErrorId} role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{paymentIssue.text}</p> : null}
+            <PaymentCurrencyNotice gateway={gateway} currency={getCurrency()} amount={totalAmount} phone={phoneValue} />
+              {paymentIssue ? <p id={paymentErrorId} role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{paymentIssue.text}</p> : null}
 
             <div dir={dir} className="flex justify-between gap-4">
               <Button
@@ -1990,6 +1995,7 @@ const DonationDialog = ({
       });
       const donationData: Record<string, unknown> = {
         currency: getCurrency(),
+        routingPhone: phoneValue, expectedGateway: paymentMethod === "CARD" ? gateway : undefined,
         teamSupport: teamSupport ?? 0,
         coverFees,
         type: donationType,
@@ -2210,6 +2216,11 @@ const DonationDialog = ({
       }
       onClose();
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.code === "PAYMENT_ROUTING_CHANGED") {
+        acceptServerRoute(error.response.data.gateway);
+        toast.error(t("paymentRoutingChanged"));
+        return;
+      }
       console.error("Payment failed: request did not complete");
       tracking?.trackPaymentFailed({
         value: donationAmount,

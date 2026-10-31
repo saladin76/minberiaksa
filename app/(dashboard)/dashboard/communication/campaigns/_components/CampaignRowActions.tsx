@@ -3,7 +3,7 @@
 import * as React from "react";
 import { RetryDialog } from "../../_shared/RetryDialog";
 import { toast } from "react-hot-toast";
-import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play, RefreshCw, Trash2 } from "lucide-react";
+import { CalendarClock, Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play, RefreshCw, Trash2 } from "lucide-react";
 import { canDeleteUnsentCampaign } from "@/lib/communication/campaign-lifecycle";
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
 import { CampaignControlsDialog } from "./CampaignControlsDialog";
+import { CampaignScheduleDialog } from "./CampaignScheduleDialog";
 import { CampaignRecoveryDialog } from "./CampaignRecoveryDialog";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 import { isCampaignControlTerminalStatus, isResumableBlockedCampaign } from "@/lib/communication/communication-runtime-types";
@@ -76,6 +77,8 @@ export function CampaignRowActions({
   const [retryOpen, setRetryOpen] = React.useState(false);
   const [recoveryOpen, setRecoveryOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+  const canSchedule = ["EMAIL", "WHATSAPP"].includes(campaign.channel) && ["DRAFT", "REVIEW", "APPROVED", "SCHEDULED"].includes(campaign.status);
 
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
   const canSend = campaign.status === "APPROVED";
@@ -209,6 +212,7 @@ export function CampaignRowActions({
 
   return (
     <div className="flex items-center justify-end gap-1.5">
+      {scheduleOpen ? <CampaignScheduleDialog campaign={campaign} onChanged={onChanged} onClose={() => setScheduleOpen(false)} /> : null}
       {campaign.status === "BLOCKED" ? <button type="button" onClick={event => { event.stopPropagation(); setRecoveryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 text-xs font-semibold text-sky-900">{dt("تشخيص واستكمال")}</button> : null}
       {canReviewFailures ? <button type="button" onClick={event => { event.stopPropagation(); setRetryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-amber-900"><RefreshCw className="h-3.5 w-3.5" />{dt("إعادة محاولة الفشل")}</button> : null}
       {canControl && (
@@ -246,6 +250,7 @@ export function CampaignRowActions({
               <Send className="me-2 h-3.5 w-3.5" />
               {dt("إرسال الآن")}</DropdownMenuItem>
           )}
+          {canSchedule ? <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="me-2 h-3.5 w-3.5" />{campaign.status === "SCHEDULED" ? dt("تعديل موعد الإرسال") : dt("جدولة الإرسال")}</DropdownMenuItem> : null}
           {canControl && (
             <>
               <DropdownMenuItem onClick={togglePause}>

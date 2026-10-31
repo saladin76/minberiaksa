@@ -12,7 +12,7 @@
  * plans use Albaraka's scheduled billing. PayFor handles one-time TRY only.
  */
 
-import { railForFrequency } from "@/lib/donations/recurring-schedule";
+import { railForFrequency } from "./donations/recurring-schedule";
 
 /** Gateway an admin can nominate as the main one in the dashboard. */
 export type MainGateway = "STRIPE" | "ALBARAKA";

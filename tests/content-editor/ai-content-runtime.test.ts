@@ -8,7 +8,7 @@ const runtime = { apiKey: "fixture-key-never-print", enabled: true, model: "gpt-
 test("the runtime diagnostic makes no provider call unless generation is explicitly requested", async () => {
   const result = await probeContentRuntime({ runtime, env: { NODE_ENV: "test" }, builders, errors, request: async () => { throw new Error("No provider call expected"); } });
   assert.equal(result.providerRequests, 0); assert.equal(result.status, "generation_not_requested");
-  assert.equal(result.models.research, "gpt-5.5"); assert.doesNotMatch(JSON.stringify(result), /fixture-key/);
+  assert.equal(result.models.research, "gpt-4.1-mini"); assert.doesNotMatch(JSON.stringify(result), /fixture-key/);
 });
 test("a rejected real research contract reports the exact safe category and never tries translation", async () => {
   const result = await probeContentRuntime({ runtime, env: { NODE_ENV: "test" }, builders, errors, checkGeneration: true, request: async (_url, init) => {

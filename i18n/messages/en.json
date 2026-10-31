@@ -519,7 +519,7 @@
     "and": "and",
     "privacyPolicy": "Privacy Policy",
     "skipAndDonate": "Skip",
-    "donateAsGuest": "Donate as guest",
+    "donateAsGuest": "Continue donating as a guest",
     "withoutLoginBadge": "without login",
     "googleFastestWay": "Fastest way",
     "orContinueWith": "or",
@@ -563,7 +563,12 @@
     "genderMale": "Male",
     "genderFemale": "Female",
     "genderPreferNotToSay": "Prefer not to say",
-    "noPasswordYet": "You already have an account with this email, but no password yet. Sign up with the same email to set one, or continue with Google."
+    "noPasswordYet": "You already have an account with this email, but no password yet. Sign up with the same email to set one, or continue with Google.",
+    "authErrorTitle": "Sign-in could not complete",
+    "authAccessDenied": "Sign-in permission was not completed. Try again or donate as a guest.",
+    "authAccountConflict": "This email uses another sign-in method. Use your previous method or donate as a guest.",
+    "authUnavailable": "Sign-in is currently unavailable. You can continue donating as a guest.",
+    "authUnknown": "Sign-in did not complete. Try again or continue as a guest."
   },
   "SharePopup": {
     "shareCampaign": "Share this project with others",
@@ -678,7 +683,10 @@
     "certificateNoteBody": "Add your real email address so we can send you the official donation certificate and receipt.",
     "free": "Free",
     "rememberCard": "Save my card for future donations",
-    "rememberCardFailed": "Your card could not be saved. You can untick this option and continue."
+    "rememberCardFailed": "Your card could not be saved. You can untick this option and continue.",
+    "bankChargeEstimate": "Your donation is {original}. The estimated bank charge is {amount} in Turkish lira; the final rate is fixed when payment starts.",
+    "bankChargeCurrency": "The bank collects this donation in Turkish lira. The converted amount is shown before payment confirmation.",
+    "paymentRoutingChanged": "The payment gateway has changed for this attempt. Review the method, re-enter your security code and confirm payment."
   },
   "DonationSuccess": {
     "thankYou": "Thank you very much",

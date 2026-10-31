@@ -2510,6 +2510,18 @@
     "rememberCard": "Ruaj kartën time për dhurimet e ardhshme",
     "rememberCardFailed": "Karta nuk mund të ruhej. Hiqni shenjën nga ky opsion për të vazhduar.",
     "savedCards": "Kartat tuaja të ruajtura",
-    "useNewCard": "Përdor një kartë të re"
+    "useNewCard": "Përdor një kartë të re",
+    "bankChargeEstimate": "Dhurimi juaj është {original}. Debitimi bankar i parashikuar është {amount} në lira turke; kursi përfundimtar fiksohet në fillim të pagesës.",
+    "bankChargeCurrency": "Banka e mbledh këtë dhurim në lira turke. Shuma e konvertuar shfaqet para konfirmimit.",
+    "paymentRoutingChanged": "Porta e pagesës ndryshoi. Kontrolloni mënyrën, rivendosni kodin e sigurisë dhe konfirmoni."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Hyrja nuk u përfundua",
+    "authAccessDenied": "Autorizimi i hyrjes nuk u përfundua. Provoni sërish ose dhuroni si vizitor.",
+    "authAccountConflict": "Ky email përdor një mënyrë tjetër hyrjeje. Përdorni mënyrën e mëparshme ose dhuroni si vizitor.",
+    "authUnavailable": "Hyrja nuk është e disponueshme tani. Mund të dhuroni si vizitor.",
+    "authUnknown": "Hyrja nuk u përfundua. Provoni sërish ose vazhdoni si vizitor.",
+    "donateAsGuest": "Vazhdoni dhurimin si vizitor",
+    "signInWithGoogle": "Hyni me Google"
   }
 }

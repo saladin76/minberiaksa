@@ -77,6 +77,11 @@ export async function requestSuggestion<T>(url: string, body: unknown, signal: A
     try {
       response = await fetchSuggestion(url, { ...request, signal: AbortSignal.any([signal, AbortSignal.timeout(25_000)]) }, signal);
       if (![502, 503, 504].includes(response.status) || attempt === 2) break;
+      // A controlled provider failure is a confirmed result, not a lost queue
+      // acknowledgement. Retrying quota/model/configuration failures cannot
+      // recover the request and defeats the first-locale batch probe.
+      const failure = await response.clone().json().catch(() => null);
+      if (isSuggestionFailureCode(failure?.reason)) break;
     } catch (error) {
       if (signal.aborted || !(error instanceof SuggestionRequestError) || attempt === 2) throw error;
     }

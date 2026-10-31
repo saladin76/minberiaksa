@@ -1943,6 +1943,7 @@ model GlobalSettings {
   /// Master switch for the PayFor (Ziraat Katılım) 3D Secure gateway. When false,
   /// every donation is forced through the main gateway regardless of currency.
   payforEnabled        Boolean  @default(true)
+  payforSaudiRoutingEnabled Boolean @default(false)
   /// Main card gateway: "STRIPE" or "ALBARAKA". Handles every case PayFor doesn't
   /// take, except monthly subscriptions which always run on Stripe.
   mainGateway          String   @default("STRIPE")

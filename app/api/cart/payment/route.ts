@@ -1,3 +1,4 @@
+import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
@@ -380,6 +381,9 @@ export async function POST(request: NextRequest) {
     /* What each later instalment carries. The first payment (the donation
        created below) always includes the full amount. */
     const planTeamSupport = teamSupportRecurringIn === false ? 0 : teamSupport;
+
+    const paymentRoute = await resolveNewCardPaymentRoute(request.headers, { method: paymentMethod, type: type, currency: currency, phone: body.routingPhone ?? guest?.phone, userId: session?.user?.id });
+    if (paymentRoute && body.expectedGateway && body.expectedGateway !== paymentRoute.gateway) return NextResponse.json({ error: "Payment route changed. Please confirm the updated payment method.", code: "PAYMENT_ROUTING_CHANGED", gateway: paymentRoute.gateway }, { status: 409 });
 
     // Resolve donor
     let donorId: string;
@@ -809,6 +813,7 @@ export async function POST(request: NextRequest) {
           referralId: referralId ?? undefined,
           paymentMethod,
           cardDetails: null,
+          ...(paymentRoute ? { provider: paymentRoute.gateway, providerRaw: { paymentRouting: paymentRoute } as unknown as Prisma.InputJsonValue } : {}),
           ...(isBankTransfer
             ? { provider: BANK_TRANSFER_PROVIDER, providerTxnResult: "Pending" }
             : isPayPal

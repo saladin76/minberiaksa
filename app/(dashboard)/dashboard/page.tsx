@@ -1,5 +1,6 @@
 "use client";
 
+import { DashboardFilterPanel } from "@/components/dashboard/DashboardFilterPanel";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useLocale } from "next-intl";
 import Link from "next/link";
@@ -1422,6 +1423,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0 space-y-4" dir={dashDir()}>
+            <DashboardFilterPanel>
             {/* Time span lives with the other filters rather than in a sticky bar of its own:
                 one place to change what the page is showing, instead of two controls in two
                 locations writing the same scope. */}
@@ -1745,7 +1747,8 @@ export default function DashboardPage() {
 
 </div>
 
-</CardContent>
+</DashboardFilterPanel>
+          </CardContent>
 
 
 
@@ -1790,7 +1793,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto" dir={dashDir()}>
+              <div className="dashboard-donation-table overflow-x-auto overscroll-x-contain" dir={dashDir()}>
                 <table className="w-full text-xs text-start leading-snug">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">

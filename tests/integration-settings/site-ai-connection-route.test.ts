@@ -8,6 +8,7 @@ function fixture(access: "none" | "view" | "test" | "manage" | "all") {
   const calls: string[] = [];
   const denied = { status: 403 };
   const deps: Record<string, unknown> = {
+    "@/lib/ai/core/economical-fetch": { aiRequestSavings: () => ({ providerRequests: 0, cacheHits: 0, coalescedRequests: 0 }) },
     "next/server": { NextResponse: { json: (body: unknown, options: { status: number; headers: unknown }) => ({ body, ...options }) } },
     "next-auth": { getServerSession: async () => access === "none" ? null : { user: {} } },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },

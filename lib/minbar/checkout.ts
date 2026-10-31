@@ -54,6 +54,8 @@ export interface CreateDonationInput {
   /** Slugs in every language → campaign id, for rows added on another language's pages. */
   projectAliases?: Readonly<Record<string, string>>;
   currency: string;
+  routingPhone?: string;
+  expectedGateway?: string;
   locale: string;
   method: CheckoutMethod;
   /**
@@ -208,7 +210,7 @@ export class UnpayableItemsError extends Error {
 /** The order API refused the order; `message` is its reason. */
 export class OrderRejectedError extends Error {
   /** `code` is the server's machine-readable reason, when it sends one. */
-  constructor(message: string, readonly status: number, readonly code?: string) {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly gateway?: string) {
     super(message);
   }
 }
@@ -273,6 +275,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       ...(categoryItems.length ? { categoryItems } : {}),
       ...(waqfItems.length ? { waqfItems } : {}),
       currency: input.currency,
+      routingPhone: input.routingPhone, expectedGateway: input.expectedGateway,
       /* The basket stores USD (plus each line's exact local figure); the
          server charges a line given in `currency` as given and converts the
          rest and the team support at its rate. Sent raw, a $1 row shown as
@@ -316,11 +319,12 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
         bankTransfer?: { accessToken: string };
         error?: string;
         code?: string;
+        gateway?: string;
       }
     | null;
 
   if (!response.ok || !payload?.donation?.id) {
-    throw new OrderRejectedError(payload?.error || "order-failed", response.status, payload?.code);
+    throw new OrderRejectedError(payload?.error || "order-failed", response.status, payload?.code, payload?.gateway);
   }
 
   // Preserve the server-issued read credential before a payment redirect.

@@ -2510,6 +2510,18 @@
     "rememberCard": "Spara mitt kort för framtida donationer",
     "rememberCardFailed": "Kortet kunde inte sparas. Avmarkera alternativet för att fortsätta.",
     "savedCards": "Dina sparade kort",
-    "useNewCard": "Använd ett nytt kort"
+    "useNewCard": "Använd ett nytt kort",
+    "bankChargeEstimate": "Din donation är {original}. Den beräknade bankdebiteringen är {amount} i turkiska lira; slutkursen fastställs när betalningen startar.",
+    "bankChargeCurrency": "Banken tar emot donationen i turkiska lira. Det omräknade beloppet visas före bekräftelsen.",
+    "paymentRoutingChanged": "Betalningsportalen har ändrats. Kontrollera metoden, ange säkerhetskoden igen och bekräfta."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Inloggningen kunde inte slutföras",
+    "authAccessDenied": "Inloggningen godkändes inte. Försök igen eller donera som gäst.",
+    "authAccountConflict": "Den här e-postadressen använder en annan inloggningsmetod. Använd den tidigare metoden eller donera som gäst.",
+    "authUnavailable": "Inloggning är inte tillgänglig just nu. Du kan donera som gäst.",
+    "authUnknown": "Inloggningen slutfördes inte. Försök igen eller fortsätt som gäst.",
+    "donateAsGuest": "Fortsätt donera som gäst",
+    "signInWithGoogle": "Logga in med Google"
   }
 }

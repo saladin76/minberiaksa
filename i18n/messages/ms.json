@@ -2510,6 +2510,18 @@
     "rememberCard": "Simpan kad saya untuk sumbangan akan datang",
     "rememberCardFailed": "Kad tidak dapat disimpan. Nyahpilih pilihan ini untuk meneruskan.",
     "savedCards": "Kad tersimpan anda",
-    "useNewCard": "Gunakan kad baharu"
+    "useNewCard": "Gunakan kad baharu",
+    "bankChargeEstimate": "Derma anda ialah {original}. Anggaran caj bank ialah {amount} dalam lira Turki; kadar akhir ditetapkan apabila pembayaran bermula.",
+    "bankChargeCurrency": "Bank mengutip derma ini dalam lira Turki. Amaun pertukaran dipaparkan sebelum pengesahan.",
+    "paymentRoutingChanged": "Gerbang pembayaran telah berubah. Semak kaedah, masukkan semula kod keselamatan dan sahkan."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Log masuk tidak dapat diselesaikan",
+    "authAccessDenied": "Kebenaran log masuk belum selesai. Cuba lagi atau derma sebagai tetamu.",
+    "authAccountConflict": "E-mel ini menggunakan kaedah log masuk lain. Gunakan kaedah terdahulu atau derma sebagai tetamu.",
+    "authUnavailable": "Log masuk tidak tersedia sekarang. Anda boleh menderma sebagai tetamu.",
+    "authUnknown": "Log masuk belum selesai. Cuba lagi atau teruskan sebagai tetamu.",
+    "donateAsGuest": "Teruskan derma sebagai tetamu",
+    "signInWithGoogle": "Log masuk dengan Google"
   }
 }

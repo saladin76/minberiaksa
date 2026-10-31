@@ -18,6 +18,7 @@ function service(payload: unknown, capture: unknown[] = []) {
       return { ok: true, json: async () => payload };
     },
     require: (name: string) => {
+      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => { capture.push(JSON.parse(options.body)); return { ok: true, json: async () => payload }; } };
       if (name === "../ai/core/connection-settings") return { getOpenAiRuntime: async () => ({ apiKey: "test-key" }) };
       if (name === "../ai/core/openai-response") return { openAiFailure };
       if (name === "../ai/core/content-requests") return { researchRequest };

@@ -519,7 +519,7 @@
     "and": "dan",
     "privacyPolicy": "Kebijakan Privasi",
     "skipAndDonate": "Lewati",
-    "donateAsGuest": "Donasi sebagai tamu",
+    "donateAsGuest": "Lanjutkan donasi sebagai tamu",
     "withoutLoginBadge": "tanpa login",
     "googleFastestWay": "Cara tercepat",
     "orContinueWith": "atau",
@@ -563,7 +563,12 @@
     "genderMale": "Laki-laki",
     "genderFemale": "Perempuan",
     "genderPreferNotToSay": "Tidak ingin menyebutkan",
-    "noPasswordYet": "Anda sudah memiliki akun dengan email ini, tetapi belum ada kata sandi. Daftar dengan email yang sama untuk membuatnya, atau lanjutkan dengan Google."
+    "noPasswordYet": "Anda sudah memiliki akun dengan email ini, tetapi belum ada kata sandi. Daftar dengan email yang sama untuk membuatnya, atau lanjutkan dengan Google.",
+    "authErrorTitle": "Tidak dapat menyelesaikan login",
+    "authAccessDenied": "Izin login belum selesai. Coba lagi atau berdonasi sebagai tamu.",
+    "authAccountConflict": "Email ini menggunakan metode login lain. Gunakan metode sebelumnya atau berdonasi sebagai tamu.",
+    "authUnavailable": "Login sedang tidak tersedia. Anda dapat berdonasi sebagai tamu.",
+    "authUnknown": "Login belum selesai. Coba lagi atau lanjutkan sebagai tamu."
   },
   "SharePopup": {
     "shareCampaign": "Bagikan proyek ini kepada orang lain",
@@ -678,7 +683,10 @@
     "certificateNoteBody": "Masukkan email asli Anda agar kami dapat mengirimkan sertifikat donasi resmi dan kuitansi kepada Anda.",
     "free": "Gratis",
     "rememberCard": "Simpan kartu saya untuk donasi berikutnya",
-    "rememberCardFailed": "Kartu tidak dapat disimpan. Hapus centang opsi ini untuk melanjutkan."
+    "rememberCardFailed": "Kartu tidak dapat disimpan. Hapus centang opsi ini untuk melanjutkan.",
+    "bankChargeEstimate": "Donasi Anda {original}. Perkiraan debit bank {amount} dalam lira Turki; kurs akhir ditetapkan saat pembayaran dimulai.",
+    "bankChargeCurrency": "Bank menagih donasi ini dalam lira Turki. Nilai konversi ditampilkan sebelum konfirmasi.",
+    "paymentRoutingChanged": "Gerbang pembayaran berubah. Periksa metode, masukkan kembali kode keamanan dan konfirmasikan."
   },
   "DonationSuccess": {
     "thankYou": "Terima kasih banyak",

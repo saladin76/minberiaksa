@@ -27,7 +27,7 @@ export async function GET() {
   try {
     const settings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true, allowAnyAmount: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, payforSaudiRoutingEnabled: true, mainGateway: true, allowAnyAmount: true },
     });
     const albaraka = albaraka2DConfig();
     return NextResponse.json({
@@ -39,6 +39,7 @@ export async function GET() {
       // Default true  first read before any record exists must still let
       // PayFor remain available for TRY donors.
       payforEnabled: settings?.payforEnabled ?? true,
+      payforSaudiRoutingEnabled: settings?.payforSaudiRoutingEnabled === true,
       mainGateway: parseMainGateway(settings?.mainGateway),
       // Off: every donation line is at least $1. On: any amount, as given.
       allowAnyAmount: settings?.allowAnyAmount === true,
@@ -90,7 +91,7 @@ export async function PUT(request: NextRequest) {
       const denied = requireAdminOrDashboardPermission(session, "campaigns");
       if (denied) return denied;
     }
-    if (body.payforEnabled !== undefined || body.mainGateway !== undefined || body.allowAnyAmount !== undefined) {
+    if (body.payforEnabled !== undefined || body.payforSaudiRoutingEnabled !== undefined || body.mainGateway !== undefined || body.allowAnyAmount !== undefined) {
       const denied = requireAdminOrDashboardPermission(session, "generalSettings");
       if (denied) return denied;
     }
@@ -136,6 +137,11 @@ export async function PUT(request: NextRequest) {
       updateData.payforEnabled = body.payforEnabled;
     }
 
+    if (body.payforSaudiRoutingEnabled !== undefined) {
+      if (typeof body.payforSaudiRoutingEnabled !== "boolean") return NextResponse.json({ error: "payforSaudiRoutingEnabled must be a boolean" }, { status: 400 });
+      updateData.payforSaudiRoutingEnabled = body.payforSaudiRoutingEnabled;
+    }
+
     if (body.allowAnyAmount !== undefined) {
       if (typeof body.allowAnyAmount !== "boolean") {
         return NextResponse.json({ error: "allowAnyAmount must be a boolean" }, { status: 400 });
@@ -169,7 +175,7 @@ export async function PUT(request: NextRequest) {
     const saved = await prisma.globalSettings.update({
       where: { id: existing.id },
       data: updateData,
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, mainGateway: true, allowAnyAmount: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, payforSaudiRoutingEnabled: true, mainGateway: true, allowAnyAmount: true },
     });
 
     // Gateway settings decide where every new donation's money goes, so each
@@ -180,10 +186,11 @@ export async function PUT(request: NextRequest) {
     const afterPayfor = saved.payforEnabled ?? true;
     const beforeAnyAmount = existing.allowAnyAmount === true;
     const afterAnyAmount = saved.allowAnyAmount === true;
-    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor || beforeAnyAmount !== afterAnyAmount)) {
+    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor || beforeAnyAmount !== afterAnyAmount || existing.payforSaudiRoutingEnabled !== saved.payforSaudiRoutingEnabled)) {
       const actor = auditActorFromDashboardSession(session);
       const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) || null : null;
       const parts: string[] = [];
+      if (existing.payforSaudiRoutingEnabled !== saved.payforSaudiRoutingEnabled) parts.push(`توجيه السعودية إلى PayFor: ${saved.payforSaudiRoutingEnabled === true}`);
       if (beforeGateway !== afterGateway) parts.push(`البوابة الرئيسية من ${beforeGateway} إلى ${afterGateway}`);
       if (beforePayfor !== afterPayfor) parts.push(`PayFor ${afterPayfor ? "مفعّل" : "معطّل"} (كان ${beforePayfor ? "مفعّلًا" : "معطّلًا"})`);
       if (beforeAnyAmount !== afterAnyAmount) parts.push(`مبلغ التبرع: ${afterAnyAmount ? "أي مبلغ بعملة المتبرع" : "حد أدنى دولار واحد"}`);
@@ -196,6 +203,8 @@ export async function PUT(request: NextRequest) {
         entityType: "GlobalSettings",
         entityId: existing.id,
         metadata: {
+          oldSaudiRouting: existing.payforSaudiRoutingEnabled === true,
+          newSaudiRouting: saved.payforSaudiRoutingEnabled === true,
           oldGateway: beforeGateway,
           newGateway: afterGateway,
           oldPayforEnabled: beforePayfor,
@@ -212,6 +221,7 @@ export async function PUT(request: NextRequest) {
       teamSupportEnabled: saved.teamSupportEnabled,
       cartUpsell: parseCartUpsell(saved.cartUpsell),
       payforEnabled: saved.payforEnabled,
+      payforSaudiRoutingEnabled: saved.payforSaudiRoutingEnabled === true,
       mainGateway: parseMainGateway(saved.mainGateway),
       allowAnyAmount: saved.allowAnyAmount === true,
     });

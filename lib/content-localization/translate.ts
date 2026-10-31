@@ -1,3 +1,4 @@
+import { economicalAiFetch } from "@/lib/ai/core/economical-fetch";
 import { researchedTranslationRequest } from "../ai/core/content-requests";
 import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import { openAiFailure, openAiResponseText, OpenAiResponseError } from "../ai/core/openai-response";
@@ -149,10 +150,10 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
 
   const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000);
   if (options.researched) {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await economicalAiFetch("https://api.openai.com/v1/responses", {
       method: "POST", signal,
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
-      body: JSON.stringify(researchedTranslationRequest(userContent)),
+      body: JSON.stringify(researchedTranslationRequest(userContent, process.env, runtime.model)),
     });
     if (!response.ok) throw await openAiFailure(response, "TRANSLATION");
     const payload = await response.json();
@@ -160,12 +161,12 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
     try { return JSON.parse(stripCodeFence(raw)) as Record<string, unknown>; }
     catch { throw new OpenAiResponseError("AI_OUTPUT_INVALID"); }
   }
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await economicalAiFetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     signal,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: process.env.CONTENT_LOCALIZATION_MODEL || "gpt-4o-mini",
+      model: process.env.CONTENT_LOCALIZATION_MODEL || runtime.model || "gpt-4.1-mini",
       temperature: 0.15,
       response_format: { type: "json_object" },
       messages: [

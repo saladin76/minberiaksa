@@ -1,3 +1,4 @@
+import { frozenPaymentRoute } from "../../lib/donations/payment-routing";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -64,6 +65,7 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; currency?: str
     async albarakaReverseSale() { throw new Error("unexpected reverse"); },
   };
   const modules: Record<string, unknown> = {
+    "@/lib/donations/payment-routing": { frozenPaymentRoute },
     "next/server": { NextResponse: { json: (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), init), redirect: (url: URL, status: number) => new Response(null, { status, headers: { location: url.toString() } }) } },
     "next-auth": { getServerSession: async () => null },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePaymentRouting } from "@/hooks/usePaymentRouting";
+import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
 import { SavedCardPicker } from "@/components/minbar/checkout/SavedCardPicker";
 import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
 
@@ -43,7 +45,7 @@ import useConvetToUSD from "@/hooks/useConvetToUSD";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { useRouter } from "@/i18n/routing";
 import { appendCurrencyQuery, getCurrencyCodeForLinks } from "@/lib/currency-link";
-import { shouldSkipPopup } from "@/lib/in-app-browser";
+import { submitGatewayForm, type GatewayForm } from "@/lib/minbar/checkout";
 import { resolveGateway } from "@/lib/payment-gateway";
 import { withDonationToken } from "@/lib/donations/access-token-link";
 import { useTranslations, useLocale } from "next-intl";
@@ -163,13 +165,16 @@ const CartPaymentDialog = ({
   // TRY while the admin leaves it on, and everything else goes to the selected main
   // gateway. A fallback secret means a 3D attempt already failed and the donor holds a
   // Stripe intent, so Stripe wins from then on.
-  const gateway = resolveGateway({
+  const [phoneValue, setPhoneValue]       = useState("");
+  const fallbackGateway = resolveGateway({
     mainGateway,
     payforEnabled,
     currency: getCurrency(),
     donationType: "ONE_TIME",
     forceStripe: Boolean(fallbackClientSecret),
   });
+  const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: globalSettings?.payforSaudiRoutingEnabled === true && !fallbackClientSecret, currency: getCurrency(), phone: phoneValue, fallback: fallbackGateway });
+
   const use3D = gateway === "PAYFOR";
   const useAlbaraka = gateway === "ALBARAKA";
   /** Both 3D rails post an HTML form to the bank instead of confirming via stripe.js. */
@@ -185,7 +190,6 @@ const CartPaymentDialog = ({
   const [redirecting, setRedirecting]     = useState(false);
   const payforSwitching = false;
   const [mounted, setMounted]             = useState(false);
-  const [phoneValue, setPhoneValue]       = useState("");
   const ipCountry = useIpCountry();
   const [currentUser, setCurrentUser]     = useState<{ phone: string | null } | null>(null);
   const [guestFirstName, setGuestFirstName] = useState("");
@@ -507,6 +511,7 @@ const CartPaymentDialog = ({
         items,
         attribution: getDonationAttributionPayload(),
         currency: getCurrency(),
+        routingPhone: phoneValue, expectedGateway: paymentMethod === "CARD" ? gateway : undefined,
         teamSupport: teamSupport ?? 0,
         coverFees,
         type: "ONE_TIME",
@@ -622,6 +627,7 @@ const CartPaymentDialog = ({
           useAlbaraka ? "/api/albaraka/3d/initiate" : "/api/payfor/3dpay/initiate",
           {
             donationId,
+            cardLast4: newPan.length >= 4 ? newPan.slice(-4) : undefined,
             locale,
             savedCardId: selectedCardId ?? undefined,
             ...(useAlbaraka && useOwnCardForm
@@ -636,110 +642,17 @@ const CartPaymentDialog = ({
               : {}),
           }
         );
-        const { actionUrl, fields } = init.data as { actionUrl: string; fields: Record<string, string> };
-
-        const form = document.createElement("form");
-          form.setAttribute("data-clarity-mask", "True");
-          form.setAttribute("data-hj-suppress", "");
-          form.setAttribute("data-private", "");
-        form.method = "POST";
-        form.action = actionUrl;
-        Object.entries(fields).forEach(([name, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden"; input.name = name; input.value = String(value ?? "");
-          form.appendChild(input);
-        });
-
-        // Card fields the browser still has to add  PayFor only. Albaraka's fields
-        // are already signed into `fields` server-side (or collected on the bank's
-        // own page), so appending anything here would break its MAC.
         const browserCardFields: Record<string, string> = {};
         if (use3D) {
-          if (selectedCardId) {
-            // Pan/Expiry/CardHolderName already in `fields`; add CVC only.
-            browserCardFields.Cvv2 = cardDetails.cvv;
-          } else {
-            const [mm, yy] = cardDetails.expiryDate.split("/");
+          browserCardFields.Cvv2 = cardDetails.cvv;
+          if (!selectedCardId) {
             browserCardFields.Pan = newPan;
-            browserCardFields.Expiry = `${mm ?? ""}${yy ?? ""}`; // MMYY
-            browserCardFields.Cvv2 = cardDetails.cvv;
+            browserCardFields.Expiry = cardDetails.expiryDate.replace(/\D/g, "");
             browserCardFields.CardHolderName = cardDetails.cardholderName;
           }
         }
-        Object.entries(browserCardFields).forEach(([name, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden"; input.name = name; input.value = value;
-          form.appendChild(input);
-        });
-
-        // Skip the popup attempt entirely on mobile / in-app browsers (FB, IG, TikTok,
-        // etc.). In those WebViews window.open often returns a truthy-but-invisible
-        // Window object  the form would silently submit to a hidden frame and the
-        // user would see nothing happen. Going straight to a full-page redirect
-        // (target=_self) lets the bank's 3DS page own the screen and redirect back
-        // to the gateway's callback → /success on completion.
-        const skipPopup = shouldSkipPopup();
-        const popupName = useAlbaraka ? "albaraka3d" : "payfor3d";
-        const pw = 600, ph = 700;
-        const popup = skipPopup
-          ? null
-          : window.open(
-              "about:blank", popupName,
-              `width=${pw},height=${ph},left=${Math.round((screen.width  - pw) / 2)},top=${Math.round((screen.height - ph) / 2)},scrollbars=yes,resizable=yes`
-            );
-        form.target = popup ? popupName : "_self";
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-
-        if (!popup) return;
-
-        payforPopupRef.current = popup;
-        isRedirecting = true;
-        setRedirecting(true);
-
-        const handlePayforFailure = () => {
-          // Guard: only run once even if poll fires multiple times
-          if (hasFallenBackRef.current) return;
-          hasFallenBackRef.current = true;
-
-          if (payforPollRef.current) { clearInterval(payforPollRef.current); payforPollRef.current = null; }
-          if (payforPopupRef.current && !payforPopupRef.current.closed) payforPopupRef.current.close();
-          router.push(
-            appendCurrencyQuery(
-              `/donation-failed?donationId=${encodeURIComponent(donationId)}`,
-              getCurrencyCodeForLinks()
-            )
-          );
-        };
-
-        let polls = 0;
-        // 60 polls × 2s = 120s. Mobile users routinely need >50s for the SMS-OTP step
-        // of 3D Secure; the previous 25-poll ceiling was firing the failure redirect
-        // while the bank popup was still authenticating.
-        const FAILURE_AFTER = 60;
-        payforPollRef.current = setInterval(async () => {
-          polls++;
-          try {
-            const check = await fetch(withDonationToken(`/api/donations/${donationId}`, donationToken));
-            if (!check.ok) return;
-            const data = await check.json();
-
-            if (data.status === "PAID" && data.paidAt) {
-              clearInterval(payforPollRef.current!); payforPollRef.current = null;
-              if (payforPopupRef.current && !payforPopupRef.current.closed) payforPopupRef.current.close();
-              clearItems(); confetti.onOpen();
-              router.push(
-                appendCurrencyQuery(withDonationToken(`/success/${donationId}`, donationToken), getCurrencyCodeForLinks())
-              );
-              return;
-            }
-            if (data.status === "FAILED" || payforPopupRef.current?.closed || polls >= FAILURE_AFTER) {
-              handlePayforFailure();
-            }
-          } catch { /* ignore transient errors */ }
-        }, 2000);
-
+        clearItems(); isRedirecting = true; setRedirecting(true);
+        submitGatewayForm(init.data as GatewayForm, browserCardFields);
         return;
       }
 
@@ -758,6 +671,11 @@ const CartPaymentDialog = ({
         onClose();
       }
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.code === "PAYMENT_ROUTING_CHANGED") {
+        acceptServerRoute(error.response.data.gateway);
+        toast.error(t("paymentRoutingChanged"));
+        return;
+      }
       console.error("Cart payment failed: request did not complete");
       // Send to the explanatory failure page rather than relying on a transient toast.
       isRedirecting = true;
@@ -1177,7 +1095,7 @@ const CartPaymentDialog = ({
                       </div>
                     </div>
                   ) : (
-                    getStepContent()
+                    <><PaymentCurrencyNotice gateway={gateway} currency={getCurrency()} amount={totalAmount} phone={phoneValue} />{getStepContent()}</>
                   )}
                 </motion.div>
               </AnimatePresence>

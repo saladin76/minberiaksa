@@ -519,7 +519,7 @@
     "and": "und",
     "privacyPolicy": "Datenschutzerklärung",
     "skipAndDonate": "Überspringen",
-    "donateAsGuest": "Als Gast spenden",
+    "donateAsGuest": "Als Gast weiter spenden",
     "withoutLoginBadge": "ohne Anmeldung",
     "googleFastestWay": "Schnellster Weg",
     "orContinueWith": "oder",
@@ -563,7 +563,12 @@
     "genderMale": "Männlich",
     "genderFemale": "Weiblich",
     "genderPreferNotToSay": "Keine Angabe",
-    "noPasswordYet": "Sie haben bereits ein Konto mit dieser E-Mail, aber noch kein Passwort. Registrieren Sie sich mit derselben E-Mail, um eines festzulegen, oder fahren Sie mit Google fort."
+    "noPasswordYet": "Sie haben bereits ein Konto mit dieser E-Mail, aber noch kein Passwort. Registrieren Sie sich mit derselben E-Mail, um eines festzulegen, oder fahren Sie mit Google fort.",
+    "authErrorTitle": "Anmeldung nicht abgeschlossen",
+    "authAccessDenied": "Die Anmeldeberechtigung wurde nicht bestätigt. Versuchen Sie es erneut oder spenden Sie als Gast.",
+    "authAccountConflict": "Diese E-Mail nutzt eine andere Anmeldemethode. Nutzen Sie die bisherige Methode oder spenden Sie als Gast.",
+    "authUnavailable": "Die Anmeldung ist derzeit nicht verfügbar. Sie können als Gast spenden.",
+    "authUnknown": "Die Anmeldung wurde nicht abgeschlossen. Versuchen Sie es erneut oder fahren Sie als Gast fort."
   },
   "SharePopup": {
     "shareCampaign": "Projekt mit anderen teilen",
@@ -678,7 +683,10 @@
     "certificateNoteBody": "Gib deine echte E-Mail-Adresse an, damit wir dir die offizielle Spendenbescheinigung und Quittung der Stiftung zusenden können.",
     "free": "Kostenlos",
     "rememberCard": "Meine Karte für weitere Spenden speichern",
-    "rememberCardFailed": "Die Karte konnte nicht gespeichert werden. Deaktivieren Sie diese Option, um fortzufahren."
+    "rememberCardFailed": "Die Karte konnte nicht gespeichert werden. Deaktivieren Sie diese Option, um fortzufahren.",
+    "bankChargeEstimate": "Ihre Spende beträgt {original}. Die geschätzte Bankabbuchung beträgt {amount} in türkischen Lira; der endgültige Kurs wird beim Zahlungsbeginn festgelegt.",
+    "bankChargeCurrency": "Die Bank zieht diese Spende in türkischen Lira ein. Der umgerechnete Betrag wird vor der Bestätigung angezeigt.",
+    "paymentRoutingChanged": "Das Zahlungsportal wurde aktualisiert. Prüfen Sie die Methode, geben Sie den Sicherheitscode erneut ein und bestätigen Sie."
   },
   "DonationSuccess": {
     "thankYou": "Vielen Dank",

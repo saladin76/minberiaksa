@@ -2510,6 +2510,18 @@
     "rememberCard": "Salva la mia carta per le prossime donazioni",
     "rememberCardFailed": "Impossibile salvare la carta. Deseleziona questa opzione per continuare.",
     "savedCards": "Le tue carte salvate",
-    "useNewCard": "Usa una nuova carta"
+    "useNewCard": "Usa una nuova carta",
+    "bankChargeEstimate": "La tua donazione è di {original}. L’addebito bancario stimato è di {amount} in lire turche; il cambio definitivo viene fissato all’avvio del pagamento.",
+    "bankChargeCurrency": "La banca incassa questa donazione in lire turche. L’importo convertito appare prima della conferma.",
+    "paymentRoutingChanged": "Il gateway è cambiato. Verifica il metodo, reinserisci il codice di sicurezza e conferma."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Accesso non completato",
+    "authAccessDenied": "L’autorizzazione non è stata completata. Riprova o dona come ospite.",
+    "authAccountConflict": "Questa email usa un altro metodo di accesso. Usa il metodo precedente o dona come ospite.",
+    "authUnavailable": "L’accesso non è disponibile. Puoi donare come ospite.",
+    "authUnknown": "L’accesso non è stato completato. Riprova o continua come ospite.",
+    "donateAsGuest": "Continua a donare come ospite",
+    "signInWithGoogle": "Accedi con Google"
   }
 }

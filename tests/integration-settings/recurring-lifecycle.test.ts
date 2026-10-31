@@ -1,3 +1,4 @@
+import { decideNewCardRoute, frozenPaymentRoute } from "../../lib/donations/payment-routing";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -72,6 +73,8 @@ function fixture(mainGateway = "ALBARAKA") {
   };
   prisma.$transaction = async (operation: unknown) => typeof operation === "function" ? operation(prisma) : Promise.all(operation as Promise<unknown>[]);
   const dependencies: Row = {
+    "@/lib/donations/payment-routing-server": { resolveNewCardPaymentRoute: async () => null },
+    "@/lib/donations/payment-routing": { frozenPaymentRoute },
     "@/lib/tracking/client-ip": clientIp,
     "server-only": {}, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor", role: "DONOR", name: "Fixture" } }) },
     "@/lib/prisma": { prisma }, "@/lib/locales": { isValidLocale: () => true },
@@ -263,7 +266,8 @@ function stripeFixture(withSecret = true) {
     products = { create: async () => ({ id: "prod_fixture" }) };
     subscriptions = { create: async (input: Row, config: Row) => { creates++; options.push([input, config]); return subscription; }, retrieve: async (_id: string, input: Row) => { retrieves++; assert.equal(input.expand[0], "latest_invoice.confirmation_secret"); return subscription; } };
   }
-  const route = load("app/api/stripe/charge/route.ts", { "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor" } }) }, stripe: Stripe,
+  const route = load("app/api/stripe/charge/route.ts", {
+    "@/lib/donations/payment-routing": { frozenPaymentRoute }, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor" } }) }, stripe: Stripe,
     "@/lib/stripe-amount": { toStripeMinorUnits }, "@/lib/donations/recurring-schedule": schedule,
     "@/lib/prisma": { prisma: { donation: { findUnique: async () => donation, update: async ({ data }: Row) => Object.assign(donation, data) }, subscription: { update: async ({ data }: Row) => Object.assign(plan, data) }, $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops) } } });
   return { route, plan, donation, subscription, options, creates: () => creates, retrieves: () => retrieves };
@@ -313,4 +317,13 @@ test("the browser checkout driver preserves the recurring-unavailable code witho
     assert.equal((error as { code?: string }).code, "RECURRING_UNAVAILABLE"); return true;
   });
   assert.equal(f.plans.size, 0); assert.equal(f.calls(), 0);
+});
+
+for (const currency of ["USD", "TRY", "EUR", "SAR"]) test(`the real cart writer freezes the one-time ${currency} route and refuses a mismatched preview before creating anything`, async () => {
+ const f = fixture(); const route = decideNewCardRoute({ mainGateway: "ALBARAKA", payforEnabled: true, saudiEnabled: true, currency, ipCountry: "SA", now: signupAt });
+ f.dependencies["@/lib/donations/payment-routing-server"].resolveNewCardPaymentRoute = async (_headers: unknown, input: Row) => input.method === "CARD" && input.type === "ONE_TIME" ? route : null;
+ const body = { items: [{ campaignId: "project", amount: 25 }], currency, type: "ONE_TIME", paymentMethod: "CARD", expectedGateway: "ALBARAKA" };
+ const mismatch = await f.checkout.POST(request(body)); assert.equal(mismatch.status, 409); assert.equal(mismatch.data.code, "PAYMENT_ROUTING_CHANGED"); assert.equal(mismatch.data.gateway, "PAYFOR"); assert.equal(f.donations.size, 0); assert.equal(f.plans.size, 0);
+ const accepted = await f.checkout.POST(request({ ...body, expectedGateway: "PAYFOR" })); assert.equal(accepted.status, 200); assert.equal(f.donations.size, 1);
+ const donation = [...f.donations.values()][0]; assert.equal(donation.provider, "PAYFOR"); assert.equal(donation.currency, currency); assert.equal(donation.totalAmount, 25); assert.equal(donation.providerRaw.paymentRouting.reason, "SA_IP"); assert.equal(f.calls(), 0);
 });

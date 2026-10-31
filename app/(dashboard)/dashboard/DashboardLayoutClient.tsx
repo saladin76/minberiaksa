@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import { localeDirection } from "@/lib/locales";
 import SessionProvider from '@/components/providers/SessionProvider';
@@ -10,7 +10,6 @@ import { NextIntlClientProvider } from "next-intl";
 import { Toaster } from "react-hot-toast";
 import { ConfettiProvider } from "@/components/providers/confetti-provider";
 import { CurrencyProvider } from "@/context/CurrencyContext";
-import { CurrencyFromUrlSync } from "@/components/CurrencyFromUrlSync";
 import { ViewUserProfileProvider } from "@/context/ViewUserProfileContext";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -365,7 +364,6 @@ export default function DashboardLayoutClient({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CurrencyProvider>
-        <Suspense fallback={null}><CurrencyFromUrlSync /></Suspense>
         <SessionProvider session={session}>
           {/* DashboardThemeProvider was mounted here but `useDashboardTheme` had zero consumers
               anywhere in the app  it only wrote a `dashboard-theme-dark` key to localStorage. */}

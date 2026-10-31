@@ -23,7 +23,7 @@ function transitionHarness(options: { missing?: boolean; denied?: boolean; failR
     "@/lib/communication/campaign-service": { getCampaign: async () => ({ status: state.status }), transitionCampaign: async (_id: string, action: string) => { state.writes++; state.status = action === "SUBMIT_REVIEW" ? "REVIEW" : "APPROVED"; return { ok: true, data: { status: state.status } }; } },
     "@/lib/communication/campaign-approval-service": { evaluateCoverageGate: async () => { state.reads++; if (options.failRead) throw new Error("AUDIENCE_DATABASE_UNAVAILABLE"); return { ok: !options.missing, undecided: options.missing ? ["fr"] : [], missingWithRecipients: options.missing ? [{ locale: "fr", label: "Français", recipientCount: 41 }] : [] }; } },
   });
-  return { state, run: (action = "CONFIRM") => route.POST({ json: async () => ({ action }) }, { params: Promise.resolve({ id: "campaign" }) }) };
+  return { state, run: (action = "CONFIRM") => route.POST({ json: async () => ({ action, ...(action === "SCHEDULE" ? { scheduledAt: new Date(Date.now() + 3600_000).toISOString() } : {}) }) }, { params: Promise.resolve({ id: "campaign" }) }) };
 }
 test("confirmation checks every audience language before changing draft/review status, including a language absent from the first batch", async () => {
   for (const action of ["CONFIRM", "APPROVE", "SCHEDULE"]) {

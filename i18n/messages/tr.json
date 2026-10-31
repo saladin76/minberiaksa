@@ -519,7 +519,7 @@
     "and": "ve",
     "privacyPolicy": "Gizlilik Politikası",
     "skipAndDonate": "Atla",
-    "donateAsGuest": "Misafir olarak bağışla",
+    "donateAsGuest": "Misafir olarak bağışa devam et",
     "withoutLoginBadge": "kayıt olmadan",
     "googleFastestWay": "En hızlı yol",
     "orContinueWith": "veya",
@@ -563,7 +563,12 @@
     "genderMale": "Erkek",
     "genderFemale": "Kadın",
     "genderPreferNotToSay": "Belirtmek istemiyorum",
-    "noPasswordYet": "Bu e-posta ile zaten bir hesabınız var ancak henüz şifreniz yok. Şifre belirlemek için aynı e-posta ile kayıt olun veya Google ile devam edin."
+    "noPasswordYet": "Bu e-posta ile zaten bir hesabınız var ancak henüz şifreniz yok. Şifre belirlemek için aynı e-posta ile kayıt olun veya Google ile devam edin.",
+    "authErrorTitle": "Giriş tamamlanamadı",
+    "authAccessDenied": "Giriş izni tamamlanmadı. Yeniden deneyebilir veya misafir olarak bağış yapabilirsiniz.",
+    "authAccountConflict": "Bu e-posta başka bir giriş yöntemine bağlı. Önceki yöntemi kullanın veya misafir olarak bağış yapın.",
+    "authUnavailable": "Giriş şu anda kullanılamıyor. Misafir olarak bağış yapabilirsiniz.",
+    "authUnknown": "Giriş tamamlanmadı. Tekrar deneyin veya misafir olarak devam edin."
   },
   "SharePopup": {
     "shareCampaign": "Projeyi Başkalarıyla Paylaş",
@@ -678,7 +683,10 @@
     "certificateNoteBody": "Resmi bağış sertifikanızı ve makbuzunuzu gönderebilmemiz için gerçek e-posta adresinizi girin.",
     "free": "Ücretsiz",
     "rememberCard": "Kartımı sonraki bağışlar için kaydet",
-    "rememberCardFailed": "Kart kaydedilemedi. Kaydetme seçeneğini kaldırıp devam edebilirsiniz."
+    "rememberCardFailed": "Kart kaydedilemedi. Kaydetme seçeneğini kaldırıp devam edebilirsiniz.",
+    "bankChargeEstimate": "Bağışınız {original}. Tahmini banka tahsilatı Türk lirası olarak {amount}; kesin kur ödeme başlatıldığında sabitlenir.",
+    "bankChargeCurrency": "Banka bu bağışı Türk lirası olarak tahsil eder. Dönüştürülen tutar ödeme onayından önce gösterilir.",
+    "paymentRoutingChanged": "Bu denemenin ödeme geçidi güncellendi. Yöntemi kontrol edin, güvenlik kodunu yeniden girin ve ödemeyi onaylayın."
   },
   "DonationSuccess": {
     "thankYou": "Çok teşekkür ederiz",

@@ -1,3 +1,5 @@
+import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
+import { buildWhatsappRenderedPreview } from "../../lib/communication/whatsapp-rendered-preview";
 import * as readiness from "../../lib/communication/whatsapp-template-readiness";
 import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
@@ -29,6 +31,7 @@ type Delivery = Dict & { id: string; status: string; recipientUserId: string; re
 type Options = { renderedLocale?: string; trackingBody?: string; denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
 type Result = { ok: boolean; status: string; sent: number; skipped: number; failed: number; total: number; hasMore?: boolean; blocked?: string };
 type Engine = {
+  runDueCampaigns: () => Promise<Result[]>;
   executeCampaignSend: (id: string, opts?: { mode?: string; maxBatches?: number; batchSize?: number; timeBudgetMs?: number }) => Promise<Result>;
   __test: { mapWithConcurrency: <T,R>(items: T[], limit: number, work: (item: T) => Promise<R>) => Promise<R[]> };
 };
@@ -65,6 +68,9 @@ function engineHarness(options: Options = {}) {
     "./smart-audience": { getSmartAudienceDefinitionForSegmentKey: async () => options.recentMarketing ? { filters: { excludeMarketedWithinDays: 7 } } : null },
     "./recent-marketing-filter": { recentMarketingDeliveryWhere },
     "@/lib/prisma": { prisma: {
+      whatsappTemplateWabaVariant: { findMany: async () => [{ businessAccountId: "waba", languageCode: "en", locale: "en", approvalStatus: "APPROVED", category: "MARKETING", providerTemplateName: "fixture", componentsSchema: [{ type: "BODY", text: "Fixture donation" }], lastSyncedAt: new Date() }] },
+      whatsappTemplate: { findUnique: async () => ({ variables: [], header: {}, translations: {} }) },
+      communicationCampaign: { findMany: async ({ where }: { where: { status: string; scheduledAt?: { lte: Date } } }) => campaign.status === where.status && (!where.scheduledAt || campaign.scheduledAt <= where.scheduledAt.lte) ? [clone(campaign)] : [] },
       communicationCampaignDeferredRecipient: {
         count: async () => { if (options.failQueueCount) throw new Error("QUEUE_READ_FAILED"); return queue.length; },
         findMany: async () => clone(queue.filter((row) => row.nextAttemptAt <= new Date())),
@@ -99,8 +105,8 @@ function engineHarness(options: Options = {}) {
       sendPreparedDelivery: async (payload: Dict) => { payloads.push(payload); calls++; events.push("send"); if (options.sendThrows) throw new Error("socket error"); return { ok: true, providerMessageId: `p-${calls}`, internalAccepted: false }; } },
     "./providers/email/client": { EMAIL_PROVIDER_ID: "ELASTIC_EMAIL" },
     "./runtime-config": { getActiveCommunicationRuntimeBundle: async () => ({}) },
-    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
-    "./whatsapp-template-readiness": readiness, "./whatsapp-template-sync": {}, "./providers/meta-whatsapp/parameters": {}, "./whatsapp-rendered-preview": {},
+    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test", businessAccountId: "waba" } }) },
+    "./whatsapp-template-readiness": readiness, "./whatsapp-template-sync": { META_PROVIDER: "META_WHATSAPP", NOT_READY: readiness.NOT_READY }, "./providers/meta-whatsapp/parameters": { buildMetaComponents }, "./whatsapp-rendered-preview": { buildWhatsappRenderedPreview },
     "./audience-list-service": { resolveAudienceOrigin: async () => "CAMPAIGN" },
     "./campaign-counter-service": { ...counter, recomputeCampaignCounters: async () => ({ ok: !options.failCounter, status: campaign.status }) },
     "./campaign-send-controls": { autoSpeedMode: () => "BALANCED", campaignPriorityRank: () => 1, campaignSendControls: controls,
@@ -298,3 +304,14 @@ for (const channel of ["EMAIL", "SMS"]) test(`${channel} executor never bypasses
   assert.equal(h.state().calls, 0); assert.equal(result.skipped, 2);
   assert.ok(h.deliveries.every(row => row.errorMessage === "EXACT_TEMPLATE_LANGUAGE_REQUIRED"));
  });
+
+for (const channel of ["EMAIL", "WHATSAPP"]) test(`${channel}: future schedules wait; concurrent due ticks send each recipient once and cancelled schedules never send`, async () => {
+ const h = engineHarness({ channel }); h.campaign.status = "SCHEDULED"; h.campaign.scheduledAt = new Date(Date.now() + 3600_000);
+ assert.equal((await h.engine.runDueCampaigns()).length, 0); assert.equal(h.state().calls, 0);
+ h.campaign.scheduledAt = new Date(Date.now() - 1000);
+ await Promise.all([h.engine.runDueCampaigns(), h.engine.runDueCampaigns()]);
+ assert.equal(h.state().calls, 2); assert.equal(h.campaign.status, "SENT");
+ await h.engine.runDueCampaigns(); assert.equal(h.state().calls, 2);
+ const cancelled = engineHarness({ channel }); cancelled.campaign.status = "CANCELLED";
+ assert.equal((await cancelled.engine.runDueCampaigns()).length, 0); assert.equal(cancelled.state().calls, 0);
+});

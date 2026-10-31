@@ -2510,6 +2510,18 @@
     "rememberCard": "Mijn kaart bewaren voor toekomstige donaties",
     "rememberCardFailed": "De kaart kon niet worden opgeslagen. Vink deze optie uit om verder te gaan.",
     "savedCards": "Uw opgeslagen kaarten",
-    "useNewCard": "Een nieuwe kaart gebruiken"
+    "useNewCard": "Een nieuwe kaart gebruiken",
+    "bankChargeEstimate": "Uw donatie is {original}. De geschatte bankafschrijving is {amount} in Turkse lira; de definitieve koers wordt bij de start vastgelegd.",
+    "bankChargeCurrency": "De bank int deze donatie in Turkse lira. Het omgerekende bedrag verschijnt vóór bevestiging.",
+    "paymentRoutingChanged": "Het betaalportaal is gewijzigd. Controleer de methode, voer de beveiligingscode opnieuw in en bevestig."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Aanmelden niet voltooid",
+    "authAccessDenied": "De toestemming is niet voltooid. Probeer opnieuw of doneer als gast.",
+    "authAccountConflict": "Dit e-mailadres gebruikt een andere aanmeldmethode. Gebruik de vorige methode of doneer als gast.",
+    "authUnavailable": "Aanmelden is nu niet beschikbaar. U kunt als gast doneren.",
+    "authUnknown": "Aanmelden is niet voltooid. Probeer opnieuw of ga verder als gast.",
+    "donateAsGuest": "Ga verder met doneren als gast",
+    "signInWithGoogle": "Aanmelden met Google"
   }
 }

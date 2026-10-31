@@ -1,3 +1,4 @@
+import { economicalAiFetch } from "@/lib/ai/core/economical-fetch";
 import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import { openAiFailure } from "../ai/core/openai-response";
 import { researchRequest } from "../ai/core/content-requests";
@@ -180,7 +181,7 @@ export async function generateResearchedSeo(input: {
     ].join("\n");
 
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await economicalAiFetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(researchRequest(prompt)),
@@ -216,7 +217,7 @@ export async function generateResearchedArticle(input: {
 }, signal?: AbortSignal) {
   const runtime = await getOpenAiRuntime("content"), apiKey = runtime.apiKey;
   if (!apiKey) throw new SeoResearchError("خدمة بحث المحتوى غير مهيأة على الخادم", 503, runtime.error || "AI_NOT_CONFIGURED");
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await economicalAiFetch("https://api.openai.com/v1/responses", {
     method: "POST",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000),
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },

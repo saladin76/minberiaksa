@@ -1,3 +1,4 @@
+import { economicalAiFetch } from "./economical-fetch";
 import { getOpenAiRuntime } from "./connection-settings";
 import { openAiResponseText } from "./openai-response";
 import type { AiAssistantContextDefinition, AiProviderStatus } from "./ai-core-types";
@@ -44,7 +45,7 @@ export async function generateOpenAiDraft(input: ProviderDraftInput): Promise<Pr
   }
 
   try {
-    const response = await fetch(`${status.baseUrl}/responses`, {
+    const response = await economicalAiFetch(`${status.baseUrl}/responses`, {
       method: "POST",
       signal: AbortSignal.timeout(90_000),
       headers: {
@@ -52,7 +53,7 @@ export async function generateOpenAiDraft(input: ProviderDraftInput): Promise<Pr
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: status.model,
+        model: status.model, store: false, max_output_tokens: 2400,
         input: [
           `Role: ${input.context.systemRole}`,
           `Safety rules: ${input.systemSafety.join(" | ")}`,

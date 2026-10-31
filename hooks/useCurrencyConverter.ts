@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
+import { currencyCookieName, onDashboard } from '@/lib/dashboard/currency';
 import { CURRENCY_COOKIE_UPDATED_EVENT } from '@/components/CurrencyFromUrlSync';
 
 const CACHE_KEY = "cachedExchangeRates";
@@ -11,13 +12,16 @@ const CACHE_DURATION = 50 * 60 * 1000;
    homepage profile showed ~0.2 s in that parser. The parse is redone only when
    `document.cookie` itself has changed, so a new selection is still seen at once. */
 let lastCookieString: string | null = null;
+let lastCookieName = "";
 let lastSelectedCurrency = "DEFAULT";
 function readSelectedCurrency(): string {
-  if (typeof document === "undefined") return Cookies.get("currency") || "DEFAULT";
+  if (typeof document === "undefined") return "DEFAULT";
+  const cookieName = currencyCookieName(onDashboard(window.location.pathname));
   const raw = document.cookie;
-  if (raw !== lastCookieString) {
+  if (raw !== lastCookieString || cookieName !== lastCookieName) {
+    lastCookieName = cookieName;
     lastCookieString = raw;
-    lastSelectedCurrency = Cookies.get("currency") || "DEFAULT";
+    lastSelectedCurrency = Cookies.get(cookieName) || "DEFAULT";
   }
   return lastSelectedCurrency;
 }
@@ -54,6 +58,7 @@ const useCurrencyConverter = () => {
   };
 
   useEffect(() => {
+    try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       const { rates, timestamp } = JSON.parse(cached);
@@ -64,6 +69,7 @@ const useCurrencyConverter = () => {
         return;
       }
     }
+    } catch { /* A corrupt or unavailable browser cache cannot block prices. */ }
     fetchRates();
   }, []);
 

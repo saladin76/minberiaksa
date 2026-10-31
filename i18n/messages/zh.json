@@ -2510,6 +2510,18 @@
     "rememberCard": "保存我的银行卡以便下次捐款",
     "rememberCardFailed": "无法保存银行卡。取消勾选此选项即可继续。",
     "savedCards": "已保存的银行卡",
-    "useNewCard": "使用新银行卡"
+    "useNewCard": "使用新银行卡",
+    "bankChargeEstimate": "您的捐款为{original}。预计银行扣款为{amount}土耳其里拉；最终汇率在付款开始时确定。",
+    "bankChargeCurrency": "银行以土耳其里拉收取此捐款。确认付款前会显示换算金额。",
+    "paymentRoutingChanged": "此次付款的支付网关已更新。请检查付款方式，重新输入安全码并确认付款。"
+  },
+  "SignInDialog": {
+    "authErrorTitle": "无法完成登录",
+    "authAccessDenied": "登录授权未完成。请重试，或以访客身份捐赠。",
+    "authAccountConflict": "此邮箱使用其他登录方式。请使用原来的方式，或以访客身份捐赠。",
+    "authUnavailable": "当前无法登录。您可以以访客身份继续捐赠。",
+    "authUnknown": "登录未完成。请重试，或以访客身份继续。",
+    "donateAsGuest": "以访客身份继续捐赠",
+    "signInWithGoogle": "使用Google登录"
   }
 }

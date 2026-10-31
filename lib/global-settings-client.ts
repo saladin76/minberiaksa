@@ -22,6 +22,7 @@ export type GlobalSettings = {
   cartUpsell: CartUpsellConfig;
   /** Master switch for the PayFor gateway. Default true. */
   payforEnabled: boolean;
+  payforSaudiRoutingEnabled?: boolean;
   /** Gateway handling every case PayFor doesn't take. Default "STRIPE". */
   mainGateway: MainGateway;
   /**
@@ -72,6 +73,7 @@ export async function fetchGlobalSettings(
             teamSupportEnabled?: unknown;
             cartUpsell?: unknown;
             payforEnabled?: unknown;
+            payforSaudiRoutingEnabled?: unknown;
             mainGateway?: unknown;
             albarakaUseOOS?: unknown;
             albarakaConfigured?: unknown;
@@ -87,6 +89,7 @@ export async function fetchGlobalSettings(
         // the donation flow working before the first record is persisted and
         // when the API response shape is incomplete for any reason.
         payforEnabled: data?.payforEnabled !== false,
+        payforSaudiRoutingEnabled: data?.payforSaudiRoutingEnabled === true,
         // Anything unrecognised falls back to Stripe  the rail that always works.
         mainGateway: parseMainGateway(data?.mainGateway),
         albarakaUseOOS: data?.albarakaUseOOS === true,

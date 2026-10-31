@@ -519,7 +519,7 @@
     "and": "e a",
     "privacyPolicy": "Política de privacidade",
     "skipAndDonate": "Pular",
-    "donateAsGuest": "Doar como convidado",
+    "donateAsGuest": "Continuar a doação como visitante",
     "withoutLoginBadge": "sem login",
     "googleFastestWay": "Mais rápido",
     "orContinueWith": "ou",
@@ -563,7 +563,12 @@
     "genderMale": "Masculino",
     "genderFemale": "Feminino",
     "genderPreferNotToSay": "Prefiro não informar",
-    "noPasswordYet": "Você já tem uma conta com este e-mail, mas ainda sem senha. Cadastre-se com o mesmo e-mail para definir uma, ou continue com o Google."
+    "noPasswordYet": "Você já tem uma conta com este e-mail, mas ainda sem senha. Cadastre-se com o mesmo e-mail para definir uma, ou continue com o Google.",
+    "authErrorTitle": "Não foi possível entrar",
+    "authAccessDenied": "A autorização não foi concluída. Tente novamente ou doe como visitante.",
+    "authAccountConflict": "Este e-mail usa outro método de acesso. Use o método anterior ou doe como visitante.",
+    "authUnavailable": "O acesso está indisponível. Você pode doar como visitante.",
+    "authUnknown": "O acesso não foi concluído. Tente novamente ou continue como visitante."
   },
   "SharePopup": {
     "shareCampaign": "Compartilhar o projeto com outras pessoas",
@@ -678,7 +683,10 @@
     "certificateNoteBody": "Informe seu e-mail real para que possamos enviar o certificado oficial de doação e o recibo.",
     "free": "Grátis",
     "rememberCard": "Guardar o meu cartão para futuros donativos",
-    "rememberCardFailed": "Não foi possível guardar o cartão. Desmarque esta opção para continuar."
+    "rememberCardFailed": "Não foi possível guardar o cartão. Desmarque esta opção para continuar.",
+    "bankChargeEstimate": "Sua doação é de {original}. O débito bancário estimado é de {amount} em liras turcas; a taxa final é fixada no início do pagamento.",
+    "bankChargeCurrency": "O banco cobra esta doação em liras turcas. O valor convertido aparece antes da confirmação.",
+    "paymentRoutingChanged": "O gateway foi atualizado. Confira o método, digite novamente o código de segurança e confirme."
   },
   "DonationSuccess": {
     "thankYou": "Muito obrigado",

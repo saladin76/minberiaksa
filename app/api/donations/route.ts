@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { donorAccountStatus } from "@/lib/dashboard/donor-account";
 import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { donationPaymentEvidence } from "@/lib/donations/payment-evidence";
@@ -372,6 +374,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const paymentRoute = await resolveNewCardPaymentRoute(request.headers, { method: paymentMethod, type: "ONE_TIME", currency: normalizeDonationCurrencyCode(currency), phone: body.routingPhone ?? guest?.phone, userId: session?.user?.id });
+    if (paymentRoute && body.expectedGateway && body.expectedGateway !== paymentRoute.gateway) return NextResponse.json({ error: "Payment route changed. Please confirm the updated payment method.", code: "PAYMENT_ROUTING_CHANGED", gateway: paymentRoute.gateway }, { status: 409 });
+
     // Resolve donorId  authenticated user or guest upsert
     let donorId: string;
     let donorName: string | null = null;
@@ -547,6 +552,7 @@ export async function POST(request: NextRequest) {
           referralId: referralId ?? undefined,
           paymentMethod,
           cardDetails: null,
+          ...(paymentRoute ? { provider: paymentRoute.gateway, providerRaw: { paymentRouting: paymentRoute } as unknown as Prisma.InputJsonValue } : {}),
           items: hasCampaignItems
             ? {
                 create: campaignItemsResolved.map((item) => ({
@@ -601,7 +607,7 @@ export async function POST(request: NextRequest) {
       messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرع لمرة واحدة (≈ ${donationTotalUsd.toFixed(0)} USD)`,
       entityType: "Donation",
       entityId: donation.id,
-      metadata: { amountUSD: donationTotalUsd, status: "PENDING", provider: "PAYFOR" },
+      metadata: { amountUSD: donationTotalUsd, status: "PENDING", provider: paymentRoute?.gateway ?? null },
       stream: auditStreamForRole(actorRole),
     });
 

@@ -2510,6 +2510,18 @@
     "rememberCard": "Lagre kortet mitt for fremtidige donasjoner",
     "rememberCardFailed": "Kortet kunne ikke lagres. Fjern avkrysningen for å fortsette.",
     "savedCards": "Dine lagrede kort",
-    "useNewCard": "Bruk et nytt kort"
+    "useNewCard": "Bruk et nytt kort",
+    "bankChargeEstimate": "Donasjonen din er {original}. Anslått bankbelastning er {amount} i tyrkiske lire; endelig kurs fastsettes ved betalingsstart.",
+    "bankChargeCurrency": "Banken belaster donasjonen i tyrkiske lire. Det omregnede beløpet vises før bekreftelse.",
+    "paymentRoutingChanged": "Betalingsportalen er endret. Kontroller metoden, skriv inn sikkerhetskoden på nytt og bekreft."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Innloggingen ble ikke fullført",
+    "authAccessDenied": "Tillatelsen til innlogging ble ikke fullført. Prøv igjen eller doner som gjest.",
+    "authAccountConflict": "Denne e-postadressen bruker en annen innloggingsmetode. Bruk den forrige metoden eller doner som gjest.",
+    "authUnavailable": "Innlogging er utilgjengelig nå. Du kan donere som gjest.",
+    "authUnknown": "Innloggingen ble ikke fullført. Prøv igjen eller fortsett som gjest.",
+    "donateAsGuest": "Fortsett å donere som gjest",
+    "signInWithGoogle": "Logg inn med Google"
   }
 }

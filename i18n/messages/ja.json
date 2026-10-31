@@ -2510,6 +2510,18 @@
     "rememberCard": "今後の寄付のためにカードを保存する",
     "rememberCardFailed": "カードを保存できませんでした。このオプションを外すと続行できます。",
     "savedCards": "保存済みのカード",
-    "useNewCard": "新しいカードを使う"
+    "useNewCard": "新しいカードを使う",
+    "bankChargeEstimate": "寄付額は{original}です。銀行からの引落見込額はトルコリラで{amount}です。最終レートは支払い開始時に確定します。",
+    "bankChargeCurrency": "銀行はこの寄付をトルコリラで受領します。換算額は支払いの確認前に表示されます。",
+    "paymentRoutingChanged": "この支払いの決済ゲートウェイが変更されました。方法を確認し、セキュリティコードを再入力して確定してください。"
+  },
+  "SignInDialog": {
+    "authErrorTitle": "ログインを完了できませんでした",
+    "authAccessDenied": "ログインの許可が完了しませんでした。再試行するか、ゲストとして寄付できます。",
+    "authAccountConflict": "このメールアドレスは別のログイン方法に関連付けられています。以前の方法を使うか、ゲストとして寄付してください。",
+    "authUnavailable": "現在ログインを利用できません。ゲストとして寄付を続けられます。",
+    "authUnknown": "ログインが完了しませんでした。再試行するか、ゲストとして続けてください。",
+    "donateAsGuest": "ゲストとして寄付を続ける",
+    "signInWithGoogle": "Googleでログイン"
   }
 }

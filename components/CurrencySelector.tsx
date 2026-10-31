@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
+import { currencyCookieName } from "@/lib/dashboard/currency";
 import { ChevronDown } from "lucide-react";
 import {
   isValidCurrencyParam,
@@ -31,6 +32,7 @@ function CurrencySelectorInner({
   onDark = true,
 }: CurrencySelectorProps) {
   const searchParams = useSearchParams();
+  const cookieName = currencyCookieName(showDefaultCurrencyOption);
   const [selectedCurrency, setSelectedCurrency] = useState(
     showDefaultCurrencyOption ? DEFAULT_CURRENCY_CODE : "USD"
   );
@@ -45,7 +47,7 @@ function CurrencySelectorInner({
     (saved: string | undefined) => {
       if (!showDefaultCurrencyOption) {
         if (!saved || saved === DEFAULT_CURRENCY_CODE) {
-          Cookies.set("currency", "USD", { expires: 365 });
+          Cookies.set(cookieName, "USD", { expires: 365 });
           setSelectedCurrency("USD");
           return;
         }
@@ -54,7 +56,7 @@ function CurrencySelectorInner({
       }
       setSelectedCurrency(saved || DEFAULT_CURRENCY_CODE);
     },
-    [showDefaultCurrencyOption]
+    [showDefaultCurrencyOption, cookieName]
   );
 
   /** URL param wins; then cookie. Keeps selector in sync on client navigations (?currency=). */
@@ -63,16 +65,16 @@ function CurrencySelectorInner({
     if (raw && isValidCurrencyParam(raw)) {
       const normalized = normalizeCurrencyParamToCookie(raw);
       if (!showDefaultCurrencyOption && normalized === DEFAULT_CURRENCY_CODE) {
-        Cookies.set("currency", "USD", { expires: 365 });
+        Cookies.set(cookieName, "USD", { expires: 365 });
         setSelectedCurrency("USD");
         return;
       }
-      Cookies.set("currency", normalized, { expires: 365 });
+      Cookies.set(cookieName, normalized, { expires: 365 });
       setSelectedCurrency(normalized);
       return;
     }
-    applyCookieToUi(Cookies.get("currency"));
-  }, [searchParams, showDefaultCurrencyOption, applyCookieToUi]);
+    applyCookieToUi(Cookies.get(cookieName));
+  }, [searchParams, showDefaultCurrencyOption, applyCookieToUi, cookieName]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -90,11 +92,12 @@ function CurrencySelectorInner({
 
   useEffect(() => {
     const onExternalCookie = (e: Event) => {
+      if (showDefaultCurrencyOption) { applyCookieToUi(Cookies.get(cookieName)); return; }
       const code = (e as CustomEvent<{ code?: string }>).detail?.code;
       if (!code || !isValidCurrencyParam(code)) return;
       const normalized = normalizeCurrencyParamToCookie(code);
       if (!showDefaultCurrencyOption && normalized === DEFAULT_CURRENCY_CODE) {
-        Cookies.set("currency", "USD", { expires: 365 });
+        Cookies.set(cookieName, "USD", { expires: 365 });
         setSelectedCurrency("USD");
         return;
       }
@@ -102,9 +105,10 @@ function CurrencySelectorInner({
     };
     window.addEventListener(CURRENCY_COOKIE_UPDATED_EVENT, onExternalCookie);
     return () => window.removeEventListener(CURRENCY_COOKIE_UPDATED_EVENT, onExternalCookie);
-  }, [showDefaultCurrencyOption]);
+  }, [showDefaultCurrencyOption, cookieName, applyCookieToUi]);
 
   useEffect(() => {
+    try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       const { timestamp } = JSON.parse(cached);
@@ -112,6 +116,7 @@ function CurrencySelectorInner({
         return;
       }
     }
+    } catch { /* Cache is optional. */ }
     fetch("/api/exchange/rates", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
@@ -133,9 +138,11 @@ function CurrencySelectorInner({
 
   const handleChange = (code: string) => {
     setSelectedCurrency(code);
-    Cookies.set("currency", code, { expires: 365 });
+    Cookies.set(cookieName, code, { expires: 365 });
     setOpen(false);
-    window.location.reload();
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("currency")) url.searchParams.set("currency", code);
+    window.location.assign(url.toString());
   };
 
   const current =

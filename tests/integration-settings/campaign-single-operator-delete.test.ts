@@ -47,7 +47,7 @@ function harness(options: { status?: string; channel?: string; deliveries?: numb
   };
   const loaded = { exports: {} as Row };
   new vm.Script(ts.transpileModule(readFileSync("lib/communication/campaign-service.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, Date, process: { env: { DATABASE_URL: "fixture", COMMUNICATION_FOUR_EYES_MIN_RECIPIENTS: "1" } }, console: { error() {} }, require: (key: string) => { assert.ok(key in deps, key); return deps[key]; } });
-  return { approve: () => loaded.exports.transitionCampaign(id, "APPROVE", { actor }), remove: () => loaded.exports.deleteUnsentCampaign(id, actor), state: () => state, audits, audienceReads: () => audienceReads };
+  return { schedule: (date: Date) => loaded.exports.transitionCampaign(id, "SCHEDULE", { scheduledAt: date, actor }), unschedule: () => loaded.exports.cancelSchedule(id, actor), approve: () => loaded.exports.transitionCampaign(id, "APPROVE", { actor }), remove: () => loaded.exports.deleteUnsentCampaign(id, actor), state: () => state, audits, audienceReads: () => audienceReads };
 }
 test("one operator can approve EMAIL, WHATSAPP and SMS regardless of the retired second-approver environment flag", async () => {
   for (const channel of ["EMAIL", "WHATSAPP", "SMS"]) {
@@ -85,4 +85,11 @@ test("a send claim winning the race aborts deletion; two delete requests cannot 
   const race = harness({ status: "SCHEDULED", sendWins: true }); assert.equal((await race.remove()).status, 409); assert.equal(race.state().campaign.status, "SENDING");
   const twice = harness(); const results = await Promise.all([twice.remove(), twice.remove()]);
   assert.equal(results.filter(result => result.ok).length, 1); assert.equal(twice.audits.length, 1);
+});
+
+test("schedule validation rejects missing and past times before reads; cancellation cannot overwrite a scheduler race", async () => {
+ const h = harness({ status: "APPROVED" }); assert.equal((await h.schedule(new Date(0))).status, 400);
+ assert.equal(h.state().campaign.status, "APPROVED"); assert.equal((await h.schedule(new Date(Date.now() + 3600_000))).ok, true);
+ assert.equal(h.state().campaign.status, "SCHEDULED"); assert.equal((await h.unschedule()).ok, true); assert.equal(h.state().campaign.status, "APPROVED"); assert.equal(h.state().campaign.scheduledAt, null);
+ const raced = harness({ status: "SCHEDULED", transitionRace: true }); assert.equal((await raced.unschedule()).status, 409); assert.equal(raced.state().campaign.status, "CANCELLED"); assert.equal(raced.audits.length, 0);
 });

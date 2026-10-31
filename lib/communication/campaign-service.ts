@@ -8,7 +8,7 @@ import { canDeleteUnsentCampaign } from "./campaign-lifecycle";
 /**
  * CampaignService  CRUD + status transitions for CommunicationCampaign. This package
  * covers the workflow up to (but not including) sending: DRAFT → REVIEW → APPROVED →
- * SCHEDULED, plus CANCELLED. Campaigns never send automatically and never move to
+ * SCHEDULED, plus CANCELLED. This service only records operator transitions; the scheduler owns sending and moves to
  * SENDING/SENT here  that is a later package behind explicit human approval + a provider.
  */
 
@@ -193,6 +193,7 @@ export async function transitionCampaign(
   action: CampaignAction,
   opts?: { scheduledAt?: Date | null; actor?: Actor }
 ): Promise<ServiceResult<CommunicationCampaign>> {
+  if (action === "SCHEDULE" && (!opts?.scheduledAt || !Number.isFinite(opts.scheduledAt.getTime()) || opts.scheduledAt <= new Date())) return { ok: false, status: 400, error: "اختر موعدًا صحيحًا في المستقبل." };
   if (!process.env.DATABASE_URL) return dbUnavailable();
   const rule = TRANSITIONS[action];
   if (!rule) return { ok: false, status: 400, error: "Unknown action." };
@@ -339,10 +340,12 @@ export async function archiveCampaign(id: string, actor?: Actor): Promise<Servic
 export async function cancelSchedule(id: string, actor?: Actor): Promise<ServiceResult<CommunicationCampaign>> {
   if (!process.env.DATABASE_URL) return dbUnavailable();
   try {
-    const current = await prisma.communicationCampaign.findUnique({ where: { id }, select: { status: true, name: true } });
+    const current = await prisma.communicationCampaign.findUnique({ where: { id }, select: { status: true, name: true, updatedAt: true } });
     if (!current) return { ok: false, status: 404, error: "Campaign not found." };
     if (current.status !== "SCHEDULED") return { ok: false, status: 409, error: "لا يمكن إلغاء الجدولة إلا لحملة مجدولة." };
-    const row = await prisma.communicationCampaign.update({ where: { id }, data: { status: "APPROVED", scheduledAt: null } });
+    const changed = await prisma.communicationCampaign.updateMany({ where: { id, status: "SCHEDULED", updatedAt: current.updatedAt }, data: { status: "APPROVED", scheduledAt: null } });
+    if (changed.count !== 1) return { ok: false, status: 409, error: "تغيرت الحملة؛ حدّثها قبل تأكيد الإجراء." };
+    const row = await prisma.communicationCampaign.findUniqueOrThrow({ where: { id } });
     await auditCampaign(actor ?? null, "communication.campaign.cancel-schedule", `إلغاء جدولة حملة: ${current.name}`, `Cancelled schedule: ${current.name}`, id, { to: "APPROVED" });
     return { ok: true, data: row };
   } catch (error) {

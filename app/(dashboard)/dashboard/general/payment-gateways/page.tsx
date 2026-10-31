@@ -16,12 +16,14 @@ import {
   Settings,
   ShieldCheck,
 } from "lucide-react";
+import { SaudiPayforReport } from "./SaudiPayforReport";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { parseMainGateway, type MainGateway } from "@/lib/payment-gateway";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 type SettingsResponse = {
   payforEnabled?: boolean;
+  payforSaudiRoutingEnabled?: boolean;
   mainGateway?: string;
   albarakaConfigured?: boolean;
   albarakaRecurringReady?: boolean;
@@ -59,6 +61,8 @@ export default function PaymentGatewaysPage() {
   const [savingGateway, setSavingGateway] = useState(false);
   const [savingPayfor, setSavingPayfor] = useState(false);
   const [payforEnabled, setPayforEnabled] = useState(true);
+  const [saudiEnabled, setSaudiEnabled] = useState(false);
+  const [savingSaudi, setSavingSaudi] = useState(false);
   const [mainGateway, setMainGateway] = useState<MainGateway>("STRIPE");
   const [albarakaConfigured, setAlbarakaConfigured] = useState(true);
   const [albarakaRecurringReady, setAlbarakaRecurringReady] = useState(false);
@@ -75,6 +79,7 @@ export default function PaymentGatewaysPage() {
         if (cancelled) return;
         if (!["STRIPE", "ALBARAKA"].includes(res.data?.mainGateway || "")) throw new Error("INVALID_PAYMENT_SETTINGS");
         setPayforEnabled(res.data?.payforEnabled !== false);
+        setSaudiEnabled(res.data?.payforSaudiRoutingEnabled === true);
         setMainGateway(parseMainGateway(res.data?.mainGateway));
         setAlbarakaConfigured(res.data?.albarakaConfigured === true);
         setAlbarakaRecurringReady(res.data?.albarakaRecurringReady === true);
@@ -154,6 +159,16 @@ export default function PaymentGatewaysPage() {
     } finally {
       setSavingPayfor(false);
     }
+  };
+
+  const handleToggleSaudi = async (next: boolean) => {
+    if (loading || loadError || savingSaudi || !payforEnabled) return;
+    const reason = confirmPaymentChange(dt("توجيه محاولات البطاقة الجديدة لمرة واحدة من السعودية إلى PayFor 3D."));
+    if (reason === null) return;
+    setSavingSaudi(true);
+    try { const response = await axios.put("/api/global-settings", { payforSaudiRoutingEnabled: next, reason }); setSaudiEnabled(response.data.payforSaudiRoutingEnabled === true); toast.success(dt("تم حفظ الإعداد")); }
+    catch (cause) { toast.error(errorMessage(cause, dt("تعذّر حفظ الإعداد"))); }
+    finally { setSavingSaudi(false); }
   };
 
   const handleToggleAnyAmount = async (next: boolean) => {
@@ -353,6 +368,8 @@ export default function PaymentGatewaysPage() {
               </div>
             </Card>
           </section>
+
+          <section className="space-y-3 rounded-2xl border bg-white p-5"><div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold">{dt("توجيه المتبرعين من السعودية إلى PayFor")}</h2><p className="mt-2 text-sm leading-7 text-slate-600">{dt("للمحاولات الجديدة لمرة واحدة بالبطاقة: يكفي بلد IP سعودي أو رقم هاتف سعودي صحيح. تبقى الاشتراكات وPayPal والتحويل البنكي على مساراتها الحالية. تعطيل PayFor العام يمنع بدء عمليات جديدة عليه.")}</p></div><Switch aria-label={dt("توجيه المتبرعين من السعودية إلى PayFor")} checked={saudiEnabled} disabled={savingSaudi || !payforEnabled} onCheckedChange={handleToggleSaudi} /></div><SaudiPayforReport /></section>
 
           <Card className="p-5 sm:p-6 space-y-3">
             <h2 className="text-sm font-semibold">{dt("التكرار")}</h2>
