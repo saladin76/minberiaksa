@@ -9253,5 +9253,15 @@
   "تشخيص واستكمال": "Diagnose and continue",
   "تعذّر تحديث إحصاءات الإرسال؛ الأرقام المعروضة هي آخر نسخة محفوظة. اضغط تحديث لإعادة المحاولة.": "Send statistics could not be updated; the figures shown are the last saved snapshot. Refresh to try again.",
   "أكمل لغات القالب للجمهور قبل الإرسال؛ راجع تفاصيل اللغات الناقصة.": "Complete the template languages for this audience before sending; review the missing languages.",
-  "تعذّر فحص لغات الجمهور؛ لم تُعتمد الحملة. أعد المحاولة.": "Could not check audience languages; the campaign was not approved. Try again."
+  "تعذّر فحص لغات الجمهور؛ لم تُعتمد الحملة. أعد المحاولة.": "Could not check audience languages; the campaign was not approved. Try again.",
+  "Google Tag Manager (اختياري)": "Google Tag Manager (optional)",
+  "تعمل وسوم GA4 وحسابات Google Ads المحفوظة مباشرة. فعّل حاوية مخصصة فقط عند الحاجة، وتجنب إضافة الوسوم نفسها داخلها حتى لا تتكرر الأحداث ويتباطأ الموقع.": "Saved GA4 and Google Ads tags run directly. Enable a custom container only when needed, and avoid adding the same tags inside it to prevent duplicate events and slower pages.",
+  "معرّف حاوية GTM": "GTM container ID",
+  "تفعيل حاوية Google Tag Manager": "Enable Google Tag Manager container",
+  "أدخل معرّف حاوية صحيحًا بصيغة GTM-XXXX قبل تفعيلها.": "Enter a valid GTM-XXXX container ID before enabling it.",
+  "أضف زر رابط لصفحة تبرع على الموقع أولًا؛ لم يتم تغيير القالب.": "Add a button linking to a donation page on this site first. The template was not changed.",
+  "أُعدت نسخة مستقلة للمراجعة: {0} رابط تبرع بتتبع الحملة، و{1} رابط بقي كما هو. لم تُحفظ أو تُرسل إلى Meta بعد.": "A separate copy is ready for review: {0} campaign-tracked donation links; {1} links unchanged. It has not been saved or submitted to Meta.",
+  "قياس إيرادات الحملات": "Campaign revenue tracking",
+  "جهّز نسخة مستقلة بأزرار تبرع تحمل معرّف كل حملة تلقائيًا. تبقى النسخة الأصلية والحملات السابقة كما هي. راجع كل لغة ثم احفظ النسخة وأرسلها إلى Meta للاعتماد قبل اختيارها في حملة جديدة.": "Prepare a separate copy with donation buttons that automatically carry each campaign ID. The original template and previous campaigns stay intact. Review every language, then save and submit the copy to Meta for approval before selecting it in a new campaign.",
+  "إعداد نسخة بتتبع إيرادات الحملات": "Prepare a copy with campaign revenue tracking"
 }

@@ -1,6 +1,6 @@
 /**
  * When the public site's marketing scripts (GTM and its tags, the Meta, TikTok
- * and GA pixels, Contentsquare) may load: on the visitor's first real
+ * and GA pixels) may load: on the visitor's first real
  * interaction, or a short while after the page has finished loading and the
  * main thread is idle  whichever comes first.
  *

@@ -7,10 +7,13 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { getRawTrackingSettings, TRACKING_SETTINGS_COLLECTION } from "@/lib/tracking/tracking-settings";
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { encryptIntegrationSecret, integrationEncryptionKeyIsConfigured } from "@/lib/integration-settings/crypto";
+import { googleTagManagerId } from "@/lib/tracking/google-script-policy";
 import { parseGa4ServiceAccountJson } from "@/lib/marketing/ga4-reporting";
 
 
 const PLAIN_FIELDS = [
+  "googleTagManagerId",
+  "googleTagManagerEnabled",
   "facebookPixelId",
   "facebookTestEventCode",
   "metaDatasetId",
@@ -235,6 +238,21 @@ export async function PUT(request: NextRequest) {
     }
 
     const existing = await getRawTrackingSettings();
+    if (Object.hasOwn(bodyRaw, "googleTagManagerEnabled") && typeof bodyRaw.googleTagManagerEnabled !== "boolean") {
+      return NextResponse.json({ error: "INVALID_GTM_SETTING" }, { status: 400 });
+    }
+    if (Object.hasOwn(bodyRaw, "googleTagManagerId")) {
+      const value = bodyRaw.googleTagManagerId;
+      if (value !== null && value !== "" && !googleTagManagerId(value)) {
+        return NextResponse.json({ error: "INVALID_GTM_CONTAINER_ID" }, { status: 400 });
+      }
+      bodyRaw.googleTagManagerId = googleTagManagerId(value);
+    }
+    const nextGtmEnabled = bodyRaw.googleTagManagerEnabled ?? existing?.googleTagManagerEnabled;
+    const nextGtmId = Object.hasOwn(bodyRaw, "googleTagManagerId") ? bodyRaw.googleTagManagerId : existing?.googleTagManagerId;
+    if (nextGtmEnabled === true && !googleTagManagerId(nextGtmId)) {
+      return NextResponse.json({ error: "GTM_CONTAINER_ID_REQUIRED" }, { status: 400 });
+    }
     const actor = auditActorFromDashboardSession(session!);
     const update = buildUpdateFromBody(
       {

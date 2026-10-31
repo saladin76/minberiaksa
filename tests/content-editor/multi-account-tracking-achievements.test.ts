@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as googleScripts from "../../lib/tracking/google-script-policy";
 import * as targets from "../../lib/tracking/google-ads-targets";
 import * as videoPlatform from "../../lib/content/video-platform";
 import * as translations from "../../lib/i18n/translation-fallback";
@@ -80,6 +81,7 @@ test("public settings expose enabled opted-in account targets without credential
   ];
   const api = load("lib/tracking/tracking-settings.ts", {
     "./google-ads-targets": targets,
+    "./google-script-policy": googleScripts,
     "@/lib/prisma": {
       prisma: {
         $runCommandRaw: async () => ({

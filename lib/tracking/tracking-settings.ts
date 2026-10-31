@@ -1,4 +1,5 @@
 import { googleAdsTargets, type GoogleAdsTarget } from "./google-ads-targets";
+import { configuredGoogleTagManager } from "./google-script-policy";
 import { prisma } from "@/lib/prisma";
 
 export const TRACKING_SETTINGS_COLLECTION = "TrackingSettings";
@@ -6,6 +7,8 @@ export const TRACKING_SETTINGS_COLLECTION = "TrackingSettings";
 export type RawTrackingSettings = Record<string, unknown>;
 
 export type PublicTrackingConfig = {
+  googleTagManagerId: string | null;
+  googleTagManagerEnabled: boolean;
   googleAdsTargets?: GoogleAdsTarget[];
   facebookPixelId: string | null;
   gaMeasurementId: string | null;
@@ -64,7 +67,10 @@ export async function getGoogleAdsTrackingTargets(row: RawTrackingSettings | nul
 export async function getPublicTrackingConfig(): Promise<PublicTrackingConfig> {
   const row = await getRawTrackingSettings();
   const targets = await getGoogleAdsTrackingTargets(row).catch(() => []);
+  const containerId = configuredGoogleTagManager(row);
   return { googleAdsTargets: targets,
+    googleTagManagerId: containerId,
+    googleTagManagerEnabled: containerId !== null,
     facebookPixelId: trackingString(row, "facebookPixelId"),
     gaMeasurementId: trackingString(row, "gaMeasurementId"),
     googleAdsConversionId: trackingString(row, "googleAdsConversionId"),

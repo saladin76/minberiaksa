@@ -1,5 +1,6 @@
 "use client";
 
+import { trackedTemplateButtons } from "@/lib/communication/tracked-template-draft";
 import { templateButtonProblem } from "@/lib/communication/template-locale-media";
 import * as React from "react";
 import axios from "axios";
@@ -715,6 +716,30 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     toast.success(dt("أُعدت نسخة بروابط اللغات الصحيحة للمراجعة. لم تُرسل إلى Meta بعد."));
   };
 
+  const createTrackedCopy = () => {
+    let prepared = 0;
+    let unchanged = 0;
+    const next = Object.fromEntries(Object.entries(locales).map(([locale, draft]) => {
+      if (!draft) return [locale, draft];
+      const tracked = trackedTemplateButtons(draft.buttons, locale);
+      prepared += tracked.prepared;
+      unchanged += tracked.unchanged;
+      return [locale, addMarketingUnsubscribe({ ...draft, buttons: tracked.buttons }, locale as SupportedLocale)];
+    })) as Partial<Record<SupportedLocale, LocaleDraft>>;
+    if (!prepared) {
+      toast.error(dt("أضف زر رابط لصفحة تبرع على الموقع أولًا؛ لم يتم تغيير القالب."));
+      return;
+    }
+    setLocales(next);
+    setWorkingId(null);
+    setLoadedTemplate(null);
+    setSubmittedLocales(new Set());
+    setProviderCategoriesByLocale({});
+    setName(previous => previous.replace(/_tracked_[a-z0-9]+$/, "").slice(0, 96) + "_tracked_" + Date.now().toString(36));
+    setPublishError("");
+    toast.success(dt("أُعدت نسخة مستقلة للمراجعة: {0} رابط تبرع بتتبع الحملة، و{1} رابط بقي كما هو. لم تُحفظ أو تُرسل إلى Meta بعد.", [prepared, unchanged]));
+  };
+
   const previewBody = React.useMemo(
     () => category === "AUTHENTICATION"
       ? dt("رمز التحقق الخاص بك هو 123456\nلا تشارك هذا الرمز مع أي شخص.")
@@ -755,6 +780,14 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     >
       {publishError ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-800">{publishError}</p> : null}
       <div className="space-y-5">
+        {initialKind === "CAMPAIGN" && category === "MARKETING" ? (
+          <section aria-label={dt("قياس إيرادات الحملات")} className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-7 text-blue-950">
+            <p>{dt("جهّز نسخة مستقلة بأزرار تبرع تحمل معرّف كل حملة تلقائيًا. تبقى النسخة الأصلية والحملات السابقة كما هي. راجع كل لغة ثم احفظ النسخة وأرسلها إلى Meta للاعتماد قبل اختيارها في حملة جديدة.")}</p>
+            <Button type="button" variant="outline" disabled={loading || saving || uploadingSample} onClick={createTrackedCopy} className="h-auto whitespace-normal text-start">
+              <Link2 className="me-2 h-4 w-4 shrink-0" />{dt("إعداد نسخة بتتبع إيرادات الحملات")}
+            </Button>
+          </section>
+        ) : null}
         {incorrectFailureLocales.length > 0 && submittedLocales.size > 0 ? (
           <section role="alert" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
             <p>{dt("روابط إعادة محاولة التبرع لا تطابق لغة بعض النسخ المعتمدة. يلزم اعتماد نسخة مصححة لدى Meta.")}</p>

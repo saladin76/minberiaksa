@@ -9245,5 +9245,15 @@
   "تشخيص واستكمال": "İncele ve devam et",
   "تعذّر تحديث إحصاءات الإرسال؛ الأرقام المعروضة هي آخر نسخة محفوظة. اضغط تحديث لإعادة المحاولة.": "Gönderim istatistikleri güncellenemedi; son kaydedilen veriler gösteriliyor. Yeniden denemek için yenileyin.",
   "أكمل لغات القالب للجمهور قبل الإرسال؛ راجع تفاصيل اللغات الناقصة.": "Gönderimden önce hedef kitlenin dilleri için şablonu tamamlayın; eksik dillerin ayrıntılarına bakın.",
-  "تعذّر فحص لغات الجمهور؛ لم تُعتمد الحملة. أعد المحاولة.": "Hedef kitlenin dilleri kontrol edilemedi; kampanya onaylanmadı. Yeniden deneyin."
+  "تعذّر فحص لغات الجمهور؛ لم تُعتمد الحملة. أعد المحاولة.": "Hedef kitlenin dilleri kontrol edilemedi; kampanya onaylanmadı. Yeniden deneyin.",
+  "Google Tag Manager (اختياري)": "Google Tag Manager (isteğe bağlı)",
+  "تعمل وسوم GA4 وحسابات Google Ads المحفوظة مباشرة. فعّل حاوية مخصصة فقط عند الحاجة، وتجنب إضافة الوسوم نفسها داخلها حتى لا تتكرر الأحداث ويتباطأ الموقع.": "Kayıtlı GA4 ve Google Ads etiketleri doğrudan çalışır. Özel kapsayıcıyı yalnızca gerektiğinde etkinleştirin; yinelenen olayları ve yavaşlamayı önlemek için aynı etiketleri kapsayıcıya eklemeyin.",
+  "معرّف حاوية GTM": "GTM kapsayıcı kimliği",
+  "تفعيل حاوية Google Tag Manager": "Google Tag Manager kapsayıcısını etkinleştir",
+  "أدخل معرّف حاوية صحيحًا بصيغة GTM-XXXX قبل تفعيلها.": "Etkinleştirmeden önce GTM-XXXX biçiminde geçerli bir kapsayıcı kimliği girin.",
+  "أضف زر رابط لصفحة تبرع على الموقع أولًا؛ لم يتم تغيير القالب.": "Önce bu sitedeki bir bağış sayfasına yönlendiren düğme ekleyin. Şablon değiştirilmedi.",
+  "أُعدت نسخة مستقلة للمراجعة: {0} رابط تبرع بتتبع الحملة، و{1} رابط بقي كما هو. لم تُحفظ أو تُرسل إلى Meta بعد.": "İnceleme için ayrı bir kopya hazırlandı: kampanya takibi olan {0} bağış bağlantısı; değişmeyen {1} bağlantı. Henüz kaydedilmedi veya Meta’ya gönderilmedi.",
+  "قياس إيرادات الحملات": "Kampanya gelir takibi",
+  "جهّز نسخة مستقلة بأزرار تبرع تحمل معرّف كل حملة تلقائيًا. تبقى النسخة الأصلية والحملات السابقة كما هي. راجع كل لغة ثم احفظ النسخة وأرسلها إلى Meta للاعتماد قبل اختيارها في حملة جديدة.": "Her kampanyanın kimliğini otomatik taşıyan bağış düğmeleriyle ayrı bir kopya hazırlayın. Özgün şablon ve önceki kampanyalar korunur. Her dili inceleyin; yeni bir kampanyada seçmeden önce kopyayı kaydedip onay için Meta’ya gönderin.",
+  "إعداد نسخة بتتبع إيرادات الحملات": "Kampanya gelir takibi olan kopya hazırla"
 }
