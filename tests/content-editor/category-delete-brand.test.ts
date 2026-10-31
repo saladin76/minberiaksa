@@ -3,7 +3,8 @@ import test from "node:test";
 import type { PrismaClient } from "@prisma/client";
 import { deleteEmptyCategory } from "../../lib/campaign/delete-empty-category";
 import { institutionalHomeTitle, siteIdentitySchemas, withInstitutionalHomeIdentity } from "../../lib/site-identity";
-import { LOCALE_SEO, SITE_NAME } from "../../lib/seo";
+import { redirectLegacyPath } from "../../lib/minbar/slug-routing";
+import { buildPageMetadata, LOCALE_SEO, SITE_NAME } from "../../lib/seo";
 import { SUPPORTED_LOCALES } from "../../lib/locales";
 
 const id = "111111111111111111111111", other = "222222222222222222222222";
@@ -107,4 +108,21 @@ test("published homepage overrides keep their intent, currency/query/canonical d
     assert.deepEqual(output.alternates, input.alternates);
     assert.equal(input.twitter.title, "Authored social title", "input is not mutated");
   }
+});
+
+
+test("internal page titles retain their meaning and display the full localized institution once", () => {
+  for (const locale of SUPPORTED_LOCALES) {
+    const name = LOCALE_SEO[locale].siteName;
+    for (const authored of ["About us", `Page | ${name}`]) {
+      const meta = buildPageMetadata(locale, {title:authored, description:"Original description", path:"/about-us"});
+      const expected = authored.includes(name) ? authored : `${authored} | ${name}`;
+      assert.deepEqual(meta.title,{absolute:expected});assert.equal(meta.openGraph?.title,expected);assert.equal(meta.twitter?.title,expected);
+      assert.equal(meta.alternates?.canonical,`https://minberiaksa.org/${locale}/about-us`);
+    }
+  }
+});
+
+test("the indexed legacy Turkish contact slug redirects in every locale", () => {
+  for (const locale of SUPPORTED_LOCALES) assert.equal(redirectLegacyPath(`/${locale}/iletisim`),`/${locale}/contact-us`);
 });

@@ -11,5 +11,5 @@ export async function resumeApprovedGifts() {
     orderBy: { updatedAt: "asc" }, take: 25,
     select: { donationId: true, giftChannels: true, giftDeliveryState: true, donation: { select: { paidAt: true } } },
   });
-  return recoverApprovalBlockedGifts(rows.map(row => ({ donationId: row.donationId, paidAt: row.donation.paidAt, channels: row.giftChannels, deliveryState: row.giftDeliveryState })), deliverDonationGifts);
+  return recoverApprovalBlockedGifts(rows.map(row => ({ donationId: row.donationId, paidAt: row.donation.paidAt, channels: row.giftChannels, deliveryState: row.giftDeliveryState })), id => deliverDonationGifts(id, { approvalBlockedOnly: true }));
 }

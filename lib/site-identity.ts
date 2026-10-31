@@ -1,3 +1,4 @@
+import { institutionalTitle } from "./institutional-title";
 import type { Metadata } from "next";
 import { LOCALE_SEO, SITE_URL, type Locale } from "./seo";
 import { SUPPORTED_LOCALES } from "./locales";
@@ -28,9 +29,7 @@ export function siteIdentitySchemas(locale: string) {
  * suffix. Never clip or duplicate the institution's complete official name. */
 export function institutionalHomeTitle(title: string, locale: string): string {
   const name = (LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en).siteName;
-  if (title.includes(name)) return title;
-  const intent = title.replace(/\s*\|\s*(?:مؤسسة منبر الأقصى(?: الدولية)?|Minberiaksa|Minbar Al[- ]Aqsa|Minber-i Aks[aâ]|Minberi Aks[aâ])\s*$/iu, "").trim();
-  return intent ? `${intent} | ${name}` : name;
+  return institutionalTitle(title, name);
 }
 
 export function withInstitutionalHomeIdentity(metadata: Metadata, locale: string): Metadata {

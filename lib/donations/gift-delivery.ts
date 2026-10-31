@@ -79,7 +79,7 @@ export interface GiftDeliveryResult {
 }
 
 /** Tell every gift recipient on a confirmed donation who has not been told yet. */
-export async function deliverDonationGifts(donationId: string): Promise<GiftDeliveryResult> {
+export async function deliverDonationGifts(donationId: string, options: { approvalBlockedOnly?: boolean } = {}): Promise<GiftDeliveryResult> {
   const result: GiftDeliveryResult = { lines: 0, emailsSent: 0, whatsappSent: 0, errors: 0 };
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
@@ -90,7 +90,12 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
     where: { donationId, giftRecipientName: { not: null }, AND: [giftNotDelivered] },
     include: { campaign: { select: { title: true, slug: true, translations: { select: { locale: true, title: true } } } } },
   });
-  if (!lines.length) return result;
+  const approvalBlocked = (raw: unknown) => {
+    const state = readGiftDeliveryState(raw).WHATSAPP;
+    return state?.status === "FAILED" && state.reason === "GIFT_TEMPLATE_APPROVAL_REQUIRED";
+  };
+  const candidates = options.approvalBlockedOnly ? lines.filter(line => approvalBlocked(line.giftDeliveryState)) : lines;
+  if (!candidates.length) return result;
   const docs = await ensureDonationDocuments(donationId);
   if (!docs) return result;
   const locale = docs.locale;
@@ -101,7 +106,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
   const whatsappSender = resolveTriggerSender(sendConfig, "WHATSAPP", { locale, purpose: "TRANSACTIONAL" });
   const donorName = (donation.donor?.name ?? "").trim() || (m.anonymousDonor ?? "");
 
-  for (const candidate of lines) {
+  for (const candidate of candidates) {
     const lock = crypto.randomUUID();
     const acquired = await prisma.donationItem.updateMany({
       where: { id: candidate.id, AND: [giftNotDelivered, { OR: [{ giftDeliveryLock: null }, { giftDeliveryLock: { isSet: false } }, { giftDeliveryLockUntil: { lt: new Date() } }] }] },
@@ -112,6 +117,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
       // Read after acquiring the lease; the earlier list may predate another worker.
       const line = await prisma.donationItem.findUnique({ where: { id: candidate.id }, include: { campaign: { select: { title: true, slug: true, translations: { select: { locale: true, title: true } } } } } });
       if (!line || line.giftDeliveryLock !== lock || line.giftDeliveredAt) continue;
+      if (options.approvalBlockedOnly && !approvalBlocked(line.giftDeliveryState)) continue;
       result.lines++;
       const state = readGiftDeliveryState(line.giftDeliveryState);
       const errors: string[] = [];
@@ -125,6 +131,7 @@ export async function deliverDonationGifts(donationId: string): Promise<GiftDeli
       const certificateUrl = giftToken ? base + "/api/gifts/" + line.id + "/certificate?giftToken=" + giftToken : "";
       const vars = { recipientName, donorName, project: donationCampaignTitle(line.campaign, locale), amount: formatAmount(line.amount, donation.currency, locale) };
       for (const channel of line.giftChannels) {
+        if (options.approvalBlockedOnly && channel !== "WHATSAPP") continue;
         if (channel !== "EMAIL" && channel !== "WHATSAPP") { errors.push("UNSUPPORTED_GIFT_CHANNEL"); result.errors++; continue; }
         if (state[channel]?.status === "SENT") continue;
         if (state[channel]?.status === "SENDING") { errors.push(channel + ":OUTCOME_UNCERTAIN"); result.errors++; continue; }

@@ -1,3 +1,4 @@
+import { institutionalTitle } from "./institutional-title";
 import { clipSeoDescription } from "@/lib/seo-description";
 import type { Metadata } from "next";
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
@@ -150,6 +151,7 @@ export function buildPageMetadata(
   }
 ): Metadata {
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
+  const title = institutionalTitle(overrides.title, seo.siteName);
   const image = overrides.image ?? OG_IMAGE;
   const alternates = overrides.alternates ?? buildHreflang(overrides.path, locale);
   /* Clipped here, once, for every page that goes through this funnel  pages pass
@@ -157,13 +159,13 @@ export function buildPageMetadata(
   const description = clipSeoDescription(overrides.description, locale);
 
   return {
-    title: { absolute: overrides.title },
+    title: { absolute: title },
     description,
     keywords: overrides.keywords ?? seo.keywords,
     alternates,
     ...(overrides.robots ? { robots: overrides.robots } : {}),
     openGraph: {
-      title: overrides.title,
+      title,
       description,
       url: alternates.canonical,
       siteName: seo.siteName,
@@ -176,7 +178,7 @@ export function buildPageMetadata(
     },
     twitter: {
       card: "summary_large_image",
-      title: overrides.title,
+      title,
       description,
       images: [image],
     },

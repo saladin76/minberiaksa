@@ -228,6 +228,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/iletisim", destination: "/tr/contact-us", permanent: true },
       /* One host. `www` served the same pages as the bare domain, so every page
          existed twice for crawlers; canonicals name the bare domain (lib/seo.ts). */
       {

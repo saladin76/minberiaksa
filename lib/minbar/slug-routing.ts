@@ -36,7 +36,7 @@ import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
 /** Legacy whole path → canonical whole path, whichever locale had it. */
 const PATH_REDIRECTS: Record<string, string> = {};
 /** Legacy first segment → canonical first segment. */
-const HEAD_REDIRECTS: Record<string, string> = {};
+const HEAD_REDIRECTS: Record<string, string> = { iletisim: "contact-us" };
 /** Exact public URLs copied by older Gaza ads; their obsolete nested paths
  * should land on the live project catalogue rather than a missing route. */
 const ARABIC_EXACT_REDIRECTS: Record<string, string> = {

@@ -19,3 +19,11 @@ test("recovery uses the existing channel ledger and never resends an accepted em
   await recoverApprovalBlockedGifts([{ donationId: "paid", paidAt: new Date(), channels: ["EMAIL", "WHATSAPP"], deliveryState: f.line.giftDeliveryState }], async () => f.deliver());
   assert.equal(f.whatsapps.length, 1);
 });
+
+
+test("approval recovery skips unknown gift lines and never sends an email with no delivery ledger", async () => {
+ const unknown = giftFixture();await unknown.deliver({approvalBlockedOnly:true});assert.equal(unknown.emails.length,0);assert.equal(unknown.whatsapps.length,0);
+ const known = giftFixture({row:{giftDeliveryState:{WHATSAPP:{status:"FAILED",reason:"GIFT_TEMPLATE_APPROVAL_REQUIRED",at:new Date().toISOString()}}}});
+ await known.deliver({approvalBlockedOnly:true});assert.equal(known.emails.length,0);assert.equal(known.whatsapps.length,1);assert.equal(known.line.giftDeliveredAt,undefined,"an unconfirmed email is not marked delivered");
+ await known.deliver({approvalBlockedOnly:true});assert.equal(known.whatsapps.length,1);
+});

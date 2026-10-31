@@ -34,8 +34,17 @@ try {
   }
   assert.ok(!html.includes("GTM-MMNBQQWB") && !html.includes("contentsquare.net"));
   assert.match(html, /rel="preload"[^>]*as="image"[^>]*imageSrcSet=/i);
+  for (const locale of ["ar", "tr", "en"]) {
+    const about = await fetch(`${base}/${locale}/about-us`); assert.equal(about.status, 200);
+    const markup = await about.text(); const name = {ar:"مؤسسة منبر الأقصى الدولية",tr:"Uluslararası Minber-i Aksâ Derneği",en:"Minbar Al Aqsa International Association"}[locale];
+    assert.ok(/<title>([^<]+)<\/title>/.exec(markup)?.[1].includes(name), `${locale} internal title must identify the institution`);
+    assert.ok(markup.includes(`https://minberiaksa.org/${locale}/about-us`));
+  }
+  const oldContact = await fetch(`${base}/iletisim`, {redirect:"manual"});
+  assert.equal(oldContact.status,308);assert.equal(oldContact.headers.get("location"),"/tr/contact-us");
+  const localizedContact = await fetch(`${base}/en/iletisim`, {redirect:"manual"});assert.equal(localizedContact.status,301);assert.equal(new URL(localizedContact.headers.get("location"),base).pathname,"/en/contact-us");
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
-  for (const width of [390, 1440]) {
+  for (const locale of ["ar", "tr", "en"]) for (const width of [390, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/*", route => {
@@ -43,13 +52,17 @@ try {
       if (url.pathname === "/_next/image" && /^https?:/.test(url.searchParams.get("url") || "")) return route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="32"/>' });
       return url.origin === base ? route.continue() : route.fulfill({ contentType: "text/javascript", body: "/* fixture: external requests disabled */" });
     });
-    await page.goto(`${base}/ar`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${base}/${locale}`, { waitUntil: "domcontentloaded" });
     const poster = page.locator("img.mia-hero-poster");
     await expect(poster).toBeVisible(); await expect(poster).toHaveAttribute("fetchpriority", "high"); await expect.poll(() => poster.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
     assert.ok((await poster.boundingBox()).width <= width);
-    await page.screenshot({ path: path.join(artifacts, `home-ar-${width}.png`), animations: "disabled" });
+    const waqfCta = page.locator("#waqf-grid > div:first-child > a");
+    const colours = await waqfCta.evaluate(node=>{const s=getComputedStyle(node);return {fg:s.color,bg:s.backgroundColor};});
+    const luminance = rgb=>{const channels=rgb.match(/\d+(?:\.\d+)?/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;};
+    const a=luminance(colours.fg),b=luminance(colours.bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);assert.ok(ratio>=4.5,`${locale} waqf CTA contrast ${ratio}`);
+    await page.screenshot({ path: path.join(artifacts, `home-${locale}-${width}.png`), animations: "disabled" });
     await page.close();
   }
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ fixture: true, htmlBytes: Buffer.byteLength(html), inlineCssCharacters: inlineCss, stylesheetCount: new Set(sheets).size, externalCssCharacters: cssBytes, widths: [390, 1440], providerCalls: 0, databaseWrites: 0, artifacts }));
+  console.log(JSON.stringify({ fixture: true, htmlBytes: Buffer.byteLength(html), inlineCssCharacters: inlineCss, stylesheetCount: new Set(sheets).size, externalCssCharacters: cssBytes, widths: [390, 1440], locales: ["ar", "tr", "en"], providerCalls: 0, databaseWrites: 0, artifacts }));
 } finally { await browser?.close(); server.kill("SIGTERM"); await writeFile(path.join(artifacts, "server.log"), output); }

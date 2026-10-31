@@ -29,7 +29,7 @@ export function giftFixture(options: { paid?: boolean; locale?: string; emailFai
     giftRecipientName: "Recipient", giftRecipientEmail: "recipient@example.test", giftRecipientPhone: "+905550000001", giftChannels: ["EMAIL", "WHATSAPP"], giftShowAmount: false, giftMessage: null, ...options.row };
   const emails: { html: string; to: string }[] = [], whatsapps: { body: string; phone: string }[] = [], pdfNames: string[] = [];
   const queries: unknown[] = [];
-  const service = fixtureModule<{ deliverDonationGifts: (id: string) => Promise<{ lines: number; errors: number; emailsSent: number; whatsappSent: number }> }>("lib/donations/gift-delivery.ts", {
+  const service = fixtureModule<{ deliverDonationGifts: (id: string, options?: {approvalBlockedOnly?: boolean}) => Promise<{ lines: number; errors: number; emailsSent: number; whatsappSent: number }> }>("lib/donations/gift-delivery.ts", {
     "server-only": {}, "node:crypto": crypto, "@/lib/templates/donation-projects": projects,
     "@/lib/templates/font": { applyAppFont, automaticEmailHtml },
     "./gift-delivery-state": stateHelpers, "./gift-certificate-token": giftTokens,
@@ -51,5 +51,5 @@ export function giftFixture(options: { paid?: boolean; locale?: string; emailFai
     "./gift-whatsapp": { sendGiftWhatsapp: async (input: { body: string; phone: string }) => { whatsapps.push(input); if (options.whatsappThrows) throw new Error("lost response"); return options.whatsappFails ? { ok: false, reason: "GIFT_TEMPLATE_APPROVAL_REQUIRED" } : { ok: true, providerMessageId: "wa-accepted" }; } },
     "@/lib/minbar/routes": { miaPath: () => "/en/bagislar/project" }, "@/lib/audit-log": { writeAuditLog: async () => {} },
   });
-  return { line, emails, whatsapps, pdfNames, queries, deliver: () => service.deliverDonationGifts("222222222222222222222222") };
+  return { line, emails, whatsapps, pdfNames, queries, deliver: (settings?: {approvalBlockedOnly?: boolean}) => service.deliverDonationGifts("222222222222222222222222", settings) };
 }

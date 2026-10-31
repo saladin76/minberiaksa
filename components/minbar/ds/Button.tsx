@@ -30,7 +30,7 @@ const VARIANTS: Record<ButtonVariant, CSSProperties> = {
   // gold accent action (secondary emphasis, e.g. Calculate Zakat cross-links)
   gold: {
     background: "var(--gold)",
-    color: "#fff",
+    color: "var(--deep)",
     border: "1px solid var(--gold)",
     boxShadow: "0 12px 24px rgba(211,154,39,.22)",
   },
