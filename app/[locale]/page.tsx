@@ -4,7 +4,8 @@ import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { getServerSession } from "next-auth";
-import { LOCALE_SEO, SITE_URL } from "@/lib/seo";
+import { LOCALE_SEO } from "@/lib/seo";
+import { siteIdentitySchemas, withInstitutionalHomeIdentity } from "@/lib/site-identity";
 import type { Locale } from "@/lib/seo";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
@@ -54,12 +55,12 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
-  return buildManagedPageMetadata("home", locale, {
+  return withInstitutionalHomeIdentity(await buildManagedPageMetadata("home", locale, {
     title: seo.title,
     description: seo.description,
     path: "/",
     keywords: seo.keywords,
-  });
+  }), locale);
 }
 
 /**
@@ -87,14 +88,7 @@ export default async function Home({ params }: Props) {
     getServerSession(authOptions),
   ]);
 
-  const organisationSchema = {
-    "@context": "https://schema.org",
-    "@type": ["Organization", "NGO"],
-    "@id": `${SITE_URL}/#organization`,
-    url: `${SITE_URL}/${locale}`,
-    name: LOCALE_SEO[locale as Locale]?.siteName ?? LOCALE_SEO.en.siteName,
-    description: LOCALE_SEO[locale as Locale]?.description ?? LOCALE_SEO.en.description,
-  };
+  const organisationSchema = siteIdentitySchemas(locale);
 
   return (
     <>

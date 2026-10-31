@@ -9217,5 +9217,15 @@
   "إلغاء تحديد المجموعة": "Grup seçimini kaldır",
   "تحديد المجموعة": "Grubu seç",
   "الإجراءات الإضافية": "Ek işlemler",
-  "أُوقفت بقية {0} لغات لأن الاتصال بالخادم لم يُؤكَّد. الاقتراحات المكتملة محفوظة للمراجعة.": "Sunucu bağlantısı doğrulanamadığı için kalan {0} dil durduruldu. Tamamlanan öneriler inceleme için korundu."
+  "أُوقفت بقية {0} لغات لأن الاتصال بالخادم لم يُؤكَّد. الاقتراحات المكتملة محفوظة للمراجعة.": "Sunucu bağlantısı doğrulanamadığı için kalan {0} dil durduruldu. Tamamlanan öneriler inceleme için korundu.",
+  "لا يمكن الحذف: {0} مشروع قائم، {1} تبرع، {2} اشتراك، {3} ارتباط بصفحة. انقل المشاريع أو استخدم الأرشفة لحفظ السجلات المالية.": "Silinemiyor: {0} mevcut proje, {1} bağış, {2} abonelik, {3} sayfa bağlantısı var. Projeleri taşıyın veya mali kayıtları korumak için kategoriyi arşivleyin.",
+  "تغير التصنيف أثناء الحذف؛ حدّث القائمة وأعد المحاولة.": "Silme sırasında kategori değişti. Listeyi yenileyip tekrar deneyin.",
+  "ليست لديك صلاحية حذف التصنيفات.": "Kategorileri silme yetkiniz yok.",
+  "تعذر حذف التصنيف. أعد المحاولة أو راجع اتصال الخادم.": "Kategori silinemedi. Tekrar deneyin veya sunucu bağlantısını kontrol edin.",
+  "تم حذف {0} تصنيف بنجاح": "{0} kategori başarıyla silindi",
+  "تعذر حذف {0} تصنيف؛ راجع الأسباب الموضحة": "{0} kategori silinemedi; aşağıdaki nedenleri inceleyin",
+  "تصنيفات لم يتم حذفها": "Silinemeyen kategoriler",
+  "عرض المشاريع المرتبطة بالتصنيف: {0}": "Kategoriye bağlı projeleri görüntüle: {0}",
+  "{0} مشاريع في المحذوفات": "Çöp kutusunda {0} proje",
+  "سجلات المشاريع المحذوفة وتبرعاتها ستبقى محفوظة.": "Silinmiş proje kayıtları ve bağışları korunacaktır."
 }

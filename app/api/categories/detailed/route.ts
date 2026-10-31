@@ -120,6 +120,7 @@ export async function GET(request: NextRequest) {
         isActive: cat.isActive ?? true,
         campaignCount: counts?.get(cat.id)?.published,
         archivedCampaignCount: counts?.get(cat.id)?.archived,
+        deletedCampaignCount: counts?.get(cat.id)?.deleted,
         linkedCampaignCount: counts?.get(cat.id)?.total,
         campaigns: includeCampaigns ? (campaignsByCategory[cat.id] || []).map(c => {
           const tC = pickTranslation(c.translations, locale);

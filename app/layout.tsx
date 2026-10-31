@@ -74,6 +74,7 @@ export const metadata: Metadata = {
   authors: [{ name: SITE_NAME, url: SITE }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
+  applicationName: SITE_NAME,
 
   /* `app/favicon.ico` is the icon now  a real file, which is also what stops a
      browser's automatic `/favicon.ico` request from falling through to the

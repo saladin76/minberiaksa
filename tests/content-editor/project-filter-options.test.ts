@@ -6,12 +6,12 @@ import { applyProjectFilterOrder, programmeProjectIds } from "../../lib/minbar/p
 
 test("category counts follow actual memberships and database publication, without stale inverse ids", async () => {
   const queries: unknown[] = [];
-  const database = { campaign: { findMany: async (query: unknown) => { queries.push(query); return JSON.stringify(query).includes('"isActive":true') ? [{ categoryIds: ["one", "one", "two"] }] : [{ categoryIds: ["one", "one", "two"] }, { categoryIds: ["one"] }]; } } } as unknown as Pick<PrismaClient, "campaign">;
+  const database = { campaign: { findMany: async (query: unknown) => { queries.push(query); return [{ categoryIds: ["one", "one", "two"], isActive: true }, { categoryIds: ["one"], isActive: false }, { categoryIds: ["one", "one", "two"], isActive: true, isDeleted: true }]; } } } as unknown as Pick<PrismaClient, "campaign">;
   const counts = await categoryProjectCounts(database, ["one", "two", "stale"]);
-  assert.deepEqual(counts.get("one"), { published: 1, archived: 1, total: 2 }); assert.deepEqual(counts.get("two"), { published: 1, archived: 0, total: 1 }); assert.deepEqual(counts.get("stale"), { published: 0, archived: 0, total: 0 });
-  assert.deepEqual((queries[0] as { select: unknown }).select, { categoryIds: true });
-  assert.match(JSON.stringify(queries[1]), /"isActive":true/); assert.match(JSON.stringify(queries[1]), /"isDeleted"/);
-  await categoryProjectCounts(database, []); assert.equal(queries.length, 2);
+  assert.deepEqual(counts.get("one"), { published: 1, archived: 1, deleted: 1, total: 2 }); assert.deepEqual(counts.get("two"), { published: 1, archived: 0, deleted: 1, total: 1 }); assert.deepEqual(counts.get("stale"), { published: 0, archived: 0, deleted: 0, total: 0 });
+  assert.deepEqual((queries[0] as { select: unknown }).select, { categoryIds: true, isActive: true, isDeleted: true });
+  assert.equal(queries.length, 1, "all counts use the same database snapshot");
+  await categoryProjectCounts(database, []); assert.equal(queries.length, 1);
 });
 test("saved ordering mixes both identity kinds, skips removed entries and appends new ones deterministically", () => {
   const rows = [{ key: "category:one", order: 1 }, { key: "programme:one", order: 0 }, { key: "category:new", order: 2 }];

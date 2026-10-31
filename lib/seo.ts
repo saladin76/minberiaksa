@@ -28,7 +28,7 @@ export const isProductionDeployment = (): boolean => {
 
 /** Vercel Analytics / Speed Insights only exist on Vercel; elsewhere their scripts 404. */
 export const isVercelDeployment = (): boolean => Boolean(process.env.VERCEL);
-export const SITE_NAME = "Minberiaksa";
+export const SITE_NAME = MINBAR_LOCALE_SEO.ar.siteName;
 export const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 // Locales derive from the single source of truth (`lib/locales.ts`). The
