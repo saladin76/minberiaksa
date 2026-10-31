@@ -157,7 +157,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-${{ matrix.artifact }}
-          path: .artifacts/
+          path: ${{ env.CONTENT_EDITOR_ARTIFACTS }}/
+          if-no-files-found: error
           retention-days: 7
 
   e2e:
