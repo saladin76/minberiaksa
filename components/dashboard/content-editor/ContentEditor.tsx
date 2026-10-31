@@ -658,7 +658,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       >
         <nav
           aria-label={dt("أقسام المحرر")}
-          className="flex min-w-0 gap-1 overflow-x-auto rounded-xl border bg-white p-2 md:sticky md:top-24 md:max-h-[calc(100vh-7rem)] md:flex-col md:overflow-y-auto"
+          className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-white p-2 md:sticky md:top-24 md:flex md:max-h-[calc(100vh-7rem)] md:flex-col md:overflow-y-auto"
         >
           {EDITOR_SECTIONS[kind].map((item, index) => {
             const Icon = sectionIcons[item.icon as keyof typeof sectionIcons];
@@ -667,11 +667,11 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
                 key={item.id}
                 type="button"
                 aria-current={section === item.id ? "page" : undefined}
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-3 md:shrink text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex min-w-0 items-center gap-2 rounded-lg px-3 py-3 text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
                 onClick={() => setSection(item.id)}
               >
                 <Icon size={17} className="shrink-0" />
-                <span className="flex-1">{dtMaybe(item.label)}</span>
+                <span className="min-w-0 flex-1 break-words leading-5">{dtMaybe(item.label)}</span>
                 <small className="text-[10px] opacity-50">
                   {String(index + 1).padStart(2, "0")}
                 </small>
