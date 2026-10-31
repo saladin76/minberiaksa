@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeAdsConversionId } from "@/lib/tracking/google-ads-targets";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -13,7 +14,7 @@ const objectId = z.string().regex(/^[a-f0-9]{24}$/i);
 const customerId = z.string().transform(value => value.replaceAll("-", "").trim()).pipe(z.string().regex(/^\d{10}$/));
 const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("test"), id: objectId, revision: z.string().length(64) }).strict(),
-  z.object({ action: z.literal("save"), id: objectId.optional(), revision: z.string().length(64).optional(), name: z.string().trim().min(1).max(150), customerId, managerId: z.union([customerId, z.literal("")]).optional(), clientId: z.string().trim().max(500), clientSecret: z.string().trim().max(4000).optional(), refreshToken: z.string().trim().max(4000).optional(), developerToken: z.string().trim().max(4000).optional(), fundingType: z.enum(["PAID", "AD_GRANTS"]), enabled: z.boolean() }).strict(),
+  z.object({ action: z.literal("save"), id: objectId.optional(), revision: z.string().length(64).optional(), name: z.string().trim().min(1).max(150), customerId, managerId: z.union([customerId, z.literal("")]).optional(), clientId: z.string().trim().max(500), clientSecret: z.string().trim().max(4000).optional(), refreshToken: z.string().trim().max(4000).optional(), developerToken: z.string().trim().max(4000).optional(), fundingType: z.enum(["PAID", "AD_GRANTS"]), conversionId: z.string().trim().max(60).refine(value => !value || Boolean(normalizeAdsConversionId(value))).optional(), conversionLabel: z.string().trim().regex(/^[\w-]{0,200}$/).optional(), trackingEnabled: z.boolean().optional(), enabled: z.boolean() }).strict(),
 ]);
 export async function GET() {
   const denied = requireAdminOrDashboardPermission(await getServerSession(authOptions), "platformConnections"); if (denied) return denied;
@@ -41,9 +42,12 @@ export async function POST(request: NextRequest) {
       queueAuditLog({ ...actor, action: "GOOGLE_SEARCH_ACCOUNT_TEST", entityType: "MarketingPlatformConnection", entityId: existing.id, messageAr: "اختبار قراءة حساب Google Ads", metadata: { externalCall: true, campaignMutations: 0 } });
       return reply({ ok: true, currency: rows[0].customer.currencyCode, timezone: rows[0].customer.timeZone });
     }
+    if (input.trackingEnabled && !(normalizeAdsConversionId(input.conversionId ?? existing?.conversionId) && (input.conversionLabel ?? existing?.conversionLabel))) return reply({ error: "CONVERSION_TARGET_REQUIRED" }, 400);
+    const duplicate = !existing ? await prisma.marketingPlatformConnection.findFirst({ where: { platform: "GOOGLE_ADS", accountId: input.customerId }, select: { id: true } }) : null;
+    if (duplicate) return reply({ error: "CUSTOMER_ALREADY_CONNECTED" }, 409);
     if (existing && input.customerId !== existing.accountId?.replaceAll("-", "")) return reply({ error: "CREATE_SEPARATE_CUSTOMER_CONNECTION" }, 409);
     const previous = existing?.configChecklist && typeof existing.configChecklist === "object" && !Array.isArray(existing.configChecklist) ? existing.configChecklist : {};
-    const data = { name: input.name, accountId: input.customerId, managerAccountId: input.managerId || null, appId: input.clientId || null, enabled: input.enabled, configChecklist: { ...previous, googleAdsFundingType: input.fundingType }, status: "MISSING_CONFIG", lastTestAt: null, lastError: null, updatedBy: actor.actorId ?? null, ...Object.fromEntries((["clientSecret", "refreshToken", "developerToken"] as const).filter(key => Boolean(input[key])).map(key => [key, input[key]!])) };
+    const data = { name: input.name, accountId: input.customerId, managerAccountId: input.managerId || null, appId: input.clientId || null, enabled: input.enabled, configChecklist: { ...previous, googleAdsFundingType: input.fundingType, ...(input.trackingEnabled !== undefined ? { googleAdsTrackingEnabled: input.trackingEnabled } : {}) }, ...(input.conversionId !== undefined ? { conversionId: normalizeAdsConversionId(input.conversionId) } : {}), ...(input.conversionLabel !== undefined ? { conversionLabel: input.conversionLabel || null } : {}), status: "MISSING_CONFIG", lastTestAt: null, lastError: null, updatedBy: actor.actorId ?? null, ...Object.fromEntries((["clientSecret", "refreshToken", "developerToken"] as const).filter(key => Boolean(input[key])).map(key => [key, input[key]!])) };
     let id: string;
     if (existing) {
       const saved = await prisma.marketingPlatformConnection.updateMany({ where: { id: existing.id, updatedAt: existing.updatedAt }, data });

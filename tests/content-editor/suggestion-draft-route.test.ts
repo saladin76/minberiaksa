@@ -10,13 +10,13 @@ import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
 
 function fixture(mode = "ok") {
   const row = { id: "111111111111111111111111", title: "Saved Arabic title", description: "Saved source", translations: [{ locale: "en", title: "Saved English title", description: "Saved English copy" }] };
-  const calls: { translations: unknown[]; research: Record<string, unknown>[]; reads: number } = { translations: [], research: [], reads: 0 };
+  const calls: { translations: unknown[]; research: Record<string, unknown>[]; reads: number; auth: number } = { translations: [], research: [], reads: 0, auth: 0 };
   class SeoResearchError extends Error { status = 502; }
   const deps: Record<string, unknown> = {
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status || 200 }) } },
-    "next-auth": { getServerSession: async () => ({ user: {} }) }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
+    "next-auth": { getServerSession: async () => { calls.auth++; if (mode === "queued" && calls.auth > 1) throw new Error("request cookies are unavailable after response"); return { user: { id: "operator" } }; } }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => mode === "denied" ? { status: 403 } : null },
-    "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
+    "@/lib/content-editor/suggestion-tasks": { queueSuggestion: async (_request: unknown, _owner: string, _permission: string, execute: (request: unknown) => Promise<unknown>) => execute({ json: async () => ({ action: "translate", locales: ["fr"], keys: ["title"], revision: "revision" }), signal: new AbortController().signal, headers: new Headers() }) }, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
     "@/lib/content-editor/service": { ContentError, readContent: async () => { calls.reads++; return row; }, fingerprint: () => "revision", documentFor: () => ({ slugs: {} }) },
     "@/lib/content-editor/store": { contentStore: {} }, "@/lib/locales": { isValidLocale: (value: string) => ["ar", "en", "fr"].includes(value) },
     "@/lib/content-localization/translate": { translateItem: async (input: unknown) => { calls.translations.push(input); if (mode === "quota") throw new OpenAiResponseError("AI_QUOTA_EXCEEDED"); return { fields: { title: "Reviewed translation" }, richFields: {}, warnings: [] }; } },
@@ -27,8 +27,8 @@ function fixture(mode = "ok") {
   };
   const loaded = { exports: {} as { POST: (request: unknown, context: unknown) => Promise<{ status: number; body: Record<string, unknown> }> } };
   const source = ts.transpileModule(fs.readFileSync("app/api/admin/content-editor/[kind]/[id]/suggest/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, console: { error: () => {} }, require: (id: string) => { if (!(id in deps)) throw new Error(id); return deps[id]; } });
-  return { row, calls, post: (body: unknown) => loaded.exports.POST({ json: async () => body, signal: new AbortController().signal }, { params: Promise.resolve({ kind: "campaigns", id: row.id }) }) };
+  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, Headers, console: { error: () => {} }, require: (id: string) => { if (!(id in deps)) throw new Error(id); return deps[id]; } });
+  return { row, calls, post: (body: unknown) => loaded.exports.POST({ json: async () => body, signal: new AbortController().signal, headers: new Headers(mode === "queued" ? { Prefer: "respond-async" } : {}) }, { params: Promise.resolve({ kind: "campaigns", id: row.id }) }) };
 }
 test("translation uses the unsaved Arabic snapshot and never mutates saved content", async () => {
   const h = fixture(), original = structuredClone(h.row);
@@ -52,4 +52,10 @@ test("translation quota failures expose a controlled actionable reason without p
   const result = await fixture("quota").post({ action: "translate", locales: ["fr"], keys: ["title"], revision: "revision" });
   assert.equal(result.status, 502); assert.equal(result.body.reason, "AI_QUOTA_EXCEEDED"); assert.equal(result.body.stopBatch, true);
   assert.match(String(result.body.error), /رصيد|فوترة/);
+});
+
+
+test("queued translation uses the initiating authorized session after the response instead of reading expired request cookies", async () => {
+  const h = fixture("queued"); const result = await h.post({});
+  assert.equal(result.status,200); assert.equal(h.calls.auth,1); assert.equal(h.calls.translations.length,1);
 });

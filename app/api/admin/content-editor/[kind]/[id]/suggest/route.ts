@@ -6,7 +6,7 @@ import { ga4ContentPagePath, ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
 import { faqTranslationFields, translatedFaq } from "@/lib/content-editor/faq";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import {
@@ -25,16 +25,17 @@ import { ContentError, documentFor, fingerprint, readContent } from "@/lib/conte
 import { isValidLocale } from "@/lib/locales";
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
-export async function POST(
-  request: NextRequest,
-  ctx: { params: Promise<{ kind: string; id: string }> },
+type SuggestionContext = { params: Promise<{ kind: string; id: string }> };
+
+// after() cannot read request cookies. Authenticate once while the request is open.
+async function suggestWithSession(
+  request: NextRequest, ctx: SuggestionContext, session: Session | null,
 ): Promise<Response> {
   const { kind: raw, id } = await ctx.params,
     kind = parseKind(raw);
   if (!kind || !/^[a-f0-9]{24}$/i.test(id))
     return NextResponse.json({ error: "قسم غير صالح" }, { status: 404 });
-  const session = await getServerSession(authOptions),
-    denied = requireAdminOrDashboardPermission(
+  const denied = requireAdminOrDashboardPermission(
       session,
       CONFIG[kind].permission,
     );
@@ -42,7 +43,7 @@ export async function POST(
   try {
     if (request.headers?.get("Prefer") === "respond-async") {
       if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
+      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => suggestWithSession(detached, ctx, session), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const body = await request.json();
     const row = await readContent(contentStore, kind, id);
@@ -218,4 +219,11 @@ export async function POST(
       { status: error instanceof SeoResearchError ? error.status : 502 },
     );
   }
+}
+
+export async function POST(request: NextRequest, ctx: SuggestionContext): Promise<Response> {
+  let session: Session | null;
+  try { session = await getServerSession(authOptions); }
+  catch { return NextResponse.json({ error: "تعذر التحقق من جلسة الدخول. احتفظ بالمسودة وأعد المحاولة.", reason: "SUGGESTION_SESSION_UNAVAILABLE" }, { status: 503 }); }
+  return suggestWithSession(request, ctx, session);
 }

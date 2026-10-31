@@ -1,3 +1,5 @@
+import { checkSiteAccess } from './lib/site-security/request';
+import type { NextFetchEvent } from 'next/server';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
@@ -43,7 +45,7 @@ function countryFromHeaders(req: NextRequest): string | null {
 // Runs before SSR so the page renders with `currency` already in cookies 
 // otherwise scripts/pixels would fire with the default (USD) before the
 // client-side `?currency=` sync catches up.
-export default function proxy(req: NextRequest) {
+function localizedResponse(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // The app defines no Server Actions, so a `Next-Action` header is always a
@@ -151,10 +153,16 @@ export default function proxy(req: NextRequest) {
   return response;
 }
 
+export default async function proxy(req: NextRequest, event: NextFetchEvent) {
+  if (req.headers.has('next-action')) return new NextResponse(null, { status: 400 });
+  const denied = await checkSiteAccess(req, event);
+  if (denied) return denied;
+  if (/^\/(?:api|dashboard|auth)(?:\/|$)/.test(req.nextUrl.pathname)) return NextResponse.next();
+  return localizedResponse(req);
+}
+
 export const config = {
-  // Catch every public path so locale-less share links also reach the middleware
-  // and can be redirected. Excludes: API/Next internals/Vercel internals,
-  // the standalone dashboard + auth routes (not localized), and any file with
-  // an extension (favicon, images, sitemap.xml, etc.).
-  matcher: ['/((?!api|_next|_vercel|dashboard|auth|.*\\..*).*)'],
+  // Include application APIs for access policy enforcement. Static assets and
+  // Next internals do not need per-request access checks.
+  matcher: ['/((?!_next|_vercel|.*\\..*).*)'],
 };

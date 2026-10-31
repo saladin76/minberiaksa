@@ -1,4 +1,5 @@
 "use client";
+import { googleAdsTargets, type GoogleAdsTarget } from "@/lib/tracking/google-ads-targets";
 
 import React, { useEffect, useRef, createContext, useContext, useCallback, useState } from "react";
 import { track as vercelTrack } from "@vercel/analytics";
@@ -71,6 +72,7 @@ function toVercelProps(event: CanonicalEvent): Record<string, string | number | 
 
 // ─── Public config (pixel IDs only  no tokens) ───────────────────────────────
 export interface TrackingConfig {
+  googleAdsTargets?: GoogleAdsTarget[];
   facebookPixelId: string | null;
   gaMeasurementId: string | null;
   tiktokPixelId: string | null;
@@ -306,6 +308,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         .then((r) => r.json())
         .then((data) => {
           const c: TrackingConfig = {
+            googleAdsTargets: googleAdsTargets(data),
             facebookPixelId: data.facebookPixelId || null,
             gaMeasurementId: data.gaMeasurementId || null,
             tiktokPixelId:   data.tiktokPixelId   || null,
@@ -374,8 +377,9 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     }
 
     // Google Analytics 4
-    if (config.gaMeasurementId) {
-      const id = config.gaMeasurementId;
+    const adsIds = [...new Set(googleAdsTargets(config).map(target => target.conversionId))];
+    if (config.gaMeasurementId || adsIds.length) {
+      const id = config.gaMeasurementId || adsIds[0];
       window.dataLayer = window.dataLayer || [];
       const gtag: (...args: unknown[]) => void = function () {
         // eslint-disable-next-line prefer-rest-params -- preserve the Arguments object expected by the data layer.
@@ -383,7 +387,8 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       };
       (window as unknown as { gtag: (...a: unknown[]) => void }).gtag = gtag;
       gtag("js", new Date());
-      gtag("config", id, { send_page_view: true });
+      if (config.gaMeasurementId) gtag("config", config.gaMeasurementId, { send_page_view: true });
+      for (const adsId of adsIds) gtag("config", adsId);
       loadScript(`https://www.googletagmanager.com/gtag/js?id=${id}`).catch(() => {});
     }
 

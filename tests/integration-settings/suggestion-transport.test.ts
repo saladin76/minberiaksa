@@ -35,7 +35,7 @@ test("network failure stops the rest of a language batch instead of repeatedly c
   const result = await api.runSuggestionBatch({ targets: ["en", "fr", "tr"], signal: new AbortController().signal,
     request: () => api.requestSuggestion("/suggest", {}, new AbortController().signal), onSuccess: () => assert.fail("No result expected"), onError: () => {}, onProgress: () => {},
   });
-  assert.equal(calls, 1); assert.equal(result.sharedFailure, true); assert.equal(result.skipped.length, 2);
+  assert.equal(calls, 3); assert.equal(result.sharedFailure, true); assert.equal(result.connectionFailure, true); assert.equal(result.skipped.length, 2);
 });
 test("cancelling a queued suggestion requests cancellation without starting another generation", async () => {
   const controller = new AbortController(); let cancelled = 0;
@@ -54,4 +54,22 @@ test("revoked source permission stops the remaining languages before another sug
     request: () => api.requestSuggestion("/suggest", {}, new AbortController().signal), onSuccess: () => assert.fail("No result expected"), onError: () => {}, onProgress: () => {},
   });
   assert.equal(calls, 1); assert.equal(result.sharedFailure, true); assert.equal(result.skipped.length, 1);
+});
+
+
+test("a lost queue acknowledgement retries the same idempotency key and a temporary poll failure reads the retained result", async () => {
+  const keys: string[] = [], signals: AbortSignal[] = []; let polls = 0;
+  const api = fixture(async (_url, options) => {
+    if (options?.method === "POST") {
+      keys.push((options.headers as Record<string,string>)["X-Suggestion-Request"]); signals.push(options.signal!);
+      if (keys.length === 1) throw new TypeError("acknowledgement lost");
+      return Response.json({ taskId: "a".repeat(64) }, { status: 202 });
+    }
+    assert.notEqual(options?.method, "DELETE");
+    if (++polls === 1) return new Response("upstream busy", { status: 503 });
+    return Response.json({ proposals: { de: { title: "Reviewed" } } });
+  });
+  const result = await api.requestSuggestion<{proposals:unknown}>("/suggest", { revision:"unchanged" }, new AbortController().signal);
+  assert.ok(result.proposals); assert.equal(keys.length, 2); assert.equal(new Set(keys).size, 1);
+  assert.notEqual(signals[0], signals[1]); assert.equal(polls,2);
 });

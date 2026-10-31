@@ -243,9 +243,12 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.sub },
-            select: { role: true, dashboardPermissions: true },
+            select: { role: true, dashboardPermissions: true, email: true },
           });
           
+          // JWT cookies outlive database sessions. A closed/missing account must
+          // not retain access to its old profile or financial endpoints.
+          if (!dbUser || dbUser.email?.endsWith("@deleted.invalid")) return { ...session, user: undefined } as unknown as typeof session;
           if (dbUser) {
             session.user.role = dbUser.role;
             session.user.dashboardPermissions = dbUser.dashboardPermissions ?? [];

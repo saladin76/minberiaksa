@@ -94,6 +94,7 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...options,
     cache: "no-store",
+    signal: options?.signal ?? AbortSignal.timeout(30_000),
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
   return readSuggestionJson<T>(res, dt("تعذر إكمال الطلب"));
@@ -343,8 +344,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       if (generationAbort.current !== controller) return;
       if (snapshot !== JSON.stringify(valuesRef.current)) throw new Error(dt("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا."));
       combined.skipped = result.skipped;
-      if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
-      if (result.sharedFailure && result.skipped.length) setMessage((Object.values(combined.errors)[0] || "") + " " + dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]), "error");
+      if (Object.keys(combined.proposals).length) setProposal(combined);
+      if (!Object.keys(combined.proposals).length && Object.keys(combined.errors).length) setMessage(Object.values(combined.errors)[0], "error");
+      if (result.sharedFailure && result.skipped.length) setMessage((Object.values(combined.errors)[0] || "") + " " + (result.connectionFailure ? dt("أُوقفت بقية {0} لغات لأن الاتصال بالخادم لم يُؤكَّد. الاقتراحات المكتملة محفوظة للمراجعة.", [result.skipped.length]) : dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])), "error");
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) { if (generationAbort.current === controller) setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر إعداد الاقتراح"), "error"); }
     finally { if (generationAbort.current === controller) { generationAbort.current = null; setGenerationProgress(null); setBusy(""); } }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
+import { getGoogleAdsTrackingTargets, getRawTrackingSettings, trackingBoolean, trackingString } from "@/lib/tracking/tracking-settings";
 import { getSchedulerStatus, type SchedulerStatus } from "@/lib/communication/scheduler-status";
 import { getActiveCommunicationRuntimeBundle, getActiveMetaWebhookConfig } from "@/lib/communication/runtime-config";
 import { safeCountValue } from "@/lib/dashboard/safe-count";
@@ -26,7 +26,7 @@ export async function getTrackingReadiness(): Promise<TrackingReadiness> {
   );
   const gaTag = setting("gaMeasurementId") || env("GA4_MEASUREMENT_ID");
   const ga4Server = Boolean(gaTag && (setting("gaApiSecret") || env("GA4_API_SECRET")));
-  const googleAds = setting("googleAdsConversionId") && setting("googleAdsConversionLabel");
+  const googleAds = hasDb() && (await getGoogleAdsTrackingTargets(row).catch(() => [])).length > 0;
   const xPixel = setting("xPixelId");
   const xApi = Boolean(
     trackingBoolean(row, "xConversionsApiEnabled") &&
@@ -40,7 +40,7 @@ export async function getTrackingReadiness(): Promise<TrackingReadiness> {
     { key: "meta_capi", label: "Meta Conversions API", configured: metaCapi, browser: false, server: true, status: status(metaCapi) },
     { key: "tiktok_pixel", label: "TikTok Pixel", configured: tiktokPixel, browser: true, server: false, status: status(tiktokPixel) },
     { key: "tiktok_api", label: "TikTok Events API", configured: tiktokApi, browser: false, server: true, status: status(tiktokApi) },
-    { key: "google_tag", label: "Google Tag", configured: gaTag, browser: true, server: false, status: status(gaTag) },
+    { key: "google_tag", label: "Google Tag", configured: Boolean(gaTag || googleAds), browser: true, server: false, status: status(Boolean(gaTag || googleAds)) },
     { key: "ga4", label: "GA4", configured: !!ga4Server, browser: true, server: true, status: status(!!ga4Server) },
     { key: "google_ads", label: "Google Ads Conversion", configured: Boolean(googleAds), browser: true, server: false, status: status(Boolean(googleAds)) },
     { key: "x_pixel", label: "X Pixel", configured: xPixel, browser: true, server: false, status: status(xPixel) },

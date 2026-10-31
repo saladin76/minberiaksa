@@ -170,6 +170,10 @@ export function WhatsappInbox() {
   const [filter, setFilter] = useState("all");
   const [senderId, setSenderId] = useState<string>("");
   const [query, setQuery] = useState(initialQuery);
+  const [totalConversations, setTotalConversations] = useState(0);
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
+  const conversationRows = useRef<Conversation[]>([]);
+  conversationRows.current = conversations;
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
@@ -268,7 +272,7 @@ export function WhatsappInbox() {
   }, []);
   useEffect(() => { void loadSenders(); return () => senderController.current?.abort(); }, [loadSenders]);
 
-  const loadList = useCallback(async (silent = false) => {
+  const loadList = useCallback(async (silent = false, reset = false) => {
     if (silent && listController.current) return;
     listController.current?.abort();
     const controller = new AbortController();
@@ -277,7 +281,8 @@ export function WhatsappInbox() {
     if (!silent) { setLoadingList(true); setNeedsReply(null); }
     setListError(null);
     try {
-      const params = new URLSearchParams({ filter });
+      const refreshLimit = reset ? 50 : Math.min(200, Math.max(50, conversationRows.current.length));
+      const params = new URLSearchParams({ filter, limit: String(refreshLimit) });
       if (senderId) params.set("senderId", senderId);
       if (query.trim()) params.set("q", query.trim());
       const res = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) });
@@ -285,7 +290,11 @@ export function WhatsappInbox() {
       if (request !== listRequest.current) return;
       if (!res.ok || !data.ok) throw new Error(data.error === "INBOX_UNAVAILABLE" ? dt("تعذّر تحميل صندوق واتساب") : data.error ?? "load failed");
       const nextConversations = data.conversations ?? [];
-      setConversations(nextConversations);
+      setTotalConversations(Number(data.total || 0));
+      setConversations(previous => reset ? nextConversations : [...new Map([
+        ...nextConversations,
+        ...previous.slice(refreshLimit).filter(row => !nextConversations.some((item: Conversation) => item.id === row.id)),
+      ].map(row => [row.id, row])).values()].filter(row => filter === "unread" ? row.unread : filter === "needsReply" ? row.needsReply : filter === "unresolved" ? row.unresolved : true));
       setNeedsReply(data.needsReply ?? 0);
       window.dispatchEvent(new CustomEvent("whatsapp-inbox-updated"));
 
@@ -293,7 +302,7 @@ export function WhatsappInbox() {
       // a hidden mobile thread must never acknowledge a message as read.
       // A read acknowledgement can remove the selected row from the unread
       // filter. Silent refreshes must not close the thread while it is being read.
-      if (!silent && !nextConversations.some((conversation: Conversation) => conversation.id === activeRef.current)) selectConversation(null);
+      if (reset && !nextConversations.some((conversation: Conversation) => conversation.id === activeRef.current)) selectConversation(null);
     } catch (error) {
       if (request !== listRequest.current || controller.signal.aborted) return;
       setListError((error as Error).message || dt("تعذّر تحميل صندوق واتساب"));
@@ -304,7 +313,7 @@ export function WhatsappInbox() {
 
   useEffect(() => {
     if (!sendersReady) return;
-    void loadList();
+    void loadList(false, true);
     return () => { invalidateRequest(listRequest); listController.current?.abort(); listController.current = null; };
   }, [loadList, sendersReady]);
 
@@ -318,14 +327,30 @@ export function WhatsappInbox() {
     return () => window.clearInterval(id);
   }, [loadList, sendersReady]);
 
+  const loadMoreConversations = async () => {
+    if (loadingMoreConversations) return;
+    const request = listRequest.current, params = new URLSearchParams({ filter, offset: String(conversationRows.current.length), limit: "50" });
+    if (senderId) params.set("senderId", senderId); if (query.trim()) params.set("q", query.trim());
+    setLoadingMoreConversations(true);
+    try {
+      const response = await fetch(`/api/dashboard/communication/inbox?${params}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
+      const data = await response.json(); if (!response.ok || !data.ok) throw new Error(dt("تعذر تحميل المزيد من المحادثات"));
+      if (request !== listRequest.current) return;
+      setConversations(previous => [...new Map([...previous, ...data.conversations].map(row => [row.id, row])).values()]); setTotalConversations(Number(data.total || 0));
+    } catch (failure) { if (request === listRequest.current) setListError((failure as Error).message); }
+    finally { setLoadingMoreConversations(false); }
+  };
+  const detailController = useRef<AbortController | null>(null);
   const loadDetail = useCallback(async (id: string, silent = false) => {
-    if (activeRef.current !== id) return;
+    if (activeRef.current !== id || silent && detailController.current) return;
+    detailController.current?.abort();
+    const controller = new AbortController(); detailController.current = controller;
     const request = ++detailRequest.current;
     if (!silent) setLoadingDetail(true);
     if (!silent) setNotice(null);
     setDetailError(null);
     try {
-      const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+      const res = await fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) });
       const data = await res.json();
       if (request !== detailRequest.current || activeRef.current !== id) return;
       if (!res.ok || !data.ok) throw new Error(data.error === "INBOX_UNAVAILABLE" ? dt("تعذّر تحميل المحادثة") : data.error ?? "load failed");
@@ -342,14 +367,15 @@ export function WhatsappInbox() {
         void fetch(`/api/dashboard/communication/inbox/${encodeURIComponent(id)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "read", eventId: latest.id }), signal: AbortSignal.timeout(12000) }).then(response => { if (!response.ok) throw new Error("Read acknowledgement failed"); setConversations(previous => previous.map(conversation => conversation.id === id ? {...conversation,unread:false} : conversation)); window.dispatchEvent(new CustomEvent("whatsapp-inbox-updated")); }).catch(() => { if (readAcknowledgements.current.get(id) === latest.id) readAcknowledgements.current.delete(id); });
       }
     } catch (error) {
-      if (request !== detailRequest.current || activeRef.current !== id) return;
+      if (controller.signal.aborted || request !== detailRequest.current || activeRef.current !== id) return;
       setDetailError((error as Error).message || dt("تعذّر تحميل المحادثة"));
     } finally {
+      if (detailController.current === controller) detailController.current = null;
       if (request === detailRequest.current) setLoadingDetail(false);
     }
   }, []);
 
-  useEffect(() => { if (activeId) void loadDetail(activeId); return () => invalidateRequest(detailRequest); }, [activeId, loadDetail]);
+  useEffect(() => { if (activeId) void loadDetail(activeId); return () => { invalidateRequest(detailRequest); detailController.current?.abort(); detailController.current = null; }; }, [activeId, loadDetail]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -512,7 +538,7 @@ export function WhatsappInbox() {
       <div className="grid min-h-0 min-w-0 gap-4 md:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)] xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
         {/* ── Conversation list ─────────────────────────────────── */}
         <div aria-label={dt("قائمة المحادثات")} className={cn("min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:flex", activeId ? "hidden" : "flex")}>
-          <div className="flex items-center justify-between border-b bg-slate-50/70 px-4 py-3 text-sm font-semibold"><h2>{dt("المحادثات")}</h2><span className="text-xs font-normal text-slate-500">{conversations.length}</span></div>
+          <div className="flex items-center justify-between border-b bg-slate-50/70 px-4 py-3 text-sm font-semibold"><h2>{dt("المحادثات")}</h2><span className="text-xs font-normal text-slate-500">{conversations.length} / {totalConversations}</span></div>
           {listError && conversations.length > 0 && (
             <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
               {dt("تعذّر تحديث القائمة الآن؛ المعروض هو آخر بيانات ناجحة.")}</div>
@@ -594,6 +620,7 @@ export function WhatsappInbox() {
                   </li>
                 );
               })}
+              {conversations.length < totalConversations ? <li className="p-3 text-center"><button type="button" disabled={loadingMoreConversations} onClick={() => void loadMoreConversations()} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50">{loadingMoreConversations ? dt("جار التحميل…") : dt("عرض المزيد من المحادثات")}</button></li> : null}
             </ul>
           )}
         </div>
@@ -629,7 +656,7 @@ export function WhatsappInbox() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">
-                      {detail.donor?.name || detail.phone} {detail.donor && <DonorAccountBadge status={detail.donor.accountStatus} />}
+                      {detail.donor?.name || <bdi dir="ltr">{detail.phone}</bdi>} {detail.donor && <DonorAccountBadge status={detail.donor.accountStatus} />}
                     </p>
                     <p className="flex flex-wrap gap-x-2 text-xs text-slate-500"><bdi dir="ltr">{detail.phone}</bdi>{detail.sender?.phone ? <span>{dt("عبر")} <bdi dir="ltr">{detail.sender.phone}</bdi></span> : null}</p>
                   </div>

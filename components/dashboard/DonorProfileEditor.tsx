@@ -12,8 +12,8 @@ import { LOCALE_LABELS } from "@/lib/locales";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 
-export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
-  user: UserProfileCardData; canEditEmail: boolean; onClose: () => void; onSaved: () => void;
+export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved, adminMember = false }: {
+  adminMember?: boolean; user: UserProfileCardData; canEditEmail: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const formId = useId();
   const [saving, setSaving] = useState(false);
@@ -32,8 +32,8 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
     setSaving(true); setError(null);
     try {
       const { email, ...fields } = draft;
-      const response = await fetch(`/api/dashboard/donors/${user.id}/profile`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+      const response = await fetch(adminMember && user.role !== "DONOR" ? `/api/users/${user.id}` : `/api/dashboard/donors/${user.id}/profile`, {
+        signal: AbortSignal.timeout(20000), method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...fields, countryCode: draft.countryCode.trim() || null,
           ...(canEditEmail && email.trim() ? { email } : {}), updatedAt: user.updatedAt }),
       });
@@ -49,7 +49,7 @@ export function DonorProfileEditor({ user, canEditEmail, onClose, onSaved }: {
   };
   return <Dialog open onOpenChange={open => { if (!open && !saving) onClose(); }}>
     <DialogContent dir={dashDir()} closeClassName={dashDir() === "rtl" ? "left-4 right-auto" : undefined} className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl" onEscapeKeyDown={event => { if (saving) event.preventDefault(); }} onPointerDownOutside={event => event.preventDefault()}>
-      <DialogHeader className="shrink-0 sm:text-start"><DialogTitle>{dt("تعديل بيانات المتبرع")}</DialogTitle>
+      <DialogHeader className="shrink-0 sm:text-start"><DialogTitle>{adminMember ? dt("تعديل بيانات العضو") : dt("تعديل بيانات المتبرع")}</DialogTitle>
         <DialogDescription>{user.name ?? user.email}</DialogDescription></DialogHeader>
       <form onSubmit={save} className="flex min-h-0 flex-col gap-4 overflow-hidden">
         <div className="min-h-0 overflow-y-auto pe-1">

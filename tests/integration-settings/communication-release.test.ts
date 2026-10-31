@@ -186,7 +186,7 @@ function profileRoute(role = "ADMIN", allowed = true, conflict = false) {
   const route = load<{ PUT: (request: { json: () => Promise<unknown> }, context: { params: Promise<{ id: string }> }) => Promise<RouteResponse> }>("app/api/dashboard/donors/[id]/profile/route.ts", {
     "next/server": { NextResponse: { json: (data: unknown, init?: { status?: number }) => ({ data, status: init?.status ?? 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: "staff", role } }) }, "@/app/api/auth/[...nextauth]/options": {},
-    "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => allowed ? null : { status: 403 } },
+    "@/lib/dashboard/api-auth": { requireAdminSession: () => allowed && role === "ADMIN" ? null : { status: 403 } },
     "@/lib/dashboard/donor-profile": { donorProfileSchema }, "@/lib/locales": locales, "@/lib/geo/country-to-locale": { localeForCountry: () => "ar" }, "@/lib/communication/phone": phone,
     "@/lib/audit-log": { writeAuditLog: async (query: unknown) => { calls.push({ operation: "audit", query }); } },
     "@/lib/prisma": { prisma: {
@@ -205,11 +205,11 @@ const profile = { name: "Fixture", phone: "+15555555555", preferredLang: "ar", u
 test("donor profile mutation checks permission before reading and staff cannot change login or authority", async () => {
   const denied = profileRoute("STAFF", false); assert.equal((await denied.put(profile)).status, 403); assert.equal(denied.calls.length, 0);
   const staff = profileRoute("STAFF"); assert.equal((await staff.put({ ...profile, email: "other@example.test" })).status, 403); assert.equal(staff.calls.length, 0);
-  assert.equal((await staff.put({ ...profile, role: "ADMIN" })).status, 400); assert.equal(staff.calls.length, 0);
+  assert.equal((await staff.put({ ...profile, role: "ADMIN" })).status, 403); assert.equal(staff.calls.length, 0);
 });
 
 test("profile edits atomically update contact routing and audit field names without touching donations or consent", async () => {
-  const h = profileRoute("STAFF"); assert.equal((await h.put(profile)).status, 200);
+  const h = profileRoute("ADMIN"); assert.equal((await h.put(profile)).status, 200);
   assert.deepEqual(h.calls.map(call => call.operation), ["lookup", "profile", "contact", "audit"]);
   const json = JSON.stringify(h.calls);
   assert.ok(!json.includes("whatsappOptIn")); assert.ok(!json.includes("doNotContact")); assert.ok(!json.includes("paidAt"));
@@ -265,4 +265,16 @@ test("the existing user-update endpoint never serializes a stored password hash"
   const response = await route.PUT({ json: async () => ({ name: "Updated" }) }, { params: Promise.resolve({ id: "donor" }) });
   assert.equal(response.data.password, undefined); assert.equal(response.data.hasPassword, true);
   assert.equal(JSON.stringify(response.data).includes("FIXTURE_HASH_DO_NOT_RETURN"), false);
+});
+
+
+test("a closed or missing account cannot reuse a previously issued JWT session", async () => {
+  for (const account of [null, {role:"DONOR", email:"deleted+fixture@deleted.invalid", dashboardPermissions:[]}]) {
+    const loaded = load<{authOptions:{callbacks:{session:(input:unknown)=>Promise<{user?:unknown}>}}}>("app/api/auth/[...nextauth]/options.ts", {
+      "@auth/prisma-adapter":{PrismaAdapter:()=>({})}, "next-auth/providers/google":{default:(input:unknown)=>input}, "next-auth/providers/facebook":{default:(input:unknown)=>input}, "next-auth/providers/credentials":{default:(input:unknown)=>input},
+      "bcryptjs":{}, "next/headers":{}, "@/lib/otp":{}, "@/lib/locales":locales, "google-auth-library":{OAuth2Client:class{}}, "@/lib/users/account-claim":{}, "@/lib/prisma":{prisma:{user:{findUnique:async()=>account}}},
+    });
+    const result = await loaded.authOptions.callbacks.session({session:{user:{id:"old-id",role:"ADMIN"}},token:{sub:"old-id",role:"ADMIN"}});
+    assert.equal(result.user,undefined);
+  }
 });

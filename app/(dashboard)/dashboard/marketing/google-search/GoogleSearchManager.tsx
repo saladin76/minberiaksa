@@ -30,7 +30,7 @@ async function api(url: string, body?: unknown) {
   const response = await fetch(url, { cache: "no-store", ...(body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
   const result = await response.json(); if (!response.ok) throw new Error(errorLabel(result.error || "SEARCH_OPERATION_FAILED")); return result;
 }
-export function GoogleSearchManager() {
+export function GoogleSearchManager({canManage = false, canTest = false}: {canManage?: boolean; canTest?: boolean}) {
   const [accounts, setAccounts] = useState<Account[]>([]), [projects, setProjects] = useState<Project[]>([]), [plans, setPlans] = useState<PlanListItem[]>([]);
   const [accountId, setAccountId] = useState(""), [prompt, setPrompt] = useState(""), [budget, setBudget] = useState(""), [countries, setCountries] = useState("");
   const [locales, setLocales] = useState<string[]>(["ar"]), [projectIds, setProjectIds] = useState<string[]>([]), [projectSearch, setProjectSearch] = useState("");
@@ -110,7 +110,7 @@ export function GoogleSearchManager() {
     <PageHeader eyebrow={dt("التسويق")} title={dt("إدارة Google Search")} description={dt("خطط متعددة اللغات مبنية على صفحات المشاريع وتقارير الحساب، مع مراجعة الميزانية والإنشاء داخل Google ومتابعة الأداء.")} icon={Search} />
     <div className="flex flex-wrap gap-2"><Link href="/dashboard/google-analytics" className={button}><ArrowUpRight size={16} />{dt("تقارير Google Analytics")}</Link><Link href="/dashboard/platform-connections" className={button}>{dt("إدارة الحسابات والاتصالات")}</Link><button type="button" onClick={() => { void load(accountId); }} disabled={Boolean(busy)} className={button}><RefreshCw size={16} />{dt("تحديث")}</button></div>
     {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
-    <GoogleSearchAccounts onChanged={() => { void load(accountId); }} />
+    <GoogleSearchAccounts canManage={canManage} canTest={canTest} onChanged={() => { void load(accountId); }} />
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="min-w-0 space-y-4">
         <section className="space-y-4 rounded-2xl border bg-white p-4">

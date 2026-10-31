@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import DashboardLayoutClient from "./DashboardLayoutClient";
-import { messagesFor } from "@/i18n/locale-messages";
+import { pickNamespaces, SHELL_NAMESPACES } from "@/i18n/locale-messages";
 import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashRequestLocale } from "@/lib/dashboard/i18n";
 
 /** The interface language picked in the top bar (Arabic until one is picked). */
@@ -26,7 +26,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: dt("لوحة التحكم"),
     description: dt("إدارة المشاريع والتبرعات والمستخدمين"),
-    icons: { icon: "/logometaminber.avif" },
     robots: { index: false, follow: false },
   };
 }
@@ -38,8 +37,8 @@ export default async function DashboardLayout({
 }) {
   const session = await getServerSession(authOptions);
 
-  // Root gate for the whole dashboard tree. `proxy.ts` deliberately excludes /dashboard
-  // from its matcher, and only 2 of ~30 sections (archive, operations) had their own layout
+  // Root gate for the whole dashboard tree. `proxy.ts` leaves /dashboard
+  // authorization to this layout, and only 2 of ~30 sections (archive, operations) had their own layout
   // guard  so the other 28 rendered server-side for an unauthenticated visitor. The API
   // routes are guarded, so this was defence-in-depth rather than a data leak, but an
   // anonymous visitor could still render the dashboard shell.
@@ -51,13 +50,14 @@ export default async function DashboardLayout({
   }
 
   const locale = await requestDashLocale();
-  const messages = messagesFor(locale) as unknown as Record<string, string | Record<string, string>>;
+  const messages = pickNamespaces(locale, [...SHELL_NAMESPACES, "certificates"]) as unknown as Record<string, string | Record<string, string>>;
 
   return (
     <DashboardLayoutClient
       session={session}
       messages={messages}
       locale={locale}
+      enableVercelAnalytics={Boolean(process.env.VERCEL)}
     >
       {children}
     </DashboardLayoutClient>

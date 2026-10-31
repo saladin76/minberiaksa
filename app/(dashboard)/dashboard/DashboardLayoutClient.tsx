@@ -161,16 +161,18 @@ function DashboardContent({
     const setInbox = (n: number) =>
       setNavCounts((prev) => (prev.inboxUnread === n ? prev : { ...prev, inboxUnread: n }));
 
+    let running = false;
     const run = async () => {
+      if (running || document.hidden) return;
+      running = true;
       try {
-        const res = await fetch('/api/admin/messages/unread-count', { cache: 'no-store' });
-        if (!res.ok) { if (!cancelled) setInbox(0); return; }
+        const res = await fetch('/api/admin/messages/unread-count', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!res.ok) return;
         const data = await res.json();
-        // ok:false means the count failed server-side; show no badge rather than a false "0 left".
-        if (!cancelled) setInbox(data?.ok === false ? 0 : Number(data?.count ?? 0));
-      } catch {
-        if (!cancelled) setInbox(0);
-      }
+        // Failed reads must not replace the last confirmed badge with a false zero.
+        if (!cancelled && data?.ok !== false && Number.isFinite(Number(data?.count))) setInbox(Number(data.count));
+      } catch { /* Retain the last confirmed count while disconnected. */ }
+      finally { running = false; }
     };
 
     run();
@@ -342,12 +344,13 @@ const LoadingSkeleton = () => (
 );
 
 export default function DashboardLayoutClient({
-  children, session, messages, locale = "ar",
+  children, session, messages, locale = "ar", enableVercelAnalytics = false,
 }: {
   children: React.ReactNode;
   session: Session | null;
   messages: Record<string, string | Record<string, string>>;
   locale?: string;
+  enableVercelAnalytics?: boolean;
 }) {
   /* Before anything below renders: `dt()` reads this during SSR and in the browser. */
   setDashLocale(parseDashLocale(locale));
@@ -376,8 +379,7 @@ export default function DashboardLayoutClient({
           }} />
         </SessionProvider>
       </CurrencyProvider>
-      <Analytics />
-      <SpeedInsights />
+      {enableVercelAnalytics ? <><Analytics /><SpeedInsights /></> : null}
     </NextIntlClientProvider>
   );
 }

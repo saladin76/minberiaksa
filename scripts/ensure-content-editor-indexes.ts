@@ -74,6 +74,11 @@ const indexes = [
   { collection: "SubscriptionServiceRequest", key: { activeKey: 1 }, unique: true },
   { collection: "SubscriptionServiceRequest", key: { status: 1, createdAt: -1 }, unique: false },
   { collection: "SubscriptionServiceRequest", key: { donorId: 1, subscriptionId: 1, createdAt: -1 }, unique: false },
+  { collection: "SiteVisitor", key: { lastSeenAt: -1 }, unique: false },
+  { collection: "SiteVisitor", key: { userId: 1, lastSeenAt: -1 }, unique: false },
+  { collection: "SiteVisitor", key: { ip: 1 }, unique: false },
+  { collection: "SiteVisitor", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "SiteAccessRule", key: { enabled: 1, updatedAt: -1 }, unique: false },
 ];
 
 async function run() {

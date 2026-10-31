@@ -13,7 +13,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Dialog, DialogOverlay, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ import {
 import { toast } from "react-hot-toast";
 import { LOCALE_LABELS } from "@/lib/locales";
 import {
+  Trash2,
   Users,
   Search,
   Pencil,
@@ -63,6 +64,7 @@ import type { UserProfileCardData } from "@/lib/dashboard/user-profile-card";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 
+import { TeamPermissionPicker } from "@/components/dashboard/TeamPermissionPicker";
 import { DonorProfileEditor } from "@/components/dashboard/DonorProfileEditor";
 import { DonorAccountBadge } from "@/components/dashboard/DonorAccountBadge";
 
@@ -98,6 +100,10 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<UserRow | null>(null);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [permissionSaving, setPermissionSaving] = useState(false);
   const [profileToEdit, setProfileToEdit] = useState<UserRow | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const { openUserProfileCard } = useViewUserProfile();
@@ -214,7 +220,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
 
   const handleEditClick = (user: UserRow) => {
     setSelectedUser({ ...user });
-    setEditPermissions(user.dashboardPermissions ?? []);
+    setEditPermissions([...(user.dashboardPermissions ?? []).filter(key => key !== "users"), ...((user.dashboardPermissions ?? []).includes("users") ? ["donors", "team", "logs"] : [])]);
     setIsDialogOpen(true);
   };
 
@@ -224,14 +230,8 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
     setEditPermissions([]);
   };
 
-  const toggleEditPermission = (key: string) => {
-    setEditPermissions((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
-
   const handleUserAuthoritySave = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || permissionSaving) return;
     const hasDashboardPagePermission = editPermissions.some((key) =>
       DASHBOARD_PERMISSION_ROWS.some((row) => row.key === key)
     );
@@ -239,37 +239,37 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
       toast.error(dt("اختر صفحة واحدة على الأقل من لوحة التحكم لعضو الطاقم"));
       return;
     }
+    setPermissionSaving(true);
     try {
-      const payload: { role: string; dashboardPermissions?: string[] } = {
-        role: selectedUser.role,
+      const payload: { role: string; dashboardPermissions?: string[]; updatedAt?: string } = {
+        role: selectedUser.role, updatedAt: selectedUser.updatedAt ?? undefined,
       };
       if (selectedUser.role === "STAFF") {
         payload.dashboardPermissions = editPermissions;
       }
       await axios.put(`/api/users/${selectedUser.id}`, payload);
       toast.success(dt("تم حفظ الصلاحيات بنجاح"));
-      if (scope === "team") {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === selectedUser.id
-              ? {
-                  ...u,
-                  role: selectedUser.role,
-                  dashboardPermissions:
-                    selectedUser.role === "STAFF" ? [...editPermissions] : [],
-                }
-              : u
-          )
-        );
-      } else {
-        fetchUsers(1, false);
-        setPage(1);
-      }
+      // Reload the authoritative row and revision; a second edit must not submit
+      // the previous timestamp, and a demoted member must leave the team list.
+      await fetchUsers(1, false);
+      setPage(1);
       handleDialogClose();
     } catch (err) {
       console.error("Error updating user:", err);
       toast.error(dt("فشل في تحديث المستخدم"));
-    }
+    } finally { setPermissionSaving(false); }
+  };
+  const deleteMember = async () => {
+    if (!memberToDelete || deleting || deleteText !== (memberToDelete.name || memberToDelete.email || memberToDelete.id)) return;
+    setDeleting(true);
+    try {
+      await axios.delete(`/api/users/${memberToDelete.id}`);
+      setMemberToDelete(null); setDeleteText(""); setPage(1); await fetchUsers(1, false); if (scope === "donors") void loadRegisteredTotal();
+      toast.success(dt("تم حذف حساب العضو مع الاحتفاظ بسجلاته المالية"));
+    } catch (error) {
+      const code = axios.isAxiosError(error) ? error.response?.data?.error : null;
+      toast.error(code === "ACTIVE_SUBSCRIPTIONS" ? dt("لدى العضو اشتراكات نشطة؛ ألغها من قسم التبرعات الدورية أولًا.") : code === "ADMIN_ACCOUNT_CHANGE_ROLE_FIRST" ? dt("غيّر دور المدير أولًا قبل حذف حسابه.") : dt("تعذر حذف العضو؛ لم تتغير القائمة."));
+    } finally { setDeleting(false); }
   };
 
   const pageTitle =
@@ -803,9 +803,9 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                                     <Pencil className="w-4 h-4 me-2" />
                                     {dt("تعديل الصلاحيات")}</DropdownMenuItem>
                                 )}
-                                {scope === "donors" && u.role === "DONOR" && (
+                                {isFullAdmin && (
                                   <DropdownMenuItem onClick={() => setProfileToEdit(u)}>
-                                    <Pencil className="w-4 h-4 me-2" />{dt("تعديل بيانات المتبرع")}
+                                    <Pencil className="w-4 h-4 me-2" />{dt("تعديل بيانات العضو")}
                                   </DropdownMenuItem>
                                 )}
                                 {scope === "donors" && u.role === "DONOR" && isFullAdmin && (
@@ -813,6 +813,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                                     <Pencil className="w-4 h-4 me-2" />{dt("تعديل الصلاحيات")}
                                   </DropdownMenuItem>
                                 )}
+                                {isFullAdmin && u.id !== session?.user?.id && <DropdownMenuItem className="text-red-700" onClick={() => { setMemberToDelete(u); setDeleteText(""); }}><Trash2 className="me-2 h-4 w-4" />{dt("حذف العضو")}</DropdownMenuItem>}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </td>
@@ -845,11 +846,13 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
         </section>
       </div>
 
-      {profileToEdit && <DonorProfileEditor key={profileToEdit.id} user={profileToEdit} canEditEmail={isFullAdmin}
+      {profileToEdit && <DonorProfileEditor adminMember key={profileToEdit.id} user={profileToEdit} canEditEmail={isFullAdmin}
         onClose={() => setProfileToEdit(null)} onSaved={() => { setPage(1); void fetchUsers(1, false); }} />}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
-        <DialogOverlay className="fixed inset-0 bg-black/50" />
-        <DialogContent className="fixed top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[min(90vh,640px)] overflow-y-auto p-4 sm:p-6 transform -translate-x-1/2 -translate-y-1/2 bg-card text-card-foreground border border-border rounded-lg shadow-lg" dir={dashDir()}>
+      <Dialog open={Boolean(memberToDelete)} onOpenChange={open => { if (!open && !deleting) setMemberToDelete(null); }}>
+        <DialogContent dir={dashDir()}><DialogTitle>{dt("حذف العضو")}</DialogTitle><p className="text-sm leading-7">{dt("سيُغلق الحساب وتُحذف بياناته الشخصية وإمكانية دخوله. تبقى التبرعات والإيصالات والسجلات المالية. لا يمكن التراجع عن هذا الإجراء.")}</p><label className="text-sm">{dt("اكتب اسم العضو للتأكيد: {0}", [memberToDelete?.name || memberToDelete?.email || memberToDelete?.id || ""])}<Input value={deleteText} disabled={deleting} onChange={event => setDeleteText(event.target.value)} /></label><div className="flex gap-2"><Button variant="outline" disabled={deleting} onClick={() => setMemberToDelete(null)}>{dt("إلغاء")}</Button><Button variant="destructive" disabled={deleting || deleteText !== (memberToDelete?.name || memberToDelete?.email || memberToDelete?.id)} onClick={deleteMember}>{deleting ? dt("جار الحذف…") : dt("حذف العضو")}</Button></div></DialogContent>
+      </Dialog>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open && !permissionSaving) handleDialogClose(); }}>
+        <DialogContent className="fixed top-1/2 left-1/2 w-[calc(100%_-_2rem)] max-w-3xl max-h-[min(90vh,640px)] overflow-y-auto p-4 sm:p-6 transform -translate-x-1/2 -translate-y-1/2 bg-card text-card-foreground border border-border rounded-lg shadow-lg" dir={dashDir()}>
           <DialogTitle className="text-lg font-bold text-foreground">{dt("تعديل الدور والصلاحيات")}</DialogTitle>
           {selectedUser && (
             <div className="space-y-4 mt-4">
@@ -860,6 +863,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                 <label className="text-sm font-medium">{dt("الدور")}</label>
                 <Select
                   value={selectedUser.role}
+                  disabled={permissionSaving}
                   onValueChange={(v) => {
                     setSelectedUser({ ...selectedUser, role: v });
                     if (v !== "STAFF") setEditPermissions([]);
@@ -875,67 +879,15 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
                   </SelectContent>
                 </Select>
               </div>
-              {selectedUser.role === "STAFF" && (
-                <>
-                  <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/40">
-                    <p className="text-sm font-medium">{dt("حملات لوحة التحكم")}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {dt("فعّل كل حملة يحق لهذا المستخدم الدخول إليه. بدون تفعيل لا يظهر في القائمة الجانبية.")}</p>
-                    <div className="grid gap-2 max-h-56 overflow-y-auto pe-1">
-                      {DASHBOARD_PERMISSION_ROWS.map((row) => (
-                        <label
-                          key={row.key}
-                          className="flex items-start gap-2 text-sm cursor-pointer rounded-md p-2 hover:bg-muted/80"
-                        >
-                          <Checkbox
-                            checked={editPermissions.includes(row.key)}
-                            onCheckedChange={() => toggleEditPermission(row.key)}
-                            className="mt-0.5"
-                          />
-                          <span>
-                            <span className="font-medium">{row.title}</span>
-                            <span className="text-muted-foreground text-xs block">{row.group}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-                    <p className="text-sm font-medium">{dt("صلاحيات إضافية")}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {dt("فعّل الإجراءات الإضافية التي يحق لهذا المستخدم تنفيذها داخل الصفحات المسموحة له.")}</p>
-                    <div className="grid gap-2 pe-1 pt-1">
-                      {ACTION_PERMISSION_ROWS.map((row) => (
-                        <label
-                          key={row.key}
-                          className="flex items-start gap-2 text-sm cursor-pointer rounded-md border border-border bg-background/70 p-2.5 hover:bg-muted/80"
-                        >
-                          <Checkbox
-                            checked={editPermissions.includes(row.key)}
-                            onCheckedChange={() => toggleEditPermission(row.key)}
-                            className="mt-0.5"
-                          />
-                          <span>
-                            <span className="font-medium">{row.title}</span>
-                            <span className="text-muted-foreground text-xs block leading-relaxed mt-0.5">
-                              {row.description}
-                            </span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
+              {selectedUser.role === "STAFF" && <TeamPermissionPicker value={editPermissions} onChange={setEditPermissions} disabled={permissionSaving} />}
               {selectedUser.role === "ADMIN" && (
                 <p className="text-xs text-muted-foreground">
                   {dt("المدير يملك صلاحية جميع حملات لوحة التحكم تلقائيًا.")}</p>
               )}
               <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={handleDialogClose}>
+                <Button type="button" variant="outline" disabled={permissionSaving} onClick={handleDialogClose}>
                   {dt("إلغاء")}</Button>
-                <Button onClick={handleUserAuthoritySave}>{dt("حفظ")}</Button>
+                <Button disabled={permissionSaving} onClick={handleUserAuthoritySave}>{permissionSaving ? dt("جار الحفظ…") : dt("حفظ")}</Button>
               </div>
             </div>
           )}

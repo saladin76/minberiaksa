@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { normalizeAdsConversionId } from "../../lib/tracking/google-ads-targets";
 import { z } from "zod";
 import { accountRevision, publicSearchAccount } from "../../lib/marketing/google-search/accounts";
 import { searchAutomationPolicy } from "../../lib/marketing/google-search/contracts";
@@ -26,6 +27,7 @@ function harness() {
     "next-auth": { getServerSession: async () => ({ user: { id, role: "STAFF" } }) }, "zod": { z },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} }, "@/lib/prisma": { prisma },
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: (_: unknown, permission: string) => permissions.has(permission) ? null : { status: 403 } },
+    "@/lib/tracking/google-ads-targets": { normalizeAdsConversionId },
     "@/lib/marketing/google-search/accounts": { accountRevision, publicSearchAccount },
     "@/lib/marketing/google-search/client": { SearchApiError, searchCredentials, googleSearchClient: async () => { providerCalls++; return { query: async (query: string) => { queries.push(query); if (conflict) row = { ...row, updatedAt: new Date(row.updatedAt.getTime() + 1) }; return [{ customer: { currencyCode: "USD", timeZone: "Europe/Istanbul" } }]; } }; } },
     "@/lib/audit-log": { queueAuditLog() {}, auditActorFromDashboardSession: () => ({ actorId: id }) },

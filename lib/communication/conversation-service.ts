@@ -246,7 +246,7 @@ async function conversationGroups() {
   finally { if (pendingGroups === pending) pendingGroups = null; }
 }
 
-export async function listConversations(opts: { senderId?: string | null; summaryOnly?: boolean; senderRows?: Promise<ConversationSender[]> } = {}): Promise<ConversationSummary[]> {
+export async function listConversations(opts: { senderId?: string | null; summaryOnly?: boolean; enrichLimit?: number; senderRows?: Promise<ConversationSender[]> } = {}): Promise<ConversationSummary[]> {
   if (!process.env.DATABASE_URL) throw new Error("INBOX_UNAVAILABLE");
   const [inbound, deliveries, appEchoes] = await conversationGroups();
   const outbound = [...deliveries, ...appEchoes];
@@ -288,7 +288,7 @@ export async function listConversations(opts: { senderId?: string | null; summar
   }
 
   const [donorMap, handledMap, senders, readMap] = await Promise.all([
-    opts.summaryOnly ? Promise.resolve(new Map<string, ConversationDonor[]>()) : matchDonors([...new Set([...buckets.values()].map((b) => phoneDigits(b.phone)))]),
+    opts.summaryOnly ? Promise.resolve(new Map<string, ConversationDonor[]>()) : matchDonors([...new Set([...buckets.values()].filter(bucket => !opts.senderId || bucket.senderId === opts.senderId).sort((a, b) => Math.max(b.lastInboundAt, b.lastOutboundAt) - Math.max(a.lastInboundAt, a.lastOutboundAt)).slice(0, opts.enrichLimit).map((b) => phoneDigits(b.phone)))]),
     loadHandledMarkers(),
     opts.summaryOnly ? Promise.resolve(new Map<string, ConversationSender>()) : senderMap(opts.senderRows),
     loadReadMarkers([...buckets.keys()]),

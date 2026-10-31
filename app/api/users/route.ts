@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
 
     let where: Record<string, unknown> = {
       ...roleFilter,
+      AND: [{ OR: [{ email: null }, { email: { isSet: false } }, { email: { not: { endsWith: "@deleted.invalid" } } }] }],
       ...(preferredLang && { preferredLang }),
       ...(search && search.length > 0 && {
         OR: [
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
       }),
     };
 
-    if (accountStatus && scope === 'donors') where.AND = [donorAccountWhere(accountStatus as "MEMBER" | "GUEST" | "UNKNOWN")];
+    if (accountStatus && scope === 'donors') where.AND = [...(where.AND as unknown[]), donorAccountWhere(accountStatus as "MEMBER" | "GUEST" | "UNKNOWN")];
 
     if (scope === 'team' && session?.user?.id) {
       where = { ...where, NOT: { id: session.user.id } };

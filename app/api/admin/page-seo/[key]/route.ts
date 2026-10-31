@@ -40,12 +40,12 @@ export async function PUT(request: NextRequest, ctx: Context) {
     return NextResponse.json(saved);
   } catch (error) { return failure(error); }
 }
-export async function POST(request: NextRequest, ctx: Context): Promise<Response> {
-  const { session, denied } = await access(); if (denied) return denied;
+async function suggestWithSession(request: NextRequest, ctx: Context, authorized: Awaited<ReturnType<typeof access>>): Promise<Response> {
+  const { session, denied } = authorized; if (denied) return denied;
   try {
     if (request.headers?.get("Prefer") === "respond-async") {
       if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-      return await queueSuggestion(request, session.user.id, "siteContent", detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
+      return await queueSuggestion(request, session.user.id, "siteContent", detached => suggestWithSession(detached, ctx, authorized), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const { key } = await ctx.params, body = await request.json();
     if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");
@@ -65,4 +65,9 @@ export async function POST(request: NextRequest, ctx: Context): Promise<Response
     const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
     return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
+}
+
+export async function POST(request: NextRequest, ctx: Context): Promise<Response> {
+  try { return await suggestWithSession(request, ctx, await access()); }
+  catch (error) { return failure(error); }
 }

@@ -2,6 +2,8 @@
 
 import { ProjectFilterOrderDialog } from "@/components/dashboard/ProjectFilterOrderDialog";
 
+import { CategoryLinkedProjects } from "@/components/dashboard/CategoryLinkedProjects";
+import { useSession } from "next-auth/react";
 import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
@@ -84,6 +86,8 @@ export default function CategoriesPage() {
   const [itemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [priorityDialog, setPriorityDialog] = useState<{ id: string; name: string } | null>(null);
+  const { data: session } = useSession();
+  const [linkedCategoryId, setLinkedCategoryId] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -439,7 +443,7 @@ export default function CategoriesPage() {
               </TableCell>
               <TableCell className="font-medium">{category.name}</TableCell>
                 <TableCell className='max-w-[300px] truncate pe-12'>{category.description || dt("لا يوجد وصف")}</TableCell>
-                <TableCell>{category.campaignCount ?? category.campaigns.length}{category.archivedCampaignCount ? <span className="ms-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{dt("{0} مشاريع مؤرشفة", [category.archivedCampaignCount])}</span> : null}</TableCell>
+                <TableCell><button type="button" className="underline" onClick={() => setLinkedCategoryId(category.id)}>{dt("عرض المشاريع المرتبطة")}</button> · {category.campaignCount ?? category.campaigns.length}{category.archivedCampaignCount ? <span className="ms-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{dt("{0} مشاريع مؤرشفة", [category.archivedCampaignCount])}</span> : null}</TableCell>
                 <TableCell>
                   {category.image ? (
                     <img
@@ -604,7 +608,7 @@ export default function CategoriesPage() {
                 ) : filteredArchive.map(category => (
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.campaignCount ?? category.campaigns.length}{category.archivedCampaignCount ? <span className="ms-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{dt("{0} مشاريع مؤرشفة", [category.archivedCampaignCount])}</span> : null}</TableCell>
+                    <TableCell><button type="button" className="underline" onClick={() => setLinkedCategoryId(category.id)}>{dt("عرض المشاريع المرتبطة")}</button> · {category.campaignCount ?? category.campaigns.length}{category.archivedCampaignCount ? <span className="ms-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{dt("{0} مشاريع مؤرشفة", [category.archivedCampaignCount])}</span> : null}</TableCell>
                     <TableCell>
                       <Button
                         size="sm"
@@ -625,6 +629,8 @@ export default function CategoriesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {linkedCategoryId && <CategoryLinkedProjects categoryId={linkedCategoryId} admin={session?.user?.role === "ADMIN"} onClose={() => setLinkedCategoryId(null)} onDeleted={() => { void fetchCategories(); }} />}
 
       {/* ── Activate/deactivate confirm ── */}
       <AlertDialog

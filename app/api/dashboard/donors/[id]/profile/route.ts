@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { requireAdminSession } from "@/lib/dashboard/api-auth";
 import { prisma } from "@/lib/prisma";
 import { donorProfileSchema } from "@/lib/dashboard/donor-profile";
 import { DEFAULT_LOCALE } from "@/lib/locales";
@@ -10,15 +10,13 @@ import { normalizePhoneE164 } from "@/lib/communication/phone";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  const denied = requireAdminOrDashboardPermission(session, "donors");
+  const denied = requireAdminSession(session);
   if (denied) return denied;
   const { id } = await params;
   if (!/^[a-f0-9]{24}$/i.test(id)) return NextResponse.json({ error: "INVALID_ID" }, { status: 400 });
   const parsed = donorProfileSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_PROFILE", issues: parsed.error.flatten() }, { status: 400 });
   const { updatedAt, ...input } = parsed.data;
-  // Staff may maintain donor contact data, but changing a login identity remains admin-only.
-  if (input.email !== undefined && session!.user.role !== "ADMIN") return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   try {
     const user = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true, name: true, phone: true, countryCode: true, countryName: true, country: true, region: true, city: true, birthdate: true, gender: true, preferredLang: true } });
     if (!user || user.role !== "DONOR") return NextResponse.json({ error: "DONOR_NOT_FOUND" }, { status: 404 });

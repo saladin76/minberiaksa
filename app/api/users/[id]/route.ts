@@ -29,7 +29,7 @@ export async function GET(
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -217,7 +217,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -246,6 +246,7 @@ export async function PUT(
       clarityId: rawClarityId,
     } = body;
 
+    if (role !== undefined && !["ADMIN", "STAFF", "DONOR"].includes(role)) return NextResponse.json({ error: "INVALID_ROLE" }, { status: 400 });
     const isSelf = session.user.id === id;
     const wantsAuthorityChange =
       role !== undefined || rawDashboardPermissions !== undefined;
@@ -256,6 +257,7 @@ export async function PUT(
       select: {
         role: true,
         dashboardPermissions: true,
+        updatedAt: true,
         name: true,
         email: true,
       },
@@ -322,12 +324,15 @@ export async function PUT(
 
       if (existingUser) {
         return NextResponse.json(
-          { error: 'Email already exists' },
-          { status: 400 }
+          { error: 'EMAIL_EXISTS' },
+          { status: 409 }
         );
       }
     }
 
+    if (isSelf && wantsAuthorityChange) return NextResponse.json({ error: "لا يمكنك تعديل دورك أو صلاحياتك من هذه الواجهة." }, { status: 409 });
+    if (existing.email?.endsWith("@deleted.invalid")) return NextResponse.json({ error: "ACCOUNT_CLOSED" }, { status: 410 });
+    if (body.updatedAt !== undefined && (typeof body.updatedAt !== "string" || new Date(body.updatedAt).getTime() !== existing.updatedAt.getTime())) return NextResponse.json({ error: "PROFILE_CONFLICT" }, { status: 409 });
     let nextDashboardPermissions: string[] | undefined;
 
     if (
@@ -373,11 +378,11 @@ export async function PUT(
       }
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id },
+    const update = (client: Pick<typeof prisma, "user">) => client.user.update({
+      where: { id, ...(body.updatedAt !== undefined ? { updatedAt: new Date(body.updatedAt) } : {}) },
       data: {
         ...(name !== undefined && { name }),
-        ...(email !== undefined && { email }),
+        ...(email !== undefined && { email, ...(email !== existing.email ? { emailVerified: null } : {}) }),
         ...(countryCode !== undefined && {
           countryCode: countryCode === "" ? null : countryCode,
         }),
@@ -417,8 +422,16 @@ export async function PUT(
       },
     });
 
+    // Lock the acting administrator before changing another account's authority.
+    // Concurrent cross-demotions then conflict instead of leaving no administrator.
+    const updatedUser = wantsAuthorityChange ? await prisma.$transaction(async tx => {
+      const actor = await tx.user.updateMany({ where: { id: session.user.id, role: "ADMIN" }, data: { updatedAt: new Date() } });
+      if (actor.count !== 1) throw new Error("AUTHORITY_CHANGED");
+      return update(tx);
+    }) : await update(prisma);
+
     if (
-      updatedUser.role === 'DONOR' &&
+      updatedUser.role === 'DONOR'  &&
       (email !== undefined || phone !== undefined || countryCode !== undefined || preferredLang !== undefined || emailNotifications !== undefined || smsNotifications !== undefined)
     ) {
       await upsertProfileForUser(id).catch(() => null);
@@ -458,6 +471,10 @@ export async function PUT(
     const { password: _password, ...safeUpdatedUser } = updatedUser;
     return NextResponse.json({ ...safeUpdatedUser, hasPassword: Boolean(_password) });
   } catch (error) {
+    const code = (error as { code?: string })?.code;
+    if (code === "P2025" || code === "P2034") return NextResponse.json({ error: "PROFILE_CONFLICT" }, { status: 409 });
+    if (code === "P2002") return NextResponse.json({ error: "EMAIL_EXISTS" }, { status: 409 });
+    if (error instanceof Error && error.message === "AUTHORITY_CHANGED") return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     console.error('Error updating user:', error);
     return NextResponse.json(
       { error: 'Failed to update user' },
@@ -506,6 +523,8 @@ export async function DELETE(
       );
     }
 
+    if (user.role === "ADMIN") return NextResponse.json({ error: "ADMIN_ACCOUNT_CHANGE_ROLE_FIRST" }, { status: 409 });
+
     // A live plan would keep charging a card whose owner no longer has an
     // account to manage it. Cancel it first (the monthly dashboard cancels at
     // the provider), then close the account.
@@ -525,10 +544,16 @@ export async function DELETE(
     const donationCount = await prisma.donation.count({ where: { donorId: id } });
 
     await prisma.$transaction(async (tx) => {
+      const current = await tx.user.findUnique({ where: { id }, select: { role: true } });
+      if (!current || current.role === "ADMIN") throw new Error("ACCOUNT_CHANGED");
+      if (await tx.subscription.count({ where: { donorId: id, status: { in: ["ACTIVE", "PAUSED"] } } })) throw new Error("ACTIVE_SUBSCRIPTIONS");
       await tx.account.deleteMany({ where: { userId: id } });
       await tx.session.deleteMany({ where: { userId: id } });
       await tx.cartItem.deleteMany({ where: { userId: id } });
+      // Inactive plans retain their history but cannot reference a removed card.
+      await tx.subscription.updateMany({ where: { donorId: id, status: { notIn: ["ACTIVE", "PAUSED"] } }, data: { paymentCardId: null } });
       await tx.creditCard.deleteMany({ where: { userId: id } });
+      await tx.donorCommunicationProfile.updateMany({ where: { userId: id }, data: { email: null, phone: null, doNotContact: true, emailOptIn: false, smsOptIn: false, whatsappOptIn: false } });
       await tx.user.update({
         where: { id },
         data: {
@@ -543,6 +568,8 @@ export async function DELETE(
           city: null,
           region: null,
           clarityId: null,
+          country: null, countryCode: null, countryName: null,
+          registeredAt: null, verifiedAt: null,
           role: 'DONOR',
           dashboardPermissions: [],
           emailNotifications: false,
@@ -572,6 +599,8 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof Error && ["ACCOUNT_CHANGED", "ACTIVE_SUBSCRIPTIONS"].includes(error.message)) return NextResponse.json({ error: error.message }, { status: 409 });
+    if ((error as { code?: string })?.code === "P2034") return NextResponse.json({ error: "ACCOUNT_CHANGED" }, { status: 409 });
     console.error('Error deleting user:', error);
     return NextResponse.json(
       { error: 'Failed to delete user' },
