@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { z } from "zod";
 import { accountRevision, publicSearchAccount } from "../../lib/marketing/google-search/accounts";
+import { searchAutomationPolicy } from "../../lib/marketing/google-search/contracts";
 import { SearchApiError, searchCredentials } from "../../lib/marketing/google-search/client";
 // Dynamic Prisma-shaped records are confined to this isolated route fixture.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,7 +65,7 @@ test("plan history is queried for the selected customer connection before pagina
     "next/server": { NextResponse: { json: (body: unknown, options: Row = {}) => ({ body, status: options.status ?? 200 }) } },
     "next-auth": { getServerSession: async () => ({}) }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} }, "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => null }, "zod": { z },
     "@/lib/prisma": { prisma: { marketingPlatformConnection: { findMany: async () => [] }, campaign: { findMany: async () => [] }, googleSearchPlan: { findMany: async (args: Row) => { queries++; assert.equal(args.where.connectionId, id); assert.equal(args.take, 30); return [{ id: "plan", connectionId: id }]; } } } },
-    "@/lib/campaign/soft-delete-filter": {}, "@/lib/marketing/google-search/client": {}, "@/lib/marketing/google-search/growth": {}, "@/lib/marketing/google-search/contracts": {}, "@/lib/events/after-response": {}, "@/lib/marketing/google-search/planner": {}, "@/lib/marketing/google-search/executor": {}, "@/lib/marketing/google-ads-report": {}, "@/lib/marketing/google-search/revenue": {}, "@/lib/audit-log": {},
+    "@/lib/campaign/soft-delete-filter": {}, "@/lib/marketing/google-search/client": {}, "@/lib/marketing/google-search/growth": {}, "@/lib/marketing/google-search/contracts": { searchAutomationPolicy }, "@/lib/events/after-response": {}, "@/lib/marketing/google-search/planner": {}, "@/lib/marketing/google-search/conversation": {}, "@/lib/marketing/google-search/executor": {}, "@/lib/marketing/google-ads-report": {}, "@/lib/marketing/google-search/revenue": {}, "@/lib/audit-log": {},
   };
   const loaded = { exports: {} as Row };
   new vm.Script(ts.transpileModule(readFileSync("app/api/admin/google-search/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, require: (key: string) => { if (!(key in dependencies)) throw new Error(key); return dependencies[key]; } });

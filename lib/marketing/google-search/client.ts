@@ -14,7 +14,9 @@ export type SearchRow = {
   campaign: { resourceName: string; name: string; status: string; campaignBudget: string };
   campaignBudget: { amountMicros: string; explicitlyShared: boolean; recommendedBudgetAmountMicros?: string };
   searchTermView?: { searchTerm?: string };
-  adGroupCriterion: { resourceName: string; keyword: { text: string }; status: string };
+  adGroup: { resourceName: string; name: string; status: string };
+  adGroupAd: { resourceName: string; status: string; policySummary?: { approvalStatus?: string }; ad: { finalUrls: string[]; responsiveSearchAd: { headlines: { text: string }[]; descriptions: { text: string }[] } } };
+  adGroupCriterion: { resourceName: string; keyword: { text: string; matchType?: string }; status: string; negative?: boolean };
   metrics: Record<string, string | number>;
   languageConstant: { code: string; resourceName: string };
   geoTargetConstant: { countryCode: string; resourceName: string };

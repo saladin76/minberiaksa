@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { googleSearchClient, searchCredentials, credentialsReady, SearchApiError } from "@/lib/marketing/google-search/client";
 import { collectSearchGrowth, type SearchGrowthResult } from "@/lib/marketing/google-search/growth";
-import { searchPlanRequest } from "@/lib/marketing/google-search/contracts";
+import { searchPlanRequest, searchAutomationPolicy } from "@/lib/marketing/google-search/contracts";
+import { converseSearchPlan, reviseSearchPlan } from "@/lib/marketing/google-search/conversation";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { prepareSearchPlan, continueSearchPlanning } from "@/lib/marketing/google-search/planner";
 import { executeSearchPlan } from "@/lib/marketing/google-search/executor";
@@ -54,12 +55,21 @@ export async function GET(request: NextRequest) {
     return response({ accounts: accounts.map(row => ({ id: row.id, name: row.name, customerId: row.accountId, enabled: row.enabled, ready: credentialsReady(searchCredentials(row)) })), projects, plans, projectLimitReached: projects.length === 1000 });
   } catch { return response({ error: "SEARCH_DATA_UNAVAILABLE" }, 502); }
 }
-const actionSchema = z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i), version: z.number().int().positive(), action: z.enum(["validate", "create", "enable", "pause", "budget", "automation", "reconcile"]), confirmation: z.string().optional(), dailyBudget: z.number().positive().max(1e6).optional(), newDailyBudget: z.number().positive().max(1e6).optional(), currency: z.string().regex(/^[A-Z]{3}$/).optional(), policy: z.object({ enabled: z.boolean(), maxKeywordCost: z.number().positive().max(1e6), minClicks: z.number().int().min(10).max(10000) }).strict().optional() }).strict();
+const actionSchema = z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i), version: z.number().int().positive(), action: z.enum(["validate", "create", "enable", "pause", "budget", "automation", "reconcile"]), confirmation: z.string().optional(), dailyBudget: z.number().positive().max(1e6).optional(), newDailyBudget: z.number().positive().max(1e6).optional(), currency: z.string().regex(/^[A-Z]{3}$/).optional(), policy: searchAutomationPolicy.optional() }).strict();
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requireAdminOrDashboardPermission(session, "platformConnectionsManage"); if (denied) return denied;
   try {
     const body = await request.json(), actor = auditActorFromDashboardSession(session!);
+    if (body.action === "chat" || body.action === "revise") {
+      const plan = body.action === "chat" ? await converseSearchPlan(body) : await (async () => {
+        const parsed = z.object({ action: z.literal("revise"), id: z.string().regex(/^[a-f0-9]{24}$/i), version: z.number().int().positive(), refinement: z.string().trim().min(1).max(2000) }).strict().parse(body);
+        return reviseSearchPlan(parsed.id, parsed.version, parsed.refinement);
+      })();
+      queueAuditLog({ ...actor, action: body.action === "chat" ? "GOOGLE_SEARCH_CHAT" : "GOOGLE_SEARCH_REVISED", entityType: "GoogleSearchPlan", entityId: plan.id, messageAr: body.action === "chat" ? "حُفظت محادثة خطة Google Search دون تعديل الإعلانات." : "أعيد تجهيز مسودة Google Search مع حفظ نطاقها وميزانيتها.", metadata: { version: plan.version, connectionId: plan.connectionId } });
+      if (body.action === "revise") runAfterResponse(() => continueSearchPlanning(plan.id));
+      return response({ plan });
+    }
     if (body.action === "resume-planning") {
       const parsed = z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i), version: z.number().int().positive() }).parse(body);
       const resumed = await prisma.googleSearchPlan.updateMany({ where: { id: parsed.id, version: parsed.version, status: "PLANNING_FAILED" }, data: { status: "PLANNING", lastError: null, version: { increment: 1 } } });

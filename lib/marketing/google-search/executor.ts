@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { SearchApiError, googleSearchClient, searchCredentials, type GoogleSearchClient } from "./client";
-import { buildSearchOperations, searchPlanRequest, searchProposal, type SearchDestination } from "./contracts";
+import { buildSearchOperations, searchPlanRequest, searchProposal, searchAutomationPolicy, type SearchAutomationPolicy, type SearchDestination } from "./contracts";
 import { searchDestinations, searchTargeting } from "./planner";
+import { verifySearchImprovements } from "./improvements";
 
 export const jsonValue = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-type ActionInput = { id: string; version: number; action: "validate" | "create" | "enable" | "pause" | "budget" | "automation" | "reconcile"; confirmation?: string; dailyBudget?: number; newDailyBudget?: number; currency?: string; policy?: { enabled: boolean; maxKeywordCost: number; minClicks: number } };
+type ActionInput = { id: string; version: number; action: "validate" | "create" | "enable" | "pause" | "budget" | "automation" | "reconcile"; confirmation?: string; dailyBudget?: number; newDailyBudget?: number; currency?: string; policy?: SearchAutomationPolicy };
 type Resources = { campaigns: string[]; mutationResults?: unknown[] };
 function scopedCampaigns(resources: unknown, customerId: string): string[] {
   const campaigns = (resources as Resources | null)?.campaigns;
@@ -32,7 +33,7 @@ export async function executeSearchPlan(input: ActionInput) {
   const account = (await client.query("SELECT customer.currency_code, customer.time_zone FROM customer LIMIT 1"))[0]?.customer;
   if (!account?.currencyCode) throw new Error("ACCOUNT_CURRENCY_UNAVAILABLE");
   const save = async (data: Prisma.GoogleSearchPlanUpdateManyMutationInput, requiredStatus = plan.status) => {
-    const changed = await prisma.googleSearchPlan.updateMany({ where: { id: plan.id, version: input.version, status: requiredStatus }, data: { ...data, version: { increment: 1 } } });
+    const changed = await prisma.googleSearchPlan.updateMany({ where: { id: plan.id, version: input.version, status: requiredStatus, OR: [{ workLeaseUntil: null }, { workLeaseUntil: { isSet: false } }, { workLeaseUntil: { lte: new Date() } }] }, data: { ...data, version: { increment: 1 } } });
     if (changed.count !== 1) throw new Error("PLAN_CHANGED_RELOAD");
     return prisma.googleSearchPlan.findUniqueOrThrow({ where: { id: plan.id } });
   };
@@ -44,13 +45,14 @@ export async function executeSearchPlan(input: ActionInput) {
     if (rows.length !== proposal.campaigns.length) throw new Error("MANUAL_PROVIDER_RECONCILIATION_REQUIRED");
     if (rows.some(row => Number(row.campaignBudget?.amountMicros) <= 0)) throw new Error("PROVIDER_BUDGET_UNAVAILABLE");
     const evidence = (plan.evidence || {}) as Record<string, unknown>;
+    if (evidence.optimizationPending) await verifySearchImprovements(client, rows.map(row => row.campaign.resourceName), evidence.optimizationPending);
     const pending = evidence.pendingChange as { request?: unknown; proposal?: unknown } | null;
     const matches = (expected: typeof proposal) => rows.every(row => Number(row.campaignBudget.amountMicros) === expected.campaigns.find(c => c.locale === String(row.campaign.name).split(" | ")[1])?.dailyBudgetMicros);
     const proposed = pending?.proposal ? searchProposal.parse(pending.proposal) : proposal;
     const pendingApplied = matches(proposed);
     if (!pendingApplied && !matches(proposal)) throw new Error("PROVIDER_BUDGET_CHANGED_REVIEW_REQUIRED");
     const status = rows.every(row => row.campaign.status === "PAUSED") ? "PAUSED" : rows.every(row => row.campaign.status === "ENABLED") ? "ACTIVE" : "MIXED";
-    return save({ status, resources: { campaigns: rows.map(row => row.campaign.resourceName) }, lastError: null, automationEnabled: false, ...(pendingApplied && pending?.request ? { request: jsonValue(searchPlanRequest.parse(pending.request)), proposal: jsonValue(proposed) } : {}), evidence: jsonValue({ ...evidence, pendingChange: null }) });
+    return save({ status, resources: { campaigns: rows.map(row => row.campaign.resourceName) }, lastError: null, automationEnabled: false, ...(pendingApplied && pending?.request ? { request: jsonValue(searchPlanRequest.parse(pending.request)), proposal: jsonValue(proposed) } : {}), evidence: jsonValue({ ...evidence, pendingChange: null, optimizationPending: null }) });
   }
 
   if (input.action === "validate" || input.action === "create") {
@@ -81,8 +83,9 @@ export async function executeSearchPlan(input: ActionInput) {
   const plannedTotal = proposal.campaigns.reduce((sum, campaign) => sum + campaign.dailyBudgetMicros, 0);
   if (input.action !== "pause" && rows.reduce((sum, row) => sum + Number(row.campaignBudget.amountMicros), 0) !== plannedTotal) throw new Error("PROVIDER_BUDGET_CHANGED_REVIEW_REQUIRED");
   if (input.action === "automation") {
-    const policy = input.policy;
-    if (!policy || !Number.isFinite(policy.maxKeywordCost) || policy.maxKeywordCost <= 0 || !Number.isInteger(policy.minClicks) || policy.minClicks < 10 || policy.minClicks > 10000) throw new Error("AUTOMATION_LIMITS_REQUIRED");
+    const parsedPolicy = searchAutomationPolicy.safeParse(input.policy);
+    if (!parsedPolicy.success) throw new Error("AUTOMATION_LIMITS_REQUIRED");
+    const policy = parsedPolicy.data;
     if (policy.enabled && input.confirmation !== "ENABLE_BOUNDED_OPTIMIZATION") throw new Error("OPTIMIZATION_APPROVAL_REQUIRED");
     return save({ automationEnabled: policy.enabled, automationPolicy: jsonValue(policy), lastReviewAt: null });
   }

@@ -13,6 +13,15 @@ export const searchPlanRequest = z.object({
   containsEuPoliticalAdvertising: z.boolean(),
 }).strict();
 export const keywordSchema = z.object({ text: z.string().trim().min(2).max(80), matchType: z.enum(["EXACT", "PHRASE"]) }).strict();
+export const searchAutomationPolicy = z.object({
+  enabled: z.boolean(), maxKeywordCost: z.number().positive().max(1e6),
+  minClicks: z.number().int().min(10).max(10000),
+  expandKeywords: z.boolean().default(false), refreshAds: z.boolean().default(false),
+}).strict();
+export type SearchAutomationPolicy = z.infer<typeof searchAutomationPolicy>;
+export const searchAdCopy = z.object({
+  headlines: z.array(copy(30)).min(3).max(15), descriptions: z.array(copy(90)).min(2).max(4),
+}).strict().refine(value => new Set(value.headlines).size === value.headlines.length && new Set(value.descriptions).size === value.descriptions.length, "DUPLICATE_AD_COPY");
 export const searchProposal = z.object({
   summary: z.string().max(4000),
   campaigns: z.array(z.object({
