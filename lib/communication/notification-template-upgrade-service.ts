@@ -65,14 +65,19 @@ export async function activateApprovedNotificationUpgrades() {
       if (senders.length !== 1 || !senders[0].enabled || senders[0].status !== "ACTIVE" || !senders[0].businessAccountId) return { state: "DEFAULT_SENDER_REQUIRED" };
       const currentMarker = object(current?.notificationUpgrade);
       if (currentMarker.activatedAt) return { state: "ALREADY_ACTIVE" };
+      // Old staged generations remain for history after a newer successor is
+      // activated. They are no longer candidates for a trigger swap and must
+      // not report misleading approval/editorial blockers on every cron run.
+      const active = source ? await tx.messageTrigger.findMany({ where: { channel: "WHATSAPP", templateId: source.id, enabled: true } }) : [];
+      if (source && current && !active.length) return { state: "SUPERSEDED" };
       if (!source || !current || notificationTemplateHash(source) !== marker.sourceHash || notificationTemplateHash(current) !== marker.draftHash) return { state: "EDITORIAL_CHANGES_REQUIRE_REVIEW" };
       const welcomeMarketing = marker.version === 3 && marker.policy === "WELCOME_MARKETING_V3";
       if (marker.version === 3 && (!welcomeMarketing || !Array.isArray(marker.events) || marker.events.some(event => event !== "USER_REGISTERED"))) return { state: "UPGRADE_POLICY_REVIEW_REQUIRED" };
       const draft = notificationUpgradeDraft(source as NotificationTemplateSource, marker.receipt === true, welcomeMarketing);
+      if (candidate.name !== draft.name) return { state: "SUPERSEDED" };
       const variants = await tx.whatsappTemplateWabaVariant.findMany({ where: { templateId: candidate.id, provider: "META_WHATSAPP", businessAccountId: senders[0].businessAccountId } });
       const approved = approvedNotificationLocales(draft, variants).length;
       if (approved !== SUPPORTED_LOCALES.length) return { state: "AWAITING_APPROVAL", approved };
-      const active = await tx.messageTrigger.findMany({ where: { channel: "WHATSAPP", templateId: source.id, enabled: true } });
       const expectedEvents = Array.isArray(marker.events) ? marker.events : [];
       if (!active.length || active.some(row => !expectedEvents.includes(row.event))) return { state: "TRIGGERS_CHANGED_REQUIRE_REVIEW" };
       // Locks the source against a simultaneous editor update without changing its content/status.

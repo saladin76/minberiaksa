@@ -6,6 +6,7 @@ import { buildStandardMetaComponents, sameVariables, sameVariableSet, variableOr
 import { templateLocaleFromLanguage } from "./template-locale-media";
 import { resolveExactVariantForLocale, type VariantRow } from "./whatsapp-template-readiness";
 import { hasWhatsappUnsubscribeQuickReply, whatsappUnsubscribeCopy } from "./whatsapp-template-unsubscribe";
+import { localizeDonationFailureDraft } from "../templates/localize-donation-failure-link";
 
 export type NotificationTemplateSource = {
   id: string; name: string; body: string; translations?: unknown; header?: unknown;
@@ -69,7 +70,11 @@ export function approvedNotificationLocales(draft: ReturnType<typeof notificatio
   return SUPPORTED_LOCALES.filter(locale => {
     const variant = resolveExactVariantForLocale(variants, locale);
     if (!variant.ready || variant.providerTemplateName !== draft.name || templateLocaleFromLanguage(variant.languageCode ?? "") !== locale || draft.category && variant.category !== draft.category) return false;
-    const expected = buildStandardMetaComponents(draft.translations[locale]).components;
+    // The publisher localizes failure links before submitting each language.
+    // Compare with that same published projection, rather than an older
+    // editorial URL preserved in this immutable draft. Text/buttons and the
+    // exact provider family must still match; approval alone is insufficient.
+    const expected = buildStandardMetaComponents(localizeDonationFailureDraft(draft.translations[locale], locale)).components;
     const shape = (value: unknown): unknown => Array.isArray(value) ? value.map(shape)
       : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "example").map(([key, child]) => [key, shape(child)])) : value;
     return JSON.stringify(stable(shape(variant.componentsSchema))) === JSON.stringify(stable(shape(expected)));

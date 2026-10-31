@@ -8,6 +8,7 @@ import { confirmedTryCharge, receiptDate, receiptMoney, RECEIPT_BANK_COPY, RECEI
 import { donationMoneyFields, donationNotificationDocument, donationNotificationText, donationReceiptText } from "../../lib/templates/donation-money";
 import * as money from "../../lib/templates/donation-money";
 import * as upgrades from "../../lib/communication/notification-template-upgrade";
+import { localizeDonationFailureDraft } from "../../lib/templates/localize-donation-failure-link";
 import { buildStandardMetaComponents } from "../../lib/communication/meta-template-components";
 import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
 import { hasWhatsappUnsubscribeQuickReply, whatsappUnsubscribeCopy } from "../../lib/communication/whatsapp-template-unsubscribe";
@@ -106,7 +107,33 @@ test("missing translations/buttons and unsupported monetary copy need review; fu
   assert.notEqual(upgrades.notificationUpgradeDraft(source, true).name, upgrades.notificationUpgradeDraft({ ...source, body: source.body + " Updated" }, true).name);
 });
 
-function serviceFixture(options: { pending?: boolean; changed?: boolean; duplicateDefault?: boolean; welcome?: boolean; wrongCategory?: boolean; mixedWelcome?: boolean } = {}) {
+test("activation compares the localized failure links actually submitted to Meta in all 19 languages", () => {
+  const source = sourceTemplate();
+  const retry = "https://minberiaksa.org/ar/donation-failed";
+  source.body += `\n${retry}`;
+  for (const locale of SUPPORTED_LOCALES) {
+    source.translations[locale].body += `\n${retry}`;
+    source.translations[locale].buttons = [{ type: "URL", text: `${locale} retry`, url: retry }];
+  }
+  source.buttons = source.translations.ar.buttons;
+  const draft = upgrades.notificationUpgradeDraft(source, true);
+  const before = JSON.stringify(draft);
+  const variants = providerVariants(draft);
+  for (let i = 0; i < SUPPORTED_LOCALES.length; i++) {
+    const locale = SUPPORTED_LOCALES[i];
+    // Real publisher projection, including static URL buttons and body links.
+    variants[i].componentsSchema = buildStandardMetaComponents(localizeDonationFailureDraft(draft.translations[locale], locale)).components;
+  }
+  assert.equal(upgrades.approvedNotificationLocales(draft, variants).length, 19);
+  assert.equal(JSON.stringify(draft), before, "approved/editorial content is never rewritten");
+  const tr = variants.find(row => row.locale === "tr")!;
+  tr.componentsSchema = buildStandardMetaComponents(draft.translations.tr).components;
+  assert.equal(upgrades.approvedNotificationLocales(draft, variants).includes("tr"), false, "an Arabic retry URL on the Turkish provider variant must still fail");
+  tr.componentsSchema = [{ type: "BODY", text: "Unexpected provider content" }];
+  assert.equal(upgrades.approvedNotificationLocales(draft, variants).includes("tr"), false);
+});
+
+function serviceFixture(options: { pending?: boolean; changed?: boolean; duplicateDefault?: boolean; welcome?: boolean; wrongCategory?: boolean; mixedWelcome?: boolean; superseded?: boolean; failureLinks?: boolean; oldGeneration?: boolean } = {}) {
   const source = sourceTemplate();
   if (options.welcome) {
     source.name = "mia_user_registered_v2";
@@ -114,10 +141,21 @@ function serviceFixture(options: { pending?: boolean; changed?: boolean; duplica
     source.buttons = [];
     for (const locale of SUPPORTED_LOCALES) source.translations[locale] = { ...source.translations[locale], body: source.body, buttons: [] };
   }
+  if (options.failureLinks) {
+    source.name = "mia_donation_failed_retry_v4";
+    source.body += "\nhttps://minberiaksa.org/ar/donation-failed";
+    source.buttons = [{ type: "URL", text: "Retry", url: "https://minberiaksa.org/ar/donation-failed" }];
+    for (const locale of SUPPORTED_LOCALES) source.translations[locale] = { ...source.translations[locale], body: source.body, buttons: source.buttons };
+  }
   const draft = upgrades.notificationUpgradeDraft(source, !options.welcome, options.welcome);
   const candidate = { ...source, ...draft, id: "replacement", status: "DRAFT", notificationUpgrade: {} as Record<string, unknown> };
   candidate.notificationUpgrade = { version: options.welcome ? 3 : 1, ...(options.welcome ? { policy: "WELCOME_MARKETING_V3" } : {}), sourceId: source.id, sourceHash: draft.sourceHash, draftHash: upgrades.notificationTemplateHash(candidate), receipt: !options.welcome, events: [options.welcome ? "USER_REGISTERED" : "DONATION_PAID"] };
+  if (options.oldGeneration) {
+    candidate.name += "_retired_policy";
+    candidate.notificationUpgrade.draftHash = upgrades.notificationTemplateHash(candidate);
+  }
   const variants = providerVariants(draft);
+  if (options.failureLinks) for (let i = 0; i < variants.length; i++) variants[i].componentsSchema = buildStandardMetaComponents(localizeDonationFailureDraft(draft.translations[SUPPORTED_LOCALES[i]], SUPPORTED_LOCALES[i])).components;
   if (options.pending) variants[0].approvalStatus = "PENDING";
   if (options.wrongCategory) variants[0].category = "UTILITY";
   if (options.changed) source.body += " Editorial change";
@@ -127,7 +165,7 @@ function serviceFixture(options: { pending?: boolean; changed?: boolean; duplica
     communicationSender: { findMany: async () => options.duplicateDefault ? [sender, sender] : [sender] },
     whatsappTemplate: { findMany: async (args: { where: { name?: unknown } }) => args.where.name ? [candidate] : [source], findUnique: async (args: { where: { id: string } }) => args.where.id === source.id ? source : candidate, findFirst: async () => null, create: async ({ data }: { data: Record<string, unknown> }) => { writes++; createdData = data; return candidate; }, update: async () => { writes++; } },
     whatsappTemplateWabaVariant: { findMany: async (args: { where: { businessAccountId: string } }) => { assert.equal(args.where.businessAccountId, "default-waba"); return variants; } },
-    messageTrigger: { findMany: async () => [{ id: "trigger", event: options.welcome ? "USER_REGISTERED" : "DONATION_PAID", templateId: triggerTarget }, ...(options.mixedWelcome ? [{ id: "other", event: "DONATION_PAID", templateId: triggerTarget }] : [])], updateMany: async (args: { data: { templateId: string } }) => { writes++; triggerTarget = args.data.templateId; return { count: 1 }; } },
+    messageTrigger: { findMany: async () => options.superseded ? [] : [{ id: "trigger", event: options.welcome ? "USER_REGISTERED" : "DONATION_PAID", templateId: triggerTarget }, ...(options.mixedWelcome ? [{ id: "other", event: "DONATION_PAID", templateId: triggerTarget }] : [])], updateMany: async (args: { data: { templateId: string } }) => { writes++; triggerTarget = args.data.templateId; return { count: 1 }; } },
   };
   const prisma = { ...db, $transaction: async (run: (tx: typeof db) => Promise<unknown>) => run(db) };
   const mod = { exports: {} as { prepareNotificationUpgrades: (opts?: unknown) => Promise<{ results: Array<{ state: string }> }>; activateApprovedNotificationUpgrades: () => Promise<{ results: Array<{ state: string }> }> } };
@@ -152,6 +190,23 @@ test("actual activation only switches fully approved, unchanged drafts on the un
   const f = serviceFixture();
   const activated = await f.api.activateApprovedNotificationUpgrades();
   assert.equal(activated.results[0].state, "ACTIVATED"); assert.equal(f.target(), "replacement");
+});
+
+test("an old staged generation with no active source triggers is reported as superseded and performs no writes", async () => {
+  const f = serviceFixture({ superseded: true, changed: true, pending: true });
+  const result = await f.api.activateApprovedNotificationUpgrades();
+  assert.equal(result.results[0].state, "SUPERSEDED");
+  assert.equal(f.writes(), 0);
+  assert.equal(f.target(), "source");
+});
+
+test("the real activation service accepts all localized failure variants and leaves an obsolete policy generation untouched", async () => {
+  const current = serviceFixture({ failureLinks: true });
+  assert.equal((await current.api.activateApprovedNotificationUpgrades()).results[0].state, "ACTIVATED");
+  assert.equal(current.target(), "replacement");
+  const old = serviceFixture({ oldGeneration: true });
+  assert.equal((await old.api.activateApprovedNotificationUpgrades()).results[0].state, "SUPERSEDED");
+  assert.equal(old.writes(), 0);
 });
 
 test("the registration successor starts as MARKETING with a localized stop button in every language", async () => {

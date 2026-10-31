@@ -15,7 +15,7 @@ new vm.Script(output).runInNewContext({
   module: loaded,
   exports: loaded.exports,
   require: (id: string) => {
-    if (id !== "@/lib/locales") throw new Error(`Unexpected dependency: ${id}`);
+    if (id !== "../locales") throw new Error(`Unexpected dependency: ${id}`);
     return {
       SUPPORTED_LOCALES,
       isValidLocale: (locale: string) => SUPPORTED_LOCALES.includes(locale as never),
