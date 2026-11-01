@@ -1751,7 +1751,9 @@
     "verificationDirectHelp": "Tanpa kode verifikasi",
     "verificationSecure": "Verifikasi bank",
     "verificationSecureHelp": "Kode mungkin diminta",
-    "verificationRequired": "Pilih satu opsi pembayaran untuk melanjutkan."
+    "verificationRequired": "Pilih satu opsi pembayaran untuk melanjutkan.",
+    "verificationSecureOptIn": "Saya ingin verifikasi bank (3D Secure)",
+    "verificationOptionalHelp": "Pembayaran langsung digunakan secara default. Pilih opsi ini untuk verifikasi melalui bank."
   },
   "certificates": {
     "certNoLabel": "No. sertifikat",

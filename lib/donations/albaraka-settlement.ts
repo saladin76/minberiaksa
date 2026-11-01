@@ -89,6 +89,9 @@ export async function settleAlbarakaDonation(
     });
     if (!fresh) return false;
     if (fresh.paidAt != null) return true;
+    const requestSnapshot = rawObject(rawObject(fresh.providerRaw).albarakaRequest);
+    const bankAmount = Number(requestSnapshot.amount);
+    const bankCurrency = ({ TL: "TRY", US: "USD", EU: "EUR" } as Record<string, string>)[String(requestSnapshot.currencyCode)];
 
     await tx.donation.update({
       where: { id: fresh.id },
@@ -98,6 +101,7 @@ export async function settleAlbarakaDonation(
         provider: "ALBARAKA",
         providerProcReturnCode: responseCode || null,
         providerTxnResult: "Success",
+        ...(Number.isSafeInteger(bankAmount) && bankAmount > 0 && bankCurrency ? { paidAmount: bankAmount / 100, paidCurrency: bankCurrency } : {}),
         providerAuthCode: sale.AuthCode ? String(sale.AuthCode) : null,
         // Albaraka's ReferenceCode is what İptal/İade are later keyed on.
         providerHostRefNum: sale.ReferenceCode ? String(sale.ReferenceCode) : null,

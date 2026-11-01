@@ -822,6 +822,11 @@ model Donation {
   providerHostRefNum     String?
   providerErrorMessage   String?
   providerRaw            Json?
+  /// Append-only financial adjustment ledger. A durable lock survives lost bank responses.
+  bankOperations Json?
+  bankOperationLock String?
+  bankOperationsRevision Int?
+  bankLastInquiry Json?
   reconciliationCheckedAt DateTime?
   reconciliationNextAt DateTime?
   reconciliationLeaseToken String?

@@ -1751,7 +1751,9 @@
     "verificationDirectHelp": "Ohne Bestätigungscode",
     "verificationSecure": "Bankbestätigung",
     "verificationSecureHelp": "Ein Code kann nötig sein",
-    "verificationRequired": "Wählen Sie eine Zahlungsoption, um fortzufahren."
+    "verificationRequired": "Wählen Sie eine Zahlungsoption, um fortzufahren.",
+    "verificationSecureOptIn": "Ich möchte die Bankbestätigung (3D Secure) verwenden",
+    "verificationOptionalHelp": "Direktzahlung ist die Standardeinstellung. Wählen Sie diese Option für eine Bestätigung durch Ihre Bank."
   },
   "certificates": {
     "certNoLabel": "Zertifikat-Nr.",

@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Pa kod verifikimi",
     "verificationSecure": "Verifikim bankar",
     "verificationSecureHelp": "Mund të kërkohet një kod",
-    "verificationRequired": "Zgjidhni një mënyrë pagese për të vazhduar."
+    "verificationRequired": "Zgjidhni një mënyrë pagese për të vazhduar.",
+    "verificationSecureOptIn": "Dua verifikim nga banka (3D Secure)",
+    "verificationOptionalHelp": "Pagesa e drejtpërdrejtë është parazgjedhja. Zgjidhni këtë opsion për verifikim nga banka."
   },
   "certificates": {
     "certNoLabel": "Nr. i certifikatës",

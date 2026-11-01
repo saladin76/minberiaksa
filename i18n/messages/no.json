@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Uten bekreftelseskode",
     "verificationSecure": "Bankbekreftelse",
     "verificationSecureHelp": "En kode kan kreves",
-    "verificationRequired": "Velg en betalingsmåte for å fortsette."
+    "verificationRequired": "Velg en betalingsmåte for å fortsette.",
+    "verificationSecureOptIn": "Jeg ønsker bankbekreftelse (3D Secure)",
+    "verificationOptionalHelp": "Direkte betaling er standard. Velg dette alternativet for bekreftelse gjennom banken."
   },
   "certificates": {
     "certNoLabel": "Sertifikatnr.",

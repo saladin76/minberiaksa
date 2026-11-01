@@ -240,7 +240,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       providerOrderId: orderId,
       providerTxnType: "RecurringSale",
       providerRaw: {
-        albarakaRecurring: { orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
+        albarakaRecurring: { merchantNo: albarakaRecurringConfig().merchantNo, terminalNo: albarakaRecurringConfig().terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
       } as Prisma.InputJsonValue,
       items: sub.items.length
         ? { create: sub.items.map((item) => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD })) }
@@ -324,12 +324,15 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
         paidAt: now,
         providerProcReturnCode: responseCode || null,
         providerTxnResult: "Success",
+        paidAmount: amount / 100,
+        paidCurrency: ({ TL: "TRY", US: "USD", EU: "EUR" } as const)[currencyCode],
         providerAuthCode: sale.AuthCode ? String(sale.AuthCode) : null,
         providerHostRefNum: sale.ReferenceCode ? String(sale.ReferenceCode) : null,
         providerErrorMessage: null,
         providerRaw: {
           ...(typeof fresh.providerRaw === "object" && fresh.providerRaw ? (fresh.providerRaw as Record<string, unknown>) : {}),
           albarakaSale: sale as unknown as Record<string, unknown>,
+          cardSummary: { last4: cardNumber.slice(-4) },
         } as Prisma.InputJsonValue,
       },
     });

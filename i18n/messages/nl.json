@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Zonder verificatiecode",
     "verificationSecure": "Bankverificatie",
     "verificationSecureHelp": "Een code kan nodig zijn",
-    "verificationRequired": "Kies een betaaloptie om door te gaan."
+    "verificationRequired": "Kies een betaaloptie om door te gaan.",
+    "verificationSecureOptIn": "Ik wil bankverificatie gebruiken (3D Secure)",
+    "verificationOptionalHelp": "Direct betalen is de standaard. Kies deze optie voor verificatie via de bank."
   },
   "certificates": {
     "certNoLabel": "Certificaatnr.",

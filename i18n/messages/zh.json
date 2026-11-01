@@ -701,7 +701,9 @@
     "verificationDirectHelp": "无需验证码",
     "verificationSecure": "银行验证",
     "verificationSecureHelp": "可能需要验证码",
-    "verificationRequired": "请选择一种支付方式以继续。"
+    "verificationRequired": "请选择一种支付方式以继续。",
+    "verificationSecureOptIn": "我希望使用银行验证（3D Secure）",
+    "verificationOptionalHelp": "默认使用直接支付。选择此项可通过银行验证。"
   },
   "certificates": {
     "certNoLabel": "证书编号",

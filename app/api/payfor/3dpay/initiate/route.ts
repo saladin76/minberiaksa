@@ -242,6 +242,7 @@ export async function POST(req: NextRequest) {
             : {}),
           ...(/^\d{4}$/.test(String(savedCardLast4 ?? body.cardLast4 ?? "")) ? { cardSummary: { last4: savedCardLast4 ?? body.cardLast4 } } : {}),
           payforRequest: {
+            merchantId, mbrId,
             orderId,
             purchAmount,
             originalAmount: donation.totalAmount, originalCurrency: donation.currency,

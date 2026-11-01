@@ -701,7 +701,9 @@
     "verificationDirectHelp": "تصدیقی کوڈ کے بغیر",
     "verificationSecure": "بینک کی تصدیق",
     "verificationSecureHelp": "تصدیقی کوڈ مانگا جا سکتا ہے",
-    "verificationRequired": "جاری رکھنے کے لیے ادائیگی کا ایک طریقہ منتخب کریں۔"
+    "verificationRequired": "جاری رکھنے کے لیے ادائیگی کا ایک طریقہ منتخب کریں۔",
+    "verificationSecureOptIn": "میں بینک کی تصدیق (3D Secure) چاہتا ہوں",
+    "verificationOptionalHelp": "براہ راست ادائیگی پہلے سے منتخب ہے۔ بینک کے ذریعے تصدیق کے لیے یہ اختیار منتخب کریں۔"
   },
   "certificates": {
     "certNoLabel": "شہادت نمبر",

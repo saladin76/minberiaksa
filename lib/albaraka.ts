@@ -300,7 +300,7 @@ export type AlbarakaServiceResponse = {
  */
 export function isAlbarakaApproved(res: AlbarakaServiceResponse | null): boolean {
   const code = res?.ServiceResponseData?.ResponseCode;
-  return code === "00" || code === "0000";
+  return !res?.TransportFailure && (code === "00" || code === "0000");
 }
 
 /**
@@ -332,7 +332,9 @@ export async function albarakaService(
 
   const text = await res.text();
   try {
-    return JSON.parse(text) as AlbarakaServiceResponse;
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Malformed bank response");
+    return res.ok ? parsed as AlbarakaServiceResponse : { ...parsed, TransportFailure: true };
   } catch {
     return {
       ServiceResponseData: {

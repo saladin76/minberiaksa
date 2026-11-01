@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Tanpa kod pengesahan",
     "verificationSecure": "Pengesahan bank",
     "verificationSecureHelp": "Kod mungkin diminta",
-    "verificationRequired": "Pilih satu kaedah pembayaran untuk meneruskan."
+    "verificationRequired": "Pilih satu kaedah pembayaran untuk meneruskan.",
+    "verificationSecureOptIn": "Saya mahu pengesahan bank (3D Secure)",
+    "verificationOptionalHelp": "Pembayaran terus ialah pilihan lalai. Pilih pilihan ini untuk pengesahan melalui bank."
   },
   "certificates": {
     "certNoLabel": "No. sijil",

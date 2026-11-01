@@ -113,7 +113,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   useHealLegacyRows(items, replace, hydrated);
 
   const [method, setMethod] = useState<PaymentMethod>("card");
-  const [verificationMode, setVerificationMode] = useState<AlbarakaCheckoutMode | null>(null);
+  const [verificationMode, setVerificationMode] = useState<AlbarakaCheckoutMode>("2D");
   const [firstName, setFirstName] = useState(donor?.firstName ?? "");
   const [lastName, setLastName] = useState(donor?.lastName ?? "");
   const [email, setEmail] = useState(donor?.email ?? "");
@@ -318,7 +318,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     return () => abort.abort();
   }, [session?.user?.id, gateway, needsOwnCardForm]);
   const requiresVerificationChoice = method === "card" && gateway === "ALBARAKA" && !planFrequency;
-  useEffect(() => { setVerificationMode(null); }, [planFrequency]);
+  useEffect(() => { setVerificationMode("2D"); }, [planFrequency]);
   const selectedBank = banks.find((b) => b.id === bankId) ?? banks[0];
 
   /* A transfer is one act by the donor; nothing can be charged again next

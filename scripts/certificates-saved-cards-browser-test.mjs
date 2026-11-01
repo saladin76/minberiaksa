@@ -4,6 +4,8 @@ import { createServer } from "node:http";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import postcss from "postcss";
+import tailwindcss from "tailwindcss";
 
 // Actual components and document renderers, with local provider/DB boundaries.
 // The browser cannot contact a bank, Meta, email provider or production API.
@@ -28,7 +30,7 @@ const replacements = {
   "@/hooks/use-toast": 'export function useToast(){return{toast:value=>window.fixtureToasts.push(value)}}',
   "@/hooks/useMinbarCart": 'const items=[{id:"fixture",projectId:"fixture",title:"Fixture Project",typeKey:"project",freqKey:"once",amount:25,currency:"USD",amountUSD:25}];export function useMinbarCart(){return{items,hydrated:true,replace(){}}}',
   "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return{currency:"USD",format:String,formatNumber:String}}',
-  "@/hooks/useDonationAmount": 'export function useDonationAmount(){return{lineTooSmall:()=>false,minLabel:"1"}}export function useHealLegacyRows(){}',
+  "@/hooks/useDonationAmount": 'export function useDonationAmount(){return{lineTooSmall:()=>false,minLabel:"1",lineValue:row=>row.amount,inLocal:false}}export function useHealLegacyRows(){}',
   "@/hooks/useReferralCode": 'export function useReferralCode(){return()=>null}',
   "@/lib/minbar/cart": 'export function readTeamSupport(){return 0}export function readTeamSupportRecurring(){return false}export function teamSupportIsRecurring(){return false}export function clearCart(){}export function rememberCheckoutAttempt(){}',
   "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return{teamSupportEnabled:false,mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true}}',
@@ -47,7 +49,7 @@ const bundle = await build({ stdin: { contents: 'import React from"react";import
   builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({ contents: replacements[path], loader: "tsx", resolveDir: process.cwd() }));
 } }] });
 const minbarCss = await readFile("styles/minbar/minbar.css", "utf8");
-const uiCss = await readFile(`${output}/ui.css`, "utf8").catch(() => "");
+const uiCss = (await postcss([tailwindcss({ ...require("../tailwind.config.ts").default, content: ["components/minbar/checkout/*.tsx", "components/minbar/home/TopSections.tsx", "app/(dashboard)/dashboard/certificates/page.tsx", "components/ui/**/*.tsx"] })]).process("@tailwind base;@tailwind components;@tailwind utilities;", { from: undefined })).css;
 const calls = []; let created = 0; const issued = new Map();
 const server = createServer(async (request, response) => {
   try {
@@ -74,7 +76,7 @@ const server = createServer(async (request, response) => {
     }
     const locale = url.searchParams.get("locale") || "ar";
     response.setHeader("Content-Type", "text/html; charset=utf-8");
-    response.end(`<!doctype html><html lang="${locale}" dir="${locale === "ar" ? "rtl" : "ltr"}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><style>@font-face{font-family:Cairo;src:url('/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2')}body{margin:0;background:#f7f8fa;font-family:Cairo,Arial,sans-serif;--font-cairo:Cairo;--deep:#10212b;--muted:#64748b;--red:#a93428;--gold:#d39a27;--border:#dce3e8;--sand:#f7f2ea}#root{padding:${url.pathname === "/hero" ? "0" : "16px"};max-width:1440px;margin:auto}input,select,textarea{max-width:100%}*{box-sizing:border-box}</style><div id="root" class="${url.pathname === "/certificates" ? "dash-vivid" : "mia-scope"}"></div><script>window.fixtureLocale=${JSON.stringify(locale)};window.fixtureMessages=${JSON.stringify(messages[locale]).replace(/</g, "\\u003c")}</script><script src="/bundle.js"></script></html>`);
+    response.end(`<!doctype html><html lang="${locale}" dir="${locale === "ar" ? "rtl" : "ltr"}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><style>@font-face{font-family:Cairo;src:url('/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2')}body{margin:0;background:#f7f8fa;font-family:Cairo,Arial,sans-serif;--font-cairo:Cairo;--radius:0.65rem;--deep:#10212b;--muted:#64748b;--red:#a93428;--gold:#d39a27;--border:#dce3e8;--sand:#f7f2ea}#root{padding:${url.pathname === "/hero" ? "0" : "16px"};max-width:1440px;margin:auto}input,select,textarea{max-width:100%}*{box-sizing:border-box}</style><div id="root" class="${url.pathname === "/certificates" ? "dash-vivid" : "mia-scope"}"></div><script>window.fixtureLocale=${JSON.stringify(locale)};window.fixtureMessages=${JSON.stringify(messages[locale]).replace(/</g, "\\u003c")}</script><script src="/bundle.js"></script></html>`);
   } catch (error) { response.statusCode = 500; response.end(JSON.stringify({ error: error.message })); }
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -84,8 +86,8 @@ if (process.argv.includes("--serve")) {
   await new Promise(() => {});
 }
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
-const errors = []; let cases = 0;
-async function pageAt(path, width) { const page = await browser.newPage({ viewport: { width, height: 1100 } }); page.on("pageerror", error => errors.push(error.message)); await page.route("https://**/*", route => route.abort()); await page.goto(base + path); return page; }
+const errors = []; let cases = 0, activePage;
+async function pageAt(path, width) { const page = await browser.newPage({ viewport: { width, height: 1100 } }); page.on("pageerror", error => errors.push(error.message)); await page.route("https://**/*", route => route.abort()); await page.goto(base + path); activePage = page; return page; }
 try {
   for (const width of [390, 1440]) {
     const page = await pageAt("/certificates", width);
@@ -116,16 +118,20 @@ try {
     const page = await pageAt(`/checkout?locale=${locale}`, width);
     await page.locator('input[value="saved-card"]').waitFor();
     assert.equal(await page.locator('input[autocomplete="cc-number"]').count(), 0);
+    const cardBox = await page.locator(".saved-card-option").first().boundingBox();
+    assert.ok(cardBox.height >= 44 && cardBox.height <= 90, `compact saved card height: ${cardBox.height}`);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2));
     const code = page.locator('input[autocomplete="cc-csc"]'); await code.fill("123");
-    await page.locator("#albaraka-2d").check();
+    assert.equal(await page.locator("#albaraka-3d").isChecked(), false, "direct 2D payment is the default");
+    await page.getByLabel(messages[locale].DonationDialog.useNewCard, { exact: true }).check();
+    await page.locator('input[autocomplete="cc-number"]').waitFor();
+    assert.equal(await code.inputValue(), "", "switching cards clears the security code");
+    assert.equal(await page.getByLabel(messages[locale].DonationDialog.rememberCard, { exact: true }).count(), 0, "no additional card-storage checkbox");
+    await page.locator('input[value="saved-card"]').check(); await code.fill("123");
     await page.locator('button[type="submit"]').click();
     await page.waitForFunction(() => window.fixtureSubmitted === true);
     const bank = await page.evaluate(() => window.fixtureBankCalls[0]);
     assert.equal(bank[5], "saved-card"); assert.equal(bank[3].number, ""); assert.equal(bank[3].cvv, "123");
-    await page.getByLabel(messages[locale].DonationDialog.useNewCard, { exact: true }).check();
-    await page.locator('input[autocomplete="cc-number"]').waitFor();
-    assert.equal(await code.inputValue(), "", "switching cards clears the security code");
-    assert.equal(await page.getByLabel(messages[locale].DonationDialog.rememberCard, { exact: true }).isChecked(), false);
     await page.screenshot({ path: `${output}/checkout-${locale}-${width}.png`, fullPage: true });
     await page.close(); cases++;
   }
@@ -156,4 +162,4 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ cases, errors, productionRequests: 0, payments: 0, recipientMessagesSent: 0 }));
-} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+} catch (error) { console.error(JSON.stringify({errors,calls:calls.map(call=>({path:call.path,method:call.method})),dom:activePage&&!activePage.isClosed()?await activePage.locator("body").innerText():null})); throw error; } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

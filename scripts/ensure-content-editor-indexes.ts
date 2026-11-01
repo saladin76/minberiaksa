@@ -85,6 +85,9 @@ const indexes = [
   { collection: "SubscriptionCardVerification", key: { subscriptionId: 1, donorId: 1, createdAt: 1 }, unique: false },
   { collection: "SubscriptionCardVerification", key: { status: 1, expiresAt: 1 }, unique: false },
   { collection: "Donation", key: { "attribution.utm_campaign": 1, status: 1, paidAt: 1 }, unique: false },
+  // Bound actual-renewal audits by their stored cycle markers and date.
+  { collection: "Donation", key: { billingReason: 1, createdAt: -1 }, unique: false },
+  { collection: "Donation", key: { providerTxnType: 1, createdAt: -1 }, unique: false },
 ];
 
 async function run() {

@@ -42,6 +42,7 @@ import {
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 import { GATEWAY_LOGOS, GATEWAY_NAMES } from "./DonationGatewayBadge";
 import type { PayPalInspection, PayPalInspectionOutcome } from "@/lib/donations/gateway-diagnostics";
+import { DonationBankOperations } from "./DonationBankOperations";
 
 type Mode = "attribution" | "payment" | "error" | "overview";
 
@@ -805,6 +806,7 @@ export default function DonationDetailsDialog({ open, onOpenChange, mode, donati
                 ].map(([label, value, Icon]) => <FieldCard key={label as string} def={{ label: label as string, Icon: Icon as typeof Users }} value={value as string} />)}
               </div>
               <PaymentView donation={displayDonation} />
+              {["ALBARAKA", "PAYFOR"].includes(displayDonation.provider || "") && <DonationBankOperations donationId={displayDonation.id} />}
             </div>
           ) : mode === "attribution" ? (
             <AttributionView
@@ -812,7 +814,7 @@ export default function DonationDetailsDialog({ open, onOpenChange, mode, donati
               onMetaDonateSent={(sentAt) => setManualMetaSentAt((current) => ({ ...current, [displayDonation.id]: sentAt }))}
             />
           ) : mode === "payment" ? (
-            <PaymentView donation={displayDonation} />
+            <div className="space-y-4"><PaymentView donation={displayDonation} />{["ALBARAKA", "PAYFOR"].includes(displayDonation.provider || "") && <DonationBankOperations donationId={displayDonation.id} />}</div>
           ) : (
             <ErrorView donation={displayDonation} />
           )}
