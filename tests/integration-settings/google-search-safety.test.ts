@@ -48,7 +48,7 @@ function fixture(locales=['ar']) {
  const modules=searchTestDependencies(deps);
  function load(name:string){const m={exports:{}as Row};runInNewContext(ts.transpileModule(readFileSync(`lib/marketing/google-search/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:m,exports:m.exports,Date,Error,Intl,URL,Buffer,console,require:(key:string)=>{assert.ok(key in modules,key);return modules[key];}});return m.exports;}
  const executor=load('executor'),optimizer=load('optimizer'),emergency=modules['./emergency-pause'] as Row;
- return{state:()=>plan,campaigns,words,calls,execute:(action:string,extra:Row={})=>executor.executeSearchPlan({id,version:plan.version,action,...extra}),optimize:()=>optimizer.optimizeSearchPlan(id,new Date('2026-11-01T12:00:00Z')),pause:()=>emergency.emergencyPauseSearchPlan(id),noTracking:()=>{tracking=false;},noConnection:()=>{connectionAvailable=false;},unknown:()=>{mutateUnknown=true;},atValidate:(fn:()=>Promise<void>)=>{onValidate=fn;},atLive:(fn:()=>Promise<void>)=>{onLive=fn;},failFinal:()=>{failFinal=true;}};
+ return{state:()=>plan,campaigns,words,calls,execute:(action:string,extra:Row={})=>executor.executeSearchPlan({id,version:plan.version,action,...extra}),optimize:()=>optimizer.optimizeSearchPlan(id,new Date('2026-11-01T12:00:00Z')),pause:()=>emergency.emergencyPauseSearchPlan(id),noTracking:()=>{tracking=false;},noConnection:()=>{connectionAvailable=false;},unknown:()=>{mutateUnknown=true;},known:()=>{mutateUnknown=false;},atValidate:(fn:()=>Promise<void>)=>{onValidate=fn;},atLive:(fn:()=>Promise<void>)=>{onLive=fn;},failFinal:()=>{failFinal=true;}};
 }
 const liveMutations=(f:ReturnType<typeof fixture>)=>f.calls.filter(row=>row.mutateOperations&&!row.validateOnly);
 
@@ -105,4 +105,20 @@ test('creation finishing after an emergency retains actual resource IDs and sche
  await assert.rejects(f.execute('create',{confirmation:'CREATE_PAUSED',dailyBudget:10,currency:'USD'}),/PLAN_CHANGED_RELOAD/);
  assert.equal(f.campaigns.length,1);assert.equal(f.campaigns[0].campaign.status,'PAUSED');assert.equal(f.state().resources.campaigns[0],f.campaigns[0].campaign.resourceName);assert.equal(f.state().evidence.emergencyPausePending,true);
  await f.pause();assert.equal(f.state().evidence.emergencyPause.confirmed,true);assert.equal(f.state().status,'PAUSED');
+});
+
+
+test('the configured per-group floor is honored above the default of three',async()=>{
+ const f=fixture();for(let i=4;i<6;i++){const word=structuredClone(f.words[0]);word.adGroupCriterion.resourceName=`customers/${account}/adGroupCriteria/12~${i}`;f.words.push(word);}
+ f.state().automationPolicy.minActiveKeywordsPerGroup=5;await f.optimize();assert.equal(f.words.filter(row=>row.adGroupCriterion.status==='ENABLED').length,5);assert.equal(f.state().evidence.optimization.pausedKeywords.length,1);
+});
+test('uncertain restorations of the same keyword in separate cycles retain distinct history entries',async()=>{
+ const f=fixture();
+ for(let cycle=0;cycle<2;cycle++){
+  f.state().lastReviewAt=null;f.state().automationEnabled=true;await f.optimize();
+  const paused=f.words.find(row=>row.adGroupCriterion.status==='PAUSED')!;f.unknown();
+  await assert.rejects(f.execute('restore-keywords',{confirmation:'RESTORE_AUTOMATION_KEYWORDS'}),/OUTCOME_UNKNOWN/);
+  paused.adGroupCriterion.status='ENABLED';f.known();await f.execute('reconcile');
+ }
+ const history=f.state().evidence.optimization.history;assert.equal(history.length,4);assert.equal(history.filter((row:Row)=>row.kind==='RESTORE').length,2);assert.equal(new Set(history.map((row:Row)=>row.runId)).size,4);
 });

@@ -117,8 +117,8 @@ export async function executeSearchPlan(input: ActionInput) {
       if(pendingRestore.some(name=>!new RegExp(`^customers/${client.id}/adGroupCriteria/\\d+~\\d+$`).test(name)))throw new Error("INVALID_RESOURCE_SCOPE");
       const restored=await client.query(`SELECT campaign.resource_name, ad_group_criterion.resource_name, ad_group_criterion.status FROM ad_group_criterion WHERE campaign.resource_name IN (${rows.map(row=>`'${row.campaign.resourceName}'`).join(',')}) AND ad_group_criterion.resource_name IN (${pendingRestore.map(name=>`'${name}'`).join(',')})`);
       if(restored.length!==pendingRestore.length || new Set(restored.map(row=>row.adGroupCriterion.resourceName)).size!==pendingRestore.length || restored.some(row=>!pendingRestore.includes(row.adGroupCriterion.resourceName)||row.adGroupCriterion.status!=="ENABLED"))throw new Error("KEYWORD_RESTORE_UNCONFIRMED");
-      evidence.optimization=appendOptimizationHistory(evidence,{runId:"restore:"+pendingRestore.join(','),at:new Date().toISOString(),kind:"RESTORE",restoredKeywords:pendingRestore.map(resource=>({resource})),pausedKeywords:[]});
-      evidence.keywordRestorePending=null;
+      evidence.optimization=appendOptimizationHistory(evidence,{runId:typeof evidence.keywordRestoreRunId==="string"?evidence.keywordRestoreRunId:`restore:${plan.id}:${plan.version}`,at:new Date().toISOString(),kind:"RESTORE",restoredKeywords:pendingRestore.map(resource=>({resource})),pausedKeywords:[]});
+      evidence.keywordRestorePending=null;evidence.keywordRestoreRunId=null;
     }
     const pending = evidence.pendingChange as { request?: unknown; proposal?: unknown } | null;
     const matches = (expected: typeof proposal) => rows.every(row => Number(row.campaignBudget.amountMicros) === proposalCampaignForResource(expected, plan.resources, row.campaign.resourceName, row.campaign.name)?.dailyBudgetMicros);
@@ -188,14 +188,14 @@ export async function executeSearchPlan(input: ActionInput) {
     const operations=restore.map(resourceName=>({adGroupCriterionOperation:{update:{resourceName,status:"ENABLED"},updateMask:"status"}}));
     if(operations.length) {
       await client.call("googleAds:mutate",{mutateOperations:operations,partialFailure:false,validateOnly:true});
-      await save({status:"CHANGING",evidence:jsonValue({...evidence,keywordRestorePending:restore})});
+      await save({status:"CHANGING",evidence:jsonValue({...evidence,keywordRestorePending:restore,keywordRestoreRunId:token})});
       try {
         await stillCurrent();await client.call("googleAds:mutate",{mutateOperations:operations,partialFailure:false,validateOnly:false});
         const verified=await client.query(`SELECT ad_group_criterion.resource_name, ad_group_criterion.status FROM ad_group_criterion WHERE ad_group_criterion.resource_name IN (${restore.map(name=>`'${name}'`).join(',')})`);
         if(verified.length!==restore.length||verified.some(row=>!restore.includes(row.adGroupCriterion.resourceName)||row.adGroupCriterion.status!=="ENABLED"))throw new SearchApiError("KEYWORD_RESTORE_UNCONFIRMED",502,true);
       }catch(error){await save({status:"RECONCILE_REQUIRED",automationEnabled:false,lastError:"KEYWORD_RESTORE_UNCONFIRMED"},"CHANGING").catch(()=>{});throw error;}
     }
-    return save({status:plan.status,evidence:jsonValue({...evidence,keywordRestorePending:null,optimization:appendOptimizationHistory(evidence,{runId:token,at:new Date().toISOString(),kind:"RESTORE",restoredKeywords:[...pending].filter(name=>rows.some(row=>row.adGroupCriterion.resourceName===name&&["ENABLED","PAUSED"].includes(row.adGroupCriterion.status))).map(resource=>({resource})),pausedKeywords:[]})}),lastError:null},operations.length?"CHANGING":plan.status);
+    return save({status:plan.status,evidence:jsonValue({...evidence,keywordRestorePending:null,keywordRestoreRunId:null,optimization:appendOptimizationHistory(evidence,{runId:token,at:new Date().toISOString(),kind:"RESTORE",restoredKeywords:[...pending].filter(name=>rows.some(row=>row.adGroupCriterion.resourceName===name&&["ENABLED","PAUSED"].includes(row.adGroupCriterion.status))).map(resource=>({resource})),pausedKeywords:[]})}),lastError:null},operations.length?"CHANGING":plan.status);
   }
   if (input.action === "validate" || input.action === "create") {
     if (!["DRAFT", "VALIDATED"].includes(plan.status)) throw new Error("PLAN_NOT_CREATABLE");

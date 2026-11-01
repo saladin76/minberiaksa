@@ -9376,5 +9376,6 @@
   "ميزانية Google الحالية التي ستُعتمد": "Current Google budget to adopt",
   "بعض موارد الخطة لم تعد موجودة في Google؛ اعتمد الموجود أو أوقف الخطة وافصلها.": "Some plan resources no longer exist in Google. Adopt the remaining campaigns or pause and detach the plan.",
   "جار قراءة الحالة من Google…": "Reading current state from Google…",
-  "راجعت نطاق الإجراء وميزانيته ونتيجته وأوافق على تنفيذه.": "I reviewed the action's scope, budget and result and approve its execution."
+  "راجعت نطاق الإجراء وميزانيته ونتيجته وأوافق على تنفيذه.": "I reviewed the action's scope, budget and result and approve its execution.",
+  "الحد الأدنى للكلمات النشطة في المجموعة": "Minimum active keywords per ad group"
 }
