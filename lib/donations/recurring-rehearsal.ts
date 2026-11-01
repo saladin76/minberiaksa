@@ -10,7 +10,7 @@ import { inspectBankReply } from "./bank-operations-inspection";
 import type { Prisma } from "@prisma/client";
 
 type Options = { subscriptionId: string; donorId: string; currency: string; maxTotal: string; cycles?: number; intervalSeconds?: number; runId?: string; execute?: boolean };
-type Spec = { subscriptionId: string; donorId: string; currency: string; maxTotalMinor: number; amountMinor: number; cardId: string; cycles: number; intervalSeconds: number; originalNextDate: string; createdAt: string };
+type Spec = { subscriptionId: string; donorId: string; currency: string; frequency: string; maxTotalMinor: number; amountMinor: number; cardId: string; cycles: number; intervalSeconds: number; originalNextDate: string; createdAt: string };
 const pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 const object = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const tokenFor = (runId: string) => `RECURRING_TEST:${runId}`;
@@ -33,14 +33,14 @@ export async function runRecurringRehearsal(options: Options, wait: (ms: number)
   const plan = await prisma.subscription.findFirst({ where: { id: options.subscriptionId, donorId: options.donorId }, include: { donor: { select: { role: true } }, donations: { where: { status: "PAID", paidAt: { not: null }, NOT: { billingReason: "subscription_test_cycle" } }, take: 1, select: { id: true } } } });
   const now = new Date();
   if (!plan || plan.donor.role !== "ADMIN" || plan.provider !== "ALBARAKA" || plan.status !== "ACTIVE" ||
-    !["DAILY", "MONTHLY"].includes(plan.frequency ?? "MONTHLY") || !plan.paymentCardId || !plan.lastBillingDate || !plan.donations.length ||
+    !["DAILY", "FRIDAY", "MONTHLY"].includes(plan.frequency ?? "MONTHLY") || !plan.paymentCardId || !plan.lastBillingDate || !plan.donations.length ||
     now.getTime() - plan.createdAt.getTime() > 86400000 || plan.createdAt > now || plan.currency !== options.currency || !plan.nextBillingDate ||
     (!saved && (plan.chargeAttempts !== 0 || plan.amountChangeLock || plan.nextBillingDate.getTime() <= now.getTime() + (cycles * intervalSeconds + 900) * 1000))) throw new Error("ONLY_NEW_SETTLED_ADMIN_TEST_PLAN_ALLOWED");
   const amountMinor = albarakaMinorUnits(plan.amount + plan.teamSupport + (plan.coverFees ? (plan.amount + plan.teamSupport) * .03 : 0));
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor * cycles > maxTotalMinor) throw new Error("REHEARSAL_BUDGET_EXCEEDED");
-  if (saved && (saved.amountMinor !== amountMinor || saved.cardId !== plan.paymentCardId || saved.originalNextDate !== plan.nextBillingDate.toISOString() || plan.amountChangeLock !== tokenFor(runId))) throw new Error("REHEARSAL_PLAN_CHANGED");
-  const spec: Spec = saved ?? { subscriptionId: plan.id, donorId: plan.donorId, currency: plan.currency, amountMinor, maxTotalMinor, cardId: plan.paymentCardId, cycles, intervalSeconds, originalNextDate: plan.nextBillingDate.toISOString(), createdAt: now.toISOString() };
-  const preview = { runId, subscriptionId: plan.id, currency: plan.currency, cycles, intervalSeconds, perCycle: amountMinor / 100, maximumAdditionalCharge: amountMinor * cycles / 100, originalNextDate: spec.originalNextDate, mailOrder: albarakaRecurringConfig().mailOrder === true };
+  if (saved && (saved.frequency !== (plan.frequency ?? "MONTHLY") || saved.amountMinor !== amountMinor || saved.cardId !== plan.paymentCardId || saved.originalNextDate !== plan.nextBillingDate.toISOString() || plan.amountChangeLock !== tokenFor(runId))) throw new Error("REHEARSAL_PLAN_CHANGED");
+  const spec: Spec = saved ?? { subscriptionId: plan.id, donorId: plan.donorId, currency: plan.currency, frequency: plan.frequency ?? "MONTHLY", amountMinor, maxTotalMinor, cardId: plan.paymentCardId, cycles, intervalSeconds, originalNextDate: plan.nextBillingDate.toISOString(), createdAt: now.toISOString() };
+  const preview = { runId, subscriptionId: plan.id, currency: plan.currency, frequency: plan.frequency ?? "MONTHLY", cycles, intervalSeconds, perCycle: amountMinor / 100, maximumAdditionalCharge: amountMinor * cycles / 100, originalNextDate: spec.originalNextDate, mailOrder: albarakaRecurringConfig().mailOrder === true };
   if (!options.execute) return { ...preview, state: "PREVIEW", readOnly: true, newCharges: 0 };
   if (!options.runId) throw new Error("PREVIEW_RUN_ID_REQUIRED");
   if (!anchor) await prisma.$transaction(async tx => {
@@ -52,7 +52,7 @@ export async function runRecurringRehearsal(options: Options, wait: (ms: number)
   const confirmed: Array<{ cycle: number; donationId: string; bankCode: string }> = [];
   for (let cycle = 1; cycle <= cycles; cycle++) {
     const fresh = await prisma.subscription.findUnique({ where: { id: plan.id } });
-    if (!fresh || fresh.amountChangeLock !== tokenFor(runId) || fresh.currency !== spec.currency || fresh.paymentCardId !== spec.cardId || fresh.nextBillingDate?.toISOString() !== spec.originalNextDate || albarakaMinorUnits(fresh.amount + fresh.teamSupport + (fresh.coverFees ? (fresh.amount + fresh.teamSupport) * .03 : 0)) !== spec.amountMinor) throw new Error("REHEARSAL_PLAN_CHANGED_OR_PENDING_REVIEW");
+    if (!fresh || fresh.amountChangeLock !== tokenFor(runId) || fresh.currency !== spec.currency || (fresh.frequency ?? "MONTHLY") !== spec.frequency || fresh.paymentCardId !== spec.cardId || fresh.nextBillingDate?.toISOString() !== spec.originalNextDate || albarakaMinorUnits(fresh.amount + fresh.teamSupport + (fresh.coverFees ? (fresh.amount + fresh.teamSupport) * .03 : 0)) !== spec.amountMinor) throw new Error("REHEARSAL_PLAN_CHANGED_OR_PENDING_REVIEW");
     const orderId = albarakaRecurringOrderId(plan.id, `REHEARSAL:${runId}`, cycle);
     let donation = await prisma.donation.findFirst({ where: { subscriptionId: plan.id, providerOrderId: orderId }, select: { ...bankDonationSelect, providerTxnResult: true, providerProcReturnCode: true } });
     if (!donation && fresh.status === "ACTIVE") {
