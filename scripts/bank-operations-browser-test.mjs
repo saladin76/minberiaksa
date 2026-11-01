@@ -1,71 +1,48 @@
 import { build } from 'esbuild';
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import { createServer } from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import path from 'node:path';
+import assert from 'node:assert/strict';
 import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
-import assert from 'node:assert/strict';
-const require = createRequire(import.meta.url), output = process.env.CONTENT_EDITOR_ARTIFACTS || '.artifacts/bank-operations'; await mkdir(output,{recursive:true});
-const locales=['ar','en','tr'];
-const messages=Object.fromEntries(await Promise.all(locales.map(async locale=>[locale,JSON.parse(await readFile(`i18n/messages/${locale}.json`,'utf8'))])));
-const catalogs=Object.fromEntries(await Promise.all(['en','tr'].map(async locale=>[locale,JSON.parse(await readFile(`lib/dashboard/i18n/catalog/${locale}.json`,'utf8'))])));
-const replacements={
- 'next-intl':'export function useTranslations(ns){return key=>window.fixtureMessages[ns][key]}',
-};
-const bundle=await build({stdin:{contents:'import React from"react";import{createRoot}from"react-dom/client";import{DonationBankOperations}from"./components/dashboard/DonationBankOperations";import{SavedCardPicker}from"./components/minbar/checkout/SavedCardPicker";function App(){const[value,setValue]=React.useState("card1");return <main><section className="mb-5 rounded-xl border bg-white p-4"><SavedCardPicker cards={[{id:"card1",last4:"1609",cardType:"VISA",expiryDate:"01/31"},{id:"card2",last4:"7313",cardType:"VISA",expiryDate:"01/31"},{id:"card3",last4:"6162",cardType:"MASTERCARD",expiryDate:"03/36"}]} value={value} onChange={setValue}/></section><DonationBankOperations donationId="111111111111111111111111"/></main>}createRoot(document.getElementById("root")).render(<App/>);',resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',tsconfig:'tsconfig.json',define:{'process.env.NODE_ENV':'"test"'},plugins:[{name:'fixture',setup(b){b.onResolve({filter:/.*/},({path})=>path in replacements?{path,namespace:'fixture'}:undefined);b.onLoad({filter:/.*/,namespace:'fixture'},({path})=>({contents:replacements[path],loader:'tsx'}));}}]});
-const css=(await postcss([tailwindcss({...require('../tailwind.config.ts').default,content:['components/dashboard/DonationBankOperations.tsx','components/minbar/checkout/SavedCardPicker.tsx']})]).process('@tailwind base;@tailwind components;@tailwind utilities;',{from:undefined})).css;
-const initial=()=>({sale:{provider:'ALBARAKA',orderId:'TEST-BANK-ORDER',reference:'TEST-REFERENCE',amountMinor:1000,currency:'EUR'},operations:[],returnedMinor:0,remainingMinor:1000,blocked:false,voided:false,confirmed:true,canManage:true,ready:{ready:true},inquiry:null});
-let state=initial(), calls=[], outcome='SUCCEEDED', writes=0;
-const server=createServer(async(req,res)=>{
- const url=new URL(req.url,'http://fixture');
- if(url.pathname==='/bundle.js'){res.setHeader('Content-Type','application/javascript');return res.end(bundle.outputFiles[0].contents)}
- if(url.pathname==='/style.css'){res.setHeader('Content-Type','text/css');return res.end(css)}
- if(url.pathname.startsWith('/api/')){
-  res.setHeader('Content-Type','application/json');if(req.method==='GET')return res.end(JSON.stringify(state));
-  let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);calls.push(body);
-  if(body.action==='INQUIRE'){state.inquiry={state:'SUCCEEDED',code:'00',at:new Date().toISOString(),data:{OrderId:'TEST-BANK-ORDER'}};return res.end(JSON.stringify({inquiry:state.inquiry}))}
-  writes++;
-  if(body.action==='RECONCILE'){const op=state.operations.find(op=>op.id===body.operationId);op.state=body.succeeded?'SUCCEEDED':'DECLINED';op.resolution={evidence:body.evidence};state.blocked=false;if(body.succeeded){state.returnedMinor+=op.amountMinor;state.remainingMinor-=op.amountMinor;}return res.end(JSON.stringify({operation:op}))}
-  const amountMinor=body.action==='VOID'?1000:Math.round(Number(body.amount)*100);
-  const op={id:`OP-${writes}`,key:body.key,action:body.action,state:outcome,amountMinor,currency:'EUR',actorName:'QA Finance',actorId:'QA',reason:body.reason,code:outcome==='SUCCEEDED'?'00':'TIMEOUT',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};state.operations.push(op);
-  if(outcome==='SUCCEEDED'){state.remainingMinor-=amountMinor;state.returnedMinor+=amountMinor;state.voided=body.action==='VOID';}else if(outcome==='UNKNOWN')state.blocked=true;
-  return res.end(JSON.stringify({operation:op}));
- }
- const locale=url.searchParams.get('locale')||'ar';res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html lang="${locale}" dir="${locale==='ar'?'rtl':'ltr'}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><style>body{margin:0;background:#f7f8fa;font-family:Arial,sans-serif}#root{padding:16px;max-width:1000px;margin:auto}</style><body class="dash-vivid"><div id="root"></div><script>document.cookie="dash-locale=${locale}; path=/";window.fixtureMessages=${JSON.stringify(messages[locale]).replace(/</g,'\\u003c')}</script><script src="/bundle.js"></script></body></html>`)
+const require=createRequire(import.meta.url);
+const {bankBalance}=require('../lib/donations/bank-operations-core.ts');
+const {executeBankAdjustment,inquireBankDonation,resolveBankAdjustment}=require('../lib/donations/bank-operations-service.ts');
+const catalogs={en:require('../lib/dashboard/i18n/catalog/en.json'),tr:require('../lib/dashboard/i18n/catalog/tr.json')};
+const label=(lang,text)=>lang==='ar'?text:catalogs[lang][text]||text;
+const ids=['a'.repeat(24),'b'.repeat(24)], actor={id:'fixture-admin',name:'Finance Admin'};
+const out=path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS||'.artifacts/bank-operations');await mkdir(out,{recursive:true});
+const entry=`import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{setDashLocale}from'./lib/dashboard/i18n';import{DonationBankOperations}from'./components/dashboard/DonationBankOperations';const lang=new URLSearchParams(location.search).get('lang')||'ar';setDashLocale(lang);function App(){const[id,setId]=useState('${ids[0]}');window.showDonation=setId;return <DonationBankOperations donationId={id}/>};createRoot(document.getElementById('root')).render(<App/>);`;
+const bundle=await build({stdin:{contents:entry,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,format:'iife',platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"test"'}});
+const css=(await postcss([tailwindcss({...require('../tailwind.config.ts').default,content:['components/dashboard/DonationBankOperations.tsx']})]).process('@tailwind base;@tailwind components;@tailwind utilities;',{from:undefined})).css;
+let rows,banks,staff=false,slow=false,financialCalls=0;
+function reset(){staff=false;slow=false;financialCalls=0;rows=new Map(ids.map((id,index)=>[id,{id,provider:index?'PAYFOR':'ALBARAKA',providerOrderId:id,providerHostRefNum:'123456789012345678',providerAuthCode:'AUTH',providerTxnType:'Sale',status:'PAID',paidAt:new Date(),providerRaw:index?{payforRequest:{orderId:id,purchAmount:'10.00',currency:'949'}}:{albarakaRequest:{orderId:id,amount:1000,currencyCode:'EU',mode:'2D'}}}]));banks=new Map(ids.map(id=>[id,{returned:0,voided:false,outcome:'SUCCEEDED'}]));}
+reset();
+function matches(row,where){return Object.entries(where).every(([key,expected])=>{if(key==='AND')return expected.every(x=>matches(row,x));if(key==='OR')return expected.some(x=>matches(row,x));if(expected===null)return row[key]==null;if(expected&&typeof expected==='object'){if('isSet'in expected)return (row[key]!==undefined)===expected.isSet;if('equals'in expected)return JSON.stringify(row[key])===JSON.stringify(expected.equals);}return row[key]===expected;});}
+const db={donation:{findUnique:async({where})=>structuredClone(rows.get(where.id)||null),updateMany:async({where,data})=>{const row=rows.get(where.id);if(!row||!matches(row,where))return{count:0};Object.assign(row,structuredClone(data));return{count:1};}}};
+async function bank(row,action,opId,amount){const state=banks.get(row.id);if(action==='INQUIRE')return{state:'SUCCEEDED',code:'00',data:row.provider==='PAYFOR'?{OrderId:row.id,PurchAmount:'10.00',Currency:'949',AuthCode:'AUTH',RefundedAmount:(state.returned/100).toFixed(2),VoidDate:state.voided?'2026-11-01T12:00:00Z':''}:{transactions:[{OrderId:row.id,Amount:'10.00',CurrencyCode:'EU',AuthCode:'AUTH',TransactionType:'Sale'},...(state.returned?[{OrderId:row.id,Amount:(state.returned/100).toFixed(2),CurrencyCode:'EU',AuthCode:'AUTH',TransactionType:state.voided?'Void':'Return'}]:[])]}};financialCalls++;await new Promise(resolve=>setTimeout(resolve,80));if(state.outcome==='SUCCEEDED'){state.returned+=amount;state.voided=action==='VOID';}return{state:state.outcome,code:state.outcome==='SUCCEEDED'?'00':'TIMEOUT',reference:opId};}
+const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://fixture');const json=(value,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
+ if(url.pathname==='/fixture.js'){res.setHeader('Content-Type','application/javascript');return res.end(bundle.outputFiles[0].contents);}if(url.pathname==='/style.css'){res.setHeader('Content-Type','text/css');return res.end(css);}
+ if(url.pathname.includes('/bank-operations')){const id=url.pathname.split('/').at(-2),row=rows.get(id);try{if(req.method==='GET'){const result={...bankBalance(row),canManage:!staff,confirmed:true,ready:{ready:true},inquiry:row.bankLastInquiry?.lastCheck};if(slow&&id===ids[0])await new Promise(resolve=>setTimeout(resolve,450));return json(result);}let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);if(body.action==='INQUIRE')return json({inquiry:await inquireBankDonation(db,id,actor,bank,()=>{})});if(staff)return json({error:'Forbidden'},403);if(body.action==='RECONCILE')return json({operation:await resolveBankAdjustment(db,id,body,actor)});const operation=await executeBankAdjustment(db,id,body,actor,bank,()=>{});return json({operation},operation.state==='UNKNOWN'?202:200);}catch(error){return json({error:error.message},409);}}
+ const lang=url.searchParams.get('lang')||'ar';res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html lang="${lang}" dir="${lang==='ar'?'rtl':'ltr'}"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><style>body{--radius:0.65rem;margin:0;background:#f8fafc;font-family:Arial,sans-serif}#root{max-width:880px;margin:auto;padding:12px}</style></head><body><div id="root"></div><script src="/fixture.js"></script></body></html>`);
 });
-await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${server.address().port}`;
-if(process.argv.includes('--serve')){console.log(base);await new Promise(()=>{})}
-const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});let checks=0;const errors=[];
-try{
- for(const locale of locales)for(const width of [320,390,1440]){
-  state=initial();calls=[];writes=0;outcome='SUCCEEDED';const cp=ar=>locale==='ar'?ar:catalogs[locale][ar];
-  const page=await browser.newPage({viewport:{width,height:1000}});page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',route=>route.abort());await page.goto(`${base}/?locale=${locale}`);
-  await page.getByRole('button',{name:cp('استرداد كامل أو جزئي'),exact:true}).waitFor();assert.equal(writes,0);assert.equal(calls.length,0);checks++;
-  const sizes=await page.locator('.saved-card-option').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().height));assert.equal(sizes.length,4);assert.ok(sizes.every(h=>h>=44&&h<=82),JSON.stringify(sizes));checks++;
-  await page.getByRole('button',{name:cp('استرداد كامل أو جزئي'),exact:true}).click();const submit=page.getByRole('button',{name:cp('تنفيذ الإجراء البنكي'),exact:true});assert.equal(await submit.isDisabled(),true);
-  const amount=page.getByRole('spinbutton');await amount.fill('11');await page.getByRole('textbox').fill('QA donor requested a refund');await page.getByRole('checkbox').check();assert.equal(await submit.isDisabled(),true);assert.equal(writes,0);checks++;
-  await amount.fill('3');await submit.dblclick();await page.getByRole('article').filter({hasText:'QA donor requested a refund'}).waitFor();assert.equal(writes,1);assert.equal(state.remainingMinor,700);assert.equal(calls[0].amount,'3');assert.ok(calls[0].key);checks++;
-  assert.equal(await page.getByRole('button',{name:cp('إلغاء العملية'),exact:true}).isDisabled(),true);checks++;
-  await page.getByRole('button',{name:cp('التحقق من العملية لدى البنك'),exact:true}).click();await page.getByText(cp('آخر استعلام لدى البنك'),{exact:false}).waitFor();assert.equal(writes,1);checks++;
-  await page.getByRole('button',{name:cp('استرداد كامل أو جزئي'),exact:true}).click();assert.equal(await page.getByRole('spinbutton').inputValue(),'7.00');await page.getByRole('textbox').fill('QA refund remainder');await page.getByRole('checkbox').check();await submit.click();await page.waitForFunction(()=>document.querySelectorAll('article').length===2);assert.equal(state.remainingMinor,0);assert.equal(writes,2);checks++;
-  assert.equal(await page.getByRole('button',{name:cp('استرداد كامل أو جزئي'),exact:true}).isDisabled(),true);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));checks++;
-  await page.screenshot({path:`${output}/bank-${locale}-${width}.png`,fullPage:true});await page.close();
- }
- for(const scenario of ['UNKNOWN','DECLINED','unavailable','reader']){
-  state=initial();calls=[];writes=0;outcome=scenario; if(scenario==='unavailable')state.ready={ready:false,reason:'BANK_NOT_CONFIGURED'};if(scenario==='reader')state.canManage=false;
-  const page=await browser.newPage({viewport:{width:390,height:1000}});await page.route('https://**/*',route=>route.abort());await page.goto(`${base}/?locale=ar`);await page.getByRole('heading',{name:'إدارة العملية البنكية',exact:true}).waitFor();
-  if(scenario==='reader'){await page.getByText('الإلغاء والاسترداد متاحان للمدير فقط.').waitFor();assert.equal(await page.getByRole('button',{name:'استرداد كامل أو جزئي',exact:true}).count(),0)}
-  else if(scenario==='unavailable'){await page.getByRole('button',{name:'التحقق من العملية لدى البنك',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'استرداد كامل أو جزئي',exact:true}).isDisabled(),true)}
-  else{await page.getByRole('button',{name:'إلغاء العملية',exact:true}).click();await page.getByRole('textbox').fill('QA cancellation requested');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'تنفيذ الإجراء البنكي',exact:true}).click();await page.locator('article').waitFor();assert.equal(writes,1);assert.equal(state.remainingMinor,1000);assert.equal(state.blocked,scenario==='UNKNOWN');
-   if(scenario==='UNKNOWN'){
-    state.operations[0].createdAt=new Date(Date.now()-180000).toISOString();await page.reload();
-    const match=page.getByRole('button',{name:'مطابقة نتيجة غير مؤكدة',exact:true});await match.waitFor();assert.equal(await match.isDisabled(),true);
-    await page.getByRole('button',{name:'التحقق من العملية لدى البنك',exact:true}).click();await match.waitFor();await page.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).find(x=>x.textContent==='مطابقة نتيجة غير مؤكدة')?.disabled);await match.click();
-    await page.getByRole('combobox').selectOption('true');await page.getByRole('textbox').fill('Bank confirmed cancellation reference QA-123');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'حفظ المطابقة',exact:true}).click();await page.waitForFunction(()=>!document.body.textContent.includes('أؤكد أن النتيجة ومرجعها مطابقان لسجل البنك.'));assert.equal(state.remainingMinor,0);assert.equal(state.blocked,false);assert.equal(calls.filter(x=>x.action==='VOID').length,1);checks+=3;
-   }
-  }
-  checks++;await page.close();
- }
- assert.deepEqual(errors,[]);console.log(JSON.stringify({checks,locales,widths:[320,390,1440],productionCalls:0,bankCalls:0,output}));
-}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${server.address().port}`;
+const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--disable-dev-shm-usage']});let checks=0;const errors=[];
+try{for(const lang of ['ar','en','tr'])for(const width of [390,1440]){reset();const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.route('https://**/*',route=>route.abort());await page.goto(origin+'/?lang='+lang);
+ const section=page.getByRole('region',{name:label(lang,'إدارة العملية البنكية'),exact:true});await expect(section.getByRole('button',{name:label(lang,'استرداد كامل أو جزئي'),exact:true})).toBeVisible();assert.equal(financialCalls,0);checks++;
+ const refund=async(amount,reason)=>{await section.getByRole('button',{name:label(lang,'استرداد كامل أو جزئي'),exact:true}).click();await section.getByLabel(label(lang,'مبلغ الاسترداد'),{exact:true}).fill(amount);await section.getByLabel(label(lang,'سبب الإجراء'),{exact:true}).fill(reason);const execute=section.getByRole('button',{name:label(lang,'تنفيذ الإجراء البنكي'),exact:true});await expect(execute).toBeDisabled();await section.getByRole('checkbox').check();return execute;};
+ let execute=await refund('3.25','Approved donor refund');await execute.evaluate(el=>{el.click();el.click();});await expect(section.getByRole('status')).toHaveText(label(lang,'مؤكد لدى البنك'));await expect(section.getByRole('button',{name:label(lang,'تنفيذ الإجراء البنكي'),exact:true})).toHaveCount(0);assert.equal(financialCalls,1);assert.equal(bankBalance(rows.get(ids[0])).remainingMinor,675);checks++;
+ execute=await refund('2.10','Second approved donor refund');await execute.click();await expect(section.getByRole('status')).toHaveText(label(lang,'مؤكد لدى البنك'));await expect(section.getByRole('button',{name:label(lang,'تنفيذ الإجراء البنكي'),exact:true})).toHaveCount(0);assert.equal(bankBalance(rows.get(ids[0])).remainingMinor,465);await expect(section.getByRole('button',{name:label(lang,'إلغاء العملية'),exact:true})).toBeDisabled();checks++;
+ execute=await refund('5.00','Exceeds remaining');await expect(execute).toBeDisabled();assert.equal(financialCalls,2);await section.getByRole('button',{name:label(lang,'رجوع'),exact:true}).click();checks++;
+ banks.get(ids[0]).outcome='UNKNOWN';execute=await refund('1.00','Lost bank response fixture');await execute.click();await expect(section.getByRole('status')).toHaveText(label(lang,'نتيجة غير مؤكدة — تحتاج مطابقة'));await expect(section.getByRole('button',{name:label(lang,'تنفيذ الإجراء البنكي'),exact:true})).toHaveCount(0);await expect(section.getByRole('button',{name:label(lang,'استرداد كامل أو جزئي'),exact:true})).toBeDisabled();assert.equal(financialCalls,3);checks++;
+ await section.getByRole('button',{name:label(lang,'التحقق من العملية لدى البنك'),exact:true}).click();await expect(section.getByRole('button',{name:label(lang,'التحقق من العملية لدى البنك'),exact:true})).toBeEnabled();assert.equal(financialCalls,3);checks++;
+ await page.screenshot({path:path.join(out,`${lang}-${width}-refund-history.png`),fullPage:true});
+ await page.evaluate(id=>window.showDonation(id),ids[1]);await expect(section).toContainText('TRY');await expect(section.getByRole('button',{name:label(lang,'إلغاء العملية'),exact:true})).toBeEnabled();await section.getByRole('button',{name:label(lang,'إلغاء العملية'),exact:true}).click();await section.getByLabel(label(lang,'سبب الإجراء'),{exact:true}).fill('Void before bank closing');await section.getByRole('checkbox').check();await section.getByRole('button',{name:label(lang,'تنفيذ الإجراء البنكي'),exact:true}).click();await expect(section.getByRole('status')).toHaveText(label(lang,'مؤكد لدى البنك'));await expect(section.getByRole('button',{name:label(lang,'استرداد كامل أو جزئي'),exact:true})).toBeDisabled();assert.equal(bankBalance(rows.get(ids[1])).remainingMinor,0);assert.equal(financialCalls,4);checks++;
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));checks++;
+ await context.close();}
+ reset();staff=true;const page=await browser.newPage();await page.goto(origin+'/?lang=en');await expect(page.getByText(label('en','الإلغاء والاسترداد متاحان للمدير فقط.'),{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:label('en','استرداد كامل أو جزئي'),exact:true})).toHaveCount(0);assert.equal(financialCalls,0);checks++;await page.close();
+ reset();slow=true;const race=await browser.newPage();const pending=race.waitForRequest(req=>req.url().includes(ids[0])&&req.url().includes('bank-operations'));await race.goto(origin+'/?lang=en');await pending;await race.evaluate(id=>window.showDonation(id),ids[1]);await expect(race.getByRole('region')).toContainText('TRY');await race.waitForTimeout(500);await expect(race.getByRole('region')).toContainText('TRY');await expect(race.getByRole('region')).not.toContainText('EUR');checks++;await race.close();
+ assert.deepEqual(errors,[]);const report={checks,errors,productionRequests:0,bankCalls:0,recipientMessages:0,scope:'Real bank-operations UI, service and ledger with synthetic HTTP, database and bank adapters'};await writeFile(path.join(out,'verification.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

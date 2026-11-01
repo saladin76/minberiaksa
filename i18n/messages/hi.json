@@ -701,7 +701,9 @@
     "verificationDirectHelp": "सत्यापन कोड के बिना",
     "verificationSecure": "बैंक सत्यापन",
     "verificationSecureHelp": "कोड माँगा जा सकता है",
-    "verificationRequired": "आगे बढ़ने के लिए भुगतान का एक विकल्प चुनें।"
+    "verificationRequired": "आगे बढ़ने के लिए भुगतान का एक विकल्प चुनें।",
+    "verificationSecureOptIn": "मैं बैंक सत्यापन (3D Secure) चाहता हूँ",
+    "verificationOptionalHelp": "सीधा भुगतान डिफ़ॉल्ट है। बैंक के माध्यम से सत्यापन के लिए यह विकल्प चुनें।"
   },
   "certificates": {
     "certNoLabel": "प्रमाणपत्र संख्या",

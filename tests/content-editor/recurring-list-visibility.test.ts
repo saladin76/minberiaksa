@@ -36,3 +36,11 @@ test("monthly-only staff cannot use the recurring permission to read the general
 test("donors cannot widen their own transaction history using recurring or donor filters", async () => {
   const h = harness("donor"); assert.equal((await h.get("subscriptionOnly=1&userId=another-user")).status, 200); assert.match(JSON.stringify(h.queries[0].where), /"donorId":"own-id"/); assert.equal(JSON.stringify(h.queries[0].where).includes("another-user"), false);
 });
+
+test("donor and staff lists never load the bank ledger, private inquiry or financial lock", async () => {
+  for (const role of ["donor", "monthly", "admin"] as const) {
+    const h = harness(role); assert.equal((await h.get("subscriptionOnly=1")).status, 200);
+    const omit = h.queries[1].omit as Record<string, unknown>;
+    for (const key of ["bankOperations", "bankOperationLock", "bankOperationsRevision", "bankLastInquiry"]) assert.equal(omit?.[key], true, key);
+  }
+});

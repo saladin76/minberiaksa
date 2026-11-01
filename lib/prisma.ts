@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 // Explicit selects in the authorized bank-operation service opt back into these fields.
 const options: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  omit: { donation: { bankOperations: true, bankOperationLock: true, bankLastInquiry: true } },
+  omit: { donation: { bankOperations: true, bankOperationLock: true, bankLastInquiry: true, bankOperationsRevision: true } },
 };
 
 export const prisma =

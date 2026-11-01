@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession, type Session } from "next-auth";
+import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { sessionHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { paymentPublicOrigin } from "@/lib/payment-public-origin";
-import { bankBalance, BANK_OPERATION_ERRORS, type BankDonation } from "@/lib/donations/bank-operations-core";
+import { bankBalance, object, BANK_OPERATION_ERRORS, type BankDonation } from "@/lib/donations/bank-operations-core";
 import { bankOperationsReady, callBankOperation } from "@/lib/donations/bank-operations-provider";
 import { bankDonationSelect, executeBankAdjustment, inquireBankDonation, resolveBankAdjustment } from "@/lib/donations/bank-operations-service";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 export const preferredRegion = "sin1";
 const response = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
-const authorized = (session: Session | null) => session?.user && (["revenue", "monthly", "referrals"] as const).some(permission => sessionHasDashboardPermission(session, permission));
+const authorized = (session: Session | null) => session?.user?.id && (["revenue", "monthly", "referrals"] as const).some(permission => sessionHasDashboardPermission(session, permission));
 function ensureReady(donation: BankDonation) { const ready = bankOperationsReady(donation); if (!ready.ready) throw new Error(ready.reason || "BANK_NOT_CONFIGURED"); }
 function failure(error: unknown) { const code = error instanceof Error && BANK_OPERATION_ERRORS.includes(error.message) ? error.message : "BANK_OPERATIONS_UNAVAILABLE"; return response({ error: code }, code === "NOT_FOUND" ? 404 : code === "BANK_OPERATIONS_UNAVAILABLE" ? 503 : 409); }
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!donation) return response({ error: "NOT_FOUND" }, 404);
     const balance = bankBalance(donation), ready = bankOperationsReady(donation);
     return response({ ...balance, sale: { provider: balance.sale.provider, orderId: balance.sale.orderId, reference: balance.sale.reference, amountMinor: balance.sale.amountMinor, currency: balance.sale.currency },
-      canManage: session?.user?.role === "ADMIN", confirmed: Boolean(donation.paidAt && donation.status === "PAID"), ready, inquiry: donation.bankLastInquiry });
+      canManage: session?.user?.role === "ADMIN", confirmed: Boolean(donation.paidAt && donation.status === "PAID"), ready, inquiry: object(donation.bankLastInquiry).lastCheck || donation.bankLastInquiry });
   } catch (error) { return failure(error); }
 }
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,8 +45,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (typeof body.operationId !== "string" || typeof body.succeeded !== "boolean" || typeof body.evidence !== "string" || body.evidence.trim().length < 12 || body.evidence.length > 1000) throw new Error("INVALID_REQUEST");
       return response({ operation: await resolveBankAdjustment(prisma, id, { operationId: body.operationId, succeeded: body.succeeded, evidence: body.evidence.trim() }, actor) });
     }
-    if (!["VOID", "REFUND"].includes(body.action) || typeof body.key !== "string" || !/^[a-zA-Z0-9-]{16,80}$/.test(body.key) || typeof body.reason !== "string" || body.reason.trim().length < 5 || body.reason.length > 500) throw new Error("INVALID_REQUEST");
-    const operation = await executeBankAdjustment(prisma, id, { action: body.action, key: body.key, amount: body.amount, reason: body.reason.trim() }, actor, callBankOperation, ensureReady);
+    if (!["VOID", "REFUND"].includes(body.action) || typeof body.currency !== "string" || typeof body.key !== "string" || !/^[a-zA-Z0-9-]{16,80}$/.test(body.key) || typeof body.reason !== "string" || body.reason.trim().length < 5 || body.reason.length > 500) throw new Error("INVALID_REQUEST");
+    const operation = await executeBankAdjustment(prisma, id, { action: body.action, key: body.key, amount: body.amount, currency: body.currency, reason: body.reason.trim() }, actor, callBankOperation, ensureReady);
     return response({ operation }, operation.state === "UNKNOWN" || operation.state === "PENDING" ? 202 : 200);
   } catch (error) { return failure(error); }
 }

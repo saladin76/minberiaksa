@@ -9,13 +9,15 @@ import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
 const require = createRequire(import.meta.url);
 const { subscriptionRequestFollowUp, subscriptionRequestCopy } = require('../lib/donations/subscription-request-copy.ts');
+const { subscriptionRequestNavigationCopy } = require('../lib/donations/subscription-request-navigation-copy.ts');
 const output = path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS || '.artifacts/project-profile-requests');
 await mkdir(output, { recursive: true });
 const catA='a'.repeat(24),catB='b'.repeat(24),donor='c'.repeat(24),planId='d'.repeat(24);
 const ids=['1','2','3'].map(x=>x.repeat(24));
-let projects, tickets, revision=0;
+const closedPlanId='8'.repeat(24);
+let projects, tickets, revision=0, profileMode='normal';
 const image='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
-function reset(){revision=0;tickets=[];projects=[
+function reset(){revision=0;profileMode='normal';tickets=[];projects=[
  {id:ids[0],title:'Project A',priority:0,categoryPriorities:{[catA]:1,[catB]:0},categories:[{id:catA,name:'Category A',slug:'a'},{id:catB,name:'Category B',slug:'b'}]},
  {id:ids[1],title:'Project B',priority:1,categoryPriorities:{[catA]:0},categories:[{id:catA,name:'Category A',slug:'a'}]},
  {id:ids[2],title:'Project C',priority:2,categoryPriorities:{[catB]:1},categories:[{id:catB,name:'Category B',slug:'b'}]},
@@ -59,6 +61,10 @@ const server=createServer(async(req,res)=>{
    for(const item of body.items){const row=projects.find(p=>p.id===item.id);if(body.categoryId){if(item.order===null)delete row.categoryPriorities[body.categoryId];else row.categoryPriorities[body.categoryId]=item.order}else row.priority=item.order;row.revision='updated-'+(++revision)}
    return json({ok:true});
   }
+  if(url.pathname===`/api/users/me/subscriptions/${closedPlanId}/requests`){
+   assert.equal(req.method,'GET','A cancelled plan must never submit a request');
+   return json({plan:{amount:7,currency:'USD',status:'CANCELLED'},requests:[{id:'7'.repeat(24),kind:'CANCEL',status:'COMPLETED',requestedAmount:null,currency:'USD',note:'Please cancel the old plan',resolutionNote:'The old plan was cancelled.',createdAt:'2026-10-02T00:00:00Z',updatedAt:'2026-10-03T00:00:00Z',history:[{status:'COMPLETED',at:'2026-10-03T00:00:00Z',actorRole:'ADMIN'}]}]});
+  }
   if(url.pathname===`/api/users/me/subscriptions/${planId}/requests`){
    if(req.method==='GET')return json({plan:{amount:20,currency:'EUR',status:'ACTIVE'},requests:tickets});
    const now=new Date().toISOString();
@@ -66,10 +72,11 @@ const server=createServer(async(req,res)=>{
    const row={id:(tickets.length?'f':'9').repeat(24),status:'NEW',kind:body.kind,requestedAmount:body.kind==='AMOUNT_CHANGE'?body.amount:null,currency:'EUR',note:body.note,createdAt:now,updatedAt:now,history:[{status:'NEW',at:now,actorRole:'DONOR'}]};tickets.unshift(row);return json({request:row,billingChanged:false},201);
   }
   if(url.pathname==='/api/users/me/account-summary')return json({summary});
-  if(url.pathname===`/api/users/${donor}`)return json({user:{id:donor,name:'Fixture Donor',email:'fixture@example.test',donations:[donation],totalDonationsCount:1,totalDonatedAmountUSD:22,activeSubscriptionsCount:1,badgeIds:[]}});
+  if(url.pathname===`/api/users/${donor}`)return json({user:{id:donor,name:'Fixture Donor',email:'fixture@example.test',donations:profileMode==='empty'?[]:profileMode==='multi'?[donation,{...donation,id:'6'.repeat(24),createdAt:'2026-09-01T00:00:00Z'},{...donation,id:'5'.repeat(24),subscriptionId:closedPlanId,status:'CANCELLED',currency:'USD',totalAmount:7,items:[]}]:[donation],totalDonationsCount:1,totalDonatedAmountUSD:22,activeSubscriptionsCount:1,badgeIds:[]}});
   return json({error:'Unexpected fixture request '+url.pathname},404);
  }
  if(url.pathname.endsWith('/account')){res.writeHead(307,{Location:url.pathname.replace(/account$/,'profile')+'?tab=overview'});return res.end()}
+ profileMode=url.searchParams.get('profileMode')||'normal';
  const locale=url.searchParams.get('lang')||url.pathname.split('/')[1]||'ar',supported=messages[locale]?locale:'ar';
  const filters=[{key:'category:'+catA,id:catA,kind:'category',name:'Category A',slug:'a',icon:'layout-grid',projectIds:[ids[0],ids[1]]},{key:'category:'+catB,id:catB,kind:'category',name:'Category B',slug:'b',icon:'layout-grid',projectIds:[ids[0],ids[2]]}];
  res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html lang='${supported}' dir='${supported==='ar'?'rtl':'ltr'}'><head><meta name='viewport' content='width=device-width,initial-scale=1'><link rel='stylesheet' href='/style.css'><style>@font-face{font-family:Cairo;src:url('/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2');font-weight:200 1000}body{margin:0;font-family:Cairo,Arial,sans-serif}*{box-sizing:border-box}#root{max-width:1440px;margin:auto}</style></head><body><div id='root'></div><script>window.fixtureIntlErrors=[];window.fixtureLocale=${JSON.stringify(supported)};window.fixtureSignedIn=${url.searchParams.get('signedOut')!=='1'};window.fixtureMessages=${JSON.stringify(messages[supported]).replace(/</g,'\\u003c')};window.fixtureProjects=${JSON.stringify(projects).replace(/</g,'\\u003c')};window.fixtureFilters=${JSON.stringify(filters)};window.fixtureNavigate=href=>{const url=new URL(href,location.origin);url.searchParams.set('lang',window.fixtureLocale);history.pushState(null,'',url);dispatchEvent(new PopStateEvent('popstate'))};</script><script src='/fixture.js'></script></body></html>`);
@@ -94,6 +101,19 @@ try{
   const dialog=page.getByRole('dialog'),copy=subscriptionRequestCopy(locale),follow=subscriptionRequestFollowUp(locale);await expect(dialog.getByRole('combobox')).toBeVisible();await dialog.getByRole('spinbutton').fill('5');await dialog.getByRole('textbox').fill('Please reduce to five');await dialog.getByRole('button',{name:copy[6],exact:true}).click();await expect(dialog.getByText(follow[5],{exact:true})).toBeVisible();await expect(dialog.getByText('9'.repeat(24))).toBeVisible();checks++;
   page.once('dialog',box=>box.accept());await dialog.getByRole('button',{name:follow[2],exact:true}).click();await expect(dialog.getByText(follow[3],{exact:true}).filter({visible:true})).toBeVisible();await expect(dialog.getByRole('button',{name:copy[6],exact:true})).toBeEnabled();checks++;
   const dialogBox=await dialog.boundingBox();assert.ok(dialogBox.width<=width+1&&dialogBox.y>=0&&dialogBox.y+dialogBox.height<=1001);await page.screenshot({path:path.join(output,`${locale}-${width}-request.png`),animations:'disabled'});checks++;
+  await dialog.getByRole('button',{name:messages[locale].common.close,exact:true}).click();
+  const requestNav=subscriptionRequestNavigationCopy(locale),requestsControl=width<1024?page.getByRole('tab',{name:requestNav.title,exact:true}):page.getByRole('button',{name:new RegExp(requestNav.title)});
+  await requestsControl.click();
+  const requestSection=page.getByRole('region',{name:requestNav.title,exact:true});
+  await expect(requestSection.getByLabel(requestNav.selectPlan,{exact:true})).toHaveValue(planId);await expect(requestSection.getByText(follow[3],{exact:true}).filter({visible:true})).toBeVisible();assert.equal(new URL(page.url()).searchParams.get('tab'),'requests');checks++;
+  await requestSection.getByRole('combobox').last().selectOption('PAUSE');await requestSection.getByRole('button',{name:copy[6],exact:true}).click();await expect(requestSection.getByText(copy[7],{exact:true})).toBeVisible();await expect(requestSection.getByText(follow[5],{exact:true})).toBeVisible();checks++;
+  await page.goto(`${origin}/${locale}/profile?tab=requests&subscriptionId=${planId}&lang=${locale}&profileMode=multi`);
+  await expect(page.getByRole('region',{name:requestNav.title,exact:true}).getByLabel(requestNav.selectPlan,{exact:true})).toHaveValue(planId);
+  await expect(page.getByLabel(requestNav.selectPlan,{exact:true}).locator('option')).toHaveCount(2);await page.getByRole('region',{name:requestNav.title,exact:true}).getByRole('combobox').last().selectOption('PAUSE');await expect(page.getByText(follow[5],{exact:true})).toBeVisible();checks++;
+  await page.getByLabel(requestNav.selectPlan,{exact:true}).selectOption(closedPlanId);await expect(page.getByText('The old plan was cancelled.',{exact:false})).toBeVisible();await expect(page.getByRole('region',{name:requestNav.title,exact:true}).getByRole('button',{name:copy[6],exact:true})).toHaveCount(0);assert.equal(new URL(page.url()).searchParams.get('subscriptionId'),closedPlanId);checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await page.screenshot({path:path.join(output,`${locale}-${width}-requests-tab.png`),fullPage:true});checks++;
+  await page.goto(`${origin}/${locale}/profile?tab=requests&subscriptionId=${closedPlanId}&lang=${locale}&profileMode=multi`);await expect(page.getByLabel(requestNav.selectPlan,{exact:true})).toHaveValue(closedPlanId);await expect(page.getByText('The old plan was cancelled.',{exact:false})).toBeVisible();checks++;
+  await page.goto(`${origin}/${locale}/profile?tab=requests&lang=${locale}&profileMode=empty`);await expect(page.getByText(requestNav.empty,{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:requestNav.title,exact:true}).getByRole('combobox')).toHaveCount(0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));checks++;
   errors.push(...await page.evaluate(()=>window.fixtureIntlErrors));
   await page.goto(`${origin}/dashboard/campaigns?lang=${locale}`);const orderInput=title=>page.getByRole('spinbutton',{name:label(locale,'ترتيب {0}').replace('{0}',title),exact:true}).filter({visible:true});
   await expect(orderInput('Project A')).toHaveValue('0');await orderInput('Project C').fill('0');await page.getByRole('button',{name:label(locale,'حفظ الترتيب'),exact:false}).click();await expect(page.getByRole('status')).toContainText(label(locale,'تم الحفظ وإعادة قراءة القائمة.'));assert.equal(writes.at(-1).body.categoryId,undefined);checks++;

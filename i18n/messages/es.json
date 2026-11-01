@@ -1751,7 +1751,9 @@
     "verificationDirectHelp": "Sin código de verificación",
     "verificationSecure": "Verificación bancaria",
     "verificationSecureHelp": "Puede solicitarse un código",
-    "verificationRequired": "Elige una opción de pago para continuar."
+    "verificationRequired": "Elige una opción de pago para continuar.",
+    "verificationSecureOptIn": "Quiero verificar el pago con el banco (3D Secure)",
+    "verificationOptionalHelp": "El pago directo es la opción predeterminada. Selecciona esta opción para verificarlo con tu banco."
   },
   "certificates": {
     "certNoLabel": "N.º de certificado",

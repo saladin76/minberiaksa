@@ -1,82 +1,143 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bankBalance, bankSale, moneyMinor, validateBankAction, type BankDonation } from "../../lib/donations/bank-operations-core";
-import { albarakaBankBody, parsePayForBankReply, payForBankFields, callBankOperation } from "../../lib/donations/bank-operations-provider";
+import { bankBalance, moneyMinor, type BankDonation } from "../../lib/donations/bank-operations-core";
+import { inspectBankReply } from "../../lib/donations/bank-operations-inspection";
+import { albarakaBankBody, parsePayForBankReply, payForBankFields, callBankOperation, type BankReply } from "../../lib/donations/bank-operations-provider";
 import { executeBankAdjustment, inquireBankDonation, resolveBankAdjustment } from "../../lib/donations/bank-operations-service";
-import { isAlbarakaApproved, type AlbarakaConfig } from "../../lib/albaraka";
+import type { AlbarakaConfig } from "../../lib/albaraka";
 const id = "1".repeat(24), actor = { id: "2".repeat(24), name: "Finance Admin" };
-const donation = (provider = "ALBARAKA"): BankDonation => ({ id, provider, providerOrderId: "A".repeat(24), providerHostRefNum: "123456789012345678", providerTxnType: "Sale", status: "PAID", paidAt: new Date(), providerRaw: provider === "ALBARAKA" ? { albarakaRequest: { orderId: "A".repeat(24), amount: 1000, currencyCode: "EU", mode: "2D" } } : { payforRequest: { orderId: "A".repeat(24), purchAmount: "10.00", currency: "978" } } });
-const approved = async () => ({ state: "SUCCEEDED" as const, code: "00", reference: "TEST-RETURN" });
-const ready = () => {};
+const donation = (provider = "ALBARAKA"): BankDonation => ({ id, provider, providerOrderId: "A".repeat(24), providerHostRefNum: "123456789012345678", providerAuthCode: "123456", providerTxnType: "Sale", status: "PAID", paidAt: new Date(), providerRaw: provider === "ALBARAKA" ? { albarakaRequest: { orderId: "A".repeat(24), amount: 1000, currencyCode: "EU", mode: "2D" } } : { payforRequest: { orderId: "A".repeat(24), purchAmount: "10.00", currency: "978" } } });
 const cfg: AlbarakaConfig = { merchantNo: "merchant", terminalNo: "terminal", posnetId: "posnet", encKey: "test-key", tdsUrl: "https://bank.invalid/3d", serviceUrl: "https://bank.invalid/api", useOOS: false, useJokerVadaa: false };
+const input = (amount = "2", key = "first") => ({ key, action: "REFUND" as const, amount, currency: "EUR", reason: "Requested by donor" });
 function fixture() {
-  const row = donation(); let failFinal = false;
-  const matches = (where: Record<string, unknown>) => (!where.bankOperationLock || row.bankOperationLock === where.bankOperationLock) && (!where.OR || !row.bankOperationLock) && (!where.bankOperations || JSON.stringify(row.bankOperations) === JSON.stringify((where.bankOperations as { equals: unknown }).equals));
+  const row = donation(), bank = { returned: 0, voided: false, financialCalls: 0, inquiries: 0, outcome: "SUCCEEDED" as BankReply["state"], missingBalance: false };
+  let failFinal = false, failReservation = false;
+  const matches = (where: Record<string, unknown>): boolean => Object.entries(where).every(([key, expected]) => {
+    if (key === "AND") return (expected as Record<string, unknown>[]).every(matches);
+    if (key === "OR") return (expected as Record<string, unknown>[]).some(matches);
+    const value = row[key as keyof BankDonation];
+    if (expected === null) return value == null;
+    if (expected && typeof expected === "object") {
+      if ("isSet" in expected) return (value !== undefined) === expected.isSet;
+      if ("equals" in expected) return JSON.stringify(value) === JSON.stringify(expected.equals);
+    }
+    return value === expected;
+  });
   const db = { donation: {
     async findUnique() { return structuredClone(row); },
-    async updateMany({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) { if (!matches(where)) return { count: 0 }; if (failFinal && data.bankOperations && JSON.stringify(data.bankOperations).includes('"state":"SUCCEEDED"')) throw new Error("write failed"); Object.assign(row, structuredClone(data)); return { count: 1 }; },
-    async update({ data }: { data: Record<string, unknown> }) { Object.assign(row, structuredClone(data)); return row; },
-  }, async $transaction<T>(fn: (tx: unknown) => Promise<T>) { const old = structuredClone(row); try { return await fn(db); } catch (error) { Object.assign(row, old); throw error; } } };
-  return { row, db: db as unknown as Parameters<typeof executeBankAdjustment>[0], failFinal: () => { failFinal = true; } };
+    async updateMany({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) {
+      if (!matches(where)) return { count: 0 };
+      if (data.bankOperations && ((failFinal && JSON.stringify(data.bankOperations).includes('"state":"SUCCEEDED"')) || (failReservation && JSON.stringify(data.bankOperations).includes('"state":"PENDING"')))) throw new Error("write failed");
+      Object.assign(row, structuredClone(data)); return { count: 1 };
+    },
+  } };
+  const call = async (_row: BankDonation, action: "INQUIRE" | "REFUND" | "VOID", _operationId: string, amount?: number): Promise<BankReply> => {
+    if (action === "INQUIRE") {
+      bank.inquiries++;
+      const transactions = [{ OrderId: row.providerOrderId!, Amount: "10.00", CurrencyCode: "EU", TransactionType: "Sale", AuthCode: "123456" }, ...(bank.returned ? [{ OrderId: row.providerOrderId!, Amount: (bank.returned / 100).toFixed(2), CurrencyCode: "EU", TransactionType: bank.voided ? "Void" : "Return", AuthCode: "123456" }] : [])];
+      return { state: "SUCCEEDED", code: "0000", data: bank.missingBalance ? {} : { transactions } };
+    }
+    bank.financialCalls++;
+    if (bank.outcome === "SUCCEEDED") { bank.returned += amount!; bank.voided = action === "VOID"; }
+    return { state: bank.outcome, code: bank.outcome === "SUCCEEDED" ? "00" : bank.outcome === "DECLINED" ? "99" : "TIMEOUT", reference: "RETURN-TEST" };
+  };
+  const ready = () => {};
+  const database = db as unknown as Parameters<typeof executeBankAdjustment>[0];
+  return { row, bank, call, ready, db: database, run: (data: Parameters<typeof executeBankAdjustment>[2] = input()) => executeBankAdjustment(database, id, data, actor, call, ready), failFinal: () => { failFinal = true; }, failReservation: () => { failReservation = true; } };
 }
 for (const value of ["0", "-1", "1.001", "1e2", "NaN", "Infinity", "", "1,00", 0.1 + 0.2]) test(`money rejects ambiguous amount ${value}`, () => assert.throws(() => moneyMinor(value)));
 test("minor amounts preserve cents exactly", () => { assert.equal(moneyMinor("7.01"), 701); assert.equal(moneyMinor(0.29), 29); });
-test("refund and inquiry select the original bank currency and 3D order prefix", () => {
-  const row = donation(); row.providerHostRefNum = null; row.providerOrderId = "A".repeat(20); row.providerRaw = { albarakaRequest: { orderId: row.providerOrderId, amount: 1000, currencyCode: "EU", mode: "3D" } };
+test("Albaraka follows the documented original currency, MAC and 3D order prefix", () => {
+  const row = donation(); row.providerHostRefNum = null; row.providerOrderId = "A".repeat(20); row.providerRaw = { albarakaRequest: { orderId: row.providerOrderId, amount: 1000, currencyCode: "EU" } };
   const refund = albarakaBankBody(row, cfg, "REFUND", 375); assert.equal(refund.OrderId, "TDS_" + row.providerOrderId); assert.equal(refund.Amount, "375"); assert.equal(refund.CurrencyCode, "EU");
   assert.equal(albarakaBankBody(row, cfg, "INQUIRE").OrderId, "TDS_" + row.providerOrderId);
+  const reverse = albarakaBankBody(donation(), cfg, "VOID"); assert.equal(reverse.ReferenceCode, "123456789012345678"); assert.equal(reverse.OrderId, null); assert.equal(reverse.MACParams, "MerchantNo:TerminalNo:ReferenceCode:OrderId"); assert.ok(!("Amount" in reverse));
 });
-test("reference-based reversals omit the original order from the MAC and body", () => { const body = albarakaBankBody(donation(), cfg, "VOID"); assert.equal(body.ReferenceCode, "123456789012345678"); assert.equal(body.OrderId, null); assert.ok(!("Amount" in body)); });
-test("PayFor uses documented secondary operation fields without card data or MerchantPass", () => { const fields = payForBankFields(donation("PAYFOR"), "REFUND", "REFUND-ID", 305); assert.equal(fields.OrgOrderId, "A".repeat(24)); assert.equal(fields.PurchAmount, "3.05"); assert.equal(fields.TxnType, "Refund"); assert.equal(fields.SecureType, "NonSecure"); assert.ok(!("Pan" in fields)); assert.ok(!("MerchantPass" in fields)); });
-test("bank response parsing excludes card data and rejects duplicate identities and XML entities", () => {
-  assert.deepEqual(parsePayForBankReply('<Reply><ProcReturnCode>00</ProcReturnCode><OrderId>TEST</OrderId><Pan>4242424242424242</Pan></Reply>'), { OrderId: "TEST", ProcReturnCode: "00" });
-  assert.deepEqual(parsePayForBankReply('<Reply><OrderId>A</OrderId><OrderId>B</OrderId></Reply>'), {});
-  assert.deepEqual(parsePayForBankReply('<!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]><Reply/>'), {});
+test("PayFor secondary requests contain no card data or 3D password", () => { const fields = payForBankFields(donation("PAYFOR"), "REFUND", "REFUND-ID", 305); assert.equal(fields.OrgOrderId, "A".repeat(24)); assert.equal(fields.PurchAmount, "3.05"); assert.equal(fields.TxnType, "Refund"); assert.equal(fields.SecureType, "NonSecure"); assert.ok(!("Pan" in fields)); assert.ok(!("MerchantPass" in fields)); });
+test("the XML boundary rejects malformed, duplicate, nested and entity payloads and strips secrets", () => {
+  assert.deepEqual(parsePayForBankReply('<Reply><ProcReturnCode>00</ProcReturnCode><OrderId>TEST</OrderId><Pan>4242424242424242</Pan><UserPass>secret</UserPass></Reply>'), { ProcReturnCode: "00", OrderId: "TEST" });
+  for (const xml of ['<Reply><OrderId>A</OrderId><OrderId>B</OrderId></Reply>', '<Reply><OrderId>A</OrderId>', '<Reply><OrderId><Nested>A</Nested></OrderId></Reply>', '<!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]><Reply/>', 'OrderId=A&OrderId=B&ProcReturnCode=00']) assert.deepEqual(parsePayForBankReply(xml), {});
 });
-test("incomplete or changed sale snapshots cannot cause a bank call", () => { const row = donation(); row.providerRaw = {}; assert.throws(() => bankSale(row)); row.providerRaw = { albarakaRequest: { orderId: "different", amount: 1000, currencyCode: "EU" } }; assert.throws(() => bankBalance(row)); });
-test("unpaid donations cannot be refunded", () => { const row = donation(); row.paidAt = null; assert.throws(() => validateBankAction(row, "REFUND", "1"), /CONFIRMED_SALE_REQUIRED/); });
-test("partial and repeated refunds consume the remaining balance and preserve the original donation", async () => {
-  const f = fixture(); let calls = 0; const call = async () => { calls++; return approved(); };
-  await executeBankAdjustment(f.db, id, { key: "first", action: "REFUND", amount: "3.01", reason: "Requested by donor" }, actor, call, ready);
-  assert.equal(bankBalance(f.row).remainingMinor, 699);
-  await assert.rejects(executeBankAdjustment(f.db, id, { key: "too-much", action: "REFUND", amount: "7", reason: "Donor request" }, actor, call, ready), /AMOUNT_EXCEEDS_REMAINING/);
-  await executeBankAdjustment(f.db, id, { key: "second", action: "REFUND", amount: "6.99", reason: "Remaining amount" }, actor, call, ready);
-  assert.equal(bankBalance(f.row).remainingMinor, 0); assert.equal(calls, 2); assert.equal(f.row.status, "PAID"); assert.ok(f.row.paidAt);
+test("only an exact original sale and complete bank refund balance authorize financial operations", async () => {
+  const f = fixture(), reply = await f.call(f.row, "INQUIRE", "test"); assert.equal(inspectBankReply(f.row, reply).verified, true);
+  for (const patch of [{ OrderId: "FOREIGN" }, { Amount: "11.00" }, { CurrencyCode: "US" }, { AuthCode: "FOREIGN" }, { TransactionType: "Auth" }]) {
+    const altered = structuredClone(reply); Object.assign((altered.data!.transactions as Record<string, unknown>[])[0], patch); assert.equal(inspectBankReply(f.row, altered).verified, false);
+  }
+  const payfor = donation("PAYFOR"), data = { OrderId: payfor.providerOrderId, PurchAmount: "10.00", Currency: "978", AuthCode: "123456", RefundedAmount: "3.00" };
+  assert.equal(inspectBankReply(payfor, { state: "SUCCEEDED", code: "00", data }).returnedMinor, 300);
+  assert.equal(inspectBankReply(payfor, { state: "SUCCEEDED", code: "00", data: { ...data, RefundedAmount: "" } }).verified, false);
 });
-test("same idempotency key replays only the recorded result and rejects changed amounts", async () => {
-  const f = fixture(); let calls = 0; const input = { key: "same", action: "REFUND" as const, amount: "2", reason: "Donor request" };
-  const first = await executeBankAdjustment(f.db, id, input, actor, async () => { calls++; return approved(); }, ready);
-  const again = await executeBankAdjustment(f.db, id, input, actor, approved, () => { throw new Error("not called on replay"); });
-  assert.equal(first.id, again.id); assert.equal(calls, 1);
-  await assert.rejects(executeBankAdjustment(f.db, id, { ...input, amount: "3" }, actor, approved, ready), /IDEMPOTENCY_CONFLICT/);
+test("unpaid, incomplete, wrong-currency or unverified sales never send an adjustment", async () => {
+  for (const change of ["unpaid", "snapshot", "currency", "inquiry"]) {
+    const f = fixture(); if (change === "unpaid") f.row.paidAt = null; if (change === "snapshot") f.row.providerRaw = {}; if (change === "inquiry") f.bank.missingBalance = true;
+    await assert.rejects(f.run({ ...input(), currency: change === "currency" ? "USD" : "EUR" })); assert.equal(f.bank.financialCalls, 0); assert.equal(bankOperationsCount(f.row), 0);
+  }
 });
-test("a concurrent refund is blocked while the first request is in flight", async () => {
-  const f = fixture(); let finish!: () => void, entered!: () => void; const started = new Promise<void>(resolve => { entered = resolve; }); const wait = new Promise<void>(resolve => { finish = resolve; });
-  const first = executeBankAdjustment(f.db, id, { key: "first", action: "REFUND", amount: "6", reason: "Donor request" }, actor, async () => { entered(); await wait; return approved(); }, ready);
-  await started; await assert.rejects(executeBankAdjustment(f.db, id, { key: "second", action: "REFUND", amount: "6", reason: "Second request" }, actor, approved, ready), /OPERATION_PENDING_REVIEW/); finish(); await first; assert.equal(bankBalance(f.row).remainingMinor, 400);
+function bankOperationsCount(row: BankDonation) { return Array.isArray(row.bankOperations) ? row.bankOperations.length : 0; }
+test("partial and repeated refunds consume the bank-verified balance and preserve the original sale", async () => {
+  const f = fixture(); await f.run(input("3.01")); assert.equal(bankBalance(f.row).remainingMinor, 699);
+  await assert.rejects(f.run(input("7", "too-much")), /AMOUNT_EXCEEDS_REMAINING/);
+  await f.run(input("6.99", "second")); assert.equal(bankBalance(f.row).remainingMinor, 0); assert.equal(f.bank.financialCalls, 2); assert.equal(f.row.status, "PAID"); assert.ok(f.row.paidAt);
 });
-test("unknown provider outcome stays locked and never becomes an automatic retry", async () => { const f = fixture(); const result = await executeBankAdjustment(f.db, id, { key: "lost", action: "REFUND", amount: "4", reason: "Donor request" }, actor, async () => { throw new Error("timeout"); }, ready); assert.equal(result.state, "UNKNOWN"); assert.ok(f.row.bankOperationLock); await assert.rejects(executeBankAdjustment(f.db, id, { key: "retry", action: "REFUND", amount: "4", reason: "Donor request" }, actor, approved, ready), /OPERATION_PENDING_REVIEW/); });
-test("a final DB failure after bank approval leaves a pending entry and a durable lock", async () => { const f = fixture(); f.failFinal(); await assert.rejects(executeBankAdjustment(f.db, id, { key: "db-fail", action: "REFUND", amount: "4", reason: "Donor request" }, actor, approved, ready)); assert.ok(f.row.bankOperationLock); assert.equal(bankBalance(f.row).operations[0].state, "PENDING"); });
-test("a bank decline consumes no money and never falls back from void to refund", async () => { const f = fixture(); let calls = 0; await executeBankAdjustment(f.db, id, { key: "void", action: "VOID", reason: "Donor request" }, actor, async (_row, action) => { calls++; assert.equal(action, "VOID"); return { state: "DECLINED", code: "99" }; }, ready); assert.equal(calls, 1); assert.equal(bankBalance(f.row).remainingMinor, 1000); assert.equal(f.row.bankOperationLock, null); });
-test("a successful void exhausts the balance and prevents any later refund", async () => { const f = fixture(); await executeBankAdjustment(f.db, id, { key: "void", action: "VOID", reason: "Donor request" }, actor, approved, ready); assert.equal(bankBalance(f.row).remainingMinor, 0); assert.equal(bankBalance(f.row).voided, true); await assert.rejects(executeBankAdjustment(f.db, id, { key: "refund", action: "REFUND", amount: "1", reason: "Donor request" }, actor, approved, ready), /NOTHING_TO_RETURN/); });
-test("manual matching requires a newer bank inquiry and records evidence without resending money", async () => {
-  const f = fixture(); await executeBankAdjustment(f.db, id, { key: "unknown", action: "REFUND", amount: "2", reason: "Donor request" }, actor, async () => ({ state: "UNKNOWN", code: "TIMEOUT" }), ready);
-  const op = bankBalance(f.row).operations[0]; op.createdAt = new Date(Date.now() - 180000).toISOString(); f.row.bankOperations = [op];
-  await assert.rejects(resolveBankAdjustment(f.db, id, { operationId: op.id, succeeded: true, evidence: "Bank reference TEST-123" }, actor), /STALE_OPERATION/);
-  await inquireBankDonation(f.db, id, actor, approved, ready);
-  const resolved = await resolveBankAdjustment(f.db, id, { operationId: op.id, succeeded: true, evidence: "Bank reference TEST-123" }, actor);
-  assert.equal(resolved.state, "SUCCEEDED"); assert.equal(bankBalance(f.row).remainingMinor, 800); assert.equal(f.row.bankOperationLock, null);
+test("refunds made outside this dashboard reduce availability without inventing ledger entries", async () => {
+  const f = fixture(); f.bank.returned = 300;
+  await assert.rejects(f.run(input("8")), /AMOUNT_EXCEEDS_REMAINING/); assert.equal(f.bank.financialCalls, 0);
+  await f.run(input("2")); assert.equal(bankBalance(f.row).remainingMinor, 500); assert.equal(bankBalance(f.row).externalReturnedMinor, 300); assert.equal(bankOperationsCount(f.row), 1);
+  await f.run(input("5", "second")); assert.equal(bankBalance(f.row).remainingMinor, 0); assert.equal(f.bank.returned, 1000);
 });
-test("PayFor rejects approvals for a different original order", async () => {
+test("same key replays only its result, while a changed amount or currency cannot reuse it", async () => {
+  const f = fixture(), first = await f.run(), again = await f.run(); assert.equal(first.id, again.id); assert.equal(f.bank.financialCalls, 1);
+  await assert.rejects(f.run(input("3")), /IDEMPOTENCY_CONFLICT/); await assert.rejects(f.run({ ...input(), currency: "TRY" }), /CURRENCY_MISMATCH/);
+});
+test("an operation in flight blocks concurrent refunds, including clients with another request key", async () => {
+  const f = fixture(); let finish!: () => void, entered!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; }), wait = new Promise<void>(resolve => { finish = resolve; });
+  const first = executeBankAdjustment(f.db, id, input("6"), actor, async (...args) => { if (args[1] !== "INQUIRE") { entered(); await wait; } return f.call(...args); }, f.ready);
+  await started; await assert.rejects(f.run(input("6", "second")), /OPERATION_PENDING_REVIEW/); finish(); await first; assert.equal(f.bank.financialCalls, 1); assert.equal(bankBalance(f.row).remainingMinor, 400);
+});
+test("a lost bank response retains a durable unknown record and never triggers an automatic resend", async () => {
+  const f = fixture(); f.bank.outcome = "UNKNOWN"; assert.equal((await f.run()).state, "UNKNOWN"); assert.ok(f.row.bankOperationLock);
+  await assert.rejects(f.run(input("2", "retry")), /OPERATION_PENDING_REVIEW/); assert.equal((await f.run()).state, "UNKNOWN"); assert.equal(f.bank.financialCalls, 1);
+});
+test("reservation failure cannot call the bank; post-approval persistence failure retains the pending lock", async () => {
+  const before = fixture(); before.failReservation(); await assert.rejects(before.run()); assert.equal(before.bank.financialCalls, 0); assert.equal(bankOperationsCount(before.row), 0);
+  const after = fixture(); after.failFinal(); await assert.rejects(after.run()); assert.equal(after.bank.financialCalls, 1); assert.ok(after.row.bankOperationLock); assert.equal(bankBalance(after.row).operations[0].state, "PENDING");
+});
+test("void never silently falls back to a refund and can exhaust only an unrefunded original sale", async () => {
+  const f = fixture(), request = { ...input(), action: "VOID" as const }; f.bank.outcome = "DECLINED"; await f.run(request); assert.equal(f.bank.financialCalls, 1); assert.equal(bankBalance(f.row).remainingMinor, 1000);
+  f.bank.outcome = "SUCCEEDED"; await f.run({ ...request, key: "second" }); assert.equal(bankBalance(f.row).voided, true); assert.equal(bankBalance(f.row).remainingMinor, 0); await assert.rejects(f.run(input("1", "refund")), /NOTHING_TO_RETURN/);
+});
+test("manual resolution needs a fresh verified balance matching the selected result and never sends money", async () => {
+  const f = fixture(); f.bank.outcome = "UNKNOWN"; await f.run();
+  const op = bankBalance(f.row).operations[0]; op.createdAt = new Date(Date.now() - 180000).toISOString(); op.updatedAt = op.createdAt; f.row.bankOperations = [op]; f.row.bankLastInquiry = null;
+  const request = { operationId: op.id, succeeded: true, evidence: "Bank reference TEST-123 confirms this refund" };
+  await assert.rejects(resolveBankAdjustment(f.db, id, request, actor), /BANK_BALANCE_UNVERIFIED/);
+  await inquireBankDonation(f.db, id, actor, f.call, f.ready); await assert.rejects(resolveBankAdjustment(f.db, id, request, actor), /BANK_BALANCE_MISMATCH/);
+  f.bank.returned = 200; await inquireBankDonation(f.db, id, actor, f.call, f.ready); const result = await resolveBankAdjustment(f.db, id, request, actor);
+  assert.equal(result.state, "SUCCEEDED"); assert.equal(bankBalance(f.row).remainingMinor, 800); assert.equal(f.row.bankOperationLock, null); assert.equal(f.bank.financialCalls, 1);
+});
+test("a failed or stale inquiry cannot erase a verified external balance", async () => {
+  const f = fixture(); f.bank.returned = 300; await inquireBankDonation(f.db, id, actor, f.call, f.ready); assert.equal(bankBalance(f.row).returnedMinor, 300);
+  f.bank.missingBalance = true; await inquireBankDonation(f.db, id, actor, f.call, f.ready); assert.equal(bankBalance(f.row).returnedMinor, 300);
+});
+test("PayFor rejects another original order, wrong amounts and malformed successful responses", async () => {
   const saved = { ...process.env }, originalFetch = global.fetch;
   Object.assign(process.env, { PAYFOR_API_URL: "https://bank.invalid/api", PAYFOR_API_FORMAT: "FORM", PAYFOR_MBR_ID: "1", PAYFOR_MERCHANT_ID: "2", PAYFOR_USER_CODE: "3", PAYFOR_USER_PASS: "test-not-real" });
-  global.fetch = async () => new Response(JSON.stringify({ ProcReturnCode: "00", OrderId: "FOREIGN", OrgOrderId: "FOREIGN" }));
-  try { assert.equal((await callBankOperation(donation("PAYFOR"), "REFUND", "OUR-REFUND", 100)).state, "UNKNOWN"); }
-  finally { global.fetch = originalFetch; process.env = saved; }
+  try {
+    for (const data of [{ ProcReturnCode: "00", OrderId: "FOREIGN", OrgOrderId: "FOREIGN" }, { ProcReturnCode: "00", OrderId: "OUR-REFUND", OrgOrderId: "A".repeat(24), PurchAmount: "100", Currency: "978", TxnType: "Refund" }]) {
+      global.fetch = async () => new Response(JSON.stringify(data)); assert.equal((await callBankOperation(donation("PAYFOR"), "REFUND", "OUR-REFUND", 100)).state, "UNKNOWN");
+    }
+  } finally { global.fetch = originalFetch; process.env = saved; }
 });
 
-test("a transport failure cannot be treated as a bank approval", () => { assert.equal(isAlbarakaApproved({ TransportFailure: true, ServiceResponseData: { ResponseCode: "00" } }), false); });
-test("PayFor query responses support semicolon separators but never duplicate response codes", () => {
-  assert.deepEqual(parsePayForBankReply("ProcReturnCode=00;;OrderId=TEST;;Pan=4242424242424242"), { OrderId: "TEST", ProcReturnCode: "00" });
-  assert.deepEqual(parsePayForBankReply("ProcReturnCode=00&ProcReturnCode=99&OrderId=TEST"), {});
+test("an HTTP error or malformed JSON can never count as Albaraka approval", async () => {
+  const { albarakaService, isAlbarakaApproved, isAlbarakaTransportFailure } = await import("../../lib/albaraka");
+  const originalFetch = global.fetch;
+  try {
+    global.fetch = async () => new Response(JSON.stringify({ ServiceResponseData: { ResponseCode: "0000" } }), { status: 502 });
+    const response = await albarakaService("Agreement", {}, { correlationId: "TEST", config: cfg });
+    assert.equal(isAlbarakaApproved(response), false); assert.equal(isAlbarakaTransportFailure(response), true);
+    global.fetch = async () => new Response("null");
+    assert.equal(isAlbarakaApproved(await albarakaService("Agreement", {}, { correlationId: "TEST", config: cfg })), false);
+  } finally { global.fetch = originalFetch; }
 });

@@ -57,7 +57,7 @@ export async function GET(
     const donation = await prisma.donation.findUnique({
       where: { id },
       omit: {
-        cardDetails: true,
+        cardDetails: true, bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true,
       },
       include: {
         donor: {
@@ -240,7 +240,7 @@ export async function PUT(
     if (Object.keys(updates).length === 0) {
       const out = await prisma.donation.findUnique({
         where: { id },
-        omit: { cardDetails: true },
+        omit: { cardDetails: true, bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true },
         include: {
           donor: { select: { name: true, email: true, image: true } },
           subscription: { select: { status: true, frequency: true, nextBillingDate: true, lastBillingDate: true } },
@@ -322,7 +322,7 @@ export async function PUT(
 
     const updatedDonation = await prisma.donation.findUnique({
       where: { id },
-      omit: { cardDetails: true },
+      omit: { cardDetails: true, bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true },
       include: {
         donor: { select: { name: true, email: true, image: true } },
         subscription: { select: { status: true, nextBillingDate: true, lastBillingDate: true } },
@@ -831,6 +831,7 @@ export async function PATCH(
 
     const refreshed = await prisma.donation.findUnique({
       where: { id },
+      omit: { bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true },
       include: {
         donor: { select: { id: true, name: true, email: true, image: true } },
         items: { include: { campaign: { select: { id: true, title: true, images: true } } } },

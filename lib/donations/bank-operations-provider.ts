@@ -1,10 +1,10 @@
-import { SaxesParser } from "saxes";
 import {
   albarakaConfig, albaraka2DConfig, albarakaRecurringConfig, albarakaInquiryMac, albarakaReverseMac,
   albarakaService, isAlbarakaApproved, isAlbarakaConfigured, isAlbarakaTransportFailure,
   ALBARAKA_INQUIRY_MAC_PARAMS, ALBARAKA_REVERSE_MAC_PARAMS, type AlbarakaConfig,
 } from "../albaraka";
 import { bankSale, object, type BankAction, type BankDonation } from "./bank-operations-core";
+import { SaxesParser } from "saxes";
 
 export type BankReply = { state: "SUCCEEDED" | "DECLINED" | "UNKNOWN"; code: string; reference?: string; data?: Record<string, unknown> };
 export function operationAlbarakaConfig(donation: BankDonation): AlbarakaConfig {
@@ -15,12 +15,13 @@ export function operationAlbarakaConfig(donation: BankDonation): AlbarakaConfig 
 }
 export function payForOperationsConfig() {
   const url = process.env.PAYFOR_API_URL || "", format = process.env.PAYFOR_API_FORMAT;
-  const parsed = url ? new URL(url) : null;
+  let parsed: URL | null = null;
+  try { parsed = url ? new URL(url) : null; } catch { throw new Error("BANK_NOT_CONFIGURED"); }
   if (!parsed || parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash || !["FORM", "XML_PRMSTR"].includes(format || "") || !process.env.PAYFOR_MBR_ID || !process.env.PAYFOR_MERCHANT_ID || !process.env.PAYFOR_USER_CODE || !process.env.PAYFOR_USER_PASS) throw new Error("BANK_NOT_CONFIGURED");
   return { url, format };
 }
 export function bankOperationsReady(donation: BankDonation): { ready: boolean; reason?: string } {
-  try { const sale = bankSale(donation); if (sale.provider === "ALBARAKA") operationAlbarakaConfig(donation); else payForOperationsConfig(); return { ready: true }; }
+  try { const sale = bankSale(donation); if (sale.provider === "ALBARAKA") operationAlbarakaConfig(donation); else { payForOperationsConfig(); payForBankFields(donation, "INQUIRE", "CONFIGCHECK"); } return { ready: true }; }
   catch (error) { return { ready: false, reason: error instanceof Error ? error.message : "BANK_NOT_CONFIGURED" }; }
 }
 export function albarakaBankBody(donation: BankDonation, cfg: AlbarakaConfig, action: BankAction | "INQUIRE", amountMinor?: number) {
@@ -36,39 +37,30 @@ export function albarakaBankBody(donation: BankDonation, cfg: AlbarakaConfig, ac
 }
 export function payForBankFields(donation: BankDonation, action: BankAction | "INQUIRE", operationId: string, amountMinor?: number): Record<string, string> {
   const sale = bankSale(donation);
+  if (sale.merchantNo && sale.merchantNo !== process.env.PAYFOR_MERCHANT_ID || sale.mbrId && sale.mbrId !== process.env.PAYFOR_MBR_ID) throw new Error("TERMINAL_MISMATCH");
   return { MbrId: process.env.PAYFOR_MBR_ID!, MerchantID: process.env.PAYFOR_MERCHANT_ID!, UserCode: process.env.PAYFOR_USER_CODE!, UserPass: process.env.PAYFOR_USER_PASS!,
     ...(action === "INQUIRE" ? { OrderId: sale.orderId } : { OrgOrderId: sale.orderId, OrderId: operationId }),
     SecureType: action === "INQUIRE" ? "Inquiry" : "NonSecure", TxnType: action === "INQUIRE" ? "OrderInquiry" : action === "VOID" ? "Void" : "Refund",
     Currency: sale.currencyCode, Lang: "TR", ...(action === "REFUND" ? { PurchAmount: (amountMinor! / 100).toFixed(2) } : {}),
   };
 }
-const SAFE_FIELDS = ["OrderId", "OrgOrderId", "TxnType", "OrgTxnType", "TxnStatus", "TxnResult", "ProcReturnCode", "AuthCode", "HostRefNum", "RefundedAmount", "PurchAmount", "Currency", "ResponseCode", "ReferenceCode"];
+const SAFE_FIELDS = ["OrderId", "OrgOrderId", "TxnType", "OrgTxnType", "TxnStatus", "TxnResult", "ProcReturnCode", "AuthCode", "HostRefNum", "RefundedAmount", "PurchAmount", "Currency", "ResponseCode", "ReferenceCode", "VoidDate"];
 export function parsePayForBankReply(text: string): Record<string, string> {
   if (text.length > 524288 || /<!DOCTYPE|<!ENTITY/i.test(text)) return {};
   let source: Record<string, unknown> = {};
   if (text.trim().startsWith("{")) { try { source = object(JSON.parse(text)); } catch { return {}; } }
   else if (text.trim().startsWith("<")) {
-    const parser = new SaxesParser(), names: string[] = [];
-    let current = "", invalid = false;
-    parser.on("doctype", () => { invalid = true; });
-    parser.on("error", () => { invalid = true; });
-    parser.on("opentag", tag => { names.push(tag.name); current = ""; });
-    const append = (value: string) => { if (SAFE_FIELDS.includes(names.at(-1) || "")) current += value; };
-    parser.on("text", append); parser.on("cdata", append);
-    parser.on("closetag", tag => {
-      if (SAFE_FIELDS.includes(tag.name)) {
-        if (source[tag.name] !== undefined) invalid = true;
-        source[tag.name] = current;
-      }
-      names.pop(); current = "";
-    });
-    try { parser.write(text).close(); } catch { return {}; }
-    if (invalid) return {};
-  } else {
-    const params = new URLSearchParams(text.trim().replaceAll(";;", "&"));
-    if (SAFE_FIELDS.some(key => params.getAll(key).length > 1)) return {};
-    source = Object.fromEntries(params);
-  }
+    try {
+      const parser = new SaxesParser({ xmlns: false });
+      const stack: Array<{ name: string; text: string; nested: boolean }> = [];
+      parser.on("doctype", () => { throw new Error("DTD"); });
+      parser.on("opentag", tag => { if (stack.length > 12) throw new Error("DEPTH"); if (stack.length) stack[stack.length - 1].nested = true; stack.push({ name: tag.name, text: "", nested: false }); });
+      const append = (value: string) => { if (stack.length) stack[stack.length - 1].text += value; };
+      parser.on("text", append); parser.on("cdata", append);
+      parser.on("closetag", () => { const node = stack.pop()!; if (!SAFE_FIELDS.includes(node.name)) return; if (node.nested || node.name in source) throw new Error("AMBIGUOUS_FIELD"); source[node.name] = node.text; });
+      parser.write(text).close();
+    } catch { return {}; }
+  } else { const values = new URLSearchParams(text.trim()); for (const key of SAFE_FIELDS) if (values.getAll(key).length > 1) return {}; source = Object.fromEntries(values); }
   return Object.fromEntries(SAFE_FIELDS.filter(key => source[key] != null && ["string", "number"].includes(typeof source[key])).map(key => [key, String(source[key]).slice(0, 150)]));
 }
 function xml(value: string): string { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;"); }
@@ -88,7 +80,9 @@ export async function callBankOperation(donation: BankDonation, action: BankActi
   const body = cfg.format === "FORM" ? new URLSearchParams(fields) : new URLSearchParams({ prmstr: `<PayforRequest>${Object.entries(fields).map(([key, value]) => `<${key}>${xml(value)}</${key}>`).join("")}</PayforRequest>` });
   const response = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" }, body, redirect: "error", signal: AbortSignal.timeout(25000), cache: "no-store" });
   const safe = parsePayForBankReply(await response.text());
-  const code = safe.ProcReturnCode || "";
+  const code = safe.ProcReturnCode || safe.ResponseCode || "";
   const matching = (safe.OrderId === (action === "INQUIRE" ? sale.orderId : operationId) || (action !== "INQUIRE" && safe.OrgOrderId === sale.orderId)) && (!safe.OrgOrderId || action === "INQUIRE" || safe.OrgOrderId === sale.orderId);
-  return { state: !response.ok || !code || !matching ? "UNKNOWN" : code === "00" && (!safe.TxnResult || safe.TxnResult === "Success") ? "SUCCEEDED" : code === "00" ? "UNKNOWN" : "DECLINED", code: !matching ? "IDENTITY_MISMATCH" : code, reference: safe.HostRefNum || safe.OrderId, data: safe };
+  const expectedType = action === "VOID" ? "Void" : "Refund";
+  const integrity = action === "INQUIRE" || (!safe.TxnType || safe.TxnType === expectedType) && (!safe.Currency || safe.Currency === sale.currencyCode) && (action !== "REFUND" || !safe.PurchAmount || Number(safe.PurchAmount) === amountMinor! / 100);
+  return { state: !response.ok || !code || !matching || !integrity ? "UNKNOWN" : code === "00" && (!safe.TxnResult || safe.TxnResult === "Success") ? "SUCCEEDED" : code === "00" ? "UNKNOWN" : "DECLINED", code: !matching || !integrity ? "IDENTITY_MISMATCH" : code, reference: safe.HostRefNum || safe.OrderId, data: safe };
 }

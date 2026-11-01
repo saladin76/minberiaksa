@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import SubscriptionRequests from "@/components/minbar/account/SubscriptionRequests";
+import DonationManagementRequests from "@/components/minbar/account/DonationManagementRequests";
+import { subscriptionRequestNavigationCopy } from "@/lib/donations/subscription-request-navigation-copy";
 import { SubscriptionCardChange, SubscriptionCardChangeResult } from "@/components/minbar/account/SubscriptionCardChange";
 import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { useSession, signOut } from "next-auth/react";
@@ -35,6 +37,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ClipboardList,
   ChevronRight,
   HandHeart,
   Headphones,
@@ -152,6 +155,20 @@ function donationReceiptAllowed(d: Pick<DonationForProfile, "paymentStatus">) {
   return donationPaymentChargeStatus(d) === "PAID";
 }
 
+function profileSubscriptionRows(user: UserProfile): DonationForProfile[] {
+  const plans = new Map<string, DonationForProfile>();
+  for (const donation of user.donations ?? []) {
+    if (donation.type !== "MONTHLY" || !donation.subscriptionId) continue;
+    const existing = plans.get(donation.subscriptionId);
+    const started = existing?.subscriptionStartedAt ?? donation.createdAt;
+    const earliest = Date.parse(donation.createdAt) < Date.parse(started) ? donation.createdAt : started;
+    if (!existing || Date.parse(donation.createdAt) > Date.parse(existing.createdAt)) {
+      plans.set(donation.subscriptionId, { ...donation, subscriptionStartedAt: earliest });
+    } else existing.subscriptionStartedAt = earliest;
+  }
+  return [...plans.values()].sort((a, b) => Date.parse(b.subscriptionStartedAt ?? b.createdAt) - Date.parse(a.subscriptionStartedAt ?? a.createdAt));
+}
+
 const ProfilePage = () => {
   const t = useTranslations("Profile");
   /* The plan's cadence label  the same `common.freq*` strings the cart uses. */
@@ -170,6 +187,7 @@ const ProfilePage = () => {
     { id: "account", label: t("nav.myinfo"), icon: User, description: t("nav.accountDesc") },
     { id: "donations", label: t("nav.donations"), icon: HandHeart, description: t("nav.donationsDesc") },
     { id: "subscriptions", label: t("nav.subscriptions"), icon: Repeat, description: t("subscriptions.settingsTableTitle") },
+    { id: "requests", label: subscriptionRequestNavigationCopy(locale).title, icon: ClipboardList, description: subscriptionRequestNavigationCopy(locale).description },
     { id: "settings", label: t("nav.settings"), icon: Settings, description: t("nav.settingsDesc") },
     { id: "support", label: t("nav.support"), icon: Headphones, description: t("nav.supportDesc") },
   ];
@@ -825,34 +843,7 @@ const ProfilePage = () => {
   };
 
   const renderSubscriptions = (u: UserProfile) => {
-    const subscriptionRows: DonationForProfile[] = (() => {
-      const monthly = (u.donations ?? []).filter(
-        (d) => d.type === "MONTHLY" && d.subscriptionId
-      );
-      const bySub = new Map<string, DonationForProfile[]>();
-      for (const d of monthly) {
-        const sid = String(d.subscriptionId);
-        const arr = bySub.get(sid) ?? [];
-        arr.push(d);
-        bySub.set(sid, arr);
-      }
-      return Array.from(bySub.values())
-        .map((list) => {
-          const desc = [...list].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          const asc = [...list].sort(
-            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-          const rep = desc[0];
-          return { ...rep, subscriptionStartedAt: asc[0]?.createdAt ?? rep.createdAt };
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.subscriptionStartedAt ?? b.createdAt).getTime() -
-            new Date(a.subscriptionStartedAt ?? a.createdAt).getTime()
-        );
-    })();
+    const subscriptionRows = profileSubscriptionRows(u);
 
     const statusLabel = (d: DonationForProfile) => {
       if (d.status === "ACTIVE") return t("subscriptions.active");
@@ -1034,6 +1025,18 @@ const ProfilePage = () => {
         return renderDonations(currentUser);
       case "subscriptions":
         return <><SubscriptionCardChangeResult />{renderSubscriptions(currentUser)}</>;
+      case "requests":
+        return <DonationManagementRequests
+          plans={profileSubscriptionRows(currentUser).map(plan => ({ id: plan.subscriptionId!, amount: plan.planAmount ?? plan.totalAmount, currency: plan.currency, frequency: plan.frequency, status: plan.status, title: plan.items?.map(item => item.campaign?.title).filter(Boolean).join(" · ") || "" }))}
+          selectedId={focusedSubscriptionId}
+          onSelect={subscriptionId => {
+            setFocusedSubscriptionId(subscriptionId);
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", "requests");
+            url.searchParams.set("subscriptionId", subscriptionId);
+            window.history.replaceState(window.history.state, "", url);
+          }}
+        />;
       case "settings":
         return renderSettings(currentUser);
       case "support":
@@ -1150,14 +1153,14 @@ const ProfilePage = () => {
         {/* Mobile tabs  label-first; icon only shows alongside on sm+ where there's room. */}
         <div className="lg:hidden sticky top-0 z-50 bg-gray-50 pt-4 pb-4 px-4 sm:px-6 shadow-sm">
           <Tabs dir={isRtl ? "rtl" : "ltr"} value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto p-1 bg-[#A5243D]/10 rounded-xl">
+            <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-[#A5243D]/10 rounded-xl">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <TabsTrigger
                     key={item.id}
                     value={item.id}
-                    className="min-h-11 min-w-0 gap-1.5 text-xs sm:text-sm font-medium px-1 py-2 sm:px-3 data-[state=active]:bg-[#A5243D] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg"
+                    className="min-h-11 min-w-0 gap-1.5 text-xs sm:text-sm font-medium px-1 py-2 sm:px-3 last:col-span-2 data-[state=active]:bg-[#A5243D] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg"
                   >
                     <Icon className="w-4 h-4 shrink-0 hidden sm:inline-block" />
                     <span className="whitespace-normal text-center leading-5">{item.label}</span>

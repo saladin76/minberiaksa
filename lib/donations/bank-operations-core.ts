@@ -4,12 +4,15 @@ export type BankOperation = {
   id: string; key: string; action: BankAction; state: "PENDING" | "SUCCEEDED" | "DECLINED" | "UNKNOWN";
   amountMinor: number; currency: string; createdAt: string; updatedAt: string;
   actorId: string; actorName: string; reason: string; code?: string; reference?: string;
+  beforeReturnedMinor?: number;
   resolution?: { actorId: string; at: string; evidence: string };
 };
 export type BankDonation = {
   id: string; provider: string | null; providerOrderId: string | null; providerHostRefNum: string | null;
   providerTxnType: string | null; providerRaw: unknown; status: string; paidAt: Date | string | null;
+  providerAuthCode?: string | null;
   bankOperations?: unknown; bankOperationLock?: string | null; bankLastInquiry?: unknown;
+  bankOperationsRevision?: number | null;
 };
 export const object = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 export function bankOperations(value: unknown): BankOperation[] {
@@ -34,21 +37,24 @@ export function bankSale(donation: BankDonation) {
   const currencyCode = String(donation.provider === "ALBARAKA" ? request.currencyCode : request.currency);
   const currency = ({ TL: "TRY", US: "USD", EU: "EUR", "949": "TRY", "840": "USD", "978": "EUR" } as Record<string, string>)[currencyCode];
   const minor = donation.provider === "ALBARAKA" ? Number(request.amount) : moneyMinor(request.purchAmount);
-  if (!(donation.provider === "ALBARAKA" ? ["TL", "US", "EU"] : ["949", "840", "978"]).includes(currencyCode)) throw new Error("SALE_AMOUNT_REQUIRED");
   if (!currency || !Number.isSafeInteger(minor) || minor <= 0 || minor > 2_000_000_000) throw new Error("SALE_AMOUNT_REQUIRED");
-  const secure = request.mode === "3D" || request.mode === "3DS";
+  const secure = request.mode === "3D" || request.mode === "3DS" || donation.provider === "ALBARAKA" && orderId.length === 20;
   return { provider: donation.provider as "ALBARAKA" | "PAYFOR", orderId, bankOrderId: donation.provider === "ALBARAKA" && secure && orderId.length === 20 ? `TDS_${orderId}` : orderId,
     reference: donation.providerHostRefNum, amountMinor: minor, currency, currencyCode, recurring,
-    terminalNo: String(request.terminalNo || ""), merchantNo: String(request.merchantNo || ""), secure };
+    terminalNo: String(request.terminalNo || ""), merchantNo: String(request.merchantNo || request.merchantId || object(raw.payforResponse).MerchantID || ""), mbrId: String(request.mbrId || object(raw.payforResponse).MbrId || ""), secure };
 }
 export function bankBalance(donation: BankDonation) {
   const sale = bankSale(donation), operations = bankOperations(donation.bankOperations);
   if (operations.some(op => op.currency !== sale.currency)) throw new Error("LEDGER_REVIEW_REQUIRED");
-  const refunded = operations.filter(op => op.state === "SUCCEEDED").reduce((sum, op) => sum + op.amountMinor, 0);
+  const localReturnedMinor = operations.filter(op => op.state === "SUCCEEDED").reduce((sum, op) => sum + op.amountMinor, 0);
+  const inquiry = object(donation.bankLastInquiry);
+  const external = inquiry.orderId === sale.orderId && inquiry.currency === sale.currency && inquiry.amountMinor === sale.amountMinor ? inquiry.externalReturnedMinor : 0;
+  if (external != null && (!Number.isSafeInteger(external) || Number(external) < 0)) throw new Error("LEDGER_REVIEW_REQUIRED");
+  const refunded = localReturnedMinor + Number(external || 0);
   if (refunded > sale.amountMinor) throw new Error("LEDGER_REVIEW_REQUIRED");
-  return { sale, operations, returnedMinor: refunded, remainingMinor: sale.amountMinor - refunded,
+  return { sale, operations, localReturnedMinor, externalReturnedMinor: Number(external || 0), returnedMinor: refunded, remainingMinor: sale.amountMinor - refunded,
     blocked: Boolean(donation.bankOperationLock || operations.some(op => op.state === "PENDING" || op.state === "UNKNOWN")),
-    voided: operations.some(op => op.action === "VOID" && op.state === "SUCCEEDED") };
+    voided: operations.some(op => op.action === "VOID" && op.state === "SUCCEEDED") || inquiry.orderId === sale.orderId && object(inquiry.inspection).voided === true };
 }
 export function validateBankAction(donation: BankDonation, action: BankAction, input?: unknown): number {
   if (!donation.paidAt || donation.status !== "PAID") throw new Error("CONFIRMED_SALE_REQUIRED");
@@ -61,4 +67,4 @@ export function validateBankAction(donation: BankDonation, action: BankAction, i
   if (amount > balance.remainingMinor) throw new Error("AMOUNT_EXCEEDS_REMAINING");
   return amount;
 }
-export const BANK_OPERATION_ERRORS = ["INVALID_AMOUNT", "SALE_REFERENCE_REQUIRED", "SALE_AMOUNT_REQUIRED", "LEDGER_REVIEW_REQUIRED", "CONFIRMED_SALE_REQUIRED", "OPERATION_PENDING_REVIEW", "NOTHING_TO_RETURN", "VOID_AFTER_REFUND", "AMOUNT_EXCEEDS_REMAINING", "BANK_NOT_CONFIGURED", "TERMINAL_MISMATCH", "IDEMPOTENCY_CONFLICT", "INVALID_REQUEST", "NOT_FOUND", "STALE_OPERATION"];
+export const BANK_OPERATION_ERRORS = ["INVALID_AMOUNT", "SALE_REFERENCE_REQUIRED", "SALE_AMOUNT_REQUIRED", "LEDGER_REVIEW_REQUIRED", "CONFIRMED_SALE_REQUIRED", "OPERATION_PENDING_REVIEW", "NOTHING_TO_RETURN", "VOID_AFTER_REFUND", "AMOUNT_EXCEEDS_REMAINING", "BANK_NOT_CONFIGURED", "TERMINAL_MISMATCH", "IDEMPOTENCY_CONFLICT", "INVALID_REQUEST", "NOT_FOUND", "STALE_OPERATION", "BANK_BALANCE_UNVERIFIED", "BANK_BALANCE_MISMATCH", "CURRENCY_MISMATCH"];

@@ -142,6 +142,12 @@ jobs:
           - name: Subscription management
             artifact: subscriptions
             script: scripts/subscription-management-browser-test.mjs
+          - name: Certificates and saved cards
+            artifact: certificates-saved-cards
+            script: scripts/certificates-saved-cards-browser-test.mjs
+          - name: Bank operations
+            artifact: bank-operations
+            script: scripts/bank-operations-browser-test.mjs
           - name: Campaign revenue and recovery
             artifact: campaign-recovery
             script: scripts/campaign-recovery-browser-test.mjs
@@ -151,9 +157,6 @@ jobs:
           - name: Subscription card authentication
             artifact: subscription-card
             script: scripts/subscription-card-browser-test.mjs
-          - name: Bank operations and saved cards
-            artifact: bank-operations
-            script: scripts/bank-operations-browser-test.mjs
           - name: Checkout
             artifact: checkout
             script: scripts/checkout-readiness-browser-test.mjs

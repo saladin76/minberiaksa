@@ -701,7 +701,9 @@
     "verificationDirectHelp": "認証コードなし",
     "verificationSecure": "銀行による認証",
     "verificationSecureHelp": "コードが必要な場合があります",
-    "verificationRequired": "支払い方法を選択して続行してください。"
+    "verificationRequired": "支払い方法を選択して続行してください。",
+    "verificationSecureOptIn": "銀行認証（3Dセキュア）を利用する",
+    "verificationOptionalHelp": "通常は直接決済です。銀行による認証を行う場合は、この項目を選択してください。"
   },
   "certificates": {
     "certNoLabel": "証明書番号",

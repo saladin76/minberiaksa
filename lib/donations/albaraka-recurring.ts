@@ -218,8 +218,6 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
 
   const donorCountrySnapshot = (await getDonorCountryCodeForSnapshot(prisma, sub.donorId)) ?? undefined;
 
-  const cfg = albarakaRecurringConfig();
-
   // ── A row before the call ────────────────────────────────────────────────
   const donation = await prisma.donation.create({
     data: {
@@ -242,7 +240,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       providerOrderId: orderId,
       providerTxnType: "RecurringSale",
       providerRaw: {
-        albarakaRecurring: { merchantNo: cfg.merchantNo, terminalNo: cfg.terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
+        albarakaRecurring: { merchantNo: albarakaRecurringConfig().merchantNo, terminalNo: albarakaRecurringConfig().terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
       } as Prisma.InputJsonValue,
       items: sub.items.length
         ? { create: sub.items.map((item) => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD })) }
@@ -262,6 +260,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     return await recordFailure(sub, donation.id, attempt, now, "Stored card could not be decrypted", "Failed", amountUSD, err);
   }
 
+  const cfg = albarakaRecurringConfig();
   const body = buildAlbarakaRecurringSale(
     {
       orderId,
@@ -325,12 +324,15 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
         paidAt: now,
         providerProcReturnCode: responseCode || null,
         providerTxnResult: "Success",
+        paidAmount: amount / 100,
+        paidCurrency: ({ TL: "TRY", US: "USD", EU: "EUR" } as const)[currencyCode],
         providerAuthCode: sale.AuthCode ? String(sale.AuthCode) : null,
         providerHostRefNum: sale.ReferenceCode ? String(sale.ReferenceCode) : null,
         providerErrorMessage: null,
         providerRaw: {
           ...(typeof fresh.providerRaw === "object" && fresh.providerRaw ? (fresh.providerRaw as Record<string, unknown>) : {}),
           albarakaSale: sale as unknown as Record<string, unknown>,
+          cardSummary: { last4: cardNumber.slice(-4) },
         } as Prisma.InputJsonValue,
       },
     });

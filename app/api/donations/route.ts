@@ -243,6 +243,8 @@ export async function GET(request: NextRequest) {
     const total = await prisma.donation.count({ where });
     const donations = await prisma.donation.findMany({
       where,
+      // The bank ledger is loaded only through its permission-checked endpoint.
+      omit: { bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true },
       include: {
         donor: { select: { id: true, name: true, email: true, image: true, password: true, verifiedAt: true, registeredAt: true, emailVerified: true, _count: { select: { accounts: true } } } },
         items: { include: { campaign: { select: { id: true, title: true, images: true } } } },
