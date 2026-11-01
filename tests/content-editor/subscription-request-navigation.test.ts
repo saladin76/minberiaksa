@@ -1,3 +1,4 @@
+import * as requestPolicy from "../../lib/donations/subscription-request-policy";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -14,7 +15,7 @@ function fixture() {
   const matches = (where: Record<string, unknown>) => ["id", "donorId", "subscriptionId"].every(key => !where[key] || where[key] === donorRequest[key as keyof typeof donorRequest]);
   const tx = { subscription: { updateMany: async () => { writes++; return { count: 1 }; } }, subscriptionItem: { update: async () => { writes++; } }, auditLog: { create: async ({ data }: { data: Record<string, unknown> }) => { audits.push(data); } } };
   const prisma = {
-    subscription: { findUnique: async () => plan, updateMany: tx.subscription.updateMany },
+    subscription: { findMany: async () => [plan], findUnique: async () => plan, updateMany: tx.subscription.updateMany },
     subscriptionServiceRequest: {
       findUnique: async () => { lookups++; return donorRequest; },
       findMany: async ({ where }: { where: Record<string, unknown> }) => { reads.push(where); return matches(where) ? [donorRequest] : []; },
@@ -36,7 +37,7 @@ function fixture() {
     "@/lib/exchange/convert-amount-in-currency-to-usd": { convertAmountInCurrencyToUsd: async (amount: number) => { conversions++; return amount * 1.1; } },
     "@/lib/audit-log": { writeAuditLog: async () => {}, auditActorFromDashboardSession: () => ({ actorRole: "ADMIN" }) },
     "@/lib/donations/recurring-schedule": { nextChargeForPlan: () => { throw new Error("Schedule must not change"); } },
-    "@/lib/donations/subscription-request-policy": { requestMatchesPlan: () => false },
+    "@/lib/donations/subscription-request-policy": requestPolicy,
     "@/lib/donations/subscription-requests": { notifySubscriptionRequest: () => { throw new Error("No recipient message is allowed"); } },
     "@/lib/events/after-response": { runAfterResponse: () => { throw new Error("No recipient notification is expected on a GET"); } },
   };

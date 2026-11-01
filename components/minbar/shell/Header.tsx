@@ -1,4 +1,5 @@
 "use client";
+import { profileHref } from "@/lib/minbar/profile-navigation";
 /* eslint-disable @next/next/no-img-element -- dynamic CMS/category images and the existing brand asset intentionally use raw img tags. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -305,8 +306,8 @@ export default function Header({
   /* Signed-in donors go straight to their account; everyone else lands on
      sign-in and is returned there afterwards. */
   const accountHref = signedIn
-    ? miaPath("account", locale)
-    : `/auth/signin?callbackUrl=${encodeURIComponent(miaPath("account", locale))}`;
+    ? profileHref(locale)
+    : `/auth/signin?callbackUrl=${encodeURIComponent(profileHref(locale))}`;
   const localeA11yLabel = `${tNav("language")} · ${tNav("currency")}`;
 
   const rowClass = "mia-row";

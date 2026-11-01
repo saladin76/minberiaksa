@@ -14,6 +14,8 @@ import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
 import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
 import { mergeProjectPriorityGroups } from "@/lib/minbar/project-order";
+import { parseCategoryPriorities } from "@/lib/campaign/categories";
+import { orderProjectsInCategory } from "@/lib/content-editor/project-order";
 import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "@/lib/campaign/priority-filter";
 import { getRestorationProgrammeProjectIds } from "./restoration-programme";
 import { selectProgrammeRelatedProjects } from "./project-filter-options";
@@ -51,6 +53,7 @@ import type { Prisma } from "@prisma/client";
 
 export interface MinbarProject {
   id: string;
+  categoryPriorities?: Record<string, number>;
   slug: string;
   /** Stable Arabic/base slug, independent of the visitor's translated URL. */
   baseSlug?: string;
@@ -189,13 +192,13 @@ async function findPublishedCampaignRows(
   const select = selectFor(locale);
   const readPrioritized = (take?: number) => prisma.campaign.findMany({
     where: prioritizedWhere,
-    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ priority: "asc" }, { createdAt: "desc" }, { id: "desc" }],
     ...(take ? { take } : {}),
     select,
   });
   const readUnprioritized = (take?: number) => prisma.campaign.findMany({
     where: unprioritizedWhere,
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     ...(take ? { take } : {}),
     select,
   });
@@ -327,6 +330,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
 
   return {
     id: row.id,
+    categoryPriorities: parseCategoryPriorities(row.categoryPriorities),
     slug: t?.slug || row.slug || row.id,
     baseSlug: row.slug || row.id,
     title: t?.title || row.title,
@@ -401,15 +405,7 @@ export async function listProjectsInCategory(
   /* The order an admin set for THIS category (`categoryPriorities`, from the
      categories dashboard) comes first; campaigns without one follow in the
      site-wide order. Sorted here because the priority lives in a JSON map. */
-  const rank = (row: CampaignRow): number => {
-    const map = row.categoryPriorities;
-    const value = map && typeof map === "object" && !Array.isArray(map) ? (map as Record<string, unknown>)[categoryId] : undefined;
-    return typeof value === "number" && Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
-  };
-  const ordered = rows
-    .map((row, index) => ({ row, index, rank: rank(row) }))
-    .sort((a, b) => (a.rank === b.rank ? a.index - b.index : a.rank - b.rank))
-    .map(({ row }) => row);
+  const ordered = orderProjectsInCategory(rows, categoryId);
 
   return (limit ? ordered.slice(0, limit) : ordered).map((row) => toProject(row, locale));
 }

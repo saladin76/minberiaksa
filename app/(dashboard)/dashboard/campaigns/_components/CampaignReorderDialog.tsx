@@ -80,30 +80,27 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
   const [selectedCampaigns, setSelectedCampaigns] = useState<Campaign[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        const response = await axios.get('/api/campaigns/all');
-        setCampaigns(response.data);
-
-        // Fetch prioritized campaigns
-        const mainResponse = await axios.get('/api/campaigns/main');
-        setSelectedCampaigns(mainResponse.data); // Set prioritized campaigns as selected
-      } catch (error) {
-        console.error('Error fetching campaigns:', error);
-        // toast.error('فشل في تحميل المشاريع');
-      }
-    };
-
-    fetchCampaigns();
-  }, []);
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setIsLoading(true); setLoadFailed(false); setCampaigns([]); setSelectedCampaigns([]);
+    void Promise.all([
+      axios.get('/api/campaigns/all?includeInactive=true', { signal: controller.signal }),
+      axios.get('/api/campaigns/main?includeInactive=true', { signal: controller.signal }),
+    ]).then(([all, main]) => { if (!controller.signal.aborted) { setCampaigns(all.data); setSelectedCampaigns(main.data); } })
+      .catch(() => { if (!controller.signal.aborted) { setLoadFailed(true); toast.error(dt("فشل في تحميل المشاريع")); } })
+      .finally(() => { if (!controller.signal.aborted) setIsLoading(false); });
+    return () => controller.abort();
+  }, [isOpen]);
 
   const handleSelectCampaign = (campaignId: string) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
 
-    if (selectedCampaigns.length >= 12) {
-      toast.error(dt("يمكنك اختيار 12 مشروع كحد أقصى"));
+    if (selectedCampaigns.length >= 500) {
+      toast.error(dt("يمكنك اختيار 500 مشروع كحد أقصى"));
       return;
     }
 
@@ -128,6 +125,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
   };
 
   const handleSave = async () => {
+    if (isSubmitting || isLoading || loadFailed) return;
     setIsSubmitting(true);
     try {
       const updatedCampaigns = selectedCampaigns.map((campaign, index) => ({
@@ -144,7 +142,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
       setIsOpen(false);
     } catch (error) {
       console.error('Error reordering campaigns:', error);
-      // toast.error('فشل في إعادة ترتيب المشاريع');
+      toast.error(dt("فشل في إعادة ترتيب المشاريع"));
     } finally {
       setIsSubmitting(false);
     }
@@ -163,9 +161,9 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
         </DialogHeader>
         <div className="py-4">
           <p className="text-sm text-gray-500 mb-4">
-            {dt("اختر المشاريع التي تريد عرضها بالترتيب. المشروع الأولى ستظهر كمشروع مميزة بحجم أكبر. الحد الأقصى 12 مشروع.")}<br />
+            {dt("اختر المشاريع التي تريد عرضها بالترتيب. الحد الأقصى 500 مشروع.")}<br />
             <span className="text-xs mt-1 block">
-              {dtx("({0}/12 مشاريع مختارة)", [selectedCampaigns.length])}</span>
+              {dtx("({0}/500 مشاريع مختارة)", [selectedCampaigns.length])}</span>
           </p>
           
           <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -173,6 +171,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
               <Button
                 variant="outline"
                 role="combobox"
+                disabled={isLoading || isSubmitting || loadFailed}
                 aria-expanded={comboOpen}
                 className="w-full justify-between font-normal text-muted-foreground"
               >
@@ -220,6 +219,10 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
                         index={index}
                         moveCampaign={moveCampaign}
                       />
+                      <div className="flex gap-2 mb-2">
+                        <Button type="button" variant="outline" size="sm" disabled={index === 0 || isSubmitting} onClick={() => moveCampaign(index, index - 1)} aria-label={dt("تقديم {0}", [campaign.title])}>↑</Button>
+                        <Button type="button" variant="outline" size="sm" disabled={index === selectedCampaigns.length - 1 || isSubmitting} onClick={() => moveCampaign(index, index + 1)} aria-label={dt("تأخير {0}", [campaign.title])}>↓</Button>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -244,7 +247,7 @@ export const CampaignReorderDialog = ({ onReorder }: { onReorder: () => void }) 
             {dt("إلغاء")}</Button>
           <Button
             onClick={handleSave}
-            disabled={isSubmitting || selectedCampaigns.length === 0}
+            disabled={isSubmitting || isLoading || loadFailed}
             className="gap-2"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

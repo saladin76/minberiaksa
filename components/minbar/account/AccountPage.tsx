@@ -215,7 +215,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
           {/* The handoff points this at the contact page  plainly a placeholder.
               It leads to the real settings screen, where a donor can also change
               their password, country and notification preferences. */}
-          <Link href={`/${locale}/profile`} className="acc-settings" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid rgba(211,154,39,.5)", background: "#fff", fontSize: 13.5, fontWeight: 800, color: "var(--deep)", transition: "all .18s ease" }}>
+          <Link href={`/${locale}/profile?tab=settings`} className="acc-settings" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid rgba(211,154,39,.5)", background: "#fff", fontSize: 13.5, fontWeight: 800, color: "var(--deep)", transition: "all .18s ease" }}>
             <Icon name="settings" />
             {t("settings")}
           </Link>
@@ -397,7 +397,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
               <span style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>
                 {activeSubscriptions > 0 ? `${formatNumber(activeSubscriptions)} ${t("activeSubs")}` : t("noActivePlan")}
               </span>
-              <Button variant="light" href={activeSubscriptions > 0 ? `/${locale}/profile?tab=donations` : miaPath("recurring", locale)} style={{ whiteSpace: "nowrap" }}>
+              <Button variant="light" href={activeSubscriptions > 0 ? `/${locale}/profile?tab=subscriptions` : miaPath("recurring", locale)} style={{ whiteSpace: "nowrap" }}>
                 {activeSubscriptions > 0 ? subscriptionRequestCopy(locale)[0] : t("startRecurring")}
               </Button>
             </div>

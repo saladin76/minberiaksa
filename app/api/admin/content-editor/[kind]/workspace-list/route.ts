@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { fingerprint, documentFor } from "@/lib/content-editor/service";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { revalidatePath } from "next/cache";
+import { writeProjectBatch, type ProjectRankWrite } from "@/lib/campaign/reorder";
+import { parseCategoryPriorities } from "@/lib/campaign/categories";
 import {
   campaignWorkspaceWhere,
   HAS_IMPACT_BACKING_CAMPAIGNS,
@@ -53,6 +55,7 @@ export async function GET(req: NextRequest, ctx: Context) {
           searchTitles: row.translations.map((t) => t.title),
           image: row.images[0] || "",
           priority: row.priority ?? null,
+          categoryPriorities: parseCategoryPriorities(row.categoryPriorities),
           createdAt: row.createdAt.toISOString(),
           isActive: row.isActive,
           archived: row.editorArchived === true,
@@ -76,6 +79,8 @@ export async function POST(req: NextRequest, ctx: Context) {
   if (denied) return denied;
   try {
     const body = await req.json();
+    const categoryId = body.categoryId;
+    if (categoryId !== undefined && (body.action !== "order" || typeof categoryId !== "string" || !/^[a-f0-9]{24}$/i.test(categoryId))) throw new Error("طلب غير صالح");
     if (
       !["enable", "disable", "archive", "restore", "order"].includes(
         body.action,
@@ -106,33 +111,26 @@ export async function POST(req: NextRequest, ctx: Context) {
     }
     await prisma.$transaction(
       async (tx) => {
+        const ids = body.items.map((item: { id: string }) => item.id);
+        const rows = await tx.campaign.findMany({ where: { id: { in: ids } }, select: { id: true, isDeleted: true, editorVersion: true, updatedAt: true, categoryIds: true, categoryPriorities: true } });
+        if (categoryId && !await tx.category.findUnique({ where: { id: categoryId }, select: { id: true } })) throw new Error("CONFLICT");
+        if (HAS_IMPACT_BACKING_CAMPAIGNS && (await (tx as unknown as Record<string, Delegate>).impactCampaign.findMany({ where: { campaignId: { in: ids } }, select: { id: true } })).length)
+          throw new Error("مشاريع تسوية الأثر تُدار من محرر الأثر");
+        const byId = new Map(rows.map(row => [row.id, row]));
+        const writes: ProjectRankWrite[] = [];
         for (const item of body.items) {
-          const row = await tx.campaign.findUnique({ where: { id: item.id } });
-          if (
-            HAS_IMPACT_BACKING_CAMPAIGNS &&
-            (await (
-              tx as unknown as Record<string, Delegate>
-            ).impactCampaign.findFirst({
-              where: { campaignId: item.id },
-              select: { id: true },
-            }))
-          )
-            throw new Error("مشاريع تسوية الأثر تُدار من محرر الأثر");
-          if (!row || row.isDeleted || version(row) !== item.revision)
-            throw new Error("CONFLICT");
-          await tx.campaign.update({
-            where: { id: row.id },
-            data:
-              body.action === "order"
-                ? { priority: item.order, editorVersion: crypto.randomUUID() }
-                : {
-                    isActive:
-                      body.action === "enable" || body.action === "restore",
-                    editorArchived: body.action === "archive",
-                    editorVersion: crypto.randomUUID(),
-                  },
-          });
+          const row = byId.get(item.id);
+          if (!row || row.isDeleted || version(row) !== item.revision || categoryId && !row.categoryIds.includes(categoryId)) throw new Error("CONFLICT");
+          const map = parseCategoryPriorities(row.categoryPriorities);
+          if (categoryId) {
+            if (item.order === null) delete map[categoryId];
+            else map[categoryId] = item.order;
+          }
+          writes.push({ id: row.id, expectedUpdatedAt: row.updatedAt, data: body.action === "order"
+            ? categoryId ? { categoryPriorities: map } : { priority: item.order }
+            : { isActive: body.action === "enable" || body.action === "restore", editorArchived: body.action === "archive" } });
         }
+        await writeProjectBatch(tx, writes);
       },
       { maxWait: 10000, timeout: 30000 },
     );
@@ -141,12 +139,12 @@ export async function POST(req: NextRequest, ctx: Context) {
       action: "CAMPAIGN_WORKSPACE_BULK",
       entityType: "Campaign",
       messageAr: "تحديث حالة أو ترتيب المشاريع من مساحة التحرير",
-      metadata: { action: body.action, ids: [...seen] },
+      metadata: { action: body.action, scope: categoryId || "global", ids: [...seen] },
     });
     revalidatePath("/", "layout");
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const conflict = error instanceof Error && error.message === "CONFLICT";
+    const conflict = error instanceof Error && error.message === "CONFLICT" || (error as { code?: string }).code === "P2034";
     return NextResponse.json(
       {
         error: conflict

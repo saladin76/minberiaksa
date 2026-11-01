@@ -89,23 +89,22 @@ export const CategoryCampaignPriorityDialog = ({
   const [selectedCampaigns, setSelectedCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // Load campaigns for this category + current priority list
   useEffect(() => {
     if (!open || !categoryId) return;
     let cancelled = false;
     (async () => {
-      setIsLoading(true);
+      setIsLoading(true); setLoadFailed(false); setCampaigns([]); setSelectedCampaigns([]);
       try {
         const [allRes, priRes] = await Promise.all([
-          axios.get(`/api/categories/${categoryId}/campaigns`, {
-            params: { limit: 100, isActive: true },
-          }),
+          axios.get('/api/campaigns/all', { params: { includeInactive: true } }),
           axios.get(`/api/categories/${categoryId}/prioritized-campaigns`),
         ]);
         if (cancelled) return;
 
-        const items = (allRes.data?.items || []) as Campaign[];
+        const items = (allRes.data || []).filter((row: { categoryIds?: string[] }) => row.categoryIds?.includes(categoryId)) as Campaign[];
         const prioritized = (priRes.data || []) as Campaign[];
 
         setCampaigns(items);
@@ -116,6 +115,8 @@ export const CategoryCampaignPriorityDialog = ({
             .filter(Boolean) as Campaign[]
         );
       } catch (err) {
+        if (cancelled) return;
+        setLoadFailed(true);
         console.error(err);
         toast.error(dt("فشل في تحميل المشاريع"));
       } finally {
@@ -129,8 +130,8 @@ export const CategoryCampaignPriorityDialog = ({
     const campaign = campaigns.find((c) => c.id === campaignId);
     if (!campaign) return;
 
-    if (selectedCampaigns.length >= 12) {
-      toast.error(dt("يمكنك اختيار 12 مشروع كحد أقصى"));
+    if (selectedCampaigns.length >= 500) {
+      toast.error(dt("يمكنك اختيار 500 مشروع كحد أقصى"));
       return;
     }
     if (selectedCampaigns.some((c) => c.id === campaignId)) {
@@ -153,6 +154,7 @@ export const CategoryCampaignPriorityDialog = ({
   };
 
   const handleSave = async () => {
+    if (isSubmitting || isLoading || loadFailed) return;
     setIsSubmitting(true);
     try {
       const payload = selectedCampaigns.map((c, index) => ({ id: c.id, order: index }));
@@ -182,9 +184,9 @@ export const CategoryCampaignPriorityDialog = ({
 
         <div className="py-4">
           <p className="text-sm text-gray-500 mb-4">
-            {dt("اختر المشاريع التي تريد عرضها بالترتيب داخل هذه الحملة. الحد الأقصى 12 مشروعًا.")}<br />
+            {dt("اختر المشاريع التي تريد عرضها بالترتيب داخل هذه الحملة. الحد الأقصى 500 مشروعًا.")}<br />
             <span className="text-xs mt-1 block">
-              {dtx("({0}/12 مشاريع مختارة)", [selectedCampaigns.length])}</span>
+              {dtx("({0}/500 مشاريع مختارة)", [selectedCampaigns.length])}</span>
           </p>
 
           <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -245,6 +247,10 @@ export const CategoryCampaignPriorityDialog = ({
                         index={index}
                         moveCampaign={moveCampaign}
                       />
+                      <div className="flex gap-2 mb-2">
+                        <Button type="button" variant="outline" size="sm" disabled={index === 0 || isSubmitting} onClick={() => moveCampaign(index, index - 1)} aria-label={dt("تقديم {0}", [campaign.title])}>↑</Button>
+                        <Button type="button" variant="outline" size="sm" disabled={index === selectedCampaigns.length - 1 || isSubmitting} onClick={() => moveCampaign(index, index + 1)} aria-label={dt("تأخير {0}", [campaign.title])}>↓</Button>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -266,7 +272,7 @@ export const CategoryCampaignPriorityDialog = ({
             {dt("إلغاء")}</Button>
           <Button
             onClick={handleSave}
-            disabled={isSubmitting || isLoading}
+            disabled={isSubmitting || isLoading || loadFailed}
             className="gap-2"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}

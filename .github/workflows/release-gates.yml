@@ -136,6 +136,9 @@ jobs:
           - name: Scheduling and routing
             artifact: scheduling
             script: scripts/saudi-mobile-browser-test.mjs
+          - name: Project ordering and donor profile
+            artifact: project-profile-requests
+            script: scripts/project-profile-requests-browser-test.mjs
           - name: Subscription management
             artifact: subscriptions
             script: scripts/subscription-management-browser-test.mjs

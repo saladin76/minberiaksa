@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { subscriptionRequestCopy, subscriptionRequestKinds } from "../../lib/donations/subscription-request-copy";
-import { requestMatchesPlan } from "../../lib/donations/subscription-request-policy";
+import * as requestPolicy from "../../lib/donations/subscription-request-policy";
 import { retiredTemplateDisposition } from "../../lib/communication/retired-template-policy";
 import { recurringAudienceWhere, cleanAudienceFrequencies } from "../../lib/communication/recurring-audience";
 import { SUPPORTED_LOCALES, isValidLocale } from "../../lib/locales";
@@ -20,7 +20,7 @@ function fixture(signedIn = true, owned = true) {
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => signedIn ? null : Response.json({}, { status: 403 }) },
     "@/lib/locales": { isValidLocale }, "@/lib/donations/subscription-request-copy": { subscriptionRequestKinds },
     "@/lib/donations/subscription-requests": { notifySubscriptionRequest: async () => { throw new Error("No actual message send is permitted in this test"); } },
-    "@/lib/donations/subscription-request-policy": { requestMatchesPlan },
+    "@/lib/donations/subscription-request-policy": requestPolicy,
     "@/lib/events/after-response": { runAfterResponse: () => { queued++; } },
     "@/lib/audit-log": { writeAuditLog: async () => {}, auditActorFromDashboardSession: () => ({ actorRole: "ADMIN" }) },
     "@/lib/prisma": { prisma: {
@@ -32,6 +32,9 @@ function fixture(signedIn = true, owned = true) {
       },
     } },
   };
+  const database = (deps["@/lib/prisma"] as { prisma: Record<string, unknown> }).prisma;
+  database.$transaction = async (run: (tx: unknown) => unknown) => run(database);
+  database.auditLog = { create: async () => {} };
   const load = (path: string) => {
     const mod = { exports: {} as { POST: (request: Request, context: unknown) => Promise<Response>; PATCH: (request: Request) => Promise<Response> } };
     const js = ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
@@ -40,7 +43,7 @@ function fixture(signedIn = true, owned = true) {
   };
   const donor = load("app/api/users/me/subscriptions/[id]/requests/route.ts"), admin = load("app/api/admin/subscription-requests/route.ts");
   const req = (body: unknown) => new Request("https://fixture.test/api/request", { method: "POST", body: JSON.stringify(body) });
-  return { plan, post: (body: unknown) => donor.POST(req(body), { params: Promise.resolve({ id }) }), patch: (status: string) => admin.PATCH(req({ id: requestId, status, staffNote: "Reviewed request" })), stats: () => ({ writes, billingWrites, queued }), row: () => row };
+  return { plan, post: (body: unknown) => donor.POST(req(body), { params: Promise.resolve({ id }) }), patch: (status: string) => admin.PATCH(req({ id: requestId, status, staffNote: "Reviewed request", resolutionNote: "", updatedAt: (row?.updatedAt as Date)?.toISOString() })), stats: () => ({ writes, billingWrites, queued }), row: () => row };
 }
 test("request creation authenticates and verifies ownership before writing or queuing a notification", async () => {
   for (const f of [fixture(false), fixture(true, false)]) {

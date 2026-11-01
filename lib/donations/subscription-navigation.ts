@@ -10,6 +10,12 @@ export type SubscriptionRequestRow = {
   staffNote: string | null;
   status: string;
   createdAt: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+  resolutionNote?: string | null;
+  history?: unknown;
+  canComplete?: boolean;
+  plan?: { amount: number; currency: string; status: string; nextBillingDate: string | null } | null;
 };
 
 export function subscriptionManagementHref(donorId: string, subscriptionId?: string, requestId?: string) {

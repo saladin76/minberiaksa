@@ -37,8 +37,8 @@ function reset() {
     { id: planB, donor: { id: donorB, name: 'Donor Beta', email: 'beta@example.test' }, status: 'PAUSED', amount: 25, amountUSD: 25, currency: 'USD', frequency: 'MONTHLY' },
   ].map(plan => ({ ...plan, provider: 'ALBARAKA', campaigns: [], categories: [], referral: null, createdAt: '2026-10-01T12:00:00Z', lastBillingDate: '2026-10-31T12:00:00Z', nextBillingDate: '2030-12-01T12:00:00Z' }));
   tickets = [
-    { id: requestA, donorId: donorA, donorName: 'Donor Alpha', subscriptionId: planA, kind: 'AMOUNT_CHANGE', requestedAmount: 10, currency: 'EUR', note: 'Please reduce my donation to 10 EUR.', staffNote: null, status: 'NEW', createdAt: '2026-10-31T12:00:00Z' },
-    { id: requestB, donorId: donorB, donorName: 'Donor Beta', subscriptionId: planB, kind: 'AMOUNT_CHANGE', requestedAmount: 5, currency: 'USD', note: 'Please reduce my donation to 5 USD.', staffNote: null, status: 'NEW', createdAt: '2026-10-31T12:00:00Z' },
+    { id: requestA, donorId: donorA, donorName: 'Donor Alpha', subscriptionId: planA, kind: 'AMOUNT_CHANGE', requestedAmount: 10, currency: 'EUR', note: 'Please reduce my donation to 10 EUR.', staffNote: null, status: 'NEW', createdAt: '2026-10-31T12:00:00Z', updatedAt: '2026-10-31T12:00:00.000Z' },
+    { id: requestB, donorId: donorB, donorName: 'Donor Beta', subscriptionId: planB, kind: 'AMOUNT_CHANGE', requestedAmount: 5, currency: 'USD', note: 'Please reduce my donation to 5 USD.', staffNote: null, status: 'NEW', createdAt: '2026-10-31T12:00:00Z', updatedAt: '2026-10-31T12:00:00.000Z' },
   ];
 }
 reset();
@@ -56,11 +56,11 @@ const server = createServer(async (req, res) => {
       if (req.method === 'PATCH') {
         const ticket = tickets.find(row => row.id === body.id);
         if (body.status === 'COMPLETED' && plans.find(plan => plan.id === ticket.subscriptionId).amount !== ticket.requestedAmount) return json({ error: 'Change the subscription first' }, 409);
-        ticket.status = body.status; ticket.staffNote = body.staffNote; return json({ ok: true, billingChanged: false });
+        assert.equal(body.updatedAt,ticket.updatedAt); ticket.status = body.status; ticket.staffNote = body.staffNote; ticket.updatedAt=new Date().toISOString(); return json({ ok: true, billingChanged: false, updatedAt: ticket.updatedAt });
       }
       const scope = tickets.filter(row => (!url.searchParams.has('userId') || row.donorId === url.searchParams.get('userId')) && (!url.searchParams.has('subscriptionId') || row.subscriptionId === url.searchParams.get('subscriptionId')));
       const list = scope.filter(row => url.searchParams.has('requestId') ? row.id === url.searchParams.get('requestId') : url.searchParams.get('status') === 'COMPLETED' ? row.status === 'COMPLETED' : row.status !== 'COMPLETED');
-      return json({ requests: omitListRequest && !url.searchParams.has('requestId') ? [] : list, openCount: scope.filter(row => row.status !== 'COMPLETED').length });
+      return json({ requests: omitListRequest && !url.searchParams.has('requestId') ? [] : list.map(row=>({...row,canComplete:plans.find(plan=>plan.id===row.subscriptionId)?.amount===row.requestedAmount})), openCount: scope.filter(row => row.status !== 'COMPLETED').length });
     }
     if (url.pathname === '/api/admin/subscriptions') {
       const userId = url.searchParams.get('userId'), subscriptionId = url.searchParams.get('subscriptionId');
@@ -112,7 +112,7 @@ try {
     await selected.getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true }).click();
     await dialog.getByRole('button', { name: label(lang, 'تأكيد التخفيض'), exact: true }).click(); await expect(dialog).toBeHidden(); await expect(selected).toContainText('10'); checks++;
     await section.getByRole('link',{name:label(lang,'فتح طلب المتبرع'),exact:true}).click();await expect(ticket).toBeInViewport();checks++;
-    await ticket.locator('textarea').fill('Reviewed and applied the donor request'); await ticket.getByRole('button', { name: label(lang, 'تأكيد إنجاز الطلب'), exact: true }).click();
+    await ticket.locator('textarea').first().fill('Reviewed and applied the donor request'); await ticket.getByRole('button', { name: label(lang, 'تأكيد إنجاز الطلب'), exact: true }).click();
     await expect(page.locator(`#linked-request-${requestA}`)).toContainText(label(lang, 'منفّذ'));await expect(ticket).toContainText('Reviewed and applied the donor request'); checks++;
     await section.getByRole('link', { name: label(lang, 'عرض جميع اشتراكات المتبرع'), exact: true }).click(); await expect(section.getByRole('row')).toHaveCount(3); await expect(section).toBeInViewport(); checks++;
     slowDonor = donorA;

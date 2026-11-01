@@ -12,6 +12,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import CategoryIcon from "./CategoryIcons";
 import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
+import { orderProjectsInCategory } from "@/lib/content-editor/project-order";
 
 /**
  * Projects catalogue  ported from `Minbar/المشاريع.dc.html`.
@@ -60,8 +61,11 @@ export default function ProjectsPage({ projects, slides, filters }: ProjectsPage
     if (match) { setCategory(match.key); setLimit(PAGE_SIZE); }
   }, [filters]);
   const filtered = useMemo(() => {
-    const ids = category === "all" ? null : new Set(filters.find(option => option.key === category)?.projectIds ?? []);
-    return ids ? projects.filter(project => ids.has(project.id)) : projects;
+    if (category === "all") return projects;
+    const filter = filters.find(option => option.key === category);
+    const ids = new Set(filter?.projectIds ?? []);
+    const matching = projects.filter(project => ids.has(project.id));
+    return filter?.kind === "category" ? orderProjectsInCategory(matching, filter.id) : matching;
   }, [projects, category, filters]);
 
   const visible = filtered.slice(0, limit);

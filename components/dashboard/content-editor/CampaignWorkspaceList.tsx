@@ -19,13 +19,14 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { ContentMetricStrip } from "@/components/dashboard/content-editor/ContentMetricStrip";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
-import { compareProjectOrder } from "@/lib/content-editor/project-order";
+import { compareProjectOrder, categoryProjectRank } from "@/lib/content-editor/project-order";
 type State = { complete: boolean; seoComplete: boolean; reviewed: boolean };
 type Row = {
   id: string;
   title: string;
   searchTitles: string[];
   priority: number | null;
+  categoryPriorities?: Record<string, number>;
   createdAt: string;
   image: string;
   isActive: boolean;
@@ -64,6 +65,14 @@ export function CampaignWorkspaceList() {
     [views, setViews] = useState<View[]>([]);
   const [orderDraft, setOrderDraft] = useState<Record<string, string>>({});
   const orderCount = Object.keys(orderDraft).length;
+  const savedOrder = (row: Row) => {
+    const rank = category === "all" ? row.priority : categoryProjectRank(row.categoryPriorities, category);
+    return rank === null || !Number.isFinite(rank) ? "" : String(rank);
+  };
+  const changeCategory = (value: string) => {
+    if (busy || orderCount) { setMessage(dt("احفظ تغييرات الترتيب أو تراجع عنها أولًا.")); return; }
+    setCategory(value);
+  };
   const invalidOrder = Object.values(orderDraft).some((value) => value !== "" && (!Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 1000000));
   useDashboardUnsavedChanges(orderCount > 0);
   useEffect(() => {
@@ -162,7 +171,7 @@ export function CampaignWorkspaceList() {
             ? a.title.localeCompare(b.title)
             : sort === "raised"
               ? b.currentAmount - a.currentAmount
-              : compareProjectOrder(a, b),
+              : (category === "all" ? 0 : categoryProjectRank(a.categoryPriorities, category) - categoryProjectRank(b.categoryPriorities, category)) || compareProjectOrder(a, b),
         ),
     [rows, query, category, progress, tab, sort],
   );
@@ -220,7 +229,7 @@ export function CampaignWorkspaceList() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, items }),
+        body: JSON.stringify({ action, items, ...(action === "order" && category !== "all" ? { categoryId: category } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -339,6 +348,7 @@ export function CampaignWorkspaceList() {
                   type="button"
                   className="px-3 py-2 text-xs"
                   onClick={() => {
+                    if (busy || orderCount) { setMessage(dt("احفظ تغييرات الترتيب أو تراجع عنها أولًا.")); return; }
                     setQuery(v.query);
                     setCategory(v.category);
                     setProgress(v.progress);
@@ -385,7 +395,7 @@ export function CampaignWorkspaceList() {
             aria-label={dt("فلترة التصنيف")}
             className={input}
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => changeCategory(e.target.value)}
           >
             <option value="all">{dt("جميع التصنيفات")}</option>
             {categories.map((c) => (
@@ -418,6 +428,7 @@ export function CampaignWorkspaceList() {
             </select>
           </label>
         </div>
+        <p className="mx-5 mb-4 text-sm text-slate-600" data-order-scope={category}>{category === "all" ? dt("تعديل الأرقام يحفظ ترتيب الكل فقط. ترتيب كل تصنيف مستقل.") : dt("تعديل الأرقام يحفظ ترتيب التصنيف المحدد فقط؛ الترتيب العام وبقية التصنيفات لا تتغير.")}</p>
         {matchingOtherStates ? <div role="status" className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm"><span>{dt("يوجد {0} مشروعًا مطابقًا للبحث في حالات أخرى.", [matchingOtherStates])}</span><button type="button" className={btn} onClick={() => setTab("all")}>{dt("عرض كل الحالات")}</button></div> : null}
         {message ? (
           <p
@@ -471,7 +482,7 @@ export function CampaignWorkspaceList() {
               </div>
               <div className="flex flex-wrap gap-1">{row.categories.map(category => <span key={category.id} className="rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-600">{category.name}</span>)}</div>
               <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-[11px] text-slate-500">{dt("المحصّل")}</p><p dir="ltr" className="text-lg font-bold">${row.currentAmount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</p><p className="mt-1 text-xs text-slate-500">{dt("{0} / {1} ترجمة", [translated, SUPPORTED_LOCALES.length - 1])}</p></div>
-                <label className="space-y-1 text-xs text-slate-500"><span className="block">{dt("الترتيب")}</span><input type="number" min="0" max="1000000" aria-label={dt("ترتيب {0}", [row.title])} className="min-h-10 w-20 rounded-lg border p-2 text-center text-base" value={orderDraft[row.id] ?? (row.priority === null ? "" : String(row.priority))} disabled={busy} onChange={event => { const value = event.target.value; setOrderDraft(previous => { const next = { ...previous }; if (value === (row.priority === null ? "" : String(row.priority))) delete next[row.id]; else next[row.id] = value; return next; }); }} /></label>
+                <label className="space-y-1 text-xs text-slate-500"><span className="block">{dt("الترتيب")}</span><input type="number" min="0" max="1000000" aria-label={dt("ترتيب {0}", [row.title])} className="min-h-10 w-20 rounded-lg border p-2 text-center text-base" value={orderDraft[row.id] ?? savedOrder(row)} disabled={busy} onChange={event => { const value = event.target.value; setOrderDraft(previous => { const next = { ...previous }; if (value === savedOrder(row)) delete next[row.id]; else next[row.id] = value; return next; }); }} /></label>
                 <Link className={btn + " min-h-10"} href={`/dashboard/campaigns/edit/${row.id}`}>{dt("تحرير")}</Link>
               </div>
             </article>;
@@ -557,14 +568,14 @@ export function CampaignWorkspaceList() {
                           max="1000000"
                           aria-label={dt("ترتيب {0}", [row.title])}
                           className="w-16 rounded border p-2 text-center"
-                          value={orderDraft[row.id] ?? (row.priority === null ? "" : String(row.priority))}
+                          value={orderDraft[row.id] ?? savedOrder(row)}
                           placeholder="—"
                           disabled={busy}
                           onChange={(event) => {
                             const value = event.target.value;
                             setOrderDraft((previous) => {
                               const next = { ...previous };
-                              if (value === (row.priority === null ? "" : String(row.priority))) delete next[row.id];
+                              if (value === savedOrder(row)) delete next[row.id];
                               else next[row.id] = value;
                               return next;
                             });

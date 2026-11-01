@@ -10,6 +10,7 @@ import { messagesFor } from "../../i18n/locale-messages";
 import type { MessageObject } from "../../i18n/message-quality";
 import { SUPPORTED_LOCALES } from "../../lib/locales";
 import { buildCatalogueNavigation, type CatalogueNavigationLabels } from "../../lib/minbar/project-catalogue-navigation";
+import * as projectOrder from "../../lib/content-editor/project-order";
 import type { ProjectFilterOption } from "../../lib/minbar/project-filter-options";
 
 function labels(locale: string) { return (messagesFor(locale).projects as MessageObject).catalogueNavigation as CatalogueNavigationLabels; }
@@ -60,7 +61,7 @@ test("the actual catalogue renders dedicated pages as navigable links, and regio
   const loaded = { exports: {} as { default: React.ComponentType<{ projects: unknown[]; slides: unknown[]; filters: ProjectFilterOption[] }> } };
   const Empty = () => null;
   const dependencies: Record<string, unknown> = {
-    react: React, "react/jsx-runtime": jsx,
+    react: React, "react/jsx-runtime": jsx, "@/lib/content-editor/project-order": projectOrder,
     "next-intl": { useTranslations: () => (key: string) => key },
     "next/link": { default: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => { delete props.prefetch; return React.createElement("a", props, children); } },
     "@/components/minbar/ProjectDonateCard": { default: Empty },

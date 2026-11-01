@@ -1,5 +1,6 @@
 "use client";
 
+import { profileHref } from "@/lib/minbar/profile-navigation";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { usePathname } from "next/navigation";
@@ -117,11 +118,11 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
     <nav className="mia-mobile-bottom-nav" dir={dir} aria-label={label("menu")}>
       <div className="mia-mobile-bottom-nav__inner">
         {ITEMS.map((item) => {
-          const active = activeRoute === item.route;
+          const active = activeRoute === item.route || (item.route === "account" && pathname?.includes("/profile"));
           const isHome = item.route === "home";
           const href =
-            item.route === "account" && !signedIn
-              ? `/auth/signin?callbackUrl=${encodeURIComponent(miaPath("account", locale))}`
+            item.route === "account"
+              ? signedIn ? profileHref(locale) : `/auth/signin?callbackUrl=${encodeURIComponent(profileHref(locale))}`
               : miaPath(item.route, locale);
           const ariaLabel = item.route === "achievementVideos" ? label("reports") : label(item.labelKey);
 

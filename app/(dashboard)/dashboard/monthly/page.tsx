@@ -444,7 +444,7 @@ function MonthlySubscriptionsDashboard() {
   const [reduceEvidence, setReduceEvidence] = useState("");
   const [reduceBusy, setReduceBusy] = useState(false);
   useEffect(() => {
-    setLinkedRequest(null); setLinkedRequestError(false);
+    setLinkedRequestError(false);
     if (!linkedDonorId || !linkedSubscriptionId || !linkedRequestId) { setLinkedRequestLoading(false); return; }
     const controller = new AbortController();
     setLinkedRequestLoading(true);
@@ -839,6 +839,7 @@ function MonthlySubscriptionsDashboard() {
       setReduceEvidence("");
       setReduceAmount("");
       setSubsPage(1);
+      setRequestRevision(value => value + 1);
       await fetchSubscriptions(1, false);
       void fetchStats();
     } catch (error) {
@@ -870,6 +871,7 @@ function MonthlySubscriptionsDashboard() {
             : dt("تم تحديث حالة الاشتراك")
         );
         setSubsPage(1);
+        setRequestRevision(value => value + 1);
         await fetchSubscriptions(1, false);
       } catch (e: unknown) {
         const msg = axios.isAxiosError(e)
@@ -1041,7 +1043,7 @@ function MonthlySubscriptionsDashboard() {
 
         <div className="flex justify-end"><Link href="/dashboard/monthly/settings" className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold text-brand">{dt("إعدادات صفحة التبرع الدوري")}</Link></div>
         <RecurringHealthPanel />
-        <SubscriptionRequestsPanel donorId={linkedDonorId || (selectedUserId !== "all" ? selectedUserId : undefined)} selectedRequest={activeLinkedRequest} onChanged={() => setRequestRevision(value => value + 1)} />
+        <SubscriptionRequestsPanel donorId={linkedDonorId || (selectedUserId !== "all" ? selectedUserId : undefined)} selectedRequest={activeLinkedRequest} refreshKey={requestRevision} onChanged={() => setRequestRevision(value => value + 1)} />
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>
@@ -2479,7 +2481,7 @@ function MonthlySubscriptionsDashboard() {
           {linkedRequestLoading && <p role="status" className="text-sm text-slate-500">{dt("جارٍ التحميل…")}</p>}
           {linkedRequestError && <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات إدارة التبرع.")}</p>}
           {activeLinkedRequest && <div id={`linked-request-${activeLinkedRequest.id}`} className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-start text-sm leading-7">
-            <p className="font-semibold">{dt(activeLinkedRequest.kind === "AMOUNT_CHANGE" ? "طلب تغيير المبلغ" : activeLinkedRequest.kind === "PAUSE" ? "طلب الإيقاف مؤقتاً" : "طلب الإلغاء")} {activeLinkedRequest.requestedAmount !== null && <bdi>{activeLinkedRequest.requestedAmount} {activeLinkedRequest.currency}</bdi>} · {dt(activeLinkedRequest.status === "COMPLETED" ? "منفّذ" : activeLinkedRequest.status === "IN_PROGRESS" ? "قيد التنفيذ" : "جديد")}</p>
+            <p className="font-semibold">{dt(activeLinkedRequest.kind === "AMOUNT_CHANGE" ? "طلب تغيير المبلغ" : activeLinkedRequest.kind === "PAUSE" ? "طلب الإيقاف مؤقتاً" : "طلب الإلغاء")} {activeLinkedRequest.requestedAmount !== null && <bdi>{activeLinkedRequest.requestedAmount} {activeLinkedRequest.currency}</bdi>} · {dt(activeLinkedRequest.status === "COMPLETED" ? "منفّذ" : activeLinkedRequest.status === "REJECTED" ? "تعذّر تنفيذ الطلب" : activeLinkedRequest.status === "WITHDRAWN" ? "مسحوب من المتبرع" : activeLinkedRequest.status === "IN_PROGRESS" ? "قيد التنفيذ" : "جديد")}</p>
             <p className="whitespace-pre-wrap break-words">{activeLinkedRequest.note}</p>
             <p className="text-xs text-slate-500"><bdi>#{activeLinkedRequest.id}</bdi> · {new Date(activeLinkedRequest.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}</p>
           </div>}

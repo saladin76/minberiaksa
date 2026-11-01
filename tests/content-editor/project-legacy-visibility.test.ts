@@ -1,3 +1,4 @@
+import * as projectOrder from "../../lib/content-editor/project-order";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -55,7 +56,7 @@ function fixture(restoration = false) {
     "@/lib/campaign/campaign-modes": { FUNDRAISING_SHARES: "SHARES", computeCampaignProgressPercent: () => 0, normalizeFundraisingMode: () => "AMOUNT", normalizeGoalType: () => "OPEN", parseSuggestedShareCounts: () => ({}), showCampaignProgress: () => false },
     "@/lib/i18n/translation-fallback": { translationLocaleWhere: () => ({}), pickTranslation: () => null }, "@/lib/campaign/categories": { parseCategoryPriorities: () => ({}) },
     "@/lib/content-editor/public-preview": {}, "@/lib/content/video-platform": {}, "@/lib/slug": {}, "@/lib/dashboard/donation-usd-revenue": {}, "@/lib/campaign/project-seo": {},
-    "@/lib/blog/rich-text": { contentToBlocks: (text: string) => [{ kind: "p", text }] }, "@/lib/minbar/recommended-frequency": { parseRecommendedFrequency: () => null }, "@/lib/minbar/project-order": { mergeProjectPriorityGroups },
+    "@/lib/blog/rich-text": { contentToBlocks: (text: string) => [{ kind: "p", text }] }, "@/lib/minbar/recommended-frequency": { parseRecommendedFrequency: () => null }, "@/lib/minbar/project-order": { mergeProjectPriorityGroups }, "@/lib/content-editor/project-order": projectOrder,
     "./project-filter-options": { selectProgrammeRelatedProjects },
     "./restoration-programme": { getRestorationProgrammeProjectIds: async () => [rows[3].id, rows[2].id, rows[0].id, rows[1].id, rows[2].id] },
   };

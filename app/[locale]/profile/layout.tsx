@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import IntlProviderClient from "../IntlProviderClient";
 import { LEGACY_NAMESPACES, SHELL_NAMESPACES, pickNamespaces } from "@/i18n/locale-messages";
@@ -12,5 +13,5 @@ export default async function NoIndexLayout({ children, params }: { children: Re
   const locale = isValidLocale(requested) ? requested : "ar";
   // Keep account-only copy out of every public page's message payload.
   const cardCopy = (await import(`@/i18n/profile-card-update/${locale}.json`)).default;
-  return <IntlProviderClient locale={locale} messages={{...pickNamespaces(locale, [...SHELL_NAMESPACES, ...LEGACY_NAMESPACES, "cart"]), ProfileCardUpdate: cardCopy}}>{children}</IntlProviderClient>;
+  return <IntlProviderClient locale={locale} messages={{...pickNamespaces(locale, [...SHELL_NAMESPACES, ...LEGACY_NAMESPACES, "cart", "account", "transferReceipt"]), ProfileCardUpdate: cardCopy}}><Suspense>{children}</Suspense></IntlProviderClient>;
 }

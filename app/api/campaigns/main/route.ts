@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
           NOT_SOFT_DELETED,
         ].filter((c) => Object.keys(c).length > 0),
       },
-      orderBy: { priority: "asc" }, // Order by priority
+      orderBy: [{ priority: "asc" }, { createdAt: "desc" }, { id: "desc" }],
       include: {
         categories: {
           select: {

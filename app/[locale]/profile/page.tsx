@@ -1,5 +1,7 @@
 "use client";
+import { subscriptionRequestFollowUp, subscriptionRequestCopy } from "@/lib/donations/subscription-request-copy";
 
+import { useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import SubscriptionRequests from "@/components/minbar/account/SubscriptionRequests";
@@ -56,6 +58,8 @@ import CountryPicker, { CountryRow } from "./_components/CountryPicker";
 import ChangePasswordDialog from "./_components/ChangePasswordDialog";
 import ImpactCard, { ImpactCompact } from "./_components/ImpactCard";
 import SupportForm from "./_components/SupportForm";
+
+const AccountOverview = React.lazy(() => import("@/components/minbar/account/AccountOverview"));
 
 interface DonationForProfile {
   id: string;
@@ -151,15 +155,18 @@ function donationReceiptAllowed(d: Pick<DonationForProfile, "paymentStatus">) {
 const ProfilePage = () => {
   const t = useTranslations("Profile");
   /* The plan's cadence label  the same `common.freq*` strings the cart uses. */
+  const searchParams = useSearchParams();
   const tCommon = useTranslations("common");
+  const tSystem = useTranslations("system");
   /* A plan the scheduler could not charge needs its own words, not "cancelled". */
   const tRecurring = useTranslations("Recurring");
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const locale = useLocale();
   const isRtl = locale === "ar";
   const { convertToCurrency } = useCurrency();
 
   const navigationItems = [
+    { id: "overview", label: subscriptionRequestFollowUp(locale)[11], icon: Receipt, description: t("nav.donationsDesc") },
     { id: "account", label: t("nav.myinfo"), icon: User, description: t("nav.accountDesc") },
     { id: "donations", label: t("nav.donations"), icon: HandHeart, description: t("nav.donationsDesc") },
     { id: "subscriptions", label: t("nav.subscriptions"), icon: Repeat, description: t("subscriptions.settingsTableTitle") },
@@ -168,7 +175,7 @@ const ProfilePage = () => {
   ];
 
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState("account");
+  const [activeTab, setActiveTab] = useState("donations");
   const [focusedSubscriptionId, setFocusedSubscriptionId] = useState("");
   const focusedSubscription = useRef("");
   const [loading, setLoading] = useState(true);
@@ -186,14 +193,18 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(searchParams.toString());
     const tabParam = params.get("tab");
     setFocusedSubscriptionId(params.get("subscriptionId") || "");
     if (tabParam && navigationItems.some((item) => item.id === tabParam)) {
       setActiveTab(tabParam);
-    }
+    } else setActiveTab("donations");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") window.location.replace(`/${locale}/auth/signin?callbackUrl=${encodeURIComponent(`/${locale}/profile?${searchParams.toString() || "tab=donations"}`)}`);
+  }, [sessionStatus, locale, searchParams]);
 
   useEffect(() => {
     if (!id) return;
@@ -214,7 +225,8 @@ const ProfilePage = () => {
   }, [id, t]);
 
   useEffect(() => {
-    if (!user || activeTab !== "subscriptions" || !focusedSubscriptionId || focusedSubscription.current === focusedSubscriptionId) return;
+    if (!user || activeTab !== "subscriptions" || !focusedSubscriptionId) { focusedSubscription.current = ""; return; }
+    if (focusedSubscription.current === focusedSubscriptionId) return;
     const frame = requestAnimationFrame(() => {
       const target = document.getElementById(`profile-subscription-${focusedSubscriptionId}`);
       if (target) { target.scrollIntoView({ block: "start", behavior: "instant" }); target.focus({ preventScroll: true }); focusedSubscription.current = focusedSubscriptionId; }
@@ -972,9 +984,9 @@ const ProfilePage = () => {
         open={!!sub}
         onOpenChange={(open) => !open && setSubscriptionSettingsDonation(null)}
       >
-        <DialogContent className="max-w-md" dir={isRtl ? "rtl" : "ltr"}>
+        <DialogContent className="z-[140] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md overflow-y-auto rounded-xl" overlayClassName="z-[130]" closeLabel={tCommon("close")} aria-describedby={`subscription-request-notice-${sub.subscriptionId}`} dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle>{t("subscriptions.subscriptionSettings")}</DialogTitle>
+            <DialogTitle>{subscriptionRequestCopy(locale)[0]}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-2">
             <div className="p-4 bg-[#A5243D]/5 border border-[#A5243D]/10 rounded-xl">
@@ -1014,6 +1026,8 @@ const ProfilePage = () => {
 
   const renderContent = (currentUser: UserProfile) => {
     switch (activeTab) {
+      case "overview":
+        return <React.Suspense fallback={<p role="status">{tSystem("loading")}</p>}><AccountOverview /></React.Suspense>;
       case "account":
         return renderAccount(currentUser);
       case "donations":
@@ -1136,7 +1150,7 @@ const ProfilePage = () => {
         {/* Mobile tabs  label-first; icon only shows alongside on sm+ where there's room. */}
         <div className="lg:hidden sticky top-0 z-50 bg-gray-50 pt-4 pb-4 px-4 sm:px-6 shadow-sm">
           <Tabs dir={isRtl ? "rtl" : "ltr"} value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-5 h-auto p-1 bg-[#A5243D]/10 rounded-xl">
+            <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto p-1 bg-[#A5243D]/10 rounded-xl">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 return (

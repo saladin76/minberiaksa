@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
         if (offset < priorityCount) {
           const priRows = await prisma.campaign.findMany({
             where: priorityWhere,
-            orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+            orderBy: [{ priority: "asc" }, { createdAt: "desc" }, { id: "desc" }],
             skip: offset,
             take: remaining,
             select: selectShape,
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
         if (remaining > 0) {
           const recentRows = await prisma.campaign.findMany({
             where: recentWhere,
-            orderBy: { createdAt: "desc" },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             skip: Math.max(0, offset - priorityCount),
             take: remaining,
             select: selectShape,
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       if (applyPriorityFallbackSort && !cursor) {
         const priRows = await prisma.campaign.findMany({
           where: { AND: [where, RANKED_CAMPAIGNS] },
-          orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+          orderBy: [{ priority: "asc" }, { createdAt: "desc" }, { id: "desc" }],
           take: limit + 1,
           select: selectShape,
         });
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
           remaining > 0
             ? await prisma.campaign.findMany({
                 where: { AND: [where, UNRANKED_CAMPAIGNS] },
-                orderBy: { createdAt: "desc" },
+                orderBy: [{ createdAt: "desc" }, { id: "desc" }],
                 take: remaining,
                 select: selectShape,
               })
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
             take: limit + 1,
             skip: 1,
             cursor: { id: cursor },
-            orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+            orderBy: [{ priority: "asc" }, { createdAt: "desc" }, { id: "desc" }],
             select: selectShape,
           });
           const remaining = Math.max(0, limit + 1 - priRows.length);
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
             remaining > 0
               ? await prisma.campaign.findMany({
                   where: { AND: [where, UNRANKED_CAMPAIGNS] },
-                  orderBy: { createdAt: "desc" },
+                  orderBy: [{ createdAt: "desc" }, { id: "desc" }],
                   take: remaining,
                   select: selectShape,
                 })
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
           take: limit + 1,
           skip: 1,
           cursor: { id: cursor },
-          orderBy: { createdAt: "desc" },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           select: selectShape,
         });
       }

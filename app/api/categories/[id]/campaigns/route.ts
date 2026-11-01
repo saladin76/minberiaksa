@@ -160,7 +160,7 @@ export async function GET(
         return pb - pa;
       }
       if (!applyPriorityFallbackSort) {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id.localeCompare(a.id);
       }
       // Default: per-category priority asc → global priority asc → createdAt desc.
       // null/missing priorities are treated as "after" any explicit value.
@@ -174,7 +174,7 @@ export async function GET(
       if (ap != null && bp != null && ap !== bp) return ap - bp;
       if (ap != null && bp == null) return -1;
       if (ap == null && bp != null) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id.localeCompare(a.id);
     });
 
     // Slice the sorted list according to the requested pagination flavor.

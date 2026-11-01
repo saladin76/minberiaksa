@@ -1030,16 +1030,18 @@ model SubscriptionServiceRequest {
   donorId         String   @db.ObjectId
   activeKey       String   @unique
   kind            String // AMOUNT_CHANGE | PAUSE | CANCEL
-  status          String   @default("NEW") // NEW | IN_PROGRESS | COMPLETED
+  status          String   @default("NEW") // NEW | IN_PROGRESS | COMPLETED | REJECTED | WITHDRAWN
   requestedAmount Float?
   currency        String
   locale          String
   note            String
   staffNote       String?
+  resolutionNote  String?
+  history         Json?
   handledById     String?  @db.ObjectId
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
+  completedAt     DateTime? // Resolution time; status distinguishes execution, rejection and withdrawal.
   @@index([status, createdAt])
   @@index([donorId, subscriptionId, createdAt])
 }
