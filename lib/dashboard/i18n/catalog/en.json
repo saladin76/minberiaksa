@@ -9400,5 +9400,13 @@
   "التغيير المطلوب غير مثبت على الاشتراك بعد. افتح الاشتراك ونفّذه ثم حدّث الطلب.": "The requested change is not yet verified on the subscription. Open it, apply the change, then refresh the request.",
   "إغلاق مع توضيح تعذّر التنفيذ": "Close with a reason for declining",
   "تعديل الأرقام يحفظ ترتيب الكل فقط. ترتيب كل تصنيف مستقل.": "These numbers set the global order only. Each category has its own order.",
-  "تعديل الأرقام يحفظ ترتيب التصنيف المحدد فقط؛ الترتيب العام وبقية التصنيفات لا تتغير.": "These numbers set this category’s order only. Global order and other categories stay the same."
+  "تعديل الأرقام يحفظ ترتيب التصنيف المحدد فقط؛ الترتيب العام وبقية التصنيفات لا تتغير.": "These numbers set this category’s order only. Global order and other categories stay the same.",
+  "طلب مباشر من حسابه الشخصي": "Direct request from their personal account",
+  "اختر طلبًا موثقًا وصالحًا من حساب المتبرع أولًا.": "Select a verified, valid request from the donor’s account first.",
+  "اختر طلب تغيير مبلغ مسجّل من حساب المتبرع؛ المرجع والتاريخ يُستخرجان تلقائيًا.": "Select an amount-change request recorded through the donor’s account; its reference and date are filled automatically.",
+  "جارٍ تحميل طلبات المتبرع…": "Loading donor requests…",
+  "تعذّر تحميل طلبات المتبرع. أعد المحاولة.": "Could not load donor requests. Please try again.",
+  "لا يوجد طلب تغيير مبلغ مفتوح وصالح لهذا الاشتراك من حساب المتبرع.": "There is no valid open amount-change request for this subscription from the donor’s account.",
+  "طلب المتبرع الموثّق": "Verified donor request",
+  "تحديث طلبات المتبرع": "Refresh donor requests"
 }

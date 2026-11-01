@@ -8,11 +8,13 @@ The public header and mobile account icon lead to `/{locale}/profile?tab=donatio
 
 Donation management requests have a stable reference, current-plan comparison, request type/status filters, pagination and a follow-up history. Staff distinguish internal notes from donor-visible replies. Completion is allowed only after the server verifies that the subscription matches the request. Rejection needs an explanation; donors can withdraw an open request without changing their subscription. Stale revisions, conflicting duplicates, ownership mismatches and concurrent edits are rejected. Request changes and their audit record commit together. A successful subscription change refreshes the request evidence; refreshing preserves a typed staff note. Internal notes, staff identities and deduplication keys are omitted from the donor response. Transactional outcome messages use the actual resolved status, a reference and the public reply. Donor follow-up copy covers 19 languages. The management dialog fits the mobile viewport, scrolls internally, and stays above the public header/navigation.
 
+The reduction consent selector always offers “Direct request from their personal account”, including when opening a plan directly from the subscription list. It retrieves current open amount-change requests for that exact donor and subscription. The stored request supplies the locked amount, reference and date; the server independently validates ownership, currency, amount and request status before any change. Missing, withdrawn, closed, foreign or failed request reads cannot authorize confirmation, and switching to a manual consent method clears the account-request reference.
+
 ## Verification
 
-- 370 content/route contract tests passed locally, including actual ordering endpoints and donor/admin request lifecycle, stale writes, ownership, rollback and private-data projection.
+- 371 content/route contract tests passed locally, including actual ordering endpoints and donor/admin request lifecycle, stale writes, ownership, rollback and private-data projection.
 - 108 browser checks passed for actual public filters, header, profile, overview, donor requests and project workspace in Arabic/English/Turkish at 320, 390 and 1440 pixels. HTTP data and framework adapters are synthetic; real components and layout styles are used.
-- 103 existing subscription-management browser checks passed after updating the response fixture to the revised request contract.
+- 145 subscription-management browser checks passed, covering the direct-account selector with and without request deep links, empty/foreign/closed request results, read failure/retry, and switching consent methods.
 - TypeScript reported zero errors; dashboard translation extraction reported zero missing translations. Release gates also run the production build and the other browser groups.
 - No production mutation, bank capture, ad-budget change or recipient message was performed by these tests.
 

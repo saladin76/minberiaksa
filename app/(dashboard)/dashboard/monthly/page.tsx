@@ -2,6 +2,7 @@
 
 import { SubscriptionRequestsPanel } from "@/components/dashboard/SubscriptionRequestsPanel";
 import { focusSubscriptionTarget, subscriptionManagementHref, type SubscriptionRequestRow } from "@/lib/donations/subscription-navigation";
+import { isReductionRequestForPlan } from "@/lib/donations/subscription-request-policy";
 import { RecurringHealthPanel } from "@/components/dashboard/RecurringHealthPanel";
 import { BILLING_READINESS_LABELS, type BillingReadiness } from "@/lib/donations/recurring-readiness";
 import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
@@ -438,11 +439,44 @@ function MonthlySubscriptionsDashboard() {
   const [linkedRequestError, setLinkedRequestError] = useState(false);
   const [requestRevision, setRequestRevision] = useState(0);
   const [reduceRequest, setReduceRequest] = useState<SubscriptionRequestRow | null>(null);
+  const [reduceRequestOptions, setReduceRequestOptions] = useState<SubscriptionRequestRow[]>([]);
+  const [reduceRequestsLoading, setReduceRequestsLoading] = useState(false);
+  const [reduceRequestsError, setReduceRequestsError] = useState(false);
+  const [reduceRequestsReload, setReduceRequestsReload] = useState(0);
   const [reducePlan, setReducePlan] = useState<SubscriptionRow | null>(null);
   const [reduceAmount, setReduceAmount] = useState("");
   const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED" | "DONOR_REQUEST">("PHONE");
   const [reduceEvidence, setReduceEvidence] = useState("");
   const [reduceBusy, setReduceBusy] = useState(false);
+  const applyReductionRequest = useCallback((row: SubscriptionRequestRow) => {
+    setReduceRequest(row);
+    setReduceAmount(String(row.requestedAmount));
+    setReduceEvidence(`${dt("طلب تغيير المبلغ")} #${row.id} · ${new Date(row.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}`);
+  }, []);
+  useEffect(() => {
+    setReduceRequestOptions([]); setReduceRequestsError(false); setReduceRequestsLoading(false);
+    if (!reducePlan || reduceMethod !== "DONOR_REQUEST") return;
+    const controller = new AbortController();
+    const scope = { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency };
+    setReduceRequest(null); setReduceAmount(""); setReduceEvidence("");
+    if (!scope.donorId) return;
+    setReduceRequestsLoading(true);
+    const params = new URLSearchParams({ userId: scope.donorId, subscriptionId: scope.id, status: "OPEN", kind: "AMOUNT_CHANGE" });
+    void fetch(`/api/admin/subscription-requests?${params}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) })
+      .then(async response => {
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (!Array.isArray(data.requests)) throw new Error();
+        const rows = data.requests.filter((row: SubscriptionRequestRow) => isReductionRequestForPlan(row, scope));
+        if (controller.signal.aborted) return;
+        setReduceRequestOptions(rows);
+        const selected = rows.find((row: SubscriptionRequestRow) => row.id === linkedRequestId) || rows[0];
+        if (selected) applyReductionRequest(selected);
+      })
+      .catch(() => { if (!controller.signal.aborted) setReduceRequestsError(true); })
+      .finally(() => { if (!controller.signal.aborted) setReduceRequestsLoading(false); });
+    return () => controller.abort();
+  }, [reducePlan, reduceMethod, linkedRequestId, reduceRequestsReload, applyReductionRequest]);
   useEffect(() => {
     setLinkedRequestError(false);
     if (!linkedDonorId || !linkedSubscriptionId || !linkedRequestId) { setLinkedRequestLoading(false); return; }
@@ -461,10 +495,7 @@ function MonthlySubscriptionsDashboard() {
   }, [linkedDonorId, linkedSubscriptionId, linkedRequestId, requestRevision]);
 
   const openSubscriptionReduction = (plan: SubscriptionRow) => {
-    const row = activeLinkedRequest?.subscriptionId === plan.id && activeLinkedRequest.donorId === plan.donor?.id &&
-      activeLinkedRequest.kind === "AMOUNT_CHANGE" && ["NEW", "IN_PROGRESS"].includes(activeLinkedRequest.status) &&
-      activeLinkedRequest.currency === plan.currency && activeLinkedRequest.requestedAmount !== null &&
-      activeLinkedRequest.requestedAmount >= 1 && activeLinkedRequest.requestedAmount < plan.amount ? activeLinkedRequest : null;
+    const row = isReductionRequestForPlan(activeLinkedRequest, { id: plan.id, donorId: plan.donor?.id || "", amount: plan.amount, currency: plan.currency }) ? activeLinkedRequest : null;
     setReduceRequest(row);
     setReduceAmount(row ? String(row.requestedAmount) : "");
     setReduceMethod(row ? "DONOR_REQUEST" : "PHONE");
@@ -823,6 +854,10 @@ function MonthlySubscriptionsDashboard() {
   const submitSubscriptionReduction = useCallback(async () => {
     if (!reducePlan || reduceBusy) return;
     const amount = Number(reduceAmount);
+    if (reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !isReductionRequestForPlan(reduceRequest, { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency }) || reduceRequest?.requestedAmount !== amount)) {
+      toast.error(dt("اختر طلبًا موثقًا وصالحًا من حساب المتبرع أولًا."));
+      return;
+    }
     if (!Number.isFinite(amount) || amount < 1 || amount >= reducePlan.amount || reduceEvidence.trim().length < 12) {
       toast.error(dt("أدخل مبلغًا أقل، مع إثبات موافقة المتبرع (12 حرفًا على الأقل)"));
       return;
@@ -847,7 +882,7 @@ function MonthlySubscriptionsDashboard() {
     } finally {
       setReduceBusy(false);
     }
-  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, reduceRequest, fetchSubscriptions, fetchStats]);
+  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, reduceRequest, reduceRequestsLoading, reduceRequestsError, fetchSubscriptions, fetchStats]);
 
   const handleSubscriptionStatusChange = useCallback(
     async (
@@ -2450,10 +2485,15 @@ function MonthlySubscriptionsDashboard() {
             </DialogHeader>
             <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} dir="ltr" />
             </label>
-            <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} onValueChange={v => setReduceMethod(v as typeof reduceMethod)}>
+            <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} disabled={reduceBusy} onValueChange={v => {
+              if (v === reduceMethod) return;
+              if (v === "DONOR_REQUEST" || reduceMethod === "DONOR_REQUEST") { setReduceRequest(null); setReduceEvidence(""); }
+              if (v === "DONOR_REQUEST") setReduceAmount("");
+              setReduceMethod(v as typeof reduceMethod);
+            }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent dir={dashDir()}>
-                  {reduceRequest && <SelectItem value="DONOR_REQUEST">{dt("طلب المتبرع من حسابه")}</SelectItem>}
+                  <SelectItem value="DONOR_REQUEST">{dt("طلب مباشر من حسابه الشخصي")}</SelectItem>
                   <SelectItem value="PHONE">{dt("مكالمة هاتفية")}</SelectItem>
                   <SelectItem value="EMAIL">{dt("بريد إلكتروني")}</SelectItem>
                   <SelectItem value="WHATSAPP">{dt("واتساب")}</SelectItem>
@@ -2461,11 +2501,19 @@ function MonthlySubscriptionsDashboard() {
                 </SelectContent>
               </Select>
             </label>
+            {reduceMethod === "DONOR_REQUEST" && <div className="grid min-w-0 gap-2">
+              <p className="text-xs leading-6 text-slate-500">{dt("اختر طلب تغيير مبلغ مسجّل من حساب المتبرع؛ المرجع والتاريخ يُستخرجان تلقائيًا.")}</p>
+              {reduceRequestsLoading ? <p role="status" className="text-sm">{dt("جارٍ تحميل طلبات المتبرع…")}</p> : reduceRequestsError ? <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات المتبرع. أعد المحاولة.")}</p> : reduceRequestOptions.length === 0 ? <p role="status" className="text-sm text-amber-800">{dt("لا يوجد طلب تغيير مبلغ مفتوح وصالح لهذا الاشتراك من حساب المتبرع.")}</p> : <label className="grid gap-1 text-sm font-medium">{dt("طلب المتبرع الموثّق")}<select aria-label={dt("طلب المتبرع الموثّق")} className="min-h-11 min-w-0 w-full rounded-lg border p-2 text-sm" value={reduceRequest?.id || ""} disabled={reduceBusy} onChange={event => {
+                const row = reduceRequestOptions.find(option => option.id === event.target.value);
+                if (row && isReductionRequestForPlan(row, { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency })) applyReductionRequest(row);
+              }}>{reduceRequestOptions.map(row => <option key={row.id} value={row.id}>{row.requestedAmount} {row.currency} · #{row.id}</option>)}</select></label>}
+              <button type="button" className="min-h-10 justify-self-start rounded-lg border px-3 text-xs disabled:opacity-50" disabled={reduceBusy || reduceRequestsLoading} onClick={() => setReduceRequestsReload(value => value + 1)}>{dt("تحديث طلبات المتبرع")}</button>
+            </div>}
             <label className="block text-sm font-medium">{dt("مرجع الموافقة وتاريخها")}<textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} placeholder={dt("التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند")} />
             </label>
             <p className="text-xs text-slate-500">{dt("لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.")}</p>
             <div className="flex gap-2">
-              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
+              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy || reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !reduceRequest)} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
               <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>{dt("إغلاق")}</button>
             </div>
           </DialogContent>

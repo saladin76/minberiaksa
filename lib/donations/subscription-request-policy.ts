@@ -12,6 +12,15 @@ export function validReduction(amount: unknown, current: number) {
   return typeof amount === "number" && Number.isFinite(amount) && amount >= 1 && amount < current &&
     Math.abs(Math.round(amount * 100) - amount * 100) < 1e-7;
 }
+
+export function isReductionRequestForPlan(
+  request: { donorId: string; subscriptionId: string; kind: string; status: string; currency: string; requestedAmount: number | null } | null | undefined,
+  plan: { id: string; donorId: string; currency: string; amount: number },
+) {
+  return !!request && !!plan.donorId && request.donorId === plan.donorId && request.subscriptionId === plan.id &&
+    request.kind === "AMOUNT_CHANGE" && OPEN_REQUEST_STATUSES.includes(request.status) &&
+    request.currency === plan.currency && validReduction(request.requestedAmount, plan.amount);
+}
 export function requestMatchesPlan(request: { kind: string; requestedAmount: number | null; currency?: string; donorId?: string }, plan: { status: string; amount: number; currency?: string; donorId?: string } | null) {
   if (!plan) return false;
   if (request.currency && plan.currency && request.currency !== plan.currency || request.donorId && plan.donorId && request.donorId !== plan.donorId) return false;

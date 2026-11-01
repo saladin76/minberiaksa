@@ -69,7 +69,7 @@ test("a real donor request authorizes only its exact reduction and records serve
 });
 
 test("another donor, plan, currency, amount, request kind or completed request cannot authorize billing", async () => {
-  const variants = [{ donorId: "d".repeat(24) }, { subscriptionId: "d".repeat(24) }, { currency: "USD" }, { requestedAmount: 20 }, { kind: "CANCEL" }, { status: "COMPLETED" }];
+  const variants = [{ donorId: "d".repeat(24) }, { subscriptionId: "d".repeat(24) }, { currency: "USD" }, { requestedAmount: 20 }, { kind: "CANCEL" }, { status: "COMPLETED" }, { status: "REJECTED" }, { status: "WITHDRAWN" }];
   for (const variant of variants) {
     const f = fixture(); Object.assign(f.donorRequest, variant);
     assert.equal((await f.patch()).status, 409, JSON.stringify(variant));
@@ -102,4 +102,15 @@ test("request reads retain donor and plan scope, include exact completed request
   assert.equal((await (await f.get(`userId=${"d".repeat(24)}&subscriptionId=${planId}&requestId=${requestId}`)).json()).requests.length, 0);
   assert.equal((await f.get("requestId=malformed")).status, 400);
   assert.equal(f.stats().writes, 0);
+});
+
+test("the direct-account picker accepts only an open reduction belonging to this donor, plan and currency", () => {
+  const plan = { id: planId, donorId, currency: "EUR", amount: 100 };
+  const row = { donorId, subscriptionId: planId, kind: "AMOUNT_CHANGE", status: "NEW", currency: "EUR", requestedAmount: 10 };
+  assert.equal(requestPolicy.isReductionRequestForPlan(row, plan), true);
+  for (const change of [{ donorId: "d".repeat(24) }, { subscriptionId: "d".repeat(24) }, { currency: "USD" }, { kind: "PAUSE" }, { status: "COMPLETED" }, { status: "REJECTED" }, { status: "WITHDRAWN" }, { requestedAmount: 100 }, { requestedAmount: 0.5 }, { requestedAmount: 1.151 }]) {
+    assert.equal(requestPolicy.isReductionRequestForPlan({ ...row, ...change }, plan), false, JSON.stringify(change));
+  }
+  assert.equal(requestPolicy.isReductionRequestForPlan(null, plan), false);
+  assert.equal(requestPolicy.isReductionRequestForPlan(row, { ...plan, donorId: "" }), false);
 });

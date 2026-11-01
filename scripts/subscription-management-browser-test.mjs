@@ -28,9 +28,9 @@ const css = (await postcss([tailwindcss({ ...require('../tailwind.config.ts').de
 const theme = (await readFile('app/[locale]/globals.css', 'utf8')).match(/:root\s*\{[\s\S]*?\}/)?.[0] || '';
 const messages = Object.fromEntries(await Promise.all(['ar', 'en', 'tr'].map(async lang => [lang, JSON.parse(await readFile(`i18n/messages/${lang}.json`, 'utf8'))])));
 const requests = [], errors = [];
-let plans, tickets, slowDonor = '', omitListRequest = false;
+let plans, tickets, slowDonor = '', omitListRequest = false, proofMode = 'normal';
 function reset() {
-  omitListRequest = false;
+  omitListRequest = false; proofMode = 'normal';
   plans = [
     { id: planA, donor: { id: donorA, name: 'Donor Alpha', email: 'alpha@example.test' }, status: 'ACTIVE', amount: 107.87, amountUSD: 118, currency: 'EUR', frequency: 'MONTHLY' },
     { id: failedPlan, donor: { id: donorA, name: 'Donor Alpha', email: 'alpha@example.test' }, status: 'PAYMENT_FAILED', amount: 1, amountUSD: 1, currency: 'USD', frequency: 'DAILY' },
@@ -57,6 +57,12 @@ const server = createServer(async (req, res) => {
         const ticket = tickets.find(row => row.id === body.id);
         if (body.status === 'COMPLETED' && plans.find(plan => plan.id === ticket.subscriptionId).amount !== ticket.requestedAmount) return json({ error: 'Change the subscription first' }, 409);
         assert.equal(body.updatedAt,ticket.updatedAt); ticket.status = body.status; ticket.staffNote = body.staffNote; ticket.updatedAt=new Date().toISOString(); return json({ ok: true, billingChanged: false, updatedAt: ticket.updatedAt });
+      }
+      if (url.searchParams.get('kind') === 'AMOUNT_CHANGE') {
+        if (proofMode === 'error') return json({error:'proof fixture unavailable'},503);
+        if (proofMode === 'empty') return json({requests:[],openCount:0});
+        if (proofMode === 'foreign') return json({requests:[tickets.find(row=>row.id===requestB)],openCount:1});
+        if (proofMode === 'closed') return json({requests:[{...tickets.find(row=>row.id===requestA),status:'COMPLETED'}],openCount:1});
       }
       const scope = tickets.filter(row => (!url.searchParams.has('userId') || row.donorId === url.searchParams.get('userId')) && (!url.searchParams.has('subscriptionId') || row.subscriptionId === url.searchParams.get('subscriptionId')));
       const list = scope.filter(row => url.searchParams.has('requestId') ? row.id === url.searchParams.get('requestId') : url.searchParams.get('status') === 'COMPLETED' ? row.status === 'COMPLETED' : row.status !== 'COMPLETED');
@@ -100,6 +106,31 @@ try {
     const section = page.locator('#subscriptions');
     await expect(section).toBeInViewport(); await expect(section.getByRole('row')).toHaveCount(3); checks++;
     assert.ok(requests.slice(before).some(row => row.path === '/api/admin/subscriptions' && row.query.userId === donorA && row.query.status === 'ALL')); checks++;
+    // The direct-account method is available from a normal plan row, even
+    // without requestId in the URL. Only a fresh scoped request can authorize it.
+    const genericPlan=page.locator(`#subscription-${planA}`);
+    await genericPlan.getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();
+    const genericDialog=page.getByRole('dialog');
+    await genericDialog.getByRole('combobox').click();
+    await page.getByRole('option',{name:label(lang,'طلب مباشر من حسابه الشخصي'),exact:true}).click();
+    await expect(genericDialog.getByRole('spinbutton')).toHaveValue('10');
+    await expect(genericDialog.locator('textarea')).toHaveValue(new RegExp(requestA));
+    await expect(genericDialog.getByRole('combobox',{name:label(lang,'طلب المتبرع الموثّق'),exact:true})).toHaveValue(requestA);
+    assert.ok(requests.slice(before).some(row=>row.path==='/api/admin/subscription-requests'&&row.query.userId===donorA&&row.query.subscriptionId===planA&&row.query.kind==='AMOUNT_CHANGE'));checks++;
+    for(const mode of ['empty','foreign','closed','error']){
+      proofMode=mode;
+      await genericDialog.getByRole('button',{name:label(lang,'تحديث طلبات المتبرع'),exact:true}).click();
+      await expect(genericDialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true})).toBeDisabled();
+      await expect(genericDialog.getByRole('spinbutton')).toHaveValue('');
+      await expect(genericDialog.locator('textarea')).toHaveValue('');
+      await expect(genericDialog.getByText(label(lang,mode==='error'?'تعذّر تحميل طلبات المتبرع. أعد المحاولة.':'لا يوجد طلب تغيير مبلغ مفتوح وصالح لهذا الاشتراك من حساب المتبرع.'),{exact:true})).toBeVisible();checks++;
+    }
+    proofMode='normal';await genericDialog.getByRole('button',{name:label(lang,'تحديث طلبات المتبرع'),exact:true}).click();
+    await expect(genericDialog.getByRole('spinbutton')).toHaveValue('10');await expect(genericDialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true})).toBeEnabled();checks++;
+    await genericDialog.getByRole('combobox').first().click();await page.getByRole('option',{name:label(lang,'مكالمة هاتفية'),exact:true}).click();
+    await expect(genericDialog.locator('textarea')).toHaveValue('');await expect(genericDialog.locator('textarea')).not.toHaveAttribute('readonly','');checks++;
+    assert.equal(requests.slice(before).filter(row=>row.method!=='GET').length,0);
+    await page.keyboard.press('Escape');await expect(genericDialog).toBeHidden();
     const ticket = page.locator(`#subscription-request-${requestA}`);
     const open = ticket.getByRole('link', { name: label(lang, 'فتح اشتراكات المتبرع'), exact: true });
     await open.click();
@@ -107,7 +138,7 @@ try {
     await expect(selected).toBeInViewport(); await expect(section.getByRole('row')).toHaveCount(2); assert.equal(new URL(page.url()).searchParams.get('requestId'), requestA); checks++;
     await page.evaluate(() => window.scrollTo(0, 0)); await open.click(); await expect(selected).toBeInViewport(); checks++;
     await selected.getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true }).click();
-    const dialog = page.getByRole('dialog'); await expect(dialog.getByRole('spinbutton')).toHaveValue('10'); await expect(dialog.getByRole('spinbutton')).toHaveAttribute('readonly', ''); await expect(dialog).toContainText(label(lang, 'طلب المتبرع من حسابه')); await expect(dialog.locator('textarea')).toHaveValue(new RegExp(requestA));const box=await dialog.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=page.viewportSize().height+1);checks++; await page.screenshot({path:path.join(output,`${lang}-${width}-request-reduction.png`),animations:'disabled'});checks++;
+    const dialog = page.getByRole('dialog'); await expect(dialog.getByRole('spinbutton')).toHaveValue('10'); await expect(dialog.getByRole('spinbutton')).toHaveAttribute('readonly', ''); await expect(dialog).toContainText(label(lang, 'طلب مباشر من حسابه الشخصي')); await expect(dialog.locator('textarea')).toHaveValue(new RegExp(requestA));const box=await dialog.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=page.viewportSize().height+1);checks++; await page.screenshot({path:path.join(output,`${lang}-${width}-request-reduction.png`),animations:'disabled'});checks++;
     await page.keyboard.press('Escape');await expect(dialog).toBeHidden(); assert.equal(requests.slice(before).filter(row => row.method !== 'GET').length, 0); checks++;
     await selected.getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true }).click();
     await dialog.getByRole('button', { name: label(lang, 'تأكيد التخفيض'), exact: true }).click(); await expect(dialog).toBeHidden(); await expect(selected).toContainText('10'); checks++;
@@ -122,7 +153,7 @@ try {
     await expect(page.locator(`#subscription-${planB}`)).toBeInViewport(); await expect(page.locator(`#subscription-${planA}`)).toHaveCount(0); await page.waitForTimeout(750); await expect(page.locator(`#subscription-${planA}`)).toHaveCount(0); await expect(page.locator('#subscription-requests')).not.toContainText('Donor Alpha'); checks++;
     await page.evaluate(href => window.fixtureNavigate(href), `/dashboard/monthly?userId=${donorB}&subscriptionId=${planB}&requestId=${requestA}#subscriptions`);
     await expect(section.getByRole('alert')).toContainText(label(lang,'تعذّر تحميل طلبات إدارة التبرع.'));checks++;
-    await page.locator(`#subscription-${planB}`).getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();await expect(dialog.getByRole('spinbutton')).toHaveValue('');await expect(dialog).not.toContainText(label(lang,'طلب المتبرع من حسابه'));await page.keyboard.press('Escape');await expect(dialog).toBeHidden();checks++;
+    await page.locator(`#subscription-${planB}`).getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();await expect(dialog.getByRole('spinbutton')).toHaveValue('');await expect(dialog).not.toContainText(label(lang,'طلب مباشر من حسابه الشخصي'));await page.keyboard.press('Escape');await expect(dialog).toBeHidden();checks++;
     await page.evaluate(href => window.fixtureNavigate(href), `/dashboard/monthly?userId=${donorA}&subscriptionId=${failedPlan}#subscriptions`);
     await expect(page.locator(`#subscription-${failedPlan}`)).toBeInViewport(); await expect(page.locator(`#subscription-${failedPlan}`).getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true })).toHaveCount(0); checks++;
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)); await page.evaluate(() => document.fonts.ready); await page.screenshot({ path: path.join(output, `${lang}-${width}.png`), fullPage: true }); checks++;

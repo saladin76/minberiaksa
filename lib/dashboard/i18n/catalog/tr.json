@@ -9392,5 +9392,13 @@
   "التغيير المطلوب غير مثبت على الاشتراك بعد. افتح الاشتراك ونفّذه ثم حدّث الطلب.": "İstenen değişiklik abonelikte henüz doğrulanmadı. Aboneliği açıp değişikliği uygulayın, ardından isteği yenileyin.",
   "إغلاق مع توضيح تعذّر التنفيذ": "Ret gerekçesiyle kapat",
   "تعديل الأرقام يحفظ ترتيب الكل فقط. ترتيب كل تصنيف مستقل.": "Bu sayılar yalnızca genel sıralamayı belirler. Her kategorinin sıralaması bağımsızdır.",
-  "تعديل الأرقام يحفظ ترتيب التصنيف المحدد فقط؛ الترتيب العام وبقية التصنيفات لا تتغير.": "Bu sayılar yalnızca seçili kategorinin sıralamasını belirler. Genel sıralama ve diğer kategoriler değişmez."
+  "تعديل الأرقام يحفظ ترتيب التصنيف المحدد فقط؛ الترتيب العام وبقية التصنيفات لا تتغير.": "Bu sayılar yalnızca seçili kategorinin sıralamasını belirler. Genel sıralama ve diğer kategoriler değişmez.",
+  "طلب مباشر من حسابه الشخصي": "Kişisel hesabından doğrudan istek",
+  "اختر طلبًا موثقًا وصالحًا من حساب المتبرع أولًا.": "Önce bağışçının hesabından doğrulanmış ve geçerli bir istek seçin.",
+  "اختر طلب تغيير مبلغ مسجّل من حساب المتبرع؛ المرجع والتاريخ يُستخرجان تلقائيًا.": "Bağışçının hesabından kaydedilmiş bir tutar değişikliği isteği seçin; referans ve tarih otomatik olarak doldurulur.",
+  "جارٍ تحميل طلبات المتبرع…": "Bağışçı istekleri yükleniyor…",
+  "تعذّر تحميل طلبات المتبرع. أعد المحاولة.": "Bağışçı istekleri yüklenemedi. Lütfen tekrar deneyin.",
+  "لا يوجد طلب تغيير مبلغ مفتوح وصالح لهذا الاشتراك من حساب المتبرع.": "Bu abonelik için bağışçının hesabından açık ve geçerli bir tutar değişikliği isteği yok.",
+  "طلب المتبرع الموثّق": "Doğrulanmış bağışçı isteği",
+  "تحديث طلبات المتبرع": "Bağışçı isteklerini yenile"
 }
