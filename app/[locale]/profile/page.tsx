@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import SubscriptionRequests from "@/components/minbar/account/SubscriptionRequests";
 import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
@@ -167,6 +167,8 @@ const ProfilePage = () => {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState("account");
+  const [focusedSubscriptionId, setFocusedSubscriptionId] = useState("");
+  const focusedSubscription = useRef("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -184,6 +186,7 @@ const ProfilePage = () => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
+    setFocusedSubscriptionId(params.get("subscriptionId") || "");
     if (tabParam && navigationItems.some((item) => item.id === tabParam)) {
       setActiveTab(tabParam);
     }
@@ -207,6 +210,15 @@ const ProfilePage = () => {
       cancelled = true;
     };
   }, [id, t]);
+
+  useEffect(() => {
+    if (!user || activeTab !== "subscriptions" || !focusedSubscriptionId || focusedSubscription.current === focusedSubscriptionId) return;
+    const frame = requestAnimationFrame(() => {
+      const target = document.getElementById(`profile-subscription-${focusedSubscriptionId}`);
+      if (target) { target.scrollIntoView({ block: "start", behavior: "instant" }); target.focus({ preventScroll: true }); focusedSubscription.current = focusedSubscriptionId; }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [user, activeTab, focusedSubscriptionId]);
 
   const handleTabChange = (tab: string) => {
     if (!navigationItems.some((item) => item.id === tab)) return;
@@ -857,7 +869,9 @@ const ProfilePage = () => {
               {subscriptionRows.map((donation) => (
                 <div
                   key={donation.subscriptionId ?? donation.id}
-                  className="p-4 sm:p-5 hover:bg-gray-50/60 transition-colors"
+                  id={`profile-subscription-${donation.subscriptionId}`}
+                  tabIndex={-1}
+                  className={cn("scroll-mt-28 p-4 sm:p-5 hover:bg-gray-50/60 transition-colors", donation.subscriptionId === focusedSubscriptionId && "bg-[#A5243D]/5 ring-2 ring-inset ring-[#A5243D]/30")}
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="flex-1 min-w-0">

@@ -1,6 +1,7 @@
 "use client";
 
 import { SubscriptionRequestsPanel } from "@/components/dashboard/SubscriptionRequestsPanel";
+import { focusSubscriptionTarget, subscriptionManagementHref, type SubscriptionRequestRow } from "@/lib/donations/subscription-navigation";
 import { RecurringHealthPanel } from "@/components/dashboard/RecurringHealthPanel";
 import { BILLING_READINESS_LABELS, type BillingReadiness } from "@/lib/donations/recurring-readiness";
 import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
@@ -8,9 +9,10 @@ import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   DollarSign,
   Heart,
@@ -313,8 +315,21 @@ function getDonationsDateRange(
 }
 
 export default function MonthlySubscriptionsDashboardPage() {
+  const params = useSearchParams();
+  const scope = [params.get("userId") || "", params.get("subscriptionId") || "", params.get("requestId") || ""].join(":");
+  // A different donor/request is a fresh workspace. In-flight responses and
+  // open editing dialogs from the previous scope cannot appear in this one.
+  return <MonthlySubscriptionsDashboard key={scope} />;
+}
+
+function MonthlySubscriptionsDashboard() {
   const locale = useLocale() as string;
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const linkedDonorId = searchParams.get("userId") || "";
+  const linkedSubscriptionId = searchParams.get("subscriptionId") || "";
+  const linkedRequestId = searchParams.get("requestId") || "";
+  const subscriptionNavigationKey = `${linkedDonorId}:${linkedSubscriptionId}:${linkedRequestId}`;
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -328,28 +343,9 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
-  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>(() => linkedDonorId || "all");
   /** Plan cadence  narrows every card, chart and table on the page. */
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>("all");
-
-  // Sync user filter from URL (e.g. from users page "تحليل تبرعات")
-  useEffect(() => {
-    const uid = searchParams.get("userId");
-    if (uid && uid !== "all") {
-      setSelectedUserId(uid);
-      fetch(`/api/users/${uid}`)
-        .then((r) => r.json())
-        .then((data) => {
-          const u = data?.user;
-          if (u)
-            setUsers((prev) => {
-              if (prev.some((x) => x.id === u.id)) return prev;
-              return [{ id: u.id, name: u.name ?? null, email: u.email ?? "" }, ...prev];
-            });
-        })
-        .catch(() => {});
-    }
-  }, [searchParams]);
 
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [dayOfMonth, setDayOfMonth] = useState<{
@@ -423,7 +419,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   // export reflects what the user is currently looking at.
   const [exportOpen, setExportOpen] = useState(false);
 
-  const [subStatusFilter, setSubStatusFilter] = useState<SubscriptionStatusFilter>("ACTIVE");
+  const [subStatusFilter, setSubStatusFilter] = useState<SubscriptionStatusFilter>(() => linkedDonorId ? "all" : "ACTIVE");
   const [subsRows, setSubsRows] = useState<SubscriptionRow[]>([]);
   const [subsPage, setSubsPage] = useState(1);
   const [subsTotal, setSubsTotal] = useState(0);
@@ -432,11 +428,50 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [subsSortBy, setSubsSortBy] = useState<"date" | "amount">("date");
   const [subsSortOrder, setSubsSortOrder] = useState<"asc" | "desc">("desc");
   const [subsStatusUpdatingId, setSubsStatusUpdatingId] = useState<string | null>(null);
+  const subscriptionsGeneration = useRef(0);
+  const subscriptionsAbort = useRef<AbortController | null>(null);
+  const lastSubscriptionNavigation = useRef("");
+  const [subsLoadedFor, setSubsLoadedFor] = useState("");
+  const [linkedRequest, setLinkedRequest] = useState<SubscriptionRequestRow | null>(null);
+  const activeLinkedRequest = linkedRequest?.id === linkedRequestId && linkedRequest.donorId === linkedDonorId && linkedRequest.subscriptionId === linkedSubscriptionId ? linkedRequest : null;
+  const [linkedRequestLoading, setLinkedRequestLoading] = useState(false);
+  const [linkedRequestError, setLinkedRequestError] = useState(false);
+  const [requestRevision, setRequestRevision] = useState(0);
+  const [reduceRequest, setReduceRequest] = useState<SubscriptionRequestRow | null>(null);
   const [reducePlan, setReducePlan] = useState<SubscriptionRow | null>(null);
   const [reduceAmount, setReduceAmount] = useState("");
-  const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED">("PHONE");
+  const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED" | "DONOR_REQUEST">("PHONE");
   const [reduceEvidence, setReduceEvidence] = useState("");
   const [reduceBusy, setReduceBusy] = useState(false);
+  useEffect(() => {
+    setLinkedRequest(null); setLinkedRequestError(false);
+    if (!linkedDonorId || !linkedSubscriptionId || !linkedRequestId) { setLinkedRequestLoading(false); return; }
+    const controller = new AbortController();
+    setLinkedRequestLoading(true);
+    const params = new URLSearchParams({ userId: linkedDonorId, subscriptionId: linkedSubscriptionId, requestId: linkedRequestId });
+    void fetch(`/api/admin/subscription-requests?${params}`, { signal: controller.signal, cache: "no-store" }).then(async response => {
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      const row = data.requests?.find((r: SubscriptionRequestRow) => r.id === linkedRequestId && r.donorId === linkedDonorId && r.subscriptionId === linkedSubscriptionId);
+      if (!row) throw new Error();
+      if (!controller.signal.aborted) setLinkedRequest(row);
+    }).catch(() => { if (!controller.signal.aborted) setLinkedRequestError(true); })
+      .finally(() => { if (!controller.signal.aborted) setLinkedRequestLoading(false); });
+    return () => controller.abort();
+  }, [linkedDonorId, linkedSubscriptionId, linkedRequestId, requestRevision]);
+
+  const openSubscriptionReduction = (plan: SubscriptionRow) => {
+    const row = activeLinkedRequest?.subscriptionId === plan.id && activeLinkedRequest.donorId === plan.donor?.id &&
+      activeLinkedRequest.kind === "AMOUNT_CHANGE" && ["NEW", "IN_PROGRESS"].includes(activeLinkedRequest.status) &&
+      activeLinkedRequest.currency === plan.currency && activeLinkedRequest.requestedAmount !== null &&
+      activeLinkedRequest.requestedAmount >= 1 && activeLinkedRequest.requestedAmount < plan.amount ? activeLinkedRequest : null;
+    setReduceRequest(row);
+    setReduceAmount(row ? String(row.requestedAmount) : "");
+    setReduceMethod(row ? "DONOR_REQUEST" : "PHONE");
+    setReduceEvidence(row ? `${dt("طلب تغيير المبلغ")} #${row.id} · ${new Date(row.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}` : "");
+    setReducePlan(plan);
+  };
+
   const [providerChecks, setProviderChecks] = useState<
     Record<string, { loading: boolean; result?: { rail: string; providerStatus: string | null; providerPaused: boolean | null; inSync: boolean; error?: string } }>
   >({});
@@ -727,7 +762,12 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   const fetchSubscriptions = useCallback(
     async (page: number, append: boolean) => {
+      subscriptionsAbort.current?.abort();
+      const controller = new AbortController();
+      subscriptionsAbort.current = controller;
+      const generation = ++subscriptionsGeneration.current;
       setSubsLoading(true);
+      if (!append) setSubsRows([]);
       try {
         const userIdFromUrl = searchParams.get("userId");
         const effectiveUserId =
@@ -739,6 +779,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         const params = new URLSearchParams();
         params.set("page", String(page));
         params.set("limit", String(PAGE_SIZE));
+        if (linkedSubscriptionId) params.set("subscriptionId", linkedSubscriptionId);
         params.set("sortBy", subsSortBy);
         params.set("sortOrder", subsSortOrder);
         params.set("status", subStatusFilter === "all" ? "ALL" : subStatusFilter);
@@ -747,8 +788,9 @@ export default function MonthlySubscriptionsDashboardPage() {
         if (effectiveUserId !== "all") params.set("userId", effectiveUserId);
         if (subsSearch) params.set("search", subsSearch);
         if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
-        const res = await fetch(`/api/admin/subscriptions?${params}`);
+        const res = await fetch(`/api/admin/subscriptions?${params}`, { signal: controller.signal });
         const data = await res.json();
+        if (generation !== subscriptionsGeneration.current) return;
         if (!res.ok) {
           toast.error(data?.error || dt("فشل في تحميل الاشتراكات"));
           return;
@@ -756,15 +798,17 @@ export default function MonthlySubscriptionsDashboardPage() {
         const list = Array.isArray(data.subscriptions) ? data.subscriptions : [];
         setSubsRows((prev) => (append ? [...prev, ...list] : list));
         setSubsTotal(data.pagination?.total ?? 0);
+        setSubsLoadedFor(`${effectiveUserId === "all" ? "" : effectiveUserId}:${linkedSubscriptionId}:${linkedRequestId}`);
       } catch {
-        toast.error(dt("فشل في تحميل الاشتراكات"));
+        if (generation === subscriptionsGeneration.current && !controller.signal.aborted) toast.error(dt("فشل في تحميل الاشتراكات"));
       } finally {
-        setSubsLoading(false);
-        setSubsFetchedOnce(true);
+        if (generation === subscriptionsGeneration.current) { setSubsLoading(false); setSubsFetchedOnce(true); }
       }
     },
     [
       searchParams,
+      linkedSubscriptionId,
+      linkedRequestId,
       selectedUserId,
       selectedCategory,
       selectedCampaign,
@@ -787,6 +831,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     try {
       const res = await axios.patch(`/api/admin/subscriptions/${reducePlan.id}`, {
         amount, consentMethod: reduceMethod, consentEvidence: reduceEvidence.trim(),
+        ...(reduceMethod === "DONOR_REQUEST" && reduceRequest ? { consentRequestId: reduceRequest.id } : {}),
       });
       if (!res.data?.ok) throw new Error("Reduction not confirmed");
       toast.success(dt("تم تخفيض المبلغ ابتداءً من الدورة القادمة وتوثيق موافقة المتبرع"));
@@ -797,11 +842,11 @@ export default function MonthlySubscriptionsDashboardPage() {
       await fetchSubscriptions(1, false);
       void fetchStats();
     } catch (error) {
-      toast.error(axios.isAxiosError(error) ? (error.response?.data?.error ?? dt("تعذّر التخفيض")) : dt("تعذّر التخفيض"));
+      toast.error(axios.isAxiosError(error) ? (error.response?.data?.code === "DONOR_REQUEST_MISMATCH" ? dt("طلب المتبرع غير صالح لهذا الاشتراك أو لهذا المبلغ.") : error.response?.data?.error ?? dt("تعذّر التخفيض")) : dt("تعذّر التخفيض"));
     } finally {
       setReduceBusy(false);
     }
-  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, fetchSubscriptions, fetchStats]);
+  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, reduceRequest, fetchSubscriptions, fetchStats]);
 
   const handleSubscriptionStatusChange = useCallback(
     async (
@@ -841,7 +886,9 @@ export default function MonthlySubscriptionsDashboardPage() {
   useEffect(() => {
     if (loading) return;
     setSubsPage(1);
-    fetchSubscriptions(1, false);
+    void fetchSubscriptions(1, false);
+    const controller = subscriptionsAbort.current;
+    return () => controller?.abort();
   }, [
     loading,
     selectedCategory,
@@ -855,6 +902,16 @@ export default function MonthlySubscriptionsDashboardPage() {
     frequencyFilter,
     fetchSubscriptions,
   ]);
+
+  useEffect(() => {
+    if (loading || subsLoading || linkedRequestLoading || !subsFetchedOnce || subsLoadedFor !== subscriptionNavigationKey ||
+        (!linkedDonorId && !linkedSubscriptionId) || lastSubscriptionNavigation.current === subscriptionNavigationKey) return;
+    const frame = requestAnimationFrame(() => {
+      focusSubscriptionTarget(linkedSubscriptionId);
+      lastSubscriptionNavigation.current = subscriptionNavigationKey;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [loading, subsLoading, linkedRequestLoading, subsFetchedOnce, subsLoadedFor, subscriptionNavigationKey, linkedDonorId, linkedSubscriptionId]);
 
   const loadMoreSubs = () => {
     const next = subsPage + 1;
@@ -961,7 +1018,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const frequencyLabelSuffix = frequencyFilter === "all" ? "" : `  ${FREQUENCY_LABEL_AR[frequencyFilter]}`;
 
   return (
-    <div className="min-h-0" dir={dashDir()}>
+    <div className="min-h-0 min-w-0 w-full" dir={dashDir()}>
       <div className="space-y-6 sm:space-y-8 p-0 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
         <PageHeader
           title={dt("التبرعات المتكررة والاشتراكات")}
@@ -984,7 +1041,7 @@ export default function MonthlySubscriptionsDashboardPage() {
 
         <div className="flex justify-end"><Link href="/dashboard/monthly/settings" className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold text-brand">{dt("إعدادات صفحة التبرع الدوري")}</Link></div>
         <RecurringHealthPanel />
-        <SubscriptionRequestsPanel />
+        <SubscriptionRequestsPanel donorId={linkedDonorId || (selectedUserId !== "all" ? selectedUserId : undefined)} selectedRequest={activeLinkedRequest} onChanged={() => setRequestRevision(value => value + 1)} />
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>
@@ -1126,20 +1183,20 @@ export default function MonthlySubscriptionsDashboardPage() {
               onValueChange={(v) => setStatCardSet(v as StatCardSet)}
               className="w-auto"
             >
-              <TabsList className="bg-muted p-1 rounded-lg h-9" dir={dashDir()}>
+              <TabsList className="bg-muted p-1 rounded-lg h-auto w-full grid grid-cols-3 sm:w-auto sm:inline-flex" dir={dashDir()}>
                 <TabsTrigger
                   value="revenue"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="min-h-9 min-w-0 whitespace-normal text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
                   {dt("الإيرادات")}</TabsTrigger>
                 <TabsTrigger
                   value="overview"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="min-h-9 min-w-0 whitespace-normal text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
                   {dt("نظرة عامة")}</TabsTrigger>
                 <TabsTrigger
                   value="breakdown"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="min-h-9 min-w-0 whitespace-normal text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
                   {dt("تفصيل الاشتراكات")}</TabsTrigger>
               </TabsList>
@@ -1646,20 +1703,20 @@ export default function MonthlySubscriptionsDashboardPage() {
 
                 <TabsContent value="split" className="mt-0" dir={dashDir()}>
                   <Tabs defaultValue="frequency" className="w-full" dir={dashDir()}>
-                    <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 inline-flex flex-row-reverse">
+                    <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 h-auto w-full grid grid-cols-3 sm:w-auto sm:inline-flex sm:flex-row-reverse">
                       <TabsTrigger
                         value="frequency"
-                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                        className="min-h-9 min-w-0 whitespace-normal data-[state=active]:bg-card data-[state=active]:shadow-sm text-xs sm:text-sm"
                       >
                         {dt("حسب الدورية")}</TabsTrigger>
                       <TabsTrigger
                         value="campaign-category"
-                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                        className="min-h-9 min-w-0 whitespace-normal data-[state=active]:bg-card data-[state=active]:shadow-sm text-xs sm:text-sm"
                       >
                         {dt("مشاريع vs فئات")}</TabsTrigger>
                       <TabsTrigger
                         value="subscription-status"
-                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                        className="min-h-9 min-w-0 whitespace-normal data-[state=active]:bg-card data-[state=active]:shadow-sm text-xs sm:text-sm"
                       >
                         {dt("حالة الاشتراك")}</TabsTrigger>
                     </TabsList>
@@ -1776,16 +1833,16 @@ export default function MonthlySubscriptionsDashboardPage() {
                     </TabsContent>
                   </Tabs>
                 </TabsContent>
-                <TabsList className="bg-slate-100 p-1 rounded-lg mt-6 flex-row-reverse w-full justify-end max-w-max">
+                <TabsList className="bg-slate-100 p-1 rounded-lg mt-6 h-auto w-full grid grid-cols-2 sm:inline-flex sm:flex-row-reverse sm:w-auto">
                   <TabsTrigger
                     value="split"
-                    className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
+                    className="min-h-11 min-w-0 whitespace-normal text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2 [&>svg]:shrink-0"
                   >
                     <PieChartIcon className="w-4 h-4" />
                     {dt("توزيع الإيرادات")}</TabsTrigger>
                   <TabsTrigger
                     value="time-series"
-                    className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
+                    className="min-h-11 min-w-0 whitespace-normal text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2 [&>svg]:shrink-0"
                   >
                     <BarChart3 className="w-4 h-4" />
                     {dt("الدفعات المتكررة عبر الزمن")}</TabsTrigger>
@@ -2383,15 +2440,18 @@ export default function MonthlySubscriptionsDashboardPage() {
         />
 
       {reducePlan && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="presentation">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6 space-y-4 text-start" dir={dashDir()} role="dialog" aria-modal="true" aria-labelledby="reduce-sub-title">
-            <h3 id="reduce-sub-title" className="text-lg font-bold">{dt("تخفيض مبلغ التبرع الدوري")}</h3>
-            <p className="text-sm text-slate-600">{dtx("المبلغ الحالي: {0} {1}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.", [reducePlan.amount, reducePlan.currency])}</p>
-            <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} dir="ltr" />
+        <Dialog open onOpenChange={open => { if (!open && !reduceBusy) setReducePlan(null); }}>
+          <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl text-start rtl:[&>button]:left-4 rtl:[&>button]:right-auto" dir={dashDir()}>
+            <DialogHeader className="text-start sm:text-start pe-6">
+              <DialogTitle>{dt("تخفيض مبلغ التبرع الدوري")}</DialogTitle>
+              <DialogDescription>{dtx("المبلغ الحالي: {0} {1}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.", [reducePlan.amount, reducePlan.currency])}</DialogDescription>
+            </DialogHeader>
+            <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} dir="ltr" />
             </label>
             <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} onValueChange={v => setReduceMethod(v as typeof reduceMethod)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent dir={dashDir()}>
+                  {reduceRequest && <SelectItem value="DONOR_REQUEST">{dt("طلب المتبرع من حسابه")}</SelectItem>}
                   <SelectItem value="PHONE">{dt("مكالمة هاتفية")}</SelectItem>
                   <SelectItem value="EMAIL">{dt("بريد إلكتروني")}</SelectItem>
                   <SelectItem value="WHATSAPP">{dt("واتساب")}</SelectItem>
@@ -2399,21 +2459,30 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </SelectContent>
               </Select>
             </label>
-            <label className="block text-sm font-medium">{dt("مرجع الموافقة وتاريخها")}<textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} placeholder={dt("التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند")} />
+            <label className="block text-sm font-medium">{dt("مرجع الموافقة وتاريخها")}<textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} placeholder={dt("التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند")} />
             </label>
             <p className="text-xs text-slate-500">{dt("لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.")}</p>
             <div className="flex gap-2">
               <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
               <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>{dt("إغلاق")}</button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
         {/* الاشتراكات  الجدول السفلي */}
-        <section className="space-y-4">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
+        <section id="subscriptions" tabIndex={-1} aria-labelledby="subscriptions-title" className="scroll-mt-28 space-y-4">
+          <h2 id="subscriptions-title" className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
             {dt("الاشتراكات")}</h2>
+          {linkedSubscriptionId && <Link href={subscriptionManagementHref(linkedDonorId)} className="inline-block text-sm text-brand underline">{dt("عرض جميع اشتراكات المتبرع")}</Link>}
+          {activeLinkedRequest && <a href={`#subscription-request-${activeLinkedRequest.id}`} className="ms-4 inline-block text-sm text-brand underline">{dt("فتح طلب المتبرع")}</a>}
+          {linkedRequestLoading && <p role="status" className="text-sm text-slate-500">{dt("جارٍ التحميل…")}</p>}
+          {linkedRequestError && <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات إدارة التبرع.")}</p>}
+          {activeLinkedRequest && <div id={`linked-request-${activeLinkedRequest.id}`} className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-start text-sm leading-7">
+            <p className="font-semibold">{dt(activeLinkedRequest.kind === "AMOUNT_CHANGE" ? "طلب تغيير المبلغ" : activeLinkedRequest.kind === "PAUSE" ? "طلب الإيقاف مؤقتاً" : "طلب الإلغاء")} {activeLinkedRequest.requestedAmount !== null && <bdi>{activeLinkedRequest.requestedAmount} {activeLinkedRequest.currency}</bdi>} · {dt(activeLinkedRequest.status === "COMPLETED" ? "منفّذ" : activeLinkedRequest.status === "IN_PROGRESS" ? "قيد التنفيذ" : "جديد")}</p>
+            <p className="whitespace-pre-wrap break-words">{activeLinkedRequest.note}</p>
+            <p className="text-xs text-slate-500"><bdi>#{activeLinkedRequest.id}</bdi> · {new Date(activeLinkedRequest.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}</p>
+          </div>}
           <Card className="border border-gray-200/60 shadow-md shadow-violet-500/5 overflow-hidden bg-card">
             <CardHeader className="border-b border-brand/20 py-4 bg-brand/4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between flex-row-reverse">
@@ -2442,6 +2511,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                       value={selectedUserId}
                       onValueChange={(v) => {
                         setSelectedUserId(v);
+                        router.push(v === "all" ? "/dashboard/monthly#subscriptions" : subscriptionManagementHref(v));
                         if (v === "all") {
                           setUsersSearchInput("");
                           setUsersSearchCommitted("");
@@ -2575,7 +2645,9 @@ export default function MonthlySubscriptionsDashboardPage() {
                       subsRows.map((s) => (
                         <tr
                           key={s.id}
-                          className="border-b border-slate-100 /80 hover:bg-gray-50/50 transition-colors"
+                          id={`subscription-${s.id}`}
+                          tabIndex={-1}
+                          className={cn("scroll-mt-28 border-b border-slate-100 /80 hover:bg-gray-50/50 transition-colors", s.id === linkedSubscriptionId && "bg-brand/5 ring-2 ring-inset ring-brand/30")}
                         >
                           <td className="py-2.5 px-3 align-top">
                             <button
@@ -2594,7 +2666,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                               {formatMoney(s.amount, s.currency, s.amountUSD ?? undefined)}
                             </span>
                             {(s.status === "ACTIVE" || s.status === "PAUSED") && (
-                              <button type="button" className="block mt-1 text-[11px] text-brand underline hover:text-brand/80" onClick={() => { setReducePlan(s); setReduceAmount(""); setReduceEvidence(""); }}>
+                              <button type="button" className="block mt-1 text-[11px] text-brand underline hover:text-brand/80" disabled={linkedRequestLoading} onClick={() => openSubscriptionReduction(s)}>
                                 {dt("تخفيض مبلغ الاشتراك")}</button>
                             )}
                             {/* Daily / Friday plans also show what they add up to in a month. */}

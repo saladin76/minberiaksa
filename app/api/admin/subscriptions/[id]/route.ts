@@ -52,6 +52,7 @@ export async function PATCH(
       where: { id },
       select: {
         id: true,
+        donorId: true,
         status: true,
         amount: true,
         currency: true,
@@ -77,10 +78,22 @@ export async function PATCH(
 
     if (loweringAmount) {
       const amount = body.amount;
-      const evidence = typeof body.consentEvidence === "string" ? body.consentEvidence.trim() : "";
+      let evidence = typeof body.consentEvidence === "string" ? body.consentEvidence.trim() : "";
       const proofType = body.consentMethod;
-      if (!Number.isFinite(amount) || amount < 1 || Math.round(amount * 100) !== amount * 100 || amount >= sub.amount ||
-          evidence.length < 12 || evidence.length > 2000 || !["PHONE", "EMAIL", "WHATSAPP", "SIGNED"].includes(proofType)) {
+      if (proofType === "DONOR_REQUEST") {
+        if (typeof body.consentRequestId !== "string" || !/^[a-f0-9]{24}$/i.test(body.consentRequestId)) return NextResponse.json({ error: "A verified donor request is required", code: "DONOR_REQUEST_MISMATCH" }, { status: 400 });
+        const donorRequest = await prisma.subscriptionServiceRequest.findUnique({ where: { id: body.consentRequestId } });
+        if (!donorRequest || donorRequest.subscriptionId !== sub.id || donorRequest.donorId !== sub.donorId ||
+            donorRequest.kind !== "AMOUNT_CHANGE" || !["NEW", "IN_PROGRESS"].includes(donorRequest.status) ||
+            donorRequest.currency !== sub.currency || donorRequest.requestedAmount !== amount) {
+          return NextResponse.json({ error: "Donor request does not match this plan or amount", code: "DONOR_REQUEST_MISMATCH" }, { status: 409 });
+        }
+        // The authenticated donor's stored request is the evidence. Never trust
+        // a reference or consent text supplied by the dashboard for this method.
+        evidence = `Donor account request ${donorRequest.id}; ${donorRequest.createdAt.toISOString()}; ${donorRequest.requestedAmount} ${donorRequest.currency}`;
+      }
+      if (!Number.isFinite(amount) || amount < 1 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || amount >= sub.amount ||
+          evidence.length < 12 || evidence.length > 2000 || !["PHONE", "EMAIL", "WHATSAPP", "SIGNED", "DONOR_REQUEST"].includes(proofType)) {
         return NextResponse.json({ error: "Enter a lower amount of at least 1, and documented donor consent (method + reference)" }, { status: 400 });
       }
       if (sub.status !== "ACTIVE" && sub.status !== "PAUSED") {
@@ -165,7 +178,7 @@ export async function PATCH(
               action: "SUBSCRIPTION_AMOUNT_REDUCED", entityType: "Subscription", entityId: sub.id,
               messageAr: `تخفيض التبرع الدوري من ${sub.amount} إلى ${newAmount} ${sub.currency} بموافقة المتبرع`,
               messageEn: `Recurring plan reduced ${sub.amount} -> ${newAmount} ${sub.currency} with documented donor consent`,
-              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, nextBillingDate: sub.nextBillingDate?.toISOString() },
+              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, consentRequestId: proofType === "DONOR_REQUEST" ? body.consentRequestId : null, nextBillingDate: sub.nextBillingDate?.toISOString() },
             },
           });
         });

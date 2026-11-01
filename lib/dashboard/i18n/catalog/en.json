@@ -9297,5 +9297,10 @@
   "للمحاولات الجديدة لمرة واحدة بالبطاقة: يكفي بلد IP سعودي أو رقم هاتف سعودي صحيح. تبقى الاشتراكات وPayPal والتحويل البنكي على مساراتها الحالية. تعطيل PayFor العام يمنع بدء عمليات جديدة عليه.": "For new one-time card attempts: a Saudi IP country or a valid Saudi phone is sufficient. Subscriptions, PayPal and bank transfers keep their current routes. The PayFor master switch prevents starting new PayFor payments when disabled.",
   "ترشيد الاستهلاك مفعّل: ندمج الطلبات المتطابقة ونُعيد استخدام نتائجها المكتملة لخمس دقائق. البحث يستخدم نموذجًا اقتصاديًا افتراضيًا، مع إبقاء النصوص الطويلة كاملة ومراجعتها قبل الحفظ.": "Usage optimization is active: identical requests are combined and completed results reused for five minutes. Research uses an economical default model while preserving full-length content for review before saving.",
   "توجيه السعودية إلى PayFor: {0}": "Saudi PayFor routing: {0}",
-  "الفلاتر والفترة": "Filters and period"
+  "الفلاتر والفترة": "Filters and period",
+  "عرض جميع اشتراكات المتبرع": "View all donor subscriptions",
+  "طلب المتبرع من حسابه": "Request from the donor’s account",
+  "طلب المتبرع غير صالح لهذا الاشتراك أو لهذا المبلغ.": "The donor request does not match this subscription or amount.",
+  "الطلب المحدد": "Selected request",
+  "فتح طلب المتبرع": "Open donor request"
 }

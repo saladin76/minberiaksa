@@ -9289,5 +9289,10 @@
   "للمحاولات الجديدة لمرة واحدة بالبطاقة: يكفي بلد IP سعودي أو رقم هاتف سعودي صحيح. تبقى الاشتراكات وPayPal والتحويل البنكي على مساراتها الحالية. تعطيل PayFor العام يمنع بدء عمليات جديدة عليه.": "Yeni tek seferlik kart denemelerinde Suudi Arabistan IP ülkesi veya geçerli Suudi telefon numarası yeterlidir. Abonelikler, PayPal ve banka havaleleri mevcut yollarını korur. PayFor ana anahtarı kapatıldığında yeni PayFor ödemeleri başlatılamaz.",
   "ترشيد الاستهلاك مفعّل: ندمج الطلبات المتطابقة ونُعيد استخدام نتائجها المكتملة لخمس دقائق. البحث يستخدم نموذجًا اقتصاديًا افتراضيًا، مع إبقاء النصوص الطويلة كاملة ومراجعتها قبل الحفظ.": "Kullanım optimizasyonu etkin: aynı istekler birleştirilir ve tamamlanan sonuçlar beş dakika yeniden kullanılır. Araştırma varsayılan olarak ekonomik bir model kullanır; uzun içerik kısaltılmadan kaydetmeden önce incelenir.",
   "توجيه السعودية إلى PayFor: {0}": "Suudi Arabistan PayFor yönlendirmesi: {0}",
-  "الفلاتر والفترة": "Filtreler ve dönem"
+  "الفلاتر والفترة": "Filtreler ve dönem",
+  "عرض جميع اشتراكات المتبرع": "Bağışçının tüm aboneliklerini göster",
+  "طلب المتبرع من حسابه": "Bağışçının hesabından gelen talep",
+  "طلب المتبرع غير صالح لهذا الاشتراك أو لهذا المبلغ.": "Bağışçı talebi bu abonelik veya tutarla eşleşmiyor.",
+  "الطلب المحدد": "Seçili talep",
+  "فتح طلب المتبرع": "Bağışçı talebini aç"
 }

@@ -12,10 +12,15 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions), denied = requireAdminOrDashboardPermission(session, "monthly");
   if (denied) return denied;
   const status = request.nextUrl.searchParams.get("status") || "OPEN";
-  const where = { status: status === "COMPLETED" ? "COMPLETED" : { in: ["NEW", "IN_PROGRESS"] } };
+  const userId = request.nextUrl.searchParams.get("userId");
+  const subscriptionId = request.nextUrl.searchParams.get("subscriptionId");
+  const requestId = request.nextUrl.searchParams.get("requestId");
+  if ([userId, subscriptionId, requestId].some(id => id && !/^[a-f0-9]{24}$/i.test(id))) return NextResponse.json({ error: "INVALID_REQUEST_FILTER" }, { status: 400 });
+  const scope = { ...(userId ? { donorId: userId } : {}), ...(subscriptionId ? { subscriptionId } : {}) };
+  const where = { ...scope, ...(requestId ? { id: requestId } : { status: status === "COMPLETED" ? "COMPLETED" : { in: ["NEW", "IN_PROGRESS"] } }) };
   const [requests, openCount] = await Promise.all([
     prisma.subscriptionServiceRequest.findMany({ where, orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.subscriptionServiceRequest.count({ where: { status: { in: ["NEW", "IN_PROGRESS"] } } }),
+    prisma.subscriptionServiceRequest.count({ where: { ...scope, status: { in: ["NEW", "IN_PROGRESS"] } } }),
   ]);
   const donors = await prisma.user.findMany({ where: { id: { in: [...new Set(requests.map(row => row.donorId))] } }, select: { id: true, name: true } });
   const names = new Map(donors.map(row => [row.id, row.name]));

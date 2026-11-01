@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     const categoryId = sp.get("categoryId");
     const campaignId = sp.get("campaignId");
     const userId = sp.get("userId");
+    const subscriptionId = sp.get("subscriptionId");
+    if (subscriptionId && !/^[a-f0-9]{24}$/i.test(subscriptionId)) return NextResponse.json({ error: "INVALID_SUBSCRIPTION_ID" }, { status: 400 });
     const search = sp.get("search")?.trim();
     const referralIdParam = sp.get("referralId");
     const frequency = parseFrequencyParam(sp.get("frequency"));
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Prisma.SubscriptionWhereInput = {};
+    if (subscriptionId) where.id = subscriptionId;
 
     if (referralIdParam) {
       where.referralId = referralIdParam;
