@@ -56,7 +56,8 @@ try {
     const poster = page.locator("img.mia-hero-poster");
     await expect(poster).toBeVisible(); await expect(poster).toHaveAttribute("fetchpriority", "high"); await expect.poll(() => poster.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
     assert.ok((await poster.boundingBox()).width <= width);
-    const waqfCta = page.locator("#waqf-grid > div:first-child > a");
+    const waqfCta = page.locator("#waqf-grid > div:first-child > a").filter({visible:true});
+    await expect(waqfCta).toHaveCount(1); await expect(waqfCta).toBeVisible();
     const colours = await waqfCta.evaluate(node=>{const s=getComputedStyle(node);return {fg:s.color,bg:s.backgroundColor};});
     const luminance = rgb=>{const channels=rgb.match(/\d+(?:\.\d+)?/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;};
     const a=luminance(colours.fg),b=luminance(colours.bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);assert.ok(ratio>=4.5,`${locale} waqf CTA contrast ${ratio}`);
