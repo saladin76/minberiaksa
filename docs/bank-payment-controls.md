@@ -6,7 +6,7 @@ Albaraka one-time checkout starts in direct 2D mode. A donor can select the opti
 
 ## Administrative operations
 
-Donation details contain bank inquiry, void, full/partial refund, and a durable adjustment history. Only ADMIN can move money or reconcile an uncertain result; authorized finance staff can inspect and inquire. These actions are separate from the original confirmed donation, which stays immutable. Existing gross revenue is not silently rewritten as net revenue.
+Donation details contain bank inquiry, void, full/partial refund, and a durable adjustment history. Only ADMIN can move money or reconcile an uncertain result; authorized finance staff can inspect and inquire. These actions are separate from the original confirmed donation, which stays immutable. Existing gross revenue is not silently rewritten as net revenue. Internal ledger, inquiry and lock fields are omitted from donor donation/history responses and ordinary list queries; they are loaded only by the permission-checked bank endpoint.
 
 - Albaraka: Agreement, Reverse, Return; original ReferenceCode is preferred, otherwise the original bank OrderId (including TDS_ for 3D).
 - PayFor: OrderInquiry, Void, Refund; original OrderId/OrgOrderId, original bank currency, and exact minor-unit arithmetic.

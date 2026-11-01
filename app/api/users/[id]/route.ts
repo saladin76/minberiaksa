@@ -47,6 +47,7 @@ export async function GET(
       where: { id },
       include: {
         donations: {
+          omit: { bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true },
           include: {
             subscription: {
               select: {
