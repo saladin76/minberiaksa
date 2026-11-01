@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { DonationBankOperations } from "./DonationBankOperations";
 import {
   Dialog,
   DialogContent,
@@ -656,6 +657,8 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
             ))}
         </div>
       </Section>
+
+      {["ALBARAKA", "PAYFOR"].includes(details.provider || "") && <DonationBankOperations key={donation.id} donationId={donation.id} />}
 
       {details.raw.length > 0 && (
         <Section title={dt("الاستجابة الكاملة من البوابة")}>

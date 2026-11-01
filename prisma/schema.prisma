@@ -822,6 +822,10 @@ model Donation {
   providerHostRefNum     String?
   providerErrorMessage   String?
   providerRaw            Json?
+  /// Append-only financial adjustment ledger. A durable lock survives lost bank responses.
+  bankOperations Json?
+  bankOperationLock String?
+  bankLastInquiry Json?
   reconciliationCheckedAt DateTime?
   reconciliationNextAt DateTime?
   reconciliationLeaseToken String?
@@ -911,7 +915,7 @@ model Subscription {
   /// for the dashboards. Rows created before this field existed are monthly,
   /// which is the only cadence that was ever actually billed.
   /// See lib/donations/recurring-schedule.ts.
-  frequency            RecurringFrequency @default(MONTHLY)
+  frequency            RecurringFrequency? @default(MONTHLY)
   /// IANA zone captured at sign-up (`Europe/Istanbul`), never a fixed offset:
   /// "Friday" and "the 15th" are resolved in it, so daylight saving is absorbed.
   timezone             String?

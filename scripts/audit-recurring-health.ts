@@ -2,6 +2,7 @@
 import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
 import { loadSubscriptionFrequencies } from "../lib/dashboard/recurring-frequency-filter";
+import { renewalEvidence } from "../lib/donations/renewal-evidence";
 import { recurringScheduleSnapshot } from "../lib/donations/recurring-schedule-snapshot";
 import { albaraka2DConfig, albarakaRecurringConfig, isAlbarakaConfigured, isAlbarakaRecurringCheckoutReady } from "../lib/albaraka";
 
@@ -48,7 +49,13 @@ async function main() {
     if (rows.length < 500) break;
     cursor = rows[rows.length - 1].id;
   }
+  const renewalSince = new Date(now.getTime() - 30 * 86400000);
+  const renewalRows = await prisma.donation.findMany({ where: { createdAt: { gte: renewalSince }, OR: [{ billingReason: "subscription_cycle" }, { providerTxnType: "RecurringSale" }] }, orderBy: { createdAt: "desc" }, take: 1001,
+    select: { provider: true, billingReason: true, providerTxnType: true, subscriptionId: true, paidAt: true, status: true, providerTxnResult: true, providerProcReturnCode: true, createdAt: true } });
+  const renewalFrequency = await loadSubscriptionFrequencies(prisma, renewalRows.map(row => row.subscriptionId).filter((id): id is string => Boolean(id)));
+  const renewals = renewalEvidence(renewalRows.slice(0, 1000), renewalFrequency, renewalSince, renewalRows.length <= 1000);
   console.log(JSON.stringify({
+    renewals,
     ranAt: now.toISOString(), readOnly: true, providerCalls: 0, databaseWrites: 0,
     readiness: {
       albarakaSignupTerminalConfigured: isAlbarakaConfigured(albaraka2DConfig()),

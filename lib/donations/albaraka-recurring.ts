@@ -119,7 +119,7 @@ async function chargeFor(totalAmount: number, currency: string): Promise<{ amoun
  * a charge that succeeded on a retry hours later does not drag the next cycle
  * off that slot. Plans without a rule step by frequency, as before.
  */
-function nextCycleAfter(sub: { frequency: string; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
+function nextCycleAfter(sub: { frequency: string | null; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
   let next = nextChargeForPlan(sub, due);
   // Bounded: a daily plan two years behind is 730 steps, which is fine; the
   // cap only guards against a clock that is wildly wrong.
@@ -218,6 +218,8 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
 
   const donorCountrySnapshot = (await getDonorCountryCodeForSnapshot(prisma, sub.donorId)) ?? undefined;
 
+  const cfg = albarakaRecurringConfig();
+
   // ── A row before the call ────────────────────────────────────────────────
   const donation = await prisma.donation.create({
     data: {
@@ -240,7 +242,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       providerOrderId: orderId,
       providerTxnType: "RecurringSale",
       providerRaw: {
-        albarakaRecurring: { orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
+        albarakaRecurring: { merchantNo: cfg.merchantNo, terminalNo: cfg.terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
       } as Prisma.InputJsonValue,
       items: sub.items.length
         ? { create: sub.items.map((item) => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD })) }
@@ -260,7 +262,6 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     return await recordFailure(sub, donation.id, attempt, now, "Stored card could not be decrypted", "Failed", amountUSD, err);
   }
 
-  const cfg = albarakaRecurringConfig();
   const body = buildAlbarakaRecurringSale(
     {
       orderId,

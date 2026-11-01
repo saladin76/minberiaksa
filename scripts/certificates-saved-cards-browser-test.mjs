@@ -27,8 +27,8 @@ const replacements = {
   "next-intl": 'export function useLocale(){return window.fixtureLocale}export function useMessages(){return window.fixtureMessages}export function useTranslations(ns){const t=(key,vars={})=>String(window.fixtureMessages[ns]?.[key]||key).replace(/\\{(\\w+)\\}/g,(_,k)=>vars[k]??"");t.has=key=>key in(window.fixtureMessages[ns]||{});return t}',
   "@/hooks/use-toast": 'export function useToast(){return{toast:value=>window.fixtureToasts.push(value)}}',
   "@/hooks/useMinbarCart": 'const items=[{id:"fixture",projectId:"fixture",title:"Fixture Project",typeKey:"project",freqKey:"once",amount:25,currency:"USD",amountUSD:25}];export function useMinbarCart(){return{items,hydrated:true,replace(){}}}',
-  "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return{currency:"USD",format:String,formatNumber:String}}',
-  "@/hooks/useDonationAmount": 'export function useDonationAmount(){return{lineTooSmall:()=>false,minLabel:"1"}}export function useHealLegacyRows(){}',
+  "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return{currency:"USD",rate:1,format:String,formatNumber:String}}',
+  "@/hooks/useDonationAmount": 'export function useDonationAmount(){return{lineTooSmall:()=>false,minLabel:"1",lineValue:row=>row.amount,inLocal:value=>value}}export function useHealLegacyRows(){}',
   "@/hooks/useReferralCode": 'export function useReferralCode(){return()=>null}',
   "@/lib/minbar/cart": 'export function readTeamSupport(){return 0}export function readTeamSupportRecurring(){return false}export function teamSupportIsRecurring(){return false}export function clearCart(){}export function rememberCheckoutAttempt(){}',
   "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return{teamSupportEnabled:false,mainGateway:"ALBARAKA",payforEnabled:false,albarakaUseOOS:false,albarakaConfigured:true,albarakaRecurringReady:true}}',
@@ -114,18 +114,19 @@ try {
   }
   for (const locale of ["ar", "en", "tr"]) for (const width of [390, 1440]) {
     const page = await pageAt(`/checkout?locale=${locale}`, width);
-    await page.locator('input[value="saved-card"]').waitFor();
+    await page.locator('input[value="saved-card"]').waitFor().catch(async error => { console.error(JSON.stringify({ browserErrors: errors, body: (await page.locator("body").innerText()).slice(0, 2500) })); throw error; });
     assert.equal(await page.locator('input[autocomplete="cc-number"]').count(), 0);
     const code = page.locator('input[autocomplete="cc-csc"]'); await code.fill("123");
-    await page.locator("#albaraka-2d").check();
+    assert.equal(await page.locator("#albaraka-3d").isChecked(), false, "direct 2D payment is the default");
     await page.locator('button[type="submit"]').click();
     await page.waitForFunction(() => window.fixtureSubmitted === true);
     const bank = await page.evaluate(() => window.fixtureBankCalls[0]);
     assert.equal(bank[5], "saved-card"); assert.equal(bank[3].number, ""); assert.equal(bank[3].cvv, "123");
+    await page.reload(); await page.locator('input[value="saved-card"]').waitFor(); await code.fill("321");
     await page.getByLabel(messages[locale].DonationDialog.useNewCard, { exact: true }).check();
     await page.locator('input[autocomplete="cc-number"]').waitFor();
     assert.equal(await code.inputValue(), "", "switching cards clears the security code");
-    assert.equal(await page.getByLabel(messages[locale].DonationDialog.rememberCard, { exact: true }).isChecked(), false);
+    assert.equal(await page.getByLabel(messages[locale].DonationDialog.rememberCard, { exact: true }).count(), 0);
     await page.screenshot({ path: `${output}/checkout-${locale}-${width}.png`, fullPage: true });
     await page.close(); cases++;
   }

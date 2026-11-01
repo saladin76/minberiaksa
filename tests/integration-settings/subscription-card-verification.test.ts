@@ -1,3 +1,4 @@
+import { subscriptionFrequencyWhere } from "../../lib/dashboard/recurring-frequency-filter";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Fault-injection fixtures deliberately supply partial Prisma clients and VM module exports. */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -10,7 +11,7 @@ import { albaraka3DLinkageError } from "../../lib/donations/albaraka-3d-verifica
 import { billingLeaseAvailable } from "../../lib/donations/recurring-lease";
 type Row = Record<string, any>;
 function service() {
- const mod={exports:{} as Row}; const deps: Row={"node:crypto":crypto,"@/lib/albaraka":{albarakaResponseMac,isStoredCardExpired},"./albaraka-3d-verification":{albaraka3DLinkageError},"./recurring-lease":{billingLeaseAvailable}};
+ const mod={exports:{} as Row}; const deps: Row={"node:crypto":crypto,"@/lib/albaraka":{albarakaResponseMac,isStoredCardExpired},"./albaraka-3d-verification":{albaraka3DLinkageError},"../dashboard/recurring-frequency-filter":{subscriptionFrequencyWhere},"./recurring-lease":{billingLeaseAvailable}};
  new vm.Script(ts.transpileModule(readFileSync("lib/donations/subscription-card-verification.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText).runInNewContext({module:mod,exports:mod.exports,Buffer,Date,Error,require:(id:string)=>{assert.ok(id in deps,id);return deps[id];}});return mod.exports;
 }
 const api=service(), now=new Date("2026-11-01T12:00:00Z"), cfg={merchantNo:"merchant",terminalNo:"terminal",encKey:"fixture-secret"};
@@ -56,4 +57,9 @@ test("legacy absent card and schedule fields can be repaired after a real bank a
 
 test("a signed but incomplete 3D bank result is not authorization",async()=>{
  for(const field of ["SecureTransactionId","CAVV","ECI","MD"]){const f=fixture();f.raw[field]="";f.sign();assert.equal((await f.run()).ok,false,field);assert.equal(f.writes(),0);}
+});
+
+test("monthly card authentication matches a legacy missing or null cadence without charging or changing its billing date", async () => {
+ for(const missing of [true,false]) { const f=fixture();f.state().verification.frequency="MONTHLY";if(missing)delete f.state().plan.frequency;else f.state().plan.frequency=null;const date=f.state().plan.nextBillingDate;
+ assert.equal((await f.run()).ok,true);assert.equal(f.state().plan.paymentCardId,f.state().card.id);assert.equal(f.state().plan.nextBillingDate.getTime(),date.getTime());assert.equal(f.writes(),1); }
 });

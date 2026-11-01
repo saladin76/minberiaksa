@@ -94,7 +94,7 @@ test("audience cadence inclusion and exclusion compose with monthly legacy handl
   const where = recurringAudienceWhere({ recurringFrequencies: ["MONTHLY"], excludeRecurringFrequencies: ["DAILY"] });
   assert.equal(where.length, 2);
   const text = JSON.stringify(where);
-  assert.match(text, /NOT/); assert.match(text, /PAID/); assert.match(text, /paidAt/); assert.match(text, /none/);
+  assert.match(text, /"isSet":false/); assert.match(text, /"frequency":null/); assert.match(text, /MONTHLY/); assert.match(text, /PAID/); assert.match(text, /paidAt/); assert.match(text, /none/);
   const once = JSON.stringify(recurringAudienceWhere({ oneTimeOnly: true }));
   assert.match(once, /isSet/); assert.match(once, /subscriptionId/); assert.match(once, /none/);
 });

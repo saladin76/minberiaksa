@@ -1751,7 +1751,9 @@
     "verificationDirectHelp": "Doğrulama kodu olmadan",
     "verificationSecure": "Banka doğrulaması",
     "verificationSecureHelp": "Kod istenebilir",
-    "verificationRequired": "Devam etmek için bir ödeme seçeneği seçin."
+    "verificationRequired": "Devam etmek için bir ödeme seçeneği seçin.",
+    "verificationSecureOptIn": "Banka doğrulaması kullan (3D Secure)",
+    "verificationOptionalHelp": "Varsayılan yöntem doğrudan ödemedir. Banka doğrulaması için bu seçeneği işaretleyin."
   },
   "certificates": {
     "certNoLabel": "Sertifika no",

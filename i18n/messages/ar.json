@@ -1751,7 +1751,9 @@
     "verificationDirectHelp": "بدون رمز تحقق",
     "verificationSecure": "تأكيد البنك",
     "verificationSecureHelp": "قد يُطلب رمز تحقق",
-    "verificationRequired": "اختر إحدى طريقتي الدفع للمتابعة."
+    "verificationRequired": "اختر إحدى طريقتي الدفع للمتابعة.",
+    "verificationSecureOptIn": "أرغب في التحقق البنكي (3D Secure)",
+    "verificationOptionalHelp": "الدفع المباشر هو الافتراضي. اختر هذا الخيار لإتمام التحقق عبر البنك."
   },
   "certificates": {
     "certNoLabel": "رقم الشهادة",

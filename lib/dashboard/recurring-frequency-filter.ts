@@ -12,8 +12,8 @@ import {
  * One rule matters here: plans written before `Subscription.frequency` existed
  * have no field at all in MongoDB, and they are monthly (the only cadence that
  * was ever billed then). A plain `{ frequency: "MONTHLY" }` would silently drop
- * them. So MONTHLY is expressed as "not DAILY and not FRIDAY", which an absent
- * field satisfies, and the lookups below only ever read `frequency` on rows
+ * them. MONTHLY explicitly includes missing and null legacy fields. The
+ * lookups below only ever read `frequency` on rows
  * that are known to carry DAILY or FRIDAY  never on a row that might lack it.
  */
 
@@ -30,7 +30,7 @@ const NON_MONTHLY: RecurringFrequency[] = ["DAILY", "FRIDAY"];
 /** Plans of one cadence, legacy (field-less) plans counted as MONTHLY. */
 export function subscriptionFrequencyWhere(frequency: RecurringFrequency): Prisma.SubscriptionWhereInput {
   if (frequency === "MONTHLY") {
-    return { NOT: NON_MONTHLY.map((f) => ({ frequency: f })) };
+    return { OR: [{ frequency: "MONTHLY" }, { frequency: { isSet: false } }, { frequency: null }] };
   }
   return { frequency };
 }
@@ -62,7 +62,7 @@ export async function loadSubscriptionFrequencies(
       },
       select: { id: true, frequency: true },
     });
-    for (const r of rows) byId.set(r.id, r.frequency);
+    for (const r of rows) if (isRecurringFrequency(r.frequency)) byId.set(r.id, r.frequency);
   }
   return (id) => (id ? byId.get(id) ?? "MONTHLY" : "MONTHLY");
 }

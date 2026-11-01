@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { renewalEvidence } from "../../lib/donations/renewal-evidence";
 import { recurringScheduleSnapshot } from "../../lib/donations/recurring-schedule-snapshot";
 function fixture(allowed = true, stale = false) {
   let reads = 0;
@@ -14,7 +15,8 @@ function fixture(allowed = true, stale = false) {
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: (_session: unknown, permission: string) => { assert.equal(permission, "monthly"); return allowed ? null : Response.json({}, { status: 403 }); } },
     "@/lib/albaraka": { isAlbarakaRecurringEnabled: () => true, isAlbarakaRecurringCheckoutReady: () => true }, "@/lib/paypal": { isPayPalConfigured: () => true, isPayPalRecurringEnabled: () => true },
     "@/lib/dashboard/recurring-frequency-filter": { loadSubscriptionFrequencies: async () => () => "DAILY" }, "@/lib/donations/recurring-schedule-snapshot": { recurringScheduleSnapshot },
-    "@/lib/prisma": { prisma: { subscription: { findMany: async () => { reads++; return [row]; } }, auditLog: { findFirst: async () => ({ action: "RECURRING_CHARGES_CHECK", createdAt: new Date(Date.now() - (stale ? 7200000 : 1000)), messageAr: "Read-only test", metadata: { ok: true, privateFixture: "do-not-return" } }) } } },
+    "@/lib/donations/renewal-evidence": { renewalEvidence },
+    "@/lib/prisma": { prisma: { donation: { findMany: async () => [] }, subscription: { findMany: async () => { reads++; return [row]; } }, auditLog: { findFirst: async () => ({ action: "RECURRING_CHARGES_CHECK", createdAt: new Date(Date.now() - (stale ? 7200000 : 1000)), messageAr: "Read-only test", metadata: { ok: true, privateFixture: "do-not-return" } }) } } },
   };
   const source = ts.transpileModule(fs.readFileSync("app/api/admin/subscriptions/health/route.ts", "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
   new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, Date, require: (name: string) => { assert.ok(name in deps, name); return deps[name]; } });

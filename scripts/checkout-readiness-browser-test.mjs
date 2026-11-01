@@ -53,7 +53,7 @@ const bundle = await build({stdin:{contents:entry,loader:"tsx",resolveDir:proces
 }}]});
 const js = bundle.outputFiles.find(file=>file.path.endsWith(".js")) || bundle.outputFiles[0];
 const css = bundle.outputFiles.find(file=>file.path.endsWith(".css"));
-const layout = (await postcss([tailwindcss({...require("../tailwind.config.ts").default,content:["components/DonationDialog.tsx","components/PayForCardForm.tsx","components/ui/*.tsx"]})]).process("@tailwind base;@tailwind components;@tailwind utilities;",{from:undefined})).css + await readFile("styles/minbar/minbar.css","utf8");
+const layout = (await postcss([tailwindcss({...require("../tailwind.config.ts").default,content:["components/minbar/checkout/*.tsx","components/DonationDialog.tsx","components/PayForCardForm.tsx","components/ui/*.tsx"]})]).process("@tailwind base;@tailwind components;@tailwind utilities;",{from:undefined})).css + await readFile("styles/minbar/minbar.css","utf8");
 const server = createServer((req,res)=>{
   if(req.url==="/bundle.js"){res.setHeader("content-type","text/javascript");res.end(js.text);}
   else if(req.url==="/bundle.css"){res.setHeader("content-type","text/css");res.end((css?.text||"")+layout);}
@@ -89,15 +89,14 @@ try {
    await page.locator("#checkout-cardNumber").waitFor();
    const submit=page.locator(".pay-form button[type=submit]");
    const before=requests.length;
-   assert.equal(await page.locator('input[name="albaraka-verification"]:checked').count(),0);
+   assert.equal(await page.locator('#albaraka-3d').isChecked(),false,"3D is an optional checkbox");
+   assert.equal(await page.locator('#albaraka-3d').getAttribute('type'),'checkbox');
    assert.equal(await submit.isDisabled(),false,"missing fields remain actionable so validation can explain them");
    assert.equal(requests.length,before);
    const mode=width===390?"2D":"3D";
-   await page.locator('#albaraka-'+mode.toLowerCase()).check();
+   if(mode==="3D") await page.locator('#albaraka-3d').check();
    assert.equal(requests.length,before,"choosing a mode must not create an order or contact a bank");
-   const boxes=await page.locator('.ab-verification-option').evaluateAll(nodes=>nodes.map(node=>({x:node.getBoundingClientRect().x,y:node.getBoundingClientRect().y,width:node.getBoundingClientRect().width})));
-   assert.equal(boxes.length,2);assert.equal(boxes[0].y,boxes[1].y,"options must remain side by side");
-   if(lang==="ar") assert.ok(boxes[0].x>boxes[1].x,"2D comes first on the right in RTL");
+   assert.equal(await page.locator('.ab-verification-option').count(),1);
    checks++;
 
    const checkField=async field=>{
@@ -159,7 +158,7 @@ try {
  }
  // Imported signed-in accounts must still correct required contact data.
  const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
- await page.locator("#albaraka-2d").check();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
+ await page.locator("#albaraka-3d").uncheck();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
  for(const frequency of ["daily","monthly","friday"]){
   const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=ar&frequency="+frequency);await page.locator("#checkout-cardNumber").waitFor();
   assert.equal(await page.locator('input[name="albaraka-verification"]').count(),1,"recurring checkout explains its fixed 2D route");assert.equal(await page.locator("#albaraka-2d").isChecked(),true);assert.equal(await page.locator("#albaraka-2d").isDisabled(),true);checks++;await page.close();
@@ -170,7 +169,7 @@ try {
   if(query.includes("payfor")) {
    await page.locator("#checkout-cardNumber").waitFor();assert.equal(await page.locator("#albaraka-3d").isChecked(),true);assert.equal(await page.locator("#albaraka-3d").isDisabled(),true);assert.equal(await page.locator("#albaraka-2d").count(),0);
   } else {
-   await page.locator("#albaraka-2d").waitFor();assert.equal(await page.locator("#checkout-cardNumber").count(),0);await page.locator("#albaraka-2d").check();await page.locator("#checkout-cardNumber").waitFor();await page.locator("#albaraka-3d").check();assert.equal(await page.locator("#checkout-cardNumber").count(),0);
+   await page.locator("#albaraka-3d").waitFor();assert.equal(await page.locator("#albaraka-3d").isChecked(),false);await page.locator("#checkout-cardNumber").waitFor();await page.locator("#albaraka-3d").check();assert.equal(await page.locator("#checkout-cardNumber").count(),0);await page.locator("#albaraka-3d").uncheck();await page.locator("#checkout-cardNumber").waitFor();
   }
   checks++;await page.close();
  }
@@ -197,10 +196,10 @@ try {
   });
   await page.addInitScript(()=>{window.fixtureSubmissions=[];HTMLFormElement.prototype.submit=function(){window.fixtureSubmissions.push({action:this.action,fields:Object.fromEntries(new FormData(this))})}});
   await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
-  await page.locator("#albaraka-2d").check();await page.locator("#checkout-email").fill("fixture@example.invalid");
+  await page.locator("#albaraka-3d").uncheck();await page.locator("#checkout-email").fill("fixture@example.invalid");
   await page.locator("#checkout-phone").fill("+90");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("5551234567");await page.locator("#checkout-phone").blur();
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
-  assert.equal(await page.locator('input[type="checkbox"]').count(),0,"no separate storage-consent checkbox");
+  assert.equal(await page.locator('input[type="checkbox"]').count(),1,"only the optional 3D checkbox is present");
   await page.locator(".pay-form button[type=submit]").click();await page.waitForFunction(()=>window.fixtureSubmissions.length===1);
   assert.equal(calls.filter(r=>r.path==="/api/credit-cards"&&r.method==="POST").length,1);
   assert.equal(calls.filter(r=>r.path==="/api/cart/payment").length,1);
@@ -223,7 +222,7 @@ try {
   await page.goto(origin+"/?lang=en&saudi=1&payfor=1");await page.locator("#checkout-cardNumber").waitFor();
   await page.locator("#checkout-firstName").fill("Fixture Donor");await page.locator("#checkout-email").fill("fixture@example.invalid");
   await page.locator("#checkout-phone").fill("+966");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("501234567");await page.locator("#checkout-phone").blur();
-  if(correction)await page.locator("#albaraka-2d").check();else await page.waitForFunction(()=>document.querySelector("#albaraka-3d")?.matches(":disabled"));
+  if(correction)await page.locator("#albaraka-3d").uncheck();else await page.waitForFunction(()=>document.querySelector("#albaraka-3d")?.matches(":disabled"));
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
   await page.locator(".pay-form button[type=submit]").click();
   if(correction){await page.waitForFunction(()=>document.querySelector("#albaraka-3d")?.matches(":disabled"));assert.equal(orderAttempts,1);assert.equal(await page.evaluate(()=>window.fixtureSubmissions.length),0);await page.locator("#checkout-cardCvc").fill("123");await page.locator(".pay-form button[type=submit]").click();}

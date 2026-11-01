@@ -54,7 +54,7 @@ type DueSubscription = Prisma.SubscriptionGetPayload<{ include: { items: true; c
  * a charge that succeeded on a retry hours later does not drag the next cycle
  * off that slot. Plans without a rule step by frequency, as before.
  */
-function nextCycleAfter(sub: { frequency: string; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
+function nextCycleAfter(sub: { frequency: string | null; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
   let next = nextChargeForPlan(sub, due);
   // Bounded: a daily plan two years behind is 730 steps, which is fine; the
   // cap only guards against a clock that is wildly wrong.

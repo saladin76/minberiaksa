@@ -151,6 +151,9 @@ jobs:
           - name: Subscription card authentication
             artifact: subscription-card
             script: scripts/subscription-card-browser-test.mjs
+          - name: Bank operations and saved cards
+            artifact: bank-operations
+            script: scripts/bank-operations-browser-test.mjs
           - name: Checkout
             artifact: checkout
             script: scripts/checkout-readiness-browser-test.mjs

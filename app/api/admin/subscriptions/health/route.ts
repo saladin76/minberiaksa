@@ -1,3 +1,4 @@
+import { renewalEvidence } from "@/lib/donations/renewal-evidence";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -32,6 +33,11 @@ export async function GET() {
     const metadata = lastCheck?.metadata && typeof lastCheck.metadata === "object" && !Array.isArray(lastCheck.metadata) ? lastCheck.metadata : {};
     const age = lastCheck ? now.getTime() - lastCheck.createdAt.getTime() : null;
     const schedulerState = !lastCheck ? "never" : lastCheck.action === "RECURRING_CHARGES_FAILED" || metadata.ok === false ? "failed" : age! < -300000 ? "unconfirmed" : age! > 40 * 60000 ? "stale" : "recent";
-    return NextResponse.json({ schedule: schedule.result(), schedulerState, checkedAt: now.toISOString(), readOnly: true, complete, groups: Object.values(groups), providers: { ALBARAKA: { enabled: isAlbarakaRecurringEnabled(), signupReady: isAlbarakaRecurringCheckoutReady() }, PAYPAL: { enabled: isPayPalConfigured() && isPayPalRecurringEnabled(), signupReady: isPayPalConfigured() && isPayPalRecurringEnabled() } }, lastCheck: lastCheck ? { createdAt: lastCheck.createdAt, action: lastCheck.action, messageAr: lastCheck.messageAr } : null }, { headers: { "Cache-Control": "no-store" } });
+    const renewalSince = new Date(now.getTime() - 30 * 86400000);
+    const renewalRows = await prisma.donation.findMany({ where: { createdAt: { gte: renewalSince }, OR: [{ billingReason: "subscription_cycle" }, { providerTxnType: "RecurringSale" }] }, orderBy: { createdAt: "desc" }, take: 1001,
+      select: { provider: true, billingReason: true, providerTxnType: true, subscriptionId: true, paidAt: true, status: true, providerTxnResult: true, providerProcReturnCode: true, createdAt: true } });
+    const renewalFrequency = await loadSubscriptionFrequencies(prisma, renewalRows.map(row => row.subscriptionId).filter((id): id is string => Boolean(id)));
+    const renewals = renewalEvidence(renewalRows.slice(0, 1000), renewalFrequency, renewalSince, renewalRows.length <= 1000);
+    return NextResponse.json({ renewals, schedule: schedule.result(), schedulerState, checkedAt: now.toISOString(), readOnly: true, complete, groups: Object.values(groups), providers: { ALBARAKA: { enabled: isAlbarakaRecurringEnabled(), signupReady: isAlbarakaRecurringCheckoutReady() }, PAYPAL: { enabled: isPayPalConfigured() && isPayPalRecurringEnabled(), signupReady: isPayPalConfigured() && isPayPalRecurringEnabled() } }, lastCheck: lastCheck ? { createdAt: lastCheck.createdAt, action: lastCheck.action, messageAr: lastCheck.messageAr } : null }, { headers: { "Cache-Control": "no-store" } });
   } catch { return NextResponse.json({ error: "RECURRING_HEALTH_UNAVAILABLE" }, { status: 503 }); }
 }

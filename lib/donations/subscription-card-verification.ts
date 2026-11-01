@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { albarakaResponseMac, isStoredCardExpired } from "@/lib/albaraka";
 import { albaraka3DLinkageError } from "./albaraka-3d-verification";
+import { subscriptionFrequencyWhere } from "../dashboard/recurring-frequency-filter";
 import { billingLeaseAvailable } from "./recurring-lease";
 
 export const cardVerificationHash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -32,7 +33,7 @@ export async function completeSubscriptionCardVerification(db: PrismaClient, id:
       const changed = await tx.subscription.updateMany({
         where: { id: row.subscriptionId, donorId: row.donorId, provider: "ALBARAKA", status: { not: "CANCELLED" },
           ...(row.oldPaymentCardId ? { paymentCardId: row.oldPaymentCardId } : {}), amount: row.amount, currency: row.currency,
-          frequency: row.frequency, teamSupport: row.teamSupport, coverFees: row.coverFees,
+          ...subscriptionFrequencyWhere(row.frequency), teamSupport: row.teamSupport, coverFees: row.coverFees,
           ...(row.nextBillingDate ? { nextBillingDate: row.nextBillingDate } : {}),
           AND: [billingLeaseAvailable(now), { OR: [{ amountChangeLock: null }, { amountChangeLock: { isSet: false } }] },
             ...(!row.oldPaymentCardId ? [{ OR: [{ paymentCardId: null }, { paymentCardId: { isSet: false as const } }] }] : []),

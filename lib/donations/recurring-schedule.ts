@@ -416,10 +416,11 @@ export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timez
  * whose frequency was changed without a new rule, or with no rule at all,
  * gets `null` and callers use the frequency-only `nextChargeAt`.
  */
-export function planRule(plan: { frequency: string; scheduleRule?: unknown }): ScheduleRule | null {
-  if (!isRecurringFrequency(plan.frequency)) return null;
+export function planRule(plan: { frequency: string | null; scheduleRule?: unknown }): ScheduleRule | null {
+  const frequency = plan.frequency ?? "MONTHLY";
+  if (!isRecurringFrequency(frequency)) return null;
   const rule = parseScheduleRule(plan.scheduleRule);
-  return rule && rule.kind === RULE_KIND[plan.frequency] ? rule : null;
+  return rule && rule.kind === RULE_KIND[frequency] ? rule : null;
 }
 
 /**
@@ -427,7 +428,7 @@ export function planRule(plan: { frequency: string; scheduleRule?: unknown }): S
  * it has one, so every cycle lands on the donor's chosen day and time (a
  * retried charge does not drag later cycles off it), else by frequency.
  */
-export function nextChargeForPlan(plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null }, from: Date): Date {
+export function nextChargeForPlan(plan: { frequency: string | null; scheduleRule?: unknown; timezone?: string | null }, from: Date): Date {
   const tz = normalizeTimezone(plan.timezone);
   const rule = planRule(plan);
   if (rule) return nextChargeFromRule(rule, from, tz);
@@ -435,7 +436,7 @@ export function nextChargeForPlan(plan: { frequency: string; scheduleRule?: unkn
 }
 
 /** The first scheduled charge of a stored plan after its checkout payment  see `firstChargeAfterCheckout`. */
-export function firstChargeForPlan(plan: { frequency: string; scheduleRule?: unknown; timezone?: string | null }, paidAt: Date): Date {
+export function firstChargeForPlan(plan: { frequency: string | null; scheduleRule?: unknown; timezone?: string | null }, paidAt: Date): Date {
   const tz = normalizeTimezone(plan.timezone);
   const rule = planRule(plan);
   if (rule) return firstChargeAfterCheckout(rule, paidAt, tz);

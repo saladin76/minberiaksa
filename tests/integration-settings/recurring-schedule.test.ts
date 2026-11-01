@@ -257,3 +257,9 @@ test("legacy plans without a stored time keep their old cadence", () => {
   assert.equal(parseScheduleRule({ kind: "weekday", weekday: 5, hour: 9 })?.kind, "weekday");
   assert.equal(parseScheduleRule({ kind: "prayer" }), null);
 });
+
+test("legacy null cadence retains its monthly rule for signup and the next cycle", () => {
+  const plan = { frequency: null, timezone: "Europe/Istanbul", scheduleRule: { kind: "monthDay", day: 15, hour: 9, minute: 0 } };
+  assert.equal(firstChargeForPlan(plan, new Date("2026-10-10T06:00:00Z")).toISOString(), "2026-11-15T06:00:00.000Z");
+  assert.equal(nextChargeForPlan(plan, new Date("2026-10-15T06:00:00Z")).toISOString(), "2026-11-15T06:00:00.000Z");
+});
