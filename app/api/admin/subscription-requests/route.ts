@@ -41,6 +41,10 @@ export async function PATCH(request: NextRequest) {
   const session = await getServerSession(authOptions), denied = requireAdminOrDashboardPermission(session, "monthly");
   if (denied) return denied;
   const body = await request.json().catch(() => null);
+  // A dashboard tab opened before this release must refresh, never silently
+  // overwrite a request using a newly-read server revision.
+  if (body && /^[a-f0-9]{24}$/i.test(body.id) && (typeof body.updatedAt !== "string" || !Number.isFinite(Date.parse(body.updatedAt))))
+    return NextResponse.json({ error: "تم تحديث الطلب من مستخدم آخر. أعد التحميل.", code: "REQUEST_REVISION_REQUIRED" }, { status: 409 });
   if (!body || !/^[a-f0-9]{24}$/i.test(body.id) || !["IN_PROGRESS", "COMPLETED", "REJECTED"].includes(body.status) ||
       typeof body.updatedAt !== "string" || !Number.isFinite(Date.parse(body.updatedAt)) ||
       typeof body.staffNote !== "string" || body.staffNote.trim().length < 3 || body.staffNote.length > 2000 ||

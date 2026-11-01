@@ -59,7 +59,7 @@ function fixture() {
 test("an authenticated donor request progresses through review, verified execution, and a private-safe outcome", async () => {
   const f = fixture(); assert.equal((await f.post()).status, 201);
   const firstRevision = (f.row().updatedAt as Date).toISOString();
-  f.role("ADMIN"); assert.equal((await f.patch()).status, 200);
+  f.role("ADMIN"); assert.equal((await f.patch({ updatedAt: undefined })).status, 409); assert.equal(f.row().status, "NEW"); assert.equal((await f.patch()).status, 200);
   assert.equal((await f.patch({ updatedAt: firstRevision, resolutionNote: "stale write" })).status, 409);
   assert.equal((await f.patch({ status: "COMPLETED" })).status, 409);
   f.plan.amount = 10;
