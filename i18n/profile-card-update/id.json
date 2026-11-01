@@ -1,0 +1,7 @@
+{
+  "title": "Perbarui kartu donasi rutin",
+  "description": "Izinkan kartu untuk pembayaran berikutnya pada langganan ini. Verifikasi bank tanpa penagihan sekarang; jumlah dan jadwal tetap sama.",
+  "submit": "Verifikasi dan izinkan pembayaran berikutnya",
+  "success": "Kartu terverifikasi dan terhubung untuk pembayaran berikutnya. Tidak ada penagihan sekarang.",
+  "error": "Pembaruan belum dapat dikonfirmasi. Periksa langganan atau hubungi lembaga sebelum mencoba lagi."
+}

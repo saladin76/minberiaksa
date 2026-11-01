@@ -1,0 +1,7 @@
+{
+  "title": "Opdater kort til faste donationer",
+  "description": "Godkend kortet til fremtidige betalinger i dette abonnement. Bankverificering uden betaling nu; beløb og tidsplan er uændrede.",
+  "submit": "Bekræft og godkend fremtidige betalinger",
+  "success": "Kortet er verificeret og knyttet til fremtidige betalinger. Intet beløb er trukket nu.",
+  "error": "Ændringen kunne ikke bekræftes. Tjek abonnementet eller kontakt foreningen, før du prøver igen."
+}

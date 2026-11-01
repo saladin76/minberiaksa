@@ -973,6 +973,36 @@ model Subscription {
   @@index([donorId, status])
 }
 
+/// A donor-owned 3DS card check. It never creates a donation or captures money.
+model SubscriptionCardVerification {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  subscriptionId    String @db.ObjectId
+  donorId           String @db.ObjectId
+  paymentCardId     String @db.ObjectId
+  oldPaymentCardId  String? @db.ObjectId
+  orderId           String @unique
+  tokenHash         String
+  cardDigest        String
+  status            String @default("PENDING")
+  amount            Float
+  currency          String
+  frequency         RecurringFrequency
+  teamSupport       Float
+  coverFees         Boolean
+  amountMinor       Int
+  currencyCode      String
+  merchantNo        String
+  terminalNo        String
+  nextBillingDate   DateTime?
+  consentSnapshot   Json
+  expiresAt         DateTime
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([subscriptionId, donorId, createdAt])
+  @@index([status, expiresAt])
+}
+
 model SubscriptionItem {
   id             String @id @default(auto()) @map("_id") @db.ObjectId
   subscriptionId String @db.ObjectId

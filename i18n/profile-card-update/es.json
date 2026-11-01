@@ -1,0 +1,7 @@
+{
+  "title": "Actualizar tarjeta de donación periódica",
+  "description": "Autoriza esta tarjeta para los próximos pagos de esta suscripción. Verificación bancaria sin cobro inmediato; importe y fechas no cambian.",
+  "submit": "Verificar y autorizar pagos futuros",
+  "success": "Tarjeta verificada y vinculada a pagos futuros. No se ha cobrado ahora.",
+  "error": "No se pudo confirmar el cambio. Revisa la suscripción o contacta con la asociación antes de volver a intentarlo."
+}

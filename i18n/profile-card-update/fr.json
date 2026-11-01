@@ -1,0 +1,7 @@
+{
+  "title": "Modifier la carte du don récurrent",
+  "description": "Autorisez cette carte pour les prochains paiements de cet abonnement. Vérification bancaire sans débit immédiat ; montant et calendrier inchangés.",
+  "submit": "Vérifier et autoriser les prochains paiements",
+  "success": "Carte vérifiée et associée aux prochains paiements, sans débit immédiat.",
+  "error": "La modification ne peut pas être confirmée. Vérifiez l’abonnement ou contactez l’association avant de réessayer."
+}

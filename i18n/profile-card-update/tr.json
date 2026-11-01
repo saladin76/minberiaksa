@@ -1,0 +1,7 @@
+{
+  "title": "Düzenli bağış kartını güncelle",
+  "description": "Bu aboneliğin sonraki ödemeleri için kartı yetkilendirin. Şimdi ödeme alınmadan bankanızla doğrulanır; tutar ve takvim aynı kalır.",
+  "submit": "Doğrula ve sonraki ödemeleri yetkilendir",
+  "success": "Kart doğrulandı ve sonraki ödemelere bağlandı. Şimdi ödeme alınmadı.",
+  "error": "Kart güncellemesi doğrulanamadı. Tekrar denemeden önce aboneliği kontrol edin veya dernekle iletişime geçin."
+}

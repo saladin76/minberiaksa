@@ -1,0 +1,7 @@
+{
+  "title": "Aggiorna la carta della donazione ricorrente",
+  "description": "Autorizza la carta per i prossimi pagamenti di questo abbonamento. Verifica bancaria senza addebito immediato; importo e scadenze invariati.",
+  "submit": "Verifica e autorizza i pagamenti futuri",
+  "success": "Carta verificata e collegata ai pagamenti futuri. Nessun addebito immediato.",
+  "error": "Impossibile confermare la modifica. Controlla l’abbonamento o contatta l’associazione prima di riprovare."
+}

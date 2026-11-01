@@ -28,7 +28,7 @@ function matches(row: Record<string, unknown>, filter: Record<string, unknown>):
   });
 }
 
-function fixture(options: { fresh?: boolean; recurring?: boolean; currency?: string; totalAmount?: number; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
+function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurring?: boolean; currency?: string; totalAmount?: number; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
   const state: Record<string, unknown> = {
     id, donorId: "222222222222222222222222", status: "PAID", paidAt: null, accessToken: "test-guest-token",
     currency: options.currency ?? "USD", totalAmount: options.totalAmount ?? 25, locale: "ar", provider: "ALBARAKA",
@@ -36,7 +36,7 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; currency?: str
     providerRaw: options.fresh ? null : { albarakaRequest: { orderId: order, amount: 125000, currencyCode: "TL", transactionType: "Sale", mode: "3D" } },
     subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: "444444444444444444444444" } : null,
   };
-  const calls = { sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
+  const calls = { cardVerifications: 0, sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
   const prisma = {
     donation: {
       async findUnique() { return structuredClone(state); },
@@ -76,6 +76,7 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; currency?: str
     "@/lib/donations/authentication-recovery": { bankRequestsAuthentication },
     "@/lib/payment-public-origin": { paymentPublicOrigin },
     "@/lib/donations/albaraka-3d-verification": { albaraka3DLinkageError },
+    "@/lib/donations/subscription-card-verification": { completeSubscriptionCardVerification: async () => { if (options.cardVerification === undefined) throw new Error("Donation callback must not verify a replacement card"); calls.cardVerifications++; return {ok: options.cardVerification, subscriptionId: "3".repeat(24)}; } },
     "@/lib/locales": { isValidLocale: (locale: string) => ["ar", "en", "tr"].includes(locale) },
     "@/lib/donations/access-token": { withDonationToken: (path: string, token: string | null) => path + (token ? "?t=" + token : "") },
     "@/lib/payment-gateway": { parseMainGateway: (value: string) => value },
@@ -101,7 +102,8 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; currency?: str
   };
   const callback = (values = raw()) => load("callback")(new Request(`https://minber.test/api/albaraka/3d/callback?donationId=${id}&locale=ar`, { method: "POST", body: new URLSearchParams(values) }));
   const initiate = (mode?: unknown) => load("initiate")(new Request("https://minber.test/api/albaraka/3d/initiate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ donationId: id, locale: "ar", ...(mode === undefined ? {} : { securityMode: mode }), card: { number: pan, expiry: "12/35", cvv: "123", holder: "Test Donor" } }) }));
-  return { state, calls, raw, callback, initiate };
+  const cardCallback = (token = "n".repeat(43)) => load("callback")(new Request(`https://minber.test/api/albaraka/3d/callback?cardVerificationId=${"b".repeat(24)}&token=${token}&donationId=${id}&locale=tr`, { method: "POST", body: new URLSearchParams(raw()) }));
+  return { state, calls, raw, callback, initiate, cardCallback };
 }
 
 test("AUTHENTICATION_ATTEMPT upgrades a donor-present 2D attempt only after confirmed no-sale, without another capture", async () => {
@@ -220,4 +222,11 @@ test("one Turkish lira remains 100 minor units and uses the same safe result han
   const response = await f.initiate("2D"); const result = await response.json();
   assert.equal(response.status, 200); assert.equal(result.method, "GET");
   assert.equal(String(f.calls.saleBodies[0].Amount), "100"); assert.equal(f.calls.saleBodies[0].CurrencyCode, "TL");
+});
+
+for (const verified of [true, false]) test(`replacement card callback (${verified}) never falls through to a Sale or donation mutation`, async () => {
+ const f = fixture({cardVerification: verified});const response = await f.cardCallback();assert.equal(response.status,303);const target=new URL(response.headers.get("location")!);assert.equal(target.pathname,"/tr/profile");assert.equal(target.searchParams.get("cardUpdate"),verified?"success":"failed");assert.equal(target.searchParams.has("verificationId"),verified);assert.equal(f.calls.cardVerifications,1);assert.equal(f.calls.sales+f.calls.mutations+f.calls.settles,0);
+});
+test("malformed card authentication nonce never falls through to a valid donation ID", async()=>{
+ const f=fixture({cardVerification:true});const response=await f.cardCallback("invalid");assert.equal(new URL(response.headers.get("location")!).searchParams.get("cardUpdate"),"failed");assert.equal(f.calls.cardVerifications+f.calls.sales+f.calls.mutations,0);
 });

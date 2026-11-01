@@ -139,6 +139,9 @@ jobs:
           - name: Subscription management
             artifact: subscriptions
             script: scripts/subscription-management-browser-test.mjs
+          - name: Subscription card authentication
+            artifact: subscription-card
+            script: scripts/subscription-card-browser-test.mjs
           - name: Checkout
             artifact: checkout
             script: scripts/checkout-readiness-browser-test.mjs

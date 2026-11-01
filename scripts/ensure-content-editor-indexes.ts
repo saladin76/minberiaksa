@@ -79,6 +79,9 @@ const indexes = [
   { collection: "SiteVisitor", key: { ip: 1 }, unique: false },
   { collection: "SiteVisitor", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
   { collection: "SiteAccessRule", key: { enabled: 1, updatedAt: -1 }, unique: false },
+  { collection: "SubscriptionCardVerification", key: { orderId: 1 }, unique: true },
+  { collection: "SubscriptionCardVerification", key: { subscriptionId: 1, donorId: 1, createdAt: 1 }, unique: false },
+  { collection: "SubscriptionCardVerification", key: { status: 1, expiresAt: 1 }, unique: false },
 ];
 
 async function run() {

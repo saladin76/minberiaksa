@@ -18,6 +18,22 @@ export type CampaignRecipientBreakdown = {
   recipientLocaleCounts: Record<string, number>;
 };
 
+/** Coverage needs counts, not a full contact preview or profile-bootstrap writes. */
+export async function countCampaignRecipientLocales(channel: CommunicationChannelId, audienceSegmentKey: string | null): Promise<Record<string, number>> {
+  const listId = parseListKey(audienceSegmentKey);
+  if (listId) {
+    const list = await readCampaignAudienceList(listId);
+    const smart = await getSmartAudienceDefinitionForList(listId);
+    if (!smart && list.type !== "SMART") {
+      const { countSavedListLanguages } = await import("./campaign-language-counts");
+      return countSavedListLanguages(listId, channel);
+    }
+    if (!smart) throw new Error("SMART_AUDIENCE_DEFINITION_UNAVAILABLE");
+    return (await previewSmartAudience({ ...smart, channel }, 0)).eligibleLanguages;
+  }
+  return (await getRecipientBreakdown(channel, { locale: audienceSegmentKey })).recipientLocaleCounts;
+}
+
 function combineBreakdown(channel: CommunicationChannelId, locales: LocaleRecipientBreakdown[]): CampaignRecipientBreakdown {
   const totals = locales.reduce((acc, row) => ({
     total: acc.total + row.total, eligible: acc.eligible + row.eligible,

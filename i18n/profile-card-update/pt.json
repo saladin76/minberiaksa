@@ -1,0 +1,7 @@
+{
+  "title": "Atualizar cartão da doação recorrente",
+  "description": "Autorize o cartão para os próximos pagamentos desta assinatura. Verificação bancária sem cobrança agora; valor e datas permanecem iguais.",
+  "submit": "Verificar e autorizar pagamentos futuros",
+  "success": "Cartão verificado e associado aos próximos pagamentos. Nenhuma cobrança agora.",
+  "error": "Não foi possível confirmar a alteração. Verifique a assinatura ou contacte a associação antes de tentar novamente."
+}

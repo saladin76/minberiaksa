@@ -52,6 +52,7 @@ export async function GET(
               select: {
                 id: true,
                 status: true,
+                provider: true,
                 frequency: true,
                 amount: true,
                 currency: true,
@@ -97,6 +98,7 @@ export async function GET(
         frequency: type === 'MONTHLY' ? (sub?.frequency ?? 'MONTHLY') : null,
         nextBillingDate: type === 'MONTHLY' ? (sub?.nextBillingDate ?? null) : null,
         planAmount: type === 'MONTHLY' ? (sub?.amount ?? null) : null,
+        subscriptionProvider: type === 'MONTHLY' ? (sub?.provider ?? null) : null,
       };
     };
 

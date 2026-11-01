@@ -13,17 +13,15 @@ function run(args: string[], mode = "normal") {
     writeFileSync(join(root, "node_modules/@next/env/package.json"), '{"main":"index.cjs"}');
     writeFileSync(join(root, "node_modules/@next/env/index.cjs"), 'exports.loadEnvConfig=()=>{};');
     copyFileSync("scripts/configure-campaign-sending.mjs", join(root, "configure.mjs"));
+    copyFileSync("scripts/settings-command-service.mjs", join(root, "settings-command-service.mjs"));
+    writeFileSync(join(root, "settings-command-runtime.mjs"), 'export function ensureSettingsCommandRuntime(){}');
     writeFileSync(join(root, "release-metadata-runtime.mjs"), `
       import assert from 'node:assert/strict';
       const mode=process.env.SENDING_QA_MODE;
-      let controls={emergencyStop:true,whatsappMarketingCooldownDays:mode==='zero'?0:7};
+      let controls={emergencyStop:true,whatsappMarketingCooldownDays:mode==='zero'?0:7,whatsappMarketingCooldownConfigured:true};
+      const tx={communicationGlobalControl:{findUnique:async()=>{if(mode==='read-failed')throw Error('read failed');return controls;},upsert:async({update})=>{if(mode==='write-failed')throw Error('write failed');assert.deepEqual(Object.keys(update).sort(),['updatedBy','whatsappMarketingCooldownConfigured','whatsappMarketingCooldownDays']);controls={...controls,...update};return controls;}},auditLog:{create:async({data})=>{assert.equal(data.metadata.externalCall,false);}}};
       export async function loadReleaseModule(path){
-        if(path==='lib/prisma.ts')return {prisma:{$disconnect:async()=>{}}};
-        if(path==='lib/audit-log.ts')return {writeAuditLog:async row=>{assert.equal(row.metadata.externalCall,false);assert.equal(row.metadata.whatsappMarketingCooldownDays,0);}};
-        if(path==='lib/communication/campaign-send-controls.ts')return {
-          readCampaignGlobalControls:async()=>mode==='read-failed'?{ok:false}:{ok:true,controls:{...controls}},
-          setCampaignGlobalControls:async patch=>{assert.deepEqual(Object.keys(patch),['whatsappMarketingCooldownDays']);if(mode==='write-failed')return null;controls={...controls,...patch};return controls;}
-        };
+        if(path==='lib/prisma.ts')return {prisma:{...tx,$transaction:async fn=>fn(tx),$disconnect:async()=>{}}};
         throw new Error('Unexpected dependency');
       }
     `);

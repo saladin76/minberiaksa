@@ -1,0 +1,7 @@
+{
+  "title": "Përditëso kartën e dhurimit periodik",
+  "description": "Autorizo kartën për pagesat e ardhshme të këtij abonimi. Verifikimi bankar nuk tërheq para tani; shuma dhe orari mbeten të njëjta.",
+  "submit": "Verifiko dhe autorizo pagesat e ardhshme",
+  "success": "Karta u verifikua dhe u lidh me pagesat e ardhshme. Nuk u tërhoqën para tani.",
+  "error": "Përditësimi nuk mund të konfirmohej. Kontrollo abonimin ose kontakto shoqatën para se të provosh sërish."
+}

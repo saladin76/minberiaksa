@@ -1,0 +1,7 @@
+{
+  "title": "Uppdatera kort för återkommande gåvor",
+  "description": "Godkänn kortet för framtida betalningar i denna prenumeration. Bankverifiering utan debitering nu; belopp och schema är oförändrade.",
+  "submit": "Verifiera och godkänn framtida betalningar",
+  "success": "Kortet har verifierats och kopplats till framtida betalningar. Ingen debitering nu.",
+  "error": "Ändringen kunde inte bekräftas. Kontrollera prenumerationen eller kontakta föreningen innan du försöker igen."
+}

@@ -1,0 +1,7 @@
+{
+  "title": "Update recurring donation card",
+  "description": "Authorize this card for future payments of this subscription. Verify it with your bank without a charge now; the amount and schedule stay the same.",
+  "submit": "Verify and authorize future payments",
+  "success": "Card verified and linked to future payments. No money was charged now.",
+  "error": "The card update could not be confirmed. Check your subscription or contact the institution before trying again."
+}

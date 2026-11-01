@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import SubscriptionRequests from "@/components/minbar/account/SubscriptionRequests";
+import { SubscriptionCardChange, SubscriptionCardChangeResult } from "@/components/minbar/account/SubscriptionCardChange";
 import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { useSession, signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -68,6 +69,7 @@ interface DonationForProfile {
   paidAt?: string | null;
   status: string | null;
   subscriptionId?: string | null;
+  subscriptionProvider?: string | null;
   /** DAILY | FRIDAY | MONTHLY on a plan; null on a one-time gift. */
   frequency?: string | null;
   nextBillingDate?: string | null;
@@ -987,6 +989,7 @@ const ProfilePage = () => {
               ))}
             </div>
             {sub.subscriptionId && <SubscriptionRequests key={sub.subscriptionId} subscriptionId={sub.subscriptionId} />}
+            {sub.subscriptionId && sub.status !== "CANCELLED" && sub.subscriptionProvider === "ALBARAKA" && <SubscriptionCardChange key={`card-${sub.subscriptionId}`} subscriptionId={sub.subscriptionId} locale={locale} />}
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
@@ -1016,7 +1019,7 @@ const ProfilePage = () => {
       case "donations":
         return renderDonations(currentUser);
       case "subscriptions":
-        return renderSubscriptions(currentUser);
+        return <><SubscriptionCardChangeResult />{renderSubscriptions(currentUser)}</>;
       case "settings":
         return renderSettings(currentUser);
       case "support":

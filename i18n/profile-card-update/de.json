@@ -1,0 +1,7 @@
+{
+  "title": "Karte für regelmäßige Spenden ändern",
+  "description": "Autorisieren Sie die Karte für künftige Zahlungen dieses Abonnements. Bankprüfung ohne sofortige Abbuchung; Betrag und Termine bleiben gleich.",
+  "submit": "Prüfen und künftige Zahlungen autorisieren",
+  "success": "Karte geprüft und für künftige Zahlungen hinterlegt. Jetzt wurde nichts abgebucht.",
+  "error": "Die Änderung konnte nicht bestätigt werden. Prüfen Sie das Abonnement oder kontaktieren Sie den Verein vor einem neuen Versuch."
+}

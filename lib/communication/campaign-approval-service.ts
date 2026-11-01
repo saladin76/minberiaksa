@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { transitionCampaign, type CampaignAction } from "./campaign-service";
-import { getRecipientBreakdown } from "./campaign-recipient-service";
+import { countCampaignRecipientLocales } from "./campaign-recipient-service";
 import { getTemplateAvailableLocales } from "./template-compat";
 import { computeLanguageCoverage } from "./language-coverage";
 import { isCommunicationChannel } from "./communication-runtime-types";
@@ -33,7 +33,7 @@ export async function evaluateCoverageGate(campaignId: string, batchLocaleCounts
   const [recipientLocaleCounts, available] = await Promise.all([
     batchLocaleCounts !== undefined
       ? Promise.resolve(batchLocaleCounts)
-      : getRecipientBreakdown(campaign.channel, { locale: campaign.audienceSegmentKey }).then((breakdown) => breakdown.recipientLocaleCounts),
+      : countCampaignRecipientLocales(campaign.channel, campaign.audienceSegmentKey),
     getTemplateAvailableLocales(campaign.channel, campaign.templateGroupId),
   ]);
   const coverage = computeLanguageCoverage(recipientLocaleCounts, available);

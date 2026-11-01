@@ -1,0 +1,7 @@
+{
+  "title": "Kaart voor terugkerende donaties wijzigen",
+  "description": "Machtig de kaart voor toekomstige betalingen van dit abonnement. Bankverificatie zonder directe afschrijving; bedrag en planning blijven gelijk.",
+  "submit": "Verifiëren en toekomstige betalingen machtigen",
+  "success": "Kaart geverifieerd en gekoppeld aan toekomstige betalingen. Nu is niets afgeschreven.",
+  "error": "De wijziging kon niet worden bevestigd. Controleer het abonnement of neem contact op met de vereniging voordat u opnieuw probeert."
+}

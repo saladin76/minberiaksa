@@ -148,8 +148,29 @@ export async function listChannelTemplates(
 }
 
 export async function getTemplateAvailableLocales(channel: CommunicationChannelId, templateId: string): Promise<SupportedLocale[]> {
-  const list = await listChannelTemplates(channel);
-  return list.find((t) => t.id === templateId)?.availableLocales ?? [];
+  if (!process.env.DATABASE_URL) throw new Error("COMMUNICATION_TEMPLATE_DATABASE_UNAVAILABLE");
+  // A gate for ONE saved campaign must not load the whole catalogue. Besides
+  // slowing every batch, the 200-item picker cap hid older valid templates.
+  const trigger = await prisma.messageTrigger.findFirst({ where: { channel, templateId }, select: { id: true } });
+  if (channel === "WHATSAPP") {
+    const defaults = await prisma.communicationSender.findMany({ where: { channel: "WHATSAPP", provider: "META_WHATSAPP", enabled: true, status: "ACTIVE", isDefault: true, businessAccountId: { not: null } }, select: { businessAccountId: true }, take: 2 });
+    const waba = defaults.length === 1 ? defaults[0].businessAccountId?.trim() : null;
+    if (!waba) throw new Error("ONE_ACTIVE_DEFAULT_WHATSAPP_SENDER_REQUIRED");
+    const row = await prisma.whatsappTemplate.findUnique({ where: { id: templateId }, select: { id: true, kind: true, purpose: true, category: true, status: true,
+      wabaVariants: { where: { provider: "META_WHATSAPP", businessAccountId: waba, approvalStatus: "APPROVED", providerTemplateId: { not: null } }, select: { languageCode: true, providerTemplateName: true, providerTemplateId: true } } } });
+    if (!row || row.status === "ARCHIVED" || resolveTemplateKind(row, Boolean(trigger)) !== "CAMPAIGN") return [];
+    const locales = new Set<SupportedLocale>();
+    for (const variant of row.wabaVariants) {
+      if (!variant.providerTemplateName?.trim() || !variant.providerTemplateId?.trim()) continue;
+      const locale = templateLocaleFromLanguage(variant.languageCode);
+      if (isValidLocale(locale)) locales.add(locale);
+    }
+    return [...locales];
+  }
+  const query = { where: { id: templateId }, select: { id: true, kind: true, purpose: true, status: true, translations: true } } as const;
+  const row = channel === "SMS" ? await prisma.smsTemplate.findUnique(query) : await prisma.emailTemplate.findUnique(query);
+  if (!row || row.status === "ARCHIVED" || resolveTemplateKind(row, Boolean(trigger)) !== "CAMPAIGN") return [];
+  return localesFromTranslations(DEFAULT_LOCALE, row.translations);
 }
 
 export type RenderedTemplate = {

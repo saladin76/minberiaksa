@@ -28,12 +28,14 @@ export function CampaignRecoveryDialog({ open, onOpenChange, campaignId, campaig
   const [data, setData] = React.useState<Diagnostic | null>(null), [error, setError] = React.useState<string | null>(null), [busy, setBusy] = React.useState(false), [loading, setLoading] = React.useState(false), [revision, setRevision] = React.useState(0);
   React.useEffect(() => {
     if (!open) return;
-    const controller = new AbortController(); setLoading(true); setError(null); setData(null);
+    const controller = new AbortController(); let timedOut = false;
+    const deadline = window.setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
+    setLoading(true); setError(null); setData(null);
     fetch(`/api/communication/campaigns/${campaignId}/recovery`, { cache: "no-store", signal: controller.signal }).then(async response => {
       const json = await response.json(); if (!response.ok || !json.ok) throw new Error("DIAGNOSTIC_UNAVAILABLE");
       if (!controller.signal.aborted) setData(json.data);
-    }).catch(() => { if (!controller.signal.aborted) setError(dt("تعذّر تحميل التشخيص. أعد المحاولة؛ لم تُرسل رسائل.")); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
+    }).catch(() => { if (!controller.signal.aborted || timedOut) setError(dt("تعذّر تحميل التشخيص. أعد المحاولة؛ لم تُرسل رسائل.")); }).finally(() => { window.clearTimeout(deadline); if (!controller.signal.aborted || timedOut) setLoading(false); });
+    return () => { window.clearTimeout(deadline); controller.abort(); };
   }, [open, campaignId, revision]);
   const resume = async () => {
     if (busy || !data?.canResume) return;
