@@ -9411,7 +9411,6 @@
   "تحديث طلبات المتبرع": "Refresh donor requests",
   "توجد محاولات تحصيل غير ناجحة لهذه الدورة. راجع آخر سبب لتعذّر الخصم، ثم حدّث الحالة بعد تسوية الدورة. يبقى طلب المتبرع محفوظًا دون تنفيذ.": "This cycle has unsuccessful collection attempts. Review the latest decline reason, then refresh after the cycle is resolved. The donor request remains saved and unapplied.",
   "تجري معالجة تحصيل لهذا الاشتراك. انتظر ظهور نتيجته ثم حدّث الحالة؛ لم يُنفّذ التخفيض.": "A collection is being processed for this subscription. Wait for its result, then refresh; the reduction has not been applied.",
-  "تغيير سابق يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لم يُنفّذ التخفيض.": "A previous change needs reconciliation with the payment provider. Check its result before trying again; the reduction has not been applied.",
   "موعد التحصيل غير محدد أو غير صالح. راجع جدولة الاشتراك قبل التخفيض؛ لم يُنفّذ التخفيض.": "The collection date is missing or invalid. Review the subscription schedule before reducing the amount; the reduction has not been applied.",
   "يمكن تخفيض الاشتراكات النشطة أو المتوقفة مؤقتًا فقط. حدّث الحالة لمراجعة الاشتراك.": "Only active or paused subscriptions can be reduced. Refresh the status to review this subscription.",
   "موعد التحصيل قريب أو مستحق خلال 24 ساعة. حدّث الحالة بعد تسوية هذه الدورة؛ يبقى طلب المتبرع محفوظًا دون تنفيذ.": "Collection is due or within 24 hours. Refresh after this cycle is resolved; the donor request remains saved and unapplied.",
@@ -9421,5 +9420,6 @@
   "تعذّر فحص حالة التحصيل. حدّث الحالة قبل تأكيد التخفيض.": "Collection status could not be checked. Refresh the status before confirming the reduction.",
   "موعد التحصيل المسجل: {0} (بتوقيت إسطنبول)": "Recorded collection date: {0} (Istanbul time)",
   "محاولات غير ناجحة لهذه الدورة: {0}": "Unsuccessful attempts for this cycle: {0}",
-  "تحديث حالة الاشتراك": "Refresh subscription status"
+  "تحديث حالة الاشتراك": "Refresh subscription status",
+  "يوجد تغيير يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لا تُكرر التخفيض قبل التحقق.": "A change needs reconciliation with the payment provider. Check its outcome before any new attempt; do not repeat the reduction before verification."
 }

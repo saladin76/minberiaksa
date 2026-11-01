@@ -141,7 +141,7 @@ try {
       [{nextBillingDate:new Date(Date.now()+3600_000).toISOString()},'موعد التحصيل قريب أو مستحق خلال 24 ساعة. حدّث الحالة بعد تسوية هذه الدورة؛ يبقى طلب المتبرع محفوظًا دون تنفيذ.'],
       [{nextBillingDate:null},'موعد التحصيل غير محدد أو غير صالح. راجع جدولة الاشتراك قبل التخفيض؛ لم يُنفّذ التخفيض.'],
       [{billingLeaseUntil:new Date(Date.now()+60_000)},'تجري معالجة تحصيل لهذا الاشتراك. انتظر ظهور نتيجته ثم حدّث الحالة؛ لم يُنفّذ التخفيض.'],
-      [{amountChangeLock:'fixture-private-lock'},'تغيير سابق يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لم يُنفّذ التخفيض.'],
+      [{amountChangeLock:'fixture-private-lock'},'يوجد تغيير يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لا تُكرر التخفيض قبل التحقق.'],
     ]) {
       Object.assign(currentPlan,baseline,patch);
       await genericPlan.getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();

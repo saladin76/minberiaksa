@@ -9403,7 +9403,6 @@
   "تحديث طلبات المتبرع": "Bağışçı isteklerini yenile",
   "توجد محاولات تحصيل غير ناجحة لهذه الدورة. راجع آخر سبب لتعذّر الخصم، ثم حدّث الحالة بعد تسوية الدورة. يبقى طلب المتبرع محفوظًا دون تنفيذ.": "Bu dönem için başarısız tahsilat denemeleri var. Son ret nedenini inceleyin ve dönem sonuçlandıktan sonra durumu yenileyin. Bağışçı talebi uygulanmadan kayıtlı kalır.",
   "تجري معالجة تحصيل لهذا الاشتراك. انتظر ظهور نتيجته ثم حدّث الحالة؛ لم يُنفّذ التخفيض.": "Bu abonelik için bir tahsilat işleniyor. Sonucu bekleyip durumu yenileyin; azaltma uygulanmadı.",
-  "تغيير سابق يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لم يُنفّذ التخفيض.": "Önceki bir değişiklik ödeme sağlayıcısıyla mutabakat gerektiriyor. Yeniden denemeden önce sonucunu kontrol edin; azaltma uygulanmadı.",
   "موعد التحصيل غير محدد أو غير صالح. راجع جدولة الاشتراك قبل التخفيض؛ لم يُنفّذ التخفيض.": "Tahsilat tarihi eksik veya geçersiz. Tutarı azaltmadan önce abonelik takvimini kontrol edin; azaltma uygulanmadı.",
   "يمكن تخفيض الاشتراكات النشطة أو المتوقفة مؤقتًا فقط. حدّث الحالة لمراجعة الاشتراك.": "Yalnızca etkin veya duraklatılmış aboneliklerin tutarı azaltılabilir. Aboneliği incelemek için durumu yenileyin.",
   "موعد التحصيل قريب أو مستحق خلال 24 ساعة. حدّث الحالة بعد تسوية هذه الدورة؛ يبقى طلب المتبرع محفوظًا دون تنفيذ.": "Tahsilatın vadesi geldi veya 24 saat içinde dolacak. Bu dönem sonuçlandıktan sonra durumu yenileyin; bağışçı talebi uygulanmadan kayıtlı kalır.",
@@ -9413,5 +9412,6 @@
   "تعذّر فحص حالة التحصيل. حدّث الحالة قبل تأكيد التخفيض.": "Tahsilat durumu kontrol edilemedi. Azaltmayı onaylamadan önce durumu yenileyin.",
   "موعد التحصيل المسجل: {0} (بتوقيت إسطنبول)": "Kayıtlı tahsilat tarihi: {0} (İstanbul saati)",
   "محاولات غير ناجحة لهذه الدورة: {0}": "Bu dönem için başarısız deneme sayısı: {0}",
-  "تحديث حالة الاشتراك": "Abonelik durumunu yenile"
+  "تحديث حالة الاشتراك": "Abonelik durumunu yenile",
+  "يوجد تغيير يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لا تُكرر التخفيض قبل التحقق.": "Bir değişiklik ödeme sağlayıcısıyla mutabakat gerektiriyor. Yeni bir denemeden önce sonucu kontrol edin; doğrulamadan azaltmayı tekrarlamayın."
 }
