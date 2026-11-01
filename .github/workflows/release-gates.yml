@@ -139,6 +139,12 @@ jobs:
           - name: Subscription management
             artifact: subscriptions
             script: scripts/subscription-management-browser-test.mjs
+          - name: Campaign revenue and recovery
+            artifact: campaign-recovery
+            script: scripts/campaign-recovery-browser-test.mjs
+          - name: Search emergency and recovery
+            artifact: google-search-recovery
+            script: scripts/google-search-recovery-browser-test.mjs
           - name: Subscription card authentication
             artifact: subscription-card
             script: scripts/subscription-card-browser-test.mjs

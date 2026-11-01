@@ -1,3 +1,4 @@
+import { proposalCampaignForResource } from "./scope";
 import { z } from "zod";
 import type { GoogleSearchClient } from "./client";
 import type { SearchAutomationPolicy, SearchDestination, SearchProposal } from "./contracts";
@@ -28,7 +29,7 @@ function destinationUrl(url: string, planId: string, locale: string) {
 }
 
 /** Uses observed converting terms and page-grounded copy without new spending authority. */
-export async function collectSearchImprovements(client: GoogleSearchClient, names: string[], planId: string, proposal: SearchProposal, destinations: SearchDestination[], policy: SearchAutomationPolicy, now: Date): Promise<SearchImprovement> {
+export async function collectSearchImprovements(client: GoogleSearchClient, names: string[], planId: string, proposal: SearchProposal, destinations: SearchDestination[], policy: SearchAutomationPolicy, now: Date, resources?: unknown): Promise<SearchImprovement> {
   const condition = scope(client, names);
   const [groups, existing, ads, terms] = await Promise.all([
     client.query(`SELECT campaign.resource_name, campaign.name, ad_group.resource_name, ad_group.name, ad_group.status FROM ad_group WHERE ${condition} AND ad_group.status = 'ENABLED'`),
@@ -41,13 +42,15 @@ export async function collectSearchImprovements(client: GoogleSearchClient, name
   let creativeAttempted = false;
   const known = new Set(existing.map(row => `${row.adGroup.resourceName}\0${normalized(row.adGroupCriterion.keyword.text)}`));
   for (const row of groups) {
-    const locale = String(row.campaign.name).split(" | ")[1];
-    if (!String(row.campaign.name).startsWith(`Minber ${planId} | `)) throw new Error("INVALID_RESOURCE_SCOPE");
-    const matches = proposal.campaigns.find(c => c.locale === locale)?.adGroups.filter(g => g.name === row.adGroup.name) || [];
-    if (matches.length !== 1) continue;
+    const campaignKey = String(row.campaign.name).split(" | ")[1];
+    const selectedCampaign=resources ? proposalCampaignForResource(proposal,resources,row.campaign.resourceName,row.campaign.name) : proposal.campaigns.find(c=>(c.country?c.locale+"-"+c.country:c.locale)===campaignKey);
+    const locale=selectedCampaign?.locale;
+    if (!resources && !String(row.campaign.name).startsWith(`Minber ${planId} | `)) throw new Error("INVALID_RESOURCE_SCOPE");
+    const matches = selectedCampaign?.adGroups.filter(g => g.name === row.adGroup.name) || [];
+    if (!locale || matches.length !== 1) continue;
     const group = matches[0], destination = destinations.find(d => d.projectId === group.projectId && d.locale === locale);
     if (!destination) continue;
-    const converting = terms.filter(t => t.adGroup.resourceName === row.adGroup.resourceName && Number(t.metrics.conversions) >= 1 && Number(t.metrics.clicks) >= 3 && Number(t.metrics.costMicros) / 1e6 / Number(t.metrics.conversions) <= policy.maxKeywordCost);
+    const converting = terms.filter(t => t.adGroup.resourceName === row.adGroup.resourceName && Number(t.metrics.conversions) >= 1 && Number(t.metrics.clicks) >= 3 && Number(t.metrics.costMicros) / 1e6 / Number(t.metrics.conversions) <= (policy.maxKeywordCost ?? 0));
     if (policy.expandKeywords) for (const term of converting) {
       const text = term.searchTermView?.searchTerm?.trim() || "", key = `${row.adGroup.resourceName}\0${normalized(text)}`;
       // Avoid personal identifiers and unrelated terms even if a broad query converted.

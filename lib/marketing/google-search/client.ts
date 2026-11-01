@@ -22,6 +22,7 @@ export type SearchRow = {
   geoTargetConstant: { countryCode: string; resourceName: string };
   text: string;
   keywordIdeaMetrics?: Record<string, unknown>;
+  segments?: { date?: string };
 };
 type SearchResponse = { results?: SearchRow[]; nextPageToken?: string; mutateOperationResponses?: { campaignResult?: { resourceName?: string } }[] };
 type GoogleErrorDetail = { errors?: { errorCode?: Record<string, unknown> }[] };

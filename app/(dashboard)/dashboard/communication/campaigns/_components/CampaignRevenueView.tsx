@@ -1,0 +1,26 @@
+"use client";
+import {useState} from "react";
+import Link from "next/link";
+import {dt} from "@/lib/dashboard/i18n";
+import {channelMeta,type CampaignRow} from "./campaign-ui";
+
+// This component must remain browser-only: URL construction is injected below,
+// rather than importing the server attribution reader or donor data.
+export function CampaignRevenueView({campaigns,ready,onTemplate}:{campaigns:CampaignRow[];ready:boolean;onTemplate:(id:string)=>void}) {
+ const [copied,setCopied]=useState("");
+ const copyLink=async(campaign:CampaignRow)=>{
+  const url=new URL("https://minberiaksa.org/ar/bagislar");
+  for(const [key,value] of Object.entries({utm_source:campaign.channel.toLowerCase(),utm_medium:"communication",utm_campaign:campaign.id,utm_id:campaign.id}))url.searchParams.set(key,value);
+  try{await navigator.clipboard.writeText(url.toString());setCopied(campaign.id);}catch{setCopied("failed");}
+ };
+ return <section aria-label={dt("إيرادات الحملات والتتبع")} className="space-y-4">
+  <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-7"><h2 className="font-bold">{dt("إيراد مستقل لكل حملة")}</h2><p>{dt("يُحسب التبرع بعد تأكيد الدفع وبمعرّف الحملة المحفوظ وقت الدفع. عدد النقرات أو قبول الرسالة لا يثبت إيرادًا.")}</p><p>{dt("روابط البريد والرسائل النصية تُوسم تلقائيًا عند الإرسال. واتساب يحتاج زرًا ديناميكيًا معتمدًا؛ إعداد نسخة للقالب يحتفظ بالنسخة الحالية وسجل الإرسال.")}</p></div>
+  {copied==="failed"?<p role="alert" className="text-sm text-red-700">{dt("تعذر نسخ الرابط؛ أعد المحاولة من متصفح يدعم النسخ.")}</p>:null}
+  <div className="hidden overflow-x-auto rounded-xl border bg-white md:block"><table className="w-full text-start text-sm"><thead className="bg-slate-50"><tr>{["الحملة","القناة","تبرعات مؤكدة","الإيراد (USD)","محاولات دفع مرفوضة","حالة التتبع","الإجراءات"].map(label=><th key={label} scope="col" className="whitespace-nowrap p-3 text-start">{dt(label)}</th>)}</tr></thead><tbody>{campaigns.map(campaign=><tr key={campaign.id} className="border-t"><td className="max-w-72 p-3"><Link className="font-semibold underline underline-offset-4" href={`${channelMeta(campaign.channel).href}?campaign=${campaign.id}`}>{campaign.name}</Link></td><td className="p-3">{channelMeta(campaign.channel).label}</td><td className="p-3 tabular-nums">{ready?campaign.donationCount??0:"—"}</td><td className="p-3 tabular-nums" dir="ltr">{ready?formatRevenue(campaign):"—"}</td><td className="p-3 tabular-nums">{ready?campaign.failedDonationCount??0:"—"}</td><td className="max-w-64 p-3 text-xs leading-6"><Tracking campaign={campaign} ready={ready}/></td><td className="p-3"><Actions campaign={campaign} copied={copied} copyLink={copyLink} onTemplate={onTemplate}/></td></tr>)}</tbody></table></div>
+  <div className="grid gap-3 md:hidden">{campaigns.map(campaign=><article key={campaign.id} className="min-w-0 space-y-3 rounded-xl border bg-white p-4"><Link className="block break-words font-bold" href={`${channelMeta(campaign.channel).href}?campaign=${campaign.id}`}>{campaign.name}</Link><p className="text-xs text-slate-500">{channelMeta(campaign.channel).label}</p><dl className="grid grid-cols-2 gap-3"><div><dt className="text-xs text-slate-500">{dt("تبرعات مؤكدة")}</dt><dd className="mt-1 text-xl font-bold">{ready?campaign.donationCount??0:"—"}</dd></div><div><dt className="text-xs text-slate-500">{dt("الإيراد (USD)")}</dt><dd className="mt-1 text-xl font-bold" dir="ltr">{ready?formatRevenue(campaign):"—"}</dd></div></dl><p className="text-xs leading-6"><Tracking campaign={campaign} ready={ready}/></p><Actions campaign={campaign} copied={copied} copyLink={copyLink} onTemplate={onTemplate}/></article>)}</div>
+  <p className="text-xs leading-6 text-slate-500">{dt("الإسناد لآخر رابط حملة خلال 30 يومًا؛ التصفح الداخلي لا يستبدله. الإيراد التاريخي ذو الروابط المشتركة يبقى منفصلًا حتى توجد أدلة تحدد حملة واحدة.")}</p>
+ </section>;
+}
+function formatRevenue(campaign:CampaignRow){return `${(campaign.revenue??0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}${campaign.unpricedPaidCount?" *":""}`;}
+function Tracking({campaign,ready}:{campaign:CampaignRow;ready:boolean}){return <>{!ready?dt("جار فحص التتبع…"):campaign.trackingRequiresTemplateUpdate?<span className="text-amber-800">{dt("رابط مشترك؛ يلزم تحديث القالب لفصل الإيرادات القادمة")}</span>:<span className="text-slate-600">{dt("تظهر المدفوعات ذات المعرّف المطابق فقط")}</span>}{ready&&campaign.unpricedPaidCount?<span className="block text-amber-800">{dt("* {0} تبرع مؤكد دون سعر تحويل محفوظ؛ غير مضاف إلى المبلغ.",[campaign.unpricedPaidCount])}</span>:null}</>;}
+function Actions({campaign,copied,copyLink,onTemplate}:{campaign:CampaignRow;copied:string;copyLink:(campaign:CampaignRow)=>Promise<void>;onTemplate:(id:string)=>void}){return <div className="flex flex-wrap gap-2"><button type="button" className="rounded-lg border px-3 py-2 text-xs" onClick={()=>void copyLink(campaign)}>{copied===campaign.id?dt("تم نسخ رابط الحملة"):dt("نسخ رابط بتتبع مستقل")}</button>{campaign.channel==="WHATSAPP"&&campaign.trackingRequiresTemplateUpdate&&campaign.templateGroupId?<button type="button" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs" onClick={()=>onTemplate(campaign.templateGroupId!)}>{dt("إصلاح تتبع القالب")}</button>:null}</div>;}

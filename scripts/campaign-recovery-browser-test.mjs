@@ -19,7 +19,7 @@ const mocks = {
   "next-intl": "export function useLocale(){return new URLSearchParams(location.search).get('lang')||'ar'}",
 };
 const bundle = await build({ stdin: { contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {setDashLocale} from './lib/dashboard/i18n';import {CampaignsListClient} from './app/(dashboard)/dashboard/communication/campaigns/_components/CampaignsListClient';const locale=new URLSearchParams(location.search).get('lang')||'ar';setDashLocale(locale);document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';createRoot(document.getElementById('root')).render(<main style={{padding:16}}><CampaignsListClient/></main>);`, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", tsconfig: path.resolve("tsconfig.json"), define: { "process.env.NODE_ENV": '"test"' }, plugins: [{ name: "fixture-navigation", setup(b) { b.onResolve({ filter: /.*/ }, args => args.path in mocks ? { path: args.path, namespace: "fixture" } : null); b.onLoad({ filter: /.*/, namespace: "fixture" }, args => ({ contents: mocks[args.path], loader: "tsx", resolveDir: process.cwd() })); } }] });
-const css = (await postcss([tailwindcss({ ...require("../tailwind.config.ts").default, content: ["app/(dashboard)/dashboard/communication/**/*.tsx", "components/dashboard/**/*.tsx", "components/ui/**/*.tsx"] })]).process("@tailwind base;@tailwind components;@tailwind utilities;", { from: undefined })).css;
+const css = (await postcss([tailwindcss({ ...require("../tailwind.config.ts").default, content: ["app/(dashboard)/dashboard/communication/**/*.tsx", "app/(dashboard)/dashboard/templates/**/*.tsx", "components/dashboard/**/*.tsx", "components/ui/**/*.tsx"] })]).process("@tailwind base;@tailwind components;@tailwind utilities;", { from: undefined })).css;
 const fonts = { "/ar.woff2": await readFile("public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2"), "/latin.woff2": await readFile("public/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2") };
 const id = "a".repeat(24); let missing = true, failRead = false, race = false, posts = 0, queued = 0;
 const errors = [], unexpected = [];
@@ -33,7 +33,7 @@ const server = createServer(async (request, response) => {
   if (fonts[url.pathname]) { response.setHeader("Content-Type", "font/woff2"); return response.end(fonts[url.pathname]); }
   if (url.pathname === "/api/communication/campaigns") {
     const row = campaign();
-    if (url.searchParams.get("outcomesMode") === "poll") return setTimeout(() => json({ ok: true, outcomesReady: true, campaigns: [{ ...row, sentCount: 3571, failedCount: 1370, donationCount: 2, revenue: 23 }], unattributed: { donationCount: 0, revenue: 0, unpricedPaidCount: 0 } }), 100);
+    if (url.searchParams.get("outcomesMode") === "poll") return setTimeout(() => json({ ok: true, outcomesReady: true, campaigns: [{ ...row, sentCount: 3571, failedCount: 1370, donationCount: 2, revenue: 23, trackingRequiresTemplateUpdate:true }], unattributed: { donationCount: 0, revenue: 0, unpricedPaidCount: 0 } }), 100);
     return json({ ok: true, deliveryCountersReady: true, campaigns: [row], outcomesReady: false });
   }
   if (url.pathname === `/api/communication/campaigns/${id}/recovery`) {
@@ -43,6 +43,7 @@ const server = createServer(async (request, response) => {
     if (race) { missing = true; return json({ ok: false, error: "LANGUAGE_COVERAGE_INCOMPLETE", diagnostic: diagnostic() }, 409); }
     queued++; return json({ ok: true, data: { status: "SENDING", queued: true, providerCalls: 0 } });
   }
+  if(url.pathname==="/api/templates/whatsapp/template" && request.method==="GET")return json({template:{id:"template",name:"fixture_shared",category:"MARKETING",body:"مرحباً، ادعم المشروع",header:{type:"NONE"},buttons:[{type:"URL",text:"تبرع",url:"https://minberiaksa.org/ar/bagislar?utm_campaign=shared"}],translations:{en:{body:"Support the published project",buttons:[{type:"URL",text:"Donate",url:"https://minberiaksa.org/en/bagislar?utm_campaign=shared"}]},tr:{body:"Projeyi destekleyin",buttons:[{type:"URL",text:"Bağış",url:"https://minberiaksa.org/tr/bagislar?utm_campaign=shared"}]}},submittedLocales:["ar","en","tr"]}});
   if (url.pathname.startsWith("/api")) { unexpected.push(url.pathname); return json({ ok: false }, 404); }
   response.setHeader("Content-Type", "text/html"); response.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>');
 });
@@ -55,6 +56,17 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/?lang=${locale}`);
     const row = page.getByRole("row").filter({ hasText: "Fixture campaign" });
     await expect(row).toContainText("4,196"); await expect(row).toContainText("23"); await expect(row).not.toContainText("3,571"); checks++;
+    await page.getByRole("button",{name:label(locale,"الإيرادات والتتبع"),exact:true}).click();
+    const revenue=page.getByRole("region",{name:label(locale,"إيرادات الحملات والتتبع")});
+    await expect(revenue).toBeVisible();await expect(revenue).toContainText("23.00");await expect(revenue).toContainText(label(locale,"رابط مشترك؛ يلزم تحديث القالب لفصل الإيرادات القادمة"));checks++;
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));checks++;
+    await page.screenshot({path:path.join(artifacts,`revenue-${locale}-${width}.png`),fullPage:true,animations:"disabled"});
+    await revenue.getByRole("button",{name:label(locale,"إصلاح تتبع القالب"),exact:true}).click();
+    const editor=page.getByRole("dialog");await editor.getByRole("button",{name:label(locale,"إعداد نسخة بتتبع إيرادات الحملات"),exact:true}).click();
+    assert.ok((await editor.locator('input').evaluateAll(inputs=>inputs.map(input=>input.value))).some(value=>value.includes("_tracked_")));checks++;
+    assert.equal(posts,0);checks++;
+    await editor.getByRole("button",{name:label(locale,"إلغاء"),exact:true}).click();await expect(editor).toHaveCount(0);
+    await page.getByRole("button",{name:label(locale,"الإرسال والمتابعة"),exact:true}).click();
     failRead = true;
     await row.getByRole("button", { name: label(locale, "تشخيص واستكمال"), exact: true }).click();
     const dialog = page.getByRole("dialog"), confirm = dialog.getByRole("button", { name: label(locale, "تأكيد جدولة الاستكمال"), exact: true });

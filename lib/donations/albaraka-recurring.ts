@@ -40,7 +40,7 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  * The Albaraka recurring scheduler.
  *
  * A plan billed by Albaraka (`Subscription.provider = "ALBARAKA"`) paid its
- * first instalment as an ordinary 3D payment at checkout, which stored the
+ * first instalment as a bank-confirmed checkout payment, which stored the
  * card (`paymentCardId`) and set `nextBillingDate`. From then on this job 
  * run by `/api/cron/recurring-charges` every few minutes  charges every plan
  * whose `nextBillingDate` has passed, through the bank's direct /Sale as a
@@ -200,7 +200,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
         where: { id: sub.id },
         data: { status: "PAYMENT_FAILED", chargeAttempts: attempt, lastChargeError: card ? "Stored card has expired" : "No stored card" },
       });
-      runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId }));
+      // Payment failure retains the plan for card replacement; it is not a donor cancellation.
     }
     return { ...base, result: "card_expired", error: card ? "card expired" : "no card" };
   }
@@ -233,6 +233,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       donorCountryCode: donorCountrySnapshot,
       donorId: sub.donorId,
       subscriptionId: sub.id,
+      billingReason: "subscription_cycle",
       referralId: sub.referralId ?? undefined,
       paymentMethod: "CARD",
       provider: "ALBARAKA",

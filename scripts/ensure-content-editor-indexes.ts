@@ -5,6 +5,8 @@ import { ensureOptionalUserEmailIndex } from "../lib/donations/optional-user-ema
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
 
 const indexes = [
+  // Scope Google Search revenue before aggregation rather than scanning every paid donation.
+
   {
     collection: "CampaignSlugRedirect",
     key: { locale: 1, slug: 1 },
@@ -82,6 +84,7 @@ const indexes = [
   { collection: "SubscriptionCardVerification", key: { orderId: 1 }, unique: true },
   { collection: "SubscriptionCardVerification", key: { subscriptionId: 1, donorId: 1, createdAt: 1 }, unique: false },
   { collection: "SubscriptionCardVerification", key: { status: 1, expiresAt: 1 }, unique: false },
+  { collection: "Donation", key: { "attribution.utm_campaign": 1, status: 1, paidAt: 1 }, unique: false },
 ];
 
 async function run() {

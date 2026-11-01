@@ -190,7 +190,7 @@ for (const code of ["05", "0005"]) test(`a declined renewal (${code}) retains th
   const run = await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: f.dueAt });
   assert.equal(run.failed.length, 1); assert.equal(run.charged.length, 0); assert.equal(calls, 1);
   const renewal = f.donations.get(run.failed[0].donationId)!;
-  assert.equal(renewal.status, "FAILED"); assert.equal(renewal.paidAt, null);
+  assert.equal(renewal.status, "FAILED"); assert.equal(renewal.paidAt, null);assert.equal(renewal.billingReason,"subscription_cycle");
   assert.equal(renewal.amount, 1); assert.equal(renewal.totalAmount, 1); assert.equal(renewal.currency, "USD");
   assert.equal(renewal.providerRaw.albarakaRecurring?.cycle, f.dueAt.toISOString());
   assert.equal(renewal.providerRaw.albarakaRecurring?.attempt, 1);
@@ -326,4 +326,13 @@ for (const currency of ["USD", "TRY", "EUR", "SAR"]) test(`the real cart writer 
  const mismatch = await f.checkout.POST(request(body)); assert.equal(mismatch.status, 409); assert.equal(mismatch.data.code, "PAYMENT_ROUTING_CHANGED"); assert.equal(mismatch.data.gateway, "PAYFOR"); assert.equal(f.donations.size, 0); assert.equal(f.plans.size, 0);
  const accepted = await f.checkout.POST(request({ ...body, expectedGateway: "PAYFOR" })); assert.equal(accepted.status, 200); assert.equal(f.donations.size, 1);
  const donation = [...f.donations.values()][0]; assert.equal(donation.provider, "PAYFOR"); assert.equal(donation.currency, currency); assert.equal(donation.totalAmount, 25); assert.equal(donation.providerRaw.paymentRouting.reason, "SA_IP"); assert.equal(f.calls(), 0);
+});
+
+
+test("an expired recurring card retains a repairable failed plan and never emits a false cancellation",async()=>{
+ const f=await paidDailyCardPlan(),events:string[]=[];f.plan.paymentCard.expiryDate="01/20";
+ f.dependencies["@/lib/events/after-response"].runAfterResponse=(work:()=>unknown)=>work();
+ f.dependencies["@/lib/events/dispatch"]={dispatchEvent:(event:string)=>events.push(event)};
+ const result=await f.albarakaWorker.chargeDueAlbarakaSubscriptions({now:f.dueAt});
+ assert.equal(result.failed[0].result,"card_expired");assert.equal(f.plan.status,"PAYMENT_FAILED");assert.equal(f.calls(),0);assert.deepEqual(events,[]);assert.equal(f.donations.size,1);
 });

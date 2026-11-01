@@ -11,9 +11,10 @@ const number = (value: unknown) => Number.isFinite(Number(value)) ? Number(value
 const customer = (value: string) => value.replaceAll("-", "").trim();
 
 /** Only OAuth token refresh and fixed GAQL SELECT queries. No mutation API is exposed. */
-export async function fetchGoogleAdsReport(credentials: GoogleAdsCredentials, selection: Ga4Period, fetcher: typeof fetch = fetch, now = new Date(), campaignPrefix?: string): Promise<GoogleAdsReport> {
-  if (campaignPrefix && !/^Minber [a-f0-9]{24} \| $/.test(campaignPrefix)) throw new GoogleAdsReportError("GOOGLE_ADS_SCOPE_INVALID", 400);
-  const scope = campaignPrefix ? ` AND campaign.name LIKE '${campaignPrefix}%'` : "";
+export async function fetchGoogleAdsReport(credentials: GoogleAdsCredentials, selection: Ga4Period, fetcher: typeof fetch = fetch, now = new Date(), campaignPrefix?: string | string[]): Promise<GoogleAdsReport> {
+  if (typeof campaignPrefix === "string" && !/^Minber [a-f0-9]{24} \| $/.test(campaignPrefix)) throw new GoogleAdsReportError("GOOGLE_ADS_SCOPE_INVALID", 400);
+  if(Array.isArray(campaignPrefix) && (campaignPrefix.length>570 || campaignPrefix.some(name=>!new RegExp(`^customers/${customer(credentials.customerId)}/campaigns/\\d+$`).test(name))))throw new GoogleAdsReportError("GOOGLE_ADS_SCOPE_INVALID",400);
+  const scope = Array.isArray(campaignPrefix) ? (campaignPrefix.length?` AND campaign.resource_name IN (${campaignPrefix.map(name=>`'${name}'`).join(',')})` : " AND campaign.id = 0") : campaignPrefix ? ` AND campaign.name LIKE '${campaignPrefix}%'` : "";
   const period = parseGa4Period(selection, now);
   const id = customer(credentials.customerId), manager = customer(credentials.managerId || "");
   const version = credentials.version || "v26";

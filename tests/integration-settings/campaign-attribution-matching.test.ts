@@ -1,3 +1,6 @@
+import {trackCampaignBody,campaignTrackingValues} from "../../lib/communication/campaign-message-tracking";
+import {buildMetaComponents} from "../../lib/communication/providers/meta-whatsapp/parameters";
+import * as attributionSanitize from "../../lib/attribution/sanitize";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -362,4 +365,38 @@ test("the full financial report cannot credit an alias before checking the last 
   const failed = reportingHarness({ donations: [donation], historyPages, historyFailureAt: 2 });
   await assert.rejects(failed.service.getCampaignOutcomeSummary([campaignA, campaignB]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "EMAIL_HISTORY");
   assert.equal(failed.historyCalls(), 2);
+});
+
+
+test("actual email, SMS and approved Meta campaign links survive checkout capture and credit only their settled campaign",async()=>{
+ const third="6ada609ef5c859cf26ebba83",donations:Record<string,unknown>[]=[];
+ for(const [index,channel] of ["EMAIL","SMS","WHATSAPP"].entries()){
+  const campaign={id:[campaignA,campaignB,third][index],channel};let url:string;
+  if(channel==="WHATSAPP"){
+   const schema=[{type:"BUTTONS",buttons:[{type:"URL",text:"Donate",url:"https://minberiaksa.org/en/bagislar?utm_source=whatsapp&utm_medium=communication&utm_id={{1}}"}]}];
+   const values=campaignTrackingValues(schema,{"1":"Donor name"},campaign);
+   const components=buildMetaComponents({componentsSchema:schema,values,positionalNames:[],scopedNames:{}});assert.ok(components.ok);if(!components.ok)return;
+   const parameter=components.components[0].parameters[0] as {text:string};url=schema[0].buttons[0].url.replace("{{1}}",parameter.text);
+  }else{
+   const raw=channel==="EMAIL"?'<a href="https://minberiaksa.org/en/bagislar">Donate</a>':"https://minberiaksa.org/en/bagislar";
+   const output=trackCampaignBody(raw,campaign);url=channel==="EMAIL"?/href="([^"]+)"/.exec(output)![1].replaceAll("&amp;","&"):output;
+  }
+  const cookies=new Map<string,string>(),storage=new Map<string,string>();
+  const document={referrer:"",get cookie(){return [...cookies].map(([k,v])=>`${k}=${v}`).join("; ");},set cookie(value:string){const [pair]=value.split(";"),i=pair.indexOf("="),key=pair.slice(0,i);if(/Max-Age=0/i.test(value))cookies.delete(key);else cookies.set(key,pair.slice(i+1));}};
+  const window={location:{href:url,search:new URL(url).search}};
+  const loaded={exports:{} as {captureAttributionFromUrl:()=>void;getDonationAttributionPayload:()=>Record<string,string>}};
+  const output=ts.transpileModule(fs.readFileSync("lib/attribution/client-payload.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,window,document,Date,Math,URLSearchParams,sessionStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value)},require:(name:string)=>name==="./sanitize"?attributionSanitize:{captureStoredClickIds:()=>({})}});
+  loaded.exports.captureAttributionFromUrl();
+  window.location={href:"https://minberiaksa.org/en/checkout?currency=EUR",search:"?currency=EUR"};
+  const snapshot=attributionSanitize.sanitizeDonationAttribution(loaded.exports.getDonationAttributionPayload());
+  assert.equal((snapshot as Record<string,unknown>).utm_id,campaign.id);
+  donations.push({...confirmed,id:channel,amount:10+index,amountUSD:10+index,attribution:snapshot});
+  donations.push({...confirmed,id:channel+"-failed",status:"FAILED",paidAt:null,amountUSD:999,attribution:snapshot});
+  donations.push({...confirmed,id:channel+"-unconfirmed",status:"PENDING",paidAt:null,amountUSD:999,attribution:snapshot});
+ }
+ const result=await reportingHarness({donations}).service.getCampaignOutcomeSummary([campaignA,campaignB,third]);
+ assert.equal(result.metrics.get(campaignA)?.revenue,10);assert.equal(result.metrics.get(campaignB)?.revenue,11);assert.equal(result.metrics.get(third)?.revenue,12);
+ assert.equal([...result.metrics.values()].reduce((sum,row)=>sum+row.revenue,0),33);assert.equal(result.unattributed.revenue,0);
+ for(const metric of result.metrics.values()){assert.equal(metric.donationCount,1);assert.equal(metric.failedDonationCount,1);}
 });

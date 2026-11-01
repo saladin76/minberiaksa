@@ -156,3 +156,21 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   await mod.exports.sendTriggerMessage({ channel: "SMS", templateId: "sms" }, ctx, { event: "DONATION_LAPSED", donationId: "donation", locale: "en", config: {} });
   assert.equal(sent[3].renderedBody, "Amount: 250 USD");
 });
+
+
+test("renewal failures retain the unconfirmed total in every language and never label the first payment as a renewal",()=>{
+  assert.deepEqual(Object.keys(donationMoney.RECURRING_RENEWAL_LABELS).sort(),[...SUPPORTED_LOCALES].sort());
+  for(const locale of SUPPORTED_LOCALES){
+    const renewal=donationMoneyFields({...order,paidAt:null,billingReason:"subscription_cycle"},locale);
+    assert.ok(renewal.receiptSummary.startsWith(donationMoney.RECURRING_RENEWAL_LABELS[locale]+" — "));
+    assert.ok(renewal.receiptSummary.includes(DONATION_MONEY_LABELS[locale][4]));
+    assert.equal(renewal.notificationAmount,donationMoneyFields({...order,paidAt:null},locale).notificationAmount);
+    assert.ok(!donationMoneyFields({...order,paidAt:null},locale).receiptSummary.startsWith(donationMoney.RECURRING_RENEWAL_LABELS[locale]));
+    assert.equal(donationMoneyFields({...order,paidAt:null,providerTxnType:"RecurringSale"},locale).receiptSummary,renewal.receiptSummary);
+  }
+});
+test("a short project summary deduplicates display titles without dropping any allocation or changing money",()=>{
+ const repeated={title:"Hot meals",translations:[]};
+ const source={locale:"ar",items:[{amount:25,amountUSD:25,campaign:repeated},{amount:10,amountUSD:10,campaign:repeated}],categoryItems:[]};
+ const result=projects.donationProjectSummary(source);assert.equal(result.campaignTitle,"Hot meals");assert.equal(result.lines.length,2);assert.equal(result.lines.reduce((sum,row)=>sum+row.amount,0),35);
+});

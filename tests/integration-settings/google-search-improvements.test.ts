@@ -1,3 +1,4 @@
+import {searchTestDependencies} from "./google-search-fixture";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -25,7 +26,7 @@ function fixture(options: { outside?: boolean; aiFail?: boolean; duplicate?: boo
   const client = { id: "1234567890", query: async (query: string) => query.includes("FROM search_term_view") ? terms : query.includes("FROM ad_group_ad") ? ads : query.includes("FROM ad_group_criterion") ? keywords : [rows] };
   const deps: Row = { zod: { z }, "./creative": { suggestSearchCreative: async () => { generationCalls++; if (options.aiFail) throw new Error("AI_DOWN"); return options.duplicate ? { headlines: [...original.headlines].reverse(), descriptions: original.descriptions } : creative; } } };
   const loaded = { exports: {} as Row };
-  new vm.Script(ts.transpileModule(readFileSync("lib/marketing/google-search/improvements.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, URL, Date, JSON, require: (name: string) => { assert.ok(name in deps, name); return deps[name]; } });
+  new vm.Script(ts.transpileModule(readFileSync("lib/marketing/google-search/improvements.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, URL, Date, JSON, require: (name: string) => { assert.ok(name in searchTestDependencies(deps), name); return searchTestDependencies(deps)[name]; } });
   return { collect: (expandKeywords = true, refreshAds = true) => loaded.exports.collectSearchImprovements(client, [campaign], planId, proposal, [destination], { enabled: true, maxKeywordCost: 5, minClicks: 20, expandKeywords, refreshAds }, new Date()), verify: (value: unknown) => loaded.exports.verifySearchImprovements(client, [campaign], value), operations: loaded.exports.searchImprovementOperations, keywords, ads, rows, client, module: loaded.exports, count: () => generationCalls };
 }
 test("opt-in expansion adds at most three relevant, nonduplicate exact keywords and one new scoped creative", async () => {
@@ -53,7 +54,7 @@ test("creative validates copy length, source numbers and language before any adv
   let answer = JSON.stringify(creative);
   const deps: Row = { "./contracts": { searchAdCopy }, "@/lib/ai/core/ai-core-service": { getAiContext: () => ({}) }, "@/lib/ai/core/openai-provider": { generateOpenAiDraft: async () => ({ status: "COMPLETED", mode: "OPENAI", answer }) } };
   const loaded = { exports: {} as Row };
-  new vm.Script(ts.transpileModule(readFileSync("lib/marketing/google-search/creative.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, JSON, require: (name: string) => { assert.ok(name in deps, name); return deps[name]; } });
+  new vm.Script(ts.transpileModule(readFileSync("lib/marketing/google-search/creative.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, JSON, require: (name: string) => { assert.ok(name in searchTestDependencies(deps), name); return searchTestDependencies(deps)[name]; } });
   assert.equal((await loaded.exports.suggestSearchCreative(destination, original, [])).headlines.length, 3);
   answer = JSON.stringify({ ...creative, headlines: ["Help 500 families", ...creative.headlines.slice(1)] }); await assert.rejects(loaded.exports.suggestSearchCreative(destination, original, []), /AD_COPY_FACTS_REQUIRE_REVIEW/);
   answer = JSON.stringify({ ...creative, headlines: ["Donate المبارك", ...creative.headlines.slice(1)] }); await assert.rejects(loaded.exports.suggestSearchCreative(destination, original, []), /AD_COPY_LANGUAGE_REQUIRES_REVIEW/);
@@ -67,7 +68,7 @@ test("automatic mutations are reserved before sending; unknown outcomes freeze, 
   const originalQuery = h.client.query;
   const campaignRow = { campaign: { ...h.rows.campaign, status: "ENABLED", campaignBudget: "customers/1234567890/campaignBudgets/124" }, campaignBudget: { amountMicros: "10000000", explicitlyShared: false } };
   const writes: Row[] = [];
-  const client = { id: "1234567890", query: async (q: string) => q.includes("FROM customer") ? [{ customer: { currencyCode: "USD", timeZone: "Europe/Istanbul" } }] : q.includes("FROM campaign") ? [campaignRow] : q.includes("FROM keyword_view") ? [] : originalQuery(q), call: async (_: string, body: Row) => {
+  const client = { id: "1234567890", query: async (q: string) => q.includes("FROM conversion_action") ? [{conversionAction:{resourceName:"fixture"}}] : q.includes("FROM customer") ? [{ customer: { currencyCode: "USD", timeZone: "Europe/Istanbul" } }] : q.includes("FROM campaign") ? [campaignRow] : q.includes("FROM keyword_view") ? [] : q.includes("ad_group_criterion.negative = FALSE") ? h.keywords.filter(row=>row.adGroupCriterion.resourceName) : originalQuery(q), call: async (_: string, body: Row) => {
     writes.push(body);
     if (body.validateOnly) return {};
     assert.equal(plan.status, "CHANGING"); assert.ok(plan.evidence.optimizationPending);
@@ -79,14 +80,14 @@ test("automatic mutations are reserved before sending; unknown outcomes freeze, 
     findUnique: async () => structuredClone(plan), findUniqueOrThrow: async () => structuredClone(plan),
     findFirst: async ({ where }: Row) => where.version === plan.version && where.workLeaseToken === plan.workLeaseToken && plan.automationEnabled && plan.status === where.status ? structuredClone(plan) : null,
     updateMany: async ({ where, data }: Row) => {
-      if (where.version !== undefined && where.version !== plan.version || where.status && where.status !== plan.status || where.workLeaseToken && where.workLeaseToken !== plan.workLeaseToken || where.automationEnabled !== undefined && where.automationEnabled !== plan.automationEnabled || where.OR && plan.workLeaseUntil && plan.workLeaseUntil > new Date()) return { count: 0 };
+      if (where.version !== undefined && where.version !== plan.version || where.status && (typeof where.status === "object" ? !where.status.in?.includes(plan.status) : where.status !== plan.status) || where.workLeaseToken && where.workLeaseToken !== plan.workLeaseToken || where.automationEnabled !== undefined && where.automationEnabled !== plan.automationEnabled || where.OR && plan.workLeaseUntil && plan.workLeaseUntil > new Date()) return { count: 0 };
       plan = { ...plan, ...data, version: data.version ? plan.version + 1 : plan.version }; return { count: 1 };
     },
   } };
   const deps: Row = { "node:crypto": { randomUUID: () => "worker-lease" }, "@/lib/prisma": { prisma: db }, "@/lib/audit-log": { queueAuditLog() {} }, "./contracts": searchContracts, "./client": { SearchApiError, googleSearchClient: async () => client, searchCredentials: () => ({}) }, "./executor": { jsonValue: (v: unknown) => v }, "./improvements": h.module, "./growth": { collectSearchGrowth: async () => ({ status: "READY" }) }, "./planner": { searchDestinations: async () => [destination] } };
   function load(path: string) {
     const loaded = { exports: {} as Row };
-    new vm.Script(ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, Date, JSON, URL, require: (name: string) => { assert.ok(name in deps, name); return deps[name]; } }); return loaded.exports;
+    new vm.Script(ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, Date, JSON, URL, require: (name: string) => { assert.ok(name in searchTestDependencies(deps), name); return searchTestDependencies(deps)[name]; } }); return loaded.exports;
   }
   const optimizer = load("lib/marketing/google-search/optimizer.ts");
   await optimizer.optimizeSearchPlan(planId, new Date());

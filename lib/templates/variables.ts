@@ -125,6 +125,8 @@ const donationSelect = {
   fees: true,
   paidAt: true,
   status: true,
+  billingReason: true,
+  providerTxnType: true,
   createdAt: true,
   items: {
     select: {
@@ -154,6 +156,8 @@ type RawDonation = DonationProjectSource & {
   provider?: string | null;
   providerOrderId?: string | null;
   providerRaw?: unknown;
+  billingReason?: string | null;
+  providerTxnType?: string | null;
 };
 
 function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {

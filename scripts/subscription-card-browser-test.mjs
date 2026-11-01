@@ -11,7 +11,7 @@ const require=createRequire(import.meta.url),id='a'.repeat(24),verificationId='b
 const output=path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS||'.artifacts/subscription-card');await mkdir(output,{recursive:true});
 const messages=Object.fromEntries(await Promise.all(['ar','en','tr'].map(async lang=>[lang,{...JSON.parse(await readFile(`i18n/messages/${lang}.json`,'utf8')),ProfileCardUpdate:JSON.parse(await readFile(`i18n/profile-card-update/${lang}.json`,'utf8'))}])));
 const entry=`import React from 'react';import {createRoot} from 'react-dom/client';import {NextIntlClientProvider} from 'next-intl';import {SubscriptionCardChange,SubscriptionCardChangeResult} from './components/minbar/account/SubscriptionCardChange';createRoot(document.getElementById('root')).render(<NextIntlClientProvider locale={document.documentElement.lang} messages={window.fixtureMessages} timeZone='Europe/Istanbul'><SubscriptionCardChangeResult/><SubscriptionCardChange subscriptionId='${id}' locale={document.documentElement.lang}/></NextIntlClientProvider>);`;
-const bundle=await build({stdin:{contents:entry,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,outfile:'fixture.js',format:'iife',platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"test"'}});
+const bundle=await build({stdin:{contents:entry,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,outfile:'fixture.js',format:'iife',platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"test"','process.env': '{}'}});
 const css=(await postcss([tailwindcss({...require('../tailwind.config.ts').default,content:['components/minbar/account/SubscriptionCardChange.tsx','components/minbar/checkout/SavedCardPicker.tsx','components/ui/button.tsx']})]).process('@tailwind base;@tailwind components;@tailwind utilities;',{from:undefined})).css;
 let verified=false,rejectForm=false;const requests=[],errors=[];
 const server=createServer(async(req,res)=>{
@@ -32,10 +32,10 @@ const server=createServer(async(req,res)=>{
  const lang=url.searchParams.get('lang')||'ar';res.setHeader('Content-Type','text/html; charset=utf-8');res.end(`<!doctype html><html lang='${lang}' dir='${lang==='ar'?'rtl':'ltr'}'><head><meta name='viewport' content='width=device-width,initial-scale=1'><link rel='stylesheet' href='/style.css'><style>body{margin:16px;font-family:Arial,sans-serif}#root{max-width:650px;margin:auto}</style></head><body><div id='root'></div><script>window.fixtureMessages=${JSON.stringify(messages[lang]).replace(/</g,'\\u003c')};HTMLFormElement.prototype.submit=function(){window.fixturePost={action:this.action,method:this.method,keys:[...this.elements].map(x=>x.name)}};</script><script src='/fixture.js'></script></body></html>`);
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${server.address().port}`;
-const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--disable-dev-shm-usage']});let checks=0;
+const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--disable-dev-shm-usage']});let checks=0, activePage;
 try{
  for(const lang of ['ar','en','tr'])for(const width of [390,1440]){
-  const context=await browser.newContext({viewport:{width,height:850}}),page=await context.newPage(),cp=messages[lang].ProfileCardUpdate;page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',route=>route.abort());
+  const context=await browser.newContext({viewport:{width,height:850}}),page=await context.newPage(),cp=messages[lang].ProfileCardUpdate;activePage=page;page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',route=>route.abort());
   const before=requests.length;await page.goto(`${origin}/?lang=${lang}`);await expect(page.getByText(cp.title,{exact:true})).toBeVisible();assert.equal(requests.length,before);checks++;
   await page.locator('summary').click();await expect(page.getByRole('radio')).toHaveCount(2);await page.getByRole('radio').first().check();await expect(page.getByLabel(messages[lang].cart.cardNumber,{exact:true})).toHaveCount(0);checks++;
   await page.getByLabel('CVC',{exact:true}).fill('123');rejectForm=true;await page.getByRole('button',{name:cp.submit,exact:true}).click();await expect(page.getByRole('alert')).toHaveText(cp.error);await expect(page.getByLabel('CVC',{exact:true})).toHaveValue('');checks++;
@@ -49,4 +49,8 @@ try{
  }
  assert.deepEqual(errors,[]);assert.ok(requests.every(r=>r.path==='/api/credit-cards'||r.path===`/api/users/me/subscriptions/${id}/card`));
  const report={checks,errors,scope:'Actual donor card-change components with synthetic bank redirect and HTTP fixtures',productionRequests:0,bankCalls:0,paymentCaptures:0,recipientMessages:0};await writeFile(path.join(output,'verification.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+}catch(error){
+ console.error(JSON.stringify({errors}));
+ if(activePage&&!activePage.isClosed()){console.error(await activePage.locator('body').innerText());await activePage.screenshot({path:path.join(output,'failure.png'),fullPage:true});}
+ throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

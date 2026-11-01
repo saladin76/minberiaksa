@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import {CampaignRevenueView} from "./CampaignRevenueView";
+const TrackedTemplateEditor=React.lazy(()=>import("../../../templates/_components/WhatsappTemplateEditorDialog").then(module=>({default:module.WhatsappTemplateEditorDialog})));
 import { readDashboardJson } from "@/lib/dashboard/read-json";
 import { readCampaignOutcomes } from "@/lib/dashboard/read-campaign-outcomes";
 import { CampaignGlobalControlsDialog } from "./CampaignGlobalControlsDialog";
@@ -16,6 +18,7 @@ import { type CampaignRow, CHANNEL_META, STATUS_META } from "./campaign-ui";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 
 export function CampaignsListClient() {
+  const [view,setView]=React.useState<"delivery"|"revenue">("delivery"),[templateId,setTemplateId]=React.useState<string|null>(null);
   const [campaigns, setCampaigns] = React.useState<CampaignRow[]>([]);
   const [unattributed, setUnattributed] = React.useState({ donationCount: 0, revenue: 0, unpricedPaidCount: 0 });
   const [loadError, setLoadError] = React.useState(false);
@@ -161,6 +164,8 @@ export function CampaignsListClient() {
         </Select>
       </FilterBar>
 
+      <div role="group" aria-label={dt("عرض الحملات")} className="mb-4 flex flex-wrap gap-2 rounded-xl border bg-white p-2">{([["delivery","الإرسال والمتابعة"],["revenue","الإيرادات والتتبع"]] as const).map(([key,label])=><button key={key} type="button" aria-pressed={view===key} onClick={()=>setView(key)} className={cn("min-h-11 rounded-lg px-4 py-2 text-sm font-semibold",view===key?"bg-brand text-white":"text-slate-600 hover:bg-slate-50")}>{dt(label)}</button>)}</div>
+      {templateId?<React.Suspense fallback={<p role="status" className="rounded-xl border p-4">{dt("جار تحميل محرر القالب…")}</p>}><div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-7">{dt("في المحرر اختر «إعداد نسخة بتتبع إيرادات الحملات»، ثم راجع اللغات واحفظ النسخة للنشر والاعتماد لدى Meta. استخدم النسخة المعتمدة للحملات الجديدة؛ لن يعاد إرسال الحملات السابقة.")}</div><TrackedTemplateEditor id={templateId} initialKind="CAMPAIGN" open onOpenChange={open=>{if(!open){setTemplateId(null);void load();}}}/></React.Suspense>:null}
       {loadError && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><p>{dt("تعذّر تحميل الحملات. البيانات السابقة قد تكون قديمة؛ أعد المحاولة.")}</p><Button variant="outline" size="sm" onClick={load}>{dt("إعادة المحاولة")}</Button></div>}
       {hasLoaded && !outcomesReady && !outcomeError && !loadError && <p role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">{dt("الحملات ظاهرة؛ جارٍ تحميل الإيرادات المؤكدة.")}</p>}
       {outcomeError && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p>{dt("تعذّر تحميل إسناد الإيرادات؛ بيانات الحملات متاحة والمبالغ غير متاحة مؤقتًا.")}</p><Button variant="outline" size="sm" onClick={load}>{dt("إعادة المحاولة")}</Button></div>}
@@ -241,7 +246,7 @@ export function CampaignsListClient() {
               <span className="font-normal normal-case tracking-normal text-slate-400"> {dtx(" من {0}", [campaigns.length])}</span>
             )}
           </p>
-          <CampaignsTable campaigns={filtered} sort={sort} onSort={toggleSort} onChanged={load} />
+          {view==="revenue"?<CampaignRevenueView campaigns={filtered} ready={outcomesReady&&!outcomeError} onTemplate={setTemplateId}/>:<CampaignsTable campaigns={filtered} sort={sort} onSort={toggleSort} onChanged={load} />}
         </>
       )}
     </div>

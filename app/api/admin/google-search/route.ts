@@ -10,7 +10,7 @@ import { searchPlanRequest, searchAutomationPolicy } from "@/lib/marketing/googl
 import { converseSearchPlan, reviseSearchPlan } from "@/lib/marketing/google-search/conversation";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { prepareSearchPlan, continueSearchPlanning } from "@/lib/marketing/google-search/planner";
-import { executeSearchPlan } from "@/lib/marketing/google-search/executor";
+import { executeSearchPlan, inspectSearchPlanProvider } from "@/lib/marketing/google-search/executor";
 import { fetchGoogleAdsReport } from "@/lib/marketing/google-ads-report";
 import { searchPlanRevenue, searchReportWindow } from "@/lib/marketing/google-search/revenue";
 import { auditActorFromDashboardSession, queueAuditLog } from "@/lib/audit-log";
@@ -26,10 +26,11 @@ export async function GET(request: NextRequest) {
       if (!/^[a-f0-9]{24}$/i.test(id)) return response({ error: "INVALID_PLAN_ID" }, 400);
       const plan = await prisma.googleSearchPlan.findUnique({ where: { id } });
       if (!plan) return response({ error: "PLAN_NOT_FOUND" }, 404);
+      if(request.nextUrl.searchParams.get("providerReview")==="1")return response({review:await inspectSearchPlanProvider(id)});
       if (request.nextUrl.searchParams.get("report") === "1") {
         const connection = await prisma.marketingPlatformConnection.findFirst({ where: { id: plan.connectionId, platform: "GOOGLE_ADS", enabled: true } });
         if (!connection) return response({ error: "ACCOUNT_NOT_AVAILABLE" }, 409);
-        const report = await fetchGoogleAdsReport(searchCredentials(connection), { range: "28d" }, fetch, new Date(), `Minber ${plan.id} | `);
+        const report = await fetchGoogleAdsReport(searchCredentials(connection), { range: "28d" }, fetch, new Date(), (plan.resources as {campaigns?:string[]}|null)?.campaigns || `Minber ${plan.id} | `);
         const [ledger, growth] = await Promise.all([
           searchPlanRevenue(plan.id, searchReportWindow(report.period, report.timezone)),
           (async (): Promise<SearchGrowthResult> => {
@@ -50,12 +51,12 @@ export async function GET(request: NextRequest) {
     const [accounts, projects, plans] = await Promise.all([
       prisma.marketingPlatformConnection.findMany({ where: { platform: "GOOGLE_ADS" }, orderBy: { name: "asc" } }),
       prisma.campaign.findMany({ where: { isActive: true, ...NOT_SOFT_DELETED }, select: { id: true, title: true, slug: true, translations: { select: { locale: true, title: true, slug: true } } }, orderBy: { priority: "asc" }, take: 1000 }),
-      prisma.googleSearchPlan.findMany({ ...(connectionId ? { where: { connectionId } } : {}), orderBy: { createdAt: "desc" }, take: 30, select: { id: true, title: true, status: true, connectionId: true, version: true, automationEnabled: true, createdAt: true } }),
+      prisma.googleSearchPlan.findMany({ where: { status: {not:"ARCHIVED"}, ...(connectionId ? {connectionId} : {}) }, orderBy: { createdAt: "desc" }, take: 30, select: { id: true, title: true, status: true, connectionId: true, version: true, automationEnabled: true, createdAt: true } }),
     ]);
     return response({ accounts: accounts.map(row => ({ id: row.id, name: row.name, customerId: row.accountId, enabled: row.enabled, ready: credentialsReady(searchCredentials(row)) })), projects, plans, projectLimitReached: projects.length === 1000 });
   } catch { return response({ error: "SEARCH_DATA_UNAVAILABLE" }, 502); }
 }
-const actionSchema = z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i), version: z.number().int().positive(), action: z.enum(["validate", "create", "enable", "pause", "budget", "automation", "reconcile"]), confirmation: z.string().optional(), dailyBudget: z.number().positive().max(1e6).optional(), newDailyBudget: z.number().positive().max(1e6).optional(), currency: z.string().regex(/^[A-Z]{3}$/).optional(), policy: searchAutomationPolicy.optional() }).strict();
+const actionSchema = z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i), version: z.number().int().positive(), action: z.enum(["validate", "create", "enable", "pause", "budget", "automation", "reconcile", "restore-keywords", "adopt-provider-budget", "discard-partial", "adopt-existing", "detach", "archive"]), confirmation: z.string().optional(), dailyBudget: z.number().positive().max(1e6).optional(), newDailyBudget: z.number().positive().max(1e6).optional(), currency: z.string().regex(/^[A-Z]{3}$/).optional(), policy: searchAutomationPolicy.optional() }).strict();
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requireAdminOrDashboardPermission(session, "platformConnectionsManage"); if (denied) return denied;

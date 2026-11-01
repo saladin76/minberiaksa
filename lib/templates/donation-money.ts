@@ -34,7 +34,13 @@ type MoneySource = ReceiptPaymentEvidence & {
   totalAmount: number;
   currency: string;
   paidAt?: Date | string | null;
+  billingReason?: string | null;
+  providerTxnType?: string | null;
 };
+
+export const RECURRING_RENEWAL_LABELS = {
+  ar:"تجديد التبرع الدوري",tr:"Düzenli bağış yenilemesi",en:"Recurring donation renewal",fr:"Renouvellement du don récurrent",de:"Verlängerung der regelmäßigen Spende",es:"Renovación de la donación periódica",pt:"Renovação do donativo recorrente",id:"Perpanjangan donasi rutin",ur:"باقاعدہ عطیے کی تجدید",sq:"Rinovimi i dhurimit periodik",it:"Rinnovo della donazione ricorrente",nl:"Verlenging van de periodieke donatie",sv:"Förnyelse av återkommande donation",no:"Fornyelse av fast donasjon",da:"Fornyelse af fast donation",ms:"Pembaharuan sumbangan berkala",ja:"継続寄付の更新",zh:"定期捐赠续期",hi:"नियमित दान का नवीनीकरण",
+} as const;
 
 export function donationMoneyFields(donation: MoneySource, locale = "ar") {
   const language = locale.toLowerCase().split(/[-_]/)[0].replace(/^nb$/, "no");
@@ -51,7 +57,9 @@ export function donationMoneyFields(donation: MoneySource, locale = "ar") {
   const totalLabel = donation.paidAt ? labels[3] : labels[4];
   const parts = [`${labels[0]}: ${projectsAmount}`, `${labels[1]}: ${teamSupport}`];
   if ((donation.fees ?? 0) > 0) parts.push(`${labels[2]}: ${fees}`);
-  const receiptSummary = `${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
+  const renewal = donation.billingReason === "subscription_cycle" || donation.providerTxnType?.toLowerCase() === "recurringsale";
+  const renewalLabel = RECURRING_RENEWAL_LABELS[language as keyof typeof RECURRING_RENEWAL_LABELS] ?? RECURRING_RENEWAL_LABELS.en;
+  const receiptSummary = `${renewal ? `${renewalLabel} — ` : ""}${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
   return {
     projectsAmount, teamSupport, fees,
     receiptSummary,

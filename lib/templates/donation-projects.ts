@@ -103,7 +103,8 @@ export function donationProjectSummary(donation: DonationProjectSource): {
     })),
   ];
   return {
-    campaignTitle: lines.map((line) => line.campaignTitle).join(locale === "ar" || locale === "ur" ? "، " : ", ") || labels.general,
+    // Keep every monetary line while avoiding repeated display titles in a short notification.
+    campaignTitle: [...new Set(lines.map((line) => line.campaignTitle))].join(locale === "ar" || locale === "ur" ? "، " : ", ") || labels.general,
     lines,
   };
 }
