@@ -3,7 +3,7 @@ import { loadEnvConfig } from "@next/env";
 import { spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync } from "node:fs";
 import { resolve } from "node:path";
-import { runRecurringRehearsal } from "../lib/donations/recurring-rehearsal";
+import { RecurringRehearsalEligibilityError, runRecurringRehearsal } from "../lib/donations/recurring-rehearsal";
 import { prisma } from "../lib/prisma";
 loadEnvConfig(process.cwd(), false);
 
@@ -40,4 +40,4 @@ async function main() {
     }
   } finally { await prisma.$disconnect(); }
 }
-main().catch(error => { const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : "REHEARSAL_FAILED_REVIEW_RUN_LOCK"; console.error(JSON.stringify({ error: code, automaticRetry: false })); process.exitCode = 1; });
+main().catch(error => { const code = error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : "REHEARSAL_FAILED_REVIEW_RUN_LOCK"; console.error(JSON.stringify({ error: code, ...(error instanceof RecurringRehearsalEligibilityError ? { eligibilityFailures: error.reasons } : {}), automaticRetry: false })); process.exitCode = 1; });

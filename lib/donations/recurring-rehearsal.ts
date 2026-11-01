@@ -16,6 +16,13 @@ const object = (value: unknown): Record<string, unknown> => value && typeof valu
 const tokenFor = (runId: string) => `RECURRING_TEST:${runId}`;
 const phaseWhere = (runId: string) => ({ entityType: "RecurringRehearsal", entityId: runId });
 
+export class RecurringRehearsalEligibilityError extends Error {
+  constructor(readonly reasons: string[]) {
+    super("ONLY_NEW_SETTLED_ADMIN_TEST_PLAN_ALLOWED");
+    this.name = "RecurringRehearsalEligibilityError";
+  }
+}
+
 export async function runRecurringRehearsal(options: Options, wait: (ms: number) => Promise<void> = pause) {
   const cycles = options.cycles ?? 3, intervalSeconds = options.intervalSeconds ?? 60;
   const runId = options.runId ?? randomBytes(12).toString("hex");
@@ -30,12 +37,30 @@ export async function runRecurringRehearsal(options: Options, wait: (ms: number)
   if (saved && (saved.subscriptionId !== options.subscriptionId || saved.donorId !== options.donorId || saved.currency !== options.currency || saved.cycles !== cycles || saved.intervalSeconds !== intervalSeconds || saved.maxTotalMinor !== maxTotalMinor)) throw new Error("RUN_ID_CONFLICT");
   const finished = anchor && await prisma.auditLog.findFirst({ where: { ...phaseWhere(runId), action: { in: ["RECURRING_REHEARSAL_COMPLETED", "RECURRING_REHEARSAL_STOPPED"] } } });
   if (finished) return { runId, state: finished.action.endsWith("COMPLETED") ? "COMPLETED" : "STOPPED", replayed: true, newCharges: 0 };
-  const plan = await prisma.subscription.findFirst({ where: { id: options.subscriptionId, donorId: options.donorId }, include: { donor: { select: { role: true } }, donations: { where: { status: "PAID", paidAt: { not: null }, NOT: { billingReason: "subscription_test_cycle" } }, take: 1, select: { id: true } } } });
+  // MongoDB/Prisma negation omits null and missing fields. First Albaraka
+  // checkout payments have no billingReason; include both forms explicitly.
+  const plan = await prisma.subscription.findFirst({ where: { id: options.subscriptionId, donorId: options.donorId }, include: { donor: { select: { role: true } }, donations: { where: { status: "PAID", paidAt: { not: null }, OR: [{ billingReason: { not: "subscription_test_cycle" } }, { billingReason: null }, { billingReason: { isSet: false } }] }, take: 1, select: { id: true } } } });
   const now = new Date();
-  if (!plan || plan.donor.role !== "ADMIN" || plan.provider !== "ALBARAKA" || plan.status !== "ACTIVE" ||
-    !["DAILY", "FRIDAY", "MONTHLY"].includes(plan.frequency ?? "MONTHLY") || !plan.paymentCardId || !plan.lastBillingDate || !plan.donations.length ||
-    now.getTime() - plan.createdAt.getTime() > 86400000 || plan.createdAt > now || plan.currency !== options.currency || !plan.nextBillingDate ||
-    (!saved && (plan.chargeAttempts !== 0 || plan.amountChangeLock || plan.nextBillingDate.getTime() <= now.getTime() + (cycles * intervalSeconds + 900) * 1000))) throw new Error("ONLY_NEW_SETTLED_ADMIN_TEST_PLAN_ALLOWED");
+  if (!plan) throw new RecurringRehearsalEligibilityError(["PLAN_NOT_FOUND_OR_OWNER_MISMATCH"]);
+  const reasons: string[] = [];
+  if (plan.donor.role !== "ADMIN") reasons.push("ADMIN_OWNER_REQUIRED");
+  if (plan.provider !== "ALBARAKA") reasons.push("ALBARAKA_PLAN_REQUIRED");
+  if (plan.status !== "ACTIVE") reasons.push("ACTIVE_PLAN_REQUIRED");
+  if (!["DAILY", "FRIDAY", "MONTHLY"].includes(plan.frequency ?? "MONTHLY")) reasons.push("UNSUPPORTED_FREQUENCY");
+  if (!plan.paymentCardId) reasons.push("SAVED_PAYMENT_CARD_REQUIRED");
+  if (!plan.lastBillingDate) reasons.push("SETTLED_BILLING_DATE_REQUIRED");
+  if (!plan.donations.length) reasons.push("SETTLED_NON_TEST_PAYMENT_REQUIRED");
+  if (now.getTime() - plan.createdAt.getTime() > 86400000) reasons.push("PLAN_OLDER_THAN_24_HOURS");
+  if (plan.createdAt > now) reasons.push("PLAN_CREATED_IN_FUTURE");
+  if (plan.currency !== options.currency) reasons.push("CURRENCY_MISMATCH");
+  if (!plan.nextBillingDate) reasons.push("NEXT_BILLING_DATE_REQUIRED");
+  if (!saved) {
+    if (plan.chargeAttempts !== 0) reasons.push("PREVIOUS_CHARGE_ATTEMPTS_PRESENT");
+    if (plan.amountChangeLock) reasons.push("AMOUNT_CHANGE_LOCK_PRESENT");
+    if (plan.nextBillingDate && plan.nextBillingDate.getTime() <= now.getTime() + (cycles * intervalSeconds + 900) * 1000) reasons.push("NORMAL_BILLING_TOO_CLOSE");
+  }
+  // Keep the required snapshot fields narrowed after collecting every failure.
+  if (reasons.length || !plan.nextBillingDate || !plan.paymentCardId) throw new RecurringRehearsalEligibilityError(reasons);
   const amountMinor = albarakaMinorUnits(plan.amount + plan.teamSupport + (plan.coverFees ? (plan.amount + plan.teamSupport) * .03 : 0));
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor * cycles > maxTotalMinor) throw new Error("REHEARSAL_BUDGET_EXCEEDED");
   if (saved && (saved.frequency !== (plan.frequency ?? "MONTHLY") || saved.amountMinor !== amountMinor || saved.cardId !== plan.paymentCardId || saved.originalNextDate !== plan.nextBillingDate.toISOString() || plan.amountChangeLock !== tokenFor(runId))) throw new Error("REHEARSAL_PLAN_CHANGED");

@@ -6,9 +6,9 @@ import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const runId = "3".repeat(24);
-async function fixture(args: string[], check: (result: ReturnType<typeof spawnSync>, dir: string) => void | Promise<void>) {
+async function fixture(args: string[], check: (result: ReturnType<typeof spawnSync>, dir: string) => void | Promise<void>, blocked = false) {
   const dir = mkdtempSync(join(tmpdir(), "minberi-rehearsal-cli-")), preload = join(dir, "preload.cjs"), script = resolve("scripts/recurring-rehearsal.ts");
-  writeFileSync(preload, `const Module=require('node:module');const original=Module._load;Module._load=function(name,parent,...args){if(parent?.filename===${JSON.stringify(script)}){if(name==='@next/env')return {loadEnvConfig(){}};if(name==='../lib/prisma')return {prisma:{$disconnect:async()=>{}}};if(name==='../lib/donations/recurring-rehearsal')return {runRecurringRehearsal:async options=>({state:options.execute?'COMPLETED':'PREVIEW',runId:options.runId||'${runId}',newCharges:0,readOnly:!options.execute})};if(!name.startsWith('node:'))throw Error('Unexpected dependency');}return original.call(this,name,parent,...args);};`);
+  writeFileSync(preload, `const Module=require('node:module');const original=Module._load;class RecurringRehearsalEligibilityError extends Error{constructor(){super('ONLY_NEW_SETTLED_ADMIN_TEST_PLAN_ALLOWED');this.reasons=['SETTLED_NON_TEST_PAYMENT_REQUIRED'];}}Module._load=function(name,parent,...args){if(parent?.filename===${JSON.stringify(script)}){if(name==='@next/env')return {loadEnvConfig(){}};if(name==='../lib/prisma')return {prisma:{$disconnect:async()=>{}}};if(name==='../lib/donations/recurring-rehearsal')return {RecurringRehearsalEligibilityError,runRecurringRehearsal:async options=>{if(${blocked})throw new RecurringRehearsalEligibilityError();return {state:options.execute?'COMPLETED':'PREVIEW',runId:options.runId||'${runId}',newCharges:0,readOnly:!options.execute};}};if(!name.startsWith('node:'))throw Error('Unexpected dependency');}return original.call(this,name,parent,...args);};`);
   try {
     const result = spawnSync(process.execPath, ["--conditions=react-server", "--require", preload, "--import", "tsx", script, ...args], { encoding: "utf8", timeout: 10000, env: { ...process.env, RECURRING_REHEARSAL_LOG_DIR: join(dir, "logs") } });
     assert.equal(result.error, undefined);
@@ -25,6 +25,10 @@ test("execution without the preview's exact run ID is rejected", async () => fix
   assert.equal(result.status, 1);
   assert.match(String(result.stderr), /PREVIEW_RUN_ID_REQUIRED/);
 }));
+test("the actual CLI reports specific eligibility failures without serializing the subscription or card", async () => fixture(selection, result => {
+  assert.equal(result.status, 1);
+  assert.deepEqual(JSON.parse(String(result.stderr)), { error: "ONLY_NEW_SETTLED_ADMIN_TEST_PLAN_ALLOWED", eligibilityFailures: ["SETTLED_NON_TEST_PAYMENT_REQUIRED"], automaticRetry: false });
+}, true));
 test("a detached rehearsal starts its reviewed child and records the eventual result without keeping SSH open", async () => fixture([...selection, "--execute", "--detach", `--run-id=${runId}`], async result => {
   assert.equal(result.status, 0, String(result.stderr));
   const started = JSON.parse(String(result.stdout));

@@ -19,20 +19,26 @@ function fixture() {
   const matches = (row: Row, where: Row): boolean => Object.entries(where).every(([key,value]) => {
     if (key === "AND") return value.every((item: Row) => matches(row,item));
     if (key === "OR") return value.some((item: Row) => matches(row,item));
-    if (key === "NOT") return !matches(row,value);
+    // Prisma negation excludes null/missing scalar values; JS inequality does not.
+    if (key === "NOT") return Object.keys(value).every(field => row[field] != null) && !matches(row,value);
     if (key === "donations" && value.some) return row.donations.some((item: Row) => matches(item,value.some));
     if (value instanceof Date) return row[key]?.getTime() === value.getTime();
     if (value && typeof value === "object") {
       if ("isSet" in value) return (row[key] !== undefined) === value.isSet;
       if ("lte" in value) return row[key] != null && row[key] <= value.lte;
-      if ("not" in value) return row[key] != null;
+      if ("not" in value) return row[key] != null && row[key] !== value.not;
       if ("in" in value) return value.in.includes(row[key]);
     }
-    return value === null ? row[key] == null : row[key] === value;
+    return value === null ? row[key] === null : row[key] === value;
   });
   const db: Row = {
     subscription: {
-      findFirst: async ({where}: Row) => matches(plan,where) ? structuredClone(plan) : null,
+      findFirst: async ({where,include}: Row) => {
+        if (!matches(plan,where)) return null;
+        const result = structuredClone(plan);
+        if (include?.donations) result.donations = result.donations.filter((row: Row) => matches(row,include.donations.where)).slice(0,include.donations.take);
+        return result;
+      },
       findUnique: async ({where}: Row) => where.id === id ? structuredClone(plan) : null,
       findMany: async ({where}: Row) => matches(plan,where) ? [structuredClone(plan)] : [],
       updateMany: async ({where,data}: Row) => { if (!matches(plan,where)) return {count:0}; writes++;Object.assign(plan,data);return {count:1}; },
@@ -81,6 +87,28 @@ function fixture() {
 }
 
 test('preview cannot write, charge or lock a plan',async()=>{const f=fixture(),report=await f.run();assert.equal(report.state,'PREVIEW');assert.equal(report.maximumAdditionalCharge,3);assert.deepEqual(f.stats(),{writes:0,captures:0,queries:0,reversals:0});assert.equal(f.plan.amountChangeLock,null);});
+for (const marker of [undefined, null, 'subscription_create']) test(`settled signup with billingReason ${String(marker)} remains eligible`, async () => {
+ const f=fixture();
+ if (marker !== undefined) f.plan.donations[0].billingReason=marker;
+ assert.equal((await f.run()).state,'PREVIEW');
+ assert.deepEqual(f.stats(),{writes:0,captures:0,queries:0,reversals:0});
+});
+for (const variant of ['test_only','unpaid','unsettled']) test(`${variant} cannot substitute for a settled original payment`, async () => {
+ const f=fixture();
+ if (variant==='test_only') f.plan.donations[0].billingReason='subscription_test_cycle';
+ if (variant==='unpaid') f.plan.donations[0].status='FAILED';
+ if (variant==='unsettled') f.plan.donations[0].paidAt=null;
+ await assert.rejects(f.run(), (error: Row) => error.message==='ONLY_NEW_SETTLED_ADMIN_TEST_PLAN_ALLOWED' && error.reasons.includes('SETTLED_NON_TEST_PAYMENT_REQUIRED'));
+ assert.deepEqual(f.stats(),{writes:0,captures:0,queries:0,reversals:0});
+});
+test('eligibility failures identify each unmet prerequisite without writing or calling a provider', async () => {
+ const f=fixture();f.plan.donor.role='DONOR';f.plan.paymentCardId=null;f.plan.lastBillingDate=null;f.plan.chargeAttempts=1;
+ await assert.rejects(f.run(), (error: Row) => {
+  assert.deepEqual(Array.from(error.reasons),['ADMIN_OWNER_REQUIRED','SAVED_PAYMENT_CARD_REQUIRED','SETTLED_BILLING_DATE_REQUIRED','PREVIOUS_CHARGE_ATTEMPTS_PRESENT']);
+  return true;
+ });
+ assert.deepEqual(f.stats(),{writes:0,captures:0,queries:0,reversals:0});
+});
 test('three actual worker cycles use separate orders, verify the bank and preserve the ordinary schedule; replay sends no charge',async()=>{
  const f=fixture(),result=await f.run({execute:true});assert.equal(result.state,'COMPLETED');assert.equal(result.confirmed.length,3);assert.equal(f.plan.status,'PAUSED');assert.equal(f.stats().captures,3);assert.equal(f.stats().queries,3);assert.equal(new Set(f.donations.map(row=>row.providerOrderId)).size,3);assert.ok(f.donations.every(row=>row.paidAt&&row.billingReason==='subscription_test_cycle'));assert.ok(f.bodies.every(body=>body.IsMailOrder==='N'&&body.IsRecurring==='Y'&&body.CardInformationData.Cvc2===''));assert.equal(f.plan.nextBillingDate.toISOString(),f.normalDate.toISOString());assert.equal(f.plan.amountChangeLock,null);assert.equal((await f.run({execute:true})).newCharges,0);assert.equal(f.stats().captures,3);
 });

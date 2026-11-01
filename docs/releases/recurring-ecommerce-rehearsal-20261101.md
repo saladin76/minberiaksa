@@ -8,6 +8,8 @@ The recurring snapshot records the transaction mode, terminal, original amount/c
 
 The rehearsal CLI targets exactly one identified subscription and its identified ADMIN owner. It requires an active Albaraka daily/Friday/monthly plan created within 24 hours, a settled first donation, a linked card, no pending attempt/lock, and a normal billing date later than the test window plus 15 minutes. Ordinary donor accounts cannot be used. No subscription is automatically selected.
 
+Signup eligibility explicitly includes settled non-test donations with a null or missing billingReason. Albaraka checkout does not set this optional field, and Prisma/MongoDB negation alone excludes those records. Test-cycle payments, failed payments and payments without paidAt cannot satisfy this prerequisite. Eligibility errors include only stable reason codes, never the donor, subscription object or card. This correction changes the rehearsal helper only; it does not rewrite first payments, change a production schedule or relax the owner, age, cap and settlement checks.
+
 Preview is read-only. The maximum additional amount is in the plan's own currency and includes all recurring team support/fees. The initial signup donation is separate. Execution requires the same preview run ID, currency, financial cap and cycle count. At most three cycles are allowed, with 60–600 seconds between them. Each cycle uses the existing charge/settlement engine and a distinct stable order ID; each paid cycle must also pass the bank's original-sale inquiry before another starts.
 
 ```bash
