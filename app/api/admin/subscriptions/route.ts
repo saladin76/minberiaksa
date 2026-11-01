@@ -1,4 +1,5 @@
 import { recurringReadiness } from "@/lib/donations/recurring-readiness";
+import { subscriptionReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -165,6 +166,7 @@ export async function GET(request: NextRequest) {
         lastBillingDate: s.lastBillingDate,
         provider: s.provider || "STRIPE",
         billingReadiness: recurringReadiness({ ...s, hasPaidDonation: s.donations.length > 0 }),
+        reductionEligibility: subscriptionReductionEligibility(s),
         chargeAttempts: s.chargeAttempts,
         lastChargeError: s.lastChargeError,
         donor: s.donor,
@@ -177,7 +179,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       subscriptions,
       pagination: { total, page, limit, pages: Math.ceil(total / limit) || 1 },
-    });
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Error listing subscriptions:", error);
     return NextResponse.json(

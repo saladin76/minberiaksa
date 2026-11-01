@@ -3,6 +3,8 @@
 import { SubscriptionRequestsPanel } from "@/components/dashboard/SubscriptionRequestsPanel";
 import { focusSubscriptionTarget, subscriptionManagementHref, type SubscriptionRequestRow } from "@/lib/donations/subscription-navigation";
 import { isReductionRequestForPlan } from "@/lib/donations/subscription-request-policy";
+import type { ReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
+import { reductionBlockMessage, reductionErrorMessage } from "@/lib/dashboard/subscription-reduction-feedback";
 import { RecurringHealthPanel } from "@/components/dashboard/RecurringHealthPanel";
 import { BILLING_READINESS_LABELS, type BillingReadiness } from "@/lib/donations/recurring-readiness";
 import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
@@ -165,6 +167,7 @@ interface DonationRow {
 }
 
 interface SubscriptionRow {
+  reductionEligibility?: ReductionEligibility;
   provider?: string; billingReadiness?: BillingReadiness; lastChargeError?: string | null; chargeAttempts?: number;
   id: string;
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
@@ -448,6 +451,35 @@ function MonthlySubscriptionsDashboard() {
   const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED" | "DONOR_REQUEST">("PHONE");
   const [reduceEvidence, setReduceEvidence] = useState("");
   const [reduceBusy, setReduceBusy] = useState(false);
+  const [reduceEligibility, setReduceEligibility] = useState<ReductionEligibility | null>(null);
+  const [reduceEligibilityLoading, setReduceEligibilityLoading] = useState(false);
+  const [reduceEligibilityError, setReduceEligibilityError] = useState(false);
+  const [reduceEligibilityReload, setReduceEligibilityReload] = useState(0);
+  const [reduceSubmitError, setReduceSubmitError] = useState<string | null>(null);
+  const reducePlanId = reducePlan?.id;
+  const reduceDonorId = reducePlan?.donor?.id;
+  // A fresh server read, not the browser clock or an old table row, controls
+  // availability. The PATCH still rechecks and atomically claims the plan.
+  useEffect(() => {
+    setReduceEligibility(null); setReduceEligibilityError(false);
+    setReduceEligibilityLoading(Boolean(reducePlanId));
+    if (!reducePlanId || !reduceDonorId) { setReduceEligibilityLoading(false); return; }
+    const controller = new AbortController();
+    const params = new URLSearchParams({ subscriptionId: reducePlanId, userId: reduceDonorId, status: "ALL", limit: "1" });
+    void fetch(`/api/admin/subscriptions?${params}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) })
+      .then(async response => {
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        const row: SubscriptionRow | undefined = data.subscriptions?.find((value: SubscriptionRow) => value.id === reducePlanId && value.donor?.id === reduceDonorId);
+        if (!row?.reductionEligibility || typeof row.reductionEligibility.allowed !== "boolean") throw new Error();
+        if (controller.signal.aborted) return;
+        setReduceEligibility(row.reductionEligibility);
+        setReducePlan(current => current?.id === reducePlanId ? row : current);
+      })
+      .catch(() => { if (!controller.signal.aborted) setReduceEligibilityError(true); })
+      .finally(() => { if (!controller.signal.aborted) setReduceEligibilityLoading(false); });
+    return () => controller.abort();
+  }, [reducePlanId, reduceDonorId, reduceEligibilityReload]);
   const applyReductionRequest = useCallback((row: SubscriptionRequestRow) => {
     setReduceRequest(row);
     setReduceAmount(String(row.requestedAmount));
@@ -495,6 +527,7 @@ function MonthlySubscriptionsDashboard() {
   }, [linkedDonorId, linkedSubscriptionId, linkedRequestId, requestRevision]);
 
   const openSubscriptionReduction = (plan: SubscriptionRow) => {
+    setReduceEligibility(null); setReduceEligibilityLoading(true); setReduceEligibilityError(false); setReduceSubmitError(null);
     const row = isReductionRequestForPlan(activeLinkedRequest, { id: plan.id, donorId: plan.donor?.id || "", amount: plan.amount, currency: plan.currency }) ? activeLinkedRequest : null;
     setReduceRequest(row);
     setReduceAmount(row ? String(row.requestedAmount) : "");
@@ -852,7 +885,8 @@ function MonthlySubscriptionsDashboard() {
   );
 
   const submitSubscriptionReduction = useCallback(async () => {
-    if (!reducePlan || reduceBusy) return;
+    if (!reducePlan || reduceBusy || reduceEligibilityLoading || reduceEligibilityError || !reduceEligibility?.allowed) return;
+    setReduceSubmitError(null);
     const amount = Number(reduceAmount);
     if (reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !isReductionRequestForPlan(reduceRequest, { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency }) || reduceRequest?.requestedAmount !== amount)) {
       toast.error(dt("اختر طلبًا موثقًا وصالحًا من حساب المتبرع أولًا."));
@@ -878,11 +912,17 @@ function MonthlySubscriptionsDashboard() {
       await fetchSubscriptions(1, false);
       void fetchStats();
     } catch (error) {
-      toast.error(axios.isAxiosError(error) ? (error.response?.data?.code === "DONOR_REQUEST_MISMATCH" ? dt("طلب المتبرع غير صالح لهذا الاشتراك أو لهذا المبلغ.") : error.response?.data?.error ?? dt("تعذّر التخفيض")) : dt("تعذّر التخفيض"));
+      const data = axios.isAxiosError(error) ? error.response?.data : null;
+      const message = reductionErrorMessage(data?.code, data?.reductionEligibility?.reason);
+      setReduceSubmitError(message);
+      // A billing transition after the read must disable another submission.
+      // Only the explicit refresh can authorize a new review of the plan.
+      setReduceEligibility(null);
+      toast.error(message);
     } finally {
       setReduceBusy(false);
     }
-  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, reduceRequest, reduceRequestsLoading, reduceRequestsError, fetchSubscriptions, fetchStats]);
+  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, reduceRequest, reduceRequestsLoading, reduceRequestsError, reduceEligibility, reduceEligibilityLoading, reduceEligibilityError, fetchSubscriptions, fetchStats]);
 
   const handleSubscriptionStatusChange = useCallback(
     async (
@@ -2483,6 +2523,12 @@ function MonthlySubscriptionsDashboard() {
               <DialogTitle>{dt("تخفيض مبلغ التبرع الدوري")}</DialogTitle>
               <DialogDescription>{dtx("المبلغ الحالي: {0} {1}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.", [reducePlan.amount, reducePlan.currency])}</DialogDescription>
             </DialogHeader>
+            <div aria-live="polite" className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm leading-6">
+              {reduceEligibilityLoading ? <p role="status">{dt("جارٍ فحص حالة التحصيل قبل التخفيض…")}</p> : reduceEligibilityError ? <p role="alert" className="text-red-700">{dt("تعذّر فحص حالة التحصيل. حدّث الحالة قبل تأكيد التخفيض.")}</p> : reduceSubmitError ? <p role="alert" className="text-red-700">{reduceSubmitError}</p> : reduceEligibility && !reduceEligibility.allowed ? <p role="alert" className="text-amber-800">{reductionBlockMessage(reduceEligibility.reason)}</p> : null}
+              {reduceEligibility?.nextBillingDate && <p className="text-xs text-slate-600">{dtx("موعد التحصيل المسجل: {0} (بتوقيت إسطنبول)", [new Date(reduceEligibility.nextBillingDate).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })])}</p>}
+              {reduceEligibility?.reason === "RETRY_PENDING" && <p className="text-xs text-slate-600">{dtx("محاولات غير ناجحة لهذه الدورة: {0}", [reduceEligibility.chargeAttempts])}{reducePlan.lastChargeError ? <span dir="auto" className="ms-2 break-words">{reducePlan.lastChargeError}</span> : null}</p>}
+              <button type="button" className="min-h-10 justify-self-start rounded-lg border bg-white px-3 text-xs disabled:opacity-50" disabled={reduceBusy || reduceEligibilityLoading} onClick={() => { setReduceSubmitError(null); setReduceEligibility(null); setReduceEligibilityLoading(true); setReduceEligibilityReload(value => value + 1); }}>{dt("تحديث حالة الاشتراك")}</button>
+            </div>
             <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} dir="ltr" />
             </label>
             <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} disabled={reduceBusy} onValueChange={v => {
@@ -2513,7 +2559,7 @@ function MonthlySubscriptionsDashboard() {
             </label>
             <p className="text-xs text-slate-500">{dt("لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.")}</p>
             <div className="flex gap-2">
-              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy || reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !reduceRequest)} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
+              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy || reduceEligibilityLoading || reduceEligibilityError || !reduceEligibility?.allowed || reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !reduceRequest)} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
               <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>{dt("إغلاق")}</button>
             </div>
           </DialogContent>

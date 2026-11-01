@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
 const require = createRequire(import.meta.url);
+const { subscriptionReductionEligibility } = require('../lib/donations/subscription-reduction-policy.ts');
 const donorA = 'b'.repeat(24), donorB = 'e'.repeat(24), planA = 'a'.repeat(24), planB = 'd'.repeat(24), requestA = 'c'.repeat(24), requestB = 'f'.repeat(24), failedPlan = '1'.repeat(24);
 const catalogs = { en: require('../lib/dashboard/i18n/catalog/en.json'), tr: require('../lib/dashboard/i18n/catalog/tr.json') };
 const label = (lang, text) => lang === 'ar' ? text : catalogs[lang][text] || text;
@@ -28,14 +29,14 @@ const css = (await postcss([tailwindcss({ ...require('../tailwind.config.ts').de
 const theme = (await readFile('app/[locale]/globals.css', 'utf8')).match(/:root\s*\{[\s\S]*?\}/)?.[0] || '';
 const messages = Object.fromEntries(await Promise.all(['ar', 'en', 'tr'].map(async lang => [lang, JSON.parse(await readFile(`i18n/messages/${lang}.json`, 'utf8'))])));
 const requests = [], errors = [];
-let plans, tickets, slowDonor = '', omitListRequest = false, proofMode = 'normal';
+let plans, tickets, slowDonor = '', omitListRequest = false, proofMode = 'normal', billingMode = 'normal', rejectReduction = false;
 function reset() {
-  omitListRequest = false; proofMode = 'normal';
+  omitListRequest = false; proofMode = 'normal'; billingMode = 'normal'; rejectReduction = false;
   plans = [
     { id: planA, donor: { id: donorA, name: 'Donor Alpha', email: 'alpha@example.test' }, status: 'ACTIVE', amount: 107.87, amountUSD: 118, currency: 'EUR', frequency: 'MONTHLY' },
     { id: failedPlan, donor: { id: donorA, name: 'Donor Alpha', email: 'alpha@example.test' }, status: 'PAYMENT_FAILED', amount: 1, amountUSD: 1, currency: 'USD', frequency: 'DAILY' },
     { id: planB, donor: { id: donorB, name: 'Donor Beta', email: 'beta@example.test' }, status: 'PAUSED', amount: 25, amountUSD: 25, currency: 'USD', frequency: 'MONTHLY' },
-  ].map(plan => ({ ...plan, provider: 'ALBARAKA', campaigns: [], categories: [], referral: null, createdAt: '2026-10-01T12:00:00Z', lastBillingDate: '2026-10-31T12:00:00Z', nextBillingDate: '2030-12-01T12:00:00Z' }));
+  ].map(plan => ({ ...plan, provider: 'ALBARAKA', chargeAttempts:0, billingLeaseUntil:null, amountChangeLock:null, campaigns: [], categories: [], referral: null, createdAt: '2026-10-01T12:00:00Z', lastBillingDate: '2026-10-31T12:00:00Z', nextBillingDate: '2030-12-01T12:00:00Z' }));
   tickets = [
     { id: requestA, donorId: donorA, donorName: 'Donor Alpha', subscriptionId: planA, kind: 'AMOUNT_CHANGE', requestedAmount: 10, currency: 'EUR', note: 'Please reduce my donation to 10 EUR.', staffNote: null, status: 'NEW', createdAt: '2026-10-31T12:00:00Z', updatedAt: '2026-10-31T12:00:00.000Z' },
     { id: requestB, donorId: donorB, donorName: 'Donor Beta', subscriptionId: planB, kind: 'AMOUNT_CHANGE', requestedAmount: 5, currency: 'USD', note: 'Please reduce my donation to 5 USD.', staffNote: null, status: 'NEW', createdAt: '2026-10-31T12:00:00Z', updatedAt: '2026-10-31T12:00:00.000Z' },
@@ -69,13 +70,15 @@ const server = createServer(async (req, res) => {
       return json({ requests: omitListRequest && !url.searchParams.has('requestId') ? [] : list.map(row=>({...row,canComplete:plans.find(plan=>plan.id===row.subscriptionId)?.amount===row.requestedAmount})), openCount: scope.filter(row => row.status !== 'COMPLETED').length });
     }
     if (url.pathname === '/api/admin/subscriptions') {
+      if (billingMode === 'error' && url.searchParams.has('subscriptionId')) return json({error:'private upstream failure'},503);
       const userId = url.searchParams.get('userId'), subscriptionId = url.searchParams.get('subscriptionId');
       const rows = plans.filter(row => (!userId || row.donor.id === userId) && (!subscriptionId || row.id === subscriptionId) && (url.searchParams.get('status') === 'ALL' || row.status === url.searchParams.get('status')));
       await new Promise(resolve => setTimeout(resolve, userId === slowDonor ? 650 : 120));
-      return json({ subscriptions: rows, pagination: { total: rows.length, pages: 1 } });
+      return json({ subscriptions: rows.map(row=>({...row,reductionEligibility:subscriptionReductionEligibility({...row,nextBillingDate:row.nextBillingDate?new Date(row.nextBillingDate):null})})), pagination: { total: rows.length, pages: 1 } });
     }
     if (req.method === 'PATCH' && url.pathname === `/api/admin/subscriptions/${planA}`) {
       assert.equal(body.consentRequestId, requestA); assert.equal(body.consentMethod, 'DONOR_REQUEST'); assert.equal(body.amount, 10);
+      if (rejectReduction) return json({error:'Billing is due soon, already pending, or under retry. Schedule a reduction after this cycle settles.',code:'BILLING_WINDOW_LOCKED',reductionEligibility:subscriptionReductionEligibility({...plans.find(plan=>plan.id===planA),nextBillingDate:new Date(),chargeAttempts:2})},409);
       plans.find(plan => plan.id === planA).amount = 10; plans.find(plan => plan.id === planA).amountUSD = 11; return json({ ok: true, amount: 10, provider: { rail: 'ALBARAKA', confirmed: true } });
     }
     if (url.pathname === '/api/admin/subscriptions/health') return json({ groups: [], providers: {}, complete: true, checkedAt: new Date().toISOString(), lastCheck: null, schedulerState: 'recent' });
@@ -131,6 +134,30 @@ try {
     await expect(genericDialog.locator('textarea')).toHaveValue('');await expect(genericDialog.locator('textarea')).not.toHaveAttribute('readonly','');checks++;
     assert.equal(requests.slice(before).filter(row=>row.method!=='GET').length,0);
     await page.keyboard.press('Escape');await expect(genericDialog).toBeHidden();
+    // The table may be stale: opening the dialog must read server eligibility.
+    const currentPlan=plans.find(plan=>plan.id===planA), baseline={...currentPlan};
+    for(const [patch,message] of [
+      [{chargeAttempts:2,lastChargeError:'Onaylanmadi'},'توجد محاولات تحصيل غير ناجحة لهذه الدورة. راجع آخر سبب لتعذّر الخصم، ثم حدّث الحالة بعد تسوية الدورة. يبقى طلب المتبرع محفوظًا دون تنفيذ.'],
+      [{nextBillingDate:new Date(Date.now()+3600_000).toISOString()},'موعد التحصيل قريب أو مستحق خلال 24 ساعة. حدّث الحالة بعد تسوية هذه الدورة؛ يبقى طلب المتبرع محفوظًا دون تنفيذ.'],
+      [{nextBillingDate:null},'موعد التحصيل غير محدد أو غير صالح. راجع جدولة الاشتراك قبل التخفيض؛ لم يُنفّذ التخفيض.'],
+      [{billingLeaseUntil:new Date(Date.now()+60_000)},'تجري معالجة تحصيل لهذا الاشتراك. انتظر ظهور نتيجته ثم حدّث الحالة؛ لم يُنفّذ التخفيض.'],
+      [{amountChangeLock:'fixture-private-lock'},'تغيير سابق يحتاج مطابقة مع مزوّد الدفع. راجع نتيجته قبل أي محاولة جديدة؛ لم يُنفّذ التخفيض.'],
+    ]) {
+      Object.assign(currentPlan,baseline,patch);
+      await genericPlan.getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();
+      await expect(genericDialog.getByRole('alert')).toContainText(label(lang,message));
+      await expect(genericDialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true})).toBeDisabled();
+      assert.equal(currentPlan.amount,107.87);assert.equal(tickets.find(row=>row.id===requestA).status,'NEW');checks++;
+      await page.keyboard.press('Escape');await expect(genericDialog).toBeHidden();
+    }
+    Object.assign(currentPlan,baseline);billingMode='error';
+    await genericPlan.getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();
+    await expect(genericDialog.getByRole('alert')).toContainText(label(lang,'تعذّر فحص حالة التحصيل. حدّث الحالة قبل تأكيد التخفيض.'));
+    await expect(genericDialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true})).toBeDisabled();checks++;
+    billingMode='normal';await genericDialog.getByRole('button',{name:label(lang,'تحديث حالة الاشتراك'),exact:true}).click();
+    await expect(genericDialog.getByRole('alert')).toHaveCount(0);checks++;
+    await page.keyboard.press('Escape');await expect(genericDialog).toBeHidden();
+    assert.equal(requests.slice(before).filter(row=>row.method!=='GET').length,0);
     const ticket = page.locator(`#subscription-request-${requestA}`);
     const open = ticket.getByRole('link', { name: label(lang, 'فتح اشتراكات المتبرع'), exact: true });
     await open.click();
@@ -141,6 +168,13 @@ try {
     const dialog = page.getByRole('dialog'); await expect(dialog.getByRole('spinbutton')).toHaveValue('10'); await expect(dialog.getByRole('spinbutton')).toHaveAttribute('readonly', ''); await expect(dialog).toContainText(label(lang, 'طلب مباشر من حسابه الشخصي')); await expect(dialog.locator('textarea')).toHaveValue(new RegExp(requestA));const box=await dialog.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=page.viewportSize().height+1);checks++; await page.screenshot({path:path.join(output,`${lang}-${width}-request-reduction.png`),animations:'disabled'});checks++;
     await page.keyboard.press('Escape');await expect(dialog).toBeHidden(); assert.equal(requests.slice(before).filter(row => row.method !== 'GET').length, 0); checks++;
     await selected.getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true }).click();
+    rejectReduction=true;
+    await dialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true}).click();
+    await expect(dialog.getByRole('alert')).toContainText(label(lang,'توجد محاولات تحصيل غير ناجحة لهذه الدورة. راجع آخر سبب لتعذّر الخصم، ثم حدّث الحالة بعد تسوية الدورة. يبقى طلب المتبرع محفوظًا دون تنفيذ.'));
+    await expect(dialog).not.toContainText('Billing is due soon');await expect(dialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true})).toBeDisabled();
+    await expect(dialog.getByRole('spinbutton')).toHaveValue('10');await expect(dialog.locator('textarea')).toHaveValue(new RegExp(requestA));assert.equal(currentPlan.amount,107.87);checks++;
+    rejectReduction=false;await dialog.getByRole('button',{name:label(lang,'تحديث حالة الاشتراك'),exact:true}).click();
+    await expect(dialog.getByRole('button',{name:label(lang,'تأكيد التخفيض'),exact:true})).toBeEnabled();checks++;
     await dialog.getByRole('button', { name: label(lang, 'تأكيد التخفيض'), exact: true }).click(); await expect(dialog).toBeHidden(); await expect(selected).toContainText('10'); checks++;
     await section.getByRole('link',{name:label(lang,'فتح طلب المتبرع'),exact:true}).click();await expect(ticket).toBeInViewport();checks++;
     await ticket.locator('textarea').first().fill('Reviewed and applied the donor request'); await ticket.getByRole('button', { name: label(lang, 'تأكيد إنجاز الطلب'), exact: true }).click();
@@ -157,7 +191,7 @@ try {
     await page.evaluate(href => window.fixtureNavigate(href), `/dashboard/monthly?userId=${donorA}&subscriptionId=${failedPlan}#subscriptions`);
     await expect(page.locator(`#subscription-${failedPlan}`)).toBeInViewport(); await expect(page.locator(`#subscription-${failedPlan}`).getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true })).toHaveCount(0); checks++;
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)); await page.evaluate(() => document.fonts.ready); await page.screenshot({ path: path.join(output, `${lang}-${width}.png`), fullPage: true }); checks++;
-    assert.equal(requests.slice(before).filter(row => row.method !== 'GET').length, 2); checks++;
+    assert.equal(requests.slice(before).filter(row => row.method !== 'GET').length, 3); checks++;
     await context.close();
   }
   reset(); omitListRequest=true;

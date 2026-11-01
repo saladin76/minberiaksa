@@ -1,4 +1,5 @@
 import * as requestPolicy from "../../lib/donations/subscription-request-policy";
+import { subscriptionReductionEligibility } from "../../lib/donations/subscription-reduction-policy";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -31,6 +32,7 @@ function fixture() {
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => allowed ? null : Response.json({}, { status: 403 }) },
     "@/lib/prisma": { prisma },
     "@/lib/donations/recurring-lease": { billingLeaseAvailable: () => ({}) },
+    "@/lib/donations/subscription-reduction-policy": { subscriptionReductionEligibility },
     "node:crypto": { randomUUID: () => "fixture-lock" },
     stripe: { default: class { constructor() { throw new Error("No bank/provider call is allowed in this fixture"); } } },
     "@/lib/donations/subscription-provider-control": { planRail: () => "ALBARAKA", ProviderSyncError: class extends Error {}, applyPlanStatusAtProvider: () => { throw new Error("Unexpected provider mutation"); } },
@@ -82,6 +84,26 @@ test("request linkage cannot bypass operator permissions, billing windows, or th
   const invalid = fixture(); assert.equal((await invalid.patch({ consentRequestId: "invalid" })).status, 400); assert.equal(invalid.stats().lookups, 0);
   const soon = fixture(); soon.plan.nextBillingDate = new Date(Date.now() + 3600000); assert.equal((await soon.patch()).status, 409); assert.equal(soon.stats().writes, 0);
   const manual = fixture(); assert.equal((await manual.patch({ consentMethod: "PHONE", consentEvidence: "" })).status, 400); assert.equal(manual.stats().writes, 0);
+});
+
+test("blocked reductions expose the actual reason without writing, converting, consuming the request or calling a provider", async () => {
+  for (const [change, reason] of [
+    [{ chargeAttempts: 2 }, "RETRY_PENDING"],
+    [{ nextBillingDate: null }, "SCHEDULE_MISSING"],
+    [{ nextBillingDate: new Date(Date.now() + 3600_000) }, "BILLING_DUE_SOON"],
+    [{ billingLeaseUntil: new Date(Date.now() + 60_000) }, "BILLING_IN_PROGRESS"],
+    [{ amountChangeLock: "previous-uncertain-result" }, "RECONCILIATION_REQUIRED"],
+  ] as const) {
+    const f = fixture(); Object.assign(f.plan, change);
+    const response = await f.patch(), data = await response.json();
+    assert.equal(response.status, 409);
+    assert.equal(data.reductionEligibility.reason, reason);
+    assert.equal(data.reductionEligibility.allowed, false);
+    assert.equal(data.reductionEligibility.chargeAttempts, f.plan.chargeAttempts);
+    assert.equal(f.plan.amount, 100); assert.equal(f.donorRequest.status, "NEW");
+    assert.deepEqual(f.stats(), { writes: 0, lookups: 1, conversions: 0 });
+    assert.doesNotMatch(JSON.stringify(data), /previous-uncertain-result|fixture-lock|private-dedup-key/);
+  }
 });
 
 test("a two-decimal donor amount survives binary floating point, while a third decimal is rejected", async () => {

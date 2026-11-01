@@ -1,4 +1,5 @@
 import { billingLeaseAvailable } from "@/lib/donations/recurring-lease";
+import { subscriptionReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
 import { NextRequest, NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
@@ -61,6 +62,7 @@ export async function PATCH(
         nextBillingDate: true,
         chargeAttempts: true,
         amountChangeLock: true,
+        billingLeaseUntil: true,
         items: { select: { id: true, amount: true, amountUSD: true } },
         categoryItems: { select: { id: true, amount: true, amountUSD: true } },
         frequency: true,
@@ -101,8 +103,9 @@ export async function PATCH(
       }
       // Prevent editing a due/retrying charge while a scheduled worker might
       // already have loaded the old amount. Defer the request for review.
-      if (!sub.nextBillingDate || sub.nextBillingDate.getTime() - Date.now() < 24 * 3600_000 || sub.chargeAttempts) {
-        return NextResponse.json({ error: "Billing is due soon, already pending, or under retry. Schedule a reduction after this cycle settles.", code: "BILLING_WINDOW_LOCKED" }, { status: 409 });
+      const reductionEligibility = subscriptionReductionEligibility(sub);
+      if (!reductionEligibility.allowed) {
+        return NextResponse.json({ error: "Reduction is blocked by the current billing state", code: reductionEligibility.reason === "RECONCILIATION_REQUIRED" ? "RECONCILE_REQUIRED" : "BILLING_WINDOW_LOCKED", reductionEligibility }, { status: 409 });
       }
       const newAmount = Math.round(amount * 100) / 100;
       const usd = await convertAmountInCurrencyToUsd(newAmount, sub.currency);
@@ -128,7 +131,7 @@ export async function PATCH(
         where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0, AND: [billingLeaseAvailable(new Date())], OR: [{ amountChangeLock: null }, { amountChangeLock: { isSet: false } }] },
         data: { amountChangeLock: token, amountChangeStartedAt: new Date() },
       });
-      if (lock.count !== 1) return NextResponse.json({ error: "Plan changed concurrently" }, { status: 409 });
+      if (lock.count !== 1) return NextResponse.json({ error: "Plan changed concurrently", code: "PLAN_CHANGED_CONCURRENTLY" }, { status: 409 });
       const unlock = async () => { await prisma.subscription.updateMany({ where: { id: sub.id, amountChangeLock: token }, data: { amountChangeLock: null, amountChangeStartedAt: null } }); };
       let providerUpdated = false;
       if (rail === "STRIPE") {
