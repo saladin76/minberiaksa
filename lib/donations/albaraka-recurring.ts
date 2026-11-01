@@ -67,8 +67,8 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
  *    bank's status query is the way to be sure, and the reconciliation job
  *    is where that belongs.
  *  - Nothing runs unless ALBARAKA_RECURRING_ENABLED=1 and the terminal is
- *    configured. The bank must have enabled recurring / mail-order without a
- *    CVC on that terminal; until it has, a live run would only produce
+ *    configured. The bank must accept recurring payments without a
+ *    CVC on that terminal; Mail Order is a separately configured transaction class; until it has, a live run would only produce
  *    declines.
  */
 
@@ -177,10 +177,27 @@ export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryR
   return summary;
 }
 
-async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Promise<RecurringChargeOutcome> {
+type RehearsalCycle = { runId: string; cycle: number };
+
+/** CLI-only rehearsal entry; the persistent run lock must already belong to this run. */
+export async function chargeAlbarakaRehearsalCycle(subscriptionId: string, donorId: string, rehearsal: RehearsalCycle, expected: { amountMinor: number; currency: string; cardId: string; originalNextDate: string }): Promise<RecurringChargeOutcome> {
+  if (![subscriptionId, donorId, rehearsal.runId].every(value => /^[a-f0-9]{24}$/.test(value)) || !Number.isInteger(rehearsal.cycle) || rehearsal.cycle < 1 || rehearsal.cycle > 3) throw new Error("INVALID_REHEARSAL");
+  if (!isAlbarakaRecurringEnabled()) throw new Error("RECURRING_NOT_CONFIGURED");
+  const approval = await prisma.auditLog.findUnique({ where: { id: rehearsal.runId } });
+  if (!approval || approval.action !== "RECURRING_REHEARSAL_STARTED" || approval.actorId !== donorId || approval.entityId !== subscriptionId) throw new Error("REHEARSAL_APPROVAL_REQUIRED");
+  const token = `RECURRING_TEST:${rehearsal.runId}`;
+  const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId, donorId, provider: "ALBARAKA", status: "ACTIVE", amountChangeLock: token }, include: { items: true, categoryItems: true, paymentCard: true } });
+  if (!sub || !sub.nextBillingDate || !sub.lastBillingDate) throw new Error("REHEARSAL_PLAN_CHANGED");
+  if (sub.currency !== expected.currency || sub.paymentCardId !== expected.cardId || sub.nextBillingDate.toISOString() !== expected.originalNextDate || albarakaMinorUnits(sub.amount + sub.teamSupport + (sub.coverFees ? (sub.amount + sub.teamSupport) * .03 : 0)) !== expected.amountMinor) throw new Error("REHEARSAL_PLAN_CHANGED");
+  const now = new Date();
+  return await withRecurringLease(prisma, sub, now, () => chargeOne(sub, now, false, rehearsal), token)
+    ?? { subscriptionId, donationId: null, result: "already_attempted", amountUSD: null, error: "Rehearsal cycle is already running" };
+}
+
+async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehearsal?: RehearsalCycle): Promise<RecurringChargeOutcome> {
   const due = sub.nextBillingDate ?? now;
   const attempt = sub.chargeAttempts + 1;
-  const orderId = albarakaRecurringOrderId(sub.id, due.toISOString(), attempt);
+  const orderId = rehearsal ? albarakaRecurringOrderId(sub.id, `REHEARSAL:${rehearsal.runId}`, rehearsal.cycle) : albarakaRecurringOrderId(sub.id, due.toISOString(), attempt);
   const base: RecurringChargeOutcome = { subscriptionId: sub.id, donationId: null, result: "declined", amountUSD: null };
 
   // ── Never twice for one cycle ────────────────────────────────────────────
@@ -217,6 +234,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   if (dryRun) return { ...base, result: "dry_run", amountUSD };
 
   const donorCountrySnapshot = (await getDonorCountryCodeForSnapshot(prisma, sub.donorId)) ?? undefined;
+  const cfg = albarakaRecurringConfig();
 
   // ── A row before the call ────────────────────────────────────────────────
   const donation = await prisma.donation.create({
@@ -233,14 +251,14 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       donorCountryCode: donorCountrySnapshot,
       donorId: sub.donorId,
       subscriptionId: sub.id,
-      billingReason: "subscription_cycle",
+      billingReason: rehearsal ? "subscription_test_cycle" : "subscription_cycle",
       referralId: sub.referralId ?? undefined,
       paymentMethod: "CARD",
       provider: "ALBARAKA",
       providerOrderId: orderId,
       providerTxnType: "RecurringSale",
       providerRaw: {
-        albarakaRecurring: { merchantNo: albarakaRecurringConfig().merchantNo, terminalNo: albarakaRecurringConfig().terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, scheduledAt: now.toISOString() },
+        albarakaRecurring: { merchantNo: cfg.merchantNo, terminalNo: cfg.terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, mailOrder: cfg.mailOrder === true ? "Y" : "N", recurring: "Y", cvvSent: false, scheduledAt: now.toISOString(), ...(rehearsal ? { rehearsal } : {}) },
       } as Prisma.InputJsonValue,
       items: sub.items.length
         ? { create: sub.items.map((item) => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD })) }
@@ -257,10 +275,9 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   try {
     cardNumber = decryptCard(card.cardNumber).replace(/\D/g, "");
   } catch (err) {
-    return await recordFailure(sub, donation.id, attempt, now, "Stored card could not be decrypted", "Failed", amountUSD, err);
+    return await recordFailure(sub, donation.id, attempt, now, "Stored card could not be decrypted", "Failed", amountUSD, err, undefined, rehearsal);
   }
 
-  const cfg = albarakaRecurringConfig();
   const body = buildAlbarakaRecurringSale(
     {
       orderId,
@@ -283,17 +300,17 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
      blindly would be a new order id the bank's duplicate check cannot catch, so
      the bank is asked about this order first — as the checkout does. */
   if (transportError || isAlbarakaTransportFailure(sale)) {
-    const resolved = await resolveUnknownRecurringSale(orderId, cfg, transportError ?? sale);
+    const resolved = await resolveUnknownRecurringSale(orderId, cfg, transportError ?? sale, !rehearsal);
     if (resolved.state === "approved") {
       sale = resolved.sale;
     } else if (resolved.state === "not_charged") {
-      return await recordFailure(sub, donation.id, attempt, now, resolved.reason, "Failed", amountUSD, transportError ?? undefined);
+      return await recordFailure(sub, donation.id, attempt, now, resolved.reason, "Failed", amountUSD, transportError ?? undefined, undefined, rehearsal);
     } else {
       return await holdUnresolved(sub, donation.id, orderId, resolved.reason, amountUSD);
     }
   }
   if (!sale) {
-    return await recordFailure(sub, donation.id, attempt, now, "Bank unreachable", "Unknown", amountUSD, transportError ?? undefined);
+    return await recordFailure(sub, donation.id, attempt, now, "Bank unreachable", "Unknown", amountUSD, transportError ?? undefined, undefined, rehearsal);
   }
 
   const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
@@ -308,12 +325,13 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       "Failed",
       amountUSD,
       undefined,
-      sale as unknown as Record<string, unknown>
+      sale as unknown as Record<string, unknown>,
+      rehearsal
     );
   }
 
   // ── Settle ───────────────────────────────────────────────────────────────
-  const nextBillingDate = nextCycleAfter(sub, due, now);
+  const nextBillingDate = rehearsal ? due : nextCycleAfter(sub, due, now);
   await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donation.id }, include: { items: true, categoryItems: true } });
     if (!fresh || fresh.paidAt) return;
@@ -348,8 +366,10 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
     });
   });
 
-  runAfterResponse(() => dispatchDonationPaid(donation.id));
-  runAfterResponse(() => dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: donation.id }));
+  if (!rehearsal) {
+    runAfterResponse(() => dispatchDonationPaid(donation.id));
+    runAfterResponse(() => dispatchEvent("SUBSCRIPTION_PAYMENT", { donationId: donation.id }));
+  }
   return { ...base, donationId: donation.id, result: "charged", amountUSD };
 }
 
@@ -367,7 +387,8 @@ type UnknownSaleResolution =
 async function resolveUnknownRecurringSale(
   orderId: string,
   cfg: ReturnType<typeof albarakaRecurringConfig>,
-  cause: unknown
+  cause: unknown,
+  allowReverse = true
 ): Promise<UnknownSaleResolution> {
   console.error("[albaraka-recurring] no readable answer, inquiring", { orderId, cause: String(cause) });
   const inquiry = await albarakaInquireSale(orderId, cfg);
@@ -384,6 +405,7 @@ async function resolveUnknownRecurringSale(
   if (inquiry.state === "absent") {
     return { state: "not_charged", reason: "Bank unreachable; the bank has no record of the sale" };
   }
+  if (!allowReverse) return { state: "unresolved", reason: "Rehearsal sale outcome is unknown; no retry or financial reversal was sent" };
   const reverse = await albarakaReverseSale(orderId, cfg);
   if (isAlbarakaApproved(reverse)) {
     return { state: "not_charged", reason: "Bank unreachable; the uncertain sale was voided" };
@@ -436,7 +458,8 @@ async function recordFailure(
   txnResult: "Failed" | "Unknown",
   amountUSD: number | null,
   err?: unknown,
-  raw?: Record<string, unknown>
+  raw?: Record<string, unknown>,
+  rehearsal?: RehearsalCycle
 ): Promise<RecurringChargeOutcome> {
   if (err) console.error("[albaraka-recurring]", reason, sub.id, err);
   const retryAt = nextRetryAt(attempt, now);
@@ -475,8 +498,10 @@ async function recordFailure(
   });
   if (!recorded) return { subscriptionId: sub.id, donationId, result: "already_attempted", amountUSD };
 
-  runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
-  void sendDonationFailedConversions(donationId);
+  if (!rehearsal) {
+    runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
+    void sendDonationFailedConversions(donationId);
+  }
   // Exhausted retries are PAYMENT_FAILED, not a donor cancellation.
   // DONATION_FAILED above and the scheduler alert describe the actual result.
 

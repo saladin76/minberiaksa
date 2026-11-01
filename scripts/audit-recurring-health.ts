@@ -60,6 +60,8 @@ async function main() {
     readiness: {
       albarakaSignupTerminalConfigured: isAlbarakaConfigured(albaraka2DConfig()),
       albarakaRecurringTerminalConfigured: isAlbarakaConfigured(albarakaRecurringConfig()),
+      albarakaRecurringMailOrder: albarakaRecurringConfig().mailOrder === true,
+      albarakaRecurringUsesSignupTerminal: albarakaRecurringConfig().terminalNo === albaraka2DConfig().terminalNo,
       albarakaRecurringSwitchEnabled: process.env.ALBARAKA_RECURRING_ENABLED === "1",
       albarakaRecurringCheckoutReady: isAlbarakaRecurringCheckoutReady(),
       paypalCredentialsPresent: Boolean(process.env.PAYPAL_CLIENT_ID?.trim() && process.env.PAYPAL_CLIENT_SECRET?.trim()),

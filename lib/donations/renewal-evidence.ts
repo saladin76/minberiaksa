@@ -4,6 +4,7 @@ export type RenewalEvidence = { since: string; complete: boolean; groups: { prov
 export function renewalEvidence(rows: RenewalRow[], frequencyOf: (id: string | null) => string, since: Date, complete: boolean): RenewalEvidence {
   const groups = new Map<string, RenewalEvidence["groups"][number]>();
   for (const row of rows) {
+    if (row.billingReason === "subscription_test_cycle") continue;
     if (!row.subscriptionId || row.createdAt < since || !(row.billingReason === "subscription_cycle" || row.providerTxnType === "RecurringSale")) continue;
     const provider = row.provider || "UNKNOWN", frequency = frequencyOf(row.subscriptionId), key = `${provider}/${frequency}`;
     const group = groups.get(key) || { provider, frequency, confirmed: 0, declined: 0, notCollected: 0, unresolved: 0, latestConfirmedAt: null, lastDeclineCode: null };

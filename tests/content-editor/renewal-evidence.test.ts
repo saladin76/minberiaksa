@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { renewalEvidence, type RenewalRow } from "../../lib/donations/renewal-evidence";
 const since = new Date("2026-10-01T00:00:00Z");
 const row = (changes: Partial<RenewalRow> = {}): RenewalRow => ({ provider: "ALBARAKA", billingReason: "subscription_cycle", providerTxnType: "RecurringSale", subscriptionId: "test-plan", paidAt: null, status: "FAILED", providerTxnResult: "Failed", providerProcReturnCode: "05", createdAt: new Date("2026-10-10T00:00:00Z"), ...changes });
+test("accelerated rehearsal payments are separately labelled and cannot establish ordinary production renewal evidence", () => {
+  const result = renewalEvidence([row({ billingReason: "subscription_test_cycle", paidAt: new Date(), status: "PAID" })], () => "MONTHLY", since, true);
+  assert.equal(result.groups.length, 0);
+});
 test("a paid signup never establishes successful automatic renewal", () => { const result = renewalEvidence([row({ billingReason: "subscription_create", providerTxnType: "Sale", paidAt: new Date(), status: "PAID" })], () => "MONTHLY", since, true); assert.equal(result.groups.length, 0); });
 test("only settled renewals count as confirmed; unknown responses remain unresolved", () => {
   const result = renewalEvidence([row({ paidAt: new Date("2026-10-11"), status: "PAID" }), row(), row({ providerTxnResult: "Unknown" }), row({ status: "PAID", providerTxnResult: "Processing" })], () => "MONTHLY", since, true);
