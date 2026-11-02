@@ -1,4 +1,5 @@
 import { formatTemplateMoney } from "./money";
+import { recurringFrequencyLabel, type RecurringFrequency } from "./recurring-cadence";
 import { metaParameterName } from "../communication/meta-parameter-name";
 import { localizeReceiptFooter, receiptMoney, type ReceiptPaymentEvidence } from "./receipt-localization";
 export { receiptDate } from "./receipt-localization";
@@ -36,6 +37,7 @@ type MoneySource = ReceiptPaymentEvidence & {
   paidAt?: Date | string | null;
   billingReason?: string | null;
   providerTxnType?: string | null;
+  frequency?: RecurringFrequency;
 };
 
 export const RECURRING_RENEWAL_LABELS = {
@@ -59,7 +61,8 @@ export function donationMoneyFields(donation: MoneySource, locale = "ar") {
   if ((donation.fees ?? 0) > 0) parts.push(`${labels[2]}: ${fees}`);
   const renewal = donation.billingReason === "subscription_cycle" || donation.providerTxnType?.toLowerCase() === "recurringsale";
   const renewalLabel = RECURRING_RENEWAL_LABELS[language as keyof typeof RECURRING_RENEWAL_LABELS] ?? RECURRING_RENEWAL_LABELS.en;
-  const receiptSummary = `${renewal ? `${renewalLabel} — ` : ""}${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
+  const cadence=donation.frequency?` (${recurringFrequencyLabel(donation.frequency,locale)})`:"";
+  const receiptSummary = `${renewal ? `${renewalLabel}${cadence} — ` : ""}${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;
   return {
     projectsAmount, teamSupport, fees,
     receiptSummary,

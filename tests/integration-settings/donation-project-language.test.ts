@@ -1,3 +1,4 @@
+import * as cadence from "../../lib/templates/recurring-cadence";
 import * as font from "../../lib/templates/font";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -56,7 +57,8 @@ function load<T>(path: string, dependencies: Record<string, unknown>): T {
   new vm.Script(code, { filename: path }).runInNewContext({
     module: mod, exports: mod.exports, Date, console,
     fetch: () => { throw new Error("No external request is permitted in the language fixture"); },
-    require: (id: string) => { if (id === "@/lib/templates/font" || id === "../templates/font") return font; assert.ok(id in dependencies, `Unexpected dependency: ${id}`); return dependencies[id]; },
+    require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence; if (id === "@/lib/templates/font" || id === "../templates/font") return font; assert.ok(id in dependencies, `Unexpected dependency: ${id}`); return dependencies[id]; },
   });
   return mod.exports;
 }

@@ -70,6 +70,8 @@ const indexes = [
   { collection: "AiSuggestionTask", key: { ownerId: 1, status: 1, deadlineAt: 1 }, unique: false },
   { collection: "AiSuggestionTask", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
   { collection: "CommunicationProviderEvent", key: { channel: 1, eventType: 1, receivedAt: -1 }, unique: false },
+  { collection: "CommunicationDelivery", key: { campaignId: 1, _id: 1 }, unique: false },
+  { collection: "CommunicationAudienceMember", key: { listId: 1, status: 1, contactType: 1, _id: 1 }, unique: false },
   { collection: "CommunicationDelivery", key: { channel: 1, senderId: 1, recipientPhone: 1, createdAt: -1, status: 1 }, unique: false },
   { collection: "Donation", key: { "attribution.utm_medium": 1, status: 1, _id: 1 }, unique: false },
   { collection: "IssuedCertificate", key: { requestKey: 1 }, unique: true },

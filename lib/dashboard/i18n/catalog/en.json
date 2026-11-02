@@ -9527,5 +9527,16 @@
   "اكتمال بيانات التتبع: ": "Tracking data completeness: ",
   "مصدر الاشتراك الأصلي": "Original subscription source",
   "إشعارات الموقع، {0} غير مقروءة": "Site notifications, {0} unread",
-  "إنشاء حساب متبرع جديد بانتظار التحقق": "New donor account awaiting verification"
+  "إنشاء حساب متبرع جديد بانتظار التحقق": "New donor account awaiting verification",
+  "تعذّر تحميل خطة الإرسال. أعد المحاولة.": "Could not load the send plan. Try again.",
+  "جارٍ تحديث إحصاءات الإرسال؛ يمكنك متابعة إدارة الحملات.": "Updating delivery statistics; campaign controls remain available.",
+  "تعذّر قراءة سجل الإرسال؛ أعد المحاولة.": "Could not read delivery records. Try again.",
+  "اشتراك تبرع دوري جديد": "New recurring donation subscription",
+  "الاشتراك الدوري": "Recurring subscription",
+  "دورية الاشتراك بلغة المتبرع": "Frequency in the donor’s language",
+  "رمز الدورية": "Frequency code",
+  "مبلغ دفعة الاشتراك": "Subscription installment amount",
+  "عملة الاشتراك": "Subscription currency",
+  "الموعد القادم للاشتراك": "Next subscription date",
+  "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة": "The saved template does not match the donation frequency; use the correct template in a new message"
 }

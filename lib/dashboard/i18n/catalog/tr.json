@@ -9519,5 +9519,16 @@
   "اكتمال بيانات التتبع: ": "İzleme verisinin eksiksizliği: ",
   "مصدر الاشتراك الأصلي": "İlk aboneliğin kaynağı",
   "إشعارات الموقع، {0} غير مقروءة": "Site bildirimleri, {0} okunmamış",
-  "إنشاء حساب متبرع جديد بانتظار التحقق": "Doğrulama bekleyen yeni bağışçı hesabı"
+  "إنشاء حساب متبرع جديد بانتظار التحقق": "Doğrulama bekleyen yeni bağışçı hesabı",
+  "تعذّر تحميل خطة الإرسال. أعد المحاولة.": "Gönderim planı yüklenemedi. Yeniden deneyin.",
+  "جارٍ تحديث إحصاءات الإرسال؛ يمكنك متابعة إدارة الحملات.": "Gönderim istatistikleri güncelleniyor; kampanyaları yönetmeye devam edebilirsiniz.",
+  "تعذّر قراءة سجل الإرسال؛ أعد المحاولة.": "Gönderim kayıtları okunamadı. Yeniden deneyin.",
+  "اشتراك تبرع دوري جديد": "Yeni düzenli bağış aboneliği",
+  "الاشتراك الدوري": "Düzenli abonelik",
+  "دورية الاشتراك بلغة المتبرع": "Bağışçının dilinde bağış sıklığı",
+  "رمز الدورية": "Sıklık kodu",
+  "مبلغ دفعة الاشتراك": "Abonelik ödemesi tutarı",
+  "عملة الاشتراك": "Abonelik para birimi",
+  "الموعد القادم للاشتراك": "Sonraki abonelik tarihi",
+  "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة": "Kayıtlı şablon bağış sıklığıyla eşleşmiyor; yeni mesajda doğru şablonu kullanın"
 }

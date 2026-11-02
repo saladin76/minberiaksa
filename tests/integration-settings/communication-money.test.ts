@@ -1,3 +1,4 @@
+import * as cadence from "../../lib/templates/recurring-cadence";
 import * as projects from "../../lib/templates/donation-projects";
 import * as donationMoney from "../../lib/templates/donation-money";
 import assert from "node:assert/strict";
@@ -35,7 +36,7 @@ test("actual context loader supports category-only donations and this site's Pri
   const dependencies: Record<string, unknown> = { "@/lib/prisma": { prisma }, "./donation-projects": projects, "./donation-money": donationMoney, "./money": { donationUsdAmount, formatTemplateMoney }, "./variable-catalog": {} };
   const output = ts.transpileModule(fs.readFileSync("lib/templates/variables.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const loaded = { exports: {} };
-  new vm.Script(output).runInNewContext({ module: loaded, exports: loaded.exports, Date, Intl, Map, require: (id: string) => { assert.ok(id in dependencies, id); return dependencies[id]; } });
+  new vm.Script(output).runInNewContext({ module: loaded, exports: loaded.exports, Date, Intl, Map, require: (id: string) => { if(id==="./recurring-cadence")return cadence; assert.ok(id in dependencies, id); return dependencies[id]; } });
   const api = loaded.exports as { loadContext: (id: string) => Promise<{ donation?: unknown; donations: Array<{ campaignTitle: string; amount: string; currency: string; amountUSD: string }>; totals: { amountUSD: string } }>; loadContextsForUserIds: (ids: string[]) => Promise<Map<string, unknown>> };
   const context = await api.loadContext("user");
   assert.equal(context.donations[0].campaignTitle, "Medical relief");

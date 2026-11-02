@@ -37,9 +37,10 @@ const server = createServer(async (request, response) => {
   if (files[url.pathname]) { response.setHeader("Content-Type", files[url.pathname].type); return response.end(files[url.pathname].data); }
   if (url.pathname.startsWith("/api")) {
     if (url.pathname === "/api/auth/google-config") return json({ clientId: null });
-    if (request.method === "GET") return json({ ok: true, campaign });
+    if (request.method === "GET") return url.pathname.endsWith("/send") ? json({ok:true,plan:{audienceTotal:100,total:100}}) : json({ ok: true, campaign });
     let raw = ""; for await (const chunk of request) raw += chunk; writes.push({ method: request.method, body: raw ? JSON.parse(raw) : null });
     if (request.method === "DELETE") { if (deleteFails) return json({ ok: false, error: "DB_UNAVAILABLE" }, 503); campaign = null; return json({ ok: true, deleted: true, archived: false }); }
+    if (url.pathname.endsWith("/send")) return json({ok:true,summary:{sent:100,skipped:0,failed:0}});
     if (url.pathname.endsWith("/transition")) { campaign.status = "APPROVED"; return json({ ok: true, campaign }); }
     return json({ error: "UNEXPECTED_FIXTURE_REQUEST" }, 404);
   }
@@ -49,8 +50,8 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve)); const orig
 let browser, checks = 0; const errors = [];
 try {
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
-  for (const locale of locales) for (const width of [390, 1440]) {
-    const page = await browser.newPage({ viewport: { width, height: 930 } }); page.on("pageerror", error => { errors.push(error.message); console.error("Browser fixture:", error.stack); });
+  for (const locale of (process.env.CAMPAIGNS_ONLY ? [] : locales)) for (const width of [390, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 930 } }); page.setDefaultTimeout(15000); page.setDefaultNavigationTimeout(15000); page.on("pageerror", error => { errors.push(error.message); console.error("Browser fixture:", error.stack); });
     const messages = require(`../i18n/messages/${locale}.json`);
     await page.route("https://accounts.google.com/**", route => route.abort());
     await page.goto(`${origin}/?surface=signin&lang=${locale}`);
@@ -64,9 +65,9 @@ try {
     if (["ar", "en", "tr"].includes(locale)) await page.screenshot({ path: path.join(artifacts, `signin-${locale}-${width}.png`), fullPage: true });
     await page.close();
   }
-  for (const locale of ["ar", "en", "ja", "zh"]) for (const width of [390, 1440]) {
+  for (const locale of (process.env.CAMPAIGNS_ONLY ? [] : ["ar", "en", "ja", "zh"])) for (const width of [390, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 930 } });
-    page.on("pageerror", error => errors.push(error.message));
+    page.setDefaultTimeout(15000); page.setDefaultNavigationTimeout(15000); page.on("pageerror", error => errors.push(error.message));
     const sentence = ["ja", "zh"].includes(locale) ? "エルサレム旧市街の住宅修復を支援します。" : "Support the restoration of family homes in Jerusalem. ";
     for (const short of [false, true]) {
       await page.goto(`${origin}/?surface=seo&lang=${locale}${short ? "&short=1" : ""}`);
@@ -79,7 +80,7 @@ try {
     await page.close();
   }
   for (const locale of ["ar", "en", "tr"]) for (const width of [390, 1440]) for (const channel of ["EMAIL", "WHATSAPP", "SMS"]) {
-    const page = await browser.newPage({ viewport: { width, height: 930 } }); page.on("pageerror", error => { errors.push(error.message); console.error("Browser fixture:", error.stack); });
+    const page = await browser.newPage({ viewport: { width, height: 930 } }); page.setDefaultTimeout(15000); page.setDefaultNavigationTimeout(15000); page.on("pageerror", error => { errors.push(error.message); console.error("Browser fixture:", error.stack); });
     await page.context().addCookies([{ name: "dash-locale", value: locale, url: origin }]);
     for (const status of ["DRAFT", "REVIEW", "APPROVED", "SCHEDULED", "CANCELLED"]) {
       writes = []; campaign = { id, name: "Fixture campaign", channel, status, sentCount: 0, deliveredCount: 0, readCount: 0, failedCount: 0, repliedCount: 0, clickedCount: 0 };
@@ -98,10 +99,18 @@ try {
     const actions = page.getByRole("button", { name: ui(locale, "إجراءات حملة {0}").replace("{0}", "Fixture campaign") });
     await actions.click(); await page.getByRole("menuitem", { name: ui(locale, "حذف الحملة التي لم تُرسل") }).click(); await page.getByRole("alertdialog").getByRole("button", { name: ui(locale, "حذف الحملة"), exact: true }).click(); await expect(page.getByText("DB_UNAVAILABLE")).toBeVisible(); await expect(actions).toBeVisible(); checks++;
     deleteFails = false;
-    await actions.click(); await page.getByRole("menuitem", { name: ui(locale, "تأكيد الحملة"), exact: true }).click(); await expect(page.getByText("APPROVED", { exact: true })).toBeVisible(); assert.equal(writes.at(-1).body.action, "CONFIRM"); checks++;
+    writes=[];
+    await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
+    await expect(page.getByRole("alertdialog")).toContainText("100"); assert.equal(writes.length,0);
+    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click(); assert.equal(writes.length,0); checks++;
+    await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
+    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
+    await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
+    assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
+
     await page.close();
   }
   assert.deepEqual(errors, []);
-  await writeFile(path.join(artifacts, "summary.json"), JSON.stringify({ fixtureOnly: true, checks, authLocales: locales.length, campaignChannels: 3, widths: [390, 1440], providerCalls: 0, errors }, null, 2));
-  console.log(JSON.stringify({ fixtureOnly: true, checks, authLocales: locales.length, providerCalls: 0, errors }));
-} finally { await browser?.close(); await new Promise(resolve => server.close(resolve)); }
+  await writeFile(path.join(artifacts, "summary.json"), JSON.stringify({ fixtureOnly: true, checks, authLocales: process.env.CAMPAIGNS_ONLY ? 0 : locales.length, campaignChannels: 3, widths: [390, 1440], providerCalls: 0, errors }, null, 2));
+  console.log(JSON.stringify({ fixtureOnly: true, checks, authLocales: process.env.CAMPAIGNS_ONLY ? 0 : locales.length, providerCalls: 0, errors }));
+} finally { await browser?.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

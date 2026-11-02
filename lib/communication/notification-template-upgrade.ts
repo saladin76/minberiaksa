@@ -7,6 +7,7 @@ import { templateLocaleFromLanguage } from "./template-locale-media";
 import { resolveExactVariantForLocale, type VariantRow } from "./whatsapp-template-readiness";
 import { hasWhatsappUnsubscribeQuickReply, whatsappUnsubscribeCopy } from "./whatsapp-template-unsubscribe";
 import { localizeDonationFailureDraft } from "../templates/localize-donation-failure-link";
+import { recurringTemplateDraftText, recurringGenericText } from "../templates/recurring-cadence";
 
 export type NotificationTemplateSource = {
   id: string; name: string; body: string; translations?: unknown; header?: unknown;
@@ -25,7 +26,7 @@ export function notificationTemplateHash(source: NotificationTemplateSource): st
 
 /** Clone each real locale verbatim except the receipt slots and closing. No
  * translation generation, no deletion, and no silent Arabic fallback. */
-export function notificationUpgradeDraft(source: NotificationTemplateSource, receipt: boolean, welcomeMarketing = false) {
+export function notificationUpgradeDraft(source: NotificationTemplateSource, receipt: boolean, welcomeMarketing = false, recurring = false) {
   if (receipt && welcomeMarketing) throw new Error("WELCOME_MARKETING_CANNOT_BE_A_RECEIPT");
   const translations = record(source.translations);
   const rootHeader = record(source.header) as HeaderDraft;
@@ -36,13 +37,15 @@ export function notificationUpgradeDraft(source: NotificationTemplateSource, rec
     const body = locale === "ar" ? source.body : typeof own.body === "string" ? own.body : "";
     if (!body.trim()) throw new Error(`NOTIFICATION_TRANSLATION_MISSING:${locale}`);
     if (locale !== "ar" && rootButtons.length && (!Array.isArray(own.buttons) || own.buttons.length !== rootButtons.length)) throw new Error(`NOTIFICATION_BUTTON_TRANSLATION_MISSING:${locale}`);
-    const header = locale === "ar" ? rootHeader : (own.header ? record(own.header) : rootHeader) as HeaderDraft;
-    const headerText = locale === "ar" ? String(rootHeader.text ?? "") : typeof own.headerText === "string" ? own.headerText : String(header.text ?? "");
+    let header = locale === "ar" ? rootHeader : (own.header ? record(own.header) : rootHeader) as HeaderDraft;
+    let headerText = locale === "ar" ? String(rootHeader.text ?? "") : typeof own.headerText === "string" ? own.headerText : String(header.text ?? "");
     if (locale !== "ar" && rootHeader.type === "TEXT" && !own.header && typeof own.headerText !== "string") throw new Error(`NOTIFICATION_HEADER_TRANSLATION_MISSING:${locale}`);
     let nextBody = receipt ? donationReceiptText(body) : body;
     if (receipt && /\{\{\s*donation\.(?:amount|totalAmount|amountUSD|notificationAmount)\s*\}\}/.test(nextBody)) throw new Error(`NOTIFICATION_AMOUNT_REVIEW_REQUIRED:${locale}`);
     nextBody = nextBody.replace(/\{\{\s*donation\.createdAt\s*\}\}/g, "{{donation.displayDate}}");
-    const buttons = [...(locale === "ar" ? rootButtons : (own.buttons ?? []) as ButtonDraft[])];
+    if(recurring)nextBody=recurringTemplateDraftText(nextBody,locale);
+    const buttons = (locale === "ar" ? rootButtons : (own.buttons ?? []) as ButtonDraft[]).map(button=>recurring&&typeof button.text==="string"?{...button,text:recurringGenericText(button.text,locale)}:button);
+    if(recurring){headerText=recurringGenericText(headerText,locale);if(header.type==="TEXT")header={...header,text:headerText};}
     if (welcomeMarketing && !nextBody.includes(whatsappUnsubscribeCopy(locale).footer)) nextBody += `\n\n${whatsappUnsubscribeCopy(locale).footer}`;
     if (welcomeMarketing && !hasWhatsappUnsubscribeQuickReply(buttons)) {
       if (buttons.length >= 10) throw new Error(`WELCOME_UNSUBSCRIBE_BUTTON_LIMIT:${locale}`);
@@ -59,7 +62,7 @@ export function notificationUpgradeDraft(source: NotificationTemplateSource, rec
   // Content-addressed name makes reruns idempotent and avoids reusing an old
   // provider name after the administrator changes the source template.
   const sourceHash = notificationTemplateHash(source);
-  const policyHash = createHash("sha256").update(`${welcomeMarketing ? "welcome-marketing-v3" : "concise-receipt-v2"}:${sourceHash}`).digest("hex");
+  const policyHash = createHash("sha256").update(`${recurring?"subscription-cadence-v4":welcomeMarketing ? "welcome-marketing-v3" : "concise-receipt-v2"}:${sourceHash}`).digest("hex");
   const name = `${source.name.replace(/_v\d+$/, "").slice(0, 90)}_notice_${policyHash.slice(0, 12)}`;
   return { name, body: upgraded.ar.body, header: upgraded.ar.header, footerText: upgraded.ar.footerText, buttons: upgraded.ar.buttons, translations: upgraded, sourceHash, ...(welcomeMarketing ? { category: "MARKETING" as const, purpose: "MARKETING" as const } : {}) };
 }

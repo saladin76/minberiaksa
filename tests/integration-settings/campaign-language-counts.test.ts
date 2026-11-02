@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Fault-injection fixtures deliberately supply partial Prisma clients and VM module exports. */
+import * as accounting from "../../lib/communication/campaign-audience-accounting";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -7,7 +8,7 @@ import ts from "typescript";
 import { resolveTemplateKind } from "../../lib/communication/template-kind";
 import { templateLocaleFromLanguage } from "../../lib/communication/template-locale-media";
 type Value=Record<string,any>;
-function load(file:string,deps:Value){const mod={exports:{} as Value};new vm.Script(ts.transpileModule(readFileSync(file,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText).runInNewContext({module:mod,exports:mod.exports,Set,process:{env:{DATABASE_URL:"fixture"}},console:{error(){}},require:(name:string)=>{assert.ok(name in deps,name);return deps[name];}});return mod.exports;}
+function load(file:string,deps:Value){const mod={exports:{} as Value};new vm.Script(ts.transpileModule(readFileSync(file,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText).runInNewContext({module:mod,exports:mod.exports,Set,process:{env:{DATABASE_URL:"fixture"}},console:{error(){}},require:(name:string)=>{if(name==="./campaign-audience-accounting")return accounting;assert.ok(name in deps,name);return deps[name];}});return mod.exports;}
 test("saved list language counts are one bounded database operation with no contacts or writes",async()=>{
  let query:Value|undefined;const lib=load("lib/communication/campaign-language-counts.ts",{"@/lib/prisma":{prisma:{communicationAudienceMember:{aggregateRaw:async(q:Value)=>{query=q;return[{_id:"ar",count:14842},{_id:"tr",count:2}];}}}},"@/lib/locales":{DEFAULT_LOCALE:"ar",SUPPORTED_LOCALES:["ar","tr","en"],isValidLocale:(s:string)=>["ar","tr","en"].includes(s)}});
  assert.deepEqual(JSON.parse(JSON.stringify(await lib.countSavedListLanguages("a".repeat(24),"WHATSAPP"))),{ar:14842,tr:2});assert.equal(query!.options.maxTimeMS,15000);

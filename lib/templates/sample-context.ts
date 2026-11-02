@@ -54,6 +54,7 @@ export const SAMPLE_TEMPLATE_CONTEXT = (() => {
         ],
       },
     ],
+    subscription: { id: "sample-subscription", frequency: "DAILY" as const, frequencyLabel: get("subscription.frequencyLabel"), amount: get("subscription.amount"), currency: get("subscription.currency"), nextBillingDate: get("subscription.nextBillingDate") },
     update: {
       title: get("update.title"),
       description: get("update.description"),

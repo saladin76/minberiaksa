@@ -50,7 +50,8 @@ test("trigger and campaign template renderers localize stored body links", () =>
   assert.match(compat, /localizeDonationFailureLinks\(ctx \? mergeText\(variant\.body, ctx\) : preview\.rendered, locale\)/);
   assert.match(compat, /localizeDonationFailureLinks\([\s\S]*renderEmailHtml\([\s\S]*locale/);
   assert.match(dispatch, /localizeDonationFailureLinks\([\s\S]*renderEmailHtml\([\s\S]*locale/);
-  assert.equal((dispatch.match(/localizeDonationFailureLinks\(mergeText\(donationNotificationText\(variant\.body, (?:moneyContext, locale|legacyMoney)\), ctx\), locale\)/g) ?? []).length, 2);
+  assert.equal((dispatch.match(/localizeDonationFailureLinks\(mergeText\(donationNotificationText\(variant\.body, (?:moneyContext, locale|legacyMoney)\), ctx\), locale\)/g) ?? []).length, 1);
+  assert.match(dispatch, /localizeDonationFailureLinks\(mergeText\(recurringNotificationText\(donationNotificationText\(variant\.body, moneyContext, locale\),frequency,locale\), ctx\), locale\)/);
   assert.match(retry, /localizeDonationFailureLinks\(row\.renderedBody, row\.locale \|\| "ar"\)/);
 });
 

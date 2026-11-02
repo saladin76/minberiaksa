@@ -1,3 +1,4 @@
+import * as cadence from "../../lib/templates/recurring-cadence";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -89,6 +90,7 @@ test("the actual context loader reads support/fees/paid evidence and retains all
   const mod = { exports: {} as { loadContextForDonation: (id: string) => Promise<{ donation: Record<string, unknown> }> } };
   const output = ts.transpileModule(readFileSync("lib/templates/variables.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(output).runInNewContext({ module: mod, exports: mod.exports, require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence;
     if (id === "@/lib/prisma") return { prisma };
     if (id === "./money") return money;
     if (id === "./donation-money") return donationMoney;
@@ -134,6 +136,7 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const source = ts.transpileModule(readFileSync("lib/events/dispatch.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const mod = { exports: {} as { sendTriggerMessage: (trigger: unknown, ctx: unknown, opts: unknown) => Promise<unknown> } };
   new vm.Script(source).runInNewContext({ module: mod, exports: mod.exports, require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence;
     if (id === "@/lib/templates/font") return { automaticEmailHtml: (html: string) => html };
     if (id in dependencies) return dependencies[id];
     // These imports belong to the uninvoked claim/settlement helpers, not the renderer.

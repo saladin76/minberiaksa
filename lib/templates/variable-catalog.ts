@@ -10,6 +10,13 @@ export interface VariableGroup {
 }
 
 export const VARIABLE_CATALOG: VariableGroup[] = [
+  { group:"الاشتراك الدوري",entries:[
+    {token:"{{subscription.frequencyLabel}}",label:"دورية الاشتراك بلغة المتبرع",exampleValue:"كل جمعة"},
+    {token:"{{subscription.frequency}}",label:"رمز الدورية",exampleValue:"FRIDAY"},
+    {token:"{{subscription.amount}}",label:"مبلغ دفعة الاشتراك",exampleValue:"25"},
+    {token:"{{subscription.currency}}",label:"عملة الاشتراك",exampleValue:"USD"},
+    {token:"{{subscription.nextBillingDate}}",label:"الموعد القادم للاشتراك",exampleValue:"2026-12-01"},
+  ]},
   {
     group: "المتبرع",
     entries: [

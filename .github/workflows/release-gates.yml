@@ -151,6 +151,9 @@ jobs:
           - name: Donation experience
             artifact: donation-experience
             script: scripts/donation-experience-browser-test.mjs
+          - name: Campaign single operator
+            artifact: campaign-operator
+            script: scripts/brand-campaign-browser-test.mjs
           - name: Campaign revenue and recovery
             artifact: campaign-recovery
             script: scripts/campaign-recovery-browser-test.mjs
@@ -165,6 +168,7 @@ jobs:
             script: scripts/checkout-readiness-browser-test.mjs
     env:
       CONTENT_EDITOR_ARTIFACTS: .artifacts/${{ matrix.artifact }}
+      CAMPAIGNS_ONLY: "1"
       DATABASE_URL: mongodb://127.0.0.1:27017/minberiaksa_ci
     steps:
       - uses: actions/checkout@v4

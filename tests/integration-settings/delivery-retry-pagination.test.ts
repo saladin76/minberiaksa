@@ -8,6 +8,7 @@ import * as donationMoney from "../../lib/templates/donation-money";
 
 type Cursor = { id: string; createdAt: Date };
 type Service = {
+  retryDelivery: (id:string)=>Promise<{code:string}>;
   listRetryCandidatePage: (filter: { channel: "WHATSAPP" }, after?: Cursor | null, take?: number) => Promise<Cursor[]>;
 };
 
@@ -17,6 +18,7 @@ function loadService(includeMissingPayload = false) {
   const secondPage = [{ id: "delivery-26", createdAt: new Date("2026-10-01T00:00:00.000Z"), channel: "WHATSAPP", templateId: "tpl", renderedBody: null, variables: { snapshot: {} } }];
   const prisma = {
     communicationDelivery: {
+      findUnique: async () => ({id:"blocked",channel:"WHATSAPP",status:"SKIPPED",errorMessage:"RECURRING_TEMPLATE_CADENCE_MISMATCH"}),
       findMany: async (args: Record<string, unknown>) => {
         calls.push(args);
         return calls.length === 1 ? firstPage : secondPage;
@@ -39,7 +41,7 @@ function loadService(includeMissingPayload = false) {
     "./providers/sms/client": { resolveSmsProvider: async () => ({ provider: "SMS" }) },
     "./retry-recipient-guard": { checkRetryRecipient: async () => ({ ok: true }), retryDefinitelyNotSent: () => true },
     "./whatsapp-marketing-frequency": { reserveWhatsappMarketingSend: async () => ({ ok: true }), releaseWhatsappMarketingReservation: async () => {} },
-    "./communication-runtime-types": { RETRYABLE_STATUSES: ["FAILED"], NON_RETRYABLE_TERMINAL: ["BOUNCED"], isCommunicationChannel: () => true },
+    "./communication-runtime-types": { RETRYABLE_STATUSES: ["FAILED", "SKIPPED"], NON_RETRYABLE_TERMINAL: ["BOUNCED"], isCommunicationChannel: () => true },
   };
   const source = fs.readFileSync("lib/communication/delivery-retry-service.ts", "utf8");
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -179,4 +181,8 @@ test("campaign retries keep their campaign and purpose scope without the dashboa
   assert.equal(candidateQueries[0].filter.purposeGroup, "MARKETING");
   assert.equal(candidateQueries[0].filter.from, undefined);
   assert.equal((candidateQueries[0].filter.to as Date).toISOString(), preflight.range.to);
+});
+
+test("retry cannot bypass a recurring cadence mismatch archived by the automatic renderer",async()=>{
+ const f=loadService();assert.equal((await f.service.retryDelivery("blocked")).code,"RECURRING_TEMPLATE_CADENCE_MISMATCH");assert.equal(f.calls.length,0);
 });

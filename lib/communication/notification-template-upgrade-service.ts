@@ -23,20 +23,22 @@ export async function prepareNotificationUpgrades(opts: { apply?: boolean; publi
     try {
       const events = triggers.filter(row => row.templateId === source.id).map(row => row.event);
       const welcomeMarketing = events.includes("USER_REGISTERED");
+      const recurring = events.includes("SUBSCRIPTION_CREATED");
       const sourceVersion = Number(object(source.notificationUpgrade).version);
-      if (sourceVersion === 3 || sourceVersion === 2 && !welcomeMarketing) continue;
+      if (sourceVersion === 4 || sourceVersion === 3 && !recurring || sourceVersion === 2 && !welcomeMarketing && !recurring) continue;
+      if(recurring && events.some(event=>event!=="SUBSCRIPTION_CREATED"))throw new Error("MIXED_SUBSCRIPTION_CADENCE_TRIGGERS_REQUIRE_REVIEW");
       const moneyEvents = events.filter(isDonationMoneyNotificationEvent);
       if (moneyEvents.length && moneyEvents.length !== events.length) throw new Error("MIXED_RECEIPT_AND_FUTURE_PAYMENT_TRIGGERS_REQUIRE_REVIEW");
       const receipt = moneyEvents.length > 0;
       if (welcomeMarketing && events.some(event => event !== "USER_REGISTERED")) throw new Error("MIXED_WELCOME_AND_TRANSACTIONAL_TRIGGERS_REQUIRE_REVIEW");
-      const draft = notificationUpgradeDraft(source, receipt, welcomeMarketing);
+      const draft = notificationUpgradeDraft(source, receipt, welcomeMarketing, recurring);
       let candidate = await prisma.whatsappTemplate.findFirst({ where: { name: draft.name } });
       const data = { name: draft.name, body: draft.body, translations: json(draft.translations), header: json(draft.header), footerText: draft.footerText, buttons: json(draft.buttons),
         provider: "META_WHATSAPP", channel: "WHATSAPP", kind: "SYSTEM", category: draft.category ?? source.category ?? "UTILITY", purpose: draft.purpose ?? source.purpose ?? "UTILITY" };
       const draftHash = notificationTemplateHash({ id: "", ...data });
       if (candidate && (object(candidate.notificationUpgrade).sourceId !== source.id || notificationTemplateHash(candidate) !== draftHash)) throw new Error("EXISTING_UPGRADE_HAS_EDITORIAL_CHANGES");
       if (!opts.apply) { results.push({ source: source.name, template: draft.name, state: candidate ? "STAGED" : "WOULD_CREATE" }); continue; }
-      candidate ??= await prisma.whatsappTemplate.create({ data: { ...data, language: "ar", status: "DRAFT", notificationUpgrade: { version: welcomeMarketing ? 3 : 2, ...(welcomeMarketing ? { policy: "WELCOME_MARKETING_V3" } : {}), sourceId: source.id, sourceHash: draft.sourceHash, draftHash, receipt, events, locales: [...SUPPORTED_LOCALES] } } });
+      candidate ??= await prisma.whatsappTemplate.create({ data: { ...data, language: "ar", status: "DRAFT", notificationUpgrade: { version: recurring ? 4 : welcomeMarketing ? 3 : 2, ...(recurring ? {policy:"SUBSCRIPTION_CADENCE_V4"} : {}), ...(welcomeMarketing ? { policy: "WELCOME_MARKETING_V3" } : {}), sourceId: source.id, sourceHash: draft.sourceHash, draftHash, receipt, events, locales: [...SUPPORTED_LOCALES] } } });
       if (opts.publish) {
         const { publishWhatsappTemplateToMeta } = await import("./meta-template-publisher");
         const result = await publishWhatsappTemplateToMeta(candidate.id, { actorRole: "SYSTEM" }, { defaultOnly: true });
@@ -55,7 +57,7 @@ export async function activateApprovedNotificationUpgrades() {
   const results: Array<{ template: string; state: string; approved?: number; triggers?: number }> = [];
   for (const candidate of candidates) {
     const marker = object(candidate.notificationUpgrade);
-    if (![1, 2, 3].includes(Number(marker.version)) || marker.activatedAt || typeof marker.sourceId !== "string") continue;
+    if (![1, 2, 3, 4].includes(Number(marker.version)) || marker.activatedAt || typeof marker.sourceId !== "string") continue;
     const result = await prisma.$transaction(async tx => {
       const [senders, source, current] = await Promise.all([
         tx.communicationSender.findMany({ where: defaults }),
@@ -73,7 +75,9 @@ export async function activateApprovedNotificationUpgrades() {
       if (!source || !current || notificationTemplateHash(source) !== marker.sourceHash || notificationTemplateHash(current) !== marker.draftHash) return { state: "EDITORIAL_CHANGES_REQUIRE_REVIEW" };
       const welcomeMarketing = marker.version === 3 && marker.policy === "WELCOME_MARKETING_V3";
       if (marker.version === 3 && (!welcomeMarketing || !Array.isArray(marker.events) || marker.events.some(event => event !== "USER_REGISTERED"))) return { state: "UPGRADE_POLICY_REVIEW_REQUIRED" };
-      const draft = notificationUpgradeDraft(source as NotificationTemplateSource, marker.receipt === true, welcomeMarketing);
+      const recurring=marker.version===4 && marker.policy==="SUBSCRIPTION_CADENCE_V4";
+      if(marker.version===4 && (!recurring||!Array.isArray(marker.events)||marker.events.some(event=>event!=="SUBSCRIPTION_CREATED")))return {state:"UPGRADE_POLICY_REVIEW_REQUIRED"};
+      const draft = notificationUpgradeDraft(source as NotificationTemplateSource, marker.receipt === true, welcomeMarketing,recurring);
       if (candidate.name !== draft.name) return { state: "SUPERSEDED" };
       const variants = await tx.whatsappTemplateWabaVariant.findMany({ where: { templateId: candidate.id, provider: "META_WHATSAPP", businessAccountId: senders[0].businessAccountId } });
       const approved = approvedNotificationLocales(draft, variants).length;

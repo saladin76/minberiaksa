@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { track as vercelTrack } from "@vercel/analytics/server";
-import { loadContext, loadContextForDonation, mergeText, type TemplateContext } from "@/lib/templates/variables";
+import { loadContext, loadContextForDonation, loadContextForSubscription, mergeText, type TemplateContext } from "@/lib/templates/variables";
+import { containsMonthlyCadence, recurringNotificationText, recurringNotificationDocument } from "@/lib/templates/recurring-cadence";
 import { automaticEmailHtml } from "@/lib/templates/font";
 import { renderEmailHtml, renderEmailSubject } from "@/lib/templates/render";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -21,7 +22,7 @@ import { localizeDonationFailureLinks } from "@/lib/templates/localize-donation-
 import { donationNotificationDocument, donationNotificationText, donationNotificationParameters, isDonationMoneyNotificationEvent } from "@/lib/templates/donation-money";
 
 export type MessageTriggerEvent = "DONATION_PAID" | "DONATION_FAILED" | "FIRST_DONATION" | "USER_REGISTERED" | "SUBSCRIPTION_CREATED" | "SUBSCRIPTION_PAYMENT" | "SUBSCRIPTION_CANCELLED" | "DONATION_LAPSED";
-export interface EventDispatchInput { userId?: string; donationId?: string }
+export interface EventDispatchInput { userId?: string; donationId?: string; subscriptionId?:string }
 interface DispatchResult { triggers: number; emailsSent: number; whatsappSent: number; smsSent: number; skipped: number; errors: number; skipReasons: Record<string, number> }
 
 /**
@@ -77,6 +78,7 @@ export async function sendTriggerMessage(
   const { event, locale, config } = opts;
   const variables = ctx as unknown as Record<string, unknown>;
   const donationId = opts.donationId ?? null;
+  const frequency=event.startsWith("SUBSCRIPTION_")?ctx.subscription?.frequency:undefined;
   // Only donation-scoped transactional notifications upgrade legacy amount
   // display slots. Marketing/history templates keep their original semantics.
   const moneyContext: Pick<TemplateContext, "donation"> = donationId && isDonationMoneyNotificationEvent(event) ? ctx : {};
@@ -86,12 +88,14 @@ export async function sendTriggerMessage(
     if (!tpl) return null;
     const variant = resolveEmailVariant(tpl, locale);
     const html = localizeDonationFailureLinks(
-      automaticEmailHtml(await renderEmailHtml(donationNotificationDocument(variant.document as TReaderDocument, moneyContext, locale), ctx, variant.resolvedLocale), locale),
+      automaticEmailHtml(await renderEmailHtml(recurringNotificationDocument(donationNotificationDocument(variant.document as TReaderDocument, moneyContext, locale),frequency,locale), ctx, variant.resolvedLocale), locale),
       locale,
     );
-    const subject = renderEmailSubject(donationNotificationText(variant.subject, moneyContext, locale), ctx);
+    const subject = renderEmailSubject(recurringNotificationText(donationNotificationText(variant.subject, moneyContext, locale),frequency,locale), ctx);
     const exactEmail = (tpl.translations as Record<string, { subject?: string; document?: unknown }> | null)?.[locale];
-    const renderingError = locale !== "ar" && (!exactEmail?.subject?.trim() || !exactEmail?.document) ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined;
+    const renderingError = event.startsWith("SUBSCRIPTION_") && !frequency && (containsMonthlyCadence(variant.subject, locale) || containsMonthlyCadence(JSON.stringify(variant.document), locale))
+      ? "RECURRING_TEMPLATE_CADENCE_MISMATCH"
+      : locale !== "ar" && (!exactEmail?.subject?.trim() || !exactEmail?.document) ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined;
     const routed = resolveTriggerSender(config, "EMAIL", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     /* A routing refusal is the answer, not a prompt to fall back to the default identity. */
     if (!routed.ok) return { channel: "EMAIL", outcome: "SKIPPED", reason: routed.reason };
@@ -103,7 +107,7 @@ export async function sendTriggerMessage(
     const tpl = await prisma.smsTemplate.findUnique({ where: { id: trigger.templateId } });
     if (!tpl) return null;
     const variant = resolveWhatsappBody(tpl, locale);
-    const body = localizeDonationFailureLinks(mergeText(donationNotificationText(variant.body, moneyContext, locale), ctx), locale);
+    const body = localizeDonationFailureLinks(mergeText(recurringNotificationText(donationNotificationText(variant.body, moneyContext, locale),frequency,locale), ctx), locale);
     const response = await sendAutomaticSmsMessage({
       triggerEvent: event,
       templateId: tpl.id,
@@ -114,7 +118,7 @@ export async function sendTriggerMessage(
       recipientPhone: ctx.user.phone || null,
       country: ctx.user.countryCode || null,
       renderedBody: body,
-      renderingError: variant.resolvedLocale && variant.resolvedLocale !== locale ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined,
+      renderingError: event.startsWith("SUBSCRIPTION_") && !frequency && containsMonthlyCadence(variant.body, locale) ? "RECURRING_TEMPLATE_CADENCE_MISMATCH" : variant.resolvedLocale && variant.resolvedLocale !== locale ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined,
       variables,
       donationId,
       purpose: opts.purpose,
@@ -133,6 +137,7 @@ export async function sendTriggerMessage(
     const routed = resolveTriggerSender(config, "WHATSAPP", { locale, country:ctx.user.countryCode || null, purpose: opts.purpose });
     if (!routed.ok) return { channel: "WHATSAPP", outcome: "SKIPPED", reason: routed.reason };
     const metaTemplate = await resolveMetaTemplateMapping(tpl, locale, routed.sender.businessAccountId, { exactLanguage: true });
+    const cadenceError=event.startsWith("SUBSCRIPTION_")&&frequency!=="MONTHLY"&&(containsMonthlyCadence(variant.body,locale)||containsMonthlyCadence(JSON.stringify(metaTemplate?.componentsSchema??[]),locale))?"RECURRING_TEMPLATE_CADENCE_MISMATCH":undefined;
     /* Meta's placeholders are positional, and the local template's variable catalog says which
        token each position carries. Each one is rendered against this recipient's context through
        the same merge the body uses, so the parameters and the body cannot disagree. */
@@ -143,7 +148,7 @@ export async function sendTriggerMessage(
       templateValues[String(index + 1)] = value;
     });
     const notificationValues = metaTemplate ? donationNotificationParameters({ values: templateValues, scopedNames: metaTemplate.scopedNames, positionalNames: metaTemplate.positionalNames, componentsSchema: metaTemplate.componentsSchema, notificationAmount: moneyContext.donation?.notificationAmount }) : templateValues;
-    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues: notificationValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose, renderingError: variant.resolvedLocale && variant.resolvedLocale !== locale ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined });
+    const response = await sendAutomaticWhatsappMessage({ triggerEvent: event, templateId: tpl.id, templateName: tpl.name, locale, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, recipientPhone: ctx.user.phone ?? null, renderedBody: body, metaTemplate, templateValues: notificationValues, sender: { id: routed.sender.id, phoneNumberId: routed.sender.phoneNumberId, businessAccountId: routed.sender.businessAccountId }, variables, donationId, purpose: opts.purpose, renderingError: cadenceError || (variant.resolvedLocale && variant.resolvedLocale !== locale ? "EXACT_TEMPLATE_LANGUAGE_REQUIRED" : undefined) });
     return { channel: "WHATSAPP", outcome: response.outcome, reason: response.reason };
   }
 
@@ -269,7 +274,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
       return result;
     }
 
-    const ctx: TemplateContext | null = input.donationId ? await loadContextForDonation(input.donationId) : input.userId ? await loadContext(input.userId) : null;
+    const ctx: TemplateContext | null = input.donationId ? await loadContextForDonation(input.donationId) : input.subscriptionId ? await loadContextForSubscription(input.subscriptionId,input.userId) : input.userId ? await loadContext(input.userId) : null;
     if (!ctx) {
       await writeAuditLog({ actorRole: "SYSTEM", action: "EVENT_DISPATCH_NO_CONTEXT", messageAr: `تعذّر إرسال الرسائل التلقائية عند «${triggerEventLabelAr(event)}»  بيانات المستلم غير متاحة`, metadata: { event, ...input }, stream: "TEAM" });
       return result;

@@ -1,3 +1,4 @@
+import * as cadence from "../../lib/templates/recurring-cadence";
 import {trackCampaignBody,campaignTrackingValues} from "../../lib/communication/campaign-message-tracking";
 import {buildMetaComponents} from "../../lib/communication/providers/meta-whatsapp/parameters";
 import * as attributionSanitize from "../../lib/attribution/sanitize";
@@ -316,6 +317,7 @@ function isolated<T>(file: string, dependencies: ServiceDependencies): T {
     process: { env: { DATABASE_URL: "test" } },
     URL,
     require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence;
       if (id === "./campaign-donation-scan") return donationScan;
       if (id === "./campaign-email-history") return emailHistory;
       if (id === "./campaign-attribution-diagnostics") return attributionDiagnostics;

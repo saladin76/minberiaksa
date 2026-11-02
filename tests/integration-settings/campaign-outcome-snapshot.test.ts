@@ -12,7 +12,7 @@ const settle = async () => { for (let i = 0; i < 5; i++) await Promise.resolve()
 
 test("polling and reordered campaign IDs share one complete scan; no partial zero is exposed", async () => {
   let calls = 0, finish!: (value: CampaignOutcomeSummary) => void, time = 1;
-  const read = createCampaignOutcomeSnapshotReader(async () => { calls++; return new Promise(resolve => { finish = resolve; }); }, () => time, 30);
+  const read = createCampaignOutcomeSnapshotReader(async () => { calls++; return new Promise<CampaignOutcomeSummary>(resolve => { finish = resolve; }); }, () => time, 30);
   assert.equal(read(["b", "a", "a"]).ready, false); await settle();
   assert.equal(read(["a", "b"]).ready, false); assert.equal(calls, 1);
   finish(result()); await settle();
@@ -59,4 +59,10 @@ test("a changed page cancels polling and a stuck report has a visible finite dea
   const read = async <T>() => ({ outcomesReady: false }) as T;
   await assert.rejects(readCampaignOutcomes("/fixture", controller.signal, { read, wait: async () => controller.abort() }), /ABORTED/);
   await assert.rejects(readCampaignOutcomes("/fixture", new AbortController().signal, { read, wait: async () => { time += 10; }, now: () => time, deadlineMs: 10 }), /TIMEOUT/);
+});
+
+test("a changed campaign revision cannot reuse counters from before sending or retry", async () => {
+  let calls=0;const read=createCampaignOutcomeSnapshotReader(async()=>{calls++;return result();});
+  read(["a"],undefined,"before");await settle();assert.equal(read(["a"],undefined,"before").ready,true);
+  assert.equal(read(["a"],undefined,"after").ready,false);await settle();assert.equal(calls,2);
 });

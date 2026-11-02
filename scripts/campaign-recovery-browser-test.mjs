@@ -33,6 +33,7 @@ const server = createServer(async (request, response) => {
   if (fonts[url.pathname]) { response.setHeader("Content-Type", "font/woff2"); return response.end(fonts[url.pathname]); }
   if (url.pathname === "/api/communication/campaigns") {
     const row = campaign();
+    if (url.searchParams.get("countersMode") === "poll") return json({ok:true,deliveryCountersReady:true,counters:{[id]:{sent:4196,delivered:2508,read:1207,clicked:0,replied:25,failed:1645}}});
     if (url.searchParams.get("outcomesMode") === "poll") return setTimeout(() => json({ ok: true, outcomesReady: true, campaigns: [{ ...row, sentCount: 3571, failedCount: 1370, donationCount: 2, revenue: 23, trackingRequiresTemplateUpdate:true }], unattributed: { donationCount: 0, revenue: 0, unpricedPaidCount: 0 } }), 100);
     return json({ ok: true, deliveryCountersReady: true, campaigns: [row], outcomesReady: false });
   }
@@ -54,8 +55,8 @@ try {
     missing = true; failRead = false; race = false; posts = 0; queued = 0;
     const page = await browser.newPage({ viewport: { width, height: 1000 } }); page.on("pageerror", e => { errors.push(e.message); console.error(e.stack); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?lang=${locale}`);
-    const row = page.getByRole("row").filter({ hasText: "Fixture campaign" });
-    await expect(row).toContainText("4,196"); await expect(row).toContainText("23"); await expect(row).not.toContainText("3,571"); checks++;
+    const row = (width < 768 ? page.getByRole("article") : page.getByRole("row")).filter({ hasText: "Fixture campaign" });
+    await expect(row).toContainText("4,196"); await expect(row).toContainText("1,645"); await expect(row).not.toContainText("3,571"); checks++;
     await page.getByRole("button",{name:label(locale,"الإيرادات والتتبع"),exact:true}).click();
     const revenue=page.getByRole("region",{name:label(locale,"إيرادات الحملات والتتبع")});
     await expect(revenue).toBeVisible();await expect(revenue).toContainText("23.00");await expect(revenue).toContainText(label(locale,"رابط مشترك؛ يلزم تحديث القالب لفصل الإيرادات القادمة"));checks++;

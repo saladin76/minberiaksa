@@ -133,7 +133,7 @@ test("activation compares the localized failure links actually submitted to Meta
   assert.equal(upgrades.approvedNotificationLocales(draft, variants).includes("tr"), false);
 });
 
-function serviceFixture(options: { pending?: boolean; changed?: boolean; duplicateDefault?: boolean; welcome?: boolean; wrongCategory?: boolean; mixedWelcome?: boolean; superseded?: boolean; failureLinks?: boolean; oldGeneration?: boolean } = {}) {
+function serviceFixture(options: { recurring?: boolean; pending?: boolean; changed?: boolean; duplicateDefault?: boolean; welcome?: boolean; wrongCategory?: boolean; mixedWelcome?: boolean; superseded?: boolean; failureLinks?: boolean; oldGeneration?: boolean } = {}) {
   const source = sourceTemplate();
   if (options.welcome) {
     source.name = "mia_user_registered_v2";
@@ -147,9 +147,9 @@ function serviceFixture(options: { pending?: boolean; changed?: boolean; duplica
     source.buttons = [{ type: "URL", text: "Retry", url: "https://minberiaksa.org/ar/donation-failed" }];
     for (const locale of SUPPORTED_LOCALES) source.translations[locale] = { ...source.translations[locale], body: source.body, buttons: source.buttons };
   }
-  const draft = upgrades.notificationUpgradeDraft(source, !options.welcome, options.welcome);
+  const draft = upgrades.notificationUpgradeDraft(source, !options.welcome && !options.recurring, options.welcome, options.recurring);
   const candidate = { ...source, ...draft, id: "replacement", status: "DRAFT", notificationUpgrade: {} as Record<string, unknown> };
-  candidate.notificationUpgrade = { version: options.welcome ? 3 : 1, ...(options.welcome ? { policy: "WELCOME_MARKETING_V3" } : {}), sourceId: source.id, sourceHash: draft.sourceHash, draftHash: upgrades.notificationTemplateHash(candidate), receipt: !options.welcome, events: [options.welcome ? "USER_REGISTERED" : "DONATION_PAID"] };
+  candidate.notificationUpgrade = { version: options.recurring ? 4 : options.welcome ? 3 : 1, ...(options.recurring ? {policy:"SUBSCRIPTION_CADENCE_V4"} : {}), ...(options.welcome ? { policy: "WELCOME_MARKETING_V3" } : {}), sourceId: source.id, sourceHash: draft.sourceHash, draftHash: upgrades.notificationTemplateHash(candidate), receipt: !options.welcome && !options.recurring, events: [options.recurring ? "SUBSCRIPTION_CREATED" : options.welcome ? "USER_REGISTERED" : "DONATION_PAID"] };
   if (options.oldGeneration) {
     candidate.name += "_retired_policy";
     candidate.notificationUpgrade.draftHash = upgrades.notificationTemplateHash(candidate);
@@ -165,7 +165,7 @@ function serviceFixture(options: { pending?: boolean; changed?: boolean; duplica
     communicationSender: { findMany: async () => options.duplicateDefault ? [sender, sender] : [sender] },
     whatsappTemplate: { findMany: async (args: { where: { name?: unknown } }) => args.where.name ? [candidate] : [source], findUnique: async (args: { where: { id: string } }) => args.where.id === source.id ? source : candidate, findFirst: async () => null, create: async ({ data }: { data: Record<string, unknown> }) => { writes++; createdData = data; return candidate; }, update: async () => { writes++; } },
     whatsappTemplateWabaVariant: { findMany: async (args: { where: { businessAccountId: string } }) => { assert.equal(args.where.businessAccountId, "default-waba"); return variants; } },
-    messageTrigger: { findMany: async () => options.superseded ? [] : [{ id: "trigger", event: options.welcome ? "USER_REGISTERED" : "DONATION_PAID", templateId: triggerTarget }, ...(options.mixedWelcome ? [{ id: "other", event: "DONATION_PAID", templateId: triggerTarget }] : [])], updateMany: async (args: { data: { templateId: string } }) => { writes++; triggerTarget = args.data.templateId; return { count: 1 }; } },
+    messageTrigger: { findMany: async () => options.superseded ? [] : [{ id: "trigger", event: options.recurring ? "SUBSCRIPTION_CREATED" : options.welcome ? "USER_REGISTERED" : "DONATION_PAID", templateId: triggerTarget }, ...(options.mixedWelcome ? [{ id: "other", event: "DONATION_PAID", templateId: triggerTarget }] : [])], updateMany: async (args: { data: { templateId: string } }) => { writes++; triggerTarget = args.data.templateId; return { count: 1 }; } },
   };
   const prisma = { ...db, $transaction: async (run: (tx: typeof db) => Promise<unknown>) => run(db) };
   const mod = { exports: {} as { prepareNotificationUpgrades: (opts?: unknown) => Promise<{ results: Array<{ state: string }> }>; activateApprovedNotificationUpgrades: () => Promise<{ results: Array<{ state: string }> }> } };
@@ -258,4 +258,15 @@ test("actual email, SMS and WhatsApp helpers archive language refusals before an
     assert.equal(result.outcome, "SKIPPED"); assert.equal(result.reason, "EXACT_TEMPLATE_LANGUAGE_REQUIRED");
   }
   assert.equal(providerCalls, 0); assert.equal(archived.length, 3); assert.deepEqual(statuses, ["SKIPPED", "SKIPPED", "SKIPPED"]);
+});
+
+test("cadence template activation requires all 19 exact approvals and unchanged source", async () => {
+  for (const opts of [{pending:true},{changed:true},{duplicateDefault:true}]) {
+    const f=serviceFixture({recurring:true,...opts});await f.api.activateApprovedNotificationUpgrades();assert.equal(f.target(),"source");assert.equal(f.writes(),0);
+  }
+  const f=serviceFixture({recurring:true});
+  await f.api.prepareNotificationUpgrades({apply:true});
+  assert.equal((f.created()?.notificationUpgrade as {version:number}).version,4);
+  assert.equal(f.target(),"source");
+  assert.equal((await f.api.activateApprovedNotificationUpgrades()).results[0].state,"ACTIVATED");assert.equal(f.target(),"replacement");
 });

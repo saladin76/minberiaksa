@@ -574,7 +574,7 @@ export async function POST(req: NextRequest) {
             where: { id: dbSubscription.id },
             data: { status: "CANCELLED" },
           });
-          runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: dbSubscription.donorId }));
+          runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: dbSubscription.donorId,subscriptionId:dbSubscription.id }));
         }
         break;
       }

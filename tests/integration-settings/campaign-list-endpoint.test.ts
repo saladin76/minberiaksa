@@ -15,9 +15,10 @@ function endpoint(mode = "ok") {
     "@/lib/dashboard/api-auth":{requireAdminOrDashboardPermission:()=>mode==="denied"?{status:403}:null},
     "@/lib/audit-log":{auditActorFromDashboardSession:()=>({})},
     "@/lib/communication/communication-runtime-types":{COMMUNICATION_CHANNELS:["EMAIL","WHATSAPP","SMS"],COMMUNICATION_PURPOSES:["MARKETING"]},
-    "@/lib/communication/campaign-service":{listCampaigns:async()=>{lists++;if(mode==="database")throw new Error("unavailable");return [{id:"campaign",status:"BLOCKED",sentCount:3571,failedCount:1370,donationCount:999,revenue:999}];}},
+    "@/lib/communication/campaign-service":{listCampaigns:async()=>{lists++;if(mode==="database")throw new Error("unavailable");return [{id:"campaign",updatedAt:new Date("2026-11-02T00:00:00Z"),status:"BLOCKED",sentCount:3571,failedCount:1370,donationCount:999,revenue:999}];}},
     "@/lib/communication/campaign-counter-service":{readCampaignDeliveryCounters:async()=>{if(mode==="counters")throw new Error("counter read unavailable");return new Map([["campaign",{sent:4196,delivered:2508,read:1207,clicked:0,replied:25,failed:1645}]]);}},
     "@/lib/communication/campaign-attribution-service":{getCampaignOutcomeSummary:async()=>{reports++;throw new Error("unavailable");}},
+    "@/lib/communication/campaign-delivery-snapshot":{getCampaignDeliverySnapshot:()=>({ready:false})},
     "@/lib/communication/campaign-outcome-snapshot":{getCampaignOutcomeSnapshot:()=>{reports++;return {ready:false};}},
     "@/lib/communication/campaign-attribution-diagnostics":{campaignAttributionDiagnostic},
   };
@@ -49,4 +50,9 @@ test("a blocked campaign list reads accepted retries and webhook failures withou
   assert.equal(result.body.campaigns?.[0].sentCount,4196);assert.equal(result.body.campaigns?.[0].failedCount,1645);
   const failed=await endpoint("counters").get("?includeOutcomes=false");
   assert.equal(failed.body.deliveryCountersReady,false);assert.equal(failed.body.campaigns?.[0].sentCount,3571);
+});
+
+test("delivery polling starts an independent background snapshot without a revenue scan",async()=>{
+ const h=endpoint();const result=await h.get("?countersMode=poll");assert.equal(result.status,200);assert.equal(result.body.deliveryCountersReady,false);assert.equal(result.body.campaigns,undefined);assert.deepEqual(h.calls(),{lists:1,reports:0});
+ const denied=endpoint("denied");assert.equal((await denied.get("?countersMode=poll")).status,403);assert.deepEqual(denied.calls(),{lists:0,reports:0});
 });

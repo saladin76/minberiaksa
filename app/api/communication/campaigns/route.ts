@@ -9,6 +9,7 @@ import { getCampaignOutcomeSummary } from "@/lib/communication/campaign-attribut
 import { getCampaignOutcomeSnapshot } from "@/lib/communication/campaign-outcome-snapshot";
 import { campaignAttributionDiagnostic } from "@/lib/communication/campaign-attribution-diagnostics";
 import { readCampaignDeliveryCounters } from "@/lib/communication/campaign-counter-service";
+import { getCampaignDeliverySnapshot } from "@/lib/communication/campaign-delivery-snapshot";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -72,10 +73,18 @@ export async function GET(request: NextRequest) {
   let campaigns: Awaited<ReturnType<typeof listCampaigns>>;
   try { campaigns = await listCampaigns({ includeArchived }); }
   catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل الحملات" }, { status: 503 }); }
-  let deliveryCountersReady = true;
+  if(request.nextUrl.searchParams.get("countersMode")==="poll"){
+    try{
+      const revision=campaigns.map(row=>`${row.id}:${row.updatedAt.toISOString()}`).sort().join(",");
+      const snapshot=getCampaignDeliverySnapshot(campaigns.map(row=>row.id),work=>after(()=>work),revision);
+      if(!snapshot.ready)return NextResponse.json({ok:true,deliveryCountersReady:false});
+      return NextResponse.json({ok:true,deliveryCountersReady:true,computedAt:snapshot.computedAt,counters:Object.fromEntries(snapshot.summary)});
+    }catch{return NextResponse.json({ok:false,error:"تعذّر قراءة سجل الإرسال؛ أعد المحاولة."},{status:503});}
+  }
+  let deliveryCountersReady = request.nextUrl.searchParams.get("includeCounters") !== "false";
   // Outcome polling only returns financial attribution. The initial/refresh read
   // gets current delivery evidence once; it must not repeat on every revenue poll.
-  if (request.nextUrl.searchParams.get("outcomesMode") !== "poll") {
+  if (request.nextUrl.searchParams.get("outcomesMode") !== "poll" && request.nextUrl.searchParams.get("includeCounters")!=="false") {
     try {
       const counters = await readCampaignDeliveryCounters(campaigns.map(campaign => campaign.id));
       campaigns = campaigns.map(campaign => {

@@ -31,7 +31,7 @@ export type RetryOutcomeCode = RetryRecipientCode
   | "NO_SENDER_IDENTITY" | "TEMPLATE_PARAMETER_MISSING" | "TEMPLATE_HEADER_MEDIA_MISSING"
   | "ARCHIVE_FAILED" | "PROVIDER_REJECTED" | "RETRY_ORIGINAL_REQUIRED"
   | "DELIVERY_OUTCOME_UNCERTAIN" | "ACCEPTED_UNRECORDED"
-  | "EXACT_TEMPLATE_LANGUAGE_REQUIRED"
+  | "EXACT_TEMPLATE_LANGUAGE_REQUIRED" | "RECURRING_TEMPLATE_CADENCE_MISMATCH"
   | "WHATSAPP_MARKETING_COOLDOWN" | "WHATSAPP_FREQUENCY_CHECK_UNAVAILABLE"
   | "DONATION_WAQF_LINK_REQUIRES_CERTIFICATE_ID" | "DONATION_DOCUMENT_CONTEXT_MISSING"
   | "DONATION_DOCUMENT_RECIPIENT_MISMATCH" | "DONATION_DOCUMENT_ACCESS_TOKEN_UNAVAILABLE";
@@ -41,6 +41,7 @@ export type RetryResult = {
   recipientName?: string | null; newDeliveryId?: string | null;
 };
 const MESSAGES: Record<RetryOutcomeCode, string> = {
+  RECURRING_TEMPLATE_CADENCE_MISMATCH: "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة",
   EXACT_TEMPLATE_LANGUAGE_REQUIRED: "النسخة المحفوظة ليست بلغة المستلم؛ أكمل ترجمة القالب وأنشئ رسالة جديدة قبل الإرسال",
   SENT: "قبل المزوّد الرسالة؛ تُتابَع حالة التسليم في السجل",
   NOT_FOUND: "لم يُعثر على الرسالة",
@@ -153,6 +154,7 @@ export async function retryDelivery(deliveryId: string, opts: { actorId?: string
   if ((NON_RETRYABLE_TERMINAL as readonly string[]).includes(row.status)) return result(deliveryId, "NOT_RETRYABLE_BOUNCED", { recipientName: row.recipientName });
   if (!(RETRYABLE_STATUSES as readonly string[]).includes(row.status)) return result(deliveryId, "NOT_RETRYABLE_STATUS", { detail: row.status });
   if (row.retriedAt) return result(deliveryId, "ALREADY_RETRIED", { recipientName: row.recipientName });
+  if (row.errorMessage === "RECURRING_TEMPLATE_CADENCE_MISMATCH") return result(deliveryId, "RECURRING_TEMPLATE_CADENCE_MISMATCH", { recipientName: row.recipientName });
   if (row.errorMessage === "EXACT_TEMPLATE_LANGUAGE_REQUIRED") return result(deliveryId, "EXACT_TEMPLATE_LANGUAGE_REQUIRED", { recipientName: row.recipientName });
   const issuedDocumentId = row.variables && typeof row.variables === "object" ? (row.variables as { issuedDocumentId?: unknown }).issuedDocumentId : null;
   if ((row.channel === "EMAIL" || row.channel === "WHATSAPP") && typeof issuedDocumentId === "string" && /^[a-f0-9]{24}$/i.test(issuedDocumentId)) {

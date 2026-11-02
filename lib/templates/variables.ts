@@ -2,6 +2,7 @@ import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
 import { donationMessageLocale, donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
 import { donationMoneyFields, receiptDate } from "./donation-money";
+import { recurringFrequency, recurringFrequencyLabel, type RecurringFrequency } from "./recurring-cadence";
 
 /** ---------------- types ---------------- */
 
@@ -85,6 +86,7 @@ export interface TemplateContext {
   totals: TemplateTotals;
   /** Set for trigger-driven flows where one specific donation is the focus */
   donation?: TemplateDonation;
+  subscription?: { id:string; frequency:RecurringFrequency; frequencyLabel:string; amount:string; currency:string; nextBillingDate:string };
   /** Set for a campaign-update email. */
   update?: TemplateUpdate;
 }
@@ -158,6 +160,7 @@ type RawDonation = DonationProjectSource & {
   providerRaw?: unknown;
   billingReason?: string | null;
   providerTxnType?: string | null;
+  subscription?: {id:string;frequency:string|null;amount:number;currency:string;nextBillingDate:Date|null}|null;
 };
 
 function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
@@ -173,7 +176,7 @@ function donationToContext(d: RawDonation, locale?: string | null): TemplateDona
   return {
     id: d.id,
     locale,
-    ...donationMoneyFields(d, locale || d.locale || "ar"),
+    ...donationMoneyFields({...d,frequency:d.subscription?recurringFrequency(d.subscription.frequency)??undefined:undefined}, locale || d.locale || "ar"),
     amount: formatTemplateMoney(d.amount, locale || d.locale, d.currency),
     amountUSD: formatTemplateMoney(donationUsdAmount(d), locale || d.locale, "USD"),
     currency: d.currency,
@@ -250,7 +253,7 @@ export async function loadContextForDonation(
     where: { id: donationId },
     // Notifications use the saved donor currency and total only; bank request
     // snapshots are not needed and must not enter template rendering.
-    select: { ...donationSelect, donorId: true },
+    select: { ...donationSelect, donorId: true, subscription: {select:{id:true,frequency:true,amount:true,currency:true,nextBillingDate:true}} },
   });
   if (!donation) return null;
   const base = await loadContext(donation.donorId, localeOverride || donation.locale);
@@ -258,7 +261,19 @@ export async function loadContextForDonation(
   return {
     ...base,
     donation: donationToContext(donation as RawDonation, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)),
+    subscription: subscriptionToContext(donation.subscription, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)),
   };
+}
+
+function subscriptionToContext(subscription:RawDonation["subscription"],locale:string):TemplateContext["subscription"] {
+  if(!subscription)return undefined;const frequency=recurringFrequency(subscription.frequency);if(!frequency)return undefined;
+  return {id:subscription.id,frequency,frequencyLabel:recurringFrequencyLabel(frequency,locale),amount:formatTemplateMoney(subscription.amount,locale,subscription.currency),currency:subscription.currency,nextBillingDate:formatDate(subscription.nextBillingDate)};
+}
+
+export async function loadContextForSubscription(subscriptionId:string,userId?:string):Promise<TemplateContext|null> {
+  const subscription=await prisma.subscription.findUnique({where:{id:subscriptionId},select:{id:true,donorId:true,frequency:true,amount:true,currency:true,nextBillingDate:true}});
+  if(!subscription||userId&&subscription.donorId!==userId)return null;
+  const context=await loadContext(subscription.donorId);return context?{...context,subscription:subscriptionToContext(subscription,context.user.preferredLang)}:null;
 }
 
 export async function loadContextsForUserIds(
@@ -348,6 +363,7 @@ export function mergeText(template: string, ctx: TemplateContext): string {
     totals: ctx.totals,
     donations: ctx.donations,
     donation: ctx.donation,
+    subscription: ctx.subscription,
     update: ctx.update,
   };
   return renderInScope(template, scope);
