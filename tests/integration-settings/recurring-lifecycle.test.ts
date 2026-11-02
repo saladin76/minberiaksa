@@ -6,6 +6,7 @@ import * as crypto from "node:crypto";
 import vm from "node:vm";
 import ts from "typescript";
 import * as schedule from "../../lib/donations/recurring-schedule";
+import * as billingSafety from "../../lib/donations/recurring-billing-safety";
 import * as albaraka from "../../lib/albaraka";
 import * as clientIp from "../../lib/tracking/client-ip";
 import * as gifts from "../../lib/donations/gift-order";
@@ -38,7 +39,8 @@ function matches(row: Row, where: Row): boolean {
     if (expected === null) return row[key] == null;
     if (expected && typeof expected === "object" && !(expected instanceof Date)) {
       if ("isSet" in expected) return (row[key] !== undefined) === expected.isSet;
-      if ("not" in expected) return row[key] != null;
+      if ("not" in expected) return expected.not === null ? row[key] != null : row[key] !== undefined && row[key] !== expected.not;
+      if ("in" in expected) return expected.in.includes(row[key]);
       if ("lte" in expected) return row[key] != null && row[key] <= expected.lte;
     }
     if (expected instanceof Date) return row[key]?.getTime() === expected.getTime();
@@ -69,6 +71,7 @@ function fixture(mainGateway = "ALBARAKA") {
       update: async ({ where, data }: Row) => Object.assign(donations.get(where.id)!, data),
       findUnique: async ({ where }: Row) => donations.get(where.id),
       findFirst: async ({ where }: Row) => [...donations.values()].find(row => matches(row, where)),
+      findMany: async ({where,take}:Row)=>[...donations.values()].filter(row=>matches(row,where)).sort((a,b)=>(b.paidAt?.getTime()??0)-(a.paidAt?.getTime()??0)).slice(0,take),
     },
   };
   prisma.$transaction = async (operation: unknown) => typeof operation === "function" ? operation(prisma) : Promise.all(operation as Promise<unknown>[]);
@@ -84,7 +87,7 @@ function fixture(mainGateway = "ALBARAKA") {
     "@/lib/exchange/convert-amount-in-currency-to-usd": { normalizeDonationCurrencyCode: (value: string) => value, convertAmountInCurrencyToUsd: async (value: number) => value },
     "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => ({ USD: 1 }), convertAmountInCurrencyToUsd: (value: number) => value },
     "@/lib/donations/donor-country-code": { getDonorCountryCodeForSnapshot: async () => null },
-    "@/lib/donations/recurring-schedule": schedule, "./recurring-schedule": schedule,
+    "@/lib/donations/recurring-schedule": schedule, "./recurring-schedule": schedule, "./recurring-billing-safety": billingSafety,
     "@/lib/payment-gateway": { parseMainGateway }, "@/lib/donations/gift-order": gifts,
     "@/lib/minbar/donation-amount": { parseLocalAmount: () => null },
     "@/lib/donations/access-token": { mintDonationAccessToken: () => "fixture-access" },
@@ -94,7 +97,7 @@ function fixture(mainGateway = "ALBARAKA") {
     "@/lib/albaraka": { ...albaraka, isAlbarakaRecurringCheckoutReady: () => ready, isAlbarakaRecurringEnabled: () => true,
       albarakaRecurringConfig: () => ({ merchantNo: "fixture", terminalNo: "fixture", encKey: "fixture-key", enabled: true }), albarakaChargeCurrency: () => "USD",
       albarakaService: async () => { bankCalls++; return { ServiceResponseData: { ResponseCode: "00" }, ReferenceCode: "fixture-ref" }; } },
-    "@/lib/paypal": { isPayPalConfigured: () => true, isPayPalRecurringEnabled: () => true,
+    "@/lib/paypal": { PayPalError: class extends Error { status=400;body={}; }, isPayPalConfigured: () => true, isPayPalRecurringEnabled: () => true,
       paypalChargeFor: async (amount: number) => ({ value: amount.toFixed(2), currency: "USD" }),
       paypalAmountsMatch: (a: string, b: string) => a === b,
       paypalAuditView: (value: unknown) => value,
@@ -335,4 +338,59 @@ test("an expired recurring card retains a repairable failed plan and never emits
  f.dependencies["@/lib/events/dispatch"]={dispatchEvent:(event:string)=>events.push(event)};
  const result=await f.albarakaWorker.chargeDueAlbarakaSubscriptions({now:f.dueAt});
  assert.equal(result.failed[0].result,"card_expired");assert.equal(f.plan.status,"PAYMENT_FAILED");assert.equal(f.calls(),0);assert.deepEqual(events,[]);assert.equal(f.donations.size,1);
+});
+
+async function confirmedPlan(rail:"ALBARAKA"|"PAYPAL",frequency:"DAILY"|"FRIDAY"|"MONTHLY"="DAILY") {
+ const f=fixture(),checkout=await f.driver.createDonation({items:[{projectId:"fixture-project",amount:1,freqKey:frequency.toLowerCase(),schedule:{hour:19,minute:30,...(frequency==="MONTHLY"?{dayOfMonth:1}:{})}}],projects:[{id:"project",slug:"fixture-project"}],currency:"USD",locale:"ar",method:rail==="PAYPAL"?"PAYPAL":"CARD",guest:null,teamSupport:0,teamSupportRecurring:false}),plan=f.plans.get(checkout.subscriptionId)!;
+ if(rail==="ALBARAKA")Object.assign(plan,{paymentCardId:"card",paymentCard:{expiryDate:"12/29",cardNumber:"encrypted"}});else plan.paypalVaultId="vault";
+ if(rail==="ALBARAKA")await f.settlement.settleAlbarakaDonation(checkout.id,{ServiceResponseData:{ResponseCode:"00"}});else await f.paypalSettlement.settlePayPalDonation({donationId:checkout.id,orderId:"first",captureId:"first",paidAmount:1,paidCurrency:"USD",audit:{},vault:{id:"vault",customerId:null},paidAt:signupAt});
+ return{...f,plan,first:f.donations.get(checkout.id)!,worker:rail==="ALBARAKA"?f.albarakaWorker.chargeDueAlbarakaSubscriptions:f.paypalWorker.chargeDuePayPalSubscriptions};
+}
+for(const rail of ["ALBARAKA","PAYPAL"] as const){
+ test(`${rail}: late 03:00 daily success prevents 19:30; following day collects only once`,async()=>{
+  const f=await confirmedPlan(rail),paidAt=new Date("2026-11-02T00:00:00Z"),due=new Date("2026-11-02T16:30:00Z");
+  f.donations.set("retry",{...f.first,id:"retry",paidAt,billingReason:"subscription_cycle",providerTxnType:rail==="ALBARAKA"?"RecurringSale":"RecurringCapture"});Object.assign(f.plan,{lastBillingDate:paidAt,nextBillingDate:due});
+  const count=f.donations.size,snapshot=JSON.stringify(f.plan);assert.equal((await f.worker({now:due,dryRun:true})).skipped[0].result,"schedule_postponed");assert.equal(JSON.stringify(f.plan),snapshot);
+  assert.equal((await f.worker({now:due})).skipped[0].result,"schedule_postponed");assert.equal(f.calls(),0);assert.equal(f.donations.size,count);assert.equal(f.plan.nextBillingDate.toISOString(),"2026-11-03T16:30:00.000Z");
+  const next=new Date(f.plan.nextBillingDate);assert.equal((await f.worker({now:next})).charged.length,1);await f.worker({now:next});assert.equal(f.calls(),1);assert.equal(f.plan.nextBillingDate.toISOString(),"2026-11-04T16:30:00.000Z");
+ });
+ test(`${rail}: October 31 signup / November 1 old renewal is postponed before a provider call`,async()=>{
+  const f=await confirmedPlan(rail,"MONTHLY"),paidAt=new Date("2026-10-31T12:00:00Z"),due=new Date("2026-11-01T16:30:00Z");f.first.paidAt=paidAt;Object.assign(f.plan,{lastBillingDate:paidAt,nextBillingDate:due});assert.equal((await f.worker({now:due})).skipped[0].result,"schedule_postponed");assert.equal(f.calls(),0);assert.equal(f.plan.nextBillingDate.toISOString(),"2026-12-01T16:30:00.000Z");assert.equal((await f.worker({now:new Date(f.plan.nextBillingDate)})).charged.length,1);assert.equal(f.calls(),1);assert.equal(f.plan.nextBillingDate.toISOString(),"2027-01-01T16:30:00.000Z");
+ });
+ test(`${rail}: Saturday retry moves to Friday without erasing attempts`,async()=>{
+  const f=await confirmedPlan(rail,"FRIDAY"),sat=new Date("2026-11-07T12:00:00Z");Object.assign(f.plan,{nextBillingDate:sat,chargeAttempts:2});assert.equal((await f.worker({now:sat})).skipped[0].result,"schedule_postponed");assert.equal(f.calls(),0);assert.equal(f.plan.chargeAttempts,2);assert.equal(f.plan.nextBillingDate.toISOString(),"2026-11-13T16:30:00.000Z");
+ });
+ test(`${rail}: unresolved old capture blocks a resumed plan without creating a new attempt`,async()=>{
+  const f=await confirmedPlan(rail),due=new Date(f.plan.nextBillingDate);f.donations.set("unknown",{...f.first,id:"unknown",paidAt:null,status:"FAILED",billingReason:"subscription_cycle",providerTxnResult:"Unknown"});const count=f.donations.size;
+  assert.equal((await f.worker({now:due})).failed[0].result,"review_required");assert.equal(f.calls(),0);assert.equal(f.plan.status,"PAUSED");assert.equal(f.plan.lastChargeError,"RECURRING_OUTCOME_REVIEW_REQUIRED");assert.equal(f.donations.size,count);
+ });
+ test(`${rail}: cancellation during capture cannot restart future billing`,async()=>{
+  const f=await confirmedPlan(rail),due=new Date(f.plan.nextBillingDate),provider=f.dependencies[rail==="ALBARAKA"?"@/lib/albaraka":"@/lib/paypal"],name=rail==="ALBARAKA"?"albarakaService":"chargePayPalVault",original=provider[name];provider[name]=async(...args:unknown[])=>{f.plan.status="CANCELLED";return original(...args);};
+  assert.equal((await f.worker({now:due})).charged.length,1);assert.equal(f.plan.status,"CANCELLED");await f.worker({now:new Date(due.getTime()+86400000)});assert.equal(f.calls(),1);
+ });
+ for(const status of ["PAUSED","CANCELLED"])test(`${rail}: late first success preserves donor ${status}`,async()=>{
+  const f=fixture(),result=await f.driver.createDonation({items:[{projectId:"fixture-project",amount:1,freqKey:"monthly"}],projects:[{id:"project",slug:"fixture-project"}],currency:"USD",locale:"ar",method:rail==="PAYPAL"?"PAYPAL":"CARD",guest:null,teamSupport:0,teamSupportRecurring:false}),plan=f.plans.get(result.subscriptionId)!;plan.status=status;
+  if(rail==="ALBARAKA")await f.settlement.settleAlbarakaDonation(result.id,{ServiceResponseData:{ResponseCode:"00"}});else await f.paypalSettlement.settlePayPalDonation({donationId:result.id,orderId:"first",captureId:"first",paidAmount:1,paidCurrency:"USD",audit:{},vault:{id:"vault",customerId:null},paidAt:signupAt});assert.ok(f.donations.get(result.id)!.paidAt);assert.equal(plan.status,status);assert.ok(plan.lastBillingDate);assert.equal(f.calls(),0);
+ });
+ test(`${rail}: midnight crossed during capture uses the actual settlement day`,async()=>{
+  const f=await confirmedPlan(rail),before=new Date("2026-11-02T20:59:00Z"),after=new Date("2026-11-02T21:01:00Z");let clock=before.getTime();f.plan.nextBillingDate=before;
+  const provider=f.dependencies[rail==="ALBARAKA"?"@/lib/albaraka":"@/lib/paypal"],name=rail==="ALBARAKA"?"albarakaService":"chargePayPalVault",original=provider[name];provider[name]=async(...args:unknown[])=>{const result=await original(...args);clock=after.getTime();return result;};
+  class PaymentClock extends Clock{static now(){return clock;}}
+  const workerModule=load(rail==="ALBARAKA"?"lib/donations/albaraka-recurring.ts":"lib/donations/paypal-recurring.ts",f.dependencies,{Date:PaymentClock}),worker=rail==="ALBARAKA"?workerModule.chargeDueAlbarakaSubscriptions:workerModule.chargeDuePayPalSubscriptions;
+  assert.equal((await worker({now:before})).charged.length,1);assert.equal(f.plan.lastBillingDate.toISOString(),after.toISOString());assert.equal(f.plan.nextBillingDate.toISOString(),"2026-11-04T16:30:00.000Z");await worker({now:new Date("2026-11-03T16:30:00Z")});assert.equal(f.calls(),1);
+ });
+}
+for(const response of ["decline","unknown"])test(`PayPal: late ${response} cannot replace confirmed payment or schedule a retry`,async()=>{
+ const f=await confirmedPlan("PAYPAL"),due=new Date(f.plan.nextBillingDate),next=new Date(due.getTime()+86400000);let sends=0;f.dependencies["@/lib/events/after-response"].runAfterResponse=()=>{sends++;};
+ f.dependencies["@/lib/paypal"].chargePayPalVault=async()=>{const row=[...f.donations.values()].find(row=>row.billingReason==="subscription_cycle")!;Object.assign(row,{paidAt:due,status:"PAID",providerTxnResult:"Success"});Object.assign(f.plan,{lastBillingDate:due,nextBillingDate:next,chargeAttempts:0});if(response==="unknown")throw new Error("Synthetic timeout");throw new f.dependencies["@/lib/paypal"].PayPalError("Synthetic decline");};
+ assert.equal((await f.worker({now:due})).skipped[0].result,"already_attempted");assert.equal(f.plan.nextBillingDate,next);assert.equal(f.plan.chargeAttempts,0);assert.equal(f.plan.status,"ACTIVE");assert.equal(sends,0);
+});
+for(const rail of ["ALBARAKA","PAYPAL"] as const)test(`${rail}: Friday window is checked again after preparing the attempt`,async()=>{
+ const f=await confirmedPlan(rail,"FRIDAY"),before=new Date("2026-11-06T20:59:00Z"),after=new Date("2026-11-06T21:01:00Z");let clock=before.getTime();f.plan.nextBillingDate=before;
+ const create=f.prisma.donation.create;f.prisma.donation.create=async(...args:unknown[])=>{const row=await create(...args);clock=after.getTime();return row;};
+ f.prisma.donation.updateMany=async({where,data}:Row)=>{const selected=[...f.donations.values()].filter(row=>matches(row,where));for(const row of selected)Object.assign(row,data);return{count:selected.length};};
+ class PaymentClock extends Clock{static now(){return clock;}}
+ const workerModule=load(rail==="ALBARAKA"?"lib/donations/albaraka-recurring.ts":"lib/donations/paypal-recurring.ts",f.dependencies,{Date:PaymentClock}),worker=rail==="ALBARAKA"?workerModule.chargeDueAlbarakaSubscriptions:workerModule.chargeDuePayPalSubscriptions;
+ assert.equal((await worker({now:before})).skipped[0].result,"schedule_postponed");assert.equal(f.calls(),0);assert.equal(f.plan.chargeAttempts,0);assert.equal(f.plan.nextBillingDate.toISOString(),"2026-11-13T16:30:00.000Z");
+ const row=[...f.donations.values()].find(row=>row.billingReason==="subscription_cycle")!;assert.equal(row.paidAt,null);assert.match(row.providerErrorMessage,/NOT_SENT/);
 });

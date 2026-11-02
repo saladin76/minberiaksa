@@ -22,7 +22,7 @@ import {writeCart} from "./lib/minbar/cart";
 import ar from "./i18n/messages/ar.json";import en from "./i18n/messages/en.json";import tr from "./i18n/messages/tr.json";
 const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
-writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:new URLSearchParams(location.search).get("currency")||"USD"}]);
+writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:new URLSearchParams(location.search).get("currency")||"USD",schedule:{hour:9,minute:30,dayOfMonth:1}}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
 createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={null} defaultCountry={new URLSearchParams(location.search).has("saudi")?"sa":"tr"}/><Legacy/></>}</NextIntlClientProvider>);`;
 const mocks = {
@@ -230,6 +230,18 @@ try {
   const order=calls.filter(r=>r.path==="/api/cart/payment").at(-1);assert.equal(order.body.expectedGateway,"PAYFOR");assert.equal(order.body.routingPhone,"+966501234567");assert.equal(order.body.currency,"USD");
   const bank=await page.evaluate(()=>window.fixtureSubmissions[0]);assert.equal(bank.fields.Currency,"949");assert.equal(bank.fields.SecureType,"3DPay");assert.equal(bank.fields.PurchAmount,"1250.00");
   checks++;await page.close();
+ }
+ for(const lang of ["ar","en","tr"])for(const width of [390,1440])for(const frequency of ["daily","friday","monthly"]){
+  const page=await browser.newPage({viewport:{width,height:900},timezoneId:"Europe/Istanbul"});let orders=0;
+  page.on("pageerror",e=>errors.push(e.message));await page.clock.setFixedTime(new Date("2026-10-31T12:00:00Z"));
+  await page.route("**/*",async route=>{const url=new URL(route.request().url());if(url.origin!==origin)return route.abort();if(url.pathname.startsWith("/api/")){if(url.pathname==="/api/cart/payment")orders++;return route.fulfill({json:{gateway:"ALBARAKA",ok:true}});}return route.continue();});
+  await page.goto(origin+`/?lang=${lang}&frequency=${frequency}`);const terms=page.locator(".pay-recurring-terms");await terms.waitFor();
+  const dates={daily:"2026-11-01T06:30:00Z",friday:"2026-11-06T06:30:00Z",monthly:"2026-12-01T06:30:00Z"};
+  const expected=new Intl.DateTimeFormat(lang,{dateStyle:"full",timeStyle:"short",timeZone:"Europe/Istanbul"}).format(new Date(dates[frequency]));
+  assert.ok((await terms.textContent()).includes(expected));assert.equal(await terms.locator("span").count(),3);
+  assert.equal(orders,0);assert.equal(await page.locator("#albaraka-2d").isDisabled(),true);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.screenshot({path:path.join(out,`${lang}-${width}-${frequency}-terms.png`),fullPage:true});checks+=5;await page.close();
  }
  assert.deepEqual(errors,[]);
  await writeFile(path.join(out,"verification.json"),JSON.stringify({checks,locales:["ar","en","tr"],widths:[390,1440],pageErrors:errors,scope:"Real client components with synthetic HTTP/auth/settings and intercepted gateway navigation. No payment, production database, analytics upload or message."},null,2));

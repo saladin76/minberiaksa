@@ -297,9 +297,12 @@ export async function settlePayPalDonation(input: {
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true, status: true },
       });
-      if (plan && plan.lastBillingDate === null) {
+      if (plan && plan.lastBillingDate === null && (plan.status === "CANCELLED" || plan.status === "PAUSED")) {
+        await tx.subscription.update({where:{id:plan.id},data:{lastBillingDate:paidAt,nextBillingDate:firstChargeForPlan(plan,paidAt),...(input.vault?{paypalVaultId:input.vault.id,paypalCustomerId:input.vault.customerId}:{})}});
+      }
+      if (plan && plan.lastBillingDate === null && (plan.status === "ACTIVE" || plan.status === "PAYMENT_FAILED")) {
         if (input.vault) {
           await tx.subscription.update({
             where: { id: plan.id },
@@ -377,8 +380,8 @@ async function failDonation(
   /* A plan whose first instalment never settled was never started. */
   if (donation.subscriptionId) {
     await prisma.subscription.updateMany({
-      where: { id: donation.subscriptionId, lastBillingDate: null },
-      data: { status: "CANCELLED", lastChargeError: reason.slice(0, 300) },
+      where: { id: donation.subscriptionId, lastBillingDate: null, status: "ACTIVE" },
+      data: { status: "PAYMENT_FAILED", lastChargeError: reason.slice(0, 300) },
     });
   }
   return { kind: "failed", reason };

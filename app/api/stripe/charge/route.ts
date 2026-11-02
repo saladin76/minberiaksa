@@ -162,7 +162,8 @@ export async function POST(req: NextRequest) {
        falls on the same day and time. Today's payment  the first month's
        gift, with any once-only team support  is charged now as a one-off
        line on the signup invoice. */
-    const firstScheduledCharge = plan.nextBillingDate ?? firstChargeForPlan(plan, donation.createdAt ?? now);
+    const safeFirstCharge = firstChargeForPlan(plan, now);
+    const firstScheduledCharge = plan.nextBillingDate && plan.nextBillingDate > safeFirstCharge ? plan.nextBillingDate : safeFirstCharge;
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,

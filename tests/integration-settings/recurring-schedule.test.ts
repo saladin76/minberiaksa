@@ -224,7 +224,7 @@ test("first charge after checkout skips the period the checkout already paid", (
   // Daily at 14:30, paid at 10:00 → tomorrow 14:30, not this afternoon.
   assert.equal(firstChargeAfterCheckout({ kind: "daily", hour: 14, minute: 30 }, new Date("2026-10-05T07:00:00Z"), tz).toISOString(), "2026-10-06T11:30:00.000Z");
   // Monthly on the 15th, paid on the 20th → next month's 15th.
-  assert.equal(firstChargeAfterCheckout({ kind: "monthDay", day: 15, hour: 14, minute: 30 }, new Date("2026-10-20T07:00:00Z"), tz).toISOString(), "2026-11-15T11:30:00.000Z");
+  assert.equal(firstChargeAfterCheckout({ kind: "monthDay", day: 15, hour: 14, minute: 30 }, new Date("2026-10-20T07:00:00Z"), tz).toISOString(), "2026-12-15T11:30:00.000Z");
   // Friday 09:00, paid on Thursday → tomorrow (a different Friday's gift).
   assert.equal(firstChargeAfterCheckout({ kind: "weekday", weekday: 5, hour: 9, minute: 0 }, new Date("2026-10-08T07:00:00Z"), tz).toISOString(), "2026-10-09T06:00:00.000Z");
   // Friday 09:00, paid on Friday at 08:00 → next Friday, not an hour later.

@@ -93,6 +93,8 @@ const indexes = [
   // Bound actual-renewal audits by their stored cycle markers and date.
   { collection: "Donation", key: { billingReason: 1, createdAt: -1 }, unique: false },
   { collection: "Donation", key: { providerTxnType: 1, createdAt: -1 }, unique: false },
+  { collection: "Subscription", key: { provider: 1, status: 1, nextBillingDate: 1 }, unique: false },
+  { collection: "Donation", key: { subscriptionId: 1, status: 1, paidAt: -1, _id: -1 }, unique: false },
 ];
 
 async function run() {

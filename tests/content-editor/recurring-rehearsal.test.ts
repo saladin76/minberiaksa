@@ -6,6 +6,7 @@ import ts from "typescript";
 import * as crypto from "node:crypto";
 import * as albaraka from "../../lib/albaraka";
 import * as schedule from "../../lib/donations/recurring-schedule";
+import * as billingSafety from "../../lib/donations/recurring-billing-safety";
 import { inspectBankReply } from "../../lib/donations/bank-operations-inspection";
 // Synthetic runtime boundaries; the real worker, lease, payload and inspection run.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +69,7 @@ function fixture() {
     "@/lib/exchange/rates-service":{getUsdBaseRatesForServer:async()=>({USD:1}),convertAmountInCurrencyToUsd:(v: number)=>v},
     "@/lib/exchange/convert-amount-in-currency-to-usd":{normalizeDonationCurrencyCode:(v: string)=>v},
     "@/lib/donations/donor-country-code":{getDonorCountryCodeForSnapshot:async()=>null},"@/lib/donations/access-token":{mintDonationAccessToken:()=>"fixture"},
-    "./recurring-schedule":schedule,"./bank-operations-service":{bankDonationSelect:{}},
+    "./recurring-schedule":schedule,"./recurring-billing-safety":billingSafety,"./bank-operations-service":{bankDonationSelect:{}},
     "./bank-operations-provider":{callBankOperation:async(row: Row,action: string)=>{assert.equal(action,'INQUIRE');queries++;return {state:'SUCCEEDED',code:'0000',data:{transactions:inquiryVerified?[{OrderId:row.providerOrderId,Amount:'1.00',CurrencyCode:'US',TransactionType:'Sale',AuthCode:'AUTH1'}]:[]}};}},
     "./bank-operations-inspection":{inspectBankReply},
   };

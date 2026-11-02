@@ -397,15 +397,9 @@ function samePeriod(rule: ScheduleRule, a: Date, b: Date, tz: string): boolean {
   return rule.kind === "monthDay" || x.day === y.day;
 }
 
-/**
- * The first scheduled charge after the checkout payment at `paidAt`. That
- * payment is the current period's gift, so the schedule starts in the next
- * period: a monthly plan for the 15th paid on the 4th next charges on the 15th
- * of NEXT month, and a daily plan paid at 10:00 for 14:30 next charges
- * tomorrow  never twice in one day or month. A Friday plan paid on a
- * Thursday still charges the next day: that is a different Friday's gift.
- */
-export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timezone: string): Date {
+/** A successful payment covers its local billing period. The next ordinary
+ * debit must use a later local day/month, even following a delayed retry. */
+function nextPeriodAfterPayment(rule: ScheduleRule, paidAt: Date, timezone: string): Date {
   const tz = normalizeTimezone(timezone);
   let next = nextChargeFromRule(rule, paidAt, tz);
   if (rule.hour === undefined) return next; // legacy rules already skip the current period
@@ -413,6 +407,16 @@ export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timez
     next = nextChargeFromRule(rule, next, tz);
   }
   return next;
+}
+
+/** First monthly renewal: first chosen slot on/after the calendar-month
+ * anniversary date. Clock seconds must not skip an additional month. */
+export function firstChargeAfterCheckout(rule: ScheduleRule, paidAt: Date, timezone: string): Date {
+  if (rule.kind !== "monthDay" || rule.hour === undefined) return nextPeriodAfterPayment(rule, paidAt, timezone);
+  const tz = normalizeTimezone(timezone);
+  const anniversary = wallClock(nextChargeAt("MONTHLY", paidAt, tz), tz);
+  const earliestDay = fromWallClock({ ...anniversary, hour: 0, minute: 0, second: 0 }, tz);
+  return nextChargeFromRule(rule, new Date(earliestDay.getTime() - 1), tz);
 }
 
 /**
@@ -445,6 +449,20 @@ export function firstChargeForPlan(plan: { frequency: string | null; scheduleRul
   const rule = planRule(plan);
   if (rule) return firstChargeAfterCheckout(rule, paidAt, tz);
   return nextChargeAt(isRecurringFrequency(plan.frequency) ? plan.frequency : "MONTHLY", paidAt, tz);
+}
+
+/** A settled late retry covers the local day/month in which it succeeds. */
+export function nextChargeAfterPayment(plan: { frequency: string | null; scheduleRule?: unknown; timezone?: string | null }, paidAt: Date): Date {
+  const tz = normalizeTimezone(plan.timezone);
+  const rule = planRule(plan);
+  return rule ? nextPeriodAfterPayment(rule, paidAt, tz) : nextChargeAt(isRecurringFrequency(plan.frequency) ? plan.frequency : "MONTHLY", paidAt, tz);
+}
+
+/** Friday retries must never create an ordinary debit on another weekday. */
+export function nextRetryForPlan(plan: { frequency: string | null; scheduleRule?: unknown; timezone?: string | null }, attempt: number, from: Date): Date | null {
+  const retry = nextRetryAt(attempt, from);
+  if (retry && plan.frequency === "FRIDAY" && wallClock(retry, normalizeTimezone(plan.timezone)).weekday !== 5) return nextChargeForPlan(plan, retry);
+  return retry;
 }
 
 // ── Retry ladder (Albaraka scheduler) ───────────────────────────────────────
@@ -492,6 +510,7 @@ export function stripeRecurringFor(frequency: RecurringFrequency): { interval: "
 
 /** The record of what the donor agreed to, written once onto the plan. */
 export interface ConsentSnapshot {
+  billingPolicyVersion: 2;
   frequency: RecurringFrequency;
   amount: number;
   currency: string;
@@ -528,6 +547,7 @@ export function consentSnapshotFor(input: {
 }): ConsentSnapshot {
   const rule = input.rule ?? scheduleRuleFor(input.frequency, input.now, input.timezone);
   return {
+    billingPolicyVersion: 2,
     frequency: input.frequency,
     amount: input.amount,
     currency: input.currency,

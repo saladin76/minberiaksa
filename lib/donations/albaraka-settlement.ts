@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { albarakaIsoCode, type AlbarakaServiceResponse } from "@/lib/albaraka";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
-import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
+import { firstChargeForPlan, nextChargeAfterPayment } from "@/lib/donations/recurring-schedule";
 import { donationFieldEmpty, donationWhereAll } from "./mongo-null";
 
 /**
@@ -59,8 +59,8 @@ export async function failAlbarakaDonation(
     void sendDonationFailedConversions(donationId);
     if (donation.subscriptionId) {
       await prisma.subscription.updateMany({
-        where: { id: donation.subscriptionId, lastBillingDate: null },
-        data: { status: "CANCELLED", lastChargeError: reason.slice(0, 300) },
+        where: { id: donation.subscriptionId, lastBillingDate: null, status: "ACTIVE" },
+        data: { status: "PAYMENT_FAILED", lastChargeError: reason.slice(0, 300) },
       });
     }
   } catch (e) {
@@ -81,6 +81,7 @@ export async function settleAlbarakaDonation(
   const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
   let newlyPaid = false;
   let subscriptionId: string | null = null;
+  let activated = false;
 
   const settled = await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({
@@ -134,17 +135,18 @@ export async function settleAlbarakaDonation(
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true, scheduleRule: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true, status: true },
       });
       if (plan) {
         const paidAt = new Date();
+        const initial = !plan.lastBillingDate;
+        activated = initial && (plan.status === "ACTIVE" || plan.status === "PAYMENT_FAILED");
         await tx.subscription.update({
           where: { id: plan.id },
           data: {
-            status: "ACTIVE",
-            provider: "ALBARAKA",
-            lastBillingDate: paidAt,
-            nextBillingDate: firstChargeForPlan(plan, paidAt),
+            ...(activated ? {status: "ACTIVE", provider: "ALBARAKA"} : {}),
+            lastBillingDate: plan.lastBillingDate && plan.lastBillingDate > paidAt ? plan.lastBillingDate : paidAt,
+            nextBillingDate: initial ? firstChargeForPlan(plan, paidAt) : nextChargeAfterPayment(plan, paidAt),
             chargeAttempts: 0,
             lastChargeError: null,
           },
@@ -158,7 +160,7 @@ export async function settleAlbarakaDonation(
 
   if (newlyPaid) {
     runAfterResponse(() => dispatchDonationPaid(donationId));
-    if (subscriptionId) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId }));
+    if (subscriptionId && activated) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId }));
   }
   return settled;
 }

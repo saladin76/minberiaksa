@@ -34,7 +34,8 @@ import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
+import { nextChargeAfterPayment, nextRetryForPlan } from "./recurring-schedule";
+import { inspectRecurringBillingSafety, applyRecurringBillingSafety, deferClosedFridayWindow } from "./recurring-billing-safety";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
 /**
@@ -76,7 +77,7 @@ import { mintDonationAccessToken } from "@/lib/donations/access-token";
 export interface RecurringChargeOutcome {
   subscriptionId: string;
   donationId: string | null;
-  result: "charged" | "declined" | "unreachable" | "card_expired" | "already_attempted" | "dry_run";
+  result: "charged" | "declined" | "unreachable" | "card_expired" | "already_attempted" | "dry_run" | "schedule_postponed" | "review_required";
   amountUSD: number | null;
   error?: string;
 }
@@ -114,22 +115,6 @@ async function chargeFor(totalAmount: number, currency: string): Promise<{ amoun
   return { amount: albarakaMinorUnits(convertAmountInCurrencyToTry(totalAmount, currency, rates)), currencyCode: "TL" };
 }
 
-/**
- * The first cycle still ahead of `now`, stepping from the cycle that was due.
- * Each step follows the plan's own rule (the donor's chosen day and time), so
- * a charge that succeeded on a retry hours later does not drag the next cycle
- * off that slot. Plans without a rule step by frequency, as before.
- */
-function nextCycleAfter(sub: { frequency: string | null; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
-  let next = nextChargeForPlan(sub, due);
-  // Bounded: a daily plan two years behind is 730 steps, which is fine; the
-  // cap only guards against a clock that is wildly wrong.
-  for (let i = 0; i < 2000 && next.getTime() <= now.getTime(); i += 1) {
-    next = nextChargeForPlan(sub, next);
-  }
-  return next;
-}
-
 export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryRun?: boolean; limit?: number } = {}): Promise<RecurringChargeSummary> {
   const now = options.now ?? new Date();
   const dryRun = options.dryRun ?? false;
@@ -152,7 +137,7 @@ export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryR
       provider: "ALBARAKA",
       status: "ACTIVE",
       lastBillingDate: { not: null },
-      donations: { some: { paidAt: { not: null } } },
+      donations: { some: { status: "PAID", paidAt: { not: null } } },
       paymentCardId: { not: null },
       nextBillingDate: { lte: now },
     },
@@ -171,7 +156,7 @@ export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryR
       outcome = { subscriptionId: sub.id, donationId: null, result: "unreachable", amountUSD: null, error: err instanceof Error ? err.message : String(err) };
     }
     if (outcome.result === "charged") summary.charged.push(outcome);
-    else if (outcome.result === "already_attempted" || outcome.result === "dry_run") summary.skipped.push(outcome);
+    else if (outcome.result === "already_attempted" || outcome.result === "dry_run" || outcome.result === "schedule_postponed") summary.skipped.push(outcome);
     else summary.failed.push(outcome);
   }
 
@@ -196,10 +181,19 @@ export async function chargeAlbarakaRehearsalCycle(subscriptionId: string, donor
 }
 
 async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehearsal?: RehearsalCycle): Promise<RecurringChargeOutcome> {
+  now = new Date(Math.max(now.getTime(), Date.now()));
   const due = sub.nextBillingDate ?? now;
   const attempt = sub.chargeAttempts + 1;
   const orderId = rehearsal ? albarakaRecurringOrderId(sub.id, `REHEARSAL:${rehearsal.runId}`, rehearsal.cycle) : albarakaRecurringOrderId(sub.id, due.toISOString(), attempt);
   const base: RecurringChargeOutcome = { subscriptionId: sub.id, donationId: null, result: "declined", amountUSD: null };
+
+  if (!rehearsal) {
+    const safety = await inspectRecurringBillingSafety(prisma, sub, now);
+    if (safety.state !== "ready") {
+      if (!dryRun && !await applyRecurringBillingSafety(prisma, sub, safety)) return { ...base, result: "already_attempted" };
+      return { ...base, result: safety.state === "postpone" ? "schedule_postponed" : "review_required", error: safety.reason };
+    }
+  }
 
   // ── Never twice for one cycle ────────────────────────────────────────────
   const existing = await prisma.donation.findFirst({
@@ -214,8 +208,8 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
   const card = sub.paymentCard;
   if (!card || isStoredCardExpired(card.expiryDate, now)) {
     if (!dryRun) {
-      await prisma.subscription.update({
-        where: { id: sub.id },
+      await prisma.subscription.updateMany({
+        where: { id: sub.id, status: "ACTIVE" },
         data: { status: "PAYMENT_FAILED", chargeAttempts: attempt, lastChargeError: card ? "Stored card has expired" : "No stored card" },
       });
       // Payment failure retains the plan for card replacement; it is not a donor cancellation.
@@ -260,6 +254,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
       provider: "ALBARAKA",
       providerOrderId: orderId,
       providerTxnType: "RecurringSale",
+      providerTxnResult: "Pending",
       providerRaw: {
         albarakaRecurring: { merchantNo: cfg.merchantNo, terminalNo: cfg.terminalNo, orderId, cycle: due.toISOString(), attempt, amount, currencyCode, mailOrder: cfg.mailOrder === true ? "Y" : "N", recurring: "Y", cvvSent: false, scheduledAt: now.toISOString(), ...(rehearsal ? { rehearsal } : {}) },
       } as Prisma.InputJsonValue,
@@ -291,6 +286,8 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
     cfg
   );
 
+  if (!rehearsal && await deferClosedFridayWindow(prisma, sub, donation.id, new Date(Math.max(now.getTime(), Date.now())))) return {...base,donationId:donation.id,result:"schedule_postponed",error:"FRIDAY_ONLY"};
+
   let sale: AlbarakaServiceResponse | null = null;
   let transportError: unknown = null;
   try {
@@ -316,6 +313,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
     return await recordFailure(sub, donation.id, attempt, now, "Bank unreachable", "Unknown", amountUSD, transportError ?? undefined, undefined, rehearsal);
   }
 
+  if (!rehearsal) now = new Date(Math.max(now.getTime(), Date.now()));
   const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
   const responseDescription = sale.ServiceResponseData?.ResponseDescription ?? "";
   if (!isAlbarakaApproved(sale)) {
@@ -334,7 +332,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
   }
 
   // ── Settle ───────────────────────────────────────────────────────────────
-  const nextBillingDate = rehearsal ? due : nextCycleAfter(sub, due, now);
+  const nextBillingDate = rehearsal ? due : nextChargeAfterPayment(sub, now);
   await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donation.id }, include: { items: true, categoryItems: true } });
     if (!fresh || fresh.paidAt) return;
@@ -365,7 +363,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
     }
     await tx.subscription.update({
       where: { id: sub.id },
-      data: { status: "ACTIVE", lastBillingDate: now, nextBillingDate, chargeAttempts: 0, lastChargeError: null },
+      data: { lastBillingDate: now, nextBillingDate, chargeAttempts: 0, lastChargeError: null },
     });
   });
 
@@ -437,8 +435,8 @@ async function holdUnresolved(
       where: { id: donationId },
       data: { status: "FAILED", providerTxnResult: "Unknown", providerErrorMessage: reason.slice(0, 500) },
     });
-    await tx.subscription.update({
-      where: { id: sub.id },
+    await tx.subscription.updateMany({
+      where: { id: sub.id, status: "ACTIVE" },
       data: { status: "PAUSED", lastChargeError: reason.slice(0, 300) },
     });
     return true;
@@ -465,7 +463,7 @@ async function recordFailure(
   rehearsal?: RehearsalCycle
 ): Promise<RecurringChargeOutcome> {
   if (err) console.error("[albaraka-recurring]", reason, sub.id, err);
-  const retryAt = nextRetryAt(attempt, now);
+  const retryAt = nextRetryForPlan(sub, attempt, now);
 
   const recorded = await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donationId }, select: { paidAt: true, providerRaw: true } });
@@ -491,8 +489,8 @@ async function recordFailure(
         ...(raw ? { providerRaw: { ...previousRaw, albarakaSale: raw } as Prisma.InputJsonValue } : {}),
       },
     });
-    await tx.subscription.update({
-      where: { id: sub.id },
+    await tx.subscription.updateMany({
+      where: { id: sub.id, status: "ACTIVE" },
       data: retryAt
         ? { chargeAttempts: attempt, nextBillingDate: retryAt, lastChargeError: reason.slice(0, 300) }
         : { status: "PAYMENT_FAILED", chargeAttempts: attempt, lastChargeError: reason.slice(0, 300) },

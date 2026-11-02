@@ -9,6 +9,7 @@ import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { digitsOnly } from "@/lib/minbar/numeric-input";
 import { checkoutFieldIssue, type CheckoutField, type CheckoutFieldIssue } from "@/lib/minbar/checkout-validation";
 import { isFutureExpiry } from "@/lib/minbar/card-validation";
+import { recurringBillingPolicy } from "@/lib/donations/recurring-policy-copy";
 import { cartHasMixedCadences } from "@/lib/donations/recurring-schedule";
 
 /** Server refusal codes (`app/api/albaraka/3d/initiate`) → `validation` messages. */
@@ -986,6 +987,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               <div className="pay-recurring-terms" style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "var(--sand)", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>
                 <b>{tCommon(planFrequency === "DAILY" ? "freqDaily" : planFrequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</b>
                 <span>{tRecurring("firstChargeToday", { cadence: tRecurring(planFrequency === "DAILY" ? "cadenceDaily" : planFrequency === "FRIDAY" ? "cadenceFriday" : "cadenceMonthly") })}</span>
+                <span>{recurringBillingPolicy(locale, planFrequency)}</span>
                 <span style={{ color: "var(--muted)" }}>{tRecurring("nextChargeOn", { date: nextChargeText })}</span>
               </div>
             ) : null}

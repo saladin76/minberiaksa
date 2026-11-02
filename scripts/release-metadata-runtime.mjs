@@ -44,6 +44,7 @@ export function checkMetadataImports(root, executable) {
     const {prisma} = await loadReleaseModule("lib/prisma.ts");
     try {
       for (const [file, names] of [
+        ["lib/donations/recurring-schedule-repair.ts", ["repairRecurringScheduleSafety"]],
         ["lib/communication/retired-template-policy.ts", ["retiredTemplateDisposition"]],
         ["lib/paypal.ts", ["ensurePayPalWebhook"]],
         ["lib/communication/meta-template-publisher.ts", ["publishWhatsappTemplateToMeta"]],

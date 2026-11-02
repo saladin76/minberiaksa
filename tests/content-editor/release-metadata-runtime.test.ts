@@ -19,6 +19,7 @@ function fixture(broken = false) {
     writeFileSync(join(root, "lib/prisma.ts"), 'import "server-only"; export const prisma={$disconnect:async()=>{}}');
   } else writeFileSync(join(root, "lib/prisma.ts"), 'export const prisma={$disconnect:async()=>{}}');
   for (const [file, names] of Object.entries({
+    "lib/donations/recurring-schedule-repair.ts": ["repairRecurringScheduleSafety"],
     "lib/communication/retired-template-policy.ts": ["retiredTemplateDisposition"],
     "lib/paypal.ts": ["ensurePayPalWebhook"], "lib/communication/meta-template-publisher.ts": ["publishWhatsappTemplateToMeta"],
     "lib/communication/notification-template-upgrade-service.ts": ["prepareNotificationUpgrades", "activateApprovedNotificationUpgrades"],
