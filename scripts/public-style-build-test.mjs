@@ -1,3 +1,7 @@
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const { SUPPORTED_LOCALES } = require("../lib/locales.ts");
+const { MINBAR_LOCALE_SEO } = require("../lib/seo-minbar.generated.ts");
 // Run after `next build`. Uses read-only in-memory Prisma fixtures; no live data/providers.
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -34,9 +38,9 @@ try {
   }
   assert.ok(!html.includes("GTM-MMNBQQWB") && !html.includes("contentsquare.net"));
   assert.match(html, /rel="preload"[^>]*as="image"[^>]*imageSrcSet=/i);
-  for (const locale of ["ar", "tr", "en"]) {
+  for (const locale of SUPPORTED_LOCALES) {
     const about = await fetch(`${base}/${locale}/about-us`); assert.equal(about.status, 200);
-    const markup = await about.text(); const name = {ar:"مؤسسة منبر الأقصى الدولية",tr:"Uluslararası Minber-i Aksâ Derneği",en:"Minbar Al Aqsa International Association"}[locale];
+    const markup = await about.text(); const name = MINBAR_LOCALE_SEO[locale].siteName;
     assert.ok(/<title>([^<]+)<\/title>/.exec(markup)?.[1].includes(name), `${locale} internal title must identify the institution`);
     assert.ok(markup.includes(`https://minberiaksa.org/${locale}/about-us`));
   }
@@ -44,7 +48,7 @@ try {
   assert.equal(oldContact.status,308);assert.equal(oldContact.headers.get("location"),"/tr/contact-us");
   const localizedContact = await fetch(`${base}/en/iletisim`, {redirect:"manual"});assert.equal(localizedContact.status,301);assert.equal(new URL(localizedContact.headers.get("location"),base).pathname,"/en/contact-us");
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
-  for (const locale of ["ar", "tr", "en"]) for (const width of [390, 1440]) {
+  for (const locale of ["ar", "tr", "en", "ja", "zh", "hi"]) for (const width of [390, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/*", route => {
@@ -65,5 +69,5 @@ try {
     await page.close();
   }
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ fixture: true, htmlBytes: Buffer.byteLength(html), inlineCssCharacters: inlineCss, stylesheetCount: new Set(sheets).size, externalCssCharacters: cssBytes, widths: [390, 1440], locales: ["ar", "tr", "en"], providerCalls: 0, databaseWrites: 0, artifacts }));
+  console.log(JSON.stringify({ fixture: true, htmlBytes: Buffer.byteLength(html), inlineCssCharacters: inlineCss, stylesheetCount: new Set(sheets).size, externalCssCharacters: cssBytes, widths: [390, 1440], locales: [...SUPPORTED_LOCALES], browserLocales: ["ar", "tr", "en", "ja", "zh", "hi"], providerCalls: 0, databaseWrites: 0, artifacts }));
 } finally { await browser?.close(); server.kill("SIGTERM"); await writeFile(path.join(artifacts, "server.log"), output); }

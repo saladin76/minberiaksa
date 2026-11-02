@@ -59,7 +59,7 @@ export function donationMoneyFields(donation: MoneySource, locale = "ar") {
   const totalLabel = donation.paidAt ? labels[3] : labels[4];
   const parts = [`${labels[0]}: ${projectsAmount}`, `${labels[1]}: ${teamSupport}`];
   if ((donation.fees ?? 0) > 0) parts.push(`${labels[2]}: ${fees}`);
-  const renewal = donation.billingReason === "subscription_cycle" || donation.providerTxnType?.toLowerCase() === "recurringsale";
+  const renewal = donation.billingReason === "subscription_cycle" || ["recurringsale", "recurringcapture"].includes(donation.providerTxnType?.toLowerCase() ?? "");
   const renewalLabel = RECURRING_RENEWAL_LABELS[language as keyof typeof RECURRING_RENEWAL_LABELS] ?? RECURRING_RENEWAL_LABELS.en;
   const cadence=donation.frequency?` (${recurringFrequencyLabel(donation.frequency,locale)})`:"";
   const receiptSummary = `${renewal ? `${renewalLabel}${cadence} — ` : ""}${totalLabel}: ${receiptMoney(donation.totalAmount, donation.currency, locale)}`;

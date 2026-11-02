@@ -1,3 +1,4 @@
+import LegacyMessages from "@/components/minbar/LegacyMessages";
 import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { LOCALE_SEO, type Locale } from "@/lib/seo";
@@ -62,6 +63,7 @@ export async function generateMetadata({ params }: Pick<Props, "params">): Promi
   });
 }
 
-export default function BankTransferLayout({ children }: Props) {
-  return children;
+export default async function BankTransferLayout({ children, params }: Props) {
+  const { locale } = await params;
+  return <LegacyMessages locale={locale}>{children}</LegacyMessages>;
 }

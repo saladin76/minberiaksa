@@ -64,13 +64,12 @@ export function messagesFor(locale: string): MessageObject {
    `CategoryNav` is the header's projects dropdown and the footer's categories
    band, both on every page. `CardGive` is that card's frequency dialog and
    added-to-basket toast. */
-export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge", "ProjectShares", "CategoryNav", "CardGive"] as const;
+export const SHELL_NAMESPACES = ["common", "navigation", "system", "validation", "projects", "Concierge", "ProjectShares", "CategoryNav", "CardGive", "Navbar"] as const;
 
 /**
- * Legacy namespaces belonging to the pre-Minbar public pages. They stay in the
- * layout bundle because those routes are still served and read them through the
- * layout's provider; they can be dropped from here as each is replaced by its
- * ported equivalent.
+ * Legacy namespaces belonging to the pre-Minbar public pages. Their route
+ * layouts use LegacyMessages; the public shell no longer ships this catalog
+ * on every page. Remove namespaces as their last legacy consumers are ported.
  */
 export const LEGACY_NAMESPACES = [
   "BankTransfer", "DonationFailed", "BlogCard", "Navbar", "HomePage", "HeroSlider",

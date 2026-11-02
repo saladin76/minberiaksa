@@ -1,7 +1,7 @@
-// Keep the public layout and its preview on the same locale font contract.
+// Local, versioned locale CSS; optional font display prevents a late font swap
+// from delaying first content. Original CDN binaries retain Unicode subsetting.
 export const LOCALE_FONT_STYLESHEETS: Partial<Record<string, string>> = {
-  ja: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap",
-  zh: "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap",
-  hi: "https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700;900&display=swap",
+  "ja": "/fonts/locales/ja-1776f14287.css",
+  "zh": "/fonts/locales/zh-6c062b7fa7.css",
+  "hi": "/fonts/locales/hi-a08905399e.css"
 };
-

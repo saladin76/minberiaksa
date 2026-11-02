@@ -1,4 +1,8 @@
 {
+  "تقويم التبرعات حسب أيام الأسبوع": "Haftanın günlerine göre bağış takvimi",
+  "أيام الأسبوع": "Haftanın günleri",
+  "تجديدات يومية وكل جمعة وشهرية من موعد الاستحقاق القادم": "Bir sonraki ödeme tarihinden itibaren günlük, her cuma ve aylık yenilemeler",
+  "التقويم بتوقيت إسطنبول؛ تكرار كل جمعة حسب المنطقة الزمنية المحفوظة للاشتراك.": "Takvim İstanbul saatindedir; cuma tekrarları aboneliğin kayıtlı saat dilimine göredir.",
   "النسخة المحفوظة ليست بلغة المستلم؛ أكمل ترجمة القالب وأنشئ رسالة جديدة قبل الإرسال": "Kaydedilen mesaj alıcının dilinde değil. Göndermeden önce şablonun çevirisini tamamlayın ve yeni bir mesaj oluşturun.",
   "إجمالي بعملة المتبرع والمقابل البنكي المؤكد بلغة الرسالة": "Mesaj dilinde, bağışçının para biriminde toplam ve doğrulanmış banka karşılığı",
   "الإجمالي: 55 دولار أمريكي. المقابل البنكي لنفس التبرع: 2,000 ليرة تركية.": "Toplam: 55 ABD doları. Aynı bağışın bankada tahsil edilen karşılığı: 2.000 Türk lirası.",

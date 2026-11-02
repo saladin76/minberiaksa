@@ -27,6 +27,10 @@ export interface TemplateDonationItem {
 }
 
 export interface TemplateDonation {
+  subscriptionId?: string;
+  billingReason?: string | null;
+  providerTxnType?: string | null;
+  settled?: boolean;
   id: string;
   /** Effective language of this donation's notification, independent of the account preference. */
   locale?: string;
@@ -86,7 +90,7 @@ export interface TemplateContext {
   totals: TemplateTotals;
   /** Set for trigger-driven flows where one specific donation is the focus */
   donation?: TemplateDonation;
-  subscription?: { id:string; frequency:RecurringFrequency; frequencyLabel:string; amount:string; currency:string; nextBillingDate:string };
+  subscription?: { status?:string; id:string; frequency:RecurringFrequency; frequencyLabel:string; amount:string; currency:string; nextBillingDate:string };
   /** Set for a campaign-update email. */
   update?: TemplateUpdate;
 }
@@ -160,7 +164,7 @@ type RawDonation = DonationProjectSource & {
   providerRaw?: unknown;
   billingReason?: string | null;
   providerTxnType?: string | null;
-  subscription?: {id:string;frequency:string|null;amount:number;currency:string;nextBillingDate:Date|null}|null;
+  subscription?: {status?:string;id:string;frequency:string|null;amount:number;currency:string;nextBillingDate:Date|null}|null;
 };
 
 function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
@@ -253,25 +257,25 @@ export async function loadContextForDonation(
     where: { id: donationId },
     // Notifications use the saved donor currency and total only; bank request
     // snapshots are not needed and must not enter template rendering.
-    select: { ...donationSelect, donorId: true, subscription: {select:{id:true,frequency:true,amount:true,currency:true,nextBillingDate:true}} },
+    select: { ...donationSelect, donorId: true, subscription: {select:{id:true,status:true,frequency:true,amount:true,currency:true,nextBillingDate:true}} },
   });
   if (!donation) return null;
   const base = await loadContext(donation.donorId, localeOverride || donation.locale);
   if (!base) return null;
   return {
     ...base,
-    donation: donationToContext(donation as RawDonation, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)),
+    donation: { ...donationToContext(donation as RawDonation, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)), subscriptionId: donation.subscription?.id, billingReason: donation.billingReason, providerTxnType: donation.providerTxnType, settled: donation.status === "PAID" && donation.paidAt != null },
     subscription: subscriptionToContext(donation.subscription, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)),
   };
 }
 
 function subscriptionToContext(subscription:RawDonation["subscription"],locale:string):TemplateContext["subscription"] {
   if(!subscription)return undefined;const frequency=recurringFrequency(subscription.frequency);if(!frequency)return undefined;
-  return {id:subscription.id,frequency,frequencyLabel:recurringFrequencyLabel(frequency,locale),amount:formatTemplateMoney(subscription.amount,locale,subscription.currency),currency:subscription.currency,nextBillingDate:formatDate(subscription.nextBillingDate)};
+  return {status:subscription.status,id:subscription.id,frequency,frequencyLabel:recurringFrequencyLabel(frequency,locale),amount:formatTemplateMoney(subscription.amount,locale,subscription.currency),currency:subscription.currency,nextBillingDate:formatDate(subscription.nextBillingDate)};
 }
 
 export async function loadContextForSubscription(subscriptionId:string,userId?:string):Promise<TemplateContext|null> {
-  const subscription=await prisma.subscription.findUnique({where:{id:subscriptionId},select:{id:true,donorId:true,frequency:true,amount:true,currency:true,nextBillingDate:true}});
+  const subscription=await prisma.subscription.findUnique({where:{id:subscriptionId},select:{id:true,status:true,donorId:true,frequency:true,amount:true,currency:true,nextBillingDate:true}});
   if(!subscription||userId&&subscription.donorId!==userId)return null;
   const context=await loadContext(subscription.donorId);return context?{...context,subscription:subscriptionToContext(subscription,context.user.preferredLang)}:null;
 }

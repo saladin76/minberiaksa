@@ -1,3 +1,4 @@
+import * as receiptPolicy from "../../lib/events/payment-receipt-policy";
 import * as cadence from "../../lib/templates/recurring-cadence";
 import * as font from "../../lib/templates/font";
 import assert from "node:assert/strict";
@@ -124,8 +125,9 @@ test("real event dispatch renders Turkish project names in email, SMS and Meta p
   const tpl = { id: "template", name: "Confirmation", subject: "تأكيد", body: "اسم المشروع: {{donation.campaignTitle}}", document: {}, translations: { tr: { subject: "Bağış onayı", body, document } } };
   const resolver = load<{ pickLocale: unknown; resolveEmailVariant: unknown; resolveWhatsappBody: unknown }>("lib/templates/locale-resolver.ts", { "@/lib/locales": locales });
   const dispatch = load<{ dispatchEvent: (event: string, input: { donationId: string }) => Promise<{ errors: number; emailsSent: number; smsSent: number; whatsappSent: number }> }>("lib/events/dispatch.ts", {
+    "./payment-receipt-policy": receiptPolicy,
     "@/lib/prisma": { prisma: {
-      messageTrigger: { findMany: async () => ["EMAIL", "SMS", "WHATSAPP"].map((channel) => ({ channel, templateId: channel })) },
+      messageTrigger: { findMany: async () => ["EMAIL", "SMS", "WHATSAPP"].map((channel) => ({ id: channel, event: "DONATION_PAID", channel, templateId: channel })) },
       emailTemplate: { findUnique: async () => tpl }, smsTemplate: { findUnique: async () => tpl }, whatsappTemplate: { findUnique: async () => tpl },
       $runCommandRaw: async () => ({ n: 1 }),
     } },

@@ -1,0 +1,3714 @@
+{
+  "site": "https://minberiaksa.org",
+  "source": "Google PageSpeed Insights via Supermetrics pagespeed_check",
+  "scope": "19 locale homepages, mobile and desktop",
+  "measurement": "production baseline before this follow-up release",
+  "attempted": 38,
+  "successful": 25,
+  "unscored": 13,
+  "results": [
+    {
+      "input": "https://minberiaksa.org/ar",
+      "url": "https://minberiaksa.org/ar",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 62/100",
+          "score": 62
+        },
+        {
+          "code": "document-latency-insight",
+          "severity": "warning",
+          "message": "Document request latency",
+          "savings_ms": 1000
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Reduce initial server response time",
+          "savings_ms": 1000
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 850
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 600
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 600
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 600
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 310
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 150
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.6 s"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.3 s"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.3 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "330 ms"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "580 ms"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/ar",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 62,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "4.6 s",
+        "cls": "0.001",
+        "tbt": "580 ms",
+        "fcp": "1.2 s",
+        "speed_index": "7.3 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "FAST",
+        "cls": "FAST",
+        "inp": null,
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:01:30+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/da",
+      "url": "https://minberiaksa.org/da",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 53/100",
+          "score": 53
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1250
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1250
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1250
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 850
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.2 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "8.5 s"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 325 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.7 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "540 ms"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,240 ms"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/da",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 53,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "4.2 s",
+        "cls": "0.003",
+        "tbt": "1,240 ms",
+        "fcp": "1.3 s",
+        "speed_index": "8.5 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:01:45+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/de",
+      "url": "https://minberiaksa.org/de",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: NO_FCP. The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP). The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "MOBILE"
+    },
+    {
+      "input": "https://minberiaksa.org/en",
+      "url": "https://minberiaksa.org/en",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: NO_FCP. The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP). The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "MOBILE"
+    },
+    {
+      "input": "https://minberiaksa.org/es",
+      "url": "https://minberiaksa.org/es",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 55/100",
+          "score": 55
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1050
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1050
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1050
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 800
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 350
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 300
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 205
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.3 s"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.6 s"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "470 ms"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,030 ms"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "8.2 s"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/es",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 55,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "4.3 s",
+        "cls": "0.003",
+        "tbt": "1,030 ms",
+        "fcp": "1.3 s",
+        "speed_index": "8.2 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:01:44+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/fr",
+      "url": "https://minberiaksa.org/fr",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 55/100",
+          "score": 55
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1100
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1050
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1050
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 850
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 350
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 202
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 200
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.4 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.8 s"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.6 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "390 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,060 ms"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/fr",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 55,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "4.4 s",
+        "cls": "0.026",
+        "tbt": "1,060 ms",
+        "fcp": "1.3 s",
+        "speed_index": "7.8 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:01:52+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/hi",
+      "url": "https://minberiaksa.org/hi",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 73/100",
+          "score": 73
+        },
+        {
+          "code": "document-latency-insight",
+          "severity": "warning",
+          "message": "Document request latency",
+          "savings_ms": 1150
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Reduce initial server response time",
+          "savings_ms": 1150
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 1000
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 400
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 400
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 400
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 326 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "15.2 s"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "380 ms"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "250 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "6.3 s"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.0 s"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/hi",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 73,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "4.0 s",
+        "cls": "0",
+        "tbt": "380 ms",
+        "fcp": "1.3 s",
+        "speed_index": "6.3 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:01:30+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/id",
+      "url": "https://minberiaksa.org/id",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: NO_FCP. The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP). The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "MOBILE"
+    },
+    {
+      "input": "https://minberiaksa.org/it",
+      "url": "https://minberiaksa.org/it",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: NO_FCP. The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP). The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "MOBILE"
+    },
+    {
+      "input": "https://minberiaksa.org/ja",
+      "url": "https://minberiaksa.org/ja",
+      "status": "critical",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "critical",
+          "message": "Performance score is 46/100",
+          "score": 46
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 1350
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 1300
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1000
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1000
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1000
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 200
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 150
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "430 ms"
+        },
+        {
+          "code": "unminified-css",
+          "severity": "warning",
+          "message": "Minify CSS",
+          "display": "Est savings of 9 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "17.0 s"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "7.5 s"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,000 ms"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.6 s"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/ja",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 46,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "7.5 s",
+        "cls": "0.001",
+        "tbt": "1,000 ms",
+        "fcp": "1.3 s",
+        "speed_index": "7.6 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:01:40+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/ms",
+      "url": "https://minberiaksa.org/ms",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "MOBILE"
+    },
+    {
+      "input": "https://minberiaksa.org/nl",
+      "url": "https://minberiaksa.org/nl",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 51/100",
+          "score": 51
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 950
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 950
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 950
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 900
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 200
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 170
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "savings_ms": 150
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "420 ms"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "13.9 s"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.7 s"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "950 ms"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.5 s"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/nl",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 51,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "4.7 s",
+        "cls": "0.061",
+        "tbt": "950 ms",
+        "fcp": "1.3 s",
+        "speed_index": "13.9 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:00:43+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/no",
+      "url": "https://minberiaksa.org/no",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 54/100",
+          "score": 54
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 850
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 700
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 700
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 700
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 450
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 150
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 150
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "savings_ms": 150
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 100
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.3 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "360 ms"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "5.0 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "13.0 s"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "700 ms"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/no",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 54,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "5.0 s",
+        "cls": "0.004",
+        "tbt": "700 ms",
+        "fcp": "1.2 s",
+        "speed_index": "13.0 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:01:14+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/pt",
+      "url": "https://minberiaksa.org/pt",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 61/100",
+          "score": 61
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 950
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 550
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 550
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 550
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 420
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 200
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 150
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.3 s"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "560 ms"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "4.8 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "350 ms"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.9 s"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/pt",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 61,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "4.8 s",
+        "cls": "0.003",
+        "tbt": "560 ms",
+        "fcp": "1.2 s",
+        "speed_index": "7.9 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:00:09+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/sq",
+      "url": "https://minberiaksa.org/sq",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 59/100",
+          "score": 59
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1000
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1000
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1000
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 950
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 450
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "990 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "3.8 s"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.4 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.7 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "430 ms"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 324 KiB"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "errors-in-console",
+          "severity": "warning",
+          "message": "Browser errors were logged to the console"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/sq",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 59,
+        "accessibility": 100,
+        "best_practices": 96,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "3.8 s",
+        "cls": "0.03",
+        "tbt": "990 ms",
+        "fcp": "1.2 s",
+        "speed_index": "7.7 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:00:32+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/sv",
+      "url": "https://minberiaksa.org/sv",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 64/100",
+          "score": 64
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 950
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 800
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 750
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 750
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 200
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 326 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.3 s"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "3.6 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "340 ms"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "770 ms"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.5 s"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/sv",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 64,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "3.6 s",
+        "cls": "0.026",
+        "tbt": "770 ms",
+        "fcp": "1.2 s",
+        "speed_index": "7.5 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:00:28+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/tr",
+      "url": "https://minberiaksa.org/tr",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 61/100",
+          "score": 61
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 950
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 950
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 950
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 950
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 453
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "6.4 s"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "940 ms"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "430 ms"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "3.8 s"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "14.6 s"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 325 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/tr",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 61,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "3.8 s",
+        "cls": "0.03",
+        "tbt": "940 ms",
+        "fcp": "1.3 s",
+        "speed_index": "6.4 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:00:07+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/ur",
+      "url": "https://minberiaksa.org/ur",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "MOBILE"
+    },
+    {
+      "input": "https://minberiaksa.org/zh",
+      "url": "https://minberiaksa.org/zh",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 52/100",
+          "score": 52
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 1450
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 1200
+        },
+        {
+          "code": "document-latency-insight",
+          "severity": "warning",
+          "message": "Document request latency",
+          "savings_ms": 1150
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Reduce initial server response time",
+          "savings_ms": 1150
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 650
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 650
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 650
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "7.4 s"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "8.9 s"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "640 ms"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "17.0 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "340 ms"
+        },
+        {
+          "code": "total-byte-weight",
+          "severity": "warning",
+          "message": "Avoid enormous network payloads",
+          "display": "Total size was 2,805 KiB"
+        },
+        {
+          "code": "unminified-css",
+          "severity": "warning",
+          "message": "Minify CSS",
+          "display": "Est savings of 10 KiB"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 327 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/zh",
+      "strategy": "MOBILE",
+      "scores": {
+        "performance": 52,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "8.9 s",
+        "cls": "0.001",
+        "tbt": "640 ms",
+        "fcp": "1.3 s",
+        "speed_index": "7.4 s"
+      },
+      "field": {
+        "overall": "SLOW",
+        "lcp": "SLOW",
+        "cls": "FAST",
+        "inp": "AVERAGE",
+        "fcp": "SLOW"
+      },
+      "checked_at": "2026-11-02T21:00:23+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/ar",
+      "url": "https://minberiaksa.org/ar",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 74/100",
+          "score": 74
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 450
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 400
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 350
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 350
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 150
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 100
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "4.9 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "250 ms"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 322 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "370 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 223 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.3 s"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/ar",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 74,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "0.8 s",
+        "cls": "0.012",
+        "tbt": "370 ms",
+        "fcp": "0.3 s",
+        "speed_index": "4.9 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:01:07+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/da",
+      "url": "https://minberiaksa.org/da",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/de",
+      "url": "https://minberiaksa.org/de",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/en",
+      "url": "https://minberiaksa.org/en",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/es",
+      "url": "https://minberiaksa.org/es",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 60/100",
+          "score": 60
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1150
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1150
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1150
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 300
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 100
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 50
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.9 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "5.3 s"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 327 KiB"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "450 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,170 ms"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/es",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 60,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "0.9 s",
+        "cls": "0.01",
+        "tbt": "1,170 ms",
+        "fcp": "0.3 s",
+        "speed_index": "5.3 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:50+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/fr",
+      "url": "https://minberiaksa.org/fr",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/hi",
+      "url": "https://minberiaksa.org/hi",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 64/100",
+          "score": 64
+        },
+        {
+          "code": "document-latency-insight",
+          "severity": "warning",
+          "message": "Document request latency",
+          "savings_ms": 1300
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Reduce initial server response time",
+          "savings_ms": 1300
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 700
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 700
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 400
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 300
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 50
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 50
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "690 ms"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.5 s"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "3.2 s"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "230 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/hi",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 64,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "1.1 s",
+        "cls": "0.008",
+        "tbt": "690 ms",
+        "fcp": "0.3 s",
+        "speed_index": "3.2 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:24+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/id",
+      "url": "https://minberiaksa.org/id",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 72/100",
+          "score": 72
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 200
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 200
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "JavaScript execution time",
+          "savings_ms": 200
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 200
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 172
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 100
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 50
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "220 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "cls-culprits-insight",
+          "severity": "warning",
+          "message": "Layout shift culprits"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "200 ms"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "layout-shifts",
+          "severity": "warning",
+          "message": "Avoid large layout shifts",
+          "display": "6 layout shifts found"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "cumulative-layout-shift",
+          "severity": "warning",
+          "message": "Cumulative Layout Shift",
+          "display": "0.204"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "4.8 s"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.1 s"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/id",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 72,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "1.0 s",
+        "cls": "0.204",
+        "tbt": "220 ms",
+        "fcp": "0.3 s",
+        "speed_index": "4.8 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:01:03+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/it",
+      "url": "https://minberiaksa.org/it",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/ja",
+      "url": "https://minberiaksa.org/ja",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 63/100",
+          "score": 63
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 600
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 550
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 550
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 350
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "270 ms"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "560 ms"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 323 KiB"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.7 s"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "1.6 s"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "unminified-css",
+          "severity": "warning",
+          "message": "Minify CSS",
+          "display": "Est savings of 9 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "3.8 s"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/ja",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 63,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "1.6 s",
+        "cls": "0.036",
+        "tbt": "560 ms",
+        "fcp": "0.3 s",
+        "speed_index": "3.8 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:34+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/ms",
+      "url": "https://minberiaksa.org/ms",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/nl",
+      "url": "https://minberiaksa.org/nl",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 73/100",
+          "score": 73
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 450
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 450
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 400
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 350
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 100
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 60
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 50
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 50
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "430 ms"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.3 s"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "3.1 s"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "270 ms"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/nl",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 73,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "0.9 s",
+        "cls": "0.011",
+        "tbt": "430 ms",
+        "fcp": "0.3 s",
+        "speed_index": "3.1 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:30+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/no",
+      "url": "https://minberiaksa.org/no",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 59/100",
+          "score": 59
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1750
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1750
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1600
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 407
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 150
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 100
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,750 ms"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "6.1 s"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 323 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "4.7 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "470 ms"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/no",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 59,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "0.9 s",
+        "cls": "0.009",
+        "tbt": "1,750 ms",
+        "fcp": "0.3 s",
+        "speed_index": "6.1 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:01:19+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/pt",
+      "url": "https://minberiaksa.org/pt",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 150
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 100
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 50
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 50
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "JavaScript execution time",
+          "savings_ms": 50
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 50
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 10 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "1.7 s"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 14 KiB"
+        },
+        {
+          "code": "errors-in-console",
+          "severity": "warning",
+          "message": "Browser errors were logged to the console"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/pt",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 96,
+        "accessibility": 100,
+        "best_practices": 96,
+        "seo": 100
+      },
+      "lab": {
+        "lcp": "1.0 s",
+        "cls": "0.009",
+        "tbt": "70 ms",
+        "fcp": "0.3 s",
+        "speed_index": "1.7 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:03:40+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/sq",
+      "url": "https://minberiaksa.org/sq",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 59/100",
+          "score": 59
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 1850
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 1800
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 1800
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 200
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 100
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 50
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 50
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "5.2 s"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "errors-in-console",
+          "severity": "warning",
+          "message": "Browser errors were logged to the console"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "1,790 ms"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "6.4 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "530 ms"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/sq",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 59,
+        "accessibility": 100,
+        "best_practices": 96,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "1.0 s",
+        "cls": "0.01",
+        "tbt": "1,790 ms",
+        "fcp": "0.4 s",
+        "speed_index": "6.4 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:50+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/sv",
+      "url": "https://minberiaksa.org/sv",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 81/100",
+          "score": 81
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 409
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 350
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 250
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 250
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 250
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 100
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "savings_ms": 100
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 50
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "180 ms"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "260 ms"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.2 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "3.2 s"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        }
+      ],
+      "final_url": "https://minberiaksa.org/sv",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 81,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "1.0 s",
+        "cls": "0.008",
+        "tbt": "260 ms",
+        "fcp": "0.3 s",
+        "speed_index": "3.2 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:24+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/tr",
+      "url": "https://minberiaksa.org/tr",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 62/100",
+          "score": 62
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 850
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 850
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 850
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 300
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 100
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "savings_ms": 50
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "3.9 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "5.5 s"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "850 ms"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "350 ms"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/tr",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 62,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "1.0 s",
+        "cls": "0.012",
+        "tbt": "850 ms",
+        "fcp": "0.3 s",
+        "speed_index": "5.5 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:44+00:00"
+    },
+    {
+      "input": "https://minberiaksa.org/ur",
+      "url": "https://minberiaksa.org/ur",
+      "status": "unknown",
+      "error": {
+        "code": "page_failed_to_load",
+        "message": "Lighthouse returned error: FAILED_DOCUMENT_REQUEST. Lighthouse was unable to reliably load the page you requested. The site blocked or did not answer Google's automated test; this is usually bot protection or a slow server, not a problem visitors see. Check the page in a browser, or try web_vitals_trend for real-user data"
+      },
+      "findings": [],
+      "strategy": "DESKTOP"
+    },
+    {
+      "input": "https://minberiaksa.org/zh",
+      "url": "https://minberiaksa.org/zh",
+      "status": "warning",
+      "findings": [
+        {
+          "code": "low_performance_score",
+          "severity": "warning",
+          "message": "Performance score is 53/100",
+          "score": 53
+        },
+        {
+          "code": "mainthread-work-breakdown",
+          "severity": "warning",
+          "message": "Minimize main-thread work",
+          "savings_ms": 900
+        },
+        {
+          "code": "long-tasks",
+          "severity": "warning",
+          "message": "Avoid long main-thread tasks",
+          "savings_ms": 900
+        },
+        {
+          "code": "bootup-time",
+          "severity": "warning",
+          "message": "Reduce JavaScript execution time",
+          "savings_ms": 850
+        },
+        {
+          "code": "unused-css-rules",
+          "severity": "warning",
+          "message": "Reduce unused CSS",
+          "savings_ms": 300
+        },
+        {
+          "code": "render-blocking-insight",
+          "severity": "warning",
+          "message": "Render-blocking requests",
+          "savings_ms": 250
+        },
+        {
+          "code": "unminified-css",
+          "severity": "warning",
+          "message": "Minify CSS",
+          "savings_ms": 50
+        },
+        {
+          "code": "server-response-time",
+          "severity": "warning",
+          "message": "Initial server response time was short",
+          "savings_ms": 50
+        },
+        {
+          "code": "robots-txt",
+          "severity": "warning",
+          "message": "robots.txt is not valid"
+        },
+        {
+          "code": "total-blocking-time",
+          "severity": "warning",
+          "message": "Total Blocking Time",
+          "display": "920 ms"
+        },
+        {
+          "code": "forced-reflow-insight",
+          "severity": "warning",
+          "message": "Forced reflow"
+        },
+        {
+          "code": "label-content-name-mismatch",
+          "severity": "warning",
+          "message": "Elements with visible text labels do not have matching accessible names."
+        },
+        {
+          "code": "lcp-breakdown-insight",
+          "severity": "warning",
+          "message": "LCP breakdown"
+        },
+        {
+          "code": "unused-javascript",
+          "severity": "warning",
+          "message": "Reduce unused JavaScript",
+          "display": "Est savings of 326 KiB"
+        },
+        {
+          "code": "image-delivery-insight",
+          "severity": "warning",
+          "message": "Improve image delivery",
+          "display": "Est savings of 5 KiB"
+        },
+        {
+          "code": "interactive",
+          "severity": "warning",
+          "message": "Time to Interactive",
+          "display": "4.1 s"
+        },
+        {
+          "code": "speed-index",
+          "severity": "warning",
+          "message": "Speed Index",
+          "display": "5.5 s"
+        },
+        {
+          "code": "largest-contentful-paint",
+          "severity": "warning",
+          "message": "Largest Contentful Paint",
+          "display": "2.0 s"
+        },
+        {
+          "code": "max-potential-fid",
+          "severity": "warning",
+          "message": "Max Potential First Input Delay",
+          "display": "380 ms"
+        },
+        {
+          "code": "total-byte-weight",
+          "severity": "warning",
+          "message": "Avoid enormous network payloads",
+          "display": "Total size was 2,836 KiB"
+        },
+        {
+          "code": "legacy-javascript-insight",
+          "severity": "warning",
+          "message": "Legacy JavaScript",
+          "display": "Est savings of 35 KiB"
+        },
+        {
+          "code": "cache-insight",
+          "severity": "warning",
+          "message": "Use efficient cache lifetimes",
+          "display": "Est savings of 222 KiB"
+        }
+      ],
+      "final_url": "https://minberiaksa.org/zh",
+      "strategy": "DESKTOP",
+      "scores": {
+        "performance": 53,
+        "accessibility": 100,
+        "best_practices": 100,
+        "seo": 92
+      },
+      "lab": {
+        "lcp": "2.0 s",
+        "cls": "0.006",
+        "tbt": "920 ms",
+        "fcp": "0.4 s",
+        "speed_index": "5.5 s"
+      },
+      "field": {
+        "overall": "AVERAGE",
+        "lcp": "AVERAGE",
+        "cls": "FAST",
+        "inp": "FAST",
+        "fcp": "AVERAGE"
+      },
+      "checked_at": "2026-11-02T21:00:44+00:00"
+    }
+  ],
+  "httpChecks": [
+    {
+      "locale": "ar",
+      "result": "200 6.013212 6.741326 https://minberiaksa.org/ar",
+      "exit": 0,
+      "title": "تبرع للقدس وغزة والمسجد الأقصى المبارك | مؤسسة منبر الأقصى الدولية",
+      "seconds": 6.76
+    },
+    {
+      "locale": "da",
+      "result": "200 7.135126 7.681163 https://minberiaksa.org/da",
+      "exit": 0,
+      "title": "Donér til Al-Quds, Al-Aqsa og nødhjælp i Gaza | Minbar Al Aqsa International Association",
+      "seconds": 7.69
+    },
+    {
+      "locale": "de",
+      "result": "200 6.754585 7.294314 https://minberiaksa.org/de",
+      "exit": 0,
+      "title": "Für Al-Quds, Al-Aqsa und Gaza spenden | Minbar | Minbar Al Aqsa International Association",
+      "seconds": 7.3
+    },
+    {
+      "locale": "en",
+      "result": "200 6.591749 7.139773 https://minberiaksa.org/en",
+      "exit": 0,
+      "title": "Donate to Support Al-Quds, Al-Aqsa and Their People | Minbar Al Aqsa International Association",
+      "seconds": 7.15
+    },
+    {
+      "locale": "es",
+      "result": "200 6.820841 7.356796 https://minberiaksa.org/es",
+      "exit": 0,
+      "title": "Donar por Al-Quds, Al-Aqsa y Gaza | Minbar Al Aqsa International Association",
+      "seconds": 7.36
+    },
+    {
+      "locale": "fr",
+      "result": "200 6.120799 6.622601 https://minberiaksa.org/fr",
+      "exit": 0,
+      "title": "Don pour Al-Quds, Al-Aqsa et les familles de Palestine | Minbar Al Aqsa International Association",
+      "seconds": 6.63
+    },
+    {
+      "locale": "hi",
+      "result": "200 6.512504 7.182648 https://minberiaksa.org/hi",
+      "exit": 0,
+      "title": "अल-क़ुद्स, मस्जिद अल-अक़्सा और ग़ज़ा राहत हेतु दान | Minbar Al Aqsa International Association",
+      "seconds": 7.19
+    },
+    {
+      "locale": "id",
+      "result": "200 6.381775 6.903107 https://minberiaksa.org/id",
+      "exit": 0,
+      "title": "Donasi Al-Quds, Al-Aqsa, Gaza dan Wakaf Berkelanjutan | Minbar Al Aqsa International Association",
+      "seconds": 6.91
+    },
+    {
+      "locale": "it",
+      "result": "200 6.943834 7.467652 https://minberiaksa.org/it",
+      "exit": 0,
+      "title": "Dona per Al-Quds, Al-Aqsa e Gaza | Minbar Al Aqsa International Association",
+      "seconds": 7.47
+    },
+    {
+      "locale": "ja",
+      "result": "200 6.781345 7.291788 https://minberiaksa.org/ja",
+      "exit": 0,
+      "title": "アル・クドゥスとガザ救援へ寄付｜Minbar Al Aqsa | Minbar Al Aqsa International Association",
+      "seconds": 7.3
+    },
+    {
+      "locale": "ms",
+      "result": "200 6.332696 6.876594 https://minberiaksa.org/ms",
+      "exit": 0,
+      "title": "Sumbang untuk Al-Quds, Al-Aqsa dan Bantuan Gaza | Minbar Al Aqsa International Association",
+      "seconds": 6.88
+    },
+    {
+      "locale": "nl",
+      "result": "200 4.780517 5.348315 https://minberiaksa.org/nl",
+      "exit": 0,
+      "title": "Doneer voor Al-Quds, Al-Aqsa en Gaza | Minbar | Minbar Al Aqsa International Association",
+      "seconds": 5.36
+    },
+    {
+      "locale": "no",
+      "result": "200 6.764077 7.263589 https://minberiaksa.org/no",
+      "exit": 0,
+      "title": "Støtt Al-Quds, Al-Aqsa og nødhjelp i Gaza | Minbar Al Aqsa International Association",
+      "seconds": 7.27
+    },
+    {
+      "locale": "pt",
+      "result": "200 3.405455 3.953390 https://minberiaksa.org/pt",
+      "exit": 0,
+      "title": "Doe para Al-Quds, Al-Aqsa e famílias em Gaza | Minbar Al Aqsa International Association",
+      "seconds": 3.96
+    },
+    {
+      "locale": "sq",
+      "result": "200 6.689136 7.204088 https://minberiaksa.org/sq",
+      "exit": 0,
+      "title": "Dhuroni për Kuds, Aksa dhe familjet në Gaza | Minbar | Minbar Al Aqsa International Association",
+      "seconds": 7.21
+    },
+    {
+      "locale": "sv",
+      "result": "200 5.029488 5.531948 https://minberiaksa.org/sv",
+      "exit": 0,
+      "title": "Donera till Al-Quds, Al-Aqsa och Gazas folk | Minbar Al Aqsa International Association",
+      "seconds": 5.54
+    },
+    {
+      "locale": "tr",
+      "result": "200 6.245796 6.756927 https://minberiaksa.org/tr",
+      "exit": 0,
+      "title": "Kudüs, Mescid-i Aksâ ve Gazze İçin Bağış Yap | Uluslararası Minber-i Aksâ Derneği",
+      "seconds": 6.76
+    },
+    {
+      "locale": "ur",
+      "result": "200 6.166420 6.668059 https://minberiaksa.org/ur",
+      "exit": 0,
+      "title": "القدس، مسجدِ اقصیٰ اور غزہ کے لیے عطیہ | Minbar Al Aqsa International Association",
+      "seconds": 6.68
+    },
+    {
+      "locale": "zh",
+      "result": "200 5.817589 6.345559 https://minberiaksa.org/zh",
+      "exit": 0,
+      "title": "为耶路撒冷、阿克萨与加沙救援捐赠 | Minbar Al Aqsa International Association",
+      "seconds": 6.35
+    }
+  ]
+}

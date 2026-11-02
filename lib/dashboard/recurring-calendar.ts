@@ -1,5 +1,5 @@
 import { formatIstanbulDateKey, istanbulDateKeysToUtcRange } from "../admin/istanbul-calendar";
-import { nextChargeForPlan, planRule } from "../donations/recurring-schedule";
+import { nextChargeForPlan, planRule, normalizeTimezone, wallClock } from "../donations/recurring-schedule";
 
 /** Reporting only: never executes, advances or repairs a subscription. */
 export function recurringCalendarMonth(value?: string | null, now = new Date()) {
@@ -35,6 +35,7 @@ export function calendarOccurrences(plan: CalendarPlan, month: CalendarMonth): D
   if (!plan.nextBillingDate) return null;
   let date = new Date(plan.nextBillingDate);
   if (!Number.isFinite(date.getTime())) return null;
+  if (plan.frequency === "FRIDAY" && wallClock(date, normalizeTimezone(plan.timezone)).weekday !== 5) date = nextChargeForPlan(plan, date);
   const occurrences: Date[] = [];
   // Stored rules can jump directly; legacy plans must walk the exact engine, including
   // its month-end clamping, rather than invent a different schedule for the report.

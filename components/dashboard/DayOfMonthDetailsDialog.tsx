@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { dashDir, dt } from "@/lib/dashboard/i18n";
+import { calendarDateLabel } from "@/lib/dashboard/calendar-layout";
+import { dashDir, getDashLocale, dt } from "@/lib/dashboard/i18n";
 
 export type DayOfMonthMode = "collected" | "expected";
 
@@ -161,8 +162,8 @@ export function DayOfMonthDetailsDialog({ day, mode, filters, formatMoney, onClo
               <CalendarRange className="h-4 w-4" />
             </span>
             {isCollected
-              ? dt("المحصّل بتاريخ {0}", [`${filters?.month}-${String(day).padStart(2, "0")}`])
-              : dt("الدفعات المتوقعة بتاريخ {0}", [`${filters?.month}-${String(day).padStart(2, "0")}`])}
+              ? dt("المحصّل بتاريخ {0}", [calendarDateLabel(filters?.month ?? "", day ?? 0, getDashLocale())])
+              : dt("الدفعات المتوقعة بتاريخ {0}", [calendarDateLabel(filters?.month ?? "", day ?? 0, getDashLocale())])}
           </DialogTitle>
           {totals && !loading ? (
             <div className="flex flex-wrap gap-4 pt-1.5">

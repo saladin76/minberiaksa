@@ -1,4 +1,8 @@
 {
+  "تقويم التبرعات حسب أيام الأسبوع": "Donation calendar by weekday",
+  "أيام الأسبوع": "Days of the week",
+  "تجديدات يومية وكل جمعة وشهرية من موعد الاستحقاق القادم": "Daily, every Friday and monthly renewals from the next due date",
+  "التقويم بتوقيت إسطنبول؛ تكرار كل جمعة حسب المنطقة الزمنية المحفوظة للاشتراك.": "Calendar dates use Istanbul time; Friday recurrence follows the subscription’s saved timezone.",
   "النسخة المحفوظة ليست بلغة المستلم؛ أكمل ترجمة القالب وأنشئ رسالة جديدة قبل الإرسال": "The saved message is not in the recipient’s language. Complete the template translation and create a new message before sending.",
   "إجمالي بعملة المتبرع والمقابل البنكي المؤكد بلغة الرسالة": "Total in the donor’s currency and confirmed bank equivalent, in the message language",
   "الإجمالي: 55 دولار أمريكي. المقابل البنكي لنفس التبرع: 2,000 ليرة تركية.": "Total: 55 US dollars. Bank charge for this same donation: 2,000 Turkish lira.",

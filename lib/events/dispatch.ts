@@ -1,3 +1,4 @@
+import { PAYMENT_RECEIPT_EVENTS, isPaymentReceiptEvent, paymentReceiptEvent, paymentReceiptTriggerGroups, canFallbackReceipt } from "./payment-receipt-policy";
 import { prisma } from "@/lib/prisma";
 import { track as vercelTrack } from "@vercel/analytics/server";
 import { loadContext, loadContextForDonation, loadContextForSubscription, mergeText, type TemplateContext } from "@/lib/templates/variables";
@@ -166,7 +167,7 @@ const ONCE_PER_DONATION: ReadonlySet<MessageTriggerEvent> = new Set([
 ]);
 
 export function dispatchClaimKey(event: MessageTriggerEvent, donationId: string): string {
-  return `${event}:${donationId}`;
+  return `${isPaymentReceiptEvent(event) ? "PAYMENT_RECEIPT" : event}:${donationId}`;
 }
 
 /**
@@ -188,6 +189,12 @@ async function claimDispatch(event: MessageTriggerEvent, donationId: string): Pr
   const key = dispatchClaimKey(event, donationId);
 
   try {
+    if (isPaymentReceiptEvent(event)) {
+      // Respect receipts already handled by releases with event-specific keys.
+      // Old in-flight claims stay with their existing delivery/outbox recovery.
+      const legacy = await prisma.$runCommandRaw({find:"EventDispatchClaim",filter:{_id:{$in:PAYMENT_RECEIPT_EVENTS.map(name=>`${name}:${donationId}`)}},limit:1,singleBatch:true}) as {cursor?:{firstBatch?:unknown[]}};
+      if (legacy.cursor?.firstBatch?.length) return {acquired:false,token:null};
+    }
     const inserted = (await prisma.$runCommandRaw({
       insert: "EventDispatchClaim",
       documents: [{
@@ -225,6 +232,10 @@ async function claimDispatch(event: MessageTriggerEvent, donationId: string): Pr
     return { acquired: takeover.value?.token === token, token: takeover.value?.token === token ? token : null };
   } catch (error) {
     if (isDuplicate(error instanceof Error ? error.message : error)) return { acquired: false, token: null };
+    if (isPaymentReceiptEvent(event)) {
+      console.error("Receipt claim unavailable; delivery deferred", { event, donationId });
+      return { acquired: false, token: null };
+    }
     console.error("claimDispatch failed; dispatching anyway", { event, donationId, error: error instanceof Error ? error.message : String(error) });
     // Fail open for availability. A null token means there is no claim to complete.
     return { acquired: true, token: null };
@@ -261,7 +272,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
   try {
     // Do not consume the once-per-donation claim until we know there is actual work and a
     // renderable recipient. This keeps a temporarily missing trigger/context retryable.
-    const triggers = await prisma.messageTrigger.findMany({ where: { event, enabled: true } });
+    let triggers = await prisma.messageTrigger.findMany({ where: { event: input.donationId && isPaymentReceiptEvent(event) ? { in: [...PAYMENT_RECEIPT_EVENTS] } : event, enabled: true }, orderBy: { id: "asc" } });
     result.triggers = triggers.length;
     if (!triggers.length) {
       await writeAuditLog({
@@ -274,10 +285,28 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
       return result;
     }
 
+    if (input.donationId && isPaymentReceiptEvent(event) && event !== "DONATION_PAID") {
+      // The generic and recurring callbacks can race; documents must exist
+      // before whichever one wins the shared receipt claim loads its links.
+      try { await ensureDonationDocuments(input.donationId); } catch { console.error("Receipt documents unavailable", { donationId: input.donationId }); }
+    }
     const ctx: TemplateContext | null = input.donationId ? await loadContextForDonation(input.donationId) : input.subscriptionId ? await loadContextForSubscription(input.subscriptionId,input.userId) : input.userId ? await loadContext(input.userId) : null;
     if (!ctx) {
       await writeAuditLog({ actorRole: "SYSTEM", action: "EVENT_DISPATCH_NO_CONTEXT", messageAr: `تعذّر إرسال الرسائل التلقائية عند «${triggerEventLabelAr(event)}»  بيانات المستلم غير متاحة`, metadata: { event, ...input }, stream: "TEAM" });
       return result;
+    }
+
+    let triggerGroups = triggers.map(trigger => [trigger]);
+    if (input.donationId && isPaymentReceiptEvent(event)) {
+      if (ctx.donation?.settled === false) {
+        result.skipped++; result.skipReasons.PAYMENT_NOT_CONFIRMED = 1; return result;
+      }
+      event = paymentReceiptEvent({ ...ctx.donation, subscription: ctx.subscription });
+      // All paid callbacks for this donation now share the actual receipt event
+      // and its existing idempotent claim, rather than sending two receipts.
+      triggerGroups = paymentReceiptTriggerGroups(triggers, event);
+      triggers = triggerGroups.flat(); result.triggers = triggerGroups.length;
+      if (!triggerGroups.length) return result;
     }
 
     if (input.donationId && ONCE_PER_DONATION.has(event)) {
@@ -291,11 +320,11 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
     const config = await resolveTriggerSendConfig();
 
     let attachments: EmailAttachment[] | undefined;
-    if (event === "DONATION_PAID" && input.donationId && triggers.some((trigger) => trigger.channel === "EMAIL")) {
+    if (isPaymentReceiptEvent(event) && input.donationId && triggers.some((trigger) => trigger.channel === "EMAIL")) {
       attachments = await donationPaidAttachments(input.donationId);
     }
 
-    for (const trigger of triggers) {
+    for (const group of triggerGroups) for (const trigger of group) {
       try {
         const sent = await sendTriggerMessage(trigger, ctx, { event, locale, config, donationId: input.donationId ?? null, attachments });
         if (!sent) {
@@ -314,6 +343,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
         } else {
           result.errors += 1;
         }
+        if (!input.donationId || !isPaymentReceiptEvent(event) || !canFallbackReceipt(sent)) break;
       } catch (error) {
         result.errors += 1;
         console.error("sendTriggerMessage failed", {
@@ -323,6 +353,7 @@ export async function dispatchEvent(event: MessageTriggerEvent, input: EventDisp
           templateId: trigger.templateId,
           error: error instanceof Error ? error.message : String(error),
         });
+        break; // An uncertain send must not fall through to a second receipt.
       }
     }
 

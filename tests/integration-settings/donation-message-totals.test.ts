@@ -1,3 +1,4 @@
+import * as receiptPolicy from "../../lib/events/payment-receipt-policy";
 import * as cadence from "../../lib/templates/recurring-cadence";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -119,6 +120,7 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const body = "Amount: {{donation.amount}} {{donation.currency}}";
   const document = { text: { type: "Text", data: { props: { text: body } } } };
   const dependencies: Record<string, unknown> = {
+    "./payment-receipt-policy": receiptPolicy,
     "@/lib/prisma": { prisma: { emailTemplate: { findUnique: async () => ({ id: "email", name: "email", document }) }, smsTemplate: { findUnique: async () => ({ id: "sms", name: "sms", body }) }, whatsappTemplate: { findUnique: async () => ({ id: "whatsapp", name: "whatsapp", body }) } } },
     "@/lib/templates/variables": { mergeText },
     "@/lib/templates/donation-money": donationMoney,

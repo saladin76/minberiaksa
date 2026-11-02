@@ -3,11 +3,10 @@ import { heroPosterSources } from "@/lib/minbar/hero-poster";
 import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
-import { getServerSession } from "next-auth";
+import { getPublicServerSession } from "@/lib/auth/public-session";
 import { LOCALE_SEO } from "@/lib/seo";
 import { siteIdentitySchemas, withInstitutionalHomeIdentity } from "@/lib/site-identity";
 import type { Locale } from "@/lib/seo";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
 import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
 import { selectQuickDonationProjectOptions } from "@/lib/minbar/quick-donation-display";
@@ -85,7 +84,7 @@ export default async function Home({ params }: Props) {
   // settings allow, which may be every project.
   const [{ quick, quickProjects, layout, lists }, session] = await Promise.all([
     cachedHomeData(locale),
-    getServerSession(authOptions),
+    getPublicServerSession(),
   ]);
 
   const organisationSchema = siteIdentitySchemas(locale);
