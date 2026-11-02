@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Nombor kad tidak sah. Sila semak semula.",
     "invalidCardExpiry": "Tarikh luput tidak sah atau telah berlalu.",
     "invalidCardCvc": "Kod keselamatan (CVC) tidak sah.",
-    "tooManyPaymentAttempts": "Terlalu banyak cubaan pembayaran. Sila cuba lagi kemudian."
+    "tooManyPaymentAttempts": "Terlalu banyak cubaan pembayaran. Sila cuba lagi kemudian.",
+    "mixedDonationCadences": "Lengkapkan kekerapan derma yang berbeza melalui pembayaran berasingan. Semak bakul anda."
   },
   "waqf": {
     "chooseUnit": "Pilih Unit",
@@ -2525,5 +2526,16 @@
     "authUnknown": "Log masuk belum selesai. Cuba lagi atau teruskan sebagai tetamu.",
     "donateAsGuest": "Teruskan derma sebagai tetamu",
     "signInWithGoogle": "Log masuk dengan Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Dipulangkan sepenuhnya",
+        "PARTIALLY_REFUNDED": "Dipulangkan sebahagian",
+        "VOIDED": "Dibatalkan oleh bank",
+        "REVIEW_REQUIRED": "Semakan kewangan diperlukan",
+        "balance": "Dipulangkan: {returned} · Baki: {remaining}"
+      }
+    }
   }
 }

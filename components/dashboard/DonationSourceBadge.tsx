@@ -38,6 +38,7 @@ const STATUS_DOT_CLASS: Record<DonationSourceResult["status"], string> = {
   "utm-only": "bg-amber-400",
   "tracking-error": "bg-rose-500",
   organic: "bg-slate-300",
+  unknown: "bg-slate-300",
 };
 
 const STATUS_PILL_CLASS: Record<DonationSourceResult["status"], string> = {
@@ -45,6 +46,7 @@ const STATUS_PILL_CLASS: Record<DonationSourceResult["status"], string> = {
   "utm-only": "bg-amber-50 text-amber-700 border-amber-200",
   "tracking-error": "bg-rose-50 text-rose-700 border-rose-200",
   organic: "bg-slate-50 text-slate-600 border-slate-200",
+  unknown: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
 export function DonationSourceBadge({
@@ -62,14 +64,15 @@ export function DonationSourceBadge({
     status,
   });
 
-  const platformLabel = PLATFORM_LABEL_AR[result.platform];
-  const statusLabel = STATUS_LABEL_AR[result.status];
+  const platformLabel = dt(PLATFORM_LABEL_AR[result.platform]);
+  const statusLabel = dt(STATUS_LABEL_AR[result.status]);
   // utm_campaign is the name a marketer typed in Ads Manager; campaign_id is the
   // numeric fallback for links that carried the id but lost the utm params.
   const campaignLabel =
     result.campaignName ?? (result.campaignId ? `#${result.campaignId}` : null);
   // Organic rows have no campaign at all, so they keep falling back to "غير إعلاني".
-  const pillLabel = compact ? statusLabel : campaignLabel ?? platformLabel;
+  const sourceLabel = result.platform === "organic" || result.platform === "unknown" ? result.sourceLabel : platformLabel;
+  const pillLabel = compact ? statusLabel : [sourceLabel, campaignLabel].filter(Boolean).join(" · ");
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -94,7 +97,7 @@ export function DonationSourceBadge({
           className="max-w-xs bg-white text-slate-800 border border-slate-200 shadow-md p-3 space-y-1.5 text-start"
         >
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold break-words">{campaignLabel ?? platformLabel}</span>
+            <span className="text-xs font-semibold break-words">{[sourceLabel, campaignLabel].filter(Boolean).join(" · ")}</span>
             <span className="text-[10px] text-slate-500 shrink-0">{statusLabel}</span>
           </div>
           <div className="text-[11px] text-slate-600">
@@ -108,9 +111,10 @@ export function DonationSourceBadge({
             </div>
           ) : null}
           <div className="text-[11px] text-slate-600">
-            <span className="text-slate-400">{dt("الثقة: ")}</span>
+            <span className="text-slate-400">{dt("اكتمال بيانات التتبع: ")}</span>
             {result.confidence}%
           </div>
+          {result.sourceDetails.filter(detail => !["first_landing_page", "first_referrer"].includes(detail.key)).map(detail => <div key={detail.key} className="break-words text-[11px] text-slate-600"><bdi className="text-slate-400">{detail.key}</bdi>: <bdi>{detail.key === "attribution_origin" && detail.value === "subscription_signup" ? dt("مصدر الاشتراك الأصلي") : detail.value}</bdi></div>)}
           {result.reasons.length > 0 ? (
             <ul className="text-[10.5px] text-slate-500 space-y-0.5 mt-1 border-t border-slate-100 pt-1.5">
               {result.reasons.map((r, i) => (

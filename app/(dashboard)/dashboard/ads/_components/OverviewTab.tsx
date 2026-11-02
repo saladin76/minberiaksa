@@ -46,6 +46,8 @@ interface OverviewBreakdownRow {
 }
 
 interface OverviewData {
+  unattributedRevenueUSD: number;
+  paidUnattributedCount: number;
   adRevenueUSD: number;
   organicRevenueUSD: number;
   totalRevenueUSD: number;
@@ -77,6 +79,7 @@ const STATUS_COLOR: Record<AttributionStatus, string> = {
   ga4_inferred: "bg-sky-500",
   utm_only: "bg-amber-400",
   organic: "bg-slate-300",
+  unknown: "bg-slate-300",
   direct: "bg-slate-400",
   tracking_issue: "bg-rose-500",
 };
@@ -90,6 +93,7 @@ const STATUS_ORDER: AttributionStatus[] = [
   "organic",
   "direct",
   "tracking_issue",
+  "unknown",
 ];
 
 const REVENUE_STATUS_CARDS: {
@@ -364,6 +368,7 @@ export function OverviewTab({ filterQs }: Props) {
           format="money"
           subtitle={dt("مجموع المدفوع في الفترة")}
         />
+        <StatsMetricCard title={dt("إيرادات غير محسومة الإسناد")} value={data.unattributedRevenueUSD || 0} icon={Info} accent="amber" format="money" subtitle={dt("{0} تبرع دون دليل كافٍ لتصنيفه إعلانيًا أو غير إعلاني", [data.paidUnattributedCount || 0])} />
         <StatsMetricCard
           title={dt("حصة الإعلانات من الإيراد")}
           value={data.adShare * 100}

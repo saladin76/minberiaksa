@@ -20,13 +20,16 @@ function row(baseSlug: string, kind: "category" | "programme" = "category", slug
 function fixture(locale: string) {
   return [row("region-al-quds"), row("ibadan-lana", "programme"), row("alquds-home-restoration", "programme", locale === "tr" ? "kudus-eski-sehrinde-restorasyon-projeleri" : locale === "en" ? "restoration-projects-in-the-old-city-of-jerusalem" : "alquds-home-restoration"), row("region-al-aqsa"), row("region-gaza"), row("type-zakat"), row("type-recurring")];
 }
-test("the requested eight destinations replace old filter ordering, without duplicate Zakat or recurring entries", () => {
-  const rows = fixture("ar"), result = buildCatalogueNavigation("ar", rows, rows.map(row => row.key), labels("ar"));
-  assert.deepEqual(result.map(row => row.name), ["غزة", "المسجد الأقصى", "القدس", "أوقف في القدس", "أخرج زكاتك لفلسطين", "ترميم منازل القدس", "عبادًا لنا", "التبرع الدوري"]);
-  assert.deepEqual(result.map(row => row.href || null), [null, null, null, "/ar/msharya-alqds-alwqfy", "/ar/pay-zakat-to-palestine", "/ar/bagislar/alquds-home-restoration", "/ar/bagislar/ibadan-lana", "/ar/recurring-donation"]);
-  assert.deepEqual(result.slice(0, 3).map(row => row.projectIds), [["one"], ["one"], ["one"]]);
-  assert.equal(rows[0].name, "CMS title");
+test("CMS names and saved category/page ordering remain authoritative after page-link binding", () => {
+  const rows=fixture("ar");rows[0].name="القدس الجديدة";
+  const result=buildCatalogueNavigation("ar",rows,rows.map(row=>row.key),labels("ar"));
+  assert.deepEqual(result.map(row=>row.key),[rows[0].key,"page:ibadan","page:restoration",rows[3].key,rows[4].key,"page:zakat","page:recurring","page:waqf"]);
+  assert.equal(result[0].name,"القدس الجديدة");
+  assert.equal(result.find(row=>row.key==="page:restoration")?.href,"/ar/bagislar/alquds-home-restoration");
+  assert.equal(result.filter(row=>row.key==="page:zakat").length,1);
+  assert.equal(rows[0].name,"القدس الجديدة");
 });
+
 test("all 19 languages have their own labels and page links retain that locale and the CMS translated project slug", () => {
   for (const locale of SUPPORTED_LOCALES) {
     const result = buildCatalogueNavigation(locale, fixture(locale), null, labels(locale));
@@ -36,8 +39,8 @@ test("all 19 languages have their own labels and page links retain that locale a
       if (entry.href) assert.ok(entry.href.startsWith(`/${locale}/`), `${locale}: ${entry.href}`);
       if (locale !== "ar" && locale !== "ur") assert.doesNotMatch(entry.name, /[\u0600-\u06ff]/);
     }
-    if (locale === "tr") assert.equal(result[5].href, "/tr/bagislar/kudus-eski-sehrinde-restorasyon-projeleri");
-    if (locale === "en") assert.equal(result[5].href, "/en/bagislar/restoration-projects-in-the-old-city-of-jerusalem");
+    if (locale === "tr") assert.equal(result.find(row => row.key === "page:restoration")!.href, "/tr/bagislar/kudus-eski-sehrinde-restorasyon-projeleri");
+    if (locale === "en") assert.equal(result.find(row => row.key === "page:restoration")!.href, "/en/bagislar/restoration-projects-in-the-old-city-of-jerusalem");
   }
 });
 test("new CMS entries append automatically and the next dashboard ordering stays authoritative", () => {
@@ -50,7 +53,7 @@ test("new CMS entries append automatically and the next dashboard ordering stays
 test("renamed CMS slugs keep their roles and old hash bookmarks while archived regional filters are absent", () => {
   const renamed = { ...row("new-restoration-url", "programme", "restauration-à-jérusalem"), previousSlugs: ["alquds-home-restoration"] };
   const result = buildCatalogueNavigation("fr", [renamed], null, labels("fr"));
-  assert.equal(result.length, 5);
+  assert.equal(result.length, 4);
   const restored = result.find(row => row.key === "page:restoration")!;
   assert.equal(restored.href, "/fr/bagislar/restauration-%C3%A0-j%C3%A9rusalem");
   assert.ok(restored.hashes?.includes("programme:new-restoration-url"));

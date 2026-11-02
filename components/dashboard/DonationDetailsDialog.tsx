@@ -42,6 +42,9 @@ import {
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 import { GATEWAY_LOGOS, GATEWAY_NAMES } from "./DonationGatewayBadge";
 import type { PayPalInspection, PayPalInspectionOutcome } from "@/lib/donations/gateway-diagnostics";
+import { DonationFinancialStatus } from "./DonationFinancialStatus";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
+import { DONATION_FINANCIAL_UPDATED } from "@/hooks/useLiveDonationRefresh";
 import { DonationBankOperations } from "./DonationBankOperations";
 
 type Mode = "attribution" | "payment" | "error" | "overview";
@@ -202,6 +205,7 @@ const STATUS_BANNER_CLASS: Record<DonationSourceStatus, string> = {
   "utm-only": "bg-amber-50 border-amber-200 text-amber-900",
   "tracking-error": "bg-rose-50 border-rose-200 text-rose-900",
   organic: "bg-slate-50 border-slate-200 text-slate-700",
+  unknown: "bg-slate-50 border-slate-200 text-slate-700",
 };
 
 const STATUS_DOT_BANNER: Record<DonationSourceStatus, string> = {
@@ -209,6 +213,7 @@ const STATUS_DOT_BANNER: Record<DonationSourceStatus, string> = {
   "utm-only": "bg-amber-400",
   "tracking-error": "bg-rose-500",
   organic: "bg-slate-300",
+  unknown: "bg-slate-300",
 };
 
 function SourceSummary({
@@ -272,7 +277,7 @@ function SourceSummary({
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-2">
           <span className={cn("inline-block w-2 h-2 rounded-full", STATUS_DOT_BANNER[result.status])} aria-hidden />
-          <span className="text-sm font-semibold">{PLATFORM_LABEL_AR[result.platform]}</span>
+          <span className="text-sm font-semibold">{result.sourceLabel || PLATFORM_LABEL_AR[result.platform]}</span>
           <span className="text-[11px] opacity-70">— {STATUS_LABEL_AR[result.status]}</span>
         </div>
         <div className="text-[11px] font-medium opacity-80">{dtx("الثقة {0}%", [result.confidence])}</div>
@@ -316,9 +321,8 @@ function AttributionView({
   donation: DonationDetailsTarget;
   onMetaDonateSent: (sentAt: string) => void;
 }) {
-  const attr = (donation.attribution ?? {}) as Record<string, unknown>;
-
   const visibleEntries = useMemo(() => {
+    const attr = (donation.attribution ?? {}) as Record<string, unknown>;
     const entries: Array<{ def: FieldDef; value: string }> = [];
     const seen = new Set<string>();
 
@@ -343,7 +347,7 @@ function AttributionView({
     }
 
     return entries;
-  }, [attr]);
+  }, [donation.attribution]);
 
   if (visibleEntries.length === 0) {
     return (
@@ -373,6 +377,7 @@ function AttributionView({
 }
 
 type GatewayDetails = {
+  financialSummary?: DonationFinancialSummary | null;
   id: string;
   provider: string | null;
   paymentMethod: string | null;
@@ -539,6 +544,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const refresh = (event: Event) => { if ((event as CustomEvent<{ donationId: string }>).detail?.donationId === donation.id) setRevision(value => value + 1); };
+    window.addEventListener(DONATION_FINANCIAL_UPDATED, refresh);
+    return () => window.removeEventListener(DONATION_FINANCIAL_UPDATED, refresh);
+  }, [donation.id]);
   const [details, setDetails] = useState<GatewayDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState(false);
@@ -555,7 +566,7 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
       .then((data) => { if (!cancelled) setDetails(data); })
       .catch((e: Error) => { if (!cancelled) setError(e.message); });
     return () => { cancelled = true; };
-  }, [donation.id]);
+  }, [donation.id, revision]);
 
   if (error) {
     return <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3 text-center text-xs text-rose-700">{error}</div>;
@@ -587,7 +598,7 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3">
         {logo ? (
-          <Image src={logo.src} alt={logo.alt} width={96} height={40} className="h-10 w-auto max-w-[96px] object-contain rounded" />
+          <Image src={logo.src} alt={logo.alt} width={96} height={30} className={details.provider === "ALBARAKA" || details.provider === "PAYFOR" ? "h-[30px] w-24 object-cover rounded" : "h-10 w-auto max-w-[96px] object-contain rounded"} />
         ) : (
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100"><CreditCard className="w-5 h-5 text-slate-500" /></div>
         )}
@@ -595,14 +606,7 @@ function PaymentView({ donation }: { donation: DonationDetailsTarget }) {
           <div className="text-sm font-semibold text-slate-900">{providerName}</div>
           <div className="text-[11px] text-slate-500">{methodLabel}</div>
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-            failed ? "bg-rose-100 text-rose-700" : succeeded ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700",
-          )}
-        >
-          {failed ? dt("فشلت العملية") : succeeded ? dt("تمت العملية") : dt("لم تكتمل بعد")}
-        </span>
+        <DonationFinancialStatus donation={details} />
       </div>
 
       {details.paypalInspection && <PayPalInspectionNotice inspection={details.paypalInspection} />}

@@ -1,5 +1,10 @@
 "use client";
 
+import { useLiveDonationRefresh } from "@/hooks/useLiveDonationRefresh";
+
+import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancialStatus";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
+
 import { DashboardFilterPanel } from "@/components/dashboard/DashboardFilterPanel";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useLocale } from "next-intl";
@@ -143,6 +148,9 @@ interface DonationRow {
   isRecurringCharge?: boolean;
   /** 1-based position within its subscription (1 = signup charge) */
   subscriptionCycle?: number | null;
+  renewalNumber?: number | null;
+  testCycle?: number | null;
+  financialSummary?: DonationFinancialSummary | null;
   status: string;
   paidAt?: string | null;
   provider?: string | null;
@@ -334,6 +342,10 @@ export default function DashboardPage() {
   const [chartLoading, setChartLoading] = useState(true);
   const [chartView, setChartView] = useState<ChartViewType>("bar");
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
+  useEffect(() => {
+    const id = searchParams.get("donationId");
+    if (id && /^[a-f0-9]{24}$/i.test(id)) { setDonationsSearch(id); setChartPeriod("all"); }
+  }, [searchParams]);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("amount");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -577,15 +589,15 @@ export default function DashboardPage() {
 
   // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number, append: boolean, quiet = false) => {
       const requestId = ++donationsRequestId.current;
-      if (!append) {
+      if (!append && !quiet) {
         // Do not leave rows from the previous filter visible while the new
         // query is loading, or after it fails.
         setDonations([]);
         setDonationsTotal(0);
       }
-      setDonationsLoading(true);
+      if (!quiet) setDonationsLoading(true);
       try {
         const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
         const params = new URLSearchParams();
@@ -608,7 +620,7 @@ export default function DashboardPage() {
         const data = await res.json();
         if (requestId !== donationsRequestId.current) return;
         if (!res.ok) {
-          toast.error(data?.error || dt("فشل في تحميل التبرعات"));
+          if (!quiet) toast.error(data?.error || dt("فشل في تحميل التبرعات"));
           return;
         }
         const list = Array.isArray(data.donations) ? data.donations : [];
@@ -617,7 +629,7 @@ export default function DashboardPage() {
       } catch (error) {
         if (requestId !== donationsRequestId.current) return;
         console.error("Error fetching donations:", error);
-        toast.error(dt("فشل في تحميل التبرعات"));
+        if (!quiet) toast.error(dt("فشل في تحميل التبرعات"));
       } finally {
         if (requestId === donationsRequestId.current) {
           setDonationsLoading(false);
@@ -642,6 +654,8 @@ export default function DashboardPage() {
       donationsSearch,
     ]
   );
+
+  useLiveDonationRefresh(() => fetchDonations(1, false, true), !loading && donationsPage === 1);
 
   // Fetch donations when filters or time span or sort change
   useEffect(() => {
@@ -1872,31 +1886,7 @@ export default function DashboardPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-3">
-                            {d.status === "FAILED" ? (
-                              <button
-                                type="button"
-                                onClick={() => openDonationDetails("error", d)}
-                                className="inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
-                                title={dt("عرض رسالة الخطأ من بوابة الدفع")}
-                              >
-                                {dt("فاشل")}{d.securityMode ? <bdi dir="ltr">{` ${d.securityMode}`}</bdi> : null}</button>
-                            ) : (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[11px] font-medium w-max",
-                                  d.status === "PAID" && d.paidAt
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-amber-100 text-amber-700"
-                                )}
-                                title={d.status === "PAID" && !d.paidAt ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
-                              >
-                                {d.status === "PAID"
-                                  ? d.paidAt
-                                    ? dt("ناجح")
-                                    : dt("قيد التأكيد")
-                                  : dt("معلق")}{d.securityMode ? <bdi dir="ltr">{` ${d.securityMode}`}</bdi> : null}
-                              </span>
-                            )}
+                            <DonationFinancialStatus donation={d} onFailure={() => openDonationDetails("error", d)} />
                           </td>
                           <td className="py-2.5 px-3">
                             <DonationGatewayBadge donation={d} onOpen={() => openDonationDetails("payment", d)} />
@@ -1928,7 +1918,7 @@ export default function DashboardPage() {
                             >
                               {d.type === "MONTHLY"
                                 ? `${donationCadenceLabel(d)} · ${d.isRecurringCharge
-                                  ? dt("تجديد تلقائي{0}", [d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""])
+                                  ? d.testCycle ? dt("دورة اختبار #{0}", [d.testCycle]) : dt("تجديد تلقائي{0}", [d.renewalNumber ? ` #${d.renewalNumber}` : ""])
                                   : dt("أول دفعة")}`
                                 : donationCadenceLabel(d)}
                             </span>

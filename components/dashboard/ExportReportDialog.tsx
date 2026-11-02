@@ -431,7 +431,7 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
                 <SelectContent>
                   <SelectItem value="all">{dt("كل الدوريات")}</SelectItem>
                   <SelectItem value="DAILY">{dt("يومي")}</SelectItem>
-                  <SelectItem value="FRIDAY">{dt("أسبوعياً")}</SelectItem>
+                  <SelectItem value="FRIDAY">{dt("تبرع كل جمعة")}</SelectItem>
                   <SelectItem value="MONTHLY">{dt("شهري")}</SelectItem>
                 </SelectContent>
               </Select>

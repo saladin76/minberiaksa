@@ -257,6 +257,7 @@ test("the existing user-update endpoint never serializes a stored password hash"
     "next/server": { NextResponse: { json: (data: unknown) => ({ data }) } }, "next-auth": { getServerSession: async () => ({ user: { id: "admin", role: "ADMIN" } }) },
     "../../auth/[...nextauth]/options": {}, "@/lib/dashboard/permissions": {}, "@/lib/dashboard/api-auth": {}, "@/lib/audit-log": {}, "@/lib/badge-criteria": {},
     "@/lib/dashboard/donation-usd-revenue": {}, "@/lib/communication/donor-communication-profile-service": {}, "@/lib/dashboard/donor-account": { donorAccountStatus },
+    "@/lib/dashboard/donation-financial-summary": {},
     "@/lib/prisma": { prisma: { user: {
       findUnique: async () => ({ role: "DONOR", name: "Fixture", email: "fixture@example.test" }),
       update: async () => ({ id: "donor", role: "DONOR", name: "Updated", password: "FIXTURE_HASH_DO_NOT_RETURN" }),

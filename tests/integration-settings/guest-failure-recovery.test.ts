@@ -75,7 +75,7 @@ test("the actual order driver remembers only the returned credential without cha
     const driver = loadClient("lib/minbar/checkout.ts", {
       "../donations/guest-access-client": guest,
       "@/lib/minbar/donation-amount": { lineLocal: () => null },
-      "@/lib/donations/recurring-schedule": { orderTypeForItems: () => "ONE_TIME" },
+      "@/lib/donations/recurring-schedule": { orderTypeForItems: () => "ONE_TIME", cartHasMixedCadences: () => false },
       "@/lib/ai/concierge/client": { readConciergeAssisted: () => null, readConciergeTouched: () => null },
       "@/lib/attribution/client-payload": { getDonationAttributionPayload: () => ({}) },
     }, {

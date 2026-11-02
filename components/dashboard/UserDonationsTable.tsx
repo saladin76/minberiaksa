@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { dt } from "@/lib/dashboard/i18n";
+import { DonationFinancialStatus } from "./DonationFinancialStatus";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
 
 type Outcome = "SUCCESS" | "PENDING" | "FAILED";
 type Frequency = "DAILY" | "FRIDAY" | "MONTHLY";
@@ -11,6 +13,7 @@ type Frequency = "DAILY" | "FRIDAY" | "MONTHLY";
 interface DonationRow {
   id: string;
   outcome: Outcome;
+  financialSummary?: DonationFinancialSummary | null;
   subscriptionId: string | null;
   frequency: Frequency | null;
   amount: number;
@@ -24,21 +27,9 @@ interface DonationRow {
   referral: { id: string; code: string } | null;
 }
 
-const OUTCOME_LABEL: Record<Outcome, string> = {
-  get SUCCESS() { return dt("ناجح"); },
-  get PENDING() { return dt("قيد التأكيد"); },
-  get FAILED() { return dt("فشل"); },
-};
-
-const OUTCOME_CLASS: Record<Outcome, string> = {
-  SUCCESS: "bg-green-100 text-green-700",
-  PENDING: "bg-amber-100 text-amber-700",
-  FAILED: "bg-red-100 text-red-700",
-};
-
 const FREQUENCY_LABEL: Record<Frequency, string> = {
   get DAILY() { return dt("يومي"); },
-  get FRIDAY() { return dt("أسبوعياً"); },
+  get FRIDAY() { return dt("تبرع كل جمعة"); },
   get MONTHLY() { return dt("شهري"); },
 };
 
@@ -197,9 +188,7 @@ export function UserDonationsTable({
                       </span>
                     </td>
                     <td className="py-2 px-3">
-                      <span className={`inline-block px-1.5 py-px rounded-full text-[11px] font-medium whitespace-nowrap ${OUTCOME_CLASS[r.outcome]}`}>
-                        {OUTCOME_LABEL[r.outcome]}
-                      </span>
+                      <DonationFinancialStatus donation={{status:r.outcome === "FAILED" ? "FAILED" : "PAID",paidAt:r.paidAt,financialSummary:r.financialSummary}} />
                     </td>
                     <td className="py-2 px-3 text-slate-600 max-w-[180px]">
                       {projects ? (

@@ -15,9 +15,7 @@ const DESTINATIONS: ReadonlyArray<{ role: CatalogueNavigationRole; aliases: read
   { role: "recurring", aliases: ["type-recurring"], icon: "calendar-heart", route: "recurring" },
 ];
 
-/** Match CMS identities through their base/previous slugs, never translated labels.
- * The new page identities invalidate the former filter-only ordering once; a
- * subsequent order saved from the dashboard remains authoritative. */
+/** Match CMS identities through base/previous slugs and retain saved ordering. */
 export function buildCatalogueNavigation(
   locale: string,
   rows: readonly ProjectFilterOption[],
@@ -35,7 +33,7 @@ export function buildCatalogueNavigation(
     const route = destination.route;
     // An unpublished category is not a functioning filter. Dedicated public
     // pages (including waqf) are available independently of category membership.
-    if (!source && !route) continue;
+    if (!source && (!route || destination.role === "restoration" || destination.role === "ibadan")) continue;
     matches.forEach(row => consumed.add(row.key));
     const href = route
       ? destination.role === "restoration" || destination.role === "ibadan"
@@ -47,18 +45,19 @@ export function buildCatalogueNavigation(
       key: route ? `page:${destination.role}` : source!.key,
       id: route ? destination.role : source!.id,
       kind: route ? "page" : source!.kind,
-      name: labels[destination.role],
+      name: source?.name || labels[destination.role],
       slug: source?.slug || destination.aliases[0],
       hashes: [...new Set(matches.flatMap(row => [row.key, row.slug, row.baseSlug || row.slug, ...row.previousSlugs || []]))],
       icon: destination.icon,
-      order,
+      order: source?.order ?? order,
       projectIds: [...new Set(matches.flatMap(row => row.projectIds))],
       ...(href ? { href } : {}),
     });
   }
   const extras = rows.filter(row => !consumed.has(row.key));
-  const currentOrder = Array.isArray(savedOrder) && savedOrder.includes("page:waqf") ? savedOrder : undefined;
-  const ordered = applyProjectFilterOrder(curated, currentOrder);
-  // New CMS entries still appear automatically, after the requested destinations.
-  return currentOrder ? applyProjectFilterOrder([...curated, ...extras], currentOrder) : [...ordered, ...applyProjectFilterOrder(extras, savedOrder)];
+  const aliases = new Map(curated.flatMap(row => (row.hashes || []).map(hash => [hash, row.key])));
+  const currentOrder = Array.isArray(savedOrder) ? savedOrder.map(key => aliases.get(key) || key) : undefined;
+  // One shared order covers categories, major pages and dedicated static pages.
+  // New CMS entries remain visible even before an administrator saves an order.
+  return applyProjectFilterOrder([...curated, ...extras], currentOrder);
 }

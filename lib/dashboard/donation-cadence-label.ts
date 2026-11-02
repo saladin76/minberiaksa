@@ -5,7 +5,7 @@ export function donationCadenceLabel(donation: { type: string; frequency?: strin
   if (donation.type === "ONE_TIME") return dt("مرة واحدة");
   switch (donation.frequency) {
     case "DAILY": return dt("يومي");
-    case "FRIDAY": return dt("أسبوعياً");
+    case "FRIDAY": return dt("تبرع كل جمعة");
     case "MONTHLY": return dt("شهري");
     default: return dt("تبرع دوري");
   }

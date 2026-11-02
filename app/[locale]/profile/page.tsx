@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
 import { useCurrency } from "@/context/CurrencyContext";
 import EditDialog from "./_components/EditDialog";
 import AvatarUploader from "./_components/AvatarUploader";
@@ -72,6 +73,7 @@ interface DonationForProfile {
   currency: string;
   type: string;
   paymentStatus?: string | null;
+  financialSummary?: DonationFinancialSummary | null;
   paymentMethod?: string | null;
   paidAt?: string | null;
   status: string | null;
@@ -802,6 +804,13 @@ const ProfilePage = () => {
                               <p className="truncate font-medium" title={formatCampaignCell(donation)}>
                                 {formatCampaignCell(donation)}
                               </p>
+                              {donation.financialSummary && donation.financialSummary.state !== "PAID" ? <div className="mt-1 space-y-1 text-xs text-violet-800">
+                                <p>{t(`donations.financial.${donation.financialSummary.state}`)}</p>
+                                {donation.financialSummary.returnedMinor != null && donation.financialSummary.remainingMinor != null && donation.financialSummary.currency ? <p className="text-gray-500">{t("donations.financial.balance", {
+                                  returned: formatDonationAmount(donation.financialSummary.returnedMinor / 100, donation.financialSummary.currency),
+                                  remaining: formatDonationAmount(donation.financialSummary.remainingMinor / 100, donation.financialSummary.currency),
+                                })}</p> : null}
+                              </div> : null}
                             </td>
                             <td className="py-3 px-3 text-gray-700">
                               {formatDonationAmount(base, donation.currency)}

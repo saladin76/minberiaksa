@@ -1,5 +1,10 @@
 "use client";
 
+import { useLiveDonationRefresh } from "@/hooks/useLiveDonationRefresh";
+
+import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancialStatus";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
+
 import { SubscriptionRequestsPanel } from "@/components/dashboard/SubscriptionRequestsPanel";
 import { focusSubscriptionTarget, subscriptionManagementHref, type SubscriptionRequestRow } from "@/lib/donations/subscription-navigation";
 import { isReductionRequestForPlan } from "@/lib/donations/subscription-request-policy";
@@ -149,6 +154,9 @@ interface DonationRow {
   isRecurringCharge?: boolean;
   /** 1-based position within its subscription (1 = signup charge) */
   subscriptionCycle?: number | null;
+  renewalNumber?: number | null;
+  testCycle?: number | null;
+  financialSummary?: DonationFinancialSummary | null;
   status: string;
   paidAt?: string | null;
   provider?: string | null;
@@ -191,7 +199,7 @@ type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 type FrequencyFilter = "all" | RecurringFrequency;
 
 const FREQUENCIES: RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
-const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("أسبوعياً"); }, get MONTHLY() { return dt("شهري"); } };
+const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("تبرع كل جمعة"); }, get MONTHLY() { return dt("شهري"); } };
 /** One hue per cadence, reused by the cards, the stacked chart and the table badges. */
 const FREQUENCY_COLOR: Record<RecurringFrequency, string> = {
   DAILY: "#2c8b5d",
@@ -375,7 +383,8 @@ function MonthlySubscriptionsDashboard() {
   const [dateTo, setDateTo] = useState("");
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
-  const donationsStatusFilter = "PAID" as const;
+  const donationsRequestId = useRef(0);
+  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "PENDING" | "FAILED">("all");
   /** Applied donor search (name or email) for أحدث الدفعات المتكررة  server-side. */
   const [donationsSearch, setDonationsSearch] = useState("");
   /** Applied donor search (name or email) for قائمة الاشتراكات  server-side, independent of the table above. */
@@ -766,8 +775,9 @@ function MonthlySubscriptionsDashboard() {
 
   // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
-    async (page: number, append: boolean) => {
-      setDonationsLoading(true);
+    async (page: number, append: boolean, quiet = false) => {
+      const requestId = ++donationsRequestId.current;
+      if (!quiet) setDonationsLoading(true);
       try {
         const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
         const params = new URLSearchParams();
@@ -782,24 +792,25 @@ function MonthlySubscriptionsDashboard() {
         if (end) params.set("end", end);
         params.set("subscriptionOnly", "1");
         if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
-        params.set("status", "PAID");
+        if (donationsStatusFilter !== "all") params.set("status", donationsStatusFilter);
         if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
+        if (requestId !== donationsRequestId.current) return;
         if (!res.ok) {
-          toast.error(data?.error || dt("فشل في تحميل الدفعات المتكررة"));
+          if (!quiet) toast.error(data?.error || dt("فشل في تحميل الدفعات المتكررة"));
           return;
         }
         const list = Array.isArray(data.donations) ? data.donations : [];
         setDonations((prev) => (append ? [...prev, ...list] : list));
         setDonationsTotal(data.pagination?.total ?? 0);
       } catch (error) {
+        if (requestId !== donationsRequestId.current) return;
         console.error("Error fetching donations:", error);
-        toast.error(dt("فشل في تحميل الدفعات المتكررة"));
+        if (!quiet) toast.error(dt("فشل في تحميل الدفعات المتكررة"));
       } finally {
-        setDonationsLoading(false);
-        setDonationsFetchedOnce(true);
+        if (requestId === donationsRequestId.current) { setDonationsLoading(false); setDonationsFetchedOnce(true); }
       }
     },
     [
@@ -813,9 +824,12 @@ function MonthlySubscriptionsDashboard() {
       donationsSortOrder,
       donationCountryFilter,
       donationsSearch,
+      donationsStatusFilter,
       frequencyFilter,
     ]
   );
+
+  useLiveDonationRefresh(() => fetchDonations(1, false, true), !loading && donationsPage === 1);
 
   // Fetch donations when filters or time span or sort change
   useEffect(() => {
@@ -1111,7 +1125,7 @@ function MonthlySubscriptionsDashboard() {
                 </span>
               </>
             ) : (
-              dt("كل التبرعات المتكررة  اليومية، وأسبوعياً، والشهرية: الإيرادات، دفعات التجديد، والحالة")
+              dt("كل التبرعات المتكررة اليومية، وكل جمعة، والشهرية: الإيرادات، دفعات التجديد، والحالة")
             )
           }
         />
@@ -1159,7 +1173,7 @@ function MonthlySubscriptionsDashboard() {
               eyebrow={dt("الإيراد الشهري المتكرر (MRR){0}", [frequencyLabelSuffix])}
               badge={dt("شهريًا")}
               value={formatMoney(Math.round(stats?.monthlyRecurringRevenue ?? 0))}
-              note={dt("المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وأسبوعياً × ٤٫٣٥، والشهري كما هو.")}
+              note={dt("المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وكل جمعة × ٤٫٣٥، والشهري كما هو.")}
             />
             {/* ARR is MRR×12  a projection of the current book, not money collected. The note
                 says so, because a figure this size sitting beside real revenue invites being
@@ -1200,7 +1214,7 @@ function MonthlySubscriptionsDashboard() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FREQUENCY_COLOR[f] }} aria-hidden="true" />
-                      {f === "DAILY" ? dt("التبرعات اليومية") : f === "FRIDAY" ? dt("تبرعات أسبوعياً") : dt("التبرعات الشهرية")}
+                      {f === "DAILY" ? dt("التبرعات اليومية") : f === "FRIDAY" ? dt("تبرعات كل جمعة") : dt("التبرعات الشهرية")}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
                       {dtx("{0} نشط", [row?.activeCount ?? 0])}</span>
@@ -2181,12 +2195,15 @@ function MonthlySubscriptionsDashboard() {
   <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
       {dt("حالة الدفعة")}</label>
-    <Select value={donationsStatusFilter} disabled>
+    <Select value={donationsStatusFilter} onValueChange={value => setDonationsStatusFilter(value as typeof donationsStatusFilter)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
         <SelectValue placeholder={dt("الحالة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
+        <SelectItem value="all">{dt("الكل")}</SelectItem>
+        <SelectItem value="PAID">{dt("ناجح")}</SelectItem>
+        <SelectItem value="PENDING">{dt("قيد التأكيد")}</SelectItem>
+        <SelectItem value="FAILED">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
@@ -2328,7 +2345,7 @@ function MonthlySubscriptionsDashboard() {
                                   title={dt("خصم تلقائي متكرر  تم دون أي إجراء من المتبرع")}
                                 >
                                   <RefreshCw className="w-3 h-3" />
-                                  {dtx("تجديد تلقائي{0}", [d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""])}
+                                  {d.testCycle ? dtx("دورة اختبار #{0}", [d.testCycle]) : dtx("تجديد تلقائي{0}", [d.renewalNumber ? ` #${d.renewalNumber}` : ""])}
                                 </span>
                               ) : (
                                 <span
@@ -2343,22 +2360,7 @@ function MonthlySubscriptionsDashboard() {
                             )}
                           </td>
                           <td className="py-2.5 px-3">
-                            {d.status === "FAILED" ? (
-                              <button
-                                type="button"
-                                onClick={() => openDonationDetails("error", d)}
-                                className="inline-block px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
-                                title={dt("عرض رسالة الخطأ من بوابة الدفع")}
-                              >
-                                {dt("فاشل")}</button>
-                            ) : (
-                              <span
-                                className={cn("inline-block px-1.5 py-px rounded-full text-[11px] font-medium", d.status === "PAID" && d.paidAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}
-                                title={d.status === "PAID" && !d.paidAt ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
-                              >
-                                {d.status === "PAID" ? (d.paidAt ? dt("ناجح") : dt("قيد التأكيد")) : dt("معلق")}
-                              </span>
-                            )}
+                            <DonationFinancialStatus donation={d} onFailure={() => openDonationDetails("error", d)} />
                           </td>
                           <td className="py-2.5 px-3">
                             <DonationGatewayBadge donation={d} onOpen={() => openDonationDetails("payment", d)} />
@@ -2927,7 +2929,7 @@ function MonthlySubscriptionsDashboard() {
         onOpenChange={setExportOpen}
         endpoint="/api/admin/monthly/export"
         title={dt("تصدير تقرير التبرعات المتكررة")}
-        description={dt("يشمل التقرير الاشتراكات المتكررة (يومي، أسبوعياً، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى.")}
+        description={dt("يشمل التقرير الاشتراكات المتكررة (يومي، كل جمعة، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى.")}
         defaults={(() => {
           const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
           return {

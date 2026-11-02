@@ -76,7 +76,7 @@ function fixture(mainGateway = "ALBARAKA") {
     "@/lib/donations/payment-routing-server": { resolveNewCardPaymentRoute: async () => null },
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
     "@/lib/tracking/client-ip": clientIp,
-    "server-only": {}, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor", role: "DONOR", name: "Fixture" } }) },
+    "./recurring-attribution":{inheritRecurringAttribution:async()=>undefined},"server-only": {}, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor", role: "DONOR", name: "Fixture" } }) },
     "@/lib/prisma": { prisma }, "@/lib/locales": { isValidLocale: () => true },
     "@/lib/referral-server": { resolveReferralId: async () => null },
     "@/lib/attribution/sanitize": { sanitizeDonationAttribution: () => undefined },

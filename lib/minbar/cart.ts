@@ -140,6 +140,18 @@ export const CART_UPDATED_EVENT = "mia:basket-updated";
 
 export const CART_SCHEMA_VERSION = 2;
 
+export function canToggleCartMonthly(item: Pick<MinbarCartItem, "freqKey">): boolean {
+  return item.freqKey === "once" || item.freqKey === "monthly";
+}
+
+/** A monthly shortcut must never replace a daily or Friday commitment. */
+export function toggleCartMonthly(item: MinbarCartItem): MinbarCartItem {
+  if (!canToggleCartMonthly(item)) return item;
+  const next = { ...item, freqKey: item.freqKey === "monthly" ? "once" as const : "monthly" as const };
+  delete next._autoMonthly;
+  return next;
+}
+
 /** Legacy v1 → v2 type mapping, from `السلة.dc.html` → `Component.LEGACY_TYPES`. */
 const LEGACY_TYPES: Record<string, CartTypeKey> = {
   مشروع: "project",

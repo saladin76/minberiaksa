@@ -7,6 +7,7 @@ import * as crypto from "node:crypto";
 import { z } from "zod";
 import * as options from "../../lib/minbar/project-filter-options";
 import * as catalogue from "../../lib/minbar/project-catalogue-navigation";
+import * as routes from "../../lib/minbar/routes";
 import { messagesFor } from "../../i18n/locale-messages";
 
 function load(file: string, dependencies: Record<string, unknown>) {
@@ -15,16 +16,16 @@ function load(file: string, dependencies: Record<string, unknown>) {
   return loaded.exports;
 }
 function fixture() {
-  const category = "a".repeat(24), programme = "b".repeat(24), pages = ["waqf", "zakat", "restoration", "ibadan", "recurring"].map(role => `page:${role}`), keys = [pages[0], `category:${category}`, ...pages.slice(1), `programme:${programme}`];
+  const category = "a".repeat(24), programme = "b".repeat(24), pages = ["waqf", "zakat", "recurring"].map(role => `page:${role}`), keys = [pages[0], `category:${category}`, ...pages.slice(1), `programme:${programme}`];
   let saved: string[] | null = null, allowed = true, reads = 0, writes = 0, race = false;
   const database = { category: { findMany: async () => { reads++; return [{ id: category, name: "Category", slug: "category", order: 1, translations: [] }]; } }, superCategory: { findMany: async () => [{ id: programme, title: "Programme", slug: "major", order: 0, translations: [], items: [], blocks: [] }] }, globalSettings: { findFirst: async () => ({ id: "settings", updatedAt: new Date(0), projectFilterOrder: saved }), updateMany: async (input: { data: Record<string, unknown> }) => { writes++; assert.deepEqual(Object.keys(input.data), ["projectFilterOrder"]); if (!race) saved = input.data.projectFilterOrder as string[]; return { count: race ? 0 : 1 }; } }, $transaction: async (fn: (tx: unknown) => unknown) => fn(database) };
-  const registry = load("lib/minbar/project-filters.ts", { "server-only": {}, "@/lib/prisma": { prisma: database }, "@/lib/campaign/soft-delete-filter": { CATEGORY_ACTIVE_OR_UNSET: {} }, "@/lib/i18n/translation-fallback": { pickTranslation: () => null, translationLocaleWhere: () => ({}) }, "./project-filter-options": options, "./project-catalogue-navigation": catalogue, "@/i18n/locale-messages": { messagesFor } });
+  const registry = load("lib/minbar/project-filters.ts", { "server-only": {}, "@/lib/prisma": { prisma: database }, "@/lib/campaign/soft-delete-filter": { CATEGORY_ACTIVE_OR_UNSET: {} }, "@/lib/i18n/translation-fallback": { pickTranslation: () => null, translationLocaleWhere: () => ({}) }, "./routes": routes, "./project-filter-options": options, "./project-catalogue-navigation": catalogue, "@/i18n/locale-messages": { messagesFor } });
   const route = load("app/api/admin/project-filters/route.ts", { "node:crypto": crypto, "zod": { z }, "next/server": { NextResponse: { json: (body: unknown, config?: { status?: number }) => ({ body, status: config?.status || 200 }) } }, "next-auth": { getServerSession: async () => ({ user: {} }) }, "@/lib/prisma": { prisma: database }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} }, "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => allowed ? null : { status: 403 } }, "@/lib/minbar/project-filters": registry, "@/lib/audit-log": { auditActorFromDashboardSession: () => ({}), queueAuditLog: () => {} }, "@/lib/locales": { isValidLocale: () => true } });
   return { keys, get: () => route.GET({ nextUrl: new URL("https://example.invalid/api?locale=ar") }), put: (body: unknown) => route.PUT({ json: async () => body }), saved: () => saved, writes: () => writes, reads: () => reads, deny: () => { allowed = false; }, race: () => { race = true; } };
 }
 test("the real registry and order endpoint save both identity kinds without changing financial/content fields", async () => {
   const f = fixture(), first = await f.get(), body = first.body as { revision: string; items: { key: string }[] };
-  assert.equal(first.status, 200); assert.deepEqual(JSON.parse(JSON.stringify(body.items.map(item => item.key))), ["page:waqf", "page:zakat", "page:restoration", "page:ibadan", "page:recurring", f.keys.at(-1), f.keys[1]]);
+  assert.equal(first.status, 200); assert.deepEqual(JSON.parse(JSON.stringify(body.items.map(item => item.key))), [f.keys.at(-1), f.keys[1], "page:waqf", "page:zakat", "page:recurring"]);
   assert.equal((await f.put({ revision: body.revision, keys: f.keys })).status, 200); assert.deepEqual(JSON.parse(JSON.stringify(f.saved())), f.keys); assert.equal(f.writes(), 1);
   const reloaded = await f.get();
   assert.deepEqual(JSON.parse(JSON.stringify((reloaded.body as typeof body).items.map(item => item.key))), f.keys);

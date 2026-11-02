@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "کارڈ نمبر درست نہیں، براہ کرم چیک کریں۔",
     "invalidCardExpiry": "میعاد ختم ہونے کی تاریخ غلط ہے یا گزر چکی ہے۔",
     "invalidCardCvc": "سیکیورٹی کوڈ (CVC) درست نہیں۔",
-    "tooManyPaymentAttempts": "ادائیگی کی بہت زیادہ کوششیں، براہ کرم بعد میں کوشش کریں۔"
+    "tooManyPaymentAttempts": "ادائیگی کی بہت زیادہ کوششیں، براہ کرم بعد میں کوشش کریں۔",
+    "mixedDonationCadences": "مختلف وقفوں کے عطیات کی الگ الگ ادائیگی کریں۔ اپنی ٹوکری دیکھیں۔"
   },
   "waqf": {
     "chooseUnit": "اپنی شرکت کی نوعیت اور تعداد منتخب کریں",
@@ -2525,5 +2526,16 @@
     "authUnknown": "لاگ اِن مکمل نہیں ہوا۔ دوبارہ کوشش کریں یا مہمان کے طور پر جاری رکھیں۔",
     "donateAsGuest": "مہمان کے طور پر عطیہ جاری رکھیں",
     "signInWithGoogle": "Google سے لاگ اِن کریں"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "مکمل رقم واپس کر دی گئی",
+        "PARTIALLY_REFUNDED": "جزوی رقم واپس کر دی گئی",
+        "VOIDED": "بینک نے منسوخ کر دیا",
+        "REVIEW_REQUIRED": "مالی جائزہ درکار ہے",
+        "balance": "واپس شدہ: {returned} · باقی: {remaining}"
+      }
+    }
   }
 }

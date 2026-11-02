@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Kortnummeret er ugyldig. Sjekk det.",
     "invalidCardExpiry": "Utløpsdatoen er ugyldig eller passert.",
     "invalidCardCvc": "Sikkerhetskoden (CVC) er ugyldig.",
-    "tooManyPaymentAttempts": "For mange betalingsforsøk. Prøv igjen senere."
+    "tooManyPaymentAttempts": "For mange betalingsforsøk. Prøv igjen senere.",
+    "mixedDonationCadences": "Fullfør ulike donasjonsintervaller med separate betalinger. Kontroller handlekurven."
   },
   "waqf": {
     "chooseUnit": "Velg Enhet",
@@ -2525,5 +2526,16 @@
     "authUnknown": "Innloggingen ble ikke fullført. Prøv igjen eller fortsett som gjest.",
     "donateAsGuest": "Fortsett å donere som gjest",
     "signInWithGoogle": "Logg inn med Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Fullt refundert",
+        "PARTIALLY_REFUNDED": "Delvis refundert",
+        "VOIDED": "Annullert av banken",
+        "REVIEW_REQUIRED": "Økonomisk gjennomgang kreves",
+        "balance": "Refundert: {returned} · Gjenstående: {remaining}"
+      }
+    }
   }
 }

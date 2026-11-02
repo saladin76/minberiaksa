@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { cartHasMixedCadences } from "../../lib/donations/recurring-schedule";
 import { checkoutFieldIssue } from "../../lib/minbar/checkout-validation";
 
 // Exercise the real handler and button expression; no payment adapter or database is loaded.
@@ -26,7 +27,7 @@ assert.ok(handler); assert.ok(disabled);
 function handlerHarness(overrides: Record<string, unknown> = {}) {
   const events: string[] = [];
   const context = {
-    submitting: false, items: [{}], requiresVerificationChoice: true, verificationMode: null,
+    cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], requiresVerificationChoice: true, verificationMode: null,
     belowMinimum: false, session: null, firstName: "Fixture", email: "fixture@example.invalid", phone: "+905551234567", method: "card", needsOwnCardForm: false, gateway: "ALBARAKA",
     cardNumber: "", cardExpiry: "", cardCvc: "", selectedCardId: null, checkoutFieldIssue,
     t: (key: string) => key, tValidation: (key: string) => key,
@@ -43,7 +44,7 @@ function handlerHarness(overrides: Record<string, unknown> = {}) {
 
 test("a donor can request validation before selecting 2D or 3D; operational blocks still disable submission", () => {
   const expression = disabled!.getText(ast);
-  const valid = { submitting: false, items: [{}], belowMinimum: false, method: "card", cardRailUnavailable: false, requiresVerificationChoice: true, verificationMode: null };
+  const valid = { cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], belowMinimum: false, method: "card", cardRailUnavailable: false, requiresVerificationChoice: true, verificationMode: null };
   assert.equal(vm.runInNewContext(expression, valid), false);
   for (const blocked of [{ submitting: true }, { items: [] }, { belowMinimum: true }, { cardRailUnavailable: true }]) assert.equal(vm.runInNewContext(expression, { ...valid, ...blocked }), true);
 });

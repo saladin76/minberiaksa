@@ -12,9 +12,12 @@ import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useDonationAmount, useHealLegacyRows } from "@/hooks/useDonationAmount";
 import { useShareWording } from "@/hooks/useShareWording";
+import { cartHasMixedCadences } from "@/lib/donations/recurring-schedule";
 import { sharePriceFor } from "@/hooks/useProjectPricing";
 import {
   cartHasRecurring,
+  canToggleCartMonthly,
+  toggleCartMonthly,
   clearTeamSupport,
   readTeamSupportChoice,
   readTeamSupportRecurring,
@@ -85,6 +88,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const tCommon = useTranslations("common");
   const tProjects = useTranslations("projects");
   const tCert = useTranslations("certificates");
+  const tValidation = useTranslations("validation");
   const tTeam = useTranslations("TeamSupport");
   const { format, formatNumber, formatLocal, code, rate, currency } = useMinbarMoney();
   const { fromLocal, tooSmall, lineTooSmall, minLocal, minLabel, lineValue, formatLine, inLocal } = useDonationAmount();
@@ -247,6 +251,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
 
   /* With the $1 floor on, a row under it holds the checkout until it is raised. */
   const belowMinimum = items.some(lineTooSmall);
+  const mixedCadences = cartHasMixedCadences(items);
   const raiseToMinimum = (index: number) => {
     if (minLocal == null) return;
     const raised = inLocal ? fromLocal(minLocal) : { usd: minLocal };
@@ -275,7 +280,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const toggleMonthly = (index: number) => {
     replace(
       items.map((item, i) =>
-        i === index ? { ...item, freqKey: item.freqKey === "monthly" ? "once" : "monthly" } : item
+        i === index ? toggleCartMonthly(item) : item
       )
     );
   };
@@ -345,7 +350,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
 
   /* The donor can move on once the basket is payable. Confirmation comes
      after paying, so it is never a jump from here. */
-  const canCheckout = hydrated && items.length > 0 && !belowMinimum;
+  const canCheckout = hydrated && items.length > 0 && !belowMinimum && !mixedCadences;
   const steps: CheckoutStep[] = [
     { n: 1, label: t("stepCart"), current: true, enabled: true },
     { n: 2, label: t("stepDetails"), href: miaPath("checkout", locale), current: false, enabled: canCheckout },
@@ -476,6 +481,8 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         <button
                           type="button"
                           onClick={() => toggleMonthly(index)}
+                          disabled={!canToggleCartMonthly(item)}
+                          title={!canToggleCartMonthly(item) ? t(FREQ_LABEL[item.freqKey]) : undefined}
                           className="cart-monthly"
                           style={{
                             display: "inline-flex",
@@ -491,7 +498,8 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                             fontSize: 12,
                             fontWeight: 800,
                             whiteSpace: "nowrap",
-                            cursor: "pointer",
+                            cursor: canToggleCartMonthly(item) ? "pointer" : "not-allowed",
+                            opacity: canToggleCartMonthly(item) ? 1 : .45,
                             transition: "all .18s ease",
                           }}
                         >
@@ -744,13 +752,13 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </div>
               ) : null}
 
-              {belowMinimum ? (
+              {belowMinimum || mixedCadences ? (
                 <>
                   <Button variant="primary" full disabled style={{ whiteSpace: "nowrap", height: 52, opacity: 0.55, boxShadow: "none", cursor: "not-allowed" }}>
                     {t("checkout")}
                   </Button>
                   <span role="status" style={{ marginTop: -8, textAlign: "center", fontSize: 12.5, fontWeight: 800, color: "var(--red)", lineHeight: 1.6 }}>
-                    {tGive("belowMinCheckout", { amount: minLabel })}
+                    {mixedCadences ? tValidation("mixedDonationCadences") : tGive("belowMinCheckout", { amount: minLabel })}
                   </span>
                 </>
               ) : (

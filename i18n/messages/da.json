@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Kortnummeret er ugyldigt. Kontrollér det.",
     "invalidCardExpiry": "Udløbsdatoen er ugyldig eller overskredet.",
     "invalidCardCvc": "Sikkerhedskoden (CVC) er ugyldig.",
-    "tooManyPaymentAttempts": "For mange betalingsforsøg. Prøv igen senere."
+    "tooManyPaymentAttempts": "For mange betalingsforsøg. Prøv igen senere.",
+    "mixedDonationCadences": "Gennemfør forskellige donationsintervaller med separate betalinger. Kontroller din kurv."
   },
   "waqf": {
     "chooseUnit": "Vælg Enhed",
@@ -2525,5 +2526,16 @@
     "authUnknown": "Login blev ikke fuldført. Prøv igen eller fortsæt som gæst.",
     "donateAsGuest": "Fortsæt donationen som gæst",
     "signInWithGoogle": "Log ind med Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Fuldt refunderet",
+        "PARTIALLY_REFUNDED": "Delvist refunderet",
+        "VOIDED": "Annulleret af banken",
+        "REVIEW_REQUIRED": "Økonomisk gennemgang påkrævet",
+        "balance": "Refunderet: {returned} · Resterende: {remaining}"
+      }
+    }
   }
 }

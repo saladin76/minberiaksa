@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Het kaartnummer is ongeldig. Controleer het.",
     "invalidCardExpiry": "De vervaldatum is ongeldig of verstreken.",
     "invalidCardCvc": "De beveiligingscode (CVC) is ongeldig.",
-    "tooManyPaymentAttempts": "Te veel betaalpogingen. Probeer het later opnieuw."
+    "tooManyPaymentAttempts": "Te veel betaalpogingen. Probeer het later opnieuw.",
+    "mixedDonationCadences": "Rond verschillende donatiefrequenties af met afzonderlijke betalingen. Controleer uw mandje."
   },
   "waqf": {
     "chooseUnit": "Kies het type en aantal van uw bijdrage",
@@ -2525,5 +2526,16 @@
     "authUnknown": "Aanmelden is niet voltooid. Probeer opnieuw of ga verder als gast.",
     "donateAsGuest": "Ga verder met doneren als gast",
     "signInWithGoogle": "Aanmelden met Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Volledig terugbetaald",
+        "PARTIALLY_REFUNDED": "Gedeeltelijk terugbetaald",
+        "VOIDED": "Geannuleerd door de bank",
+        "REVIEW_REQUIRED": "Financiële controle nodig",
+        "balance": "Terugbetaald: {returned} · Resterend: {remaining}"
+      }
+    }
   }
 }

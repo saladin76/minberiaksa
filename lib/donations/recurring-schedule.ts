@@ -90,6 +90,10 @@ export function orderTypeForItems(items: ReadonlyArray<{ freqKey: CartFreqKeyLik
   return recurring ? orderTypeForFreqKey(recurring.freqKey) : "ONE_TIME";
 }
 
+export function cartHasMixedCadences(items: ReadonlyArray<{ freqKey: CartFreqKeyLike }>): boolean {
+  return new Set(items.map(item => item.freqKey)).size > 1;
+}
+
 export function frequencyOfOrderType(type: OrderType): RecurringFrequency | null {
   return type === "ONE_TIME" ? null : type;
 }

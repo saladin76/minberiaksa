@@ -875,7 +875,14 @@
       "paymentMethodCard": "Cartão",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Você cobriu as taxas da transação",
-      "emptyHistoryFiltered": "Nenhuma doação corresponde aos filtros. Tente outro status ou período."
+      "emptyHistoryFiltered": "Nenhuma doação corresponde aos filtros. Tente outro status ou período.",
+      "financial": {
+        "REFUNDED": "Reembolso total",
+        "PARTIALLY_REFUNDED": "Reembolso parcial",
+        "VOIDED": "Anulada pelo banco",
+        "REVIEW_REQUIRED": "Revisão financeira necessária",
+        "balance": "Reembolsado: {returned} · Restante: {remaining}"
+      }
     },
     "subscriptions": {
       "settingsTableTitle": "Assinaturas e configurações",
@@ -2903,7 +2910,8 @@
     "invalidCardNumber": "O número do cartão não é válido. Verifique-o.",
     "invalidCardExpiry": "A data de validade é inválida ou já passou.",
     "invalidCardCvc": "O código de segurança (CVC) não é válido.",
-    "tooManyPaymentAttempts": "Demasiadas tentativas de pagamento. Tente novamente mais tarde."
+    "tooManyPaymentAttempts": "Demasiadas tentativas de pagamento. Tente novamente mais tarde.",
+    "mixedDonationCadences": "Conclua cada frequência de doação em um pagamento separado. Revise sua cesta."
   },
   "waqf": {
     "chooseUnit": "Escolha o tipo e a quantidade da sua contribuição",

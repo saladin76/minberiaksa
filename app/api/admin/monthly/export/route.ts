@@ -38,7 +38,7 @@ import {
 } from "@/lib/dashboard/recurring-frequency-filter";
 import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 
-const FREQUENCY_LABEL_AR = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("أسبوعياً"); }, get MONTHLY() { return dt("شهري"); } } as const;
+const FREQUENCY_LABEL_AR = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("تبرع كل جمعة"); }, get MONTHLY() { return dt("شهري"); } } as const;
 
 export async function GET(request: NextRequest) {
   // Sheet names, headers and labels in the dashboard's interface language.

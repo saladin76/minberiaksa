@@ -312,7 +312,7 @@ function DashboardContent({
         inert={isSidebarOpen}
         className={`flex-1 min-w-0 ${dir === 'rtl' ? 'lg:mr-[268px]' : 'lg:ml-[268px]'}`}
       >
-        <DashboardTopbar
+        <DashboardTopbar showSiteNotifications={userHasDashboardPermission(session?.user, "logs")}
           crumbs={crumbs}
           sidebarOpen={isSidebarOpen}
           onOpenSidebar={() => setIsSidebarOpen(true)}

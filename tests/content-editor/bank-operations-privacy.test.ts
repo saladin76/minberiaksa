@@ -20,6 +20,7 @@ function load(file: string, prisma: Row) {
     "@/lib/dashboard/api-auth": { isRevenueDashboardUser: () => false },
     "@/lib/donations/reconcile-stripe-donation": { reconcileStripeDonation: async () => {} },
     "@/lib/dashboard/donor-account": { donorAccountStatus: () => "REGISTERED" },
+    "@/lib/dashboard/donation-financial-summary": { loadDonationFinancialSummaries: async () => new Map([[donationId, {state:"REFUNDED",returnedMinor:1000,remainingMinor:0,currency:"USD"}]]) },
   };
   runInNewContext(ts.transpileModule(readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { module: loaded, exports: loaded.exports, URL, Date, Set, Map, console: { error() {} }, require: (name: string) => deps[name] || {} });
   return loaded.exports;
@@ -42,4 +43,5 @@ test("personal account donation history excludes internal bank evidence at the d
   });
   const result = await route.GET({}, { params: Promise.resolve({ id: donorId }) });
   assertPrivate(result); assert.equal(result.body.user.donations[0].amount, 10);
+  assert.equal(result.body.user.donations[0].financialSummary.state, "REFUNDED");
 });

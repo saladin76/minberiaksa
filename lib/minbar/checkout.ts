@@ -2,7 +2,7 @@ import type { MinbarCartItem } from "./cart";
 import { rememberGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
-import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
+import { cartHasMixedCadences, orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
 import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/client";
 import { getDonationAttributionPayload } from "@/lib/attribution/client-payload";
 
@@ -263,6 +263,7 @@ function conciergeMarker(): { sessionId: string; intent: string | null; campaign
 }
 
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
+  if (cartHasMixedCadences(input.items)) throw new OrderRejectedError("Separate checkout is required for different donation frequencies", 400, "MIXED_DONATION_FREQUENCIES");
   const { items, categoryItems, waqfItems, unmatched } = toOrderItems(input.items, input.projects, input.projectAliases);
   if (unmatched.length) throw new UnpayableItemsError(unmatched);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
@@ -282,6 +283,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
          ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
       type: orderType(input.items),
+      lineFrequencies: input.items.map(item => item.freqKey),
       timezone: browserTimezone(),
       ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,

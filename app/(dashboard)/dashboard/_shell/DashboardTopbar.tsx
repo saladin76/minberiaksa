@@ -1,5 +1,6 @@
 'use client';
 
+import { SiteNotificationBell } from "@/components/dashboard/SiteNotificationBell";
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ExternalLink, Menu, MessagesSquare, Search, Settings2 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ type Props = {
   showWhatsappInbox?: boolean;
   whatsappInboxCount?: number;
   showGeneralInbox?: boolean;
+  showSiteNotifications?: boolean;
   generalInboxCount?: number;
 };
 
@@ -30,7 +32,7 @@ function WhatsappMark() {
   );
 }
 
-export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, sidebarOpen = false, showWhatsappInbox = false, whatsappInboxCount = 0, showGeneralInbox = false, generalInboxCount = 0 }: Props) {
+export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, sidebarOpen = false, showWhatsappInbox = false, whatsappInboxCount = 0, showGeneralInbox = false, generalInboxCount = 0, showSiteNotifications = false }: Props) {
   const Separator = dir === 'rtl' ? ChevronLeft : ChevronRight;
   const iconButton = "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
   return <header className="sticky top-0 z-20 flex h-16 min-w-0 items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-3 backdrop-blur-md sm:gap-3 sm:px-4 lg:px-6">
@@ -46,6 +48,7 @@ export function DashboardTopbar({ crumbs, onOpenSidebar, onOpenSearch, dir, side
     </div>
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       <button type="button" onClick={onOpenSearch} aria-label={dt("بحث")} className={cn(iconButton, "lg:hidden")}><Search size={18} /></button>
+      {showSiteNotifications ? <SiteNotificationBell /> : null}
       {showWhatsappInbox ? <Link href="/dashboard/communication/inbox" className={cn("relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:w-auto sm:gap-1.5 sm:px-2", whatsappInboxCount > 0 ? "border-emerald-300 bg-emerald-50 hover:bg-emerald-100" : "border-slate-200 bg-white hover:bg-emerald-50")} aria-label={whatsappInboxCount > 0 ? dt("واتساب، {0} محادثة غير مقروءة", [whatsappInboxCount]) : dt("محادثات واتساب")}>
         <WhatsappMark />{whatsappInboxCount > 0 ? <span className="absolute -end-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold tabular-nums text-white ring-2 ring-white sm:static sm:ring-0">{whatsappInboxCount > 99 ? "99+" : whatsappInboxCount}</span> : null}
       </Link> : null}

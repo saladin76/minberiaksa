@@ -1,3 +1,5 @@
+import { subscriptionPaymentSequence } from "@/lib/dashboard/subscription-payment-sequence";
+import { loadDonationFinancialSummaries } from "@/lib/dashboard/donation-financial-summary";
 import type { Prisma } from "@prisma/client";
 import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { donorAccountStatus } from "@/lib/dashboard/donor-account";
@@ -15,7 +17,7 @@ import { authOptions } from "../auth/[...nextauth]/options";
 import { resolveReferralId } from "@/lib/referral-server";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { isRevenueDashboardUser } from "@/lib/dashboard/api-auth";
-import { writeAuditLog, auditStreamForRole } from "@/lib/audit-log";
+import { writeAuditLog } from "@/lib/audit-log";
 import {
   convertAmountInCurrencyToUsd,
   normalizeDonationCurrencyCode,
@@ -226,7 +228,7 @@ export async function GET(request: NextRequest) {
     const frequencyWhere = donationFrequencyWhere(frequencyFilter);
 
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
-    const statusWhere = donationStatusWhere(subscriptionOnly ? "PAID" : statusFilter);
+    const statusWhere = donationStatusWhere(statusFilter);
 
     const providerWhere = isAdmin ? donationProviderWhere(searchParams.get("provider")) : null;
     const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere].filter(
@@ -264,28 +266,12 @@ export async function GET(request: NextRequest) {
     const pageSubscriptionIds = [
       ...new Set(donations.map((d) => d.subscriptionId).filter(Boolean) as string[]),
     ];
-    const cycleById = new Map<string, number>();
-    if (pageSubscriptionIds.length > 0) {
-      const siblings = await prisma.donation.findMany({
-        where: { subscriptionId: { in: pageSubscriptionIds }, status: "PAID", paidAt: { not: null } },
-        select: { id: true, subscriptionId: true, paidAt: true, createdAt: true },
-      });
-      const bySubscription = new Map<string, typeof siblings>();
-      for (const row of siblings) {
-        const key = row.subscriptionId!;
-        const list = bySubscription.get(key) ?? [];
-        list.push(row);
-        bySubscription.set(key, list);
-      }
-      for (const list of bySubscription.values()) {
-        list
-          .sort(
-            (a, b) =>
-              (a.paidAt ?? a.createdAt).getTime() - (b.paidAt ?? b.createdAt).getTime()
-          )
-          .forEach((row, index) => cycleById.set(row.id, index + 1));
-      }
-    }
+    const siblings = pageSubscriptionIds.length ? await prisma.donation.findMany({
+      where: { subscriptionId: { in: pageSubscriptionIds } },
+      select: { id: true, subscriptionId: true, status: true, paidAt: true, createdAt: true, billingReason: true, providerTxnType: true },
+    }) : [];
+    const sequenceById = subscriptionPaymentSequence(siblings);
+    const financialById = await loadDonationFinancialSummaries(prisma, donations.filter(row => ["ALBARAKA", "PAYFOR"].includes(row.provider || "")).map(row => row.id));
 
     // `type` stays MONTHLY for every plan charge (older screens key off it); `frequency` is the
     // plan's real cadence.
@@ -296,12 +282,11 @@ export async function GET(request: NextRequest) {
       securityMode: donationPaymentEvidence(donation).securityMode,
       type: donation.subscriptionId ? ("MONTHLY" as const) : ("ONE_TIME" as const),
       frequency: donation.subscriptionId ? frequencyOf(donation.subscriptionId) : null,
-      subscriptionCycle: donation.subscriptionId ? cycleById.get(donation.id) ?? null : null,
-      isRecurringCharge: donation.subscriptionId
-        ? donationPaymentEvidence(donation).isRecurringCharge || (donation.billingReason
-          ? donation.billingReason !== "subscription_create"
-          : (cycleById.get(donation.id) ?? 1) > 1)
-        : false,
+      subscriptionCycle: sequenceById.get(donation.id)?.subscriptionCycle ?? null,
+      renewalNumber: sequenceById.get(donation.id)?.renewalNumber ?? null,
+      testCycle: sequenceById.get(donation.id)?.testCycle ?? null,
+      isRecurringCharge: sequenceById.get(donation.id)?.isRecurringCharge ?? donationPaymentEvidence(donation).isRecurringCharge,
+      financialSummary: financialById.get(donation.id) ?? null,
       fees: donation.fees,
       teamSupport: donation.teamSupport,
       // Legacy rows can have paymentMethod unset in MongoDB even though every
@@ -610,7 +595,7 @@ export async function POST(request: NextRequest) {
       entityType: "Donation",
       entityId: donation.id,
       metadata: { amountUSD: donationTotalUsd, status: "PENDING", provider: paymentRoute?.gateway ?? null },
-      stream: auditStreamForRole(actorRole),
+      stream: "SITE",
     });
 
     return NextResponse.json({

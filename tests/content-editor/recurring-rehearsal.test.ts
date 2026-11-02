@@ -58,7 +58,7 @@ function fixture() {
   };
   db.$transaction=async (fn: (tx: Row)=>Promise<unknown>)=>fn(db);
   const dependencies: Row = {
-    "server-only":{},"node:crypto":crypto,"../prisma":{prisma:db},"@/lib/prisma":{prisma:db},
+    "./recurring-attribution":{inheritRecurringAttribution:async()=>undefined},"server-only":{},"node:crypto":crypto,"../prisma":{prisma:db},"@/lib/prisma":{prisma:db},
     "../albaraka":albaraka,
     "@/lib/albaraka":{...albaraka,albarakaChargeCurrency:()=>"USD",albarakaRecurringConfig:()=>({...albaraka.albarakaRecurringConfig(),merchantNo:"fixture-merchant",terminalNo:"fixture-terminal",encKey:"fixture-key",enabled:true,mailOrder:false}),isAlbarakaRecurringEnabled:()=>true,
       albarakaService:async (action: string,body: Row)=>{assert.equal(action,"Sale");captures++;bodies.push(body);if(outcome==='unknown')throw Error('timeout');return {ServiceResponseData:{ResponseCode:outcome==='declined'?'05':'0000',ResponseDescription:outcome==='declined'?'Onaylanmadi':'Approved'},AuthCode:'AUTH1',ReferenceCode:'REF1'};},

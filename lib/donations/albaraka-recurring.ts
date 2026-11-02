@@ -1,3 +1,4 @@
+import { inheritRecurringAttribution } from "./recurring-attribution";
 import "server-only";
 import { withRecurringLease } from "./recurring-lease";
 import { runAfterResponse } from "@/lib/events/after-response";
@@ -237,8 +238,10 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
   const cfg = albarakaRecurringConfig();
 
   // ── A row before the call ────────────────────────────────────────────────
+  const attribution = await inheritRecurringAttribution(prisma, sub.id, sub.donorId);
   const donation = await prisma.donation.create({
     data: {
+      ...(attribution ? { attribution } : {}),
       accessToken: mintDonationAccessToken(),
       amount: sub.amount,
       amountUSD,

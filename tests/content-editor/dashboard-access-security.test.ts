@@ -239,6 +239,7 @@ function members(role = "ADMIN", live = 0, targetRole = "DONOR") {
     "@/lib/dashboard/donation-usd-revenue": {},
     "@/lib/dashboard/donor-account": {},
     "@/lib/communication/donor-communication-profile-service": {},
+    "@/lib/dashboard/donation-financial-summary": {},
     "@/lib/prisma": { prisma },
   });
   const invoke = (method: string, body: Row = {}) =>

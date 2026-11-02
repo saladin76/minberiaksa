@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { dt, dashIntl } from "@/lib/dashboard/i18n";
 import type { BankOperation } from "@/lib/donations/bank-operations-core";
+import { DONATION_FINANCIAL_UPDATED } from "@/hooks/useLiveDonationRefresh";
 
 type Details = { sale: { provider: string; orderId: string; reference: string | null; amountMinor: number; currency: string }; operations: BankOperation[]; returnedMinor: number; remainingMinor: number; blocked: boolean; voided: boolean; confirmed: boolean; canManage: boolean; ready: { ready: boolean; reason?: string }; inquiry?: { state: string; code: string; at: string; inspection?: { verified: boolean }; data?: Record<string, unknown> } };
 const label = (state: string) => state === "SUCCEEDED" ? dt("مؤكد لدى البنك") : state === "DECLINED" ? dt("رفضه البنك") : state === "PENDING" ? dt("قيد المعالجة") : dt("نتيجة غير مؤكدة — تحتاج مطابقة");
@@ -56,7 +57,7 @@ export function DonationBankOperations({ donationId }: { donationId: string }) {
       setAction(null); setResolution(null); setConfirmed(false); request.current = null;
       await load();
     } catch (err) { if (current === generation.current) { setConfirmed(false); setAction(null); setResolution(null); setError(errorText(err instanceof Error ? err.message : "UNAVAILABLE")); await load().catch(() => {}); } }
-    finally { if (current === generation.current) { inFlight.current = false; setBusy(false); } }
+    finally { if (current === generation.current) { inFlight.current = false; setBusy(false); window.dispatchEvent(new CustomEvent(DONATION_FINANCIAL_UPDATED, { detail: { donationId } })); } }
   }
   function execute() {
     if (!action || !confirmed) return;

@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export type AuditStream = "TEAM" | "DONOR";
+export type AuditStream = "TEAM" | "DONOR" | "SITE";
 
 export function auditActorFromDashboardSession(session: Session): { actorId: string; actorName: string | null | undefined; actorRole: string } {
   const u = session.user!;

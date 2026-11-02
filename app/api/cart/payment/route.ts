@@ -10,7 +10,7 @@ import { resolveReferralId } from "@/lib/referral-server";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { inferLocaleFromRequest } from "@/lib/preferred-lang";
 import { sanitizeDonationAttribution } from "@/lib/attribution/sanitize";
-import { writeAuditLog, auditStreamForRole } from "@/lib/audit-log";
+import { writeAuditLog } from "@/lib/audit-log";
 import {
   convertAmountInCurrencyToUsd,
   normalizeDonationCurrencyCode,
@@ -158,6 +158,11 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     const body = await request.json();
+    if (body?.lineFrequencies !== undefined) {
+      const expected = ({ ONE_TIME: "once", DAILY: "daily", FRIDAY: "friday", MONTHLY: "monthly" } as Record<string,string>)[body.type || "ONE_TIME"];
+      const count = [body.items, body.categoryItems, body.waqfItems].reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
+      if (!expected || !Array.isArray(body.lineFrequencies) || body.lineFrequencies.length !== count || body.lineFrequencies.some((value: unknown) => value !== expected)) return NextResponse.json({ error: "Separate checkout is required for different donation frequencies", code: "MIXED_DONATION_FREQUENCIES" }, { status: 400 });
+    }
     const {
       items: itemsIn,
       categoryItems: categoryItemsIn,
@@ -773,7 +778,7 @@ export async function POST(request: NextRequest) {
         entityType: "Donation",
         entityId: d.id,
         metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: rail, frequency, timezone, nextChargeAt: consent.nextChargeAt },
-        stream: auditStreamForRole(actorRole),
+        stream: "SITE",
       });
 
       return NextResponse.json({
@@ -870,7 +875,7 @@ export async function POST(request: NextRequest) {
       entityType: "Donation",
       entityId: donationRow.id,
       metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: isBankTransfer ? BANK_TRANSFER_PROVIDER : isPayPal ? "PAYPAL" : "PAYFOR" },
-      stream: auditStreamForRole(actorRole),
+      stream: "SITE",
     });
 
     return NextResponse.json({

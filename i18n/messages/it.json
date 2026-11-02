@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Il numero della carta non è valido. Controllalo.",
     "invalidCardExpiry": "La data di scadenza non è valida o è già passata.",
     "invalidCardCvc": "Il codice di sicurezza (CVC) non è valido.",
-    "tooManyPaymentAttempts": "Troppi tentativi di pagamento. Riprova più tardi."
+    "tooManyPaymentAttempts": "Troppi tentativi di pagamento. Riprova più tardi.",
+    "mixedDonationCadences": "Completa le diverse frequenze di donazione con pagamenti separati. Controlla il carrello."
   },
   "waqf": {
     "chooseUnit": "Scegli tipo e quantità del tuo contributo",
@@ -2525,5 +2526,16 @@
     "authUnknown": "L’accesso non è stato completato. Riprova o continua come ospite.",
     "donateAsGuest": "Continua a donare come ospite",
     "signInWithGoogle": "Accedi con Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Rimborso completo",
+        "PARTIALLY_REFUNDED": "Rimborso parziale",
+        "VOIDED": "Annullata dalla banca",
+        "REVIEW_REQUIRED": "Verifica finanziaria necessaria",
+        "balance": "Rimborsato: {returned} · Residuo: {remaining}"
+      }
+    }
   }
 }

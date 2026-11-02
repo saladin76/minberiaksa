@@ -1,3 +1,4 @@
+import { loadDonationFinancialSummaries } from "@/lib/dashboard/donation-financial-summary";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -70,8 +71,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     ? await inspectPayPalCheckout(donation, { configured: isPayPalConfigured(), readOrder: getPayPalOrder })
     : null;
 
+  const financialSummary = ["ALBARAKA", "PAYFOR"].includes(donation.provider || "") ? (await loadDonationFinancialSummaries(prisma, [id])).get(id) ?? null : null;
   return NextResponse.json({
     id: donation.id,
+    financialSummary,
     provider: donation.provider,
     paymentMethod: donation.paymentMethod,
     status: donation.status,

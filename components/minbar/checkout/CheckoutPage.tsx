@@ -9,6 +9,7 @@ import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { digitsOnly } from "@/lib/minbar/numeric-input";
 import { checkoutFieldIssue, type CheckoutField, type CheckoutFieldIssue } from "@/lib/minbar/checkout-validation";
 import { isFutureExpiry } from "@/lib/minbar/card-validation";
+import { cartHasMixedCadences } from "@/lib/donations/recurring-schedule";
 
 /** Server refusal codes (`app/api/albaraka/3d/initiate`) → `validation` messages. */
 const CARD_ERROR_KEYS: Record<string, string> = {
@@ -17,6 +18,7 @@ const CARD_ERROR_KEYS: Record<string, string> = {
   INVALID_CARD_EXPIRY: "invalidCardExpiry",
   INVALID_CARD_CVC: "invalidCardCvc",
   TOO_MANY_ATTEMPTS: "tooManyPaymentAttempts",
+  MIXED_DONATION_FREQUENCIES: "mixedDonationCadences",
 };
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Link from "next/link";
@@ -361,6 +363,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
    */
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (cartHasMixedCadences(items)) { setError(tValidation("mixedDonationCadences")); return; }
     if (submitting || !items.length) return;
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
@@ -639,6 +642,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
       <section style={{ padding: "0 0 64px" }}>
         <div id="pay-grid" style={{ maxWidth: 880, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 0, alignItems: "start" }}>
+          {cartHasMixedCadences(items) ? <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{tValidation("mixedDonationCadences")}</p> : null}
           <form ref={formRef} className="pay-form" style={{ display: "grid", gap: 22 }} onSubmit={onSubmit} onChange={() => { setInvalidField(null); setError(null); }} noValidate>
             {/* ── Donor details ──────────────────────────────────────────── */}
             <div className="pay-card" style={cardBox}>
@@ -989,7 +993,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             {method === "paypal" ? (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum}
+                disabled={submitting || !items.length || belowMinimum || cartHasMixedCadences(items)}
                 className="pay-paypal"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", height: 52, border: 0, borderRadius: 8, background: "#FFC439", color: "#10212B", fontFamily: "inherit", fontWeight: 900, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 16px rgba(255,196,57,.35)", boxSizing: "border-box", transition: "filter .18s ease, transform .18s ease" }}
               >
@@ -1000,7 +1004,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable)}
+                disabled={submitting || !items.length || belowMinimum || cartHasMixedCadences(items) || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}

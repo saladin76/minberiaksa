@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Numri i kartës nuk është i vlefshëm. Ju lutem kontrollojeni.",
     "invalidCardExpiry": "Data e skadimit është e pavlefshme ose ka kaluar.",
     "invalidCardCvc": "Kodi i sigurisë (CVC) nuk është i vlefshëm.",
-    "tooManyPaymentAttempts": "Shumë përpjekje pagese. Ju lutem provoni më vonë."
+    "tooManyPaymentAttempts": "Shumë përpjekje pagese. Ju lutem provoni më vonë.",
+    "mixedDonationCadences": "Përfundoni frekuencat e ndryshme të dhurimit me pagesa të veçanta. Kontrolloni shportën."
   },
   "waqf": {
     "chooseUnit": "Zgjidhni tipin dhe numrin e kontributit",
@@ -2525,5 +2526,16 @@
     "authUnknown": "Hyrja nuk u përfundua. Provoni sërish ose vazhdoni si vizitor.",
     "donateAsGuest": "Vazhdoni dhurimin si vizitor",
     "signInWithGoogle": "Hyni me Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Rimbursuar plotësisht",
+        "PARTIALLY_REFUNDED": "Rimbursuar pjesërisht",
+        "VOIDED": "Anuluar nga banka",
+        "REVIEW_REQUIRED": "Nevojitet shqyrtim financiar",
+        "balance": "Rimbursuar: {returned} · Mbetur: {remaining}"
+      }
+    }
   }
 }

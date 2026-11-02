@@ -96,6 +96,7 @@ const STATUS_PILL: Record<AttributionStatus, string> = {
   ga4_inferred: "bg-sky-50 text-sky-700 border-sky-200",
   utm_only: "bg-amber-50 text-amber-700 border-amber-200",
   organic: "bg-slate-50 text-slate-600 border-slate-200",
+  unknown: "bg-slate-50 text-slate-600 border-slate-200",
   direct: "bg-slate-50 text-slate-600 border-slate-200",
   tracking_issue: "bg-rose-50 text-rose-700 border-rose-200",
 };
@@ -109,6 +110,7 @@ const ALL_STATUSES: AttributionStatus[] = [
   "organic",
   "direct",
   "tracking_issue",
+  "unknown",
 ];
 
 const ISSUE_CARDS: {

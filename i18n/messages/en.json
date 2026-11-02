@@ -875,7 +875,14 @@
       "paymentMethodCard": "Card",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "You covered transaction fees",
-      "emptyHistoryFiltered": "No donations match your filters. Try another payment status or time period."
+      "emptyHistoryFiltered": "No donations match your filters. Try another payment status or time period.",
+      "financial": {
+        "REFUNDED": "Fully refunded",
+        "PARTIALLY_REFUNDED": "Partially refunded",
+        "VOIDED": "Voided by the bank",
+        "REVIEW_REQUIRED": "Financial review required",
+        "balance": "Returned: {returned} · Remaining: {remaining}"
+      }
     },
     "subscriptions": {
       "settingsTableTitle": "Subscriptions & Settings",
@@ -2903,7 +2910,8 @@
     "invalidCardNumber": "The card number is not valid. Please check it.",
     "invalidCardExpiry": "The expiry date is invalid or has passed.",
     "invalidCardCvc": "The security code (CVC) is not valid.",
-    "tooManyPaymentAttempts": "Too many payment attempts. Please try again later."
+    "tooManyPaymentAttempts": "Too many payment attempts. Please try again later.",
+    "mixedDonationCadences": "Complete different donation frequencies in separate payments. Review your basket."
   },
   "waqf": {
     "chooseUnit": "Choose your contribution type and quantity",

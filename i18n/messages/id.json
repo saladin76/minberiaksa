@@ -875,7 +875,14 @@
       "paymentMethodCard": "Kartu",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Anda menanggung biaya transaksi",
-      "emptyHistoryFiltered": "Tidak ada donasi yang cocok dengan filter. Coba status atau periode lain."
+      "emptyHistoryFiltered": "Tidak ada donasi yang cocok dengan filter. Coba status atau periode lain.",
+      "financial": {
+        "REFUNDED": "Dikembalikan seluruhnya",
+        "PARTIALLY_REFUNDED": "Dikembalikan sebagian",
+        "VOIDED": "Dibatalkan oleh bank",
+        "REVIEW_REQUIRED": "Perlu tinjauan keuangan",
+        "balance": "Dikembalikan: {returned} · Tersisa: {remaining}"
+      }
     },
     "subscriptions": {
       "settingsTableTitle": "Langganan & pengaturan",
@@ -2903,7 +2910,8 @@
     "invalidCardNumber": "Nomor kartu tidak valid. Silakan periksa kembali.",
     "invalidCardExpiry": "Tanggal kedaluwarsa tidak valid atau sudah lewat.",
     "invalidCardCvc": "Kode keamanan (CVC) tidak valid.",
-    "tooManyPaymentAttempts": "Terlalu banyak percobaan pembayaran. Silakan coba lagi nanti."
+    "tooManyPaymentAttempts": "Terlalu banyak percobaan pembayaran. Silakan coba lagi nanti.",
+    "mixedDonationCadences": "Selesaikan frekuensi donasi yang berbeda melalui pembayaran terpisah. Periksa keranjang Anda."
   },
   "waqf": {
     "chooseUnit": "Pilih jenis dan jumlah kontribusi Anda",

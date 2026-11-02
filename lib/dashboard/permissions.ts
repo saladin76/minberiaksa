@@ -109,6 +109,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/users/team", key: "team" },
   { prefix: "/dashboard/security", key: "logs" },
   { prefix: "/dashboard/logs", key: "logs" },
+  { prefix: "/dashboard/notifications", key: "logs" },
   { prefix: "/dashboard/badges", key: "badges" },
   { prefix: "/dashboard/communication", key: "messages" },
   // Without its own rule /dashboard/inbox fell through to the "/dashboard → revenue" catch-all,

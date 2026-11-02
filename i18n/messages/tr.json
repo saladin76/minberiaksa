@@ -875,7 +875,14 @@
       "paymentMethodCard": "Kart",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "İşlem ücretlerini karşıladınız",
-      "emptyHistoryFiltered": "Filtrelere uyan bağış yok. Başka bir durum veya dönem deneyin."
+      "emptyHistoryFiltered": "Filtrelere uyan bağış yok. Başka bir durum veya dönem deneyin.",
+      "financial": {
+        "REFUNDED": "Tamamen iade edildi",
+        "PARTIALLY_REFUNDED": "Kısmen iade edildi",
+        "VOIDED": "Banka tarafından iptal edildi",
+        "REVIEW_REQUIRED": "Mali inceleme gerekli",
+        "balance": "İade: {returned} · Kalan: {remaining}"
+      }
     },
     "subscriptions": {
       "settingsTableTitle": "Abonelikler ve ayarlar",
@@ -2903,7 +2910,8 @@
     "invalidCardNumber": "Kart numarası geçersiz, lütfen kontrol edin.",
     "invalidCardExpiry": "Son kullanma tarihi geçersiz veya geçmiş.",
     "invalidCardCvc": "Güvenlik kodu (CVC) geçersiz.",
-    "tooManyPaymentAttempts": "Çok fazla ödeme denemesi. Lütfen daha sonra tekrar deneyin."
+    "tooManyPaymentAttempts": "Çok fazla ödeme denemesi. Lütfen daha sonra tekrar deneyin.",
+    "mixedDonationCadences": "Farklı bağış sıklıkları için ayrı ödeme yapın. Sepetinizi kontrol edin."
   },
   "waqf": {
     "chooseUnit": "Katkı Türünüzü ve Adedini Seçin",

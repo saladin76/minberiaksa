@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "Kortnumret är ogiltigt. Kontrollera det.",
     "invalidCardExpiry": "Utgångsdatumet är ogiltigt eller har passerat.",
     "invalidCardCvc": "Säkerhetskoden (CVC) är ogiltig.",
-    "tooManyPaymentAttempts": "För många betalningsförsök. Försök igen senare."
+    "tooManyPaymentAttempts": "För många betalningsförsök. Försök igen senare.",
+    "mixedDonationCadences": "Slutför olika donationsintervall med separata betalningar. Kontrollera din varukorg."
   },
   "waqf": {
     "chooseUnit": "Välj typ och antal för ditt bidrag",
@@ -2525,5 +2526,16 @@
     "authUnknown": "Inloggningen slutfördes inte. Försök igen eller fortsätt som gäst.",
     "donateAsGuest": "Fortsätt donera som gäst",
     "signInWithGoogle": "Logga in med Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Helt återbetald",
+        "PARTIALLY_REFUNDED": "Delvis återbetald",
+        "VOIDED": "Makulerad av banken",
+        "REVIEW_REQUIRED": "Ekonomisk granskning krävs",
+        "balance": "Återbetalt: {returned} · Återstående: {remaining}"
+      }
+    }
   }
 }

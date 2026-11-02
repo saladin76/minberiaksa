@@ -30,7 +30,7 @@ export type ExportRecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 
 const FREQUENCY_LABEL_AR: Record<ExportRecurringFrequency, string> = {
   get DAILY() { return dt("يومي"); },
-  get FRIDAY() { return dt("أسبوعياً"); },
+  get FRIDAY() { return dt("تبرع كل جمعة"); },
   get MONTHLY() { return dt("شهري"); },
 };
 

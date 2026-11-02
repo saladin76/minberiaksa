@@ -148,6 +148,9 @@ jobs:
           - name: Bank operations
             artifact: bank-operations
             script: scripts/bank-operations-browser-test.mjs
+          - name: Donation experience
+            artifact: donation-experience
+            script: scripts/donation-experience-browser-test.mjs
           - name: Campaign revenue and recovery
             artifact: campaign-recovery
             script: scripts/campaign-recovery-browser-test.mjs

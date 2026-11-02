@@ -875,7 +875,14 @@
       "paymentMethodCard": "Karte",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Du hast die Transaktionsgebühren übernommen",
-      "emptyHistoryFiltered": "Keine Spenden entsprechen deinen Filtern. Versuche einen anderen Zahlungsstatus oder Zeitraum."
+      "emptyHistoryFiltered": "Keine Spenden entsprechen deinen Filtern. Versuche einen anderen Zahlungsstatus oder Zeitraum.",
+      "financial": {
+        "REFUNDED": "Vollständig erstattet",
+        "PARTIALLY_REFUNDED": "Teilweise erstattet",
+        "VOIDED": "Von der Bank storniert",
+        "REVIEW_REQUIRED": "Finanzprüfung erforderlich",
+        "balance": "Erstattet: {returned} · Verbleibend: {remaining}"
+      }
     },
     "subscriptions": {
       "settingsTableTitle": "Abonnements & Einstellungen",
@@ -2903,7 +2910,8 @@
     "invalidCardNumber": "Die Kartennummer ist ungültig. Bitte prüfen Sie sie.",
     "invalidCardExpiry": "Das Ablaufdatum ist ungültig oder abgelaufen.",
     "invalidCardCvc": "Der Sicherheitscode (CVC) ist ungültig.",
-    "tooManyPaymentAttempts": "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut."
+    "tooManyPaymentAttempts": "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut.",
+    "mixedDonationCadences": "Schließen Sie verschiedene Spendenintervalle mit getrennten Zahlungen ab. Prüfen Sie Ihren Warenkorb."
   },
   "waqf": {
     "chooseUnit": "Wählen Sie Art und Anzahl Ihres Beitrags",

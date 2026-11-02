@@ -5,6 +5,7 @@ import { authOptions } from '../../../auth/[...nextauth]/options';
 import { userCanViewUserProfilesInDashboard } from '@/lib/dashboard/permissions';
 import { donationRowUsdApprox } from '@/lib/dashboard/donation-usd-revenue';
 import { loadSubscriptionFrequencies } from '@/lib/dashboard/recurring-frequency-filter';
+import { loadDonationFinancialSummaries } from '@/lib/dashboard/donation-financial-summary';
 
 /**
  * GET /api/users/[id]/donations
@@ -34,6 +35,7 @@ export async function GET(
       where: { donorId: id },
       select: {
         id: true,
+        provider: true,
         amount: true,
         amountUSD: true,
         totalAmount: true,
@@ -55,12 +57,14 @@ export async function GET(
       donations.map((d) => d.subscriptionId).filter((sid): sid is string => Boolean(sid))
     );
 
+    const financial = await loadDonationFinancialSummaries(prisma, donations.filter(row => ["ALBARAKA", "PAYFOR"].includes(row.provider || "")).map(row => row.id));
     const rows = donations.map((d) => {
       const outcome =
         d.status === 'FAILED' ? 'FAILED' : d.paidAt != null ? 'SUCCESS' : 'PENDING';
       return {
         id: d.id,
         outcome,
+        financialSummary: financial.get(d.id) ?? null,
         subscriptionId: d.subscriptionId,
         frequency: d.subscriptionId ? frequencyOf(d.subscriptionId) : null,
         amount: d.totalAmount ?? d.amount,

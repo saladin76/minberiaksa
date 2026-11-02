@@ -1,6 +1,15 @@
 import type { Prisma } from "@prisma/client";
 
 export const DONATION_ATTRIBUTION_KEYS = [
+  "attribution_origin",
+  "acquisition_kind",
+  "source_capture",
+  "source_captured_at",
+  "snap_click_id",
+  "scid",
+  "scclid",
+  "li_fat_id",
+  "rdt_cid",
   "utm_source",
   "utm_medium",
   "utm_campaign",
@@ -44,6 +53,7 @@ export const DONATION_ATTRIBUTION_KEYS = [
   "objective",
   "fbclid",
   "gclid",
+  "dclid",
   "gbraid",
   "wbraid",
   "ttclid",
@@ -134,9 +144,10 @@ function qualityWarnings(out: Record<string, string>): string[] {
   for (const [key, value] of Object.entries(out)) {
     if (key.endsWith("_unresolved") || hasUnresolvedMacro(value)) warnings.push(`unresolved_macro:${key.replace(/_unresolved$/, "")}`);
   }
+  if (out.attribution_origin === "subscription_signup") return warnings;
   const platform = normalizePlatform(out.platform ?? out.utm_source);
   if (platform === "meta" && !out.fbclid && !out.fbc && !out.fbp) warnings.push("meta_missing_fb_click_ids");
-  if (platform === "google_ads" && !out.gclid && !out.gbraid && !out.wbraid) warnings.push("google_missing_click_ids");
+  if (platform === "google_ads" && !out.gclid && !out.gbraid && !out.wbraid && !out.dclid) warnings.push("google_missing_click_ids");
   if (platform === "tiktok" && !out.ttclid) warnings.push("tiktok_missing_ttclid");
   if (platform === "x" && !out.twclid) warnings.push("x_missing_twclid");
   return warnings;
@@ -144,7 +155,8 @@ function qualityWarnings(out: Record<string, string>): string[] {
 
 export function sanitizeDonationAttribution(raw: unknown): Prisma.InputJsonValue | undefined {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-  const src = raw as Record<string, unknown>;
+  const original = raw as Record<string, unknown>;
+  const src = { ...original, scclid: original.scclid || original.ScCid || original.sccid || original.sc_click_id } as Record<string, unknown>;
   const out: Record<string, string> = {};
   for (const key of DONATION_ATTRIBUTION_KEYS) {
     const v = src[key];

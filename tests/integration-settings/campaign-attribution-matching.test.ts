@@ -386,7 +386,7 @@ test("actual email, SMS and approved Meta campaign links survive checkout captur
   const window={location:{href:url,search:new URL(url).search}};
   const loaded={exports:{} as {captureAttributionFromUrl:()=>void;getDonationAttributionPayload:()=>Record<string,string>}};
   const output=ts.transpileModule(fs.readFileSync("lib/attribution/client-payload.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,window,document,Date,Math,URLSearchParams,sessionStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value)},require:(name:string)=>name==="./sanitize"?attributionSanitize:{captureStoredClickIds:()=>({})}});
+  new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,window,document,Date,Math,URLSearchParams,sessionStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value),removeItem:(key:string)=>storage.delete(key)},require:(name:string)=>name==="./sanitize"?attributionSanitize:{captureStoredClickIds:()=>({}),clearStoredClickIds:()=>{}}});
   loaded.exports.captureAttributionFromUrl();
   window.location={href:"https://minberiaksa.org/en/checkout?currency=EUR",search:"?currency=EUR"};
   const snapshot=attributionSanitize.sanitizeDonationAttribution(loaded.exports.getDonationAttributionPayload());

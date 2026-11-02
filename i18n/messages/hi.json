@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "कार्ड नंबर मान्य नहीं है। कृपया जाँच करें।",
     "invalidCardExpiry": "समाप्ति तिथि अमान्य है या बीत चुकी है।",
     "invalidCardCvc": "सुरक्षा कोड (CVC) मान्य नहीं है।",
-    "tooManyPaymentAttempts": "भुगतान के बहुत अधिक प्रयास। कृपया बाद में पुनः प्रयास करें।"
+    "tooManyPaymentAttempts": "भुगतान के बहुत अधिक प्रयास। कृपया बाद में पुनः प्रयास करें।",
+    "mixedDonationCadences": "अलग-अलग दान आवृत्तियों के लिए अलग भुगतान करें। अपनी टोकरी की समीक्षा करें।"
   },
   "waqf": {
     "chooseUnit": "इकाई चुनें",
@@ -2525,5 +2526,16 @@
     "authUnknown": "साइन इन पूरा नहीं हुआ। फिर कोशिश करें या अतिथि के रूप में जारी रखें।",
     "donateAsGuest": "अतिथि के रूप में दान जारी रखें",
     "signInWithGoogle": "Google से साइन इन करें"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "पूरी राशि वापस की गई",
+        "PARTIALLY_REFUNDED": "आंशिक राशि वापस की गई",
+        "VOIDED": "बैंक द्वारा रद्द",
+        "REVIEW_REQUIRED": "वित्तीय समीक्षा आवश्यक",
+        "balance": "वापस की गई: {returned} · शेष: {remaining}"
+      }
+    }
   }
 }

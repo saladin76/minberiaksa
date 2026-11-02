@@ -875,7 +875,14 @@
       "paymentMethodCard": "Carte",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Vous avez couvert les frais",
-      "emptyHistoryFiltered": "Aucun don ne correspond aux filtres. Essayez un autre statut ou une autre période."
+      "emptyHistoryFiltered": "Aucun don ne correspond aux filtres. Essayez un autre statut ou une autre période.",
+      "financial": {
+        "REFUNDED": "Remboursement intégral",
+        "PARTIALLY_REFUNDED": "Remboursement partiel",
+        "VOIDED": "Annulé par la banque",
+        "REVIEW_REQUIRED": "Vérification financière nécessaire",
+        "balance": "Remboursé : {returned} · Restant : {remaining}"
+      }
     },
     "subscriptions": {
       "settingsTableTitle": "Abonnements et paramètres",
@@ -2903,7 +2910,8 @@
     "invalidCardNumber": "Le numéro de carte n'est pas valide. Veuillez le vérifier.",
     "invalidCardExpiry": "La date d'expiration est invalide ou dépassée.",
     "invalidCardCvc": "Le code de sécurité (CVC) n'est pas valide.",
-    "tooManyPaymentAttempts": "Trop de tentatives de paiement. Veuillez réessayer plus tard."
+    "tooManyPaymentAttempts": "Trop de tentatives de paiement. Veuillez réessayer plus tard.",
+    "mixedDonationCadences": "Effectuez un paiement distinct pour chaque fréquence de don. Vérifiez votre panier."
   },
   "waqf": {
     "chooseUnit": "Choisissez le type et le nombre de parts",

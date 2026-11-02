@@ -81,6 +81,7 @@ test("bank request currency conversion remains an attempted amount and never bec
 function routeHarness({ session = { user: { role: "ADMIN" } } as unknown, allowed = true, row = donation as typeof donation | null } = {}) {
   const reads: string[] = [];
   const dependencies: Record<string, unknown> = {
+    "@/lib/dashboard/donation-financial-summary": { loadDonationFinancialSummaries: async () => new Map() },
     "@/lib/donations/card-last-four": cardTrace,
     "@/lib/card-crypto": { decryptCard: () => { throw new Error("unexpected fixture decryption"); } },
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number; headers?: Record<string, string> }) => ({ body, status: options?.status ?? 200, headers: options?.headers }) } },

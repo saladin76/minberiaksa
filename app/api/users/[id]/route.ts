@@ -14,6 +14,7 @@ import { PAID_DONATION_FILTER } from '@/lib/dashboard/donation-usd-revenue';
 import { setProfileConsent, upsertProfileForUser } from '@/lib/communication/donor-communication-profile-service';
 
 import { donorAccountStatus } from "@/lib/dashboard/donor-account";
+import { loadDonationFinancialSummaries } from "@/lib/dashboard/donation-financial-summary";
 
 function roleLabelAr(r: string) {
   if (r === 'ADMIN') return 'مدير';
@@ -84,6 +85,7 @@ export async function GET(
       );
     }
 
+    const financialSummaries = await loadDonationFinancialSummaries(prisma, user.donations.filter(d => d.provider === 'ALBARAKA' || d.provider === 'PAYFOR').map(d => d.id));
     const oneTimeDonations = user.donations.filter((d) => d.subscriptionId == null);
     const monthlyDonations = user.donations.filter((d) => d.subscriptionId != null);
 
@@ -94,6 +96,7 @@ export async function GET(
         type,
         /** Donation charge status (PAID / FAILED)  unchanged for revenue totals */
         paymentStatus: d.status,
+        financialSummary: financialSummaries.get(d.id) ?? null,
         status: type === 'MONTHLY' ? (sub?.status ?? null) : d.status,
         /** The plan's cadence  DAILY | FRIDAY | MONTHLY. `type` stays "MONTHLY" for every plan: it means "recurring" to every consumer. */
         frequency: type === 'MONTHLY' ? (sub?.frequency ?? 'MONTHLY') : null,

@@ -1853,7 +1853,8 @@
     "invalidCardNumber": "カード番号が無効です。ご確認ください。",
     "invalidCardExpiry": "有効期限が無効か、すでに過ぎています。",
     "invalidCardCvc": "セキュリティコード（CVC）が無効です。",
-    "tooManyPaymentAttempts": "支払いの試行回数が多すぎます。しばらくしてから再度お試しください。"
+    "tooManyPaymentAttempts": "支払いの試行回数が多すぎます。しばらくしてから再度お試しください。",
+    "mixedDonationCadences": "寄付の頻度ごとに別々のお支払いを完了してください。カートをご確認ください。"
   },
   "waqf": {
     "chooseUnit": "単位を選ぶ",
@@ -2525,5 +2526,16 @@
     "authUnknown": "ログインが完了しませんでした。再試行するか、ゲストとして続けてください。",
     "donateAsGuest": "ゲストとして寄付を続ける",
     "signInWithGoogle": "Googleでログイン"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "全額返金済み",
+        "PARTIALLY_REFUNDED": "一部返金済み",
+        "VOIDED": "銀行による取消",
+        "REVIEW_REQUIRED": "会計上の確認が必要",
+        "balance": "返金済み: {returned} · 残額: {remaining}"
+      }
+    }
   }
 }

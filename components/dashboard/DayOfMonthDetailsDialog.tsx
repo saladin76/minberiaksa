@@ -69,7 +69,7 @@ const STATUS_CLASS: Record<PlanStatus, string> = {
 
 const FREQUENCY_LABEL: Record<"DAILY" | "FRIDAY" | "MONTHLY", string> = {
   get DAILY() { return dt("يومي"); },
-  get FRIDAY() { return dt("أسبوعياً"); },
+  get FRIDAY() { return dt("تبرع كل جمعة"); },
   get MONTHLY() { return dt("شهري"); },
 };
 
