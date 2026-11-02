@@ -2535,7 +2535,9 @@
         "VOIDED": "بینک نے منسوخ کر دیا",
         "REVIEW_REQUIRED": "مالی جائزہ درکار ہے",
         "balance": "واپس شدہ: {returned} · باقی: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "باقاعدہ عطیات کے مہینے",
+      "recurringGivingMonthsHint": "منتخب مدت میں باقاعدہ عطیات کی تصدیق شدہ ادائیگیوں والے مہینے"
     }
   }
 }

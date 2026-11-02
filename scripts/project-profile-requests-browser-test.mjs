@@ -45,6 +45,18 @@ const catalogues={en:require('../lib/dashboard/i18n/catalog/en.json'),tr:require
 const label=(locale,text)=>locale==='ar'?text:catalogues[locale][text]||text;
 const errors=[],writes=[];
 const donation={id:'e'.repeat(24),amount:20,totalAmount:20,currency:'EUR',type:'MONTHLY',status:'ACTIVE',paymentStatus:'PAID',paidAt:'2026-10-01T12:00:00Z',createdAt:'2026-10-01T12:00:00Z',subscriptionId:planId,subscriptionProvider:'ALBARAKA',frequency:'MONTHLY',nextBillingDate:'2030-12-01T12:00:00Z',items:[{id:'item',amount:20,campaign:{title:'Project A'}}]};
+const statsDonations=[
+ donation,
+ {...donation,id:'stats-failed-1',paymentStatus:'FAILED',paidAt:null},
+ {...donation,id:'stats-failed-2',paymentStatus:'FAILED',paidAt:null},
+ {...donation,id:'stats-pending',paymentStatus:'PENDING',paidAt:null},
+ {...donation,id:'stats-unsettled',paidAt:null},
+ {...donation,id:'stats-oct-repeat',paidAt:'2026-10-03T12:00:00Z'},
+ {...donation,id:'stats-daily',frequency:'DAILY',subscriptionId:'daily-plan',paidAt:'2026-11-01T12:00:00Z'},
+ {...donation,id:'stats-closed',subscriptionId:closedPlanId,status:'CANCELLED',paidAt:'2026-09-01T12:00:00Z'},
+ {...donation,id:'stats-qa',billingReason:'subscription_test_cycle',paidAt:'2026-08-01T12:00:00Z'},
+ {...donation,id:'stats-once',type:'ONE_TIME',subscriptionId:null,paidAt:'2026-07-01T12:00:00Z'},
+];
 const summary={profile:{id:donor,name:'Fixture Donor',email:'fixture@example.test',phone:null,birthdate:null,address:null,memberSince:'2026-01-01T00:00:00Z'},donations:[{id:donation.id,date:donation.paidAt,amount:20,currency:'EUR',titles:['Project A'],recurring:true}],pendingTransfers:[],totalDonatedUSD:22,donationCount:1,activeSubscriptions:1};
 const server=createServer(async(req,res)=>{
  const url=new URL(req.url,'http://fixture');const json=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data))};
@@ -72,7 +84,7 @@ const server=createServer(async(req,res)=>{
    const row={id:(tickets.length?'f':'9').repeat(24),status:'NEW',kind:body.kind,requestedAmount:body.kind==='AMOUNT_CHANGE'?body.amount:null,currency:'EUR',note:body.note,createdAt:now,updatedAt:now,history:[{status:'NEW',at:now,actorRole:'DONOR'}]};tickets.unshift(row);return json({request:row,billingChanged:false},201);
   }
   if(url.pathname==='/api/users/me/account-summary')return json({summary});
-  if(url.pathname===`/api/users/${donor}`)return json({user:{id:donor,name:'Fixture Donor',email:'fixture@example.test',donations:profileMode==='empty'?[]:profileMode==='multi'?[donation,{...donation,id:'6'.repeat(24),createdAt:'2026-09-01T00:00:00Z'},{...donation,id:'5'.repeat(24),subscriptionId:closedPlanId,status:'CANCELLED',currency:'USD',totalAmount:7,items:[]}]:[donation],totalDonationsCount:1,totalDonatedAmountUSD:22,activeSubscriptionsCount:1,badgeIds:[]}});
+  if(url.pathname===`/api/users/${donor}`)return json({user:{id:donor,name:'Fixture Donor',email:'fixture@example.test',donations:profileMode==='stats'?statsDonations:profileMode==='empty'?[]:profileMode==='multi'?[donation,{...donation,id:'6'.repeat(24),createdAt:'2026-09-01T00:00:00Z'},{...donation,id:'5'.repeat(24),subscriptionId:closedPlanId,status:'CANCELLED',currency:'USD',totalAmount:7,items:[]}]:[donation],totalDonationsCount:1,totalDonatedAmountUSD:22,activeSubscriptionsCount:1,badgeIds:[]}});
   return json({error:'Unexpected fixture request '+url.pathname},404);
  }
  if(url.pathname.endsWith('/account')){res.writeHead(307,{Location:url.pathname.replace(/account$/,'profile')+'?tab=overview'});return res.end()}
@@ -86,14 +98,22 @@ const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROM
 let checks=0,currentPage;
 try{
  for(const locale of ['ar','en','tr'])for(const width of [320,390,1440]){
-  reset();const context=await browser.newContext({viewport:{width,height:1000}}),page=await context.newPage();currentPage=page;
-  page.on('pageerror',error=>errors.push(error.message));await page.route('**/*',route=>route.request().url().startsWith(origin)||route.request().url().startsWith('data:')?route.continue():route.abort());
+  reset();const context=await browser.newContext({viewport:{width,height:1000},timezoneId:"Europe/Istanbul"}),page=await context.newPage();currentPage=page;
+  await page.clock.setFixedTime('2026-11-02T12:00:00Z');page.on('pageerror',error=>errors.push(error.message));await page.route('**/*',route=>route.request().url().startsWith(origin)||route.request().url().startsWith('data:')?route.continue():route.abort());
   await page.goto(`${origin}/${locale}/bagislar?lang=${locale}`);
   const identities=()=>page.locator('[data-project-id]').evaluateAll(rows=>rows.map(row=>row.dataset.projectId));
   await expect(page.locator('[data-project-id]')).toHaveCount(3);assert.deepEqual(await identities(),ids);checks++;
   await page.getByRole('button',{name:'Category A',exact:false}).click();assert.deepEqual(await identities(),[ids[1],ids[0]]);checks++;
   await page.getByRole('button',{name:'Category B',exact:false}).click();assert.deepEqual(await identities(),[ids[0],ids[2]]);checks++;
   const profileLinks=page.locator(`a[href='/${locale}/profile?tab=donations']`);assert.ok(await profileLinks.count()>=2);await profileLinks.filter({visible:true}).first().click();await expect(page.locator('aside button[aria-current="page"]')).toContainText(messages[locale].Profile.nav.donations);assert.equal(new URL(page.url()).searchParams.get('tab'),'donations');checks++;
+  await page.goto(`${origin}/${locale}/profile?tab=donations&lang=${locale}&profileMode=stats`);
+  const months=page.getByRole('group',{name:messages[locale].Profile.donations.recurringGivingMonths,exact:true});
+  await expect(months.locator('p').nth(1)).toHaveText('3');await expect(months).toContainText(messages[locale].Profile.donations.recurringGivingMonthsHint);await expect(months).not.toContainText(messages[locale].Profile.donations.activeSubscription);checks++;
+  const period=page.getByRole('combobox',{name:messages[locale].Profile.donations.timePeriod,exact:true});
+  await period.click();await page.getByRole('option',{name:messages[locale].Profile.donations.thisMonth,exact:true}).click();await expect(months.locator('p').nth(1)).toHaveText('1');checks++;
+  await period.click();await page.getByRole('option',{name:messages[locale].Profile.donations.thisYear,exact:true}).click();await expect(months.locator('p').nth(1)).toHaveText('3');checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await page.screenshot({path:path.join(output,`${locale}-${width}-giving-months.png`),fullPage:true});checks++;
+  await page.goto(`${origin}/${locale}/profile?tab=donations&lang=${locale}`);
   const overview=subscriptionRequestFollowUp(locale)[11];const navControl=width<1024?page.getByRole('tab',{name:overview,exact:true}):page.getByRole('button',{name:new RegExp(overview)});
   await navControl.click();await expect(page.locator('.acc-page')).toBeVisible();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await page.screenshot({path:path.join(output,`${locale}-${width}-overview.png`),fullPage:true});assert.equal(new URL(page.url()).searchParams.get('tab'),'overview');checks++;
   const recurringLabel=messages[locale].Profile.nav.subscriptions;await (width<1024?page.getByRole('tab',{name:recurringLabel,exact:true}):page.getByRole('button',{name:new RegExp(recurringLabel)})).click();
@@ -106,10 +126,10 @@ try{
   await requestsControl.click();
   const requestSection=page.getByRole('region',{name:requestNav.title,exact:true});
   await expect(requestSection.getByLabel(requestNav.selectPlan,{exact:true})).toHaveValue(planId);await expect(requestSection.getByText(follow[3],{exact:true}).filter({visible:true})).toBeVisible();assert.equal(new URL(page.url()).searchParams.get('tab'),'requests');checks++;
-  await requestSection.getByRole('combobox').last().selectOption('PAUSE');await requestSection.getByRole('button',{name:copy[6],exact:true}).click();await expect(requestSection.getByText(copy[7],{exact:true})).toBeVisible();await expect(requestSection.getByText(follow[5],{exact:true})).toBeVisible();checks++;
+  await requestSection.getByLabel(copy[0],{exact:true}).selectOption('PAUSE');await requestSection.getByRole('button',{name:copy[6],exact:true}).click();await expect(requestSection.getByText(copy[7],{exact:true})).toBeVisible();await expect(requestSection.getByText(follow[5],{exact:true})).toBeVisible();checks++;
   await page.goto(`${origin}/${locale}/profile?tab=requests&subscriptionId=${planId}&lang=${locale}&profileMode=multi`);
   await expect(page.getByRole('region',{name:requestNav.title,exact:true}).getByLabel(requestNav.selectPlan,{exact:true})).toHaveValue(planId);
-  await expect(page.getByLabel(requestNav.selectPlan,{exact:true}).locator('option')).toHaveCount(2);await page.getByRole('region',{name:requestNav.title,exact:true}).getByRole('combobox').last().selectOption('PAUSE');await expect(page.getByText(follow[5],{exact:true})).toBeVisible();checks++;
+  await expect(page.getByLabel(requestNav.selectPlan,{exact:true}).locator('option')).toHaveCount(2);await page.getByRole('region',{name:requestNav.title,exact:true}).getByLabel(copy[0],{exact:true}).selectOption('PAUSE');await expect(page.getByText(follow[5],{exact:true})).toBeVisible();checks++;
   await page.getByLabel(requestNav.selectPlan,{exact:true}).selectOption(closedPlanId);await expect(page.getByText('The old plan was cancelled.',{exact:false})).toBeVisible();await expect(page.getByRole('region',{name:requestNav.title,exact:true}).getByRole('button',{name:copy[6],exact:true})).toHaveCount(0);assert.equal(new URL(page.url()).searchParams.get('subscriptionId'),closedPlanId);checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await page.screenshot({path:path.join(output,`${locale}-${width}-requests-tab.png`),fullPage:true});checks++;
   await page.goto(`${origin}/${locale}/profile?tab=requests&subscriptionId=${closedPlanId}&lang=${locale}&profileMode=multi`);await expect(page.getByLabel(requestNav.selectPlan,{exact:true})).toHaveValue(closedPlanId);await expect(page.getByText('The old plan was cancelled.',{exact:false})).toBeVisible();checks++;

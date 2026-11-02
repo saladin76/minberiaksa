@@ -882,7 +882,9 @@
         "VOIDED": "Von der Bank storniert",
         "REVIEW_REQUIRED": "Finanzprüfung erforderlich",
         "balance": "Erstattet: {returned} · Verbleibend: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Monate mit regelmäßigen Spenden",
+      "recurringGivingMonthsHint": "Monate mit bestätigten regelmäßigen Zahlungen in diesem Zeitraum"
     },
     "subscriptions": {
       "settingsTableTitle": "Abonnements & Einstellungen",

@@ -882,7 +882,9 @@
         "VOIDED": "Dibatalkan oleh bank",
         "REVIEW_REQUIRED": "Perlu tinjauan keuangan",
         "balance": "Dikembalikan: {returned} · Tersisa: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Bulan donasi rutin",
+      "recurringGivingMonthsHint": "Bulan dengan pembayaran donasi rutin terkonfirmasi dalam periode ini"
     },
     "subscriptions": {
       "settingsTableTitle": "Langganan & pengaturan",

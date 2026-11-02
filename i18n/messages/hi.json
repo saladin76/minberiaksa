@@ -2535,7 +2535,9 @@
         "VOIDED": "बैंक द्वारा रद्द",
         "REVIEW_REQUIRED": "वित्तीय समीक्षा आवश्यक",
         "balance": "वापस की गई: {returned} · शेष: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "नियमित दान वाले महीने",
+      "recurringGivingMonthsHint": "चुनी गई अवधि में नियमित दान का भुगतान पुष्ट होने वाले महीने"
     }
   }
 }

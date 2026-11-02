@@ -2535,7 +2535,9 @@
         "VOIDED": "Annullert av banken",
         "REVIEW_REQUIRED": "Økonomisk gjennomgang kreves",
         "balance": "Refundert: {returned} · Gjenstående: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Måneder med faste gaver",
+      "recurringGivingMonthsHint": "Måneder med bekreftede faste betalinger i denne perioden"
     }
   }
 }

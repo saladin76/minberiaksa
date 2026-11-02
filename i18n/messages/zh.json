@@ -2535,7 +2535,9 @@
         "VOIDED": "已由银行撤销",
         "REVIEW_REQUIRED": "需要财务审核",
         "balance": "已退：{returned} · 剩余：{remaining}"
-      }
+      },
+      "recurringGivingMonths": "定期捐赠月数",
+      "recurringGivingMonthsHint": "所选期间内有已确认定期捐款的月份数"
     }
   }
 }

@@ -2535,7 +2535,9 @@
         "VOIDED": "Dibatalkan oleh bank",
         "REVIEW_REQUIRED": "Semakan kewangan diperlukan",
         "balance": "Dipulangkan: {returned} · Baki: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Bulan sumbangan berkala",
+      "recurringGivingMonthsHint": "Bulan dengan bayaran berkala yang disahkan dalam tempoh ini"
     }
   }
 }

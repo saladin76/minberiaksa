@@ -882,7 +882,9 @@
         "VOIDED": "ملغاة لدى البنك",
         "REVIEW_REQUIRED": "تحتاج مراجعة مالية",
         "balance": "المسترد: {returned} · المتبقي: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "أشهر التبرع الدوري",
+      "recurringGivingMonthsHint": "أشهر فيها دفعات دورية مؤكدة خلال الفترة المحددة"
     },
     "subscriptions": {
       "settingsTableTitle": "الاشتراكات والإعدادات",

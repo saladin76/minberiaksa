@@ -2535,7 +2535,9 @@
         "VOIDED": "Makulerad av banken",
         "REVIEW_REQUIRED": "Ekonomisk granskning krävs",
         "balance": "Återbetalt: {returned} · Återstående: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Månader med återkommande gåvor",
+      "recurringGivingMonthsHint": "Månader med bekräftade återkommande betalningar under denna period"
     }
   }
 }

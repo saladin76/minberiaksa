@@ -19,6 +19,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   get reports() { return dt("التقارير"); },
   get health() { return dt("فحص الاتصال"); },
   get logs() { return dt("السجلات"); },
+  get notifications() { return dt("إشعارات الموقع"); },
   get import() { return dt("استيراد"); },
   get "bulk-import"() { return dt("استيراد جماعي"); },
   get layouts() { return dt("التخطيطات"); },

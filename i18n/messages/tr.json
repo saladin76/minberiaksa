@@ -882,7 +882,9 @@
         "VOIDED": "Banka tarafından iptal edildi",
         "REVIEW_REQUIRED": "Mali inceleme gerekli",
         "balance": "İade: {returned} · Kalan: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Düzenli bağış yapılan aylar",
+      "recurringGivingMonthsHint": "Seçili dönemde düzenli bağışın tahsil edildiği aylar"
     },
     "subscriptions": {
       "settingsTableTitle": "Abonelikler ve ayarlar",

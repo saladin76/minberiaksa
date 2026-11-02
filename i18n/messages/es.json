@@ -882,7 +882,9 @@
         "VOIDED": "Anulada por el banco",
         "REVIEW_REQUIRED": "Revisión financiera necesaria",
         "balance": "Reembolsado: {returned} · Restante: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Meses con donaciones periódicas",
+      "recurringGivingMonthsHint": "Meses con pagos periódicos confirmados en este período"
     },
     "subscriptions": {
       "settingsTableTitle": "Suscripciones y ajustes",

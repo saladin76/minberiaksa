@@ -2535,7 +2535,9 @@
         "VOIDED": "銀行による取消",
         "REVIEW_REQUIRED": "会計上の確認が必要",
         "balance": "返金済み: {returned} · 残額: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "継続寄付を行った月数",
+      "recurringGivingMonthsHint": "選択した期間内に継続寄付の入金が確認された月数"
     }
   }
 }

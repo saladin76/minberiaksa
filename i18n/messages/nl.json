@@ -2535,7 +2535,9 @@
         "VOIDED": "Geannuleerd door de bank",
         "REVIEW_REQUIRED": "Financiële controle nodig",
         "balance": "Terugbetaald: {returned} · Resterend: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Maanden met periodieke donaties",
+      "recurringGivingMonthsHint": "Maanden met bevestigde periodieke betalingen in deze periode"
     }
   }
 }

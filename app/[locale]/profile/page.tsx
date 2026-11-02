@@ -7,6 +7,7 @@ import axios from "axios";
 import SubscriptionRequests from "@/components/minbar/account/SubscriptionRequests";
 import DonationManagementRequests from "@/components/minbar/account/DonationManagementRequests";
 import { subscriptionRequestNavigationCopy } from "@/lib/donations/subscription-request-navigation-copy";
+import { isSettledProfileDonation, profileDonationDate, profileDonationMatchesPeriod, successfulRecurringMonthCount } from "@/lib/minbar/profile-donation-stats";
 import { SubscriptionCardChange, SubscriptionCardChangeResult } from "@/components/minbar/account/SubscriptionCardChange";
 import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { useSession, signOut } from "next-auth/react";
@@ -78,6 +79,7 @@ interface DonationForProfile {
   paidAt?: string | null;
   status: string | null;
   subscriptionId?: string | null;
+  billingReason?: string | null;
   subscriptionProvider?: string | null;
   /** DAILY | FRIDAY | MONTHLY on a plan; null on a one-time gift. */
   frequency?: string | null;
@@ -554,28 +556,19 @@ const ProfilePage = () => {
   );
 
   const renderDonations = (u: UserProfile) => {
-    const matchesPeriod = (donation: DonationForProfile) => {
-      const date = new Date(donation.createdAt);
-      const now = new Date();
-      switch (selectedPeriod) {
-        case "month":
-          return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-        case "year":
-          return date.getFullYear() === now.getFullYear();
-        default:
-          return true;
-      }
-    };
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const now = new Date();
+    const matchesPeriod = (donation: DonationForProfile) => profileDonationMatchesPeriod(donation, selectedPeriod, now, timeZone);
 
     const donationsInPeriod = u.donations?.filter(matchesPeriod) ?? [];
-    const isSuccessfulCharge = (d: DonationForProfile) => donationReceiptAllowed(d);
+    const isSuccessfulCharge = (d: DonationForProfile) => isSettledProfileDonation(d);
     const successfulInPeriod = donationsInPeriod.filter(isSuccessfulCharge);
     const forReceiptDownload = successfulInPeriod;
 
     const filteredHistory = donationsInPeriod.filter((d) => {
       if (paymentFilter === "all") return true;
       return donationPaymentChargeStatus(d) === paymentFilter;
-    });
+    }).sort((a, b) => (profileDonationDate(b)?.getTime() ?? 0) - (profileDonationDate(a)?.getTime() ?? 0));
 
     const totalHistoryUSD =
       successfulInPeriod.reduce(
@@ -598,8 +591,7 @@ const ProfilePage = () => {
           })
         : "0";
 
-    const monthlyCount =
-      u.donations?.filter((d) => d.type === "MONTHLY" && d.status === "ACTIVE").length || 0;
+    const recurringMonths = successfulRecurringMonthCount(donationsInPeriod, timeZone);
     const campaignCount = new Set(
       (u.donations ?? [])
         .filter(isSuccessfulCharge)
@@ -637,12 +629,12 @@ const ProfilePage = () => {
               {t("donations.successfulPaymentsInPeriod", { count: successfulInPeriod.length })}
             </p>
           </Card>
-          <Card className="p-5 bg-gradient-to-br from-[#A5243D]/8 to-white border-[#D8AA55]/20">
-            <p className="text-xs font-semibold text-[#D8AA55] uppercase tracking-wider">
-              {t("donations.monthlyDonations")}
+          <Card role="group" aria-labelledby="profile-recurring-months-title" className="p-5 bg-gradient-to-br from-[#A5243D]/8 to-white border-[#D8AA55]/20">
+            <p id="profile-recurring-months-title" className="text-xs font-semibold text-[#D8AA55] uppercase tracking-wider">
+              {t("donations.recurringGivingMonths")}
             </p>
-            <p className="text-2xl font-bold text-gray-900 mt-2">{monthlyCount}</p>
-            <p className="text-xs text-gray-600 mt-1">{t("donations.activeSubscription")}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{recurringMonths}</p>
+            <p className="text-xs text-gray-600 mt-1">{t("donations.recurringGivingMonthsHint")}</p>
           </Card>
           <Card className="p-5 bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
             <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
@@ -662,10 +654,10 @@ const ProfilePage = () => {
                   {t("donations.timePeriod")}
                 </p>
                 <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectTrigger aria-label={t("donations.timePeriod")} className="w-full sm:w-[200px]">
                     <SelectValue placeholder={t("donations.timePeriod")} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[300]">
                     <SelectItem value="all">{t("donations.allPeriods")}</SelectItem>
                     <SelectItem value="month">{t("donations.thisMonth")}</SelectItem>
                     <SelectItem value="year">{t("donations.thisYear")}</SelectItem>
@@ -683,7 +675,7 @@ const ProfilePage = () => {
                   <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[300]">
                     <SelectItem value="all">{t("donations.filterPaymentAll")}</SelectItem>
                     <SelectItem value="PAID">{t("donations.filterPaymentPaid")}</SelectItem>
                     <SelectItem value="FAILED">{t("donations.filterPaymentFailed")}</SelectItem>
@@ -795,10 +787,10 @@ const ProfilePage = () => {
                         return (
                           <tr key={donation.id} className="hover:bg-slate-50 transition-colors">
                             <td className="py-3 px-3 text-gray-600 whitespace-nowrap">
-                              {new Date(donation.createdAt).toLocaleDateString(
+                              {profileDonationDate(donation)?.toLocaleDateString(
                                 locale === "ar" ? "ar-EG" : undefined,
                                 { day: "numeric", month: "short", year: "numeric" }
-                              )}
+                              ) ?? "—"}
                             </td>
                             <td className="py-3 px-3 text-gray-800">
                               <p className="truncate font-medium" title={formatCampaignCell(donation)}>

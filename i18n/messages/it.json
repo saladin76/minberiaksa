@@ -2535,7 +2535,9 @@
         "VOIDED": "Annullata dalla banca",
         "REVIEW_REQUIRED": "Verifica finanziaria necessaria",
         "balance": "Rimborsato: {returned} · Residuo: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Mesi con donazioni periodiche",
+      "recurringGivingMonthsHint": "Mesi con pagamenti periodici confermati in questo periodo"
     }
   }
 }

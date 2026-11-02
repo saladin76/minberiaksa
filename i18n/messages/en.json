@@ -882,7 +882,9 @@
         "VOIDED": "Voided by the bank",
         "REVIEW_REQUIRED": "Financial review required",
         "balance": "Returned: {returned} · Remaining: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Months of recurring giving",
+      "recurringGivingMonthsHint": "Months with confirmed recurring payments in this period"
     },
     "subscriptions": {
       "settingsTableTitle": "Subscriptions & Settings",

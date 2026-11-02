@@ -882,7 +882,9 @@
         "VOIDED": "Annulé par la banque",
         "REVIEW_REQUIRED": "Vérification financière nécessaire",
         "balance": "Remboursé : {returned} · Restant : {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Mois de dons réguliers",
+      "recurringGivingMonthsHint": "Mois avec des dons réguliers confirmés sur cette période"
     },
     "subscriptions": {
       "settingsTableTitle": "Abonnements et paramètres",

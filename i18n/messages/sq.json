@@ -2535,7 +2535,9 @@
         "VOIDED": "Anuluar nga banka",
         "REVIEW_REQUIRED": "Nevojitet shqyrtim financiar",
         "balance": "Rimbursuar: {returned} · Mbetur: {remaining}"
-      }
+      },
+      "recurringGivingMonths": "Muaj me dhurime periodike",
+      "recurringGivingMonthsHint": "Muaj me pagesa periodike të konfirmuara në këtë periudhë"
     }
   }
 }
