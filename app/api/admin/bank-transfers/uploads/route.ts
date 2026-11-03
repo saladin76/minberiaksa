@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const COLLECTION = "BankStatementUpload";
-const TRANSACTIONS_COLLECTION = "BankTransferTransaction";
+
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -53,6 +53,14 @@ function serialize(row: Record<string, unknown>) {
     duplicateCount: num(row.duplicateCount),
     excludedCount: num(row.excludedCount),
     createdAt: mongoDate(row.createdAt),
+    status: str(row.status) ?? "LEGACY",
+    archivedAt: mongoDate(row.archivedAt),
+    failedCount: num(row.failedCount),
+    unknownCount: num(row.unknownCount),
+    possibleDuplicateCount: num(row.possibleDuplicateCount),
+    invalidCount: num(row.invalidCount),
+    sheetName: str(row.sheetName),
+    dateRange: isRecord(row.dateRange) ? row.dateRange : null,
   };
 }
 
@@ -108,29 +116,25 @@ export async function DELETE(request: NextRequest) {
       : [];
     const fileHashes = rows.map((row) => str(row.fileHash)).filter((v): v is string => Boolean(v));
 
-    if (fileHashes.length) {
-      await prisma.$runCommandRaw({
-        delete: TRANSACTIONS_COLLECTION,
-        deletes: [{ q: { uploadFileHash: { $in: fileHashes } }, limit: 0 }],
-      });
-    }
-
-    await prisma.$runCommandRaw({
-      delete: COLLECTION,
-      deletes: [{ q: { _id: { $in: ids.map(objectId) } }, limit: 0 }],
+    const changed = await prisma.$runCommandRaw({
+      update: COLLECTION,
+      updates: [{ q: { _id: { $in: ids.map(objectId) }, archivedAt: { $exists: false } }, u: { $set: { archivedAt: { $date: new Date().toISOString() } } }, multi: true }],
     });
+    if (!isRecord(changed) || changed.ok !== 1 || changed.writeConcernError || (Array.isArray(changed.writeErrors) && changed.writeErrors.length)) {
+      return NextResponse.json({ error: "تعذّر تأكيد الأرشفة" }, { status: 503 });
+    }
 
     const actor = auditActorFromDashboardSession(session!);
     await writeAuditLog({
       ...actor,
       stream: "TEAM",
-      action: "BANK_STATEMENT_UPLOAD_DELETED",
-      messageAr: `${actor.actorName ?? "مسؤول"} حذف ${ids.length} كشف حساب بنكي`,
+      action: "BANK_STATEMENT_UPLOAD_ARCHIVED",
+      messageAr: `${actor.actorName ?? "مسؤول"} أرشف كشوف حساب بنكي مع الاحتفاظ بالحركات`,
       entityType: "BankStatementUpload",
-      metadata: { ids, fileHashes, deletedUploads: ids.length, deletedFileHashes: fileHashes.length },
+      metadata: { ids, fileHashes, archivedUploads: changed.n, transactionsPreserved: true },
     });
 
-    return NextResponse.json({ ok: true, deletedUploads: ids.length, deletedFileHashes: fileHashes.length });
+    return NextResponse.json({ ok: true, archivedUploads: changed.n, transactionsPreserved: true });
   } catch (error) {
     console.error("[bank-transfers] failed to delete uploads", error);
     return NextResponse.json({ error: "Failed to delete bank statement uploads" }, { status: 500 });

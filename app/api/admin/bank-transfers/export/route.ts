@@ -39,6 +39,7 @@ function num(value: string | null) {
   return Number.isFinite(n) ? n : null;
 }
 
+function regex(value: string) { return value.slice(0, 200).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 function buildFilter(url: URL) {
   const status = url.searchParams.get("status") ?? "all";
   const filter: Record<string, unknown> = {
@@ -57,7 +58,7 @@ function buildFilter(url: URL) {
   if (bankId) filter.bankId = bankId;
   if (currency) filter.currency = currency;
   if (donorLocale) filter.donorLocale = donorLocale;
-  if (project) filter.finalProject = { $regex: project, $options: "i" };
+  if (project) filter.finalProject = { $regex: regex(project), $options: "i" };
   if (dateFrom || dateTo) {
     const range: Record<string, string> = {};
     if (dateFrom) range.$gte = dateFrom;
@@ -72,12 +73,12 @@ function buildFilter(url: URL) {
   }
   if (q) {
     filter.$or = [
-      { donorName: { $regex: q, $options: "i" } },
-      { description: { $regex: q, $options: "i" } },
-      { finalProject: { $regex: q, $options: "i" } },
-      { suggestedProject: { $regex: q, $options: "i" } },
-      { reference: { $regex: q, $options: "i" } },
-      { bankId: { $regex: q, $options: "i" } },
+      { donorName: { $regex: regex(q), $options: "i" } },
+      { description: { $regex: regex(q), $options: "i" } },
+      { finalProject: { $regex: regex(q), $options: "i" } },
+      { suggestedProject: { $regex: regex(q), $options: "i" } },
+      { reference: { $regex: regex(q), $options: "i" } },
+      { bankId: { $regex: regex(q), $options: "i" } },
     ];
   }
   return filter;

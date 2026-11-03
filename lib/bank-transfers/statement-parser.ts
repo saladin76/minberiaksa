@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { statementDate, statementCurrency, validIbanText } from "./statement-metadata";
 import { looksLikeIdentifier, looksLikeMoneyText, parseAmount } from "./amount-format";
 import {
   NO_COLUMNS,
@@ -9,6 +10,8 @@ import {
 // Relative, not "@/": the integration-test build compiles this file without path aliases.
 import { SUPPORTED_LOCALES, type SupportedLocale } from "../locales";
 
+export const BANK_STATEMENT_PARSER_VERSION = 2;
+export const MAX_STATEMENT_ROWS = 5000;
 export const BANK_TRANSFER_CURRENCIES = ["USD", "TRY", "EUR"] as const;
 /** Every site language  one source, so it cannot drift to a subset again. */
 export const BANK_TRANSFER_DONOR_LOCALES = SUPPORTED_LOCALES;
@@ -18,6 +21,12 @@ export type BankTransferDonorLocale = SupportedLocale;
 
 export type ParsedBankTransferRow = {
   rowNumber: number;
+  transactionAt?: string | null;
+  balance?: number | null;
+  channel?: string | null;
+  legacyTransactionHash?: string;
+  identityLevel?: "REFERENCE" | "CONTEXT" | "WEAK";
+  issues?: string[];
   transactionDate: string | null;
   description: string;
   donorName: string | null;
@@ -34,6 +43,12 @@ export type ParsedBankTransferRow = {
 
 export type ParsedBankStatement = {
   parser: "spreadsheet" | "pdf";
+  parserVersion?: number;
+  sheetName?: string;
+  sheets?: string[];
+  headerRowNumber?: number | null;
+  detectedCurrency?: BankTransferCurrency | null;
+  dateRange?: { from: string | null; to: string | null };
   fileHash: string;
   bankIban: string | null;
   rows: ParsedBankTransferRow[];
@@ -71,21 +86,11 @@ function compact(value: string): string {
 }
 
 export function extractIbanFromText(text: string): string | null {
-  const match = text.match(/TR[\s\d]{24,40}/i);
-  if (!match) return null;
-  const iban = match[0].replace(/\s+/g, "").toUpperCase();
-  return /^TR\d{24}$/.test(iban) ? iban : null;
+  return validIbanText(text);
 }
 
 function looksLikeDate(value: unknown): string | null {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  const raw = normalizeCell(value);
-  if (!raw) return null;
-  const iso = raw.match(/\b(20\d{2}|19\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
-  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
-  const dmy = raw.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2}|19\d{2})\b/);
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
-  return null;
+  return statementDate(value)?.date ?? null;
 }
 
 function amountTokens(text: string): number[] {
@@ -100,7 +105,7 @@ function amountTokens(text: string): number[] {
  * decimal part or thousands grouping) over a bare integer.
  */
 function pickAmountFromRow(row: unknown[], cols: ResolvedColumns): number | null {
-  const skip = new Set([cols.date, cols.description, cols.donor, cols.reference].filter((i) => i >= 0));
+  const skip = new Set([cols.date, cols.description, cols.donor, cols.reference, cols.balance, cols.currency, cols.channel].filter((i) => i >= 0));
   const candidates: { value: number; money: boolean }[] = [];
 
   for (let i = 0; i < row.length; i += 1) {
@@ -170,7 +175,7 @@ function makeTransactionHash(input: {
   ].join("|"));
 }
 
-function rowToPreview(row: unknown[], rowNumber: number, args: { currency: BankTransferCurrency; donorLocale: BankTransferDonorLocale; bankId: string; bankIban: string | null; columns?: ResolvedColumns }): ParsedBankTransferRow | null {
+function rowToPreview(row: unknown[], rowNumber: number, args: { currency: BankTransferCurrency; donorLocale: BankTransferDonorLocale; bankId: string; bankIban: string | null; legacyBankIban?: string | null; legacyCurrency?: BankTransferCurrency; columns?: ResolvedColumns }): ParsedBankTransferRow | null {
   const cells = row.map(normalizeCell);
   if (cells.every((c) => !c)) return null;
 
@@ -212,22 +217,41 @@ function rowToPreview(row: unknown[], rowNumber: number, args: { currency: BankT
   }
 
   const lowerDescription = description.toLowerCase();
-  if (lowerDescription.includes("devir bakiyesi") || lowerDescription.includes("toplam")) return null;
+  if (!transactionDate && (/^(?:devir bakiyesi|toplam|total|المجموع)/.test(lowerDescription) || amount === null)) return null;
+  const dateDetail = cols.date >= 0 ? statementDate(row[cols.date]) : row.map(statementDate).find(Boolean);
+  const balance = cols.balance >= 0 ? parseAmount(row[cols.balance]) : null;
+  const rowCurrency = cols.currency >= 0 ? statementCurrency(row[cols.currency]) : null;
+  if (cols.currency >= 0 && cells[cols.currency] && !rowCurrency) throw new Error("STATEMENT_CURRENCY_UNSUPPORTED");
+  const currency = rowCurrency ?? args.currency;
+  const absolute = amount === null ? null : Math.abs(amount);
+  const legacyTransactionHash = makeTransactionHash({ bankId: args.bankId, bankIban: "legacyBankIban" in args ? args.legacyBankIban ?? null : args.bankIban, transactionDate, reference, amount: absolute, currency: args.legacyCurrency ?? currency, description });
+  const identityLevel = reference && transactionDate ? "REFERENCE" : args.bankIban && dateDetail?.at && balance !== null ? "CONTEXT" : "WEAK";
+  const transactionHash = identityLevel === "WEAK" ? legacyTransactionHash : sha256([
+    "bank-statement-v2", args.bankIban ?? args.bankId, currency, direction,
+    identityLevel === "REFERENCE" ? `ref:${reference}|${transactionDate}` : `context:${dateDetail?.at}|${balance?.toFixed(2)}`,
+    absolute?.toFixed(2) ?? "",
+  ].join("|"));
 
   const suggestion = suggestProject(description);
   return {
     rowNumber,
+    transactionAt: dateDetail?.at ?? null,
+    balance,
+    channel: cols.channel >= 0 ? cells[cols.channel] || null : null,
+    legacyTransactionHash,
+    identityLevel,
+    issues: [...(!transactionDate ? ["DATE_INVALID"] : []), ...(absolute === null || absolute === 0 ? ["AMOUNT_INVALID"] : [])],
     transactionDate,
     description,
     donorName: donorName || null,
     amount: amount === null ? null : Math.abs(amount),
-    currency: args.currency,
+    currency,
     donorLocale: args.donorLocale,
     direction,
     reference,
     suggestedProject: suggestion.project,
     confidence: suggestion.confidence,
-    transactionHash: makeTransactionHash({ bankId: args.bankId, bankIban: args.bankIban, transactionDate, reference, amount: amount === null ? null : Math.abs(amount), currency: args.currency, description }),
+    transactionHash,
     raw: cells,
   };
 }
@@ -268,28 +292,36 @@ function parseTurkishStatementLine(line: string, rowNumber: number, args: { curr
 
 async function parseSpreadsheet(
   buffer: Buffer,
-  args: { currency: BankTransferCurrency; donorLocale: BankTransferDonorLocale; bankId: string; bankIban: string | null }
-): Promise<{ rows: ParsedBankTransferRow[]; columns: ResolvedColumns }> {
+  args: { currency: BankTransferCurrency; donorLocale: BankTransferDonorLocale; bankId: string; bankIban: string | null; sheetName?: string }
+) {
   const XLSX = await import("xlsx");
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-  const firstSheetName = workbook.SheetNames[0];
-  if (!firstSheetName) return { rows: [], columns: NO_COLUMNS };
-  const sheet = workbook.Sheets[firstSheetName];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, blankrows: false }) as unknown[][];
-
-  const headerRowIndex = findHeaderRow(rows);
+  const workbook = XLSX.read(buffer, { type: "buffer", cellNF: true, cellDates: false, sheetRows: MAX_STATEMENT_ROWS + 102 });
+  const sheetName = args.sheetName ?? workbook.SheetNames[0];
+  if (!sheetName || !workbook.SheetNames.includes(sheetName)) throw new Error("STATEMENT_SHEET_REQUIRED");
+  const sheet = workbook.Sheets[sheetName];
+  const range = XLSX.utils.decode_range(sheet["!fullref"] ?? sheet["!ref"] ?? "A1");
+  if (range.e.r > MAX_STATEMENT_ROWS + 100 || range.e.c > 100) throw new Error("STATEMENT_TOO_LARGE");
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, blankrows: true, defval: "" }) as unknown[][];
+  // Decode typed Excel date serials without involving the server's timezone.
+  for (let r = 0; r < rows.length; r++) for (let c = 0; c < rows[r].length; c++) {
+    const cell = sheet[XLSX.utils.encode_cell({ r: r + range.s.r, c: c + range.s.c })];
+    if (cell?.t === "n" && cell.z && XLSX.SSF.is_date(String(cell.z))) {
+      const d = XLSX.SSF.parse_date_code(Number(cell.v), { date1904: workbook.Workbook?.WBProps?.date1904 === true });
+      if (d) rows[r][c] = `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")} ${String(d.H).padStart(2,"0")}:${String(d.M).padStart(2,"0")}:${String(Math.floor(d.S)).padStart(2,"0")}`;
+    }
+  }
+  const headerRowIndex = findHeaderRow(rows, 100);
   const headers = headerRowIndex >= 0 ? rows[headerRowIndex].map(normalizeCell) : undefined;
-  const dataRows = (headerRowIndex >= 0 ? rows.slice(headerRowIndex + 1) : rows).slice(0, 1000);
-
-  // Resolve the layout once, from the header plus the data, then apply it to
-  // every row  so all rows agree on which column the money is in.
+  const preamble = rows.slice(0, Math.max(0, headerRowIndex)).flat().map(normalizeCell).join(" | ");
+  const bankIban = extractIbanFromText(preamble) ?? args.bankIban;
+  const dataRows = headerRowIndex >= 0 ? rows.slice(headerRowIndex + 1) : rows;
+  if (dataRows.filter(row => row.some(value => normalizeCell(value))).length > MAX_STATEMENT_ROWS) throw new Error("STATEMENT_TOO_LARGE");
   const columns = resolveStatementColumns(headers, dataRows);
-
-  const parsed = dataRows
-    .map((row, index) => rowToPreview(row, (headerRowIndex >= 0 ? headerRowIndex + 2 : 1) + index, { ...args, columns }))
-    .filter((row): row is ParsedBankTransferRow => Boolean(row));
-
-  return { rows: parsed, columns };
+  const detectedCurrency = statementCurrency(columns.amountHeader) ?? null;
+  const parsed = dataRows.map((row, index) => rowToPreview(row, range.s.r + (headerRowIndex >= 0 ? headerRowIndex + 2 : 1) + index, {
+    ...args, bankIban, currency: detectedCurrency ?? args.currency, legacyBankIban: args.bankIban, legacyCurrency: args.currency, columns,
+  })).filter((row): row is ParsedBankTransferRow => Boolean(row));
+  return { rows: parsed, columns, bankIban, detectedCurrency, sheetName, sheets: workbook.SheetNames, headerRowNumber: headerRowIndex < 0 ? null : range.s.r + headerRowIndex + 1 };
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
@@ -345,6 +377,7 @@ export async function parseBankStatementFile(args: {
   currency: BankTransferCurrency;
   donorLocale: BankTransferDonorLocale;
   bankId: string;
+  sheetName?: string;
 }): Promise<ParsedBankStatement> {
   const fileHash = sha256(args.buffer);
   const lower = args.fileName.toLowerCase();
@@ -360,13 +393,16 @@ export async function parseBankStatementFile(args: {
     textForIban = args.buffer.toString("utf8");
   }
 
-  const bankIban = extractIbanFromText(textForIban);
+  let bankIban = extractIbanFromText(textForIban);
   const commonArgs = { currency: args.currency, donorLocale: args.donorLocale, bankId: args.bankId, bankIban };
   let rows: ParsedBankTransferRow[];
   let columns: ResolvedColumns = NO_COLUMNS;
+  let details: Partial<ParsedBankStatement> = {};
 
   if (lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".csv")) {
-    const result = await parseSpreadsheet(args.buffer, commonArgs);
+    const result = await parseSpreadsheet(args.buffer, { ...commonArgs, sheetName: args.sheetName });
+    bankIban = result.bankIban;
+    details = { sheetName: result.sheetName, sheets: result.sheets, headerRowNumber: result.headerRowNumber, detectedCurrency: result.detectedCurrency };
     rows = result.rows;
     columns = result.columns;
     if (columns.amountSource === "none") {
@@ -386,9 +422,12 @@ export async function parseBankStatementFile(args: {
   }
 
   return {
+    ...details,
     parser,
+    parserVersion: BANK_STATEMENT_PARSER_VERSION,
     fileHash,
     bankIban,
+    dateRange: { from: rows.flatMap(row => row.transactionDate ? [row.transactionDate] : []).sort()[0] ?? null, to: rows.flatMap(row => row.transactionDate ? [row.transactionDate] : []).sort().at(-1) ?? null },
     rows,
     warning,
     amountColumn: { source: columns.amountSource, header: columns.amountHeader },

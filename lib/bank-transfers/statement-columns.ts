@@ -27,6 +27,9 @@ import {
 
 export type ResolvedColumns = {
   date: number;
+  balance: number;
+  currency: number;
+  channel: number;
   description: number;
   donor: number;
   reference: number;
@@ -43,7 +46,7 @@ export type ResolvedColumns = {
 };
 
 export const NO_COLUMNS: ResolvedColumns = {
-  date: -1, description: -1, donor: -1, reference: -1,
+  date: -1, balance: -1, currency: -1, channel: -1, description: -1, donor: -1, reference: -1,
   amount: -1, credit: -1, debit: -1,
   amountSource: "none", amountHeader: null,
 };
@@ -212,6 +215,12 @@ export function resolveStatementColumns(
 
   const date = matchHeader(folded, DATE_TOKENS, claimed);
   if (date >= 0) claimed.add(date);
+  const balance = matchHeader(folded, ["bakiye", "balance", "الرصيد", "رصيد"], claimed);
+  if (balance >= 0) claimed.add(balance);
+  const currency = matchHeader(folded, ["para birimi", "currency", "doviz cinsi", "العملة"], claimed);
+  if (currency >= 0) claimed.add(currency);
+  const channel = matchHeader(folded, ["kanal", "channel", "قناة"], claimed);
+  if (channel >= 0) claimed.add(channel);
   const description = matchHeader(folded, DESC_TOKENS, claimed);
   if (description >= 0) claimed.add(description);
   const donor = matchHeader(folded, DONOR_TOKENS, claimed);
@@ -239,7 +248,7 @@ export function resolveStatementColumns(
 
   // Nothing usable in the header: profile the data.
   if (amount < 0) {
-    const skip = new Set<number>([date, description, donor, reference, debit].filter((i) => i >= 0));
+    const skip = new Set<number>([date, description, donor, reference, debit, balance, currency, channel].filter((i) => i >= 0));
     const detected = detectAmountColumn(dataRows, skip);
     if (detected >= 0) {
       amount = detected;
@@ -254,6 +263,9 @@ export function resolveStatementColumns(
 
   return {
     date,
+    balance,
+    currency,
+    channel,
     description,
     donor,
     reference,

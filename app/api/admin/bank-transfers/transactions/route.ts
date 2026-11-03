@@ -45,6 +45,10 @@ function serialize(row: Record<string, unknown>) {
     id: mongoId(row._id) ?? mongoId(row.id),
     bankId: typeof row.bankId === "string" ? row.bankId : null,
     bankIban: typeof row.bankIban === "string" ? row.bankIban : null,
+    transactionAt: typeof row.transactionAt === "string" ? row.transactionAt : null,
+    balance: typeof row.balance === "number" ? row.balance : null,
+    channel: typeof row.channel === "string" ? row.channel : null,
+    approvalPending: Boolean(row.approvalClaim),
     transactionDate: typeof row.transactionDate === "string" ? row.transactionDate : null,
     donorName: typeof row.donorName === "string" ? row.donorName : null,
     description: typeof row.description === "string" ? row.description : "",
@@ -67,6 +71,7 @@ function serialize(row: Record<string, unknown>) {
   };
 }
 
+function regex(value: string) { return value.slice(0, 200).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 function buildFilter(url: URL) {
   const filter: Record<string, unknown> = { direction: "CREDIT", status: { $nin: ["DUPLICATE", "DELETED"] } };
   const status = clean(url.searchParams.get("status"));
@@ -84,7 +89,7 @@ function buildFilter(url: URL) {
   if (bankId && bankId !== "all") filter.bankId = bankId;
   if (currency && currency !== "all") filter.currency = currency;
   if (donorLocale && donorLocale !== "all") filter.donorLocale = donorLocale;
-  if (project && project !== "all") filter.finalProject = { $regex: project, $options: "i" };
+  if (project && project !== "all") filter.finalProject = { $regex: regex(project), $options: "i" };
   if (dateFrom || dateTo) {
     const range: Record<string, string> = {};
     if (dateFrom) range.$gte = dateFrom;
@@ -99,12 +104,12 @@ function buildFilter(url: URL) {
   }
   if (q) {
     filter.$or = [
-      { donorName: { $regex: q, $options: "i" } },
-      { description: { $regex: q, $options: "i" } },
-      { finalProject: { $regex: q, $options: "i" } },
-      { suggestedProject: { $regex: q, $options: "i" } },
-      { reference: { $regex: q, $options: "i" } },
-      { bankId: { $regex: q, $options: "i" } },
+      { donorName: { $regex: regex(q), $options: "i" } },
+      { description: { $regex: regex(q), $options: "i" } },
+      { finalProject: { $regex: regex(q), $options: "i" } },
+      { suggestedProject: { $regex: regex(q), $options: "i" } },
+      { reference: { $regex: regex(q), $options: "i" } },
+      { bankId: { $regex: regex(q), $options: "i" } },
     ];
   }
   return filter;
@@ -117,25 +122,34 @@ export async function GET(request: NextRequest) {
     if (denied) return denied;
 
     const url = new URL(request.url);
-    const page = Math.max(1, Number(url.searchParams.get("page") || 1));
-    const limit = Math.min(200, Math.max(10, Number(url.searchParams.get("limit") || 50)));
+    const page = Math.max(1, Math.min(100000, Math.floor(Number(url.searchParams.get("page")) || 1)));
+    const limit = Math.min(200, Math.max(10, Math.floor(Number(url.searchParams.get("limit")) || 50)));
     const skip = (page - 1) * limit;
     const sortByRaw = clean(url.searchParams.get("sortBy")) ?? "createdAt";
     const sortBy = ALLOWED_SORT_FIELDS.has(sortByRaw) ? sortByRaw : "createdAt";
     const sortDir = url.searchParams.get("sortDir") === "asc" ? 1 : -1;
     const filter = buildFilter(url);
 
-    const [result, countResult] = await Promise.all([
-      prisma.$runCommandRaw(rawCommand({ find: COLLECTION, filter, sort: { [sortBy]: sortDir, createdAt: -1 }, skip, limit })),
+    const [result, countResult, statsResult] = await Promise.all([
+      prisma.$runCommandRaw(rawCommand({ find: COLLECTION, filter, sort: { [sortBy]: sortDir, _id: -1 }, skip, limit, batchSize: limit, projection: { raw: 0 } })),
       prisma.$runCommandRaw(rawCommand({ count: COLLECTION, query: filter })),
+      prisma.$runCommandRaw(rawCommand({ aggregate: COLLECTION, pipeline: [{ $match: filter }, { $group: { _id: { status: "$status", currency: "$currency" }, count: { $sum: 1 }, amount: { $sum: "$amount" } } }], cursor: { batchSize: 1000 }, maxTimeMS: 15000 })),
     ]);
 
     const rows = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)
       ? result.cursor.firstBatch as Record<string, unknown>[]
       : [];
+    if (!isRecord(result) || !isRecord(result.cursor) || !Array.isArray(result.cursor.firstBatch) || !isRecord(countResult) || typeof countResult.n !== "number" || !isRecord(statsResult) || !isRecord(statsResult.cursor) || !Array.isArray(statsResult.cursor.firstBatch)) throw new Error("Incomplete statement listing");
+    const summary: { counts: Record<string, number>; approvedTotals: Record<string, number> } = { counts: {}, approvedTotals: {} };
+    for (const row of statsResult.cursor.firstBatch) {
+      if (!isRecord(row) || !isRecord(row._id)) continue;
+      const state = String(row._id.status), currency = String(row._id.currency);
+      summary.counts[state] = (summary.counts[state] ?? 0) + Number(row.count ?? 0);
+      if (["APPROVED", "IMPORTED"].includes(state)) summary.approvedTotals[currency] = Math.round(((summary.approvedTotals[currency] ?? 0) + Number(row.amount ?? 0)) * 100) / 100;
+    }
     const total = isRecord(countResult) && typeof countResult.n === "number" ? countResult.n : rows.length;
 
-    return NextResponse.json({ transactions: rows.map(serialize), page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) });
+    return NextResponse.json({ transactions: rows.map(serialize), summary, page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) });
   } catch (error) {
     console.error("[bank-transfers] failed to list transactions", error);
     return NextResponse.json({ error: "Failed to list bank transfer transactions" }, { status: 500 });
