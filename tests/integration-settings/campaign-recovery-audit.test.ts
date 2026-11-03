@@ -39,3 +39,13 @@ test('a failed coverage check waits for the independent controls read before dia
  const result=await auditCampaignRecoveryReadOnly({...fixture(),readCoverage:async()=>{throw Error('private failure');},readControls:async()=>{await new Promise(resolve=>setTimeout(resolve,20));finished=true;return{ok:true};}});
  assert.equal(finished,true);assert.equal(result.results[0].ok,false);assert.equal(result.results[0].failures.length,1);
 });
+
+test('the real CLI suppresses a dependency logging a private database error before it throws', async () => {
+ const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');const {tmpdir}=await import('node:os');const {join}=await import('node:path');const {spawnSync}=await import('node:child_process');
+ const dir=mkdtempSync(join(tmpdir(),'minberi-readonly-cli-'));
+ try{
+  const preload=join(dir,'preload.mjs');writeFileSync(preload,`globalThis.fetch=()=>{throw Error('NETWORK_FORBIDDEN')};globalThis.prisma={communicationCampaign:{findMany:async()=>[{id:'${'a'.repeat(24)}',status:'BLOCKED'}],findUnique:async()=>{console.error('PRIVATE_DATABASE_DETAILS');console.log('PRIVATE_DATABASE_DETAILS');throw Error('mongodb://secret:password@private.example');}},$disconnect:async()=>{}};globalThis.prismaBankLedgerPrivate=globalThis.prisma;`);
+  const result=spawnSync(process.execPath,['--conditions=react-server','--import','tsx','--import',preload,'scripts/audit-campaign-recovery-readonly.mjs','--name=Oct31'],{cwd:process.cwd(),encoding:'utf8',timeout:20000,env:{...process.env,DATABASE_URL:'mongodb://127.0.0.1:1/qa?serverSelectionTimeoutMS=100',STRIPE_SECRET_KEY:'sk_test_fixture_no_network',NEXTAUTH_SECRET:'fixture'}});
+  assert.equal(result.status,1);assert.match(result.stdout,/READ_FAILED/);assert.match(result.stdout,/"databaseWrites": 0/);assert.doesNotMatch(result.stdout+result.stderr,/PRIVATE_DATABASE_DETAILS|secret:password|private\.example/);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

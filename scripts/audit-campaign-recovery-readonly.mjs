@@ -56,15 +56,29 @@ async function main() {
   const name = args[0].slice(7);
   if (name.trim().length < 2 || name.length > 80) throw new Error('CAMPAIGN_NAME_FILTER_REQUIRED');
   createRequire(import.meta.url)('@next/env').loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
-  const { prisma } = await loadReleaseModule('lib/prisma.ts');
+  // Some deployed readers log raw Prisma errors. Keep those internal logs
+  // out of a shareable diagnostic; only the explicit JSON projection is output.
+  const methods = ['log', 'info', 'warn', 'error', 'debug'];
+  const original = Object.fromEntries(methods.map(method => [method, console[method]]));
+  for (const method of methods) console[method] = () => {};
+  let prisma;
   try {
-    const [{ getCampaign }, { evaluateCoverageGate }, { evaluateCampaignSendControls }] = await Promise.all([
-      loadReleaseModule('lib/communication/campaign-service.ts'), loadReleaseModule('lib/communication/campaign-approval-service.ts'), loadReleaseModule('lib/communication/campaign-send-controls.ts'),
+    ({ prisma } = await loadReleaseModule('lib/prisma.ts'));
+    const [{ evaluateCoverageGate }, { evaluateCampaignSendControls }] = await Promise.all([
+      loadReleaseModule('lib/communication/campaign-approval-service.ts'), loadReleaseModule('lib/communication/campaign-send-controls.ts'),
     ]);
-    const report = await auditCampaignRecoveryReadOnly({ prisma, readCampaign: getCampaign, readCoverage: evaluateCoverageGate, readControls: evaluateCampaignSendControls, name, emit: event => console.log(JSON.stringify({ readOnly: true, ...event })) });
-    console.log(JSON.stringify(report, null, 2));
+    const report = await auditCampaignRecoveryReadOnly({
+      prisma,
+      readCampaign: id => prisma.communicationCampaign.findUnique({ where: { id }, select: { channel: true, status: true, metadata: true } }),
+      readCoverage: evaluateCoverageGate, readControls: evaluateCampaignSendControls, name,
+      emit: event => process.stdout.write(JSON.stringify({ readOnly: true, ...event }) + '\n'),
+    });
+    process.stdout.write(JSON.stringify(report, null, 2) + '\n');
     if (!report.complete || report.results.some(row => !row.ok)) process.exitCode = 1;
-  } finally { await prisma.$disconnect(); }
+  } finally {
+    try { if (prisma) await prisma.$disconnect(); }
+    finally { for (const method of methods) console[method] = original[method]; }
+  }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await main().catch(error => {
   console.error(JSON.stringify({ readOnly: true, complete: false, stage: 'RUNTIME', failure: recoveryReadFailure(error), databaseWrites: 0, providerCalls: 0, recipientMessages: 0 }));
