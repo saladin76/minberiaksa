@@ -115,3 +115,25 @@ test("VPS deploy installs and selects the package-required Node major from NVM",
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+for (const scenario of ["reviewed", "wrong-source", "auth-failed"] as const) test(`VPS source acquisition: ${scenario}`, () => {
+  const script = readFileSync("scripts/deploy-vps.sh", "utf8");
+  const start = script.indexOf('if [[ -n "${MINBER_REVIEWED_SOURCE_SHA:-}" ]]');
+  const sourceStep = script.slice(start, script.indexOf('lock_after=', start));
+  const root = mkdtempSync(join(tmpdir(), "deploy-source-")), bin = join(root, "bin"), log = join(root, "calls");
+  try {
+    mkdirSync(bin);
+    writeFileSync(join(bin,"git"), ['#!/bin/bash', 'printf "%s\\n" "$*" >> "$FIXTURE_LOG"',
+      'if [[ "$1" == rev-parse ]]; then printf "%s" "$FIXTURE_HEAD"; exit 0; fi',
+      '[[ "$GIT_TERMINAL_PROMPT" == 0 && "$GCM_INTERACTIVE" == never ]] || exit 92',
+      'exit 128',
+    ].join("\n"), {mode:0o755});
+    const sha="a".repeat(40);
+    const result=spawnSync("bash",["-c",'set -euo pipefail\nexport GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never\n'+sourceStep+'\necho build-started'],{
+      env:{NODE_ENV:"test",PATH:`${bin}:/usr/bin:/bin`,BRANCH:sha,FIXTURE_HEAD:sha,FIXTURE_LOG:log,
+        ...(scenario==="auth-failed"?{}:{MINBER_REVIEWED_SOURCE_SHA:scenario==="wrong-source"?"b".repeat(40):sha})}, encoding:"utf8",timeout:5000,
+    });
+    if(scenario==="reviewed") {assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/build-started/);assert.doesNotMatch(readFileSync(log,"utf8"),/pull|fetch/);}
+    else {assert.notEqual(result.status,0);assert.doesNotMatch(result.stdout,/build-started/);assert.match(result.stderr,scenario==="auth-failed"?/GIT_SOURCE_UNAVAILABLE/:/does not match HEAD/);}
+  } finally {rmSync(root,{recursive:true,force:true});}
+});

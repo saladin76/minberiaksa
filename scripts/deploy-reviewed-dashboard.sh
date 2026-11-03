@@ -11,7 +11,9 @@ TARGET="${1:-}"
 # The same runner is used for releases from different branches. Fetch the
 # immutable reviewed commit by default, never an unrelated legacy branch.
 # An explicit SOURCE_BRANCH still requires its remote head to match TARGET.
+VERIFY_REMOTE_REF="${SOURCE_BRANCH:+1}"
 SOURCE_BRANCH="${SOURCE_BRANCH:-$TARGET}"
+export GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never
 APP="${PM2_APP:-minberiaksa}"
 if [[ ! "$TARGET" =~ ^[a-f0-9]{40}$ ]]; then echo "Pass the reviewed full commit SHA." >&2; exit 1; fi
 # Manual invocations share the detached runner's lock. The runner already holds
@@ -25,8 +27,18 @@ fi
 unset MINBER_RELEASE_JOB_LOCK_HELD
 if ! git diff --quiet || ! git diff --cached --quiet; then echo "Tracked local edits need to be preserved before deployment." >&2; exit 1; fi
 echo "▶ verifying reviewed source $TARGET from origin ($SOURCE_BRANCH)"
-git fetch origin "$SOURCE_BRANCH"
-if [[ "$(git rev-parse FETCH_HEAD)" != "$TARGET" ]]; then echo "Remote head differs from the reviewed commit; nothing deployed." >&2; exit 1; fi
+# The immutable reviewed object may already have been fetched by the bootstrap
+# or detached runner. Do not require network authentication again for that SHA.
+# An explicitly selected branch still requires a fresh remote-head check.
+if [[ -n "$VERIFY_REMOTE_REF" ]] || ! git cat-file -e "$TARGET^{commit}" 2>/dev/null; then
+  if timeout --kill-after=5s 120s git -c credential.interactive=false fetch origin "$SOURCE_BRANCH"; then
+    if [[ "$(git rev-parse FETCH_HEAD)" != "$TARGET" ]]; then echo "Remote head differs from the reviewed commit; nothing deployed." >&2; exit 1; fi
+  else
+    FETCH_STATUS=$?
+    echo "GIT_SOURCE_UNAVAILABLE: source fetch failed or timed out. Configure read-only GitHub access on this VPS and retry; nothing deployed." >&2
+    exit "$FETCH_STATUS"
+  fi
+fi
 if ! git merge-base --is-ancestor HEAD "$TARGET"; then echo "Current source is not an ancestor; no merge or reset performed." >&2; exit 1; fi
 PREVIOUS="$(git rev-parse HEAD)"
 BACKUP_ROOT="${RELEASE_BACKUPS_DIR:-$(dirname "$ROOT")/minberi-release-backups}"
@@ -36,7 +48,7 @@ printf '%s\n' "$PREVIOUS" > "$BACKUP/previous-source.txt"
 printf '%s\n' "$TARGET" > "$BACKUP/target-source.txt"
 git merge --ff-only "$TARGET"
 set +e
-BRANCH="$TARGET" PM2_APP="$APP" bash scripts/deploy-vps.sh 2>&1 | tee "$BACKUP/deploy.log"
+MINBER_REVIEWED_SOURCE_SHA="$TARGET" BRANCH="$TARGET" PM2_APP="$APP" bash scripts/deploy-vps.sh 2>&1 | tee "$BACKUP/deploy.log"
 DEPLOY_STATUS=${PIPESTATUS[0]}
 set -e
 if [[ "$DEPLOY_STATUS" != "0" ]]; then echo "Deployment stopped; inspect $BACKUP/deploy.log" >&2; exit "$DEPLOY_STATUS"; fi

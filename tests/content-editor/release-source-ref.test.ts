@@ -11,7 +11,7 @@ const releaseBranch = "fix/fixture-reviewed-release";
 
 // Use real Git and the real detached runner/wrapper. Only the build, providers
 // and HTTP probe are fixtures; no production credentials or external services.
-for (const scenario of ["default", "explicit-branch", "branch-advanced", "wrong-branch"] as const) {
+for (const scenario of ["default", "offline-reviewed", "explicit-branch", "branch-advanced", "wrong-branch"] as const) {
   test(`reviewed source ${scenario}: the detached release deploys only the pinned commit`, () => {
     const root = mkdtempSync(join(tmpdir(), "release-source-ref-"));
     const app = join(root, "app"), origin = join(root, "origin.git"), bin = join(root, "bin");
@@ -40,8 +40,9 @@ for (const scenario of ["default", "explicit-branch", "branch-advanced", "wrong-
         "#!/bin/bash", "set -euo pipefail", 'cd "$(dirname "$0")/.."',
         '[[ ! -v APP_DIR ]] || { echo "APP_DIR leaked into the build" >&2; exit 92; }',
         '[[ "$BRANCH" == "$FIXTURE_TARGET" ]] || exit 93',
-        // Exercise the second fetch too, as the real deploy-vps.sh does.
-        'git pull --ff-only origin "$BRANCH"',
+        // The verified wrapper supplies its already-fetched immutable source.
+        '[[ "$MINBER_REVIEWED_SOURCE_SHA" == "$BRANCH" ]] || exit 94',
+        '[[ "$(git rev-parse HEAD)" == "$MINBER_REVIEWED_SOURCE_SHA" ]] || exit 95',
         'printf "build %s\\n" "$(git rev-parse HEAD)" >> "$FIXTURE_RECORD"',
         "mv .next .next-previous", "mkdir .next", "cp reviewed-marker .next/runtime",
       ].join("\n"));
@@ -67,6 +68,7 @@ for (const scenario of ["default", "explicit-branch", "branch-advanced", "wrong-
       // the VPS; neither the outer fetch nor the wrapper may follow a new head.
       git("fetch", "origin", target);
       assert.equal(git("rev-parse", "FETCH_HEAD"), target);
+      if (scenario === "offline-reviewed") git("remote", "set-url", "origin", join(root, "unavailable-origin.git"));
       const pinnedRunner = join(root, "reviewed-runner.mjs");
       writeFileSync(pinnedRunner, git("show", target + ":scripts/release-job.mjs"));
       const result = spawnSync(process.execPath, [pinnedRunner, "start", target, "--wait"], {

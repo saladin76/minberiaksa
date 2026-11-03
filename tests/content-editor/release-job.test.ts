@@ -291,3 +291,26 @@ test("release fetches an absent reviewed commit before reading its deployment wr
     assert.equal(invoke(f.app, "rev-parse", "FETCH_HEAD"), target);
   } finally { rmSync(f.dir, { force: true, recursive: true }); }
 });
+
+test("missing GitHub credentials fail source acquisition without prompting or starting deployment", () => {
+  const f = fixture();
+  try {
+    const bin = join(f.dir, "bin"); mkdirSync(bin);
+    writeFileSync(join(bin, "git"), ["#!/bin/bash",
+      'if [[ "$1" == -c ]]; then shift 2; fi',
+      'if [[ "$1" == fetch ]]; then',
+      '  [[ "$GIT_TERMINAL_PROMPT" == 0 && "$GCM_INTERACTIVE" == never ]] || exit 92',
+      '  echo noninteractive-rejection > "$APP_DIR/auth-result"; exit 128',
+      'fi', 'exec /usr/bin/git "$@"',
+    ].join("\n"), {mode:0o755});
+    const result = spawnSync(process.execPath, [runner, "start", "f".repeat(40), "--wait"], {
+      cwd: f.app, env: {...f.env, PATH: `${bin}:${process.env.PATH}`}, encoding: "utf8", timeout: 10_000,
+    });
+    assert.equal(result.error, undefined); assert.equal(result.status, 1);
+    const job = readFileSync(join(f.jobs, "latest"), "utf8").trim();
+    assert.equal(f.state(job).phase, "FAILED"); assert.equal(f.state(job).failedPhase, "FETCHING_SOURCE");
+    assert.notEqual(f.state(job).runtimeActivated, true); assert.equal(f.calls(), "");
+    assert.match(readFileSync(join(job, "release.log"), "utf8"), /GIT_SOURCE_UNAVAILABLE/);
+    assert.equal(readFileSync(join(f.app, "auth-result"), "utf8").trim(), "noninteractive-rejection");
+  } finally { rmSync(f.dir, {force:true, recursive:true}); }
+});

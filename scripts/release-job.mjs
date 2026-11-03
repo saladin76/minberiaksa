@@ -16,6 +16,7 @@ const read = dir => JSON.parse(readFileSync(stateFile(dir), "utf8"));
 const terminalPhases = new Set(["SUCCEEDED", "FAILED", "BLOCKED_BY_RUNNING_RELEASE"]);
 const recoveryMetadataSteps = ["gift-templates", "notification-templates", "greeting-templates"];
 const activeFile = join(jobs, "active");
+const sourceEnvironment = (env = process.env) => ({ ...env, GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never" });
 function recordedJobs() {
   if (!existsSync(jobs)) return [];
   return readdirSync(jobs, { withFileTypes: true }).filter(item => item.isDirectory()).flatMap(item => {
@@ -207,10 +208,14 @@ if (mode === "start" || mode === "recover-providers") {
     const present = spawnSync("git", ["cat-file", "-e", `${options.target}^{commit}`], { cwd: options.root, stdio: "ignore" });
     if (present.status !== 0) {
       save(dir, { phase: "FETCHING_SOURCE" });
-      const fetched = spawnSync("git", ["fetch", "--no-tags", "origin", options.target], { cwd: options.root, stdio: "inherit" });
+      const fetched = spawnSync("git", ["-c", "credential.interactive=false", "fetch", "--no-tags", "origin", options.target], {
+        cwd: options.root, stdio: "inherit", env: sourceEnvironment(), timeout: 120_000, killSignal: "SIGTERM",
+      });
       const verified = spawnSync("git", ["rev-parse", "FETCH_HEAD"], { cwd: options.root, encoding: "utf8" });
       if (fetched.error || fetched.status !== 0 || verified.status !== 0 || verified.stdout.trim() !== options.target)
-        throw new Error("Cannot fetch the exact reviewed commit from origin. The runtime was not changed.");
+        throw new Error(fetched.error?.code === "ETIMEDOUT"
+          ? "GIT_FETCH_TIMEOUT: source download exceeded 120 seconds. The runtime was not changed."
+          : "GIT_SOURCE_UNAVAILABLE: cannot fetch the reviewed commit. Configure read-only GitHub access on this VPS and retry. The runtime was not changed.");
     }
     if (options.recovery) {
       save(dir, { phase: "CONFIGURING_PROVIDERS" });
@@ -239,7 +244,7 @@ if (mode === "start" || mode === "recover-providers") {
     const wrapper = spawnSync("git", ["show", `${options.target}:scripts/deploy-reviewed-dashboard.sh`], { cwd: options.root, encoding: "utf8" });
     if (wrapper.status !== 0 || !wrapper.stdout.startsWith("#!/usr/bin/env bash")) throw new Error("Reviewed deployment wrapper is unavailable.");
     const script = join(dir, "deploy-reviewed.sh"); writeFileSync(script, wrapper.stdout, { mode: 0o700 });
-    const deploy = spawnSync("bash", [script, options.target], { cwd: options.root, env: { ...process.env, APP_DIR: options.root, MINBER_RELEASE_JOB_LOCK_HELD: "1" }, stdio: "inherit" });
+    const deploy = spawnSync("bash", [script, options.target], { cwd: options.root, env: sourceEnvironment({ ...process.env, APP_DIR: options.root, MINBER_RELEASE_JOB_LOCK_HELD: "1" }), stdio: "inherit" });
     if (deploy.error || deploy.status !== 0) throw new Error("Reviewed deployment did not complete; provider setup was not started.");
     save(dir, { phase: "CONFIGURING_PROVIDERS", runtimeActivated: true });
     run(nodePath(), ["scripts/finalize-reviewed-dashboard.mjs", "--apply", ...(options.publish ? ["--publish"] : []), ...(options.activate ? ["--activate-approved"] : [])], options.root);
