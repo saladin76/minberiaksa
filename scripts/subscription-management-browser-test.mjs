@@ -14,7 +14,7 @@ const catalogs = { en: require('../lib/dashboard/i18n/catalog/en.json'), tr: req
 const label = (lang, text) => lang === 'ar' ? text : catalogs[lang][text] || text;
 const output = path.resolve(process.env.CONTENT_EDITOR_ARTIFACTS || '.artifacts/subscription-management');
 await mkdir(output, { recursive: true });
-const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {NextIntlClientProvider} from 'next-intl';import Monthly from './app/(dashboard)/dashboard/monthly/page';import {setDashLocale} from './lib/dashboard/i18n';const lang=new URLSearchParams(location.search).get('lang')||'ar';setDashLocale(lang);createRoot(document.getElementById('root')).render(<NextIntlClientProvider locale={lang} messages={window.fixtureMessages} timeZone='Europe/Istanbul'><Monthly/></NextIntlClientProvider>);`;
+const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {NextIntlClientProvider} from 'next-intl';import Monthly from './app/(dashboard)/dashboard/monthly/page';import Requests from './app/(dashboard)/dashboard/subscription-requests/page';import{useSearchParams}from'next/navigation';import {setDashLocale} from './lib/dashboard/i18n';const lang=new URLSearchParams(location.search).get('lang')||'ar';setDashLocale(lang);function App(){useSearchParams();return location.pathname==='/dashboard/subscription-requests'?<Requests/>:<Monthly/>}createRoot(document.getElementById('root')).render(<NextIntlClientProvider locale={lang} messages={window.fixtureMessages} timeZone='Europe/Istanbul'><App/></NextIntlClientProvider>);`;
 const navigation = `import React,{useMemo,useState,useEffect} from 'react';export function useSearchParams(){const [search,setSearch]=useState(location.search);useEffect(()=>{const update=()=>setSearch(location.search);window.addEventListener('popstate',update);return()=>window.removeEventListener('popstate',update)},[]);return useMemo(()=>new URLSearchParams(search),[search])}export function useRouter(){return {push:window.fixtureNavigate,replace:window.fixtureNavigate,refresh:()=>{}}}export function usePathname(){return location.pathname}export function useParams(){return {locale:new URLSearchParams(location.search).get('lang')||'ar'}}`;
 const mocks = {
   'next/navigation': navigation,
@@ -158,12 +158,14 @@ try {
     await expect(genericDialog.getByRole('alert')).toHaveCount(0);checks++;
     await page.keyboard.press('Escape');await expect(genericDialog).toBeHidden();
     assert.equal(requests.slice(before).filter(row=>row.method!=='GET').length,0);
+    await page.getByRole('link',{name:label(lang,'طلبات إدارة التبرع')+' ←',exact:true}).click();
     const ticket = page.locator(`#subscription-request-${requestA}`);
+    await expect(ticket).toBeVisible();
     const open = ticket.getByRole('link', { name: label(lang, 'فتح اشتراكات المتبرع'), exact: true });
     await open.click();
     const selected = page.locator(`#subscription-${planA}`);
     await expect(selected).toBeInViewport(); await expect(section.getByRole('row')).toHaveCount(2); assert.equal(new URL(page.url()).searchParams.get('requestId'), requestA); checks++;
-    await page.evaluate(() => window.scrollTo(0, 0)); await open.click(); await expect(selected).toBeInViewport(); checks++;
+    await section.getByRole('link',{name:label(lang,'فتح طلب المتبرع'),exact:true}).click();await expect(ticket).toBeVisible();await open.click(); await expect(selected).toBeInViewport(); checks++;
     await selected.getByRole('button', { name: label(lang, 'تخفيض مبلغ الاشتراك'), exact: true }).click();
     const dialog = page.getByRole('dialog'); await expect(dialog.getByRole('spinbutton')).toHaveValue('10'); await expect(dialog.getByRole('spinbutton')).toHaveAttribute('readonly', ''); await expect(dialog).toContainText(label(lang, 'طلب مباشر من حسابه الشخصي')); await expect(dialog.locator('textarea')).toHaveValue(new RegExp(requestA));const box=await dialog.boundingBox();assert.ok(box.y>=0&&box.y+box.height<=page.viewportSize().height+1);checks++; await page.screenshot({path:path.join(output,`${lang}-${width}-request-reduction.png`),animations:'disabled'});checks++;
     await page.keyboard.press('Escape');await expect(dialog).toBeHidden(); assert.equal(requests.slice(before).filter(row => row.method !== 'GET').length, 0); checks++;
@@ -178,13 +180,13 @@ try {
     await dialog.getByRole('button', { name: label(lang, 'تأكيد التخفيض'), exact: true }).click(); await expect(dialog).toBeHidden(); await expect(selected).toContainText('10'); checks++;
     await section.getByRole('link',{name:label(lang,'فتح طلب المتبرع'),exact:true}).click();await expect(ticket).toBeInViewport();checks++;
     await ticket.locator('textarea').first().fill('Reviewed and applied the donor request'); await ticket.getByRole('button', { name: label(lang, 'تأكيد إنجاز الطلب'), exact: true }).click();
-    await expect(page.locator(`#linked-request-${requestA}`)).toContainText(label(lang, 'منفّذ'));await expect(ticket).toContainText('Reviewed and applied the donor request'); checks++;
+    await expect(ticket).toContainText('Reviewed and applied the donor request');await open.click();await expect(page.locator(`#linked-request-${requestA}`)).toContainText(label(lang, 'منفّذ')); checks++;
     await section.getByRole('link', { name: label(lang, 'عرض جميع اشتراكات المتبرع'), exact: true }).click(); await expect(section.getByRole('row')).toHaveCount(3); await expect(section).toBeInViewport(); checks++;
     slowDonor = donorA;
     const pendingAlpha=page.waitForRequest(request=>{const url=new URL(request.url());return url.pathname==='/api/admin/subscriptions'&&url.searchParams.get('userId')===donorA&&url.searchParams.get('subscriptionId')===planA});
     await page.evaluate(href => window.fixtureNavigate(href), `/dashboard/monthly?userId=${donorA}&subscriptionId=${planA}&requestId=${requestA}#subscriptions`);await pendingAlpha;
     await page.evaluate(href => window.fixtureNavigate(href), `/dashboard/monthly?userId=${donorB}&subscriptionId=${planB}&requestId=${requestB}#subscriptions`);
-    await expect(page.locator(`#subscription-${planB}`)).toBeInViewport(); await expect(page.locator(`#subscription-${planA}`)).toHaveCount(0); await page.waitForTimeout(750); await expect(page.locator(`#subscription-${planA}`)).toHaveCount(0); await expect(page.locator('#subscription-requests')).not.toContainText('Donor Alpha'); checks++;
+    await expect(page.locator(`#subscription-${planB}`)).toBeInViewport(); await expect(page.locator(`#subscription-${planA}`)).toHaveCount(0); await page.waitForTimeout(750); await expect(page.locator(`#subscription-${planA}`)).toHaveCount(0); await expect(page.locator('#subscription-requests')).toHaveCount(0);await expect(page.locator(`#linked-request-${requestA}`)).toHaveCount(0); checks++;
     await page.evaluate(href => window.fixtureNavigate(href), `/dashboard/monthly?userId=${donorB}&subscriptionId=${planB}&requestId=${requestA}#subscriptions`);
     await expect(section.getByRole('alert')).toContainText(label(lang,'تعذّر تحميل طلبات إدارة التبرع.'));checks++;
     await page.locator(`#subscription-${planB}`).getByRole('button',{name:label(lang,'تخفيض مبلغ الاشتراك'),exact:true}).click();await expect(dialog.getByRole('spinbutton')).toHaveValue('');await expect(dialog).not.toContainText(label(lang,'طلب مباشر من حسابه الشخصي'));await page.keyboard.press('Escape');await expect(dialog).toBeHidden();checks++;
@@ -200,7 +202,7 @@ try {
   await expect(olderPage.locator(`#subscription-request-${requestA}`)).toHaveCount(1);await expect(olderPage.locator(`#subscription-request-${requestA}`).getByRole('button',{name:'تأكيد إنجاز الطلب',exact:true})).toBeVisible();checks++;
   await olderContext.close();
   assert.deepEqual(errors, []);
-  const report = { checks, errors, scope: 'Real monthly page and request panel with synthetic HTTP and framework routing adapters', productionRequests: 0, bankCalls: 0, recipientMessages: 0 };
+  const report = { checks, errors, scope: 'Real monthly page and separate request workspace with synthetic HTTP and framework routing adapters', productionRequests: 0, bankCalls: 0, recipientMessages: 0 };
   await writeFile(path.join(output, 'verification.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
 } catch (error) {
   if (activePage && !activePage.isClosed()) {
