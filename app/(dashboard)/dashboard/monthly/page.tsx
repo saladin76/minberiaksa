@@ -2572,7 +2572,7 @@ function MonthlySubscriptionsDashboard() {
           <h2 id="subscriptions-title" className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
             {dt("الاشتراكات")}</h2>
           {linkedSubscriptionId && <Link href={subscriptionManagementHref(linkedDonorId)} className="inline-block text-sm text-brand underline">{dt("عرض جميع اشتراكات المتبرع")}</Link>}
-          {activeLinkedRequest && <a href={`/dashboard/subscription-requests?${new URLSearchParams({ userId: activeLinkedRequest.donorId, subscriptionId: activeLinkedRequest.subscriptionId, requestId: activeLinkedRequest.id })}`} className="ms-4 inline-block text-sm text-brand underline">{dt("فتح طلب المتبرع")}</a>}
+          {activeLinkedRequest && <Link href={`/dashboard/subscription-requests?${new URLSearchParams({ userId: activeLinkedRequest.donorId, subscriptionId: activeLinkedRequest.subscriptionId, requestId: activeLinkedRequest.id })}`} className="ms-4 inline-block text-sm text-brand underline">{dt("فتح طلب المتبرع")}</Link>}
           {linkedRequestLoading && <p role="status" className="text-sm text-slate-500">{dt("جارٍ التحميل…")}</p>}
           {linkedRequestError && <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات إدارة التبرع.")}</p>}
           {activeLinkedRequest && <div id={`linked-request-${activeLinkedRequest.id}`} className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-start text-sm leading-7">
