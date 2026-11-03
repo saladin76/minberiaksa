@@ -68,7 +68,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
           const draft = snapshot[target] || {};
-          const response = await requestSuggestion<Proposal>("/api/admin/page-seo/" + pageKey, { locale: target, revision, market, ...(Object.keys(draft).length ? { draft } : {}), ...(analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
+          const response = await requestSuggestion<Proposal>("/api/admin/page-seo/" + pageKey, { locale: target, revision, market, sourceDraft: snapshot.ar || {}, ...(analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.key !== pageKey || response.locale !== target || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return { ...response, base: structuredClone(draft) };
         },

@@ -71,3 +71,33 @@ test("the prose check preserves opaque tokens, URLs, source verses and Arabic di
   assert.equal(hasUnexpectedArabicProse(source, "Verse ﴿وقولوا للناس حسنا﴾ {{اسم}} https://example.org/عربي ١٥"), false);
   assert.equal(hasUnexpectedArabicProse(source, "Al-Aqsa المبارك"), true);
 });
+
+test("every target locale receives Arabic-master audience guidance while rich headings, lists, marks and links stay fixed", async () => {
+  const { TRANSLATION_TARGET_LOCALES } = await import("../../lib/content-localization/translate");
+  const doc = { type: "doc", content: [
+    { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "ساعد الأسر" }] },
+    { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "دعم 15 أسرة", marks: [{ type: "bold" }, { type: "link", attrs: { href: "https://example.org/donate", target: "_blank" } }] }] }] }] },
+    { type: "image", attrs: { src: "/families.jpg", alt: "صورة ثابتة" } },
+  ] };
+  for (const locale of TRANSLATION_TARGET_LOCALES) await withModel([{ fields: { title: "Family support" }, richTexts: { body: ["Support families", "Help 15 families"] } }], async prompts => {
+    const result = await translateItem({ fields: { title: "دعم الأسر" }, richFields: { body: JSON.stringify(doc) } }, locale);
+    assert.match(prompts[0], /Arabic is the authoritative master copy/);
+    assert.match(prompts[0], /native readers/); assert.match(prompts[0], /search terms/);
+    assert.match(prompts[0], /دعم الأسر/); assert.equal(result.warnings.length, 0);
+    const expected = JSON.parse(JSON.stringify(doc).replace("ساعد الأسر", "Support families").replace("دعم 15 أسرة", "Help 15 families"));
+    assert.deepEqual(JSON.parse(result.richFields.body), expected);
+  });
+});
+
+test("plain paragraphs and HTML retain structure; flattened or modified proposals are refused without losing valid fields", async () => {
+  for (const invalid of [false, true]) await withModel([{ fields: { title: "Support", body: invalid ? "Support families now" : "## Support\n\nHelp families\n- Donate", html: invalid ? '<p>Help families</p>' : '<h2>Support</h2><p><a href="https://example.org/?a=1&gt;0">Help families</a></p>' } }], async () => {
+    const result = await translateItem({ fields: { title: "دعم", body: "## دعم\n\nساعد الأسر\n- تبرع" }, richFields: { html: '<h2>دعم</h2><p><a href="https://example.org/?a=1&gt;0">ساعد الأسر</a></p>' } }, "en");
+    assert.equal(result.fields.title, "Support");
+    if (invalid) { assert.equal(result.fields.body, undefined); assert.equal(result.richFields.html, undefined); assert.equal(result.warnings.length, 2); }
+    else { assert.match(result.fields.body, /^## Support\n\n/); assert.match(result.richFields.html, /^<h2>Support/); assert.equal(result.warnings.length, 0); }
+  });
+});
+
+test("translation refuses an intermediate source language before contacting the provider", async () => {
+  await withModel([], async () => { await assert.rejects(translateItem({ fields: { title: "English intermediate" }, sourceLocale: "en" }, "fr"), /العربي الأصلي/); });
+});

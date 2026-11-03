@@ -268,6 +268,7 @@ export default function EditCategoryPage() {
       title={title || ''}
       description={description || ''}
       imageCount={imageCount}
+      arabicSource={{ title: form.watch('name') || '', description: form.watch('description') || '' }}
     />
   );
 

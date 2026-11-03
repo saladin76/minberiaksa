@@ -1,4 +1,5 @@
 /** Shared provider payloads for the live editor and the explicit synthetic runtime diagnostic. */
+export const ARABIC_MASTER_LOCALIZATION = "Arabic is the authoritative master copy. Localize directly from the supplied Arabic, never from an intermediate translation. Preserve its meaning, factual scope, heading hierarchy, paragraph and list order, emphasis and calls to action. Rephrase idiomatically for native readers of the target language, using familiar charitable, cultural and religious terminology; do not translate word-for-word or independently rewrite the subject. Preserve numbers, names, URLs, placeholders and currencies exactly. For SEO metadata, express the same Arabic page intent using natural target-language search terms, without keyword stuffing or adding claims. Research informs terminology and audience understanding only; it never overrides or expands the Arabic source. Do not assume a country from language alone.";
 export function contentModels(env: NodeJS.ProcessEnv = process.env, configuredTranslationModel?: string) {
   return {
     research: env.SEO_RESEARCH_MODEL?.trim() || "gpt-4.1-mini",
@@ -23,7 +24,7 @@ export function researchedTranslationRequest(userContent: string, env: NodeJS.Pr
   const outputBudget = /(?:^|:)gpt-4o(?:-|:|$)/.test(model) ? 16_384 : 24_000;
   return {
     model,
-    instructions: "Translate professionally into the requested language. Use natural native phrasing and researched terminology, while preserving the source's meaning, facts, numbers, names, URLs, placeholders and currencies exactly. Never add claims from research. Return JSON only.",
+    instructions: ARABIC_MASTER_LOCALIZATION + " Translate professionally into the requested language. Return JSON only.",
     // JSON mode validates the input messages, not only top-level instructions.
     // A plain title/terminology prompt must satisfy that contract too.
     input: "Return valid JSON only.\n" + userContent, text: { format: { type: "json_object" } }, max_output_tokens: outputBudget, store: false,

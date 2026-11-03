@@ -17,6 +17,7 @@ const { pickNamespaces, SHELL_NAMESPACES } = require("../i18n/locale-messages.ts
 const en = require("../lib/dashboard/i18n/catalog/en.json"), tr = require("../lib/dashboard/i18n/catalog/tr.json");
 const ui = (locale, text) => locale === "ar" ? text : ({en,tr}[locale][text] || text);
 const editorialFixture = {id:"222222222222222222222222",kind:"ARTICLE",status:"REVIEW",locale:"ar",title:"مقال للمراجعة",version:"review-1",createdAt:"2026-10-24T07:00:00.000Z",attempts:1,result:{values:{title:"عنوان للمراجعة",description:"ملخص للمراجعة",content:JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"نص للمراجعة"}]}]})},research:{summary:"مصادر اختبار قابلة للمراجعة",sources:[{url:"https://example.org/source-one",title:"مصدر أول"},{url:"https://example.org/source-two",title:"مصدر ثان"}]}}};
+let lastSuggestionInput = null, lastPageSeoInput = null;
 let editorialWrites = 0;
 let projectLibraryVideos = [];
 let lastEditorialCommand = null;
@@ -132,7 +133,7 @@ const server = createServer(async (req, res) => {
   } else if (req.url?.startsWith("/api/admin/page-seo/")) {
     res.setHeader("Content-Type","application/json");
     let body = "";req.on("data",chunk => body+=chunk);req.on("end",() => {
-      if (req.method === "POST") res.end(JSON.stringify({key:seoFixture.key,locale:JSON.parse(body).locale,revision:seoFixture.revision,values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}}));
+      if (req.method === "POST") { lastPageSeoInput = JSON.parse(body); res.end(JSON.stringify({key:seoFixture.key,locale:lastPageSeoInput.locale,revision:seoFixture.revision,values:{metaTitle:"عنوان مقترح قابل للتحرير",metaDescription:"وصف مقترح"},research:{summary:"مراجعة مصادر الاختبار",sources:[{url:"https://example.org/research",title:"مصدر البحث"}]}})); }
       else res.end(JSON.stringify(seoFixture));
     });
   } else if (req.url?.startsWith("/api/admin/editorial-jobs/articles")) {
@@ -184,7 +185,7 @@ const server = createServer(async (req, res) => {
         res.end(JSON.stringify({kind,page,messages:pickNamespaces(input.locale,[...SHELL_NAMESPACES,"cart","homepage","ProjectExtras","CampaignsPage","CategoryLanding"])}));return;
       }
       if (req.url.endsWith("/suggest")) {
-        const input = JSON.parse(body);
+        const input = JSON.parse(body); lastSuggestionInput = input;
         if (delay) await delay;
         res.end(
           JSON.stringify({
@@ -307,6 +308,8 @@ try {
   await page.waitForFunction(() =>
     document.body.textContent.includes("جار إعداد الترجمة"),
   );
+  assert.equal(lastSuggestionInput.sourceDraft.name, "اختبار التصنيف", "foreign translation requests carry the Arabic master draft");
+  assert.equal(lastSuggestionInput.draft, undefined);
   await title.fill("Edited while generating");
   release();
   await page
@@ -569,6 +572,10 @@ try {
   await additions.getByRole("tab",{name:"المقالات والترجمات",exact:true}).click();
   await additions.getByRole("tab",{name:"SEO الصفحات العامة",exact:true}).click();
   assert.equal(await seoTitle.inputValue(),"مسودة باقية بين الأدوات","switching tools must preserve the draft");
+  await additions.getByRole("button",{name:"اقتراح SEO للغة الحالية",exact:true}).click();
+  await additions.getByText("عنوان مقترح قابل للتحرير",{exact:true}).first().waitFor();
+  assert.equal(lastPageSeoInput.sourceDraft.metaTitle,"مسودة باقية بين الأدوات","page SEO must send the current Arabic master snapshot");
+  assert.equal(lastPageSeoInput.draft,undefined);
   await additions.screenshot({path:path.join(temp,"ar-content-strategy-mobile.png"),fullPage:true,animations:"disabled"});
   await additions.goto(origin+"/?surface=ads");await additions.getByRole("button",{name:"تحميل تقرير الإعلانات",exact:true}).click();
   await additions.getByText("Donate bread",{exact:true}).first().waitFor();assert.ok(await additions.getByText("Bread Search",{exact:false}).count());

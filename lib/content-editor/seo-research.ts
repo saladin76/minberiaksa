@@ -1,10 +1,11 @@
 import { economicalAiFetch } from "@/lib/ai/core/economical-fetch";
 import { getOpenAiRuntime } from "../ai/core/connection-settings";
 import { openAiFailure } from "../ai/core/openai-response";
-import { researchRequest } from "../ai/core/content-requests";
+import { ARABIC_MASTER_LOCALIZATION, researchRequest } from "../ai/core/content-requests";
 import "server-only";
 import { isValidLocale } from "@/lib/locales";
 import { LOCALE_ENGLISH_NAMES } from "@/lib/content-localization/translate";
+import { hasUnexpectedArabicProse } from "../content-localization/translation-language";
 
 export type SeoContentType = "campaign" | "category" | "blog" | "page";
 
@@ -158,6 +159,7 @@ export async function generateResearchedSeo(input: {
     const prompt = [
       "You are a senior SEO strategist and humanitarian fundraising copywriter.",
       "Research the web first, then create professional SEO suggestions for a nonprofit donation website.",
+      ARABIC_MASTER_LOCALIZATION,
       "Use natural human wording. Do not mention AI, models, generation, or automation.",
       "Do not claim measured search volumes, rankings, trends, or most-searched keywords. Provide qualitative intent guidance unless verified metric data is supplied.",
       `Write every suggested human-facing field in ${languageName}. Do not return English copy unless the target language is English or a proper noun genuinely requires it.`,
@@ -199,8 +201,16 @@ export async function generateResearchedSeo(input: {
   const sources = webSources(payload, annotations);
   if (!sources.length) throw new SeoResearchError("لم يُرجع البحث مصادر قابلة للتحقق. أعد المحاولة.");
   const parsed = parseResearchJson(text);
+  // An absent translation must not silently display the Arabic source as foreign SEO.
+  if (locale !== "ar" && (!cleanString(parsed.seoTitle) || !cleanString(parsed.metaDescription)))
+    throw new SeoResearchError("لم تكتمل ترجمة بيانات SEO للغة المطلوبة. لم يتغير المحتوى.");
+  const suggestion = sanitizeSuggestion(parsed, title, type, locale);
+  if (!["ar", "ur"].includes(locale) && hasUnexpectedArabicProse(title + "\n" + description,
+    [suggestion.seoTitle, suggestion.metaDescription, suggestion.primaryKeyword, ...suggestion.keywords,
+      ...suggestion.longTailKeywords, suggestion.altText, ...suggestion.faq.flatMap(item => [item.question, item.answer])].join("\n")))
+    throw new SeoResearchError("بقيت كلمات عربية غير مترجمة في اقتراح SEO. راجع الاقتراح أو أعد المحاولة.");
   return {
-    suggestion: sanitizeSuggestion(parsed, title, type, locale),
+    suggestion,
     research: {
       summary: cleanString(parsed?.researchSummary, 1200),
       queries: cleanArray(parsed?.searchQueries, 8, 160),

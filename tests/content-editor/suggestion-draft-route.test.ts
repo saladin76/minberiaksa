@@ -37,10 +37,10 @@ test("translation uses the unsaved Arabic snapshot and never mutates saved conte
   const input = h.calls.translations[0] as { fields: Record<string, string>; richFields: Record<string, string> };
   assert.deepEqual(JSON.parse(JSON.stringify({ ...input.fields, ...input.richFields })), { title: "Unsaved Arabic title", description: "Unsaved source" });
 });
-test("SEO uses an unsaved language draft while keeping revision and authorization checks", async () => {
+test("SEO uses the Arabic master even when a conflicting foreign draft is supplied", async () => {
   const h = fixture();
-  assert.equal((await h.post({ action: "seo", locale: "en", revision: "revision", draft: { title: "Unsaved English title", description: "Current draft copy" } })).status, 200);
-  assert.equal(h.calls.research[0].title, "Unsaved English title"); assert.match(String(h.calls.research[0].description), /Current draft copy/);
+  assert.equal((await h.post({ action: "seo", locale: "en", revision: "revision", sourceDraft: { title: "عنوان عربي غير محفوظ", description: "محتوى المصدر العربي" }, draft: { title: "Conflicting English claim", description: "Invented foreign content" } })).status, 200);
+  assert.equal(h.calls.research[0].title, "عنوان عربي غير محفوظ"); assert.match(String(h.calls.research[0].description), /محتوى المصدر العربي/); assert.doesNotMatch(JSON.stringify(h.calls.research), /Conflicting|Invented/);
   assert.equal((await h.post({ action: "seo", locale: "en", revision: "stale" })).status, 409); assert.equal(h.calls.research.length, 1);
   const denied = fixture("denied"); assert.equal((await denied.post({})).status, 403); assert.equal(denied.calls.reads, 0);
 });
@@ -58,4 +58,22 @@ test("translation quota failures expose a controlled actionable reason without p
 test("queued translation uses the initiating authorized session after the response instead of reading expired request cookies", async () => {
   const h = fixture("queued"); const result = await h.post({});
   assert.equal(result.status,200); assert.equal(h.calls.auth,1); assert.equal(h.calls.translations.length,1);
+});
+
+test("SEO and FAQ fall back to saved Arabic, never foreign text, and refuse missing Arabic before the provider", async () => {
+  for (const action of ["seo", "faq"]) {
+    const h = fixture();
+    await h.post({ action, locale: "fr", revision: "revision", draft: { title: "Foreign" } });
+    assert.equal(h.calls.research[0].title, "Saved Arabic title");
+    const missing = await h.post({ action, locale: "en", revision: "revision", sourceDraft: { title: "", description: "" } });
+    assert.equal(missing.status, 400); assert.match(String(missing.body.error), /بالعربية/);
+    assert.equal(h.calls.research.length, 1);
+  }
+});
+
+test("proofreading still edits the requested language without substituting Arabic", async () => {
+  const h = fixture();
+  assert.equal((await h.post({ action: "proofread", locale: "en", revision: "revision", keys: ["title"], draft: { title: "English draft" }, sourceDraft: { amount: "invalid ignored source" } })).status, 200);
+  const input = h.calls.translations[0] as { mode: string; sourceLocale: string; fields: Record<string, string> };
+  assert.equal(input.mode, "proofread"); assert.equal(input.sourceLocale, "en"); assert.equal(input.fields.title, "English draft");
 });

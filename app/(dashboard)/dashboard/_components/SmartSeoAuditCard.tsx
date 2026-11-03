@@ -18,6 +18,7 @@ export function SmartSeoAuditCard({
   description,
   slug,
   imageCount = 0,
+  arabicSource,
 }: {
   type: SeoContentType;
   locale?: LocaleCode;
@@ -25,6 +26,7 @@ export function SmartSeoAuditCard({
   description?: string | null;
   slug?: string | null;
   imageCount?: number;
+  arabicSource?: { title: string; description: string };
 }) {
   return (
     <SmartSeoWorkbenchCard
@@ -34,6 +36,7 @@ export function SmartSeoAuditCard({
       description={description}
       slug={slug}
       imageCount={imageCount}
+      arabicSource={arabicSource}
     />
   );
 }

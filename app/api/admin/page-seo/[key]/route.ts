@@ -51,8 +51,10 @@ async function suggestWithSession(request: NextRequest, ctx: Context, authorized
     if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");
     const document = await readPageSeoDocument(key);
     if (document.revision !== body.revision) throw new ContentError("تغيرت إعدادات الصفحة. أعد تحميلها أولًا.", 409);
-    const source = pageSeoDefaults(key, body.locale);
-    const overrides = body.draft === undefined ? document.overrides[body.locale] || {} : validatePageSeoOverrides({ [body.locale]: body.draft })[body.locale];
+    const source = pageSeoDefaults(key, "ar");
+    // Older Arabic clients sent draft. A foreign draft must never become source copy.
+    const sourceDraft = body.sourceDraft ?? (body.locale === "ar" ? body.draft : undefined);
+    const overrides = sourceDraft === undefined ? document.overrides.ar || {} : validatePageSeoOverrides({ ar: sourceDraft }).ar;
     const values = Object.fromEntries(Object.entries(source.values).map(([field, fallback]) => [field, overrides[field] || fallback]));
     let analyticsEvidence;
     if (body.analyticsPeriod) {

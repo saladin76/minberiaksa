@@ -12,12 +12,15 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, body.type === "campaign" ? "campaigns" : body.type === "category" ? "categories" : "blog");
     if (denied) return denied;
+    const source = body.sourceDraft ?? ((!body.locale || body.locale === "ar") ? body : null);
+    if (!source || typeof source.title !== "string" || typeof source.description !== "string" || !(source.title.trim() || source.description.trim()))
+      return NextResponse.json({ error: "اكتب المحتوى بالعربية أولًا واستخدمه مرجعًا لاقتراحات SEO." }, { status: 400 });
     const result = await generateResearchedSeo({
       type: body.type,
       locale: typeof body.locale === "string" ? body.locale : "ar",
-      title: typeof body.title === "string" ? body.title : "",
-      description: typeof body.description === "string" ? body.description : "",
-      keywords: Array.isArray(body.keywords) ? body.keywords : [],
+      title: source.title,
+      description: source.description,
+      keywords: Array.isArray(source.keywords) ? source.keywords : [],
       market: typeof body.market === "string" ? body.market : undefined,
     }, request.signal);
     return NextResponse.json({ ok: true, ...result });

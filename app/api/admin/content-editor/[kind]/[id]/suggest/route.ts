@@ -61,7 +61,7 @@ async function suggestWithSession(
         return { ...saved, ...validateChanges(fields, changedTextValues(value as Record<string, string>, saved)) };
       } catch (error) { throw new ContentError(error instanceof Error ? error.message : "حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
     };
-    const source = body.action === "translate" ? draftValues(body.sourceDraft, "ar") : valuesFor(kind, row, "ar");
+    const source = body.action === "proofread" ? valuesFor(kind, row, "ar") : draftValues(body.sourceDraft, "ar");
     if (body.action === "proofread") {
       if (!isValidLocale(body.locale))
         return NextResponse.json({ error: "اختر لغة صالحة للتدقيق" }, { status: 400 });
@@ -167,10 +167,10 @@ async function suggestWithSession(
     }
     if (!["seo", "faq"].includes(body.action) || !isValidLocale(body.locale))
       return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
-    const values = draftValues(body.draft, body.locale);
+    const values = source;
     const context = fields.filter((field) => field.group === "content" && hasText(values[field.key]));
     if (!context.length)
-      return NextResponse.json({ error: "احفظ محتوى هذه اللغة أولًا" }, { status: 400 });
+      return NextResponse.json({ error: "اكتب المحتوى بالعربية أولًا ثم اطلب اقتراحات SEO أو الأسئلة الشائعة." }, { status: 400 });
     const seoFields = fields.filter((field) =>
       field.group === "seo" && !["seoNoIndex", "ogImage"].includes(field.key) &&
       (body.action !== "faq" || field.key === "faqContent"),

@@ -47,3 +47,15 @@ test("invalid SEO draft fields never reach the provider and quota errors retain 
   const h=fixture();assert.equal((await h.post({locale:"ar",revision:"saved",draft:{amount:"1"}})).status,400);assert.equal(h.calls.length,0);
   const result=await fixture("quota").post({locale:"ar",revision:"saved"});assert.equal(result.status,502);assert.equal((result.body as Record<string,unknown>).reason,"AI_QUOTA_EXCEEDED");
 });
+
+test("foreign page SEO uses unsaved Arabic or saved Arabic defaults instead of a foreign draft", async () => {
+  const h = fixture();
+  const before = structuredClone(h.document);
+  const result = await h.post({ locale: "en", revision: "saved", sourceDraft: { metaTitle: "مصدر عربي حالي", metaDescription: "محتوى الصفحة بالعربية" }, draft: { metaTitle: "Foreign claim" } });
+  assert.equal(result.status, 200); assert.equal(h.calls[0].locale, "en"); assert.equal(h.calls[0].title, "مصدر عربي حالي");
+  assert.match(String(h.calls[0].description), /محتوى الصفحة بالعربية/); assert.doesNotMatch(JSON.stringify(h.calls), /Foreign claim/);
+  await h.post({ locale: "fr", revision: "saved", draft: { metaTitle: "Other foreign claim" } });
+  assert.equal(h.calls[1].title, "Saved override"); assert.equal(h.stats().writes, 0); assert.deepEqual(h.document, before);
+  assert.equal((await h.post({ locale: "en", revision: "saved", sourceDraft: { amount: "1" } })).status, 400);
+  assert.equal(h.calls.length, 2);
+});

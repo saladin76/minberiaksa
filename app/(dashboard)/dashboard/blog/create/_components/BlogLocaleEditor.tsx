@@ -371,6 +371,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
             title={watchedTitle}
             description={`${watchedDescription || ""}\n${content || ""}`}
             imageCount={watchedImage ? 1 : 0}
+            arabicSource={{ title: post.title || "", description: `${post.description || ""}\n${post.content || ""}` }}
           />
 
           <Card className="">

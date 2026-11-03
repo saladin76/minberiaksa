@@ -332,7 +332,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
           const response = await requestSuggestion<Proposal>(url + "/suggest", { action, locale: target, locales: [target], keys: selected, revision,
-              ...(action === "translate" ? { sourceDraft: drafts.ar || {} } : { draft: drafts[target] || {} }),
+              ...(action === "proofread" ? { draft: drafts[target] || {} } : { sourceDraft: drafts.ar || {} }),
               ...(action === "seo" && analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.id !== id || response.kind !== kind || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return response;
