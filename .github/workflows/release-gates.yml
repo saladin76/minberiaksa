@@ -82,10 +82,11 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
+        timeout-minutes: 5
         run: |
           if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends ffmpeg
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
           fi
       - run: npm run test:integration-settings
       - name: Content editor and audit regressions
