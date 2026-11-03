@@ -262,6 +262,36 @@ function DashboardContent({
     };
   }, [wantsReceiptsBadge]);
 
+  const wantsRequestsBadge = badgeKeys.includes('subscriptionRequestsOpen');
+  useEffect(() => {
+    if (!wantsRequestsBadge) return;
+    const controller = new AbortController();
+    let running = false;
+    const run = async () => {
+      if (running || document.hidden) return;
+      running = true;
+      try {
+        const response = await fetch('/api/admin/subscription-requests/count', { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!controller.signal.aborted && Number.isSafeInteger(data.count) && data.count >= 0)
+          setNavCounts(previous => ({ ...previous, subscriptionRequestsOpen: data.count }));
+      } catch { /* Preserve the last confirmed count on a failed read. */ }
+      finally { running = false; }
+    };
+    void run();
+    const timer = setInterval(run, 60000);
+    window.addEventListener('subscription-requests-updated', run);
+    window.addEventListener('focus', run);
+    document.addEventListener('visibilitychange', run);
+    return () => {
+      controller.abort(); clearInterval(timer);
+      window.removeEventListener('subscription-requests-updated', run);
+      window.removeEventListener('focus', run);
+      document.removeEventListener('visibilitychange', run);
+    };
+  }, [wantsRequestsBadge]);
+
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
   useEffect(() => { setIsSidebarOpen(false); }, [pathname]);
   useEffect(() => {

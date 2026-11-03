@@ -247,8 +247,9 @@ export function UpdateCampaignWizard({ updateId }: { updateId: string }) {
       {step === 2 && (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">{dt("اسم الحملة (داخلي)")}</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={160} />
+            <label htmlFor="update-campaign-name" className="text-sm font-bold text-slate-900">{dt("اسم الحملة (داخلي)")} <span className="text-red-700">* {dt("مطلوب")}</span></label>
+            <Input id="update-campaign-name" name="campaignName" required aria-required="true" aria-describedby="update-campaign-name-help" value={name} onChange={(e) => setName(e.target.value)} maxLength={160} className={!name.trim() ? "border-amber-400 bg-amber-50/40" : ""} />
+            <p id="update-campaign-name-help" className="text-xs leading-6 text-slate-600">{dt("أدخل اسمًا واضحًا للحملة للمتابعة. يظهر لفريق العمل فقط ولا يُرسل إلى المتبرعين.")}</p>
           </div>
           <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand">

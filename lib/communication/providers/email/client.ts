@@ -1,3 +1,4 @@
+import { normalizeCampaignContact } from "../../campaign-contact-validation";
 import type { ElasticEmailRuntimeConfig } from "../elastic-email/client";
 import type { EmailAttachmentInput } from "../elastic-email/types";
 import { sendElasticEmail, isElasticEmailConfigured } from "../elastic-email/client";
@@ -42,6 +43,9 @@ export type EmailSendResult =
   | { ok: false; reason: string; detail?: string };
 
 export async function sendEmailMessage(input: EmailSendInput, runtime?: ElasticEmailRuntimeConfig): Promise<EmailSendResult> {
+  const recipient = normalizeCampaignContact("EMAIL", input.to);
+  if (!recipient) return { ok: false, reason: "INVALID_CONTACT" };
+  input = { ...input, to: recipient };
   const purpose = input.purpose ?? "TRANSACTIONAL";
   const suppression = await emailSuppressionDecision(input.to, purpose);
   if (!suppression.allowed) return { ok: false, reason: "EMAIL_SUPPRESSED", detail: `${suppression.reason}:${suppression.scope}` };

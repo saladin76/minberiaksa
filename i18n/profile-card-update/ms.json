@@ -3,5 +3,20 @@
   "description": "Benarkan kad untuk bayaran akan datang bagi langganan ini. Pengesahan bank tanpa caj sekarang; jumlah dan jadual kekal sama.",
   "submit": "Sahkan dan benarkan bayaran akan datang",
   "success": "Kad disahkan dan dipautkan kepada bayaran akan datang. Tiada caj sekarang.",
-  "error": "Kemas kini tidak dapat disahkan. Semak langganan atau hubungi persatuan sebelum mencuba lagi."
+  "error": "Kemas kini tidak dapat disahkan. Semak langganan atau hubungi persatuan sebelum mencuba lagi.",
+  "cardsTitle": "Kad pembayaran",
+  "cardsDescription": "Kad lalai hanya untuk derma baharu. Untuk menukar kad langganan, buka derma berkala dan lengkapkan pengesahan bank.",
+  "manageSubscriptions": "Urus kad derma berkala",
+  "emptyCards": "Tiada kad disimpan.",
+  "nickname": "Nama kad",
+  "save": "Simpan",
+  "makeDefault": "Jadikan lalai",
+  "defaultCard": "Lalai",
+  "cardInUse": "Kad dipautkan kepada langganan atau pengesahan belum selesai. Tukar kad langganan dahulu.",
+  "removeWarning": "Kad tersimpan akan dipadamkan. Kad yang dipautkan kepada langganan tidak boleh dipadamkan.",
+  "confirmRemove": "Sahkan pemadaman",
+  "refresh": "Muat semula",
+  "addCard": "Tambah kad",
+  "saved": "Perubahan disimpan.",
+  "cardsNavDescription": "Kad pembayaran"
 }

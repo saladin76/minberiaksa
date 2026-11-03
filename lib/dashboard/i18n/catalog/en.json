@@ -9647,5 +9647,7 @@
   "{0} أرشف كشوف حساب بنكي مع الاحتفاظ بالحركات": "{0} archived bank statements while preserving transactions",
   "حركات لم تتأكد نتيجة حفظها: {0}.": "Transactions with an unconfirmed save result: {0}.",
   "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "Could not refresh transactions. The displayed data is outdated; refresh before reviewing.",
-  "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Results exceed 10,000 transactions. Narrow the filters and export again."
+  "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Results exceed 10,000 transactions. Narrow the filters and export again.",
+  "متابعة طلبات المتبرعين لتعديل التبرعات الدورية أو إيقافها، مع سجل واضح لكل إجراء.": "Track requests to change or stop recurring donations, with a clear action history.",
+  "أدخل اسمًا واضحًا للحملة للمتابعة. يظهر لفريق العمل فقط ولا يُرسل إلى المتبرعين.": "Enter a clear campaign name to continue. It is visible to your team only and is not sent to donors."
 }

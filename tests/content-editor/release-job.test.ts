@@ -271,3 +271,23 @@ test("a full deployment never treats a running metadata-only job for the same so
     rmSync(f.dir, { force: true, recursive: true });
   }
 });
+
+test("release fetches an absent reviewed commit before reading its deployment wrapper", async () => {
+  const f = fixture();
+  try {
+    const remote = join(f.dir, "remote");
+    const invoke = (cwd: string, ...args: string[]) => {
+      const result = spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_AUTHOR_NAME: "Fixture", GIT_AUTHOR_EMAIL: "fixture@example.test", GIT_COMMITTER_NAME: "Fixture", GIT_COMMITTER_EMAIL: "fixture@example.test" } });
+      assert.equal(result.status, 0, result.stderr); return result.stdout.trim();
+    };
+    invoke(f.dir, "clone", f.app, remote);
+    writeFileSync(join(remote, "reviewed.txt"), "reviewed source\n");
+    invoke(remote, "add", "."); invoke(remote, "commit", "-m", "New reviewed source");
+    const target = invoke(remote, "rev-parse", "HEAD");
+    invoke(f.app, "remote", "add", "origin", remote);
+    assert.notEqual(spawnSync("git", ["cat-file", "-e", `${target}^{commit}`], { cwd: f.app }).status, 0);
+    const job = f.start(target), state = await f.until(job, value => terminal.has(value.phase));
+    assert.equal(state.phase, "SUCCEEDED"); assert.equal(f.calls(), "deploy\nmetadata --apply --publish --activate-approved\n");
+    assert.equal(invoke(f.app, "rev-parse", "FETCH_HEAD"), target);
+  } finally { rmSync(f.dir, { force: true, recursive: true }); }
+});

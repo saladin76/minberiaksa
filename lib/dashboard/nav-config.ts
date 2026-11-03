@@ -24,7 +24,7 @@ export type DashboardNavItem = {
 };
 
 /** Counters the sidebar knows how to fetch. */
-export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending";
+export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending" | "subscriptionRequestsOpen";
 
 export type DashboardNavGroup = { group: string; items: DashboardNavItem[] };
 
@@ -46,6 +46,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { key: "revenue", get title() { return dt("اللوحة الرئيسية"); }, href: "/dashboard", icon: "layoutDashboard", keywords: ["home", "overview", "الرئيسية"] },
       { key: "monthly", get title() { return dt("التبرعات المتكررة"); }, href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "recurring", "daily", "weekly", "subscriptions", "اشتراكات", "شهري", "يومي", "جمعة"] },
+      { key: "monthly", get title() { return dt("طلبات إدارة التبرع"); }, href: "/dashboard/subscription-requests", icon: "listChecks", keywords: ["requests", "subscription", "طلبات", "إلغاء", "إيقاف", "تعديل"], badge: "subscriptionRequestsOpen" },
       { key: "bankTransfers", get title() { return dt("التحويلات البنكية"); }, href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
       // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
       // decision. A different queue from the statement importer above: that one starts from the

@@ -202,6 +202,16 @@ if (mode === "start" || mode === "recover-providers") {
     // SHAs so a blocked metadata repair can find the actual deployment job.
     const activeTemp = `${activeFile}.${process.pid}.tmp`;
     writeFileSync(activeTemp, dir + "\n", { mode: 0o600 }); renameSync(activeTemp, activeFile);
+    // The reviewed commit may not exist in this checkout yet. Fetch under the
+    // release lock before git show/archive; never fall back to a different ref.
+    const present = spawnSync("git", ["cat-file", "-e", `${options.target}^{commit}`], { cwd: options.root, stdio: "ignore" });
+    if (present.status !== 0) {
+      save(dir, { phase: "FETCHING_SOURCE" });
+      const fetched = spawnSync("git", ["fetch", "--no-tags", "origin", options.target], { cwd: options.root, stdio: "inherit" });
+      const verified = spawnSync("git", ["rev-parse", "FETCH_HEAD"], { cwd: options.root, encoding: "utf8" });
+      if (fetched.error || fetched.status !== 0 || verified.status !== 0 || verified.stdout.trim() !== options.target)
+        throw new Error("Cannot fetch the exact reviewed commit from origin. The runtime was not changed.");
+    }
     if (options.recovery) {
       save(dir, { phase: "CONFIGURING_PROVIDERS" });
       // A separate source snapshot repairs metadata without changing HEAD, .next,

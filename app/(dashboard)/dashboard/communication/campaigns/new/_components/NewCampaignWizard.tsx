@@ -510,8 +510,9 @@ export function NewCampaignWizard() {
       {step === 2 && (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">{dt("اسم الحملة (داخلي)")}</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={dt("مثال: حملة رمضان — المتبرعون النشطون")} />
+            <label htmlFor="campaign-name" className="text-sm font-bold text-slate-900">{dt("اسم الحملة (داخلي)")} <span className="text-red-700">* {dt("مطلوب")}</span></label>
+            <Input id="campaign-name" name="campaignName" required aria-required="true" aria-describedby="campaign-name-help" maxLength={160} value={name} onChange={(e) => setName(e.target.value)} placeholder={dt("مثال: حملة رمضان — المتبرعون النشطون")} className={!name.trim() ? "border-amber-400 bg-amber-50/40" : ""} />
+            <p id="campaign-name-help" className="text-xs leading-6 text-slate-600">{dt("أدخل اسمًا واضحًا للحملة للمتابعة. يظهر لفريق العمل فقط ولا يُرسل إلى المتبرعين.")}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1 md:grid-cols-4">

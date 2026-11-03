@@ -1,3 +1,4 @@
+import { normalizeCampaignContact } from "../../campaign-contact-validation";
 import type { CommunicationRuntimeBundle } from "../../runtime-config";
 import { getActiveCommunicationRuntimeBundle } from "../../runtime-config";
 import { sendNetgsmSms } from "../netgsm/client";
@@ -37,6 +38,9 @@ export type SmsSendResult =
   | { ok: false; provider: SmsProviderId; reason: string; detail?: string };
 
 export async function sendSmsMessage(input: SmsSendInput, runtime?: CommunicationRuntimeBundle): Promise<SmsSendResult> {
+  const recipient = normalizeCampaignContact("SMS", input.to);
+  if (!recipient) return { ok: false, provider: isTurkishNumber(input.to, input.country) ? "NETGSM_SMS" : "BREVO_SMS", reason: "INVALID_CONTACT" };
+  input = { ...input, to: recipient };
   const bundle = runtime ?? await getActiveCommunicationRuntimeBundle();
   const route = resolveSmsProviderWithRuntime(bundle, input.country, input.to);
   if (!route.configured) return { ok: false, provider: route.provider, reason: route.reason };

@@ -3,5 +3,20 @@
   "description": "Autoriza esta tarjeta para los próximos pagos de esta suscripción. Verificación bancaria sin cobro inmediato; importe y fechas no cambian.",
   "submit": "Verificar y autorizar pagos futuros",
   "success": "Tarjeta verificada y vinculada a pagos futuros. No se ha cobrado ahora.",
-  "error": "No se pudo confirmar el cambio. Revisa la suscripción o contacta con la asociación antes de volver a intentarlo."
+  "error": "No se pudo confirmar el cambio. Revisa la suscripción o contacta con la asociación antes de volver a intentarlo.",
+  "cardsTitle": "Tarjetas de pago",
+  "cardsDescription": "La tarjeta predeterminada solo se aplica a nuevas donaciones. Para cambiar la de una suscripción, abre las donaciones periódicas y completa la verificación bancaria.",
+  "manageSubscriptions": "Gestionar tarjeta de donación periódica",
+  "emptyCards": "No hay tarjetas guardadas.",
+  "nickname": "Nombre de la tarjeta",
+  "save": "Guardar",
+  "makeDefault": "Usar como predeterminada",
+  "defaultCard": "Predeterminada",
+  "cardInUse": "La tarjeta está vinculada a una suscripción o verificación pendiente. Cambia primero la tarjeta de la suscripción.",
+  "removeWarning": "Se eliminará la tarjeta guardada. Las tarjetas vinculadas a una suscripción no se pueden eliminar.",
+  "confirmRemove": "Confirmar eliminación",
+  "refresh": "Actualizar",
+  "addCard": "Añadir tarjeta",
+  "saved": "Cambio guardado.",
+  "cardsNavDescription": "Tarjetas de pago"
 }

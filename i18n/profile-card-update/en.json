@@ -3,5 +3,20 @@
   "description": "Authorize this card for future payments of this subscription. Verify it with your bank without a charge now; the amount and schedule stay the same.",
   "submit": "Verify and authorize future payments",
   "success": "Card verified and linked to future payments. No money was charged now.",
-  "error": "The card update could not be confirmed. Check your subscription or contact the institution before trying again."
+  "error": "The card update could not be confirmed. Check your subscription or contact the institution before trying again.",
+  "cardsTitle": "Payment cards",
+  "cardsDescription": "The default card applies to new donations only. To replace a card on an existing plan, open recurring donations and complete bank verification.",
+  "manageSubscriptions": "Manage recurring payment card",
+  "emptyCards": "No saved cards.",
+  "nickname": "Card nickname",
+  "save": "Save",
+  "makeDefault": "Make default",
+  "defaultCard": "Default",
+  "cardInUse": "This card is linked to a plan or pending verification and cannot be removed. Replace the plan card first.",
+  "removeWarning": "This removes the saved card. Cards linked to a plan cannot be removed.",
+  "confirmRemove": "Confirm card removal",
+  "refresh": "Refresh",
+  "addCard": "Add a card",
+  "saved": "Change saved.",
+  "cardsNavDescription": "Payment cards"
 }

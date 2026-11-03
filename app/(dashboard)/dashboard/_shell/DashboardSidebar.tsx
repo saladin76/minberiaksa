@@ -25,13 +25,14 @@ import { dt } from "@/lib/dashboard/i18n";
  * Capped at 99+ so a long-neglected inbox cannot widen the item and push the label into an
  * ellipsis. `tabular-nums` keeps the pill from twitching as the number changes under the poll.
  */
-function NavCountBadge({ count, label }: { count: number; label: string }) {
+function NavCountBadge({ count, label, highlight = false }: { count: number; label: string; highlight?: boolean }) {
   return (
     <span
       className={cn(
         'shrink-0 min-w-[1.25rem] h-5 px-1.5 inline-flex items-center justify-center',
         'rounded-full bg-brand text-white text-[10.5px] font-bold leading-none tabular-nums',
         'shadow-sm shadow-brand/30',
+        highlight && 'ring-2 ring-amber-300 shadow-[0_0_12px_#fbbf2480] bg-amber-500 text-slate-950',
       )}
       // The digits alone are meaningless to a screen reader sitting after "الرسائل الواردة".
       aria-label={`${count} ${label}`}
@@ -204,7 +205,7 @@ export function DashboardSidebar({
                             {item.title}
                           </span>
                         </span>
-                        {count > 0 && <NavCountBadge count={count} label={dt("رسالة غير مقروءة")} />}
+                        {count > 0 && <NavCountBadge count={count} label={item.badge === "subscriptionRequestsOpen" ? dt("طلبات مفتوحة") : dt("رسالة غير مقروءة")} highlight={item.badge === "subscriptionRequestsOpen"} />}
                       </Link>
                     );
                   })}

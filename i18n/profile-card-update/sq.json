@@ -3,5 +3,20 @@
   "description": "Autorizo kartën për pagesat e ardhshme të këtij abonimi. Verifikimi bankar nuk tërheq para tani; shuma dhe orari mbeten të njëjta.",
   "submit": "Verifiko dhe autorizo pagesat e ardhshme",
   "success": "Karta u verifikua dhe u lidh me pagesat e ardhshme. Nuk u tërhoqën para tani.",
-  "error": "Përditësimi nuk mund të konfirmohej. Kontrollo abonimin ose kontakto shoqatën para se të provosh sërish."
+  "error": "Përditësimi nuk mund të konfirmohej. Kontrollo abonimin ose kontakto shoqatën para se të provosh sërish.",
+  "cardsTitle": "Kartat e pagesës",
+  "cardsDescription": "Karta e parazgjedhur vlen vetëm për dhurime të reja. Për të ndryshuar kartën e abonimit, hapni dhurimet periodike dhe përfundoni verifikimin bankar.",
+  "manageSubscriptions": "Menaxho kartën e dhurimit periodik",
+  "emptyCards": "Nuk ka karta të ruajtura.",
+  "nickname": "Emri i kartës",
+  "save": "Ruaj",
+  "makeDefault": "Vendos si të parazgjedhur",
+  "defaultCard": "E parazgjedhur",
+  "cardInUse": "Karta lidhet me një abonim ose verifikim në pritje. Ndryshoni fillimisht kartën e abonimit.",
+  "removeWarning": "Karta e ruajtur do të hiqet. Kartat e lidhura me abonime nuk mund të hiqen.",
+  "confirmRemove": "Konfirmo heqjen",
+  "refresh": "Rifresko",
+  "addCard": "Shto kartë",
+  "saved": "Ndryshimi u ruajt.",
+  "cardsNavDescription": "Kartat e pagesës"
 }

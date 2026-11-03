@@ -139,6 +139,9 @@ jobs:
           - name: Project ordering and donor profile
             artifact: project-profile-requests
             script: scripts/project-profile-requests-browser-test.mjs
+          - name: Donor requests and payment cards
+            artifact: donor-management
+            script: scripts/donor-management-browser-test.mjs
           - name: Subscription management
             artifact: subscriptions
             script: scripts/subscription-management-browser-test.mjs

@@ -1,3 +1,5 @@
+import * as phoneNumberValidation from "libphonenumber-js/core";
+import * as phoneMetadata from "libphonenumber-js/metadata.min.json";
 import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -28,7 +30,7 @@ const locales = {
   isValidLocale: (value: string) => ["ar", "en"].includes(value),
 };
 const policy = isolated<Record<string, unknown>>("lib/communication/campaign-audience-accounting.ts", {});
-const validation = isolated<Record<string, unknown>>("lib/communication/campaign-contact-validation.ts", {});
+const validation = isolated<Record<string, unknown>>("lib/communication/campaign-contact-validation.ts", { "libphonenumber-js/core": phoneNumberValidation, "libphonenumber-js/metadata.min.json": phoneMetadata });
 const approved = { doNotContact: false, whatsappOptIn: true, emailOptIn: true, smsOptIn: true };
 type Donor = { email: string | null; phone: string | null; communicationProfile: (typeof approved & { consentSource?: string | null }) | null };
 type RetryRow = { channel: string; purpose: string; campaignId: string | null; recipientUserId: string | null; recipientEmail: string | null; recipientPhone: string | null };

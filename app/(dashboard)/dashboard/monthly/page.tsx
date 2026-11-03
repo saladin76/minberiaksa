@@ -5,7 +5,6 @@ import { useLiveDonationRefresh } from "@/hooks/useLiveDonationRefresh";
 import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancialStatus";
 import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
 
-import { SubscriptionRequestsPanel } from "@/components/dashboard/SubscriptionRequestsPanel";
 import { focusSubscriptionTarget, subscriptionManagementHref, type SubscriptionRequestRow } from "@/lib/donations/subscription-navigation";
 import { isReductionRequestForPlan } from "@/lib/donations/subscription-request-policy";
 import type { ReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
@@ -1132,7 +1131,7 @@ function MonthlySubscriptionsDashboard() {
 
         <div className="flex justify-end"><Link href="/dashboard/monthly/settings" className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold text-brand">{dt("إعدادات صفحة التبرع الدوري")}</Link></div>
         <RecurringHealthPanel />
-        <SubscriptionRequestsPanel donorId={linkedDonorId || (selectedUserId !== "all" ? selectedUserId : undefined)} selectedRequest={activeLinkedRequest} refreshKey={requestRevision} onChanged={() => setRequestRevision(value => value + 1)} />
+        <Link href="/dashboard/subscription-requests" className="inline-flex min-h-11 items-center rounded-lg border bg-white px-4 text-sm font-semibold text-brand">{dt("طلبات إدارة التبرع")} ←</Link>
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>
@@ -2573,7 +2572,7 @@ function MonthlySubscriptionsDashboard() {
           <h2 id="subscriptions-title" className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
             {dt("الاشتراكات")}</h2>
           {linkedSubscriptionId && <Link href={subscriptionManagementHref(linkedDonorId)} className="inline-block text-sm text-brand underline">{dt("عرض جميع اشتراكات المتبرع")}</Link>}
-          {activeLinkedRequest && <a href={`#subscription-request-${activeLinkedRequest.id}`} className="ms-4 inline-block text-sm text-brand underline">{dt("فتح طلب المتبرع")}</a>}
+          {activeLinkedRequest && <a href={`/dashboard/subscription-requests?${new URLSearchParams({ userId: activeLinkedRequest.donorId, subscriptionId: activeLinkedRequest.subscriptionId, requestId: activeLinkedRequest.id })}`} className="ms-4 inline-block text-sm text-brand underline">{dt("فتح طلب المتبرع")}</a>}
           {linkedRequestLoading && <p role="status" className="text-sm text-slate-500">{dt("جارٍ التحميل…")}</p>}
           {linkedRequestError && <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات إدارة التبرع.")}</p>}
           {activeLinkedRequest && <div id={`linked-request-${activeLinkedRequest.id}`} className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-start text-sm leading-7">

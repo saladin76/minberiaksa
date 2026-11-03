@@ -8,6 +8,7 @@ import SubscriptionRequests from "@/components/minbar/account/SubscriptionReques
 import DonationManagementRequests from "@/components/minbar/account/DonationManagementRequests";
 import { subscriptionRequestNavigationCopy } from "@/lib/donations/subscription-request-navigation-copy";
 import { isSettledProfileDonation, profileDonationDate, profileDonationMatchesPeriod, successfulRecurringMonthCount } from "@/lib/minbar/profile-donation-stats";
+import PaymentCards from "@/components/minbar/account/PaymentCards";
 import { SubscriptionCardChange, SubscriptionCardChangeResult } from "@/components/minbar/account/SubscriptionCardChange";
 import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { useSession, signOut } from "next-auth/react";
@@ -39,6 +40,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
   ChevronRight,
   HandHeart,
   Headphones,
@@ -178,6 +180,7 @@ const ProfilePage = () => {
   /* The plan's cadence label  the same `common.freq*` strings the cart uses. */
   const searchParams = useSearchParams();
   const tCommon = useTranslations("common");
+  const cardCopy = useTranslations("ProfileCardUpdate");
   const tSystem = useTranslations("system");
   /* A plan the scheduler could not charge needs its own words, not "cancelled". */
   const tRecurring = useTranslations("Recurring");
@@ -191,6 +194,7 @@ const ProfilePage = () => {
     { id: "account", label: t("nav.myinfo"), icon: User, description: t("nav.accountDesc") },
     { id: "donations", label: t("nav.donations"), icon: HandHeart, description: t("nav.donationsDesc") },
     { id: "subscriptions", label: t("nav.subscriptions"), icon: Repeat, description: t("subscriptions.settingsTableTitle") },
+    { id: "cards", label: cardCopy("cardsTitle"), icon: CreditCard, description: cardCopy("cardsNavDescription") },
     { id: "requests", label: subscriptionRequestNavigationCopy(locale).title, icon: ClipboardList, description: subscriptionRequestNavigationCopy(locale).description },
     { id: "settings", label: t("nav.settings"), icon: Settings, description: t("nav.settingsDesc") },
     { id: "support", label: t("nav.support"), icon: Headphones, description: t("nav.supportDesc") },
@@ -1026,6 +1030,8 @@ const ProfilePage = () => {
         return renderDonations(currentUser);
       case "subscriptions":
         return <><SubscriptionCardChangeResult />{renderSubscriptions(currentUser)}</>;
+      case "cards":
+        return <PaymentCards locale={locale} />;
       case "requests":
         return <DonationManagementRequests
           plans={profileSubscriptionRows(currentUser).map(plan => ({ id: plan.subscriptionId!, amount: plan.planAmount ?? plan.totalAmount, currency: plan.currency, frequency: plan.frequency, status: plan.status, title: plan.items?.map(item => item.campaign?.title).filter(Boolean).join(" · ") || "" }))}

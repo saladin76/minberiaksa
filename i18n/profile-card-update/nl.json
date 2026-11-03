@@ -3,5 +3,20 @@
   "description": "Machtig de kaart voor toekomstige betalingen van dit abonnement. Bankverificatie zonder directe afschrijving; bedrag en planning blijven gelijk.",
   "submit": "Verifiëren en toekomstige betalingen machtigen",
   "success": "Kaart geverifieerd en gekoppeld aan toekomstige betalingen. Nu is niets afgeschreven.",
-  "error": "De wijziging kon niet worden bevestigd. Controleer het abonnement of neem contact op met de vereniging voordat u opnieuw probeert."
+  "error": "De wijziging kon niet worden bevestigd. Controleer het abonnement of neem contact op met de vereniging voordat u opnieuw probeert.",
+  "cardsTitle": "Betaalkaarten",
+  "cardsDescription": "De standaardkaart geldt alleen voor nieuwe donaties. Open periodieke donaties en voltooi de bankverificatie om de kaart van een bestaand abonnement te vervangen.",
+  "manageSubscriptions": "Kaart voor periodieke donaties beheren",
+  "emptyCards": "Geen opgeslagen kaarten.",
+  "nickname": "Kaartnaam",
+  "save": "Opslaan",
+  "makeDefault": "Als standaard instellen",
+  "defaultCard": "Standaard",
+  "cardInUse": "Deze kaart is gekoppeld aan een abonnement of lopende verificatie. Wijzig eerst de kaart van het abonnement.",
+  "removeWarning": "De opgeslagen kaart wordt verwijderd. Kaarten die aan een abonnement zijn gekoppeld kunnen niet worden verwijderd.",
+  "confirmRemove": "Verwijderen bevestigen",
+  "refresh": "Vernieuwen",
+  "addCard": "Kaart toevoegen",
+  "saved": "Wijziging opgeslagen.",
+  "cardsNavDescription": "Betaalkaarten"
 }

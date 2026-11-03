@@ -3233,7 +3233,7 @@
   "تحتاج تصنيف": "Sınıflandırma gerekiyor",
   "تحتاج متابعة": "Takip gerekiyor",
   "تحتاج متابعة الفريق": "Ekip takibi gerekiyor",
-  "تحتاج مراجعة": "İnceleme gerekli",
+  "تحتاج مراجعة": "İnceleme gerekiyor",
   "تحتاج مراجعة أو نشرًا": "İnceleme veya yayın bekliyor",
   "تحتاج مراجعة الخصوصية والحقوق": "Gizlilik ve hak incelemesi gerekiyor",
   "تحتاج مراجعة نهائية للنص قبل الإرسال.": "Göndermeden önce metnin son incelemesi gerekiyor.",
@@ -9027,7 +9027,7 @@
   "تحديث متابعة طلب تبرع دوري": "Düzenli bağış isteği takibi güncellendi",
   "غير متاح في الحساب المحدد": "Seçilen hesapta mevcut değil",
   "تعذّر تحميل طلبات إدارة التبرع.": "Bağış yönetimi istekleri yüklenemedi.",
-  "طلبات إدارة التبرع": "Bağış yönetimi istekleri",
+  "طلبات إدارة التبرع": "Bağış yönetimi talepleri",
   "حالة الطلب": "İstek durumu",
   "طلبات مفتوحة": "Açık istekler",
   "منفّذة": "Tamamlandı",
@@ -9639,5 +9639,7 @@
   "{0} أرشف كشوف حساب بنكي مع الاحتفاظ بالحركات": "{0}, işlemleri koruyarak hesap ekstrelerini arşivledi",
   "حركات لم تتأكد نتيجة حفظها: {0}.": "Kayıt sonucu doğrulanmamış işlem: {0}.",
   "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "İşlemler yenilenemedi. Gösterilen veriler eski; incelemeden önce yenileyin.",
-  "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Sonuçlar 10.000 işlemi aşıyor. Filtreleri daraltıp yeniden dışa aktarın."
+  "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Sonuçlar 10.000 işlemi aşıyor. Filtreleri daraltıp yeniden dışa aktarın.",
+  "متابعة طلبات المتبرعين لتعديل التبرعات الدورية أو إيقافها، مع سجل واضح لكل إجراء.": "Düzenli bağışları değiştirme veya durdurma taleplerini işlem geçmişiyle takip edin.",
+  "أدخل اسمًا واضحًا للحملة للمتابعة. يظهر لفريق العمل فقط ولا يُرسل إلى المتبرعين.": "Devam etmek için açık bir kampanya adı girin. Bu ad yalnızca ekibinize görünür, bağışçılara gönderilmez."
 }
