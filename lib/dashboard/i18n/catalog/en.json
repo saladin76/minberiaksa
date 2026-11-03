@@ -9646,5 +9646,6 @@
   "تعذّر تأكيد الأرشفة": "Could not confirm archiving",
   "{0} أرشف كشوف حساب بنكي مع الاحتفاظ بالحركات": "{0} archived bank statements while preserving transactions",
   "حركات لم تتأكد نتيجة حفظها: {0}.": "Transactions with an unconfirmed save result: {0}.",
-  "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "Could not refresh transactions. The displayed data is outdated; refresh before reviewing."
+  "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "Could not refresh transactions. The displayed data is outdated; refresh before reviewing.",
+  "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Results exceed 10,000 transactions. Narrow the filters and export again."
 }

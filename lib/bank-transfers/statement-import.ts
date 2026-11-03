@@ -11,7 +11,14 @@ import type {
   ParsedBankTransferRow,
 } from "./statement-parser";
 
-type Database = Pick<PrismaClient, "$runCommandRaw">;
+type Database = Pick<
+  PrismaClient,
+  | "$runCommandRaw"
+  | "bankTransferTransactionRecord"
+  | "bankStatementUploadRecord"
+  | "bankTransferBankRecord"
+  | "bankAccount"
+>;
 type Doc = Record<string, unknown>;
 export const STATEMENT_TRANSACTIONS = "BankTransferTransaction";
 export const STATEMENT_UPLOADS = "BankStatementUpload";
@@ -27,47 +34,44 @@ export class StatementReviewError extends Error {
   }
 }
 
-/** Fully consume a raw cursor. A failed/partial lookup is never zero duplicates. */
+/** Prisma findRaw drains its cursor in the originating session. A database
+ * failure or an invalid/oversized result must never mean “no duplicates”. */
 export async function statementRead(
   db: Database,
   collection: string,
   filter: Doc,
   projection?: Doc,
+  options: Doc = {},
 ): Promise<Doc[]> {
-  const all: Doc[] = [];
-  let reply = record(
-    await db.$runCommandRaw(
-      rawCommand({
-        find: collection,
-        filter,
-        ...(projection ? { projection } : {}),
-        batchSize: 500,
-        maxTimeMS: 15000,
-      }),
-    ),
-  );
-  for (let page = 0; page < 50; page++) {
-    const cursor = record(reply.cursor),
-      batch = cursor.firstBatch ?? cursor.nextBatch;
-    if (!Array.isArray(batch))
-      throw new StatementReviewError("STATEMENT_LOOKUP_FAILED");
-    all.push(...batch.map(record));
-    const cursorId = cursor.id;
-    if (
-      cursorId === 0 ||
-      cursorId === "0" ||
-      record(cursorId).$numberLong === "0"
-    )
-      return all;
-    if (cursorId === undefined || batch.length === 0 || all.length > 20000)
-      throw new StatementReviewError("STATEMENT_LOOKUP_INCOMPLETE");
-    reply = record(
-      await db.$runCommandRaw(
-        rawCommand({ getMore: cursorId, collection, batchSize: 500 }),
-      ),
-    );
-  }
-  throw new StatementReviewError("STATEMENT_LOOKUP_INCOMPLETE");
+  const model =
+    collection === STATEMENT_TRANSACTIONS
+      ? db.bankTransferTransactionRecord
+      : collection === STATEMENT_UPLOADS
+        ? db.bankStatementUploadRecord
+        : collection === TRANSFER_BANK_COLLECTION
+          ? db.bankTransferBankRecord
+          : collection === "BankAccount"
+            ? db.bankAccount
+            : null;
+  if (!model) throw new StatementReviewError("STATEMENT_LOOKUP_FAILED");
+  const result = await model.findRaw({
+    filter: rawCommand(filter),
+    options: rawCommand({
+      limit: 20001,
+      batchSize: 500,
+      maxTimeMS: 15000,
+      ...options,
+      ...(projection ? { projection } : {}),
+    }),
+  });
+  if (
+    !Array.isArray(result) ||
+    result.some((row) => !row || typeof row !== "object" || Array.isArray(row))
+  )
+    throw new StatementReviewError("STATEMENT_LOOKUP_FAILED");
+  if (result.length > 20000)
+    throw new StatementReviewError("STATEMENT_LOOKUP_INCOMPLETE");
+  return result as Doc[];
 }
 export type StatementBank = {
   id: string;

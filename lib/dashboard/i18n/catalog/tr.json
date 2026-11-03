@@ -9638,5 +9638,6 @@
   "تعذّر تأكيد الأرشفة": "Arşivleme doğrulanamadı",
   "{0} أرشف كشوف حساب بنكي مع الاحتفاظ بالحركات": "{0}, işlemleri koruyarak hesap ekstrelerini arşivledi",
   "حركات لم تتأكد نتيجة حفظها: {0}.": "Kayıt sonucu doğrulanmamış işlem: {0}.",
-  "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "İşlemler yenilenemedi. Gösterilen veriler eski; incelemeden önce yenileyin."
+  "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "İşlemler yenilenemedi. Gösterilen veriler eski; incelemeden önce yenileyin.",
+  "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Sonuçlar 10.000 işlemi aşıyor. Filtreleri daraltıp yeniden dışa aktarın."
 }

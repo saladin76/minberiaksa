@@ -171,6 +171,14 @@ function database(initial: Doc[] = []) {
       throw new Error("unexpected operation");
     },
   };
+  const findRaw = async ({ filter }: Doc) =>
+    [...transactions.values()].filter((row) => matches(row, filter ?? {}));
+  Object.assign(db, {
+    bankTransferTransactionRecord: { findRaw },
+    bankStatementUploadRecord: { findRaw },
+    bankTransferBankRecord: { findRaw },
+    bankAccount: { findRaw },
+  });
   return {
     db: db as unknown as Database,
     transactions,
@@ -460,42 +468,46 @@ test("partial and indeterminate writes are not reported as a completed import", 
     assert.equal([...d.uploads.values()][0].status, result.state);
   }
 });
-test("duplicate cursor pagination is fully consumed and partial reads fail closed", async () => {
-  let pages = 0;
+test("statement reads use Prisma cursor-aware findRaw, and reject malformed or oversized replies", async () => {
+  const rows = Array.from({ length: 1200 }, (_, index) => ({
+    _id: { $oid: index.toString(16).padStart(24, "0") },
+  }));
+  let reads = 0;
   const db = {
-    $runCommandRaw: async () =>
-      ++pages === 1
-        ? {
-            cursor: {
-              id: { $numberLong: "12" },
-              firstBatch: [{ transactionHash: "a" }],
-            },
-          }
-        : { cursor: { id: 0, nextBatch: [{ transactionHash: "b" }] } },
-  };
+    bankTransferTransactionRecord: {
+      findRaw: async (args: Doc) => {
+        reads++;
+        assert.equal(args.options.limit, 20001);
+        return rows;
+      },
+    },
+    $runCommandRaw: async () => {
+      throw new Error("Session-bound raw cursors are forbidden");
+    },
+  } as unknown as Database;
   assert.equal(
-    (
-      await service.statementRead(
-        db as unknown as Database,
+    (await service.statementRead(db, "BankTransferTransaction", {})).length,
+    1200,
+  );
+  assert.equal(reads, 1);
+  for (const result of [
+    { cursor: { firstBatch: [] } },
+    [{ invalid: true }, null],
+    Array.from({ length: 20001 }, () => ({})),
+  ])
+    await assert.rejects(
+      service.statementRead(
+        {
+          bankTransferTransactionRecord: { findRaw: async () => result },
+        } as unknown as Database,
         "BankTransferTransaction",
         {},
-      )
-    ).length,
-    2,
-  );
-  await assert.rejects(
-    service.statementRead(
-      {
-        $runCommandRaw: async () => ({ cursor: { firstBatch: [] } }),
-      } as unknown as Database,
-      "BankTransferTransaction",
-      {},
-    ),
-    /STATEMENT_LOOKUP_INCOMPLETE/,
-  );
+      ),
+      /STATEMENT_LOOKUP/,
+    );
 });
 
-function mutationFixture(initial: Doc | null, denied = false) {
+function mutationFixture(initial: Doc | null, denied = false, outcome?: Doc) {
   const doc = initial ? structuredClone(initial) : null;
   let donationCalls = 0;
   const commands: Doc[] = [];
@@ -547,16 +559,19 @@ function mutationFixture(initial: Doc | null, denied = false) {
       isValidLocale: (value: string) => ["ar", "en", "tr"].includes(value),
     },
     "@/lib/prisma-raw-command": { rawCommand: (value: unknown) => value },
+    "@/lib/bank-transfers/statement-metadata": metadata,
     "@/lib/bank-transfers/statement-import": {
       statementRead: async () => (doc ? [structuredClone(doc)] : []),
     },
     "@/lib/donations/bank-transfer-donation": {
       createDonationFromBankTransfer: async () => {
         donationCalls++;
+        if (outcome) return outcome;
         return {
           ok: true,
           donationId: "c".repeat(24),
           donorId: "d".repeat(24),
+          campaignId: null,
         };
       },
     },
@@ -610,6 +625,59 @@ test("approval is permission protected, requires confirmation, refuses missing/d
     assert.equal(f.commands.length, 0);
   }
 });
+test("unknown donation writes and historical conflicts retain the approval claim, while confirmed failures permit correction", async () => {
+  for (const reason of [
+    "DONATION_CREATE_UNRESOLVED",
+    "DONATION_REVIEW_REQUIRED",
+    "CAMPAIGN_NOT_FOUND",
+  ]) {
+    const fixture = mutationFixture(pending, false, { ok: false, reason });
+    const reply = await fixture.api.PATCH(
+      fixture.request({
+        status: "APPROVED",
+        approvalConfirmed: true,
+        campaignId: "c".repeat(24),
+      }),
+      fixture.context,
+    );
+    const unresolved = reason !== "CAMPAIGN_NOT_FOUND";
+    assert.equal(reply.status, unresolved ? 409 : 422);
+    assert.equal(Boolean(fixture.getDoc()?.approvalClaim), unresolved);
+    assert.equal(fixture.getDoc()?.campaignId, "c".repeat(24));
+    assert.notEqual(fixture.getDoc()?.status, "APPROVED");
+    if (unresolved) {
+      assert.equal(fixture.getDoc()?.approvalState, "UNRESOLVED");
+      assert.equal(
+        (
+          await fixture.api.PATCH(
+            fixture.request({ status: "APPROVED", approvalConfirmed: true }),
+            fixture.context,
+          )
+        ).status,
+        409,
+      );
+      assert.equal(fixture.donations(), 1);
+    }
+  }
+});
+
+test("invalid legacy calendar dates cannot be approved", async () => {
+  const fixture = mutationFixture({
+    ...pending,
+    transactionDate: "31.02.2026",
+  });
+  assert.equal(
+    (
+      await fixture.api.PATCH(
+        fixture.request({ status: "APPROVED", approvalConfirmed: true }),
+        fixture.context,
+      )
+    ).status,
+    422,
+  );
+  assert.equal(fixture.donations(), 0);
+});
+
 test("two concurrent approval requests claim the transaction atomically and create only one donation", async () => {
   const f = mutationFixture(pending),
     request = f.request({ status: "APPROVED", approvalConfirmed: true });
@@ -628,6 +696,11 @@ test("archiving a statement preserves every transaction and linked donation", as
   const api = load<{ DELETE: (request: JsonRequest) => Promise<Response> }>(
     "app/api/admin/bank-transfers/uploads/route.ts",
     {
+      "@/lib/bank-transfers/statement-import": {
+        statementRead: async () => [
+          { _id: { $oid: "e".repeat(24) }, fileHash: "f".repeat(64) },
+        ],
+      },
       "next/server": {
         NextResponse: {
           json: (body: unknown, init: { status?: number }) =>

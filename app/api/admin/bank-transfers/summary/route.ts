@@ -22,26 +22,52 @@ export async function GET(request?: NextRequest) {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
     if (denied) return denied;
-    const month = request?.nextUrl.searchParams.get("period") === "month" ? formatIstanbulDateKey(new Date()).slice(0, 7) : null;
-    const periodFilter = month ? { transactionDate: { $gte: `${month}-01`, $lte: formatIstanbulDateKey(new Date()) } } : {};
+    const month =
+      request?.nextUrl.searchParams.get("period") === "month"
+        ? formatIstanbulDateKey(new Date()).slice(0, 7)
+        : null;
+    const periodFilter = month
+      ? {
+          transactionDate: {
+            $gte: `${month}-01`,
+            $lte: formatIstanbulDateKey(new Date()),
+          },
+        }
+      : {};
 
-    const approvedResult = await prisma.$runCommandRaw({
-      aggregate: COLLECTION,
-      pipeline: [
-        { $match: { direction: "CREDIT", status: { $in: ["APPROVED", "IMPORTED"] }, ...periodFilter } },
-        { $group: { _id: "$currency", count: { $sum: 1 }, total: { $sum: "$amount" } } },
-      ],
-      cursor: {},
-    });
+    const approvedResult =
+      await prisma.bankTransferTransactionRecord.aggregateRaw({
+        pipeline: [
+          {
+            $match: {
+              direction: "CREDIT",
+              status: { $in: ["APPROVED", "IMPORTED"] },
+              ...periodFilter,
+            },
+          },
+          {
+            $group: {
+              _id: "$currency",
+              count: { $sum: 1 },
+              total: { $sum: "$amount" },
+            },
+          },
+        ],
+        options: { maxTimeMS: 15000 },
+      });
 
     const pendingResult = await prisma.$runCommandRaw({
       count: COLLECTION,
       query: { direction: "CREDIT", status: "PENDING_REVIEW", ...periodFilter },
     });
 
-    const approvedRows = isRecord(approvedResult) && isRecord(approvedResult.cursor) && Array.isArray(approvedResult.cursor.firstBatch)
-      ? approvedResult.cursor.firstBatch as GroupRow[]
-      : [];
+    if (
+      !Array.isArray(approvedResult) ||
+      !isRecord(pendingResult) ||
+      typeof pendingResult.n !== "number"
+    )
+      throw new Error("Incomplete bank summary");
+    const approvedRows = approvedResult as GroupRow[];
 
     const totals: Record<string, number> = {};
     const usdTotals: Record<string, number> = {};
@@ -61,15 +87,35 @@ export async function GET(request?: NextRequest) {
         totalUsd += usd;
       } catch (error) {
         unconvertedCurrencies++;
-        console.warn("[bank-transfers] currency conversion failed", { currency, error });
+        console.warn("[bank-transfers] currency conversion failed", {
+          currency,
+          error,
+        });
       }
     }
 
-    const pendingCount = isRecord(pendingResult) && typeof pendingResult.n === "number" ? pendingResult.n : 0;
+    const pendingCount =
+      isRecord(pendingResult) && typeof pendingResult.n === "number"
+        ? pendingResult.n
+        : 0;
 
-    return NextResponse.json({ totals, usdTotals, totalUsd, approvedCount, pendingCount, month, unconvertedCurrencies }, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json(
+      {
+        totals,
+        usdTotals,
+        totalUsd,
+        approvedCount,
+        pendingCount,
+        month,
+        unconvertedCurrencies,
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     console.error("[bank-transfers] failed to load summary", error);
-    return NextResponse.json({ error: "Failed to load bank transfers summary" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load bank transfers summary" },
+      { status: 500 },
+    );
   }
 }

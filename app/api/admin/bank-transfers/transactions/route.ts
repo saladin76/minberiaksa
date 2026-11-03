@@ -3,14 +3,29 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { statementRead } from "@/lib/bank-transfers/statement-import";
 import { rawCommand } from "@/lib/prisma-raw-command";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const COLLECTION = "BankTransferTransaction";
-const ALLOWED_STATUSES = new Set(["PENDING_REVIEW", "APPROVED", "IMPORTED", "IGNORED"]);
-const ALLOWED_SORT_FIELDS = new Set(["createdAt", "transactionDate", "amount", "donorName", "bankId", "status", "donorLocale", "finalProject"]);
+const ALLOWED_STATUSES = new Set([
+  "PENDING_REVIEW",
+  "APPROVED",
+  "IMPORTED",
+  "IGNORED",
+]);
+const ALLOWED_SORT_FIELDS = new Set([
+  "createdAt",
+  "transactionDate",
+  "amount",
+  "donorName",
+  "bankId",
+  "status",
+  "donorLocale",
+  "finalProject",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -40,40 +55,58 @@ function toNumber(value: string | null) {
 }
 
 function serialize(row: Record<string, unknown>) {
-  const suggestedProject = typeof row.suggestedProject === "string" ? row.suggestedProject : "تبرع عام";
+  const suggestedProject =
+    typeof row.suggestedProject === "string"
+      ? row.suggestedProject
+      : "تبرع عام";
   return {
     id: mongoId(row._id) ?? mongoId(row.id),
     bankId: typeof row.bankId === "string" ? row.bankId : null,
     bankIban: typeof row.bankIban === "string" ? row.bankIban : null,
-    transactionAt: typeof row.transactionAt === "string" ? row.transactionAt : null,
+    transactionAt:
+      typeof row.transactionAt === "string" ? row.transactionAt : null,
     balance: typeof row.balance === "number" ? row.balance : null,
     channel: typeof row.channel === "string" ? row.channel : null,
     approvalPending: Boolean(row.approvalClaim),
-    transactionDate: typeof row.transactionDate === "string" ? row.transactionDate : null,
+    transactionDate:
+      typeof row.transactionDate === "string" ? row.transactionDate : null,
     donorName: typeof row.donorName === "string" ? row.donorName : null,
     description: typeof row.description === "string" ? row.description : "",
     amount: typeof row.amount === "number" ? row.amount : null,
     currency: typeof row.currency === "string" ? row.currency : "USD",
     donorLocale: typeof row.donorLocale === "string" ? row.donorLocale : "ar",
-    transferMethod: typeof row.transferMethod === "string" ? row.transferMethod : "BANK_TRANSFER",
+    transferMethod:
+      typeof row.transferMethod === "string"
+        ? row.transferMethod
+        : "BANK_TRANSFER",
     suggestedProject,
-    finalProject: typeof row.finalProject === "string" ? row.finalProject : suggestedProject,
+    finalProject:
+      typeof row.finalProject === "string"
+        ? row.finalProject
+        : suggestedProject,
     campaignId: typeof row.campaignId === "string" ? row.campaignId : null,
-    donorContact: typeof row.donorContact === "string" ? row.donorContact : null,
+    donorContact:
+      typeof row.donorContact === "string" ? row.donorContact : null,
     donationId: typeof row.donationId === "string" ? row.donationId : null,
     confidence: typeof row.confidence === "string" ? row.confidence : "LOW",
     reference: typeof row.reference === "string" ? row.reference : null,
     status: typeof row.status === "string" ? row.status : "IMPORTED",
-    reviewedByName: typeof row.reviewedByName === "string" ? row.reviewedByName : null,
+    reviewedByName:
+      typeof row.reviewedByName === "string" ? row.reviewedByName : null,
     approvedAt: mongoDate(row.approvedAt),
     ignoredAt: mongoDate(row.ignoredAt),
     createdAt: mongoDate(row.createdAt),
   };
 }
 
-function regex(value: string) { return value.slice(0, 200).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function regex(value: string) {
+  return value.slice(0, 200).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 function buildFilter(url: URL) {
-  const filter: Record<string, unknown> = { direction: "CREDIT", status: { $nin: ["DUPLICATE", "DELETED"] } };
+  const filter: Record<string, unknown> = {
+    direction: "CREDIT",
+    status: { $nin: ["DUPLICATE", "DELETED"] },
+  };
   const status = clean(url.searchParams.get("status"));
   const bankId = clean(url.searchParams.get("bankId"));
   const currency = clean(url.searchParams.get("currency"));
@@ -89,7 +122,8 @@ function buildFilter(url: URL) {
   if (bankId && bankId !== "all") filter.bankId = bankId;
   if (currency && currency !== "all") filter.currency = currency;
   if (donorLocale && donorLocale !== "all") filter.donorLocale = donorLocale;
-  if (project && project !== "all") filter.finalProject = { $regex: regex(project), $options: "i" };
+  if (project && project !== "all")
+    filter.finalProject = { $regex: regex(project), $options: "i" };
   if (dateFrom || dateTo) {
     const range: Record<string, string> = {};
     if (dateFrom) range.$gte = dateFrom;
@@ -122,8 +156,14 @@ export async function GET(request: NextRequest) {
     if (denied) return denied;
 
     const url = new URL(request.url);
-    const page = Math.max(1, Math.min(100000, Math.floor(Number(url.searchParams.get("page")) || 1)));
-    const limit = Math.min(200, Math.max(10, Math.floor(Number(url.searchParams.get("limit")) || 50)));
+    const page = Math.max(
+      1,
+      Math.min(100000, Math.floor(Number(url.searchParams.get("page")) || 1)),
+    );
+    const limit = Math.min(
+      200,
+      Math.max(10, Math.floor(Number(url.searchParams.get("limit")) || 50)),
+    );
     const skip = (page - 1) * limit;
     const sortByRaw = clean(url.searchParams.get("sortBy")) ?? "createdAt";
     const sortBy = ALLOWED_SORT_FIELDS.has(sortByRaw) ? sortByRaw : "createdAt";
@@ -131,27 +171,72 @@ export async function GET(request: NextRequest) {
     const filter = buildFilter(url);
 
     const [result, countResult, statsResult] = await Promise.all([
-      prisma.$runCommandRaw(rawCommand({ find: COLLECTION, filter, sort: { [sortBy]: sortDir, _id: -1 }, skip, limit, batchSize: limit, projection: { raw: 0 } })),
+      statementRead(
+        prisma,
+        COLLECTION,
+        filter,
+        { raw: 0 },
+        { sort: { [sortBy]: sortDir, _id: -1 }, skip, limit },
+      ),
       prisma.$runCommandRaw(rawCommand({ count: COLLECTION, query: filter })),
-      prisma.$runCommandRaw(rawCommand({ aggregate: COLLECTION, pipeline: [{ $match: filter }, { $group: { _id: { status: "$status", currency: "$currency" }, count: { $sum: 1 }, amount: { $sum: "$amount" } } }], cursor: { batchSize: 1000 }, maxTimeMS: 15000 })),
+      prisma.bankTransferTransactionRecord.aggregateRaw({
+        pipeline: [
+          { $match: rawCommand(filter) },
+          {
+            $group: {
+              _id: { status: "$status", currency: "$currency" },
+              count: { $sum: 1 },
+              amount: { $sum: "$amount" },
+            },
+          },
+        ],
+        options: { maxTimeMS: 15000 },
+      }),
     ]);
 
-    const rows = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)
-      ? result.cursor.firstBatch as Record<string, unknown>[]
-      : [];
-    if (!isRecord(result) || !isRecord(result.cursor) || !Array.isArray(result.cursor.firstBatch) || !isRecord(countResult) || typeof countResult.n !== "number" || !isRecord(statsResult) || !isRecord(statsResult.cursor) || !Array.isArray(statsResult.cursor.firstBatch)) throw new Error("Incomplete statement listing");
-    const summary: { counts: Record<string, number>; approvedTotals: Record<string, number> } = { counts: {}, approvedTotals: {} };
-    for (const row of statsResult.cursor.firstBatch) {
+    const rows = result;
+    if (
+      !isRecord(countResult) ||
+      typeof countResult.n !== "number" ||
+      !Array.isArray(statsResult)
+    )
+      throw new Error("Incomplete statement listing");
+    const summary: {
+      counts: Record<string, number>;
+      approvedTotals: Record<string, number>;
+    } = { counts: {}, approvedTotals: {} };
+    for (const row of statsResult) {
       if (!isRecord(row) || !isRecord(row._id)) continue;
-      const state = String(row._id.status), currency = String(row._id.currency);
-      summary.counts[state] = (summary.counts[state] ?? 0) + Number(row.count ?? 0);
-      if (["APPROVED", "IMPORTED"].includes(state)) summary.approvedTotals[currency] = Math.round(((summary.approvedTotals[currency] ?? 0) + Number(row.amount ?? 0)) * 100) / 100;
+      const state = String(row._id.status),
+        currency = String(row._id.currency);
+      summary.counts[state] =
+        (summary.counts[state] ?? 0) + Number(row.count ?? 0);
+      if (["APPROVED", "IMPORTED"].includes(state))
+        summary.approvedTotals[currency] =
+          Math.round(
+            ((summary.approvedTotals[currency] ?? 0) +
+              Number(row.amount ?? 0)) *
+              100,
+          ) / 100;
     }
-    const total = isRecord(countResult) && typeof countResult.n === "number" ? countResult.n : rows.length;
+    const total =
+      isRecord(countResult) && typeof countResult.n === "number"
+        ? countResult.n
+        : rows.length;
 
-    return NextResponse.json({ transactions: rows.map(serialize), summary, page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) });
+    return NextResponse.json({
+      transactions: rows.map(serialize),
+      summary,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
   } catch (error) {
     console.error("[bank-transfers] failed to list transactions", error);
-    return NextResponse.json({ error: "Failed to list bank transfer transactions" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to list bank transfer transactions" },
+      { status: 500 },
+    );
   }
 }

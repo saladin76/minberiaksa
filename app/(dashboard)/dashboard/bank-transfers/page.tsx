@@ -494,6 +494,11 @@ export default function BankTransfersPage() {
       if (status === "APPROVED") void refreshBanksOnly();
     } catch (e) {
       toast.error(apiError(e, dt("فشل تحديث العملية")));
+      // An uncertain write or a concurrent review can have changed the lock.
+      // Refresh server truth before offering another financial action.
+      if (!axios.isAxiosError(e) || !e.response || [409, 503].includes(e.response.status)) {
+        await loadTransactions(appliedFilters, page);
+      }
     } finally {
       setReviewingId(null);
     }

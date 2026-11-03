@@ -3686,3 +3686,23 @@ model AiSuggestionTask {
 
   @@index([ownerId, status, deadlineAt], map: "content_editor_ownerId_status_deadlineAt")
 }
+
+/// Read adapters for legacy statement collections. Documents remain managed by
+/// the review service; these models add no indexes or database migration.
+model BankTransferTransactionRecord {
+  id String @id @map("_id") @db.ObjectId
+
+  @@map("BankTransferTransaction")
+}
+
+model BankStatementUploadRecord {
+  id String @id @map("_id") @db.ObjectId
+
+  @@map("BankStatementUpload")
+}
+
+model BankTransferBankRecord {
+  id String @id @map("_id") @db.ObjectId
+
+  @@map("BankTransferBank")
+}

@@ -8,6 +8,7 @@ import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { createDonationFromBankTransfer } from "@/lib/donations/bank-transfer-donation";
 import { isValidLocale } from "@/lib/locales";
 import { rawCommand } from "@/lib/prisma-raw-command";
+import { statementDate } from "@/lib/bank-transfers/statement-metadata";
 import { statementRead } from "@/lib/bank-transfers/statement-import";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,10 +19,15 @@ const approvalFailure: Record<string, string> = {
   INVALID_AMOUNT: "قيمة العملية غير صالحة",
   DONOR_NOT_FOUND: "المتبرع المختار غير موجود",
   DONOR_CONTACT_NOT_FOUND: "لا يوجد متبرع بهذا البريد أو الهاتف",
-  DONOR_CONTACT_AMBIGUOUS: "أكثر من متبرع بهذا البريد أو الهاتف  حدّد المتبرع يدويًا",
+  DONOR_CONTACT_AMBIGUOUS:
+    "أكثر من متبرع بهذا البريد أو الهاتف  حدّد المتبرع يدويًا",
   CAMPAIGN_NOT_FOUND: "المشروع المختار غير موجود أو محذوف",
   DONOR_CREATE_FAILED: "تعذّر إنشاء سجل المتبرع",
   DONATION_CREATE_FAILED: "تعذّر إنشاء التبرع",
+  DONATION_CREATE_UNRESOLVED:
+    "تعذّر تأكيد الإجراء. راجع حالة العملية قبل تكراره.",
+  DONATION_REVIEW_REQUIRED:
+    "الإجراء يحتاج تحققًا. لا تكرر الاعتماد قبل مراجعة الحالة.",
 };
 const statuses = new Set(["PENDING_REVIEW", "APPROVED", "IGNORED", "DELETED"]);
 const obj = (v: unknown): Record<string, unknown> =>
@@ -121,13 +127,15 @@ async function mutate(
         typeof doc.amount !== "number" ||
         !Number.isFinite(doc.amount) ||
         doc.amount <= 0 ||
-        !doc.transactionDate
+        !statementDate(doc.transactionDate)
       )
         return NextResponse.json(
           { error: "لا يمكن اعتماد حركة غير واردة أو ناقصة البيانات." },
           { status: 422 },
         );
       claim = randomUUID();
+      const reviewFields = { ...$set };
+      delete reviewFields.status;
       const claimed = obj(
         await prisma.$runCommandRaw(
           rawCommand({
@@ -135,7 +143,13 @@ async function mutate(
             updates: [
               {
                 q: { _id: { $oid: id }, ...ready },
-                u: { $set: { approvalClaim: claim, approvalStartedAt: now } },
+                u: {
+                  $set: {
+                    ...reviewFields,
+                    approvalClaim: claim,
+                    approvalStartedAt: now,
+                  },
+                },
               },
             ],
           }),
@@ -173,30 +187,62 @@ async function mutate(
         donorUserId: clean(effective.donorUserIdChoice),
       });
       if (!result.ok) {
-        // Donation creation returned a known failure; retain reviewer choices and permit correction.
-        await prisma.$runCommandRaw(
-          rawCommand({
-            update: COLLECTION,
-            updates: [
-              {
-                q: { _id: { $oid: id }, approvalClaim: claim },
-                u: { $unset: { approvalClaim: "", approvalStartedAt: "" } },
-              },
-            ],
-          }),
+        const unresolved = [
+          "DONATION_CREATE_UNRESOLVED",
+          "DONATION_REVIEW_REQUIRED",
+        ].includes(result.reason);
+        // Keep the claim when a commit is uncertain or historical records need
+        // review. Only confirmed pre-write/transaction rejections can be retried.
+        const released = obj(
+          await prisma.$runCommandRaw(
+            rawCommand({
+              update: COLLECTION,
+              updates: [
+                {
+                  q: { _id: { $oid: id }, approvalClaim: claim },
+                  u: unresolved
+                    ? {
+                        $set: {
+                          approvalState: "UNRESOLVED",
+                          approvalFailureReason: result.reason,
+                          updatedAt: now,
+                        },
+                      }
+                    : { $unset: { approvalClaim: "", approvalStartedAt: "" } },
+                },
+              ],
+            }),
+          ),
         );
+        if (
+          released.ok !== 1 ||
+          released.n !== 1 ||
+          released.writeConcernError ||
+          (Array.isArray(released.writeErrors) && released.writeErrors.length)
+        )
+          return NextResponse.json(
+            {
+              error: "تعذّر تأكيد حفظ العملية. راجع حالتها قبل إعادة الإجراء.",
+              code: "TRANSFER_WRITE_UNRESOLVED",
+            },
+            { status: 409 },
+          );
         return NextResponse.json(
           {
-            error: approvalFailure[result.reason] ?? "تعذّر اعتماد التبرع. راجع بيانات المتبرع والمشروع.",
+            error:
+              approvalFailure[result.reason] ??
+              "تعذّر اعتماد التبرع. راجع بيانات المتبرع والمشروع.",
             code: result.reason,
           },
-          { status: 422 },
+          { status: unresolved ? 409 : 422 },
         );
       }
       donationId = result.donationId;
       Object.assign($set, {
         donationId,
+        approvalState: "CONFIRMED",
         donorUserId: result.donorId,
+        campaignId: result.campaignId,
         approvedAt: now,
         convertedToDonation: true,
         convertedAt: now,
