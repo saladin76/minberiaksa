@@ -6,9 +6,9 @@ import ts from "typescript";
 import * as syncResult from "../../lib/communication/template-sync-result";
 import * as timestamps from "../../lib/communication/template-sync-timestamps";
 
-type Result = { status: number; body: { templateSync?: syncResult.TemplateSyncResult } };
+type Result = { status: number; body: { templateSync?: syncResult.TemplateSyncResult; templates?: { total: number; ready: number; rows: Array<{ name: string; approvedLocales: string[] }> } } };
 
-function dashboard(permitted = true, withCatalogue = true) {
+function dashboard(permitted = true, withCatalogue = true, catalogue: { templates: unknown[]; senders: unknown[] } = { templates: [], senders: [] }) {
   let reads = 0;
   const summary = { ok: true, matchedTemplates: 13, variantsUpserted: 192, unmatchedNames: ["remote_only"] };
   const audits = [
@@ -17,8 +17,8 @@ function dashboard(permitted = true, withCatalogue = true) {
   ];
   const prisma = {
     communicationDelivery: { count: async () => 0, groupBy: async () => [], findMany: async () => [] },
-    whatsappTemplate: { findMany: async () => [] },
-    communicationSender: { findMany: async () => [] },
+    whatsappTemplate: { findMany: async () => catalogue.templates },
+    communicationSender: { findMany: async () => catalogue.senders },
     auditLog: { findFirst: async ({ where }: { where: { action: string; entityType: string } }) => {
       reads++;
       assert.equal(where.entityType, "WhatsappTemplate");
@@ -34,7 +34,7 @@ function dashboard(permitted = true, withCatalogue = true) {
     "@/lib/communication/whatsapp-delivery-progress": { whatsappDeliveryProgress: () => { throw new Error("No delivery rows expected"); } },
     "@/lib/communication/runtime-config": { getActiveMetaWhatsappRuntimeConfig: async () => ({ configured: true }) },
     "@/lib/communication/delivery-retry-service": { retryPreflight: async () => ({ eligible: 0 }) },
-    "@/lib/communication/whatsapp-template-sync": { resolveVariantForLocale: () => { throw new Error("No template rows expected"); } },
+    "@/lib/communication/whatsapp-template-sync": { resolveVariantForLocale: (variants: Array<{ approvalStatus: string }>) => ({ ready: variants.some(v => v.approvalStatus === "APPROVED"), approvalStatus: variants.some(v => v.approvalStatus === "APPROVED") ? "APPROVED" : "UNKNOWN", languageCode: "en_US" }) },
     "@/lib/communication/template-sync-result": syncResult,
     "@/lib/communication/template-sync-timestamps": timestamps,
     "@/lib/communication/purpose-group": { parseCommunicationPurposeGroup: () => "ALL", communicationPurposeWhere: () => ({}) },
@@ -66,4 +66,19 @@ test("legacy unscoped audits cannot establish a completed catalogue", async () =
 
 test("unauthorized dashboard requests cannot read the saved catalogue audit", async () => {
   const h = dashboard(false); assert.equal((await h.get()).status, 403); assert.equal(h.reads(), 0);
+});
+
+
+test("readiness excludes archived templates and approvals belonging only to a non-default account", async () => {
+  const variant = (businessAccountId: string) => ({ businessAccountId, languageCode: "en_US", locale: "en", approvalStatus: "APPROVED", lastSyncedAt: new Date("2030-01-01T00:00:00Z") });
+  const template = (name: string, status: string | null, variants: unknown[]) => ({ id: name, name, status, category: "UTILITY", updatedAt: new Date(), wabaVariants: variants });
+  const result = await dashboard(true, true, {
+    templates: [template("archived", "ARCHIVED", [variant("primary")]), template("current", "READY", [variant("primary")]), template("legacy", null, [variant("primary")]), template("other-account", "READY", [variant("secondary")])],
+    // Even an incorrectly broad mocked query cannot establish readiness from this secondary row.
+    senders: [{ businessAccountId: "primary", isDefault: true }, { businessAccountId: "secondary", isDefault: false }],
+  }).get();
+  assert.equal(result.status, 200); assert.equal(result.body.templates?.total, 3); assert.equal(result.body.templates?.ready, 2);
+  assert.deepEqual(Array.from(result.body.templates!.rows.find(row => row.name === "other-account")!.approvedLocales), []);
+  const ambiguous = await dashboard(true, true, { templates: [template("current", "READY", [variant("primary")])], senders: [{ businessAccountId: "primary", isDefault: true }, { businessAccountId: "secondary", isDefault: true }] }).get();
+  assert.equal(ambiguous.body.templates?.ready, 0);
 });

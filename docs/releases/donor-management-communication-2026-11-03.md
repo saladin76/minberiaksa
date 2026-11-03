@@ -9,12 +9,13 @@
 - Existing Albaraka subscription replacement still requires the donor-owned 3DS authentication flow. No capture is initiated by that flow. Other providers are not silently switched to Albaraka. The result is read from the server, never trusted from a success URL alone.
 - Card metadata edits return only explicitly selected safe fields. Card deletion is transactional and blocked for any linked subscription or pending bank verification. CVV is never persisted or returned; no stored PAN or encrypted PAN is returned by metadata edits.
 - Outbound WhatsApp text/templates/media, email and SMS reject malformed destinations before provider access. Phone validation checks the country numbering plan and exact canonical identity, so an embedded trunk prefix is rejected rather than guessed into another destination. Historical inbox matching keys remain unchanged.
+- WhatsApp readiness excludes archived templates and evaluates approval/language/sync evidence only on the default sending account; a secondary account cannot inflate readiness. Ambiguous different defaults do not establish readiness.
 - Explicit email errors cannot become success merely from HTTP 200. Definite Elastic Email rejection/auth/rate-limit errors are distinguished from transport uncertainty; unknown delivery outcomes remain held.
 - The release runner fetches and verifies an absent exact commit under its existing release lock before reading the wrapper. A failed fetch does not activate the runtime.
 
 ## Verification
 
-- Integration-settings suite: 1,776 passed.
+- Integration-settings suite: 1,777 passed.
 - Content-editor/operational suite: 444 passed, including 14 isolated release-runner scenarios.
 - Donor-management browser fixtures: 378 checks, 19 locales, phone/desktop, including card edits/default/removal protection, adding cards, cleared CVV, failed reads, collapsed health and request queues.
 - Existing project/profile/request browser fixtures: 207 checks.
@@ -24,9 +25,9 @@
 
 ## Live evidence and remaining external gates
 
-Read-only inspection of the current WhatsApp dashboard on 3 November showed 25 of 29 local template groups ready, 417 synchronized language variants across 25 groups, some language versions not synchronized, and 13 provider templates without a local counterpart. The dashboard also contains genuine Meta 131026 delivery failures. These are not converted into successful delivery or a fabricated 100% readiness score.
+Read-only inspection of the current WhatsApp dashboard on 3 November showed 25 of 29 local template groups ready, 417 synchronized language variants across 25 groups, some language versions not synchronized, and 13 provider templates without a local counterpart. The old aggregate included archived templates and approvals from secondary accounts. The revised metric must be checked after deployment; this review does not infer that four live groups necessarily need approval. The dashboard also contains genuine Meta 131026 delivery failures. These are not converted into successful delivery or a fabricated 100% readiness score.
 
-The code fixtures prove local behavior. Completion still requires deployment, reconciliation of the four template groups/language mapping against current Meta approval, and a deliberately selected recipient test with acceptance plus delivery receipts. Existing queued/failed messages were not resent by this review. No automatic bulk retry or donor charge was performed.
+The code fixtures prove local behavior. Completion still requires deployment, reconciliation of the active template groups/language mapping against current Meta approval, and a deliberately selected recipient test with acceptance plus delivery receipts. Existing queued/failed messages were not resent by this review. No automatic bulk retry or donor charge was performed.
 
 ## Deploy
 
