@@ -588,7 +588,89 @@ export default function StatementImporter({
                   ))}
                 </select>
               </div>
-              <div className="max-h-[480px] overflow-auto rounded-xl border border-slate-200">
+              <div data-mobile-statement-rows className="space-y-3 md:hidden">
+                {shown.map((row) => (
+                  <article
+                    key={row.rowKey}
+                    className={`rounded-xl border border-slate-200 p-4 ${excluded.has(row.rowNumber) ? "bg-slate-50 opacity-70" : "bg-white"}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <label className="flex items-center gap-2 text-xs text-slate-500">
+                        <input
+                          type="checkbox"
+                          aria-label={dt("تضمين الصف {0}", [row.rowNumber])}
+                          checked={
+                            !excluded.has(row.rowNumber) &&
+                            ["NEW", "AMBIGUOUS", "EXCLUDED"].includes(
+                              row.importState,
+                            )
+                          }
+                          disabled={
+                            Boolean(busy) ||
+                            !["NEW", "AMBIGUOUS", "EXCLUDED"].includes(
+                              row.importState,
+                            )
+                          }
+                          onChange={(event) => {
+                            setExcluded((previous) => {
+                              const next = new Set(previous);
+                              if (event.target.checked)
+                                next.delete(row.rowNumber);
+                              else next.add(row.rowNumber);
+                              return next;
+                            });
+                            setDirty(true);
+                            setConfirmed(false);
+                          }}
+                        />
+                        <span>#{row.rowNumber}</span>
+                      </label>
+                      <strong
+                        dir="ltr"
+                        className="text-base tabular-nums text-slate-900"
+                      >
+                        {row.amount === null
+                          ? "—"
+                          : `${row.direction === "DEBIT" ? "−" : ""}${money(row.amount, row.currency)}`}
+                      </strong>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                      <span
+                        className={`rounded-full px-2 py-1 ${row.importState === "NEW" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+                      >
+                        {states[row.importState]}
+                      </span>
+                      <time dir="ltr" className="text-slate-500">
+                        {row.transactionAt?.replace("T", " ") ??
+                          row.transactionDate ??
+                          "—"}
+                      </time>
+                    </div>
+                    <p className="mt-3 break-words text-sm leading-6 text-slate-700">
+                      {row.description}
+                    </p>
+                    <p className="mt-2 break-all font-mono text-[10px] text-slate-400">
+                      {[row.reference, row.channel]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </p>
+                    {row.balance !== null && row.balance !== undefined && (
+                      <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                        {dt("الرصيد")}:{" "}
+                        <span dir="ltr" className="inline-block">
+                          {money(row.balance, row.currency)}
+                        </span>
+                      </p>
+                    )}
+                  </article>
+                ))}
+                {!shown.length && (
+                  <p className="p-6 text-center text-xs text-slate-400">
+                    {dt("لا توجد عمليات مطابقة")}
+                  </p>
+                )}
+              </div>
+              <div className="hidden md:block max-h-[480px] overflow-auto rounded-xl border border-slate-200">
                 <table className="w-full min-w-[850px] text-start text-xs">
                   <caption className="sr-only">
                     {dt("معاينة حركات الكشف")}
