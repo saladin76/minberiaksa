@@ -9534,5 +9534,11 @@
   "مبلغ دفعة الاشتراك": "Abonelik ödemesi tutarı",
   "عملة الاشتراك": "Abonelik para birimi",
   "الموعد القادم للاشتراك": "Sonraki abonelik tarihi",
-  "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة": "Kayıtlı şablon bağış sıklığıyla eşleşmiyor; yeni mesajda doğru şablonu kullanın"
+  "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة": "Kayıtlı şablon bağış sıklığıyla eşleşmiyor; yeni mesajda doğru şablonu kullanın",
+  "إلغاء حد الدولار الواحد في الموقع. قد تفرض البوابة أو البنك حدودًا مستقلة على مبلغ الدفع.": "Sitenin bir dolarlık alt sınırını kaldır. Ödeme kuruluşu veya banka kendi tutar sınırlarını uygulayabilir.",
+  "مفعّل: يُلغى حد الدولار الواحد في الموقع، مع بقاء ضوابط المبلغ والعملة لدى البوابة والبنك.": "Etkin: sitenin bir dolarlık alt sınırı kaldırılır. Ödeme kuruluşunun ve bankanın tutar ve para birimi kuralları geçerlidir.",
+  "معطّل: الحد الأدنى لكل تبرع دولار واحد أو ما يعادله بالعملة المختارة عند إنشاء الطلب. يطلب الموقع رفع المبالغ الأقل من هذا الحد.": "Devre dışı: her bağış, sipariş oluşturulurken en az bir ABD doları veya seçilen para birimindeki karşılığı kadar olmalıdır. Site daha düşük tutarların artırılmasını ister.",
+  "عملة العرض هي العملة المختارة للتبرع. قد يُرسل طلب البنك بعملة مختلفة حسب البوابة؛ وتوضح تفاصيل العملية المبلغ والعملة المرسلين فعليًا. المعادل بالدولار للمحاسبة، ولا يسري حد الدولار الواحد على الأوقاف ذات السعر الثابت.": "Gösterim para birimi, bağış için seçilen para birimidir. Ödeme kuruluşuna göre bankaya farklı bir para birimiyle talep gönderilebilir; işlem ayrıntıları gönderilen gerçek tutarı ve para birimini gösterir. ABD doları karşılığı muhasebe içindir. Sabit fiyatlı vakıf kalemleri bir dolarlık alt sınırdan muaftır.",
+  "السماح بمبالغ أقل من دولار واحد": "Bir ABD dolarından düşük bağışlara izin ver",
+  "عنوان الصفحة غير متاح في هذا التقرير": "Bu raporda sayfa başlığı mevcut değil"
 }

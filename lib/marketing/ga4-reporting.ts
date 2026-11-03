@@ -133,6 +133,12 @@ export function buildGa4BatchRequests(range: Ga4Selection): Ga4BatchReportReques
         },
       },
     }),
+    // Titles have their own grain: keep the path-only user/session totals above
+    // intact when a page had several titles during the selected period.
+    report(range, ["pagePath", "pageTitle"], [METRICS.screenPageViews], {
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+      limit: "500",
+    }),
   ];
 }
 
@@ -168,6 +174,13 @@ export function parseGa4BatchResponse(value: unknown): Ga4DashboardReport {
   const response = (index: number) => reports[index];
   const summaryRows = getRows(response(0));
   const summaryRow = summaryRows[0] ?? {};
+  const titles = new Map<string, { title: string; views: number }>();
+  for (const row of getRows(response(8))) {
+    const path = dimension(row, 0), title = dimension(row, 1).trim(), views = metric(row, 0);
+    if (!path || !title || ["(not set)", "(other)"].includes(title.toLowerCase())) continue;
+    const previous = titles.get(path);
+    if (!previous || views > previous.views || (views === previous.views && title < previous.title)) titles.set(path, { title, views });
+  }
 
   const metadata = reports.map((value) => isRecord(value) && isRecord(value.metadata) ? value.metadata : {});
   return {
@@ -190,7 +203,7 @@ export function parseGa4BatchResponse(value: unknown): Ga4DashboardReport {
     })),
     pages: getRows(response(2)).map((row) => ({
       pagePath: dimension(row, 0),
-      pageTitle: dimension(row, 1),
+      pageTitle: titles.get(dimension(row, 0))?.title ?? "",
       screenPageViews: metric(row, 0),
       activeUsers: metric(row, 1),
       sessions: metric(row, 2),

@@ -20,7 +20,7 @@ test("GA4 report ranges and requests cover the dashboard reporting set", () => {
   assert.equal(isGa4Range("all"), false);
 
   const requests = buildGa4BatchRequests("28d");
-  assert.equal(requests.length, 8);
+  assert.equal(requests.length, 9);
   assert.equal((requests[0].dateRanges as Array<{ startDate: string }>)[0].startDate, "28daysAgo");
   assert.deepEqual(requests[0].metrics, [
     { name: "activeUsers" }, { name: "totalUsers" }, { name: "newUsers" }, { name: "sessions" },
@@ -28,6 +28,7 @@ test("GA4 report ranges and requests cover the dashboard reporting set", () => {
   ]);
   assert.deepEqual(requests[2].dimensions, [{ name: "pagePath" }]);
   assert.equal(requests[2].limit, "25");
+  assert.deepEqual(requests[8].dimensions, [{ name: "pagePath" }, { name: "pageTitle" }]);
   assert.deepEqual(
     (requests[6].dimensionFilter as { filter: { fieldName: string; stringFilter: { value: string } } }).filter,
     { fieldName: "eventName", stringFilter: { matchType: "EXACT", value: "exception" } },
@@ -117,7 +118,7 @@ test("report request uses scoped bearer access and maps provider errors without 
   assert.equal(requestedUrls.length, 2);
   assert.ok(requestedUrls.every((url) => /properties\/123456789:batchRunReports$/.test(url)));
   assert.deepEqual(authorizations, ["Bearer private-test-token", "Bearer private-test-token"]);
-  assert.deepEqual(requestedBodySizes, [5, 3]);
+  assert.deepEqual(requestedBodySizes, [5, 4]);
   assert.equal(result.exceptionCount, 0);
 
   await assert.rejects(

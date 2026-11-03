@@ -9542,5 +9542,11 @@
   "مبلغ دفعة الاشتراك": "Subscription installment amount",
   "عملة الاشتراك": "Subscription currency",
   "الموعد القادم للاشتراك": "Next subscription date",
-  "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة": "The saved template does not match the donation frequency; use the correct template in a new message"
+  "القالب المحفوظ لا يطابق دورية التبرع؛ استخدم القالب الصحيح في رسالة جديدة": "The saved template does not match the donation frequency; use the correct template in a new message",
+  "إلغاء حد الدولار الواحد في الموقع. قد تفرض البوابة أو البنك حدودًا مستقلة على مبلغ الدفع.": "Disable the site’s one-dollar minimum. The gateway or bank may impose its own amount limits.",
+  "مفعّل: يُلغى حد الدولار الواحد في الموقع، مع بقاء ضوابط المبلغ والعملة لدى البوابة والبنك.": "Enabled: the site’s one-dollar minimum is removed. Gateway and bank amount and currency rules still apply.",
+  "معطّل: الحد الأدنى لكل تبرع دولار واحد أو ما يعادله بالعملة المختارة عند إنشاء الطلب. يطلب الموقع رفع المبالغ الأقل من هذا الحد.": "Disabled: each donation must be at least one US dollar or its equivalent in the selected currency when the order is created. The site asks donors to increase smaller amounts.",
+  "عملة العرض هي العملة المختارة للتبرع. قد يُرسل طلب البنك بعملة مختلفة حسب البوابة؛ وتوضح تفاصيل العملية المبلغ والعملة المرسلين فعليًا. المعادل بالدولار للمحاسبة، ولا يسري حد الدولار الواحد على الأوقاف ذات السعر الثابت.": "The display currency is the selected donation currency. Depending on the gateway, the bank request may use another currency; transaction details show the actual submitted amount and currency. The USD equivalent is for accounting. Fixed-price waqf items are exempt from the one-dollar minimum.",
+  "السماح بمبالغ أقل من دولار واحد": "Allow donations below one US dollar",
+  "عنوان الصفحة غير متاح في هذا التقرير": "Page title is unavailable in this report"
 }
