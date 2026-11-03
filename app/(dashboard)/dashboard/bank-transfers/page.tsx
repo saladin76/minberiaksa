@@ -195,7 +195,7 @@ function editFor(tx: ImportedTransaction): EditState {
 }
 function apiError(e: unknown, fallback: string) {
   return axios.isAxiosError(e) && typeof e.response?.data?.error === "string"
-    ? dtx(e.response.data.error)
+    ? dt(e.response.data.error)
     : fallback;
 }
 
