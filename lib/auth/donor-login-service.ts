@@ -124,10 +124,12 @@ async function consumeChallenge(record: { id: string; channel: string; contact: 
   }, { timeout: 30_000, maxWait: 10_000 });
 }
 
+/** Contact-and-code entry also accepts ordinary sign-in codes after a reload or
+ * opening the existing-code form. Linking proofs remain scoped to their session. */
 export async function verifyDonorInvitation(channel: LoginChannel, value: string, code: string) {
   if (!/^\d{6}$/.test(code)) throw new Error("INVALID_CODE");
   const contact = loginContact(channel, value);
-  const record = await prisma.donorLoginChallenge.findFirst({ where: { channel, contact, invitationUserId: { not: null }, linkUserId: null, consumed: false, sent: true }, orderBy: { createdAt: "desc" } });
+  const record = await prisma.donorLoginChallenge.findFirst({ where: { channel, contact, linkUserId: null, sent: true }, orderBy: { createdAt: "desc" } });
   if (!record) throw new Error("INVALID_CODE");
   return consumeChallenge(record, code);
 }

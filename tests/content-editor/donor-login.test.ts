@@ -217,3 +217,42 @@ test("an invited donor enters the existing account and activates the invitation 
   assert.equal(f.rows("donorAccountInvitation")[0].status, "ACTIVATED");
   await assert.rejects(f.service.verifyDonorInvitation("EMAIL", proof.contact, f.sent[0].code), /INVALID_CODE/);
 });
+
+test("the existing-code form accepts an ordinary email or WhatsApp login without an invitation", async () => {
+  for (const channel of ["EMAIL", "WHATSAPP"] as const) {
+    const contact = channel === "EMAIL" ? proof.contact : "+905527396876";
+    const f = fixture([donor("returning", { phone: "+905527396876" })]);
+    await f.service.requestDonorLogin({ ...proof, channel, contact });
+    assert.equal(f.rows("donorLoginChallenge")[0].invitationUserId, null);
+    const user = await f.service.verifyDonorInvitation(channel, contact, f.sent[0].code);
+    assert.equal(user.id, "returning");
+    assert.equal(f.rows("user").length, 1);
+    await assert.rejects(f.service.verifyDonorInvitation(channel, contact, f.sent[0].code), /INVALID_CODE/);
+  }
+});
+test("contact-and-code entry retains expiry, attempt limits and session linking scope", async () => {
+  const f = fixture();
+  await f.service.requestDonorLogin(proof);
+  const code = f.sent[0].code;
+  for (let i = 0; i < 5; i++) await assert.rejects(f.service.verifyDonorInvitation("EMAIL", proof.contact, code === "000000" ? "111111" : "000000"), /INVALID_CODE/);
+  await assert.rejects(f.service.verifyDonorInvitation("EMAIL", proof.contact, code), /INVALID_CODE/);
+  assert.equal(f.rows("user").length, 0);
+  const expired = fixture();
+  await expired.service.requestDonorLogin(proof);
+  expired.rows("donorLoginChallenge")[0].expiresAt = new Date(0);
+  await assert.rejects(expired.service.verifyDonorInvitation("EMAIL", proof.contact, expired.sent[0].code), /INVALID_CODE/);
+  const linked = fixture([donor("target")]);
+  await linked.service.requestDonorLogin({ ...proof, linkUserId: "target" });
+  await assert.rejects(linked.service.verifyDonorInvitation("EMAIL", proof.contact, linked.sent[0].code), /INVALID_CODE/);
+  assert.equal(linked.rows("donorLoginChallenge")[0].consumed, false);
+});
+test("contact-and-code entry never falls back to an older code after the latest is consumed", async () => {
+  const f = fixture();
+  await f.service.requestDonorLogin(proof);
+  f.rows("donorLoginChallenge")[0].createdAt = new Date(0);
+  // Synthetic historical row retained to exercise latest-only selection.
+  const latest = { ...f.rows("donorLoginChallenge")[0], id: "latest", createdAt: new Date(), consumed: true };
+  f.rows("donorLoginChallenge").push(latest);
+  await assert.rejects(f.service.verifyDonorInvitation("EMAIL", proof.contact, f.sent[0].code), /INVALID_CODE/);
+  assert.equal(f.rows("user").length, 0);
+});

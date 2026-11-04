@@ -80,7 +80,7 @@ export default function DonorCodeLogin({ link = false, onDone, callbackUrl }: { 
     {(challenge || invitation) ? <button type="button" disabled={busy || code.length !== 6 || (invitation && !contact)} onClick={() => void verify()} className="w-full rounded-lg bg-burgundy px-4 py-3 text-white disabled:opacity-50">{busy ? "…" : link ? ar ? "تحقق وربط" : "Verify and link" : ar ? "دخول" : "Sign in"}</button>
       : <button type="button" disabled={busy || !contact || wait > 0} onClick={() => void requestCode()} className="w-full rounded-lg bg-burgundy px-4 py-3 text-white disabled:opacity-50">{busy ? "…" : wait ? `${wait}s` : ar ? "إرسال كود الدخول" : "Send sign-in code"}</button>}
     {challenge && <button type="button" disabled={busy} onClick={() => { setChallenge(null); setCode(""); setMessage(""); }} className="text-sm underline">{ar ? "تغيير البيانات أو طلب كود جديد" : "Change details or request a new code"}</button>}
-    {!link && !challenge && <button type="button" disabled={busy} onClick={() => setInvitation(!invitation)} className="block text-sm underline">{invitation ? ar ? "طلب كود جديد" : "Request a new code" : ar ? "لدي كود دعوة بالفعل" : "I already have an invitation code"}</button>}
+    {!link && !challenge && <button type="button" disabled={busy} onClick={() => setInvitation(!invitation)} className="block text-sm underline">{invitation ? ar ? "طلب كود جديد" : "Request a new code" : ar ? "لدي كود دخول بالفعل" : "I already have a sign-in code"}</button>}
     <p role="status" aria-live="polite" className="text-sm text-gray-700">{message}</p>
   </section>;
 }
