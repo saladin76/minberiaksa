@@ -1101,6 +1101,7 @@ const ProfilePage = () => {
           <p className="text-sm text-gray-500 truncate w-full mt-1">{user.email}</p>
         </div>
         <ImpactCompact
+          activeSubscriptionsCount={user.activeSubscriptionsCount}
           totalDonationsCount={user.totalDonationsCount}
           totalDonatedAmountUSD={user.totalDonatedAmountUSD}
           streakMonths={user.streakMonths}
