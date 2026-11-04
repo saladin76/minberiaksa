@@ -15,10 +15,11 @@ function load<T>(path: string, imports: Record<string, unknown>): T {
 test("WhatsApp authentication uses an approved authentication template; archived content excludes codes", async () => {
   const archived: Record<string, unknown>[] = [], statuses: string[] = [], sent: Record<string, unknown>[] = [];
   const make = (approved: boolean) => load<typeof import("../../lib/auth/donor-login-delivery")>("lib/auth/donor-login-delivery.ts", {
+    "./donor-authentication-sender": { donorAuthenticationSender: async () => ({ id: "sender-row", phoneNumberId: "sender-1", businessAccountId: "default-waba" }) },
     "@/lib/communication/providers/email/client": { sendEmailMessage: async () => ({ ok: true, providerMessageId: "email-1" }) },
-    "@/lib/communication/runtime-config": { getActiveElasticEmailRuntimeConfig: async () => ({}), getActiveMetaWhatsappRuntimeConfig: async () => ({ configured: true, values: { defaultPhoneNumberId: "sender-1" } }) },
+    "@/lib/communication/runtime-config": { getActiveElasticEmailRuntimeConfig: async () => ({}), getActiveMetaWhatsappRuntimeConfig: async () => ({ configured: true, values: { defaultPhoneNumberId: "wrong-legacy-sender" } }) },
     "@/lib/communication/providers/meta-whatsapp/messages": { sendTemplateMessage: async (input: Record<string, unknown>) => { sent.push(input); return { ok: true, providerMessageId: "wamid-1" }; } },
-    "@/lib/communication/providers/meta-whatsapp/templates": { listApprovedTemplates: async () => ({ ok: true, templates: approved ? [{ name: "mia_donor_login_v1", language: "ar", category: "AUTHENTICATION", status: "APPROVED" }] : [] }) },
+    "@/lib/communication/providers/meta-whatsapp/templates": { listApprovedTemplates: async (waba: string) => { assert.equal(waba, "default-waba"); return { ok: true, templates: approved ? [{ name: "mia_donor_login_v1", language: "ar", category: "AUTHENTICATION", status: "APPROVED" }] : [] }; } },
     "@/lib/communication/delivery-log-service": { createDeliveryRecord: async (input: Record<string, unknown>) => { archived.push(input); return { ok: true, data: { id: "delivery-1" } }; }, markDeliveryStatus: async (_id: string, status: string) => { statuses.push(status); } },
   });
   delete process.env.DONOR_LOGIN_WHATSAPP_TEMPLATE;
@@ -28,6 +29,8 @@ test("WhatsApp authentication uses an approved authentication template; archived
   assert.equal(sent.length, 0);
   await make(true).deliverLoginCode(input);
   assert.equal(sent.length, 1);
+  assert.equal(sent[0].phoneNumberId, "sender-1");
+  assert.equal(archived[1].senderId, "sender-row");
   assert.deepEqual(JSON.parse(JSON.stringify(sent[0].components)), [{ type: "body", parameters: [{ type: "text", text: "123456" }] }, { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: "123456" }] }]);
   assert.ok(archived.every(r => !String(r.renderedBody).includes("123456")));
   assert.deepEqual(statuses, ["FAILED", "SENT"]);
@@ -59,4 +62,25 @@ test("closed accounts remove verified credentials and ordinary profile edits can
   const auth = fs.readFileSync("app/api/auth/[...nextauth]/options.ts", "utf8");
   assert.ok(auth.includes("dbUser.mergedIntoUserId"));
   assert.ok(auth.includes('email_verified !== true'));
+});
+
+test("changing the verified primary email updates notification routing for the session owner only", async () => {
+  const updates: Array<Record<string, unknown>> = [];
+  const tx = {
+    donorLoginIdentity: {
+      findUnique: async ({ where }: { where: { id: string } }) => ({ id: where.id, userId: "target", channel: "EMAIL", contact: where.id === "new-address" ? "new@hotmail.com" : "old@gmail.com", verifiedAt: new Date() }),
+    },
+    user: { findUniqueOrThrow: async () => ({ id: "target", email: "old@gmail.com", emailVerified: new Date() }), update: async (args: Record<string, unknown>) => { updates.push(args); } },
+    donorCommunicationProfile: { updateMany: async (args: Record<string, unknown>) => { updates.push(args); } },
+  };
+  const next = { "next/server": { NextResponse: { json } } };
+  const boundary = load<typeof import("../../lib/auth/donor-login-request")>("lib/auth/donor-login-request.ts", next);
+  const route = load<{ PATCH: (request: unknown) => Promise<Reply> }>("app/api/users/me/login-identities/route.ts", {
+    ...next, "next-auth": { getServerSession: async () => ({ user: { id: "target", role: "DONOR" } }) }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
+    "@/lib/auth/donor-login-request": boundary, "@/lib/prisma": { prisma: { $transaction: async (fn: (client: typeof tx) => Promise<void>) => fn(tx) } },
+  });
+  const reply = await route.PATCH({ headers: new Headers({ origin: "https://minberiaksa.org", "content-type": "application/json" }), nextUrl: { origin: "https://minberiaksa.org" }, json: async () => ({ identityId: "new-address", userId: "attacker-supplied-id" }) });
+  assert.equal(reply.status, 200);
+  assert.equal(updates.length, 2);
+  assert.deepEqual(JSON.parse(JSON.stringify(updates[1])), { where: { userId: "target" }, data: { email: "new@hotmail.com" } });
 });

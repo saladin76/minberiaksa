@@ -12,6 +12,8 @@ Administrators can send or resend an account invitation from the donor profile. 
 
 Authentication messages use the configured Elastic Email and default Meta sender. Message archives contain a redacted placeholder, never the code or sign-in URL. Only a provider message ID establishes SENT. Existing signed webhooks establish DELIVERED/READ; provider acceptance alone does not prove arrival.
 
+WhatsApp reads the active default `CommunicationSender` row for its phone and WABA, including the AUTHENTICATION purpose permission. Legacy app-level phone IDs are never used to select a sender or to certify template approval. The selected sender must be enabled/ACTIVE with authentication allowed before template setup or recipient delivery.
+
 ## Deployment
 
 The build generates Prisma clients and installs the new account-identity lookup and expiry indexes through the existing index setup. The identities and challenges use string `_id` uniqueness; no bulk account migration is performed.
@@ -28,6 +30,6 @@ This command creates/reads provider template metadata and sends no recipient mes
 
 ## Validation
 
-Focused TypeScript, Prisma schema validation and ESLint pass. Twelve authentication service/delivery/boundary tests cover code replay, expiration, attempts, contact throttling, linking, privileged accounts, in-flight billing, invitation activation and redacted message records. Four existing registration/profile regressions pass. Browser fixtures exercised the Arabic mobile code flow, linked addresses and invitation states, plus English rendering, with no mobile overflow or browser exceptions. These tests use synthetic data and mocked provider responses; they do not prove live delivery or production database behavior. Full repository release gates and live acceptance remain required before production approval.
+Focused TypeScript, Prisma schema validation and ESLint pass. Thirteen authentication service/delivery/boundary tests cover code replay, expiration, attempts, contact throttling, linking, privileged accounts, in-flight billing, invitation activation, verified primary email routing and redacted message records. Four existing registration/profile regressions pass. Browser fixtures exercised the Arabic mobile code flow, linked addresses and invitation states, plus English rendering, with no mobile overflow or browser exceptions. These tests use synthetic data and mocked provider responses; they do not prove live delivery or production database behavior. Full repository release gates and live acceptance remain required before production approval.
 
 Five release-metadata fixture regressions also pass, including all independent setup steps, selective retries and runtime guards.

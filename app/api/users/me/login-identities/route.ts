@@ -31,6 +31,7 @@ export async function PATCH(request: NextRequest) {
         if (!old) await tx.donorLoginIdentity.create({ data: { id: oldId, userId: current.id, channel: "EMAIL", contact: current.email.toLowerCase(), verifiedAt: current.emailVerified } });
       }
       await tx.user.update({ where: { id: session.user.id }, data: { email: identity.contact, emailVerified: identity.verifiedAt } });
+      await tx.donorCommunicationProfile.updateMany({ where: { userId: session.user.id }, data: { email: identity.contact } });
     });
     return NextResponse.json({ ok: true });
   } catch (error) { return loginError(error); }

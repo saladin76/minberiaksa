@@ -12,15 +12,17 @@ else {
   const { prisma } = await loadReleaseModule("lib/prisma.ts");
   try {
     const { getActiveMetaWhatsappRuntimeConfig } = await loadReleaseModule("lib/communication/runtime-config.ts");
+    const { donorAuthenticationSender } = await loadReleaseModule("lib/auth/donor-authentication-sender.ts");
     const { listAllTemplates, ensureMetaTemplate } = await loadReleaseModule("lib/communication/providers/meta-whatsapp/templates.ts");
     const runtime = await getActiveMetaWhatsappRuntimeConfig();
-    if (!runtime.configured || !runtime.values.businessAccountId) throw new Error("WHATSAPP_AUTH_NOT_CONFIGURED");
-    const catalog = await listAllTemplates(null, runtime);
+    if (!runtime.configured) throw new Error("WHATSAPP_AUTH_NOT_CONFIGURED");
+    const sender = await donorAuthenticationSender();
+    const catalog = await listAllTemplates(sender.businessAccountId, runtime);
     const existing = catalog.ok ? catalog.templates.find(t => t.name === name && t.language === language) : null;
     if (existing?.category === "AUTHENTICATION") {
       console.log(JSON.stringify({ name, language, status: existing.status, recipientMessages: 0 }));
     } else {
-      const result = await ensureMetaTemplate({ businessAccountId: runtime.values.businessAccountId, name, language, category: "AUTHENTICATION", components: [
+      const result = await ensureMetaTemplate({ businessAccountId: sender.businessAccountId, name, language, category: "AUTHENTICATION", components: [
         { type: "BODY", add_security_recommendation: true },
         { type: "FOOTER", code_expiration_minutes: 10 },
         { type: "BUTTONS", buttons: [{ type: "OTP", otp_type: "COPY_CODE", text: language === "ar" ? "نسخ الرمز" : "Copy code" }] },
