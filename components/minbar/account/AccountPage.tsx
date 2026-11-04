@@ -238,8 +238,8 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
           ))}
         </div>
 
-        <div className="acc-body" style={{ ...SECTION, display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,.8fr)", gap: 30, alignItems: "start" }}>
-          <div style={{ display: "grid", gap: 14 }}>
+        <div className="acc-body" style={{ ...SECTION, display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+          <div style={{ display: "grid", gap: 16, minWidth: 0, width: "100%" }}>
             {/* Bank transfers the finance team has not confirmed yet. Shown
                 above the history, apart from it and never in the totals: the
                 donor should see where each one stands and what it needs of
@@ -295,36 +295,31 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             {downloadError && <p role="alert" className="text-sm text-red-700">{tSystem("techErrorLead")}</p>}
             <div style={{ display: "grid", gap: 10 }}>
               {donations.map((donation) => (
-                <div key={donation.id} className="acc-row acc-card acc-in" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 18px", background: "#fff", border: "1px solid var(--border)", borderRadius: 10 }}>
-                  <span style={{ flex: "1 1 auto", minWidth: 0 }}>
-                    <b style={{ display: "block", fontSize: 15 }}>
-                      {donation.titles.length ? donation.titles.join("، ") : t("dearDonor")}
+                <article key={donation.id} className="acc-card acc-in min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="m-0 break-words text-sm font-bold leading-7 sm:text-base">
+                        {donation.titles.length ? donation.titles.join("، ") : t("dearDonor")}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-[var(--muted)]">
+                        <time dateTime={donation.date} className="inline-flex items-center gap-1.5"><Icon name="calendar" size={13} />{dateFormat.format(new Date(donation.date))}</time>
+                        {donation.recurring ? <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-2.5 py-1 font-semibold text-[var(--gold)]"><Icon name="refresh" size={12} />{t("recurringTitle")}</span> : null}
+                      </div>
+                    </div>
+                    <b dir="ltr" className="shrink-0 whitespace-nowrap rounded-lg bg-slate-50 px-3 py-2 text-base font-bold text-[var(--deep)]" style={{ unicodeBidi: "isolate" }}>
+                      {chargedAmount(donation.amount, donation.currency)}
                     </b>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>
-                      <time dateTime={donation.date}>{dateFormat.format(new Date(donation.date))}</time>
-                      {donation.recurring ? (
-                        <>
-                          <span aria-hidden="true" style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--muted)" }} />
-                          <span style={{ display: "inline-flex", padding: "2px 8px", borderRadius: 999, background: "var(--sand)", color: "var(--gold)", fontWeight: 800 }}>
-                            {t("recurringTitle")}
-                          </span>
-                        </>
-                      ) : null}
-                    </span>
-                  </span>
-                  <b dir="ltr" style={{ unicodeBidi: "isolate", whiteSpace: "nowrap" }}>
-                    {chargedAmount(donation.amount, donation.currency)}
-                  </b>
-                  <div className="flex flex-wrap gap-2">
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-2 border-t border-[var(--border)] pt-3 sm:grid-cols-2 xl:flex xl:flex-wrap">
                     {(["receipt", "thanks"] as const).map(kind => (
                       <button key={kind} type="button" disabled={downloading !== null} aria-busy={downloading === `${donation.id}:${kind}`} onClick={() => void download(donation.id, kind)}
-                        className="acc-receipt inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 text-xs font-bold disabled:opacity-50">
-                        <Icon name="receipt" size={13} />
+                        className={`acc-receipt inline-flex min-h-11 min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${kind === "receipt" ? "border-[#A5243D]/20 bg-[#A5243D]/5 text-[#A5243D]" : "border-[var(--border)] bg-white text-[var(--deep)]"}`}>
+                        <span className="shrink-0"><Icon name="receipt" size={15} /></span>
                         {downloading === `${donation.id}:${kind}` ? tSystem("processing") : tSystem(kind === "receipt" ? "downloadReceipt" : "downloadThankYouCert")}
                       </button>
                     ))}
                   </div>
-                </div>
+                </article>
               ))}
 
               {donations.length === 0 ? (
@@ -339,7 +334,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 12 }}>
+          <div className="grid w-full min-w-0 gap-4 md:grid-cols-2">
             <div className="acc-in acc-in-1" style={{ display: "grid", gap: 10, padding: 22, background: "var(--sand)", borderRadius: 12 }}>
               <b style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15 }}>
                 <Icon name="user" size={16} />

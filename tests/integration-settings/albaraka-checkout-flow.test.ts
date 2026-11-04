@@ -8,7 +8,7 @@ import ts from "typescript";
 import { convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd } from "../../lib/exchange/convert";
 import * as bank from "../../lib/albaraka";
 import * as nulls from "../../lib/donations/mongo-null";
-import { albarakaCheckoutMode } from "../../lib/donations/albaraka-checkout-mode";
+import { albarakaCheckoutMode, isMixedRecurringCheckout } from "../../lib/donations/albaraka-checkout-mode";
 import { albaraka3DLinkageError } from "../../lib/donations/albaraka-3d-verification";
 import { bankRequestsAuthentication } from "../../lib/donations/authentication-recovery";
 import { paymentPublicOrigin } from "../../lib/payment-public-origin";
@@ -28,15 +28,16 @@ function matches(row: Record<string, unknown>, filter: Record<string, unknown>):
   });
 }
 
-function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurring?: boolean; currency?: string; totalAmount?: number; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
+function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurring?: boolean; mixed?: boolean; newCard?: boolean; unavailable3D?: boolean; currency?: string; totalAmount?: number; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
   const state: Record<string, unknown> = {
     id, donorId: "222222222222222222222222", status: "PAID", paidAt: null, accessToken: "test-guest-token",
     currency: options.currency ?? "USD", totalAmount: options.totalAmount ?? 25, locale: "ar", provider: "ALBARAKA",
     providerOrderId: options.fresh ? null : order, providerTxnResult: options.fresh ? null : "Processing",
     providerRaw: options.fresh ? null : { albarakaRequest: { orderId: order, amount: 125000, currencyCode: "TL", transactionType: "Sale", mode: "3D" } },
-    subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: "444444444444444444444444" } : null,
+    attribution: options.mixed ? { one_time_principal: 10, recurring_principal: 5 } : null,
+    subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: options.newCard ? null : "444444444444444444444444" } : null,
   };
-  const calls = { cardVerifications: 0, sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
+  const calls = { cardVerifications: 0, sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, storedCards: [] as Record<string, unknown>[], saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
   const prisma = {
     donation: {
       async findUnique() { return structuredClone(state); },
@@ -46,11 +47,11 @@ function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurri
       },
     },
     globalSettings: { async findFirst() { return { mainGateway: "ALBARAKA" }; } },
-    creditCard: { async create() { calls.cards++; throw new Error("unexpected card storage"); } },
-    subscription: { async update() { throw new Error("unexpected plan mutation"); } },
+    creditCard: { async create({ data }: { data: Record<string, unknown> }) { calls.cards++; if (!options.newCard) throw new Error("unexpected card storage"); calls.storedCards.push(data); return { id: "new-fixture-card" }; } },
+    subscription: { async update({ data }: { data: Record<string, unknown> }) { if (!options.newCard) throw new Error("unexpected plan mutation"); Object.assign(state.subscription as object, data); return state.subscription; } },
   };
   const bankAdapter = {
-    ...bank, albarakaConfig: () => cfg, albaraka2DConfig: () => twoCfg,
+    ...bank, albarakaConfig: () => options.unavailable3D ? { ...cfg, terminalNo: "" } : cfg, albaraka2DConfig: () => twoCfg,
     albarakaChargeCurrency: () => "TRY", isAlbarakaRecurringEnabled: () => true,
     async albarakaService(_operation: string, body: Record<string, unknown>, settings: { config: bank.AlbarakaConfig }) {
       calls.sales++; calls.saleBodies.push(body); calls.terminals.push(settings.config.terminalNo);
@@ -72,7 +73,7 @@ function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurri
     "@prisma/client": { Prisma: {} }, "@/lib/prisma": { prisma }, crypto,
     "@/lib/albaraka": bankAdapter,
     "@/lib/donations/mongo-null": nulls,
-    "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode },
+    "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode, isMixedRecurringCheckout },
     "@/lib/donations/authentication-recovery": { bankRequestsAuthentication },
     "@/lib/payment-public-origin": { paymentPublicOrigin },
     "@/lib/donations/albaraka-3d-verification": { albaraka3DLinkageError },
@@ -152,7 +153,7 @@ for (const mode of [undefined, "2D"]) test(`2D initiation preserves the existing
   assert.equal(body.MACParams, bank.ALBARAKA_NON_SECURE_MAC_PARAMS); assert.equal(body.CurrencyCode, "TL"); assert.equal(String(body.Amount), "125000");
 });
 
-test("a recurring checkout cannot enable 3D even if a client requests it", async () => {
+test("a recurring-only checkout retains 2D even if a client requests 3D", async () => {
   const f = fixture({ fresh: true, recurring: true }); const response = await f.initiate("3D");
   assert.equal(response.status, 200); assert.equal(f.calls.sales, 1); assert.equal(f.calls.terminals[0], twoCfg.terminalNo);
   assert.equal(f.calls.saleBodies[0].IsTDSecureMerchant, "N"); assert.equal(f.calls.cards, 0);
@@ -229,4 +230,31 @@ for (const verified of [true, false]) test(`replacement card callback (${verifie
 });
 test("malformed card authentication nonce never falls through to a valid donation ID", async()=>{
  const f=fixture({cardVerification:true});const response=await f.cardCallback("invalid");assert.equal(new URL(response.headers.get("location")!).searchParams.get("cardUpdate"),"failed");assert.equal(f.calls.cardVerifications+f.calls.sales+f.calls.mutations,0);
+});
+
+test("mixed lira checkout authenticates the whole first payment in 3D and links the recurring card before capture", async () => {
+  const f = fixture({ fresh: true, recurring: true, mixed: true, newCard: true, currency: "TRY", totalAmount: 15 });
+  const response = await f.initiate("2D");
+  assert.equal(response.status, 200);
+  const form = await response.json();
+  assert.equal(form.actionUrl, cfg.tdsUrl);
+  assert.equal(f.calls.sales, 0);
+  assert.equal(f.calls.cards, 1);
+  assert.equal(f.calls.storedCards[0].cardNumber, "encrypted-test");
+  assert.equal(f.calls.storedCards[0].cvc, "");
+  assert.equal((f.state.subscription as { paymentCardId: string }).paymentCardId, "new-fixture-card");
+  const snapshot = (f.state.providerRaw as { albarakaRequest: { mode: string; amount: number } }).albarakaRequest;
+  assert.equal(snapshot.mode, "3D");
+  assert.equal(snapshot.amount, 1500);
+  await f.callback(f.raw({ OrderId: String(f.state.providerOrderId), Amount: "1500" }));
+  assert.equal(f.calls.sales, 1);
+  assert.equal(f.calls.terminals[0], cfg.terminalNo);
+  assert.equal(f.calls.settles, 1);
+  await f.callback(f.raw({ OrderId: String(f.state.providerOrderId), Amount: "1500" }));
+  assert.equal(f.calls.sales, 1);
+});
+test("a mixed first payment never falls back to 2D when the 3D terminal is unavailable", async () => {
+  const f = fixture({ fresh: true, recurring: true, mixed: true, newCard: true, unavailable3D: true });
+  assert.equal((await f.initiate("2D")).status, 503);
+  assert.equal(f.calls.sales + f.calls.cards + f.calls.mutations, 0);
 });

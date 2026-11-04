@@ -246,6 +246,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      so what is previewed here is what is sent. */
   const orderTypeForCart = orderType(items);
   const planFrequency = frequencyOfOrderType(orderTypeForCart);
+  const mixedBasket = Boolean(planFrequency) && items.some(item => item.freqKey === "once");
+  const albarakaSecurityMode = mixedBasket ? "3D" : planFrequency ? "2D" : verificationMode || "2D";
 
   /* When the plan will charge  shown before the donor confirms, computed
      the way the server computes it: the same rule from the donor's chosen
@@ -516,7 +518,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               holder: cardToUse ? "" : cardName,
             }
           : undefined,
-        gateway === "ALBARAKA" ? (planFrequency ? "2D" : verificationMode || "2D") : undefined,
+        gateway === "ALBARAKA" ? albarakaSecurityMode : undefined,
         cardToUse || undefined,
         cardToUse ? savedCards.find(card => card.id === cardToUse)?.last4 : cardNumber.replace(/\D/g, "").slice(-4),
       );
@@ -973,7 +975,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             </div>
 
             {method === "card" && (currency === "USD" || inLocal) ? <PaymentCurrencyNotice gateway={gateway} currency={currency} amount={payableDisplayTotal} phone={phone} /> : null}
-            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : method === "card" && (gateway === "PAYFOR" || (gateway === "ALBARAKA" && planFrequency)) ? <AlbarakaVerificationChoice value={gateway === "PAYFOR" ? "3D" : "2D"} onChange={() => {}} fixed /> : null}
+            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : method === "card" && (gateway === "PAYFOR" || (gateway === "ALBARAKA" && planFrequency)) ? <AlbarakaVerificationChoice value={gateway === "PAYFOR" ? "3D" : albarakaSecurityMode} onChange={() => {}} fixed /> : null}
 
             {belowMinimum ? (
               <div role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>

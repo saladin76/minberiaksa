@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
-import { albarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
+import { albarakaCheckoutMode, isMixedRecurringCheckout } from "@/lib/donations/albaraka-checkout-mode";
 import { bankRequestsAuthentication } from "@/lib/donations/authentication-recovery";
 import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import {
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     });
     const plan = donation.subscription;
     let mode: "2D" | "3D";
-    try { mode = albarakaCheckoutMode(body.securityMode, Boolean(plan)); }
+    try { mode = albarakaCheckoutMode(body.securityMode, Boolean(plan), isMixedRecurringCheckout(donation.attribution)); }
     catch { return NextResponse.json({ error: "Invalid payment verification mode", code: "INVALID_PAYMENT_MODE" }, { status: 400 }); }
     const cfg = mode === "3D" ? albarakaConfig() : albaraka2DConfig();
     if (!isAlbarakaConfigured(cfg)) return NextResponse.json({ error: "Albaraka is not configured on server" }, { status: 503 });
@@ -376,17 +376,6 @@ export async function POST(req: NextRequest) {
       );
     }
     unsentClaim = donation.id;
-    if (mode === "3D") {
-      const fields = buildAlbaraka3DForm({
-        orderId, amount, currencyCode, locale,
-        returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
-        card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
-      }, cfg);
-      // No Sale here: the bank authenticates first, then the callback claims capture.
-      unsentClaim = null;
-      return NextResponse.json({ actionUrl: cfg.tdsUrl, fields }, { headers: { "Cache-Control": "no-store" } });
-    }
-
     /* A plan: keep the card the donor is authorising, so the scheduler can
        charge the later instalments. PAN is encrypted at rest; no CVC is stored,
        including hashes. The card is linked before the bank is asked for
@@ -413,6 +402,17 @@ export async function POST(req: NextRequest) {
         where: { id: plan.id },
         data: { paymentCardId: card.id, provider: "ALBARAKA" },
       });
+    }
+
+    if (mode === "3D") {
+      const fields = buildAlbaraka3DForm({
+        orderId, amount, currencyCode, locale,
+        returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
+        card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
+      }, cfg);
+      // No Sale here: the bank authenticates first, then the callback claims capture.
+      unsentClaim = null;
+      return NextResponse.json({ actionUrl: cfg.tdsUrl, fields }, { headers: { "Cache-Control": "no-store" } });
     }
 
     // ── 2D sale ──────────────────────────────────────────────────────────────

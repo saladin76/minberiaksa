@@ -43,3 +43,26 @@ export function selectProgrammeRelatedProjects<T extends { id: string }>(pool: r
   const publicRows = new Map(pool.map(row => [row.id, row]));
   return [...new Set(ids)].filter(id => id !== currentId).flatMap(id => publicRows.has(id) ? [publicRows.get(id)!] : []);
 }
+
+const PUBLIC_FILTERS = [
+  { role: "gaza", aliases: ["region-gaza"] },
+  { role: "aqsa", aliases: ["region-al-aqsa"] },
+  { role: "jerusalem", aliases: ["region-al-quds"] },
+  { role: "zakat", aliases: ["type-zakat"] },
+  { role: "waqf", aliases: ["type-waqf"] },
+  { role: "restoration", aliases: ["alquds-home-restoration", "al-quds-home-restoration"] },
+  { role: "recurring", aliases: ["type-recurring"] },
+  { role: "ibadan", aliases: ["ibadan-lana"] },
+] as const;
+
+/** Public presentation only: keep the registry and old hash destinations intact. */
+export function publicProjectFilters(rows: readonly ProjectFilterOption[], labels: Readonly<Record<string, string>>): ProjectFilterOption[] {
+  const roleOf = (row: ProjectFilterOption) => PUBLIC_FILTERS.find(entry =>
+    row.key === "page:" + entry.role || [row.baseSlug, row.slug, ...(row.previousSlugs ?? []), ...(row.hashes ?? [])].some(slug => entry.aliases.some(alias => alias === slug)));
+  return rows.map((row, index) => {
+    const entry = roleOf(row);
+    return { row, index, entry, rank: entry ? PUBLIC_FILTERS.indexOf(entry) : PUBLIC_FILTERS.length };
+  }).filter(value => value.entry?.role !== "ibadan")
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ row, entry }) => entry ? { ...row, name: labels[entry.role] || row.name } : row);
+}

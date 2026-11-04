@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import type { ProjectFilterOption } from "@/lib/minbar/project-filter-options";
+import { publicProjectFilters, type ProjectFilterOption } from "@/lib/minbar/project-filter-options";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import { NoResults } from "@/components/minbar/states/ContentStates";
@@ -44,11 +44,12 @@ export interface ProjectsPageProps {
 export default function ProjectsPage({ projects, slides, filters }: ProjectsPageProps) {
   const tCommon = useTranslations("common");
   const tSystem = useTranslations("system");
+  const tNavigation = useTranslations("projects.catalogueNavigation");
 
   const [category, setCategory] = useState("all");
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const categories: ProjectFilterOption[] = useMemo(() => [{ key: "all", id: "all", kind: "category", slug: "all", order: -1, name: tSystem("allFilter"), icon: "layout-grid", projectIds: projects.map(project => project.id) }, ...filters], [filters, projects, tSystem]);
+  const categories: ProjectFilterOption[] = useMemo(() => [{ key: "all", id: "all", kind: "category", slug: "all", order: -1, name: tSystem("allFilter"), icon: "layout-grid", projectIds: projects.map(project => project.id) }, ...publicProjectFilters(filters, Object.fromEntries(["gaza", "aqsa", "jerusalem", "zakat", "waqf", "restoration", "recurring"].map(key => [key, tNavigation(key)])))], [filters, projects, tSystem, tNavigation]);
   useEffect(() => {
     let hash: string; try { hash = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
     const match = filters.find(option => option.slug === hash || option.slug === `region-${hash}` || option.key === hash || option.hashes?.includes(hash));
