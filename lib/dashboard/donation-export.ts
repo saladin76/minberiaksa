@@ -669,110 +669,6 @@ function addCoverSheet(wb: ExcelJS.Workbook, input: DonationExportInput, agg: Ag
   sheet.pageSetup.fitToHeight = 1;
 }
 
-function addAnalysisSheet(wb: ExcelJS.Workbook, input: DonationExportInput, agg: Aggregates) {
-  const sheet = wb.addWorksheet(dt("التحليلات"));
-  configureReportSheet(sheet, 5);
-  addReportHeader(sheet, input, 5);
-  let row = 6;
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب الحملة (الأعلى أولًا)"),
-    [dt("الحملة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
-    agg.perCampaign.map((b) => [
-      b.label,
-      Math.round(b.count * 100) / 100,
-      fmtMoney(b.donationAmount),
-      fmtMoney(b.teamSupport),
-      fmtMoney(b.amountUSD),
-    ]),
-    { highlightTop: true }
-  );
-
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب القسم (الأعلى أولًا)"),
-    [dt("القسم"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
-    agg.perCategory.map((b) => [
-      b.label,
-      Math.round(b.count * 100) / 100,
-      fmtMoney(b.donationAmount),
-      fmtMoney(b.teamSupport),
-      fmtMoney(b.amountUSD),
-    ])
-  );
-
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب الدولة"),
-    [dt("الدولة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
-    agg.perCountry.map((b) => [
-      b.label,
-      b.count,
-      fmtMoney(b.donationAmount),
-      fmtMoney(b.teamSupport),
-      fmtMoney(b.amountUSD),
-    ])
-  );
-
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب الإحالة"),
-    [dt("الإحالة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
-    agg.perReferral.map((b) => [
-      b.label,
-      b.count,
-      fmtMoney(b.donationAmount),
-      fmtMoney(b.teamSupport),
-      fmtMoney(b.amountUSD),
-    ])
-  );
-
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب اللغة"),
-    [dt("اللغة"), dt("العدد"), dt("مبلغ التبرع (USD)"), dt("دعم الفريق (USD)"), dt("إجمالي (USD)")],
-    agg.perLocale.map((b) => [
-      b.label,
-      b.count,
-      fmtMoney(b.donationAmount),
-      fmtMoney(b.teamSupport),
-      fmtMoney(b.amountUSD),
-    ])
-  );
-
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب بوابة الدفع"),
-    [dt("البوابة"), dt("العدد"), dt("إجمالي (USD)")],
-    agg.perProvider.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
-  );
-
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب وسيلة الدفع"),
-    [dt("الوسيلة"), dt("العدد"), dt("إجمالي (USD)")],
-    agg.perPaymentMethod.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
-  );
-
-  addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب الحالة"),
-    [dt("الحالة"), dt("العدد"), dt("إجمالي (USD)")],
-    agg.perStatus.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
-  );
-
-
-  sheet.getColumn(1).width = 45;
-  sheet.pageSetup.printArea = `A1:E${sheet.rowCount}`;
-}
 function addBreakdownTable(
   sheet: ExcelJS.Worksheet,
   startRow: number,
@@ -990,14 +886,140 @@ async function buildXlsx(input: DonationExportInput): Promise<Buffer> {
 
   const agg = aggregate(input.donations);
   addCoverSheet(wb, input, agg);
+  addManagementSheets(wb, input, agg);
   addDonationsSheet(wb, input);
-  addAnalysisSheet(wb, input, agg);
   if (input.subscriptions) {
     addSubscriptionsSheet(wb, input);
   }
 
   const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
   return Buffer.from(buf);
+}
+
+/** Presentation views use the same settled-payment totals as the existing exporter. */
+function addManagementSheets(wb: ExcelJS.Workbook, input: DonationExportInput, agg: Aggregates) {
+  const paid = input.donations.filter(r => r.status === "PAID" && r.paidAt != null);
+  const makeSheet = (name: string, columns: number) => {
+    const sheet = wb.addWorksheet(dt(name));
+    configureReportSheet(sheet, columns);
+    addReportHeader(sheet, input, columns);
+    return sheet;
+  };
+  const countryKey = (r: DonationExportRow) => r.donorCountryCode?.trim() || r.donor.countryCode || "_unknown";
+  const groups = (rows: DonationExportRow[], key: (r: DonationExportRow) => string) => {
+    const map = new Map<string, DonationExportRow[]>();
+    for (const row of rows) {
+      const value = key(row);
+      const list = map.get(value) ?? [];
+      list.push(row);
+      map.set(value, list);
+    }
+    return [...map];
+  };
+  const baseUsd = (r: DonationExportRow) => ratio(r.amount, r.totalAmount || r.amount + r.teamSupport + r.fees, r.amountUSD);
+  const metrics = (rows: DonationExportRow[], key: (r: DonationExportRow) => string, label: (key: string) => string) =>
+    groups(rows, key).map(([key, items]) => ({ label: label(key), count: items.length, amount: items.reduce((sum, r) => sum + baseUsd(r), 0) }))
+      .sort((a, b) => b.amount - a.amount);
+
+  // Country and language tables intentionally have independent external spend inputs.
+  // Counts are actual transactions. No monetary allocation is presented as a count.
+  const performance = (sheet: ExcelJS.Worksheet, start: number, title: string, label: string,
+    rows: { label: string; count: number; amount: number }[]) => {
+    sheet.mergeCells(`A${start}:H${start}`);
+    sheet.getCell(`A${start}`).value = title;
+    styleSectionBanner(sheet.getRow(start));
+    const headers = [label, dt("عدد التبرعات"), dt("مبلغ التبرع (USD)"), dt("متوسط التبرع (USD)"), dt("النسبة من التبرعات"), dt("الصرف الإعلاني (USD)"), dt("تكلفة التبرع (USD)"), dt("نسبة الصرف")];
+    headers.forEach((value, i) => { sheet.getCell(start + 1, i + 1).value = value; });
+    styleHeaderRow(sheet.getRow(start + 1));
+    sheet.getRow(start + 1).height = 44;
+    const total = rows.reduce((sum, row) => sum + row.amount, 0);
+    rows.forEach((item, i) => {
+      const r = start + 2 + i;
+      const row = sheet.getRow(r);
+      row.values = [item.label, item.count, fmtMoney(item.amount), { formula: `IFERROR(C${r}/B${r},0)`, result: item.count ? fmtMoney(item.amount) / item.count : 0 }, total ? item.amount / total : 0];
+      row.getCell(6).value = null;
+      row.getCell(6).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2CC" } };
+      row.getCell(6).dataValidation = { type: "decimal", operator: "greaterThanOrEqual", formulae: [0], allowBlank: true, showErrorMessage: true, errorTitle: dt("الصرف الإعلاني"), error: dt("أدخل مبلغًا لا يقل عن صفر") };
+      row.getCell(7).value = { formula: `IF(ISNUMBER(F${r}),IFERROR(F${r}/B${r},""),"")`, result: "" };
+      row.getCell(8).value = { formula: `IF(ISNUMBER(F${r}),IFERROR(F${r}/C${r},""),"")`, result: "" };
+      row.height = Math.max(30, Math.ceil(item.label.length / 32) * 18);
+      for (let c = 1; c <= 8; c++) {
+        const cell = row.getCell(c);
+        cell.font = { name: "Arial", size: 11, color: { argb: HEADER_FILL } };
+        cell.alignment = { horizontal: c === 1 ? (dashDir() === "rtl" ? "right" : "left") : "right", vertical: "middle", wrapText: true };
+        cell.numFmt = c === 2 ? "#,##0" : c === 5 || c === 8 ? "0.0%" : "#,##0.00";
+      }
+    });
+    applyZebra(sheet, start + 2, start + 1 + rows.length);
+    sheet.getColumn(1).width = 42;
+    sheet.pageSetup.printArea = `A1:H${sheet.rowCount}`;
+    return start + rows.length + 4;
+  };
+
+  const cover = wb.worksheets[0];
+  let next = cover.rowCount + 3;
+  next = addBreakdownTable(cover, next, dt("مصادر التبرعات"),
+    [dt("المصدر"), dt("العدد"), dt("مبلغ التبرع (محلي)"), dt("العملة"), dt("بالدولار (USD)")],
+    groups(paid, r => JSON.stringify([r.provider || "_unknown", r.type, r.currency])).map(([, rows]) => {
+      const first = rows[0];
+      return [`${first.provider || dt("غير محدد")} — ${first.type === "MONTHLY" ? dt("متكرر") : dt("لمرة واحدة")}`, rows.length, fmtMoney(rows.reduce((sum, r) => sum + r.amount, 0)), first.currency, fmtMoney(rows.reduce((sum, r) => sum + baseUsd(r), 0))];
+    }), { noTotal: true });
+  next = addBreakdownTable(cover, next, dt("متوسط التبرع"), [dt("المؤشر"), dt("القيمة")],
+    [[dt("متوسط التبرع (USD)"), agg.paidCount ? fmtMoney(agg.totalAmountUSD / agg.paidCount) : 0]], { noTotal: true });
+  cover.getCell(next - 2, 2).numFmt = "#,##0.00";
+  performance(cover, next, dt("الصرف الإعلاني الإجمالي"), dt("النطاق"), [{ label: dt("جميع التبرعات"), count: agg.paidCount, amount: agg.totalAmountUSD }]);
+  cover.getCell("A4").value = dt("الملخص للدفعات المؤكدة. الخانات الصفراء للصرف الخارجي بالدولار. لا تُجمع العملات الأصلية المختلفة.");
+  cover.pageSetup.printArea = `A1:H${cover.rowCount}`;
+  cover.pageSetup.fitToHeight = 0;
+
+  const countries = makeSheet("الدول", 8);
+  performance(countries, 6, dt("التبرعات حسب الدولة"), dt("الدولة"), metrics(paid, countryKey, exportCountryName));
+  const languages = makeSheet("اللغات", 8);
+  let languageRow = performance(languages, 6, dt("التبرعات حسب اللغة"), dt("اللغة"), metrics(paid, r => r.locale || "_unknown", exportLanguageName));
+  for (const [locale, rows] of groups(paid, r => r.locale || "_unknown")) {
+    languageRow = performance(languages, languageRow, exportLanguageName(locale), dt("الدولة"), metrics(rows, countryKey, exportCountryName));
+  }
+  for (const sheet of [countries, languages]) {
+    sheet.mergeCells(`A${sheet.rowCount + 2}:H${sheet.rowCount + 2}`);
+    const note = sheet.getCell(sheet.rowCount, 1);
+    note.value = dt("الخانات الصفراء لإضافة الصرف من الخارج. كل جدول مستقل؛ أدخل الصرف المطابق له. الحسابات فارغة حتى إضافة الصرف.");
+    note.alignment = { wrapText: true, vertical: "middle" };
+    sheet.getRow(sheet.rowCount).height = 35;
+    sheet.pageSetup.printArea = `A1:H${sheet.rowCount}`;
+  }
+
+  const projects = makeSheet("المشاريع", 4);
+  const projectTable = (start: number, title: string, rows: DonationExportRow[]) => {
+    // A cart containing multiple projects remains an explicitly named group. This
+    // avoids inventing line allocations that the export input does not contain.
+    const buckets = metrics(rows, r => JSON.stringify([...new Set(r.campaigns.map(c => c.title))].sort()), key => {
+      const titles = JSON.parse(key) as string[];
+      return titles.length ? titles.join(dt("؛ ")) : dt("غير محدد");
+    });
+    const total = buckets.reduce((sum, b) => sum + b.amount, 0);
+    const end = addBreakdownTable(projects, start, title,
+      [dt("المشروع / مجموعة المشاريع"), dt("عدد التبرعات"), dt("مبلغ التبرع (USD)"), dt("النسبة من التبرعات")],
+      buckets.map(b => [b.label, b.count, fmtMoney(b.amount), total ? b.amount / total : 0]));
+    for (let r = start + 2; r < end - 1; r++) projects.getCell(r, 4).numFmt = "0.0%";
+    return end;
+  };
+  let projectRow = projectTable(6, dt("جميع اللغات"), paid);
+  for (const [locale, rows] of groups(paid, r => r.locale || "_unknown")) projectRow = projectTable(projectRow, exportLanguageName(locale), rows);
+  projects.getColumn(1).width = 78;
+  projects.pageSetup.printArea = `A1:D${projects.rowCount}`;
+
+  const failed = makeSheet("المحاولات الفاشلة", 3);
+  const failures = input.donations.filter(r => r.status === "FAILED");
+  let failedRow = 6;
+  for (const [title, key, label] of [
+    [dt("حسب الدولة"), countryKey, exportCountryName],
+    [dt("حسب بوابة الدفع"), (r: DonationExportRow) => r.provider || dt("غير محدد"), (s: string) => s],
+  ] as const) {
+    failedRow = addBreakdownTable(failed, failedRow, title, [dt("البيان"), dt("عدد المحاولات"), dt("مبلغ المحاولات (USD)")],
+      groups(failures, key).map(([key, rows]) => [label(key), rows.length, fmtMoney(rows.reduce((sum, r) => sum + (r.amountUSD ?? 0), 0))]));
+  }
+  failed.getCell("A4").value = dt("المبالغ المعروضة تخص محاولات فاشلة ولم تُحتسب ضمن الإيرادات.");
+  failed.pageSetup.printArea = `A1:C${failed.rowCount}`;
 }
 
 // ─── CSV builder ──────────────────────────────────────────────────────────────
@@ -1180,4 +1202,5 @@ export function buildContentDisposition(result: ExportResult): string {
   );
   return `attachment; filename="${safe}"; filename*=UTF-8''${utf8}`;
 }
+
 
