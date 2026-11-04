@@ -267,6 +267,8 @@ export async function PUT(
         updatedAt: true,
         name: true,
         email: true,
+        registeredAt: true,
+        emailVerified: true,
       },
     });
     if (!existing) {
@@ -274,6 +276,12 @@ export async function PUT(
     }
 
     const isAdmin = session.user.role === 'ADMIN';
+
+    // Established login addresses change only after proving the new address.
+    // Editing checkout/profile contact data cannot silently replace a credential.
+    if (email !== undefined && email !== existing.email && existing.role === "DONOR" && (isSelf || existing.registeredAt || existing.emailVerified)) {
+      return NextResponse.json({ error: "VERIFY_EMAIL_IN_LINKED_IDENTITIES" }, { status: 409 });
+    }
 
     if (!isSelf && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -555,6 +563,8 @@ export async function DELETE(
       if (!current || current.role === "ADMIN") throw new Error("ACCOUNT_CHANGED");
       if (await tx.subscription.count({ where: { donorId: id, status: { in: ["ACTIVE", "PAUSED"] } } })) throw new Error("ACTIVE_SUBSCRIPTIONS");
       await tx.account.deleteMany({ where: { userId: id } });
+      await tx.donorLoginIdentity.deleteMany({ where: { userId: id } });
+      await tx.donorLoginChallenge.updateMany({ where: { OR: [{ linkUserId: id }, { invitationUserId: id }] }, data: { consumed: true } });
       await tx.session.deleteMany({ where: { userId: id } });
       await tx.cartItem.deleteMany({ where: { userId: id } });
       // Inactive plans retain their history but cannot reference a removed card.
@@ -615,3 +625,4 @@ export async function DELETE(
     );
   }
 }
+

@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { Link, usePathname } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import DonorCodeLogin from "@/components/auth/DonorCodeLogin";
 import {
   X,
   Heart,
@@ -374,6 +375,7 @@ export function SignInPanel({
           {screen === "options" && (
             <>
               {/* Google  same footprint as email + gradient frame */}
+              <DonorCodeLogin callbackUrl={googleCallbackUrl} onDone={onAuthenticated ? () => { onAuthenticated(); onClose(); } : undefined} />
               <div className="relative pt-2">
                 <div
                   className={`pointer-events-none absolute -top-1 z-10 flex max-w-[calc(100%-2rem)] items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 px-2 py-1 text-[10px] font-bold leading-none text-white shadow-md ring-2 ring-white sm:text-[11px] ${
@@ -717,3 +719,4 @@ export default function SignInDialog({
     </Dialog>
   );
 }
+

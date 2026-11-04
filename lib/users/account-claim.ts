@@ -36,6 +36,12 @@ type Existing = { [K in keyof ProfileFields]?: string | null } & { verifiedAt?: 
 export async function findUserByEmail(email: string) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return null;
+  const identity = await prisma.donorLoginIdentity.findUnique({ where: { id: `EMAIL:${normalized}` } });
+  if (identity) {
+    const owner = await prisma.user.findUnique({ where: { id: identity.userId } });
+    if (owner && !owner.mergedIntoUserId) return owner;
+    return null;
+  }
   const exact = await prisma.user.findUnique({ where: { email: normalized } });
   if (exact) return exact;
 
@@ -77,3 +83,4 @@ export interface AccountClaim {
   birthdate: string | null;
   gender: string | null;
 }
+

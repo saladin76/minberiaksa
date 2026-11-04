@@ -164,6 +164,7 @@ test("verified Google One Tap records explicit membership for new and returning 
       "next/headers": { cookies: async () => ({ get: () => ({ value: "ar" }) }) }, "@/lib/otp": {}, "@/lib/locales": locales,
       "google-auth-library": { OAuth2Client: class { async verifyIdToken() { return { getPayload: () => ({ email: "fixture@example.test", email_verified: true, sub: "google-user" }) }; } } },
       "@/lib/users/account-claim": { completionData: () => ({}), findUserByEmail: async () => existing ? { id: "user", email: "fixture@example.test", emailVerified: new Date(), role: "DONOR" } : null },
+      "@/lib/auth/donor-login-service": { verifiedGoogleIdentity: async () => {} },
       "@/lib/prisma": { prisma: { user: { create: async ({ data }: { data: Record<string, unknown> }) => { writes.push(data); return { ...data, id: "user" }; }, update: async ({ data }: { data: Record<string, unknown> }) => { writes.push(data); } } } },
     });
     const oneTap = options.authOptions.providers.find(provider => provider.id === "google-onetap");
@@ -280,3 +281,4 @@ test("a closed or missing account cannot reuse a previously issued JWT session",
     assert.equal(result.user,undefined);
   }
 });
+

@@ -162,6 +162,51 @@ model OtpCode {
   @@index([email, purpose])
 }
 
+/// Verified sign-in addresses, independent of editable checkout contact details.
+model DonorLoginIdentity {
+  id String @id @map("_id")
+  userId String @db.ObjectId
+  channel String
+  contact String
+  verifiedAt DateTime @default(now())
+  @@index([userId])
+}
+
+/// One active challenge per address and purpose. Only keyed hashes are stored.
+model DonorLoginChallenge {
+  id String @id @map("_id")
+  channel String
+  contact String
+  codeHash String
+  ticketHash String
+  linkUserId String? @db.ObjectId
+  invitationUserId String? @db.ObjectId
+  attempts Int @default(0)
+  consumed Boolean @default(false)
+  sent Boolean @default(false)
+  providerMessageId String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model DonorLoginThrottle {
+  id String @id @map("_id")
+  attempts Int @default(1)
+  expiresAt DateTime
+}
+
+model DonorAccountInvitation {
+  id String @id @map("_id")
+  userId String @db.ObjectId
+  channel String
+  status String
+  deliveryId String?
+  sentAt DateTime?
+  activatedAt DateTime?
+  updatedAt DateTime @updatedAt
+  @@index([userId])
+}
+
 /**
  * ===================== USER =====================
  */
@@ -171,6 +216,9 @@ model User {
   name                  String?
   email                 String?   @unique
   emailVerified         DateTime?
+  mergedIntoUserId      String? @db.ObjectId
+  mergedOriginalEmail   String?
+  mergedOriginalPhone   String?
   image                 String?
   password              String?
   /// @deprecated Prefer countryName + countryCode; kept for legacy receipts / data
@@ -3706,3 +3754,4 @@ model BankTransferBankRecord {
 
   @@map("BankTransferBank")
 }
+

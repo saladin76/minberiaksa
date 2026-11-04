@@ -10,6 +10,7 @@ const publish = process.argv.includes("--publish");
 const activate = process.argv.includes("--activate-approved");
 if ((publish || activate) && !apply) throw new Error("Publishing or activation requires --apply");
 const allSteps = [
+  { name: "donor-login-template", script: "scripts/prepare-donor-login-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "paypal-webhook", script: "scripts/setup-paypal-webhook.mjs", args: [] },
   { name: "gift-templates", script: "scripts/prepare-gift-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "notification-templates", script: "scripts/upgrade-notification-templates.mjs", args: [...(publish ? ["--publish"] : []), ...(activate ? ["--activate-approved"] : [])] },
@@ -46,3 +47,4 @@ if (!apply && !checkRuntime) {
     if (outcomes.some(step => !step.ok)) process.exitCode = 1;
   }
 }
+

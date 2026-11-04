@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { Heart } from 'lucide-react';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
+import DonorCodeLogin from '@/components/auth/DonorCodeLogin';
 
 const LOGO_URL = '/brand/minber-logo-full.webp';
 const LOGO_SIZES = '(max-width: 640px) calc(100vw - 80px), (max-width: 1023px) 400px, (min-width: 1280px) 500px, 40vw';
@@ -52,6 +53,7 @@ export default function SignIn() {
             <p className="text-sm text-gray-500 mb-8">{t('welcome')}</p>
 
             <div className="space-y-3">
+              <DonorCodeLogin />
               <div className="flex w-full justify-center">
                 <GoogleSignInButton callbackUrl={`/${locale}`} locale={locale} fallbackLabel={t('signInWithGoogle')} />
               </div>
@@ -79,3 +81,4 @@ export default function SignIn() {
     </div>
   );
 }
+

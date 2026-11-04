@@ -5,6 +5,11 @@ import { ensureOptionalUserEmailIndex } from "../lib/donations/optional-user-ema
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
 
 const indexes = [
+  { collection: "DonorLoginIdentity", key: { userId: 1 }, unique: false },
+  { collection: "DonorLoginChallenge", key: { channel: 1, contact: 1, createdAt: -1 }, unique: false },
+  { collection: "DonorLoginChallenge", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "DonorLoginThrottle", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "DonorAccountInvitation", key: { userId: 1 }, unique: false },
   // Scope Google Search revenue before aggregation rather than scanning every paid donation.
 
   {
@@ -190,3 +195,4 @@ run().catch((error) => {
   console.error(error instanceof Error ? error.message : "Index setup failed");
   process.exitCode = 1;
 });
+

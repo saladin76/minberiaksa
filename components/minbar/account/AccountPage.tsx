@@ -10,6 +10,7 @@ import type { MinbarAccountSummary } from "@/lib/minbar/account";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { formatMoney } from "@/lib/minbar/money";
 import { Button } from "@/components/minbar/ds";
+import DonorLinkedIdentities from "@/components/auth/DonorLinkedIdentities";
 
 /**
  * The donor account  ported from `Minbar/حساب المتبرع.dc.html`.
@@ -349,7 +350,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
                 <>
                   <span style={{ display: "grid", gap: 8 }}>
                     <EditField label={t("fullName")} value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} autoComplete="name" />
-                    <EditField label={t("email")} value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} type="email" dir="ltr" autoComplete="email" />
+                    <div className="space-y-1"><span className="text-sm">{t("email")}</span><p dir="ltr">{saved.email}</p><a href="#linked-login-identities" className="text-sm underline">{locale === "ar" ? "إدارة البريد من طرق الدخول المرتبطة" : "Manage email in linked sign-in methods"}</a></div>
                     <EditField label={t("phone")} value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} type="tel" dir="ltr" autoComplete="tel" />
                     <EditField label={t("birthDate")} value={form.birthdate} onChange={(v) => setForm((f) => ({ ...f, birthdate: v }))} type="date" dir="ltr" />
                     <EditField label={t("address")} value={form.address} onChange={(v) => setForm((f) => ({ ...f, address: v }))} autoComplete="address-level2" />
@@ -404,6 +405,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
           </div>
         </div>
       </section>
+      <DonorLinkedIdentities />
     </div>
   );
 }
@@ -437,3 +439,4 @@ function EditField({
     </label>
   );
 }
+

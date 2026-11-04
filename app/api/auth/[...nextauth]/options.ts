@@ -10,6 +10,7 @@ import { OAuth2Client, type TokenPayload } from "google-auth-library";
 import { verifyToken } from "@/lib/otp";
 import { isValidLocale, DEFAULT_LOCALE, type SupportedLocale } from "@/lib/locales";
 import { completionData, findUserByEmail } from "@/lib/users/account-claim";
+import { verifyDonorLogin, verifyDonorInvitation, verifiedGoogleIdentity } from "@/lib/auth/donor-login-service";
 
 const googleAuthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -62,6 +63,19 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
 
 providers.push(
   CredentialsProvider({
+    id: "donor-code", name: "Donor sign-in code",
+    credentials: { challengeId: { type: "text" }, ticket: { type: "text" }, code: { type: "text" }, contact: { type: "text" }, channel: { type: "text" }, invitation: { type: "text" } },
+    async authorize(credentials) {
+      if (!credentials) return null;
+      try {
+        const user = credentials.invitation === "true" && (credentials.channel === "EMAIL" || credentials.channel === "WHATSAPP")
+          ? await verifyDonorInvitation(credentials.channel, credentials.contact, credentials.code)
+          : await verifyDonorLogin(credentials);
+        return { id: user.id, email: user.email, name: user.name, role: user.role };
+      } catch { return null; }
+    },
+  }),
+  CredentialsProvider({
     id: "google-onetap",
     name: "Google",
     credentials: {
@@ -85,6 +99,8 @@ providers.push(
       if (!payload?.email || !payload.email_verified) return null;
 
       const email = payload.email.toLowerCase();
+      const identityOwner = await findUserByEmail(email);
+      if (!identityOwner || identityOwner.role === "DONOR") await verifiedGoogleIdentity(email);
       const name = payload.name ?? "Google User";
       const image = payload.picture ?? null;
 
@@ -97,7 +113,7 @@ providers.push(
           image,
           preferredLang: existing.preferredLang ? null : await readLocaleFromCookies(),
         });
-        if (!existing.emailVerified) updateData.emailVerified = new Date();
+        if (!existing.emailVerified && existing.email?.toLowerCase() === email) updateData.emailVerified = new Date();
         if (!existing.registeredAt) updateData.registeredAt = new Date();
         if (Object.keys(updateData).length) await prisma.user.update({ where: { id: existing.id }, data: updateData });
         return {
@@ -173,7 +189,10 @@ providers.push(
 );
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: { ...PrismaAdapter(prisma), getUserByEmail: async email => {
+    const user = await findUserByEmail(email);
+    return user ? { ...user, email: user.email || email, emailVerified: user.emailVerified } : null;
+  } },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development',
   providers,
@@ -192,6 +211,7 @@ export const authOptions: NextAuthOptions = {
         if (account?.type === "credentials") return true;
 
         if (account && profile && user.email) {
+          if (account.provider === "google" && (profile as { email_verified?: boolean }).email_verified !== true) return false;
           // The provider's email decides who this is. A donor imported from the
           // old site signs straight into that record (the adapter links the
           // provider to it by email); what the provider knows only fills the
@@ -200,6 +220,8 @@ export const authOptions: NextAuthOptions = {
           // exact lookup finds the same record.
           const email = user.email.toLowerCase();
           user.email = email;
+          const owner = await findUserByEmail(email);
+          if (account.provider === "google" && (!owner || owner.role === "DONOR")) await verifiedGoogleIdentity(email);
           const existingUser = await findUserByEmail(email);
 
           if (existingUser) {
@@ -209,7 +231,7 @@ export const authOptions: NextAuthOptions = {
               preferredLang: existingUser.preferredLang ? null : await readLocaleFromCookies(),
             });
             // Google and Facebook only hand over addresses they have confirmed.
-            if (!existingUser.emailVerified) updateData.emailVerified = new Date();
+            if (!existingUser.emailVerified && existingUser.email?.toLowerCase() === email) updateData.emailVerified = new Date();
             if (Object.keys(updateData).length) {
               await prisma.user.update({ where: { id: existingUser.id }, data: updateData });
             }
@@ -243,12 +265,12 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.sub },
-            select: { role: true, dashboardPermissions: true, email: true },
+            select: { role: true, dashboardPermissions: true, email: true, mergedIntoUserId: true },
           });
           
           // JWT cookies outlive database sessions. A closed/missing account must
           // not retain access to its old profile or financial endpoints.
-          if (!dbUser || dbUser.email?.endsWith("@deleted.invalid")) return { ...session, user: undefined } as unknown as typeof session;
+          if (!dbUser || dbUser.mergedIntoUserId || dbUser.email?.endsWith("@deleted.invalid")) return { ...session, user: undefined } as unknown as typeof session;
           if (dbUser) {
             session.user.role = dbUser.role;
             session.user.dashboardPermissions = dbUser.dashboardPermissions ?? [];

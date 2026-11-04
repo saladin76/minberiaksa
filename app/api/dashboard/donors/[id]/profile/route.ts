@@ -18,8 +18,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!parsed.success) return NextResponse.json({ error: "INVALID_PROFILE", issues: parsed.error.flatten() }, { status: 400 });
   const { updatedAt, ...input } = parsed.data;
   try {
-    const user = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true, name: true, phone: true, countryCode: true, countryName: true, country: true, region: true, city: true, birthdate: true, gender: true, preferredLang: true } });
-    if (!user || user.role !== "DONOR") return NextResponse.json({ error: "DONOR_NOT_FOUND" }, { status: 404 });
+    const user = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true, name: true, phone: true, countryCode: true, countryName: true, country: true, region: true, city: true, birthdate: true, gender: true, preferredLang: true, registeredAt: true, emailVerified: true, mergedIntoUserId: true } });
+    if (!user || user.role !== "DONOR" || user.mergedIntoUserId) return NextResponse.json({ error: "DONOR_NOT_FOUND" }, { status: 404 });
+    if (input.email !== undefined && input.email !== user.email && (user.registeredAt || user.emailVerified)) return NextResponse.json({ error: "VERIFY_EMAIL_IN_LINKED_IDENTITIES" }, { status: 409 });
     const data = {
       ...input,
       ...(input.phone !== undefined ? { phone: input.phone ? normalizePhoneE164(input.phone) : null } : {}),
@@ -51,3 +52,4 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "PROFILE_SAVE_FAILED" }, { status: 503 });
   }
 }
+
