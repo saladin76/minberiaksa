@@ -761,7 +761,7 @@ function addAnalysisSheet(wb: ExcelJS.Workbook, input: DonationExportInput, agg:
     agg.perPaymentMethod.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
 
-  row = addBreakdownTable(
+  addBreakdownTable(
     sheet,
     row,
     dt("تفصيل حسب الحالة"),
