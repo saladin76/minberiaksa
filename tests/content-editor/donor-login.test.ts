@@ -148,11 +148,44 @@ test("a verified second email merges donor history into the logged-in account tr
   assert.equal(f.rows("user").find(u => u.id === "source")?.mergedOriginalEmail, proof.contact);
   assert.equal((await f.service.verifiedGoogleIdentity(proof.contact)).id, "target");
 });
-test("an unverified profile phone cannot take over an established account", async () => {
+test("a WhatsApp code signs into the existing established donor without an earlier email login", async () => {
   const f = fixture([donor("registered", { phone: "+905527396876", registeredAt: new Date() })]);
   const issued = await f.service.requestDonorLogin({ ...proof, channel: "WHATSAPP", contact: "+905527396876" });
-  await assert.rejects(f.service.verifyDonorLogin({ ...issued, code: f.sent[0].code }), /VERIFY_ACCOUNT_EMAIL_FIRST/);
+  const user = await f.service.verifyDonorLogin({ ...issued, code: f.sent[0].code });
+  assert.equal(user.id, "registered");
+  assert.equal(f.rows("user").length, 1);
+  assert.equal(f.rows("donorLoginIdentity")[0].userId, "registered");
+});
+test("a guest's first WhatsApp login activates the same record only after a correct code", async () => {
+  const f = fixture([donor("guest", { phone: "+905527396876" })]);
+  f.rows("donation").push({ id: "historic-payment", donorId: "guest", amount: 25 });
+  const issued = await f.service.requestDonorLogin({ ...proof, channel: "WHATSAPP", contact: "+905527396876" });
+  const code = f.sent[0].code;
+  await assert.rejects(f.service.verifyDonorLogin({ ...issued, code: code === "000000" ? "111111" : "000000" }), /INVALID_CODE/);
+  assert.equal(f.rows("user")[0].registeredAt, null);
+  const user = await f.service.verifyDonorLogin({ ...issued, code });
+  assert.equal(user.id, "guest");
+  assert.equal(f.rows("user").length, 1);
+  assert.ok(f.rows("user")[0].registeredAt);
+  assert.equal(f.rows("user")[0].emailVerified, null);
+  assert.equal(f.rows("donation")[0].donorId, "guest");
+  assert.equal(f.rows("donation")[0].amount, 25);
+});
+test("a shared phone on multiple established accounts is an explicit conflict", async () => {
+  const f = fixture([donor("one", { phone: "+905527396876", registeredAt: new Date() }), donor("two", { phone: "+905527396876", registeredAt: new Date() })]);
+  const issued = await f.service.requestDonorLogin({ ...proof, channel: "WHATSAPP", contact: "+905527396876" });
+  await assert.rejects(f.service.verifyDonorLogin({ ...issued, code: f.sent[0].code }), /ACCOUNT_CONFLICT/);
   assert.equal(f.rows("donorLoginIdentity").length, 0);
+  assert.ok(f.rows("user").every(u => !u.mergedIntoUserId));
+});
+test("a WhatsApp invitation activates the original guest without a duplicate account", async () => {
+  const f = fixture([donor("invited", { phone: "+905527396876" })]);
+  await f.service.requestDonorLogin({ ...proof, channel: "WHATSAPP", contact: "+905527396876", invitationUserId: "invited" });
+  assert.equal(f.rows("user")[0].registeredAt, null);
+  const user = await f.service.verifyDonorInvitation("WHATSAPP", "+905527396876", f.sent[0].code);
+  assert.equal(user.id, "invited");
+  assert.equal(f.rows("user").length, 1);
+  assert.equal(f.rows("donorAccountInvitation")[0].status, "ACTIVATED");
 });
 test("phone proof unifies guests but never verifies their unproven email addresses", async () => {
   const f = fixture([donor("one", { email: "first@gmail.com", phone: "+905527396876" }), donor("two", { email: "other@hotmail.com", phone: "905527396876" })]);

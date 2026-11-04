@@ -5,6 +5,7 @@ import { listApprovedTemplates } from "@/lib/communication/providers/meta-whatsa
 import { createDeliveryRecord, markDeliveryStatus } from "@/lib/communication/delivery-log-service";
 import type { LoginChannel } from "./donor-login-policy";
 import { donorAuthenticationSender } from "./donor-authentication-sender";
+import { donorLoginEmail } from "./donor-login-email";
 
 /** Authentication codes and bearer links must never enter the communication archive. */
 export async function deliverLoginCode(input: { channel: LoginChannel; contact: string; code: string; locale: string; userId?: string; loginUrl?: string }) {
@@ -14,11 +15,8 @@ export async function deliverLoginCode(input: { channel: LoginChannel; contact: 
   let result: { ok: boolean; providerMessageId?: string | null; reason?: string };
   try {
     if (input.channel === "EMAIL") {
-      const ar = input.locale === "ar";
-      const subject = ar ? "رمز الدخول إلى حسابك — منبر الأقصى" : "Your Minber Al-Aqsa sign-in code";
-      // loginUrl is constructed server-side from a configured origin, never donor input.
-      const link = input.loginUrl ? `<p><a href="${input.loginUrl.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">${ar ? "فتح صفحة الدخول" : "Open sign in"}</a></p>` : "";
-      result = await sendEmailMessage({ to: input.contact, subject, html: `<div dir="${ar ? "rtl" : "ltr"}"><h1>${subject}</h1><p style="font-size:30px;letter-spacing:5px">${input.code}</p><p>${ar ? "صالح لمدة 10 دقائق. لا تشاركه مع أحد." : "Valid for 10 minutes. Do not share this code."}</p>${link}</div>`, purpose: "AUTHENTICATION" }, await getActiveElasticEmailRuntimeConfig());
+      const message = donorLoginEmail(input.code, input.locale, input.loginUrl);
+      result = await sendEmailMessage({ to: input.contact, ...message, purpose: "AUTHENTICATION" }, await getActiveElasticEmailRuntimeConfig());
     } else {
       const runtime = await getActiveMetaWhatsappRuntimeConfig();
       const templateName = process.env.DONOR_LOGIN_WHATSAPP_TEMPLATE || "mia_donor_login_v1";

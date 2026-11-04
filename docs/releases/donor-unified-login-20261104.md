@@ -2,7 +2,7 @@
 
 Email codes, verified WhatsApp numbers and verified Google emails resolve to one donor account. The linked methods panel supports multiple emails and a verified primary email. Codes expire after ten minutes, allow five attempts, are hashed with the authentication secret and are consumed atomically. A successfully delivered replacement invalidates earlier codes in the same scope. Resend throttles are durable database counters.
 
-Editable checkout phone numbers are contact data, not verified sign-in factors. An established account with an unverified phone must first sign in through email or Google and verify its phone in the account panel. The service does not infer mailbox ownership from a shared phone. Additional mailboxes must each be verified.
+A correct code delivered to an existing donor's unique email or WhatsApp contact activates and signs into the existing record, including historical guests. No earlier email or Google login is required for WhatsApp. Several established accounts sharing one phone are an explicit conflict rather than an automatic merge. Phone proof does not verify mailbox ownership; additional mailboxes must each be verified.
 
 When an authenticated donor proves another account's verified sign-in address, the donor records are consolidated transactionally. Guest records matching a newly verified phone can also be consolidated. Financial values, statuses, schedules and provider references are retained; only ownership references change. Retired source records preserve their original contacts for administrative traceability, are hidden from active user lists and cannot retain sessions or credentials. Privileged/closed accounts and accounts currently billing or verifying a card cannot be merged. No payment provider is called by linking. Source communication profiles are stopped to avoid duplicate sends.
 
@@ -33,3 +33,8 @@ This command creates/reads provider template metadata and sends no recipient mes
 Focused TypeScript, Prisma schema validation and ESLint pass. Thirteen authentication service/delivery/boundary tests cover code replay, expiration, attempts, contact throttling, linking, privileged accounts, in-flight billing, invitation activation, verified primary email routing and redacted message records. Four existing registration/profile regressions pass. Browser fixtures exercised the Arabic mobile code flow, linked addresses and invitation states, plus English rendering, with no mobile overflow or browser exceptions. These tests use synthetic data and mocked provider responses; they do not prove live delivery or production database behavior. Full repository release gates and live acceptance remain required before production approval.
 
 Five release-metadata fixture regressions also pass, including all independent setup steps, selective retries and runtime guards.
+
+
+## Follow-up validation
+
+Added regression coverage for direct WhatsApp login, guest activation without duplicates, WhatsApp invitations, ambiguous shared phones and branded RTL/LTR email rendering. The execution environment is unavailable for this follow-up; these new tests have not been run locally. Earlier validation above describes the prior revision. GitHub Actions and live acceptance are required for the updated revision.

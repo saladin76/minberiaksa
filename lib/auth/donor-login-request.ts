@@ -7,6 +7,6 @@ export function requireLoginOrigin(request: NextRequest) {
 }
 export function loginError(error: unknown) {
   const reason = error instanceof Error ? error.message : "UNAVAILABLE";
-  const safe = ["INVALID_CONTACT", "RATE_LIMITED", "INVALID_CODE", "ACCOUNT_CONFLICT", "VERIFY_ACCOUNT_EMAIL_FIRST", "DELIVERY_UNAVAILABLE"].includes(reason) ? reason : "UNAVAILABLE";
+  const safe = ["INVALID_CONTACT", "RATE_LIMITED", "INVALID_CODE", "ACCOUNT_CONFLICT", "DELIVERY_UNAVAILABLE"].includes(reason) ? reason : "UNAVAILABLE";
   return NextResponse.json({ error: safe }, { status: safe === "RATE_LIMITED" ? 429 : safe === "UNAVAILABLE" || safe === "DELIVERY_UNAVAILABLE" ? 503 : 400 });
 }

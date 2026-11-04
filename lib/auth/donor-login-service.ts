@@ -85,11 +85,15 @@ async function mergeDonor(tx: Prisma.TransactionClient, sourceId: string, target
 async function resolveIdentity(tx: Prisma.TransactionClient, channel: LoginChannel, contact: string, linkUserId?: string, invitationUserId?: string) {
   const key = identityKey(channel, contact);
   const identity = await tx.donorLoginIdentity.findUnique({ where: { id: key } });
-  const matches = await tx.user.findMany({ where: { ...activeUser, ...(channel === "EMAIL" ? { email: { equals: contact, mode: "insensitive" } } : { phone: { in: phoneMatchVariants(contact) } }) }, include: { accounts: { select: { id: true } } }, take: 50 });
+  const matches = await tx.user.findMany({ where: { ...activeUser, ...(channel === "EMAIL" ? { email: { equals: contact, mode: "insensitive" } } : { phone: { in: phoneMatchVariants(contact) } }) }, include: { accounts: { select: { id: true } } }, orderBy: { createdAt: "asc" }, take: 50 });
   if (matches.length === 50) throw new Error("ACCOUNT_CONFLICT");
-  const targetId = linkUserId || identity?.userId || (channel === "EMAIL" ? matches[0]?.id : undefined);
-  // An editable, unverified phone on an established account is not a login credential.
-  if (channel === "WHATSAPP" && matches.some(u => u.id !== targetId && u.id !== identity?.userId && !donorMayBeClaimedByPhone(u))) throw new Error("VERIFY_ACCOUNT_EMAIL_FIRST");
+  // A valid code proves this contact. Reuse its existing donor record on first
+  // sign-in too: historical guest profiles do not need an earlier email login.
+  // A shared phone on several established accounts is ambiguous, not a merge instruction.
+  const established = channel === "WHATSAPP" ? matches.filter(u => !donorMayBeClaimedByPhone(u)) : [];
+  if (channel === "WHATSAPP" && established.length > 1) throw new Error("ACCOUNT_CONFLICT");
+  const matchedId = channel === "WHATSAPP" ? established[0]?.id || matches[0]?.id : matches[0]?.id;
+  const targetId = linkUserId || identity?.userId || matchedId;
   let target = targetId ? await tx.user.findUniqueOrThrow({ where: { id: targetId } }) : null;
   if (target && (target.role !== "DONOR" || target.mergedIntoUserId || target.email?.endsWith("@deleted.invalid"))) throw new Error("ACCOUNT_CONFLICT");
   if (!target) target = await tx.user.create({ data: { email: channel === "EMAIL" ? contact : null, phone: channel === "WHATSAPP" ? contact : null, role: "DONOR", verifiedAt: new Date(), registeredAt: new Date(), emailVerified: channel === "EMAIL" ? new Date() : null } });

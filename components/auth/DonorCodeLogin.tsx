@@ -30,7 +30,6 @@ export default function DonorCodeLogin({ link = false, onDone, callbackUrl }: { 
   const wait = Math.max(0, Math.ceil((retryAt - now) / 1000));
   const errorText = (error: string) => error === "RATE_LIMITED"
     ? ar ? "انتظر دقيقة قبل طلب كود جديد." : "Please wait before requesting another code."
-    : error === "VERIFY_ACCOUNT_EMAIL_FIRST" ? ar ? "ادخل ببريد حسابك أولًا، ثم اربط واتساب من طرق الدخول." : "Sign in with your account email first, then link WhatsApp in account settings."
     : error === "ACCOUNT_CONFLICT" ? ar ? "تعذر ربط الحسابين تلقائيًا. تواصل مع الدعم." : "These accounts could not be linked automatically. Contact support."
     : error === "DELIVERY_UNAVAILABLE" || error === "UNAVAILABLE" ? ar ? "تعذر إرسال الكود حاليًا. جرّب البريد أو Google." : "Code delivery is unavailable. Try email or Google."
     : ar ? "تحقق من البيانات والكود وصلاحيته، ثم أعد المحاولة." : "Check your details and code, then try again.";

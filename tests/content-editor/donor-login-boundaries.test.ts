@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { donorLoginEmail } from "../../lib/auth/donor-login-email";
 
 type Reply = { status: number; body: Record<string, unknown> };
 const json = (body: Record<string, unknown>, options?: { status?: number }): Reply => ({ status: options?.status ?? 200, body });
@@ -15,6 +16,7 @@ function load<T>(path: string, imports: Record<string, unknown>): T {
 test("WhatsApp authentication uses an approved authentication template; archived content excludes codes", async () => {
   const archived: Record<string, unknown>[] = [], statuses: string[] = [], sent: Record<string, unknown>[] = [];
   const make = (approved: boolean) => load<typeof import("../../lib/auth/donor-login-delivery")>("lib/auth/donor-login-delivery.ts", {
+    "./donor-login-email": { donorLoginEmail },
     "./donor-authentication-sender": { donorAuthenticationSender: async () => ({ id: "sender-row", phoneNumberId: "sender-1", businessAccountId: "default-waba" }) },
     "@/lib/communication/providers/email/client": { sendEmailMessage: async () => ({ ok: true, providerMessageId: "email-1" }) },
     "@/lib/communication/runtime-config": { getActiveElasticEmailRuntimeConfig: async () => ({}), getActiveMetaWhatsappRuntimeConfig: async () => ({ configured: true, values: { defaultPhoneNumberId: "wrong-legacy-sender" } }) },
