@@ -5,6 +5,9 @@ import fs from "node:fs";
 import * as crypto from "node:crypto";
 import vm from "node:vm";
 import ts from "typescript";
+import * as mixed from "../../lib/donations/mixed-cart";
+import { albarakaCheckoutMode, isMixedRecurringCheckout } from "../../lib/donations/albaraka-checkout-mode";
+import { albaraka3DLinkageError } from "../../lib/donations/albaraka-3d-verification";
 import * as schedule from "../../lib/donations/recurring-schedule";
 import * as billingSafety from "../../lib/donations/recurring-billing-safety";
 import * as albaraka from "../../lib/albaraka";
@@ -41,6 +44,7 @@ function matches(row: Row, where: Row): boolean {
       if ("isSet" in expected) return (row[key] !== undefined) === expected.isSet;
       if ("not" in expected) return expected.not === null ? row[key] != null : row[key] !== undefined && row[key] !== expected.not;
       if ("in" in expected) return expected.in.includes(row[key]);
+      if ("notIn" in expected) return !expected.notIn.includes(row[key]);
       if ("lte" in expected) return row[key] != null && row[key] <= expected.lte;
     }
     if (expected instanceof Date) return row[key]?.getTime() === expected.getTime();
@@ -76,6 +80,7 @@ function fixture(mainGateway = "ALBARAKA") {
   };
   prisma.$transaction = async (operation: unknown) => typeof operation === "function" ? operation(prisma) : Promise.all(operation as Promise<unknown>[]);
   const dependencies: Row = {
+    "@/lib/donations/mixed-cart": mixed,
     "@/lib/donations/payment-routing-server": { resolveNewCardPaymentRoute: async () => null },
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
     "@/lib/tracking/client-ip": clientIp,
@@ -393,4 +398,99 @@ for(const rail of ["ALBARAKA","PAYPAL"] as const)test(`${rail}: Friday window is
  const workerModule=load(rail==="ALBARAKA"?"lib/donations/albaraka-recurring.ts":"lib/donations/paypal-recurring.ts",f.dependencies,{Date:PaymentClock}),worker=rail==="ALBARAKA"?workerModule.chargeDueAlbarakaSubscriptions:workerModule.chargeDuePayPalSubscriptions;
  assert.equal((await worker({now:before})).skipped[0].result,"schedule_postponed");assert.equal(f.calls(),0);assert.equal(f.plan.chargeAttempts,0);assert.equal(f.plan.nextBillingDate.toISOString(),"2026-11-13T16:30:00.000Z");
  const row=[...f.donations.values()].find(row=>row.billingReason==="subscription_cycle")!;assert.equal(row.paidAt,null);assert.match(row.providerErrorMessage,/NOT_SENT/);
+});
+
+for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true], ["MONTHLY", true], ["MONTHLY", false]] as const) test(`mixed TRY ${frequency} ${verificationPassed ? "approved" : "rejected"}: real checkout → 3D callback → recurring-only 2D renewal, with replay and concurrent-worker safety`, async () => {
+  const f = fixture();
+  const cfg = { merchantNo: "900000001", terminalNo: "90000002", posnetId: "900000003", encKey: "test-key-never-live", tdsUrl: "https://bank.invalid/3d", serviceUrl: "https://bank.invalid/api", useOOS: false, useJokerVadaa: false };
+  const bankPayloads: Row[] = [], bankTerminals: string[] = [], cards = new Map<string, Row>();
+  const bankAdapter = f.dependencies["@/lib/albaraka"];
+  const originalSale = bankAdapter.albarakaService;
+  bankAdapter.albarakaConfig = () => cfg;
+  bankAdapter.albaraka2DConfig = () => ({ ...cfg, terminalNo: "90000004" });
+  bankAdapter.albarakaChargeCurrency = () => "DONOR";
+  bankAdapter.albarakaService = async (operation: string, body: Row, options: Row) => {
+    bankPayloads.push(body); bankTerminals.push(options.config.terminalNo);
+    return originalSale(operation, body, options);
+  };
+  const rates = f.dependencies["@/lib/exchange/rates-service"];
+  rates.getUsdBaseRatesForServer = async () => ({ USD: 1, TRY: 50 });
+  rates.convertAmountInCurrencyToUsd = (value: number, currency: string) => currency === "TRY" ? value / 50 : value;
+  f.dependencies["@/lib/exchange/convert-amount-in-currency-to-usd"].convertAmountInCurrencyToUsd = async (value: number, currency: string) => currency === "TRY" ? value / 50 : value;
+  f.prisma.creditCard = {
+    create: async ({ data }: Row) => { const card = { id: "c".repeat(24), ...data }; cards.set(card.id, card); return card; },
+  };
+  f.dependencies["@/lib/card-crypto"].encryptCard = () => "encrypted-fixture";
+  f.dependencies["@/lib/card-crypto"].detectCardType = () => "visa";
+  f.prisma.donation.updateMany = async ({ where, data }: Row) => {
+    const rows = [...f.donations.values()].filter(row => matches(row, where));
+    for (const row of rows) Object.assign(row, data);
+    return { count: rows.length };
+  };
+  const originalFindDonation = f.prisma.donation.findUnique;
+  f.prisma.donation.findUnique = async (args: Row) => {
+    const row = await originalFindDonation(args);
+    return row && args.include?.subscription ? { ...row, subscription: f.plans.get(row.subscriptionId) } : row;
+  };
+  const originalFindPlans = f.prisma.subscription.findMany;
+  f.prisma.subscription.findMany = async (args: Row) => (await originalFindPlans(args)).map((row: Row) => ({ ...row, paymentCard: cards.get(row.paymentCardId) }));
+  const mixedResult = await f.driver.createDonation({
+    items: [
+      { projectId: "fixture-project", amount: 10, freqKey: "once" },
+      { projectId: "fixture-project", amount: 5, freqKey: frequency.toLowerCase(), schedule: { hour: 9, minute: 30, ...(frequency === "MONTHLY" ? { dayOfMonth: 15 } : {}) } },
+    ], projects: [{ id: "project", slug: "fixture-project" }], currency: "TRY", locale: "ar", method: "CARD", guest: null, teamSupport: 0, teamSupportRecurring: false,
+  });
+  const plan = f.plans.get(mixedResult.subscriptionId)!, first = f.donations.get(mixedResult.id)!;
+  assert.equal(first.totalAmount, 750);
+  assert.equal(plan.amount, 250); assert.equal(plan.amountUSD, 5);
+  assert.equal(plan.items.length, 1); assert.equal(plan.items[0].amount, 250);
+  const bankDependencies = { ...f.dependencies, crypto,
+    "@/lib/donations/access-token": { withDonationToken: (url: string) => url },
+    "next/server": { NextResponse: { ...next.NextResponse, redirect: (url: URL, status: number) => ({ status, location: String(url) }) } },
+    "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode, isMixedRecurringCheckout },
+    "@/lib/donations/albaraka-3d-verification": { albaraka3DLinkageError },
+    "@/lib/donations/mongo-null": load("lib/donations/mongo-null.ts", {}),
+    "@/lib/payment-public-origin": { paymentPublicOrigin: () => "https://fixture.invalid" },
+    "@/lib/security/card-attempts": { checkCardAttempt: async () => ({ ok: true }) },
+    "@/lib/exchange/convert": { normalizeCurrencyCode: (value: string) => value },
+    "@/lib/donations/albaraka-settlement": f.settlement,
+  };
+  const initiate = load("app/api/albaraka/3d/initiate/route.ts", bankDependencies);
+  const response = await initiate.POST(request({ donationId: first.id, securityMode: "2D", card: { number: "4242424242424242", expiry: "12/35", cvv: "123", holder: "Fixture" } }));
+  assert.equal(response.status, 200); assert.equal(response.data.actionUrl, cfg.tdsUrl);
+  assert.equal(f.calls(), 0, "3D initiation must not send a sale");
+  assert.equal(first.paidAt, null);
+  assert.ok(plan.paymentCardId); assert.equal(cards.get(plan.paymentCardId)!.cvc, "");
+  const dueBeforePayment = await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: new Date(plan.nextBillingDate) });
+  assert.equal(dueBeforePayment.scanned, 0, "saved card alone cannot authorize an abandoned plan");
+  const raw: Row = { TranType: "Sale", OrderId: first.providerOrderId, MerchantId: cfg.merchantNo, Amount: "75000", Currency: "TL", MdStatus: verificationPassed ? "1" : "0", SecureTransactionId: "fixture-secure", CAVV: "fixture-cavv", ECI: "05", MD: "fixture-md" };
+  raw.MacNew = albaraka.albarakaResponseMac(raw, cfg.encKey);
+  const callback = load("app/api/albaraka/3d/callback/route.ts", bankDependencies);
+  const callbackRequest = () => new Request(`https://fixture.invalid/api/albaraka/3d/callback?donationId=${first.id}&locale=ar`, { method: "POST", body: new URLSearchParams(raw) });
+  await callback.POST(callbackRequest());
+  if (!verificationPassed) {
+    assert.equal(first.paidAt, null);
+    assert.equal(f.calls(), 0, "failed authentication cannot capture or downgrade to 2D");
+    assert.equal((await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: new Date(plan.nextBillingDate) })).scanned, 0);
+    await callback.POST(callbackRequest());
+    assert.equal(f.calls(), 0);
+    return;
+  }
+  assert.ok(first.paidAt); assert.ok(plan.lastBillingDate); assert.equal(f.calls(), 1);
+  assert.equal(bankTerminals[0], cfg.terminalNo);
+  assert.equal(Number(bankPayloads[0].Amount), 75000);
+  await callback.POST(callbackRequest()); assert.equal(f.calls(), 1, "callback replay must not recapture");
+  const due = new Date(plan.nextBillingDate);
+  const runs = await Promise.all([f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due }), f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due })]);
+  assert.equal(runs.reduce((n: number, run: Row) => n + run.charged.length, 0), 1);
+  assert.equal(f.calls(), 2, "one signup capture plus exactly one renewal");
+  assert.equal(bankTerminals[1], "fixture", "renewal must retain its separate recurring terminal");
+  assert.equal(Number(bankPayloads[1].Amount), 25000);
+  assert.equal(bankPayloads[1].IsTDSecureMerchant, "N");
+  assert.equal(bankPayloads[1].CardInformationData.Cvc2, "", "renewal cannot carry a stored security code");
+  assert.equal(bankPayloads[1].IsRecurring, "Y");
+  const renewal = [...f.donations.values()].find(row => row.id !== first.id)!;
+  assert.equal(renewal.totalAmount, 250); assert.equal(renewal.items.length, 1); assert.equal(renewal.items[0].amount, 250);
+  await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due });
+  assert.equal(f.calls(), 2);
 });
