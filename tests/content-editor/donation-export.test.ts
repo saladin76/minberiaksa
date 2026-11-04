@@ -36,7 +36,7 @@ for (const [locale, name, rtl] of [["ar", "المملكة العربية الس�
     assert.deepEqual(rows.autoFilter, "A6:AA7");
     assert.equal(rows.getCell("L7").value, 15.5);
     assert.equal(rows.getCell("L7").numFmt, "#,##0.00");
-    for (const sheetName of [dt("ملخص التقرير"), dt("التحليلات")]) {
+    for (const sheetName of [dt("ملخص التقرير"), dt("الدول")]) {
       const values: string[] = [];
       wb.getWorksheet(sheetName)!.eachRow(row => row.eachCell(cell => values.push(cell.text)));
       assert.ok(values.includes(name), sheetName);
@@ -106,7 +106,7 @@ test("CSV also uses full country and language names and keeps formula-looking in
 test("empty reports remain valid workbooks with summary and filterable column headers", async () => {
   setDashLocale("ar");
   const wb = await workbook([]);
-  assert.equal(wb.worksheets.length, 3);
+  assert.equal(wb.worksheets.length, 6);
   assert.equal(wb.getWorksheet(dt("التبرعات"))!.getCell("I6").value, dt("الدولة"));
   assert.equal(wb.getWorksheet(dt("ملخص التقرير"))!.getCell("A7").value, 0);
 });
@@ -125,4 +125,22 @@ test("recurring report country labels are complete and its local totals respect 
   assert.equal(rows.getCell("G7").value, "تركيا");
   assert.equal(rows.getCell("I9").value, "—");
   assert.equal((rows.getCell("L9").value as ExcelJS.CellFormulaValue).result, 60.88);
+});
+
+
+test("management views have integer cart counts, external spend inputs and blank guarded ratios", async () => {
+  setDashLocale("ar");
+  const wb = await workbook([gift({ campaigns: [{ id: "a", title: "أ" }, { id: "b", title: "ب" }] }), gift({ id: "failed", status: "FAILED", paidAt: null, amountUSD: 999 })]);
+  assert.deepEqual(wb.worksheets.map(s => s.name), ["ملخص التقرير", "الدول", "اللغات", "المشاريع", "المحاولات الفاشلة", "التبرعات"]);
+  const countries = wb.getWorksheet("الدول")!;
+  assert.equal(countries.getCell("B8").value, 1);
+  assert.equal(countries.getCell("C8").value, 15.5);
+  assert.equal(countries.getCell("F8").value, null);
+  assert.equal(countries.getCell("F8").dataValidation.type, "decimal");
+  assert.equal(countries.getCell("G8").formula, 'IF(ISNUMBER(F8),IFERROR(F8/B8,""),"")');
+  assert.equal(countries.getCell("H8").formula, 'IF(ISNUMBER(F8),IFERROR(F8/C8,""),"")');
+  const projects = wb.getWorksheet("المشاريع")!;
+  assert.equal(projects.getCell("B8").value, 1);
+  assert.equal(projects.getCell("D8").numFmt, "0.0%");
+  assert.equal(wb.getWorksheet("المحاولات الفاشلة")!.getCell("C8").value, 999);
 });
