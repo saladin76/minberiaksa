@@ -8,6 +8,7 @@ import * as locales from "../../lib/locales";
 import { ContentError } from "../../lib/content-editor/service";
 import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
 import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
+import { seoSourceText } from "../../lib/content-editor/seo-source";
 function load(file: string, deps: Record<string, unknown>) {
   const loaded = { exports: {} as Record<string, (...args: unknown[]) => Promise<Record<string, unknown>>> };
   const source = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -24,6 +25,7 @@ function fixture(mode = "ok") {
   class SeoResearchError extends Error { status = 502; }
   class Ga4ReportError extends Error { status = 502; }
   const route = load("app/api/admin/page-seo/[key]/route.ts", {
+    "@/lib/content-editor/seo-source": { seoSourceText },
     "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "next/server": { NextResponse: { json: (body: unknown, options?: {status?:number}) => ({ body, status: options?.status || 200 }) } },
     "next-auth": { getServerSession: async () => ({user:{}}) }, "@/app/api/auth/[...nextauth]/options": {authOptions:{}}, "@/lib/dashboard/api-auth": {requireAdminOrDashboardPermission:()=>mode==="denied"?{status:403}:null},
     "@/lib/content-editor/service": {ContentError}, "@/lib/content-editor/page-seo": {...pageSeo, readPageSeoDocument:async()=>{reads++;return document;}, savePageSeoDocument:async()=>{writes++;throw new Error("Unexpected write");},pageSeoDefaults:()=>({values:{metaTitle:"Default title",metaDescription:"Default description"},context:"Public page context"})},

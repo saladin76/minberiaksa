@@ -21,7 +21,7 @@ export function pageSeoDefaults(key: string, locale: string) {
   const section = key === "blog" ? seo.blog : key === "projects" || key === "legacyCampaigns" ? seo.campaigns : key === "contact" ? seo.contact : seo;
   const title = page.titleKeys.length ? page.titleKeys.map((field) => String(valueAt(namespace, field) || "")).join(" ") : section.title;
   const description = page.descriptionKey ? String(valueAt(namespace, page.descriptionKey) || "") : section.description;
-  return { values: { metaTitle: title, metaDescription: description, seoKeyword: seo.keywords.join(", "), ogTitle: title, ogDescription: description, imageAlt: title, ogImage: "", seoNoIndex: "false" }, context: JSON.stringify(namespace || {}).slice(0, 20000) };
+  return { values: { metaTitle: title, metaDescription: description, seoKeyword: seo.keywords.join(", "), ogTitle: title, ogDescription: description, imageAlt: title, ogImage: "", seoNoIndex: "false" }, context: JSON.stringify(namespace || {}) };
 }
 export function validatePageSeoOverrides(input: unknown): PageSeoLocales {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new ContentError("إعدادات SEO غير صالحة");

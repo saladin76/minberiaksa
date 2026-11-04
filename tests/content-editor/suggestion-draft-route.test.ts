@@ -7,12 +7,14 @@ import * as contracts from "../../lib/content-editor/contracts";
 import { ContentError } from "../../lib/content-editor/service";
 import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
 import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
+import { seoSourceText } from "../../lib/content-editor/seo-source";
 
 function fixture(mode = "ok") {
   const row = { id: "111111111111111111111111", title: "Saved Arabic title", description: "Saved source", translations: [{ locale: "en", title: "Saved English title", description: "Saved English copy" }] };
   const calls: { translations: unknown[]; research: Record<string, unknown>[]; reads: number; auth: number } = { translations: [], research: [], reads: 0, auth: 0 };
   class SeoResearchError extends Error { status = 502; }
   const deps: Record<string, unknown> = {
+    "@/lib/content-editor/seo-source": { seoSourceText },
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status || 200 }) } },
     "next-auth": { getServerSession: async () => { calls.auth++; if (mode === "queued" && calls.auth > 1) throw new Error("request cookies are unavailable after response"); return { user: { id: "operator" } }; } }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => mode === "denied" ? { status: 403 } : null },

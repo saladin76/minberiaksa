@@ -17,7 +17,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 type GroupRow = { _id?: unknown; count?: number; total?: number };
 
-export async function GET(request?: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");

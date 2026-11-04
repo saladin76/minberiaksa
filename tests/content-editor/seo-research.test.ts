@@ -1,13 +1,14 @@
 import { ARABIC_MASTER_LOCALIZATION, researchRequest } from "../../lib/ai/core/content-requests";
 import { openAiFailure } from "../../lib/ai/core/openai-response";
 import { hasUnexpectedArabicProse } from "../../lib/content-localization/translation-language";
+import { seoSourceText } from "../../lib/content-editor/seo-source";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 
-function service(payload: unknown, capture: unknown[] = []) {
+function service(payload: unknown, capture: unknown[] = [], repairPayload: unknown = payload) {
   const source = readFileSync("lib/content-editor/seo-research.ts", "utf8");
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const loaded = { exports: {} };
@@ -19,11 +20,12 @@ function service(payload: unknown, capture: unknown[] = []) {
       return { ok: true, json: async () => payload };
     },
     require: (name: string) => {
-      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => { capture.push(JSON.parse(options.body)); return { ok: true, json: async () => payload }; } };
+      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => { capture.push(JSON.parse(options.body)); return { ok: true, json: async () => capture.length === 1 ? payload : repairPayload }; } };
       if (name === "../ai/core/connection-settings") return { getOpenAiRuntime: async () => ({ apiKey: "test-key" }) };
       if (name === "../ai/core/openai-response") return { openAiFailure };
       if (name === "../ai/core/content-requests") return { ARABIC_MASTER_LOCALIZATION, researchRequest };
       if (name === "../content-localization/translation-language") return { hasUnexpectedArabicProse };
+      if (name === "./seo-source") return { seoSourceText };
       if (name === "server-only") return {};
       if (name === "@/lib/locales") return { isValidLocale: (value: string) => ["ar", "en", "tr"].includes(value) };
       if (name === "@/lib/content-localization/translate") return { LOCALE_ENGLISH_NAMES: { en: "English" } };
@@ -92,4 +94,61 @@ test("foreign SEO cannot silently fall back to an Arabic title or accept leftove
     message.content[0].text = JSON.stringify(fields);
     await assert.rejects(service(payload).generateResearchedSeo({type: "campaign", locale: "en", title: "دعم الأسر", description: "دعم الأسر"}), /SEO/);
   }
+});
+
+test("search commentary cannot hide the final JSON, including split output blocks and quoted braces", async () => {
+  const payload = response();
+  const answer = JSON.stringify({ seoTitle: "Food {parcels}", metaDescription: "Support families with food." });
+  payload.output.splice(1, 0, { type: "message", content: [{ type: "output_text", text: "I will research terminology first." }] });
+  payload.output[2] = { type: "message", content: [
+    { type: "output_text", text: "Result:\n```json\n" + answer.slice(0, 20) },
+    { type: "output_text", text: answer.slice(20) + "\n```\nSources are listed above." },
+  ] };
+  const capture: unknown[] = [];
+  const result = await service(payload, capture).generateResearchedSeo(input);
+  assert.equal((result.suggestion as unknown as {seoTitle:string}).seoTitle, "Food {parcels}");
+  assert.equal(capture.length, 1);
+});
+
+test("prose-only researched output is formatted once in JSON mode without rerunning search", async () => {
+  const malformed = response();
+  (malformed.output[1] as {content:{text:string}[]}).content[0].text = "Gazze için gıda kolisi bağışı: ihtiyaç sahibi ailelere destek.";
+  const repaired = response(false);
+  (repaired.output[0] as {content:{text:string}[]}).content[0].text = JSON.stringify({seoTitle:"Gazze için gıda kolisi bağışı",metaDescription:"Gazze'de ihtiyaç sahibi ailelere gıda kolisi ulaştırılmasına destek olun."});
+  const capture: unknown[] = [];
+  const result = await service(malformed, capture, repaired).generateResearchedSeo({...input,locale:"tr",title:"طرود غذائية",description:"مساعدة الأسر في غزة"});
+  assert.equal(capture.length, 2);
+  const retry = capture[1] as {text:{format:{type:string}};tools?:unknown;input:unknown};
+  assert.equal(retry.text.format.type, "json_object"); assert.equal(retry.tools, undefined);
+  assert.match(JSON.stringify(retry.input), /مساعدة الأسر في غزة/);
+  assert.equal(result.research.sources.length, 1);
+});
+
+test("metadata is rewritten to fit, never cut, and an invalid repair is refused", async () => {
+  const oversized = response();
+  (oversized.output[1] as {content:{text:string}[]}).content[0].text = JSON.stringify({seoTitle:"Food parcels",metaDescription:"Support families. ".repeat(15)});
+  const repaired = response(false);
+  (repaired.output[0] as {content:{text:string}[]}).content[0].text = JSON.stringify({seoTitle:"Food parcels",metaDescription:"Support families with essential food parcels."});
+  const capture: unknown[] = [];
+  const result = await service(oversized,capture,repaired).generateResearchedSeo(input);
+  assert.equal(capture.length,2);
+  assert.equal((result.suggestion as unknown as {metaDescription:string}).metaDescription,"Support families with essential food parcels.");
+  const failed: unknown[] = [];
+  await assert.rejects(service(oversized,failed).generateResearchedSeo(input), /حد الحقل/);
+  assert.equal(failed.length,2);
+});
+
+test("SEO receives the complete readable Arabic document including its final facts", async () => {
+  const doc = JSON.stringify({type:"doc",content:[
+    {type:"paragraph",content:[{type:"text",text:"محتوى عربي طويل ".repeat(350)}]},
+    {type:"heading",attrs:{level:2},content:[{type:"text",text:"أثر المشروع"}]},
+    {type:"paragraph",content:[{type:"text",text:"تكلفة الطرد 30 USD وتشمل المواد الغذائية فقط"}]},
+  ]});
+  const capture: unknown[] = [];
+  await service(response(),capture).generateResearchedSeo({...input,description:doc});
+  const prompt = JSON.stringify(capture[0]);
+  assert.match(prompt,/تكلفة الطرد 30 USD/); assert.doesNotMatch(prompt,/\\"type\\":\\"paragraph\\"/);
+  assert.match(prompt,/أثر المشروع/);
+  assert.equal(seoSourceText(JSON.stringify({heading:"دعم الأسر",items:["الطعام","الماء"]})),"دعم الأسر\nالطعام\nالماء");
+  assert.equal(seoSourceText(JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"{{first_name}} 30 USD https://example.org/food_parcels"}]}]})),"{{first_name}} 30 USD https://example.org/food_parcels");
 });

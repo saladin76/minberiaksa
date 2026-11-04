@@ -5,7 +5,7 @@ import { jsonNoStore, requireArchiveApiAccess } from "../../../_auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> | { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 type FileAnalysis = {
   summary: string;

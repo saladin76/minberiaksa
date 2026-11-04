@@ -6,7 +6,7 @@ import { jsonNoStore, requireArchiveActionAccess } from "../../../_auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> | { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, context: Params) {
   const { session, denied } = await requireArchiveActionAccess("archiveUpload");

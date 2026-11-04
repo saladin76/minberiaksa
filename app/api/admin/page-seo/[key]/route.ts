@@ -7,6 +7,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { ContentError } from "@/lib/content-editor/service";
 import { pageSeoDefaults, readPageSeoDocument, savePageSeoDocument, validatePageSeoOverrides } from "@/lib/content-editor/page-seo";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
+import { seoSourceText } from "@/lib/content-editor/seo-source";
 import { managedPagePath } from "@/lib/content-editor/page-seo-registry";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
 import { loadGa4DashboardReport, Ga4ReportError } from "@/lib/marketing/ga4-server";
@@ -64,7 +65,7 @@ async function suggestWithSession(request: NextRequest, ctx: Context, authorized
       analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}${managedPagePath(key, body.locale)}`);
     }
 
-    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
+    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + seoSourceText(source.context), market: typeof body.market === "string" ? body.market : undefined }, request.signal);
     return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
 }

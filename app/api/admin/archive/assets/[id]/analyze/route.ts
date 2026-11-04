@@ -4,7 +4,7 @@ import { dashboardUser, jsonNoStore, requireArchiveApiAccess } from "../../../_a
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(_request: Request, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { session, denied } = await requireArchiveApiAccess();
   if (denied) return denied;
   const { id } = await Promise.resolve(context.params);

@@ -5,6 +5,7 @@ import { loadGa4DashboardReport } from "@/lib/marketing/ga4-server";
 import { ga4ContentPagePath, ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
 import { faqTranslationFields, translatedFaq } from "@/lib/content-editor/faq";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
+import { seoSourceText } from "@/lib/content-editor/seo-source";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -190,7 +191,7 @@ async function suggestWithSession(
       locale: body.locale,
       analyticsEvidence,
       title: values.title || values.name || values.question || "",
-      description: context.map((field) => values[field.key]).join("\n"),
+      description: context.filter(field => !field.locked).map((field) => seoSourceText(values[field.key])).join("\n\n"),
       keywords: values.seoKeyword ? [values.seoKeyword] : [],
     }, request.signal);
     const seo = generated.suggestion;

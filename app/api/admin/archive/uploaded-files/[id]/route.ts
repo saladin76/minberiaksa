@@ -16,7 +16,7 @@ import { jsonNoStore, requireArchiveActionAccess, requireArchiveUploadedFileList
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> | { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 const allowedStatuses: ArchiveReviewStatus[] = ["NEW", "REVIEWED", "IMPORTANT"];
 

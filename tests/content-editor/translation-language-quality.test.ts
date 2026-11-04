@@ -3,20 +3,22 @@ import assert from "node:assert/strict";
 import { translateItem, type TranslateInput } from "../../lib/content-localization/translate";
 import { hasUnexpectedArabicProse } from "../../lib/content-localization/translation-language";
 
-async function withModel<T>(replies: unknown[], run: (prompts: string[]) => Promise<T>) {
+async function withModel<T>(replies: unknown[], run: (prompts: string[], models: string[]) => Promise<T>) {
   const original = globalThis.fetch, key = process.env.OPENAI_API_KEY, database = process.env.DATABASE_URL;
   const prompts: string[] = [];
+  const models: string[] = [];
   process.env.OPENAI_API_KEY = "test-only-not-a-real-key"; delete process.env.DATABASE_URL;
   try {
     globalThis.fetch = async (url, options) => {
       assert.equal(String(url), "https://api.openai.com/v1/chat/completions");
       prompts.push(JSON.parse(String(options?.body)).messages[1].content);
+      models.push(JSON.parse(String(options?.body)).model);
       assert.ok(prompts.length <= replies.length, "Unexpected extra provider request");
       const reply = replies[prompts.length - 1];
       if (reply instanceof Error) throw reply;
       return Response.json({ choices: [{ message: { content: JSON.stringify(reply) } }] });
     };
-    return await run(prompts);
+    return await run(prompts, models);
   } finally {
     globalThis.fetch = original;
     if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
@@ -100,4 +102,32 @@ test("plain paragraphs and HTML retain structure; flattened or modified proposal
 
 test("translation refuses an intermediate source language before contacting the provider", async () => {
   await withModel([], async () => { await assert.rejects(translateItem({ fields: { title: "English intermediate" }, sourceLocale: "en" }, "fr"), /العربي الأصلي/); });
+});
+
+test("translation keeps word separators around bold and linked fragments and refuses blank replacement nodes", async () => {
+  const doc = {type:"doc",content:[{type:"paragraph",content:[
+    {type:"text",text:"ساعد "},{type:"text",text:"الأسر",marks:[{type:"bold"}]},{type:"text",text:" الآن"},
+  ]}]};
+  await withModel([{richTexts:{body:["Support","families","now"]}}],async()=>{
+    const result=await translateItem({fields:{},richFields:{body:JSON.stringify(doc)}},"en");
+    const saved=JSON.parse(result.richFields.body);
+    assert.equal(saved.content[0].content.map((node:{text:string})=>node.text).join(""),"Support families now");
+    assert.deepEqual(saved.content[0].content[1].marks,[{type:"bold"}]);
+  });
+  await withModel([{richTexts:{body:["Support","","now"]}}],async()=>{
+    const result=await translateItem({fields:{},richFields:{body:JSON.stringify(doc)}},"en");
+    assert.equal(result.richFields.body,undefined); assert.match(result.warnings.join(" "),/حُذفت/);
+  });
+});
+
+test("ordinary editor translation respects the professional translation model override", async () => {
+  const previous = process.env.CONTENT_PRO_TRANSLATION_MODEL;
+  process.env.CONTENT_PRO_TRANSLATION_MODEL = "gpt-4.1";
+  try {
+    await withModel([{fields:{title:"Food parcels"}}],async(prompts,models)=>{
+      const result=await translateItem({fields:{title:"طرود غذائية"}},"en");
+      assert.equal(result.fields.title,"Food parcels"); assert.deepEqual(models,["gpt-4.1"]);
+      assert.match(prompts[0],/idiomatic fundraising copy/);
+    });
+  } finally { if (previous === undefined) delete process.env.CONTENT_PRO_TRANSLATION_MODEL; else process.env.CONTENT_PRO_TRANSLATION_MODEL=previous; }
 });
