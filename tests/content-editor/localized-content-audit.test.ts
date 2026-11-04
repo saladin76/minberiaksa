@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { probeLocalizedContent } from "../../scripts/audit-localized-content.mjs";
+import { localizedAuditFailure, probeLocalizedContent } from "../../scripts/audit-localized-content.mjs";
+import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
+import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
 
 test("the localized provider check does nothing without explicit generation", async () => {
   const fail = async () => { throw new Error("Unexpected provider call"); };
@@ -19,4 +21,26 @@ test("the live check exercises the production services and fails on lost formatt
   });
   assert.equal(translations,2); assert.equal(research,2); assert.equal(result.status,"generation_failed");
   assert.equal(result.results[1].seo,"ready"); assert.equal(result.results[2].failure,"LOCALIZED_CONTENT_CHECK_FAILED");
+  assert.equal(result.results[2].translation,"failed"); assert.equal(result.results[2].failureStage,"translation");
+});
+
+test("the audit reports the failing SEO field and progress while retaining successful languages",async()=>{
+  class SeoError extends Error { reason="SEO_FIELD_TOO_LONG"; validation={fields:[{field:"metaDescription",limit:160,actual:174}]}; }
+  const progress:unknown[]=[];
+  const result=await probeLocalizedContent({checkGeneration:true,locales:["en","tr"],
+    translate:async(input:{richFields:Record<string,string>})=>({fields:{title:"Food parcels"},richFields:input.richFields,warnings:[]}),
+    seo:async(input:{locale:string})=>{if(input.locale==="en")throw new SeoError("metaDescription exceeds its budget");return {suggestion:{seoTitle:"Food parcels",metaDescription:"Food for families."},research:{sources:[{url:"https://example.org"}]}};},
+    describeFailure:(error:unknown)=>localizedAuditFailure(error,{seoError:SeoError,providerFailure:suggestionFailure}),onProgress:(event:unknown)=>progress.push(event),
+  });
+  assert.equal(result.status,"generation_failed");assert.equal(result.results[0].translation,"ready");assert.equal(result.results[0].seo,"failed");assert.equal(result.results[0].failure,"SEO_FIELD_TOO_LONG");assert.equal(result.results[0].failureStage,"seo");
+  assert.deepEqual(result.results[0].validation,{fields:[{field:"metaDescription",limit:160,actual:174}]});assert.equal(result.results[1].seo,"ready");assert.ok(progress.length>=6);
+});
+
+test("audit diagnostics never print an arbitrary provider message or secret",()=>{
+  class SeoError extends Error {}
+  const raw=new Error("Authorization private-key donor@example.test");
+  assert.deepEqual(localizedAuditFailure(raw,{seoError:SeoError,providerFailure:suggestionFailure}),{reason:"LOCALIZED_CONTENT_CHECK_FAILED"});
+  const provider=new OpenAiResponseError("AI_ACCESS_DENIED");provider.message=raw.message;
+  const safe=localizedAuditFailure(provider,{seoError:SeoError,providerFailure:suggestionFailure});
+  assert.equal(safe.reason,"AI_ACCESS_DENIED");assert.doesNotMatch(JSON.stringify(safe),/private-key|donor@|Authorization/);
 });

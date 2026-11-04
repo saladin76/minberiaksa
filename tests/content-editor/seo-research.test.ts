@@ -2,13 +2,14 @@ import { ARABIC_MASTER_LOCALIZATION, researchRequest } from "../../lib/ai/core/c
 import { openAiFailure } from "../../lib/ai/core/openai-response";
 import { hasUnexpectedArabicProse } from "../../lib/content-localization/translation-language";
 import { seoSourceText } from "../../lib/content-editor/seo-source";
+import { missingProtectedTokens } from "../../lib/content-localization/protected-tokens";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 
-function service(payload: unknown, capture: unknown[] = [], repairPayload: unknown = payload) {
+function service(payload: unknown, capture: unknown[] = [], repairPayload: unknown = payload, finalPayload: unknown = repairPayload) {
   const source = readFileSync("lib/content-editor/seo-research.ts", "utf8");
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const loaded = { exports: {} };
@@ -20,12 +21,13 @@ function service(payload: unknown, capture: unknown[] = [], repairPayload: unkno
       return { ok: true, json: async () => payload };
     },
     require: (name: string) => {
-      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => { capture.push(JSON.parse(options.body)); return { ok: true, json: async () => capture.length === 1 ? payload : repairPayload }; } };
+      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => { capture.push(JSON.parse(options.body)); return { ok: true, json: async () => capture.length === 1 ? payload : capture.length === 2 ? repairPayload : finalPayload }; } };
       if (name === "../ai/core/connection-settings") return { getOpenAiRuntime: async () => ({ apiKey: "test-key" }) };
       if (name === "../ai/core/openai-response") return { openAiFailure };
       if (name === "../ai/core/content-requests") return { ARABIC_MASTER_LOCALIZATION, researchRequest };
       if (name === "../content-localization/translation-language") return { hasUnexpectedArabicProse };
       if (name === "./seo-source") return { seoSourceText };
+      if (name === "../content-localization/protected-tokens") return { missingProtectedTokens };
       if (name === "server-only") return {};
       if (name === "@/lib/locales") return { isValidLocale: (value: string) => ["ar", "en", "tr"].includes(value) };
       if (name === "@/lib/content-localization/translate") return { LOCALE_ENGLISH_NAMES: { en: "English" } };
@@ -135,7 +137,55 @@ test("metadata is rewritten to fit, never cut, and an invalid repair is refused"
   assert.equal((result.suggestion as unknown as {metaDescription:string}).metaDescription,"Support families with essential food parcels.");
   const failed: unknown[] = [];
   await assert.rejects(service(oversized,failed).generateResearchedSeo(input), /حد الحقل/);
-  assert.equal(failed.length,2);
+  assert.equal(failed.length,3);
+});
+
+function copyResponse(copy: Record<string, unknown>, search = true) {
+  const payload = response(search);
+  (payload.output[payload.output.length - 1] as {content:{text:string}[]}).content[0].text = JSON.stringify(copy);
+  return payload;
+}
+
+test("a long optional field is repaired alone without regenerating healthy English SEO or FAQ", async () => {
+  const original = {seoTitle:"Food parcels for Gaza",metaDescription:"Support families with essential food.",altText:"Food parcel for families. ".repeat(10),faq:[{question:"Who benefits?",answer:"Families in need."}]};
+  const capture: unknown[]=[];
+  const result=await service(copyResponse(original),capture,copyResponse({fields:{altText:"Food parcel for families in Gaza",seoTitle:"Unrequested new title"}},false)).generateResearchedSeo(input);
+  const copy=result.suggestion as unknown as typeof original;
+  assert.equal(copy.seoTitle,original.seoTitle);assert.equal(copy.metaDescription,original.metaDescription);assert.equal(copy.altText,"Food parcel for families in Gaza");assert.deepEqual(JSON.parse(JSON.stringify(copy.faq)),original.faq);
+  const repair=capture[1] as {tools?:unknown;input:{content:string}[]};
+  assert.equal(repair.tools,undefined);
+  assert.deepEqual(JSON.parse(repair.input[1].content).fields.map((field:{key:string})=>field.key),["altText"]);
+  assert.equal(capture.length,2);
+});
+
+test("a still-long rewrite gets measured feedback and a tighter target once, then is validated again", async () => {
+  const capture: unknown[]=[];
+  const result=await service(copyResponse({seoTitle:"Keep this title",metaDescription:"Support families with food. ".repeat(10)}),capture,
+    copyResponse({fields:{metaDescription:"Support families with food. ".repeat(7)}},false),
+    copyResponse({fields:{metaDescription:"Help families in Gaza access essential food."}},false)).generateResearchedSeo(input);
+  assert.equal(capture.length,3);
+  const first=JSON.parse((capture[1] as {input:{content:string}[]}).input[1].content).fields[0];
+  const second=JSON.parse((capture[2] as {input:{content:string}[]}).input[1].content).fields[0];
+  assert.ok(second.actualCharacters>160);assert.ok(second.targetCharacters<first.targetCharacters);
+  assert.equal((result.suggestion as unknown as {seoTitle:string}).seoTitle,"Keep this title");
+});
+
+test("a shortening repair cannot change a protected price and persistent overflow names its field", async () => {
+  const original={seoTitle:"Food parcels",metaDescription:("Help families. ".repeat(15))+"30 USD"};
+  const capture:unknown[]=[];
+  const result=await service(copyResponse(original),capture,copyResponse({fields:{metaDescription:"Help families with food for 99 USD."}},false),copyResponse({fields:{metaDescription:"Help families with food for 30 USD."}},false)).generateResearchedSeo(input);
+  assert.match((result.suggestion as unknown as {metaDescription:string}).metaDescription,/30 USD/);assert.equal(capture.length,3);
+  await assert.rejects(service(copyResponse(original)).generateResearchedSeo(input),(error:unknown)=>{
+    const failure=error as {reason:string;validation:{fields:{field:string;actual:number;limit:number}[]}};
+    assert.equal(failure.reason,"SEO_FIELD_TOO_LONG");assert.equal(failure.validation.fields[0].field,"metaDescription");assert.ok(failure.validation.fields[0].actual>failure.validation.fields[0].limit);return true;
+  });
+});
+
+test("FAQ entries beyond the five-item output limit cannot reject the retained valid questions", async () => {
+  const capture:unknown[]=[];
+  const faq=Array.from({length:5},()=>({question:"Who benefits?",answer:"Families in need."}));
+  const result=await service(copyResponse({seoTitle:"Food parcels",metaDescription:"Support families.",faq:[...faq,{question:"Discarded question ".repeat(30),answer:"Long answer ".repeat(100)}]}),capture).generateResearchedSeo(input);
+  assert.equal(result.suggestion.faq.length,5);assert.equal(capture.length,1);
 });
 
 test("SEO receives the complete readable Arabic document including its final facts", async () => {

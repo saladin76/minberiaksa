@@ -25,3 +25,10 @@ test("unconfirmed proxy failures retain bounded retries and the same idempotency
  const h = fixture([new Response("<html>502 proxy</html>", { status: 502 }), new Response("<html>503 proxy</html>", { status: 503 }), Response.json({ ok: true })]);
  assert.deepEqual(await h.requestSuggestion("/fixture", {}, new AbortController().signal), { ok: true }); assert.equal(h.calls(), 3); assert.equal(new Set(h.keys).size, 1);
 });
+
+test("a locale-specific SEO validation error is not retried and cannot stop other languages",async()=>{
+ const h=fixture([Response.json({error:"metaDescription exceeds its budget"},{status:422}),Response.json({locale:"tr"}),Response.json({locale:"fr"})]);
+ const errors:string[]=[],completed:string[]=[];
+ const result=await h.runSuggestionBatch({targets:["en","tr","fr"],signal:new AbortController().signal,request:()=>h.requestSuggestion("/fixture",{},new AbortController().signal),onSuccess:(locale:string)=>completed.push(locale),onError:(locale:string)=>errors.push(locale),onProgress:()=>{}});
+ assert.equal(h.calls(),3);assert.deepEqual(errors,["en"]);assert.deepEqual(completed,["tr","fr"]);assert.equal(result.sharedFailure,false);assert.deepEqual([...result.skipped],[]);
+});

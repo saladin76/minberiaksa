@@ -15,23 +15,44 @@ const document = { type: "doc", content: [
 ] };
 const shape = value => JSON.stringify(value, (key, field) => key === "text" ? "" : field);
 
-export async function probeLocalizedContent({ checkGeneration = false, locales = ["en", "tr", "fr"], translate, seo }) {
-  /** @type {Array<{locale: string, translation: string, seo: string, failure?: string}>} */
+/** Never print an arbitrary provider message, prompt, key or response body. */
+export function localizedAuditFailure(error, { seoError, providerFailure }) {
+  const provider = providerFailure(error);
+  if (provider) return { reason: provider.reason, error: provider.error, ...(provider.details ? { details: provider.details } : {}) };
+  if (error instanceof seoError) return { reason: error.reason || "SEO_GENERATION_FAILED", error: error.message, ...(error.validation ? { validation: error.validation } : {}) };
+  if (error instanceof Error && ["TRANSLATION_CHECK_FAILED", "SEO_CHECK_FAILED"].includes(error.message)) return { reason: error.message };
+  return { reason: "LOCALIZED_CONTENT_CHECK_FAILED" };
+}
+
+export async function probeLocalizedContent({ checkGeneration = false, locales = ["en", "tr", "fr"], translate, seo,
+  describeFailure = error => { void error; return { reason: "LOCALIZED_CONTENT_CHECK_FAILED" }; }, onProgress = progress => { void progress; } }) {
+  /** @type {Array<{locale: string, translation: string, seo: string, failure?: string, failureStage?: string, error?: string, details?: unknown, validation?: unknown}>} */
   const results = [];
   const report = { status: "generation_not_requested", syntheticInputOnly: true, databaseWrites: 0, recipientMessages: 0, paymentCaptures: 0, results };
   if (!checkGeneration) return report;
   for (const locale of locales) {
     const row = { locale, translation: locale === "ar" ? "source_language" : "not_checked", seo: "not_checked" };
+    let stage = locale === "ar" ? "seo" : "translation";
     try {
       if (locale !== "ar") {
+        row.translation = "checking"; onProgress({ locale, stage, status: "checking" });
         const translated = await translate({ fields: { title }, richFields: { description: JSON.stringify(document) }, sourceLocale: "ar" }, locale);
         if (!translated.fields.title?.trim() || !translated.richFields.description || translated.warnings.length || shape(JSON.parse(translated.richFields.description)) !== shape(document)) throw new Error("TRANSLATION_CHECK_FAILED");
         row.translation = "ready";
+        onProgress({ locale, stage, status: "ready" });
       }
+      stage = "seo"; row.seo = "checking"; onProgress({ locale, stage, status: "checking" });
       const result = await seo({ type: "campaign", locale, title, description: JSON.stringify(document) });
       if (!result.suggestion.seoTitle?.trim() || !result.suggestion.metaDescription?.trim() || !result.research.sources.length) throw new Error("SEO_CHECK_FAILED");
       row.seo = "ready";
-    } catch { row.failure = "LOCALIZED_CONTENT_CHECK_FAILED"; }
+      onProgress({ locale, stage, status: "ready" });
+    } catch (error) {
+      row[stage] = "failed";
+      const failure = describeFailure(error);
+      Object.assign(row, { failure: failure.reason, failureStage: stage },
+        ...["error", "details", "validation"].filter(key => failure[key] !== undefined).map(key => ({ [key]: failure[key] })));
+      onProgress({ locale, stage, status: "failed", reason: failure.reason });
+    }
     report.results.push(row);
   }
   report.status = report.results.every(row => !row.failure) ? "generation_ready" : "generation_failed";
@@ -47,15 +68,19 @@ async function main() {
     const { isValidLocale } = await loadReleaseModule("lib/locales.ts");
     if (!requested.length || requested.some(locale => !isValidLocale(locale)) || new Set(requested).size !== requested.length) throw new Error("INVALID_LOCALES");
     const checkGeneration = args.includes("--check-generation");
-    let translate, seo;
+    let translate, seo, describeFailure;
     if (checkGeneration) {
       const require = createRequire(resolve(process.cwd(), "package.json"));
       require("@next/env").loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
       ({ prisma } = await loadReleaseModule("lib/prisma.ts"));
       ({ translateItem: translate } = await loadReleaseModule("lib/content-localization/translate.ts"));
-      ({ generateResearchedSeo: seo } = await loadReleaseModule("lib/content-editor/seo-research.ts"));
+      const service = await loadReleaseModule("lib/content-editor/seo-research.ts"); seo = service.generateResearchedSeo;
+      const { suggestionFailure } = await loadReleaseModule("lib/ai/core/suggestion-failure.ts");
+      describeFailure = error => localizedAuditFailure(error, { seoError: service.SeoResearchError, providerFailure: suggestionFailure });
     }
-    const report = await probeLocalizedContent({ checkGeneration, locales: requested, translate, seo });
+    const report = await probeLocalizedContent({ checkGeneration, locales: requested, translate, seo, describeFailure,
+      onProgress: progress => console.log(JSON.stringify({ phase: "localized-content-check", ...progress })),
+    });
     console.log(JSON.stringify({ checkedAt: new Date().toISOString(), ...report }, null, 2));
     if (checkGeneration && report.status !== "generation_ready") process.exitCode = 1;
   } catch {
