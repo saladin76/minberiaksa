@@ -39,7 +39,7 @@ try {
   await page.getByRole('button',{name:label(lang,'مرة واحدة'),exact:true}).click();await expect(page.locator('tbody tr')).toHaveCount(1);checks++;
   await expect(page.locator('tbody').getByText(label(lang,'ملغي'),{exact:true})).toHaveCount(0);checks++;
   await page.getByRole('button',{name:label(lang,'دوري'),exact:true}).click();await expect(page.locator('tbody tr')).toHaveCount(1);checks++;
-  await page.getByRole('button',{name:new RegExp('^'+label(lang,'الكل')+' ')}).click();await expect(page.locator('tbody tr')).toHaveCount(2);checks++;
+  await page.getByRole('button',{name:label(lang,'الكل')+' (2)',exact:true}).click();await expect(page.locator('tbody tr')).toHaveCount(2);checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));checks++;
   await page.screenshot({path:path.join(output,`${lang}-profile-${width}.png`),fullPage:true});
   await page.goto(`${origin}/?surface=rich&lang=${lang}`);await expect(page.locator('ol')).toHaveCount(2);await expect(page.locator('li')).toHaveCount(10);await expect(page.locator('strong')).toHaveCount(2);await expect(page.locator('h3')).toHaveCount(1);checks+=4;
