@@ -72,7 +72,11 @@ providers.push(
           ? await verifyDonorInvitation(credentials.channel, credentials.contact, credentials.code)
           : await verifyDonorLogin(credentials);
         return { id: user.id, email: user.email, name: user.name, role: user.role };
-      } catch { return null; }
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "";
+        if (reason === "VERIFY_ACCOUNT_EMAIL_FIRST" || reason === "ACCOUNT_CONFLICT") throw new Error(reason);
+        return null;
+      }
     },
   }),
   CredentialsProvider({

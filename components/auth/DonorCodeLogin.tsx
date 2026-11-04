@@ -56,7 +56,7 @@ export default function DonorCodeLogin({ link = false, onDone, callbackUrl }: { 
         setChallenge(null); setContact(""); setCode(""); setMessage(ar ? "تم الربط بنجاح." : "Linked successfully."); onDone?.();
       } else {
         const result = await signIn("donor-code", { ...challenge, code, contact, channel, invitation: String(invitation), redirect: false });
-        if (!result?.ok) throw new Error("INVALID_CODE");
+        if (!result?.ok || result.error) throw new Error(result?.error || "INVALID_CODE");
         if (onDone) onDone();
         else window.location.assign(callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : `/${locale}/account`);
       }
