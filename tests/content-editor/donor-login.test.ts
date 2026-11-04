@@ -90,6 +90,11 @@ function donor(id: string, extra: Row = {}): Row {
 }
 
 test("email and international phone normalization retain provider-independent identity", () => {
+  const metadata = { countries: {} };
+  assert.equal(policy.unwrapPhoneMetadata(metadata), metadata);
+  assert.equal(policy.unwrapPhoneMetadata({ default: metadata }), metadata);
+  assert.equal(policy.unwrapPhoneMetadata({ default: { default: metadata } }), metadata);
+  assert.throws(() => policy.unwrapPhoneMetadata({ default: {} }), /AUTH_PHONE_METADATA_UNAVAILABLE/);
   assert.equal(policy.loginContact("EMAIL", " A@Hotmail.com "), "a@hotmail.com");
   assert.equal(policy.loginContact("WHATSAPP", "00905527396876"), "+905527396876");
   assert.throws(() => policy.loginContact("WHATSAPP", "05527396876"));

@@ -1,5 +1,17 @@
 import { createHmac, randomInt, randomBytes } from "node:crypto";
-import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { parsePhoneNumberFromString, type MetadataJson } from "libphonenumber-js/core";
+import phoneMetadata from "libphonenumber-js/metadata.min.json";
+
+/** Some CJS/tsx loaders wrap JSON in a default export; the core API needs the JSON itself. */
+export function unwrapPhoneMetadata(value: unknown): MetadataJson {
+  let current = value;
+  for (let depth = 0; depth < 3; depth++) {
+    if (!current || typeof current !== "object") break;
+    if ("countries" in current) return current as MetadataJson;
+    current = (current as { default?: unknown }).default;
+  }
+  throw new Error("AUTH_PHONE_METADATA_UNAVAILABLE");
+}
 
 export type LoginChannel = "EMAIL" | "WHATSAPP";
 export function loginContact(channel: LoginChannel, input: string): string {
@@ -9,7 +21,7 @@ export function loginContact(channel: LoginChannel, input: string): string {
     return value.toLowerCase();
   }
   const international = value.startsWith("00") ? `+${value.slice(2)}` : value.startsWith("+") ? value : `+${value}`;
-  const phone = parsePhoneNumberFromString(international);
+  const phone = parsePhoneNumberFromString(international, unwrapPhoneMetadata(phoneMetadata));
   if (!phone?.isValid()) throw new Error("INVALID_CONTACT");
   return phone.number;
 }

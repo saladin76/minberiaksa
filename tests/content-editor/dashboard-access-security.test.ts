@@ -220,6 +220,8 @@ function members(role = "ADMIN", live = 0, targetRole = "DONOR") {
     "cartItem",
     "creditCard",
     "donorCommunicationProfile",
+    "donorLoginIdentity",
+    "donorLoginChallenge",
   ])
     prisma[name] = { deleteMany: track(name), updateMany: track(name) };
   prisma.$transaction = async (fn: (tx: Row) => Promise<unknown>) => fn(prisma);
@@ -299,6 +301,8 @@ test("account deletion preserves financial history, disables contact and removes
   assert.equal(identity.email.endsWith("@deleted.invalid"), true);
   assert.equal(identity.registeredAt, null);
   assert.equal(identity.password, null);
+  assert.ok(h.writes.some(item => item.name === "donorLoginIdentity"));
+  assert.equal(h.writes.find(item => item.name === "donorLoginChallenge")!.data.consumed, true);
   assert.equal(
     h.writes.find((item) => item.name === "donorCommunicationProfile")!.data
       .doNotContact,
@@ -541,3 +545,4 @@ test("administrator access rules validate addresses and countries and disable ru
     "::ffff:cb00:7107",
   );
 });
+

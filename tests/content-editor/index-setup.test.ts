@@ -62,9 +62,14 @@ async function runSetup(
 test("explicit production index setup runs on the VPS without Vercel variables", async () => {
   const result = await runSetup(["--production"]);
   assert.equal(result.clients, 1);
-  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 57);
+  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 62);
   assert.equal(result.disconnects, 1);
   assert.equal(result.exitCode, undefined);
+  const created = result.commands.filter(command => "createIndexes" in command);
+  assert.ok(created.some(command => command.createIndexes === "DonorLoginIdentity"));
+  for (const collection of ["DonorLoginChallenge", "DonorLoginThrottle"]) {
+    assert.ok(created.some(command => command.createIndexes === collection && (command.indexes as Array<{ expireAfterSeconds?: number }>).some(index => index.expireAfterSeconds === 0)));
+  }
 });
 
 test("production index setup skips Vercel previews without opening the database", async () => {
@@ -76,7 +81,7 @@ test("production index setup skips Vercel previews without opening the database"
 
 test("production index setup still runs on Vercel production", async () => {
   const result = await runSetup(["--production"], { VERCEL: "1", VERCEL_ENV: "production" });
-  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 57);
+  assert.equal(result.commands.filter((command) => "createIndexes" in command).length, 62);
   assert.equal(result.disconnects, 1);
 });
 
@@ -110,3 +115,4 @@ test("duplicate values fail production index setup and leave existing data intac
   assert.match(result.messages.join("\n"), /E11000/);
   assert.equal(result.disconnects, 1);
 });
+
