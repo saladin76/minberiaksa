@@ -83,9 +83,11 @@ test("a click-only signup preserves its historical platform without copying the 
   assert.deepEqual(inherited,{platform:"google_ads",acquisition_kind:"paid",attribution_origin:"subscription_signup"});
   const resolved=resolveAttribution(sourceInput(inherited));assert.equal(resolved.platform,"google");assert.equal(resolved.paidEvidence,true);assert.notEqual(resolved.status,"verified");
 });
-test("mixed cadence carts are rejected before any order or payment request",async()=>{
+test("different recurring cadences are rejected before payment while one-time rows may accompany a plan",async()=>{
   assert.equal(cartHasMixedCadences([{freqKey:"daily"},{freqKey:"monthly"}]),true);
-  assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"monthly"}]),true);
+  assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"monthly"}]),false);
+  assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"daily"}]),false);
+  assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"friday"}]),false);
   assert.equal(cartHasMixedCadences([{freqKey:"friday"},{freqKey:"friday"}]),false);
   const input: CreateDonationInput={items:[{freqKey:"daily",amount:1,currency:"USD"},{freqKey:"monthly",amount:1,currency:"USD"}],projects:[],currency:"USD",locale:"ar",method:"CARD",teamSupport:0,teamSupportRecurring:true,guest:null};
   await assert.rejects(createDonation(input),error=>error instanceof OrderRejectedError&&error.code==="MIXED_DONATION_FREQUENCIES");

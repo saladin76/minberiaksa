@@ -11,7 +11,7 @@ import type { MessageObject } from "../../i18n/message-quality";
 import { SUPPORTED_LOCALES } from "../../lib/locales";
 import { buildCatalogueNavigation, type CatalogueNavigationLabels } from "../../lib/minbar/project-catalogue-navigation";
 import * as projectOrder from "../../lib/content-editor/project-order";
-import type { ProjectFilterOption } from "../../lib/minbar/project-filter-options";
+import { publicProjectFilters, type ProjectFilterOption } from "../../lib/minbar/project-filter-options";
 
 function labels(locale: string) { return (messagesFor(locale).projects as MessageObject).catalogueNavigation as CatalogueNavigationLabels; }
 function row(baseSlug: string, kind: "category" | "programme" = "category", slug = baseSlug): ProjectFilterOption {
@@ -65,7 +65,8 @@ test("the actual catalogue renders dedicated pages as navigable links, and regio
   const Empty = () => null;
   const dependencies: Record<string, unknown> = {
     react: React, "react/jsx-runtime": jsx, "@/lib/content-editor/project-order": projectOrder,
-    "next-intl": { useTranslations: () => (key: string) => key },
+    "@/lib/minbar/project-filter-options": { publicProjectFilters },
+    "next-intl": { useTranslations: (namespace: string) => (key: string) => namespace === "projects.catalogueNavigation" ? labels("ar")[key as keyof CatalogueNavigationLabels] : key },
     "next/link": { default: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => { delete props.prefetch; return React.createElement("a", props, children); } },
     "@/components/minbar/ProjectDonateCard": { default: Empty },
     "@/components/minbar/states/ContentStates": { NoResults: Empty },
@@ -81,9 +82,11 @@ test("the actual catalogue renders dedicated pages as navigable links, and regio
   vm.runInNewContext(source, { module: loaded, exports: loaded.exports, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; } });
   const filters = buildCatalogueNavigation("ar", fixture("ar"), null, labels("ar"));
   const html = renderToStaticMarkup(React.createElement(loaded.exports.default, { projects: [], slides: [], filters }));
-  assert.equal((html.match(/<a\b[^>]*data-filter-key=/g) || []).length, 5);
+  assert.equal((html.match(/<a\b[^>]*data-filter-key=/g) || []).length, 4);
   assert.equal((html.match(/<button\b[^>]*data-filter-key=/g) || []).length, 4);
   assert.equal((html.match(/class="proj-cat-count"/g) || []).length, 4);
   assert.match(html, /<a href="\/ar\/pay-zakat-to-palestine"[^>]*data-filter-key="page:zakat"/);
   assert.doesNotMatch(html, /<a\b[^>]*aria-(?:pressed|controls)=/);
+  assert.deepEqual([...html.matchAll(/data-filter-key="([^"]+)"/g)].map(match => match[1]), ["all", "category:region-gaza", "category:region-al-aqsa", "category:region-al-quds", "page:zakat", "page:waqf", "page:restoration", "page:recurring"]);
+  assert.doesNotMatch(html, /data-filter-key="page:ibadan"/);
 });
