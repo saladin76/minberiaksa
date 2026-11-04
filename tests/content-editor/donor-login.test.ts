@@ -135,8 +135,10 @@ test("a verified second email merges donor history into the logged-in account tr
   assert.equal(user.id, "target");
   assert.equal(f.rows("donation")[0].donorId, "target");
   assert.equal(f.rows("donation")[0].amount, 30);
+  assert.equal(f.rows("donation")[0].originalDonorId, "source");
   assert.equal(f.rows("subscription")[0].donorId, "target");
   assert.equal(f.rows("subscription")[0].status, "ACTIVE");
+  assert.equal(f.rows("subscription")[0].originalDonorId, "source");
   assert.equal(f.rows("donorLoginIdentity")[0].userId, "target");
   assert.equal(f.rows("user").find(u => u.id === "source")?.mergedOriginalEmail, proof.contact);
   assert.equal((await f.service.verifiedGoogleIdentity(proof.contact)).id, "target");

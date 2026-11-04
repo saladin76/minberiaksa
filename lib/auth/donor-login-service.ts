@@ -57,6 +57,9 @@ async function mergeDonor(tx: Prisma.TransactionClient, sourceId: string, target
   const billing = await tx.subscription.count({ where: { donorId: sourceId, billingLeaseUntil: { gt: new Date() } } });
   const verification = await tx.subscriptionCardVerification.count({ where: { donorId: sourceId, status: "PENDING", expiresAt: { gt: new Date() } } });
   if (billing || verification) throw new Error("ACCOUNT_CONFLICT");
+  const originalOwnerMissing = { OR: [{ originalDonorId: null }, { originalDonorId: { isSet: false } }] };
+  await tx.donation.updateMany({ where: { donorId: sourceId, ...originalOwnerMissing }, data: { originalDonorId: sourceId } });
+  await tx.subscription.updateMany({ where: { donorId: sourceId, ...originalOwnerMissing }, data: { originalDonorId: sourceId } });
   await tx.donation.updateMany({ where: { donorId: sourceId }, data: { donorId: targetId } });
   await tx.subscription.updateMany({ where: { donorId: sourceId }, data: { donorId: targetId } });
   await tx.subscriptionServiceRequest.updateMany({ where: { donorId: sourceId }, data: { donorId: targetId } });

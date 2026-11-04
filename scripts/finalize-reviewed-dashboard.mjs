@@ -10,13 +10,13 @@ const publish = process.argv.includes("--publish");
 const activate = process.argv.includes("--activate-approved");
 if ((publish || activate) && !apply) throw new Error("Publishing or activation requires --apply");
 const allSteps = [
-  { name: "donor-login-template", script: "scripts/prepare-donor-login-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "paypal-webhook", script: "scripts/setup-paypal-webhook.mjs", args: [] },
   { name: "gift-templates", script: "scripts/prepare-gift-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "notification-templates", script: "scripts/upgrade-notification-templates.mjs", args: [...(publish ? ["--publish"] : []), ...(activate ? ["--activate-approved"] : [])] },
   { name: "document-templates", script: "scripts/prepare-document-whatsapp.mjs", args: publish ? ["--publish"] : [] },
   { name: "retired-templates", script: "scripts/cleanup-retired-templates.mjs", args: [] },
   { name: "greeting-templates", script: "scripts/prepare-greeting-whatsapp.mjs", args: publish ? ["--publish"] : [] },
+  { name: "donor-login-template", script: "scripts/prepare-donor-login-whatsapp.mjs", args: publish ? ["--publish"] : [] },
 ];
 const stepOptions = process.argv.slice(2).filter(arg => arg.startsWith("--steps="));
 if (stepOptions.length > 1 || process.argv.slice(2).some(arg => !["--apply", "--check-runtime", "--publish", "--activate-approved"].includes(arg) && !arg.startsWith("--steps="))) throw new Error("Unknown or duplicate metadata option");

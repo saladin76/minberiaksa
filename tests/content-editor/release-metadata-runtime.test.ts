@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
-const steps = ["setup-paypal-webhook.mjs", "prepare-gift-whatsapp.mjs", "upgrade-notification-templates.mjs", "prepare-document-whatsapp.mjs", "cleanup-retired-templates.mjs", "prepare-greeting-whatsapp.mjs"];
+const steps = ["setup-paypal-webhook.mjs", "prepare-gift-whatsapp.mjs", "upgrade-notification-templates.mjs", "prepare-document-whatsapp.mjs", "cleanup-retired-templates.mjs", "prepare-greeting-whatsapp.mjs", "prepare-donor-login-whatsapp.mjs"];
 function fixture(broken = false) {
   const root = mkdtempSync(join(tmpdir(), "minberi-metadata-"));
   mkdirSync(join(root, "scripts")); mkdirSync(join(root, "lib/communication"), { recursive: true }); mkdirSync(join(root, "lib/certificates")); mkdirSync(join(root, "lib/donations")); mkdirSync(join(root, "node_modules"));
@@ -56,7 +56,7 @@ test("metadata retries use the correct Node and flags, attempt every independent
     const result = spawnSync(process.execPath, [join(root, "scripts/finalize-reviewed-dashboard.mjs"), "--apply", "--publish", "--activate-approved"], { encoding: "utf8", timeout: 20_000 });
     assert.equal(result.status, 1, result.stderr);
     const calls = readFileSync(join(root, "calls"), "utf8").trim().split("\n").map(line => JSON.parse(line));
-    assert.deepEqual(calls.map(call => call.step), [0, 1, 2, 3, 4, 5]); assert.ok(calls.every(call => call.node.split(".")[0] === process.versions.node.split(".")[0]));
+    assert.deepEqual(calls.map(call => call.step), [0, 1, 2, 3, 4, 5, 6]); assert.ok(calls.every(call => call.node.split(".")[0] === process.versions.node.split(".")[0]));
     assert.ok(calls[2].args.includes("--activate-approved")); assert.ok(!calls[0].args.includes("--publish"));
     const report = JSON.parse(result.stdout.trim().split("\n").at(-1)!); assert.equal(report.outcomes[1].ok, false); assert.equal(report.outcomes[3].ok, true); assert.equal(report.paymentCaptures, 0); assert.equal(report.recipientMessages, 0);
   } finally { rmSync(root, { recursive: true, force: true }); }
@@ -93,3 +93,4 @@ test("a Node 22 login shell can select the installed project-engine Node from NV
     assert.equal(result.status, 0, result.stderr); assert.equal(result.stdout.trim(), join(bin, "node"));
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+

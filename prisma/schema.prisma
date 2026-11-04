@@ -891,6 +891,8 @@ model Donation {
   paidAmount       Float?
   paidCurrency     String?
   donorId          String    @db.ObjectId
+  /// Preserved on the first verified account consolidation; financial provenance is immutable.
+  originalDonorId  String?   @db.ObjectId
   donor            User      @relation(fields: [donorId], references: [id])
   /// ISO 3166-1 alpha-2 snapshot from donor User.countryCode at donation time
   donorCountryCode String?
@@ -1009,6 +1011,7 @@ model Subscription {
   paypalCustomerId      String?
 
   donorId    String    @db.ObjectId
+  originalDonorId String? @db.ObjectId
   donor      User      @relation(fields: [donorId], references: [id])
   referralId String?   @db.ObjectId
   referral   Referral? @relation(fields: [referralId], references: [id])
