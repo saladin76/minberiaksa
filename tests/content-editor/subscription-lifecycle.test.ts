@@ -1,6 +1,7 @@
+import { dt, setDashLocale } from "../../lib/dashboard/i18n";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { subscriptionLifecycle, subscriptionLifecycleWhere, ACTIVATING_DONATION_WHERE } from "../../lib/donations/subscription-lifecycle";
+import { subscriptionLifecycle, subscriptionLifecycleWhere, ACTIVATING_DONATION_WHERE, SUBSCRIPTION_LIFECYCLE_LABELS } from "../../lib/donations/subscription-lifecycle";
 
 test("an optimistic ACTIVE row is not an active subscription before its first settled payment", () => {
   for (const status of ["ACTIVE", "PAUSED", "PAYMENT_FAILED"]) assert.equal(subscriptionLifecycle({ status, hasPaidDonation: false }), "AWAITING_FIRST_PAYMENT");
@@ -52,4 +53,9 @@ test("failed renewal filtering includes the first scheduled retry and respects c
   assert.equal(matches(plan, subscriptionLifecycleWhere("PAYMENT_FAILED") as Row), true);
   assert.equal(matches(plan, subscriptionLifecycleWhere("ACTIVE") as Row), false);
   assert.equal(matches({ ...plan, status: "CANCELLED" }, subscriptionLifecycleWhere("PAYMENT_FAILED") as Row), false);
+});
+
+test("every subscription lifecycle label reaches the compiled English and Turkish UI catalogs", () => {
+  try { for (const locale of ["en", "tr"] as const) { setDashLocale(locale); for (const text of Object.values(SUBSCRIPTION_LIFECYCLE_LABELS)) assert.notEqual(dt(text), text, `${locale}: ${text}`); } }
+  finally { setDashLocale("ar"); }
 });
