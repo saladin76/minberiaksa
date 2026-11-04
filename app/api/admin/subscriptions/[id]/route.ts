@@ -1,3 +1,4 @@
+import { ACTIVATING_DONATION_WHERE } from "@/lib/donations/subscription-lifecycle";
 import { billingLeaseAvailable } from "@/lib/donations/recurring-lease";
 import { subscriptionReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
 import { NextRequest, NextResponse } from "next/server";
@@ -200,6 +201,10 @@ export async function PATCH(
         { error: "A cancelled plan cannot be reactivated. The donor must start a new plan." },
         { status: 409 }
       );
+    }
+
+    if (nextStatus === "ACTIVE" && !(await prisma.donation.findFirst({ where: { subscriptionId: id, ...ACTIVATING_DONATION_WHERE }, select: { id: true } }))) {
+      return NextResponse.json({ error: "لا يمكن تفعيل اشتراك لم تنجح دفعته الأولى.", code: "FIRST_PAYMENT_NOT_CONFIRMED" }, { status: 409 });
     }
 
     // The provider first. If Stripe refuses, nothing local changes and the

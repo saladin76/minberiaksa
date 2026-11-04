@@ -1,3 +1,4 @@
+import { subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecycle";
 import { recurringPlanTotals } from "@/lib/dashboard/recurring-plan-totals";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
@@ -290,8 +291,7 @@ export async function GET(request: NextRequest) {
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere: Prisma.SubscriptionWhereInput = {
       ...subBase,
-      status: "ACTIVE",
-      donations: { some: PAID_CONTRIBUTING_FILTER },
+      AND: [subBase, subscriptionLifecycleWhere("ACTIVE")],
     };
     const donationChargeBase = buildDonationChargeBase(startDate, endDate, categoryId, campaignId, referralId, frequency);
 
@@ -400,7 +400,7 @@ export async function GET(request: NextRequest) {
       recurringPlanTotals(prisma, activeMonthlyWhere),
       recurringPlanTotals(prisma, { ...subBase, status: "PAUSED" }),
       recurringPlanTotals(prisma, { ...subBase, status: "CANCELLED" }),
-      recurringPlanTotals(prisma, { ...subBase, status: "PAYMENT_FAILED" }),
+      recurringPlanTotals(prisma, { AND: [subBase, subscriptionLifecycleWhere("PAYMENT_FAILED")] }),
       paidTotalsByFrequency(donationPaidWhere),
       prisma.subscription.count({
         where: { ...subBase, createdAt: { gte: startDate, lte: endDate } },

@@ -1,3 +1,4 @@
+import { publicRichText, type PublicRichNode } from "@/lib/content/public-rich-text";
 import { applyPublicPreview, type PublicPreviewDraft } from "@/lib/content-editor/public-preview";
 import "server-only";
 
@@ -67,6 +68,7 @@ export interface MinbarProject {
    * by `getProject` only; lists (cards) leave it empty to keep pages light.
    */
   body: ArticleBlock[];
+  richBody?: PublicRichNode[];
   image: string | null;
   imageAlt?: string;
   /** Category slug  the handoff's regional filter key (gaza, al-quds, …). */
@@ -335,6 +337,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
     baseSlug: row.slug || row.id,
     title: t?.title || row.title,
     text,
+    ...(detail ? { richBody: publicRichText(rawDescription) } : {}),
     body: detail ? (body.length ? body : [{ kind: "p", text }]) : [],
     image: cover,
     imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,

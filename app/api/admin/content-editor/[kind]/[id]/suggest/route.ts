@@ -216,7 +216,7 @@ async function suggestWithSession(
     if (error instanceof ContentError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("content-editor suggestions failed");
     return NextResponse.json(
-      { error: error instanceof SeoResearchError ? error.message : "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ." },
+      { error: error instanceof SeoResearchError ? error.message : "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ.", ...(error instanceof SeoResearchError ? { reason: error.reason, validation: error.validation } : {}) },
       { status: error instanceof SeoResearchError ? error.status : 502 },
     );
   }

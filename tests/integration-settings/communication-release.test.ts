@@ -1,3 +1,4 @@
+import * as subscriptionLifecycle from "../../lib/donations/subscription-lifecycle";
 import * as unsubscribe from "../../lib/communication/whatsapp-template-unsubscribe";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -19,7 +20,7 @@ function load<T>(file: string, dependencies: Record<string, unknown>) {
   const loaded = { exports: {} as T };
   const code = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(code).runInNewContext({ module: loaded, exports: loaded.exports, Date, Map, Set, Buffer, URL, console: { ...console, error() {} }, process: { env: { DATABASE_URL: "fixture", GOOGLE_CLIENT_ID: "fixture-id", GOOGLE_CLIENT_SECRET: "fixture-secret", NEXTAUTH_SECRET: "fixture-auth" } },
-    require: (name: string) => { if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name); return dependencies[name]; } });
+    require: (name: string) => { if (name === "@/lib/donations/subscription-lifecycle") return subscriptionLifecycle; if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name); return dependencies[name]; } });
   return loaded.exports;
 }
 

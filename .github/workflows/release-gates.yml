@@ -143,6 +143,9 @@ jobs:
           - name: Donor requests and payment cards
             artifact: donor-management
             script: scripts/donor-management-browser-test.mjs
+          - name: Donor lifecycle and public content
+            artifact: donor-lifecycle
+            script: scripts/donor-lifecycle-browser-test.mjs
           - name: Subscription management
             artifact: subscriptions
             script: scripts/subscription-management-browser-test.mjs

@@ -1,3 +1,4 @@
+import { subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecycle";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from 'next-auth';
@@ -126,7 +127,7 @@ export async function GET(
         orderBy: { order: 'asc' },
       }),
       prisma.subscription.findMany({
-        where: { donorId: id, status: 'ACTIVE' },
+        where: { donorId: id, AND: [subscriptionLifecycleWhere("ACTIVE")] },
         select: { id: true, amountUSD: true, amount: true, currency: true },
       }),
     ]);

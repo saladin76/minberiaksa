@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -120,7 +121,13 @@ const SECURITY_HEADERS = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
 ];
 
+function buildSourceSha() {
+  try { const sha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", timeout: 1000, stdio: ["ignore", "pipe", "ignore"] }).trim(); return /^[a-f0-9]{40}$/.test(sha) ? sha : ""; }
+  catch { return ""; }
+}
+
 const nextConfig: NextConfig = {
+  env: { MINBER_BUILD_SHA: buildSourceSha() },
   /* `scripts/deploy-vps.sh` builds into a separate folder (NEXT_DIST_DIR) while
      the live server keeps reading `.next`, then swaps the two. Building over the
      `.next` a running server reads left it serving half of each build: missing

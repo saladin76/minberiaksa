@@ -1,3 +1,4 @@
+import * as subscriptionLifecycle from "../../lib/donations/subscription-lifecycle";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -13,6 +14,7 @@ function project(row: Row, omit: Row) { return Object.fromEntries(Object.entries
 function load(file: string, prisma: Row) {
   const loaded = { exports: {} as Row };
   const deps: Row = {
+    "@/lib/donations/subscription-lifecycle": subscriptionLifecycle,
     "next/server": { NextResponse: { json: (body: Row, options: Row = {}) => ({ body, status: options.status || 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: donorId, role: "DONOR" } }) },
     "@/lib/prisma": { prisma },

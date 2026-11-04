@@ -131,3 +131,23 @@ test("ordinary editor translation respects the professional translation model ov
     });
   } finally { if (previous === undefined) delete process.env.CONTENT_PRO_TRANSLATION_MODEL; else process.env.CONTENT_PRO_TRANSLATION_MODEL=previous; }
 });
+
+test("Chinese rich translation restores literal USD after generation and still rejects a changed currency", async () => {
+  for (const alter of [false, true]) {
+    const original = globalThis.fetch, key = process.env.OPENAI_API_KEY, database = process.env.DATABASE_URL;
+    process.env.OPENAI_API_KEY = "test-only"; delete process.env.DATABASE_URL;
+    try {
+      globalThis.fetch = async (_url, options) => {
+        const prompt = JSON.parse(String(options?.body)).messages[1].content as string;
+        const input = JSON.parse(prompt.slice(prompt.lastIndexOf("Input: ") + 7));
+        assert.doesNotMatch(input.richTexts.body[0], /USD/);
+        const text = input.richTexts.body[0].replace("القيمة التجريبية", "测试金额");
+        const translated = alter ? text.replace(/⟦KEEP_CURRENCY_[^⟧]+⟧/, "EUR") : text;
+        return Response.json({ choices: [{ message: { content: JSON.stringify({ richTexts: { body: [translated] } }) } }] });
+      };
+      const result = await translateItem({ fields: {}, richFields: { body: JSON.stringify({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "القيمة التجريبية 37 USD {{fixed_code}}" }] }] }) } }, "zh");
+      if (alter) { assert.equal(result.richFields.body, undefined); assert.match(result.warnings.join(" "), /USD/); }
+      else { assert.match(result.richFields.body, /37 USD \{\{fixed_code\}\}/); assert.equal(result.warnings.length, 0); }
+    } finally { globalThis.fetch = original; if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key; if (database === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = database; }
+  }
+});

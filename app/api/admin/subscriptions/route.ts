@@ -1,3 +1,4 @@
+import { ACTIVATING_DONATION_WHERE, subscriptionLifecycle, subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecycle";
 import { recurringReadiness } from "@/lib/donations/recurring-readiness";
 import { subscriptionReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
 import { NextRequest, NextResponse } from "next/server";
@@ -49,16 +50,9 @@ export async function GET(request: NextRequest) {
       where.referralId = referralIdParam;
     }
 
-    if (statusParam !== "ALL") {
-      if (
-        statusParam === "ACTIVE" ||
-        statusParam === "PAUSED" ||
-        statusParam === "CANCELLED" ||
-        statusParam === "PAYMENT_FAILED"
-      ) {
-        where.status = statusParam;
-      }
-    }
+    const allowedStatuses = ["ALL", "ACTIVE", "PAUSED", "CANCELLED", "PAYMENT_FAILED", "AWAITING_FIRST_PAYMENT"];
+    if (!allowedStatuses.includes(statusParam)) return NextResponse.json({ error: "INVALID_STATUS" }, { status: 400 });
+    where.AND = [subscriptionLifecycleWhere(statusParam)];
 
     if (userId && userId !== "all") {
       where.donorId = userId;
@@ -123,7 +117,7 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           nextBillingDate: true,
           lastBillingDate: true,
-          donations: { where: { paidAt: { not: null } }, select: { id: true }, take: 1 },
+          donations: { where: ACTIVATING_DONATION_WHERE, select: { id: true }, take: 1 },
           provider: true, paymentCardId: true, paypalVaultId: true, stripeSubscriptionId: true, payforToken: true,
           amountChangeLock: true, billingLeaseUntil: true, chargeAttempts: true, lastChargeError: true,
           donor: {
@@ -154,6 +148,7 @@ export async function GET(request: NextRequest) {
       return {
         id: s.id,
         status: s.status,
+        lifecycle: subscriptionLifecycle({ ...s, hasPaidDonation: s.donations.length > 0 }),
         amount: s.amount,
         amountUSD: s.amountUSD,
         /** The plan's per-charge USD amount on a monthly scale (daily ×30.44, Friday ×4.35). */

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { localizedAuditFailure, probeLocalizedContent } from "../../scripts/audit-localized-content.mjs";
+import { localizedAuditFailure, probeLocalizedContent, probeHomepageSeo } from "../../scripts/audit-localized-content.mjs";
 import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
 import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
 
@@ -43,4 +43,14 @@ test("audit diagnostics never print an arbitrary provider message or secret",()=
   const provider=new OpenAiResponseError("AI_ACCESS_DENIED");provider.message=raw.message;
   const safe=localizedAuditFailure(provider,{seoError:SeoError,providerFailure:suggestionFailure});
   assert.equal(safe.reason,"AI_ACCESS_DENIED");assert.doesNotMatch(JSON.stringify(safe),/private-key|donor@|Authorization/);
+});
+
+
+test("homepage acceptance requires three complete page-type English runs and preserves an individual failure", async () => {
+  const calls: unknown[] = [];
+  const seo = async (input: unknown) => { calls.push(input); if (calls.length === 2) throw new Error("SEO_CHECK_FAILED"); return { suggestion: { seoTitle: "Support Al-Quds", metaDescription: "Support the association's projects." }, research: { sources: [{ url: "https://example.org" }] } }; };
+  assert.deepEqual(await probeHomepageSeo({ runs: 3, seo }), []);
+  const rows = await probeHomepageSeo({ checkGeneration: true, runs: 3, seo, source: {title:"دعم القدس",description:"المصدر العربي الحالي"} });
+  assert.deepEqual(rows.map(row => row.status), ["ready", "failed", "ready"]);
+  assert.equal(calls.length, 3); assert.deepEqual(calls[0], {type:"page",locale:"en",title:"دعم القدس",description:"المصدر العربي الحالي"});
 });

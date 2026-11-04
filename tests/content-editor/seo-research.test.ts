@@ -1,3 +1,4 @@
+import { groundedSeo, seoGroundingFields } from "../../lib/content-editor/seo-grounding";
 import { ARABIC_MASTER_LOCALIZATION, researchRequest } from "../../lib/ai/core/content-requests";
 import { openAiFailure } from "../../lib/ai/core/openai-response";
 import { hasUnexpectedArabicProse } from "../../lib/content-localization/translation-language";
@@ -9,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 
-function service(payload: unknown, capture: unknown[] = [], repairPayload: unknown = payload, finalPayload: unknown = repairPayload) {
+function service(payload: unknown, capture: unknown[] = [], repairPayload: unknown = payload, finalPayload: unknown = repairPayload, reviewVerdict?: unknown) {
   const source = readFileSync("lib/content-editor/seo-research.ts", "utf8");
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const loaded = { exports: {} };
@@ -21,11 +22,20 @@ function service(payload: unknown, capture: unknown[] = [], repairPayload: unkno
       return { ok: true, json: async () => payload };
     },
     require: (name: string) => {
-      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => { capture.push(JSON.parse(options.body)); return { ok: true, json: async () => capture.length === 1 ? payload : capture.length === 2 ? repairPayload : finalPayload }; } };
+      if (name === "@/lib/ai/core/economical-fetch") return { economicalAiFetch: async (_url: string, options: { body: string }) => {
+        const request = JSON.parse(options.body);
+        if (request.input?.[0]?.content?.startsWith("SEO_SOURCE_GROUNDING_REVIEW")) {
+          const item = JSON.parse(request.input[1].content);
+          const verdict = reviewVerdict ?? { checks: item.fields.map((field: {key:string}) => ({key:field.key,supported:true,evidenceQuotes:[item.source]})), relevantSourceUrls: item.sources.map((source:{url:string})=>source.url) };
+          return {ok:true,json:async()=>({output:[{type:"message",content:[{type:"output_text",text:JSON.stringify(verdict)}]}]})};
+        }
+        capture.push(request); return { ok: true, json: async () => capture.length === 1 ? payload : capture.length === 2 ? repairPayload : finalPayload };
+      } };
       if (name === "../ai/core/connection-settings") return { getOpenAiRuntime: async () => ({ apiKey: "test-key" }) };
       if (name === "../ai/core/openai-response") return { openAiFailure };
       if (name === "../ai/core/content-requests") return { ARABIC_MASTER_LOCALIZATION, researchRequest };
       if (name === "../content-localization/translation-language") return { hasUnexpectedArabicProse };
+      if (name === "./seo-grounding") return { groundedSeo, seoGroundingFields };
       if (name === "./seo-source") return { seoSourceText };
       if (name === "../content-localization/protected-tokens") return { missingProtectedTokens };
       if (name === "server-only") return {};
@@ -173,7 +183,7 @@ test("a still-long rewrite gets measured feedback and a tighter target once, the
 test("a shortening repair cannot change a protected price and persistent overflow names its field", async () => {
   const original={seoTitle:"Food parcels",metaDescription:("Help families. ".repeat(15))+"30 USD"};
   const capture:unknown[]=[];
-  const result=await service(copyResponse(original),capture,copyResponse({fields:{metaDescription:"Help families with food for 99 USD."}},false),copyResponse({fields:{metaDescription:"Help families with food for 30 USD."}},false)).generateResearchedSeo(input);
+  const result=await service(copyResponse(original),capture,copyResponse({fields:{metaDescription:"Help families with food for 99 USD."}},false),copyResponse({fields:{metaDescription:"Help families with food for 30 USD."}},false)).generateResearchedSeo({...input,description:"Food for 30 USD"});
   assert.match((result.suggestion as unknown as {metaDescription:string}).metaDescription,/30 USD/);assert.equal(capture.length,3);
   await assert.rejects(service(copyResponse(original)).generateResearchedSeo(input),(error:unknown)=>{
     const failure=error as {reason:string;validation:{fields:{field:string;actual:number;limit:number}[]}};
@@ -201,4 +211,29 @@ test("SEO receives the complete readable Arabic document including its final fac
   assert.match(prompt,/أثر المشروع/);
   assert.equal(seoSourceText(JSON.stringify({heading:"دعم الأسر",items:["الطعام","الماء"]})),"دعم الأسر\nالطعام\nالماء");
   assert.equal(seoSourceText(JSON.stringify({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"{{first_name}} 30 USD https://example.org/food_parcels"}]}]})),"{{first_name}} 30 USD https://example.org/food_parcels");
+});
+
+
+test("home-page metadata ignores unused oversized FAQ instead of failing English SEO", async () => {
+  const capture: unknown[] = [];
+  const result = await service(copyResponse({ seoTitle: "Support Al-Quds and Gaza", metaDescription: "Support the association's projects in Al-Quds and Gaza.", faq: [{question:"Unused",answer:"Unused answer. ".repeat(100)}] }), capture).generateResearchedSeo({...input,type:"page"});
+  assert.equal(capture.length, 1); assert.deepEqual(Array.from(result.suggestion.faq), []);
+});
+test("persistent optional overflow omits the whole optional field after bounded rewrites, preserving the title", async () => {
+  const capture: unknown[] = [];
+  const result = await service(copyResponse({seoTitle:"Food parcels",metaDescription:"Support food parcels.",altText:"Long optional description. ".repeat(20)}), capture).generateResearchedSeo(input);
+  assert.equal(capture.length, 3); assert.equal((result.suggestion as unknown as {altText:string}).altText, "");
+});
+
+test("SEO never returns a ready title or description when the independent source review refuses it", async () => {
+  await assert.rejects(service(response(), [], response(), response(), {checks:[],relevantSourceUrls:["https://example.org/water"]}).generateResearchedSeo(input), (error:unknown) => (error as {reason:string}).reason === "SEO_SOURCE_UNSUPPORTED");
+});
+test("the completed service removes an unsupported FAQ before returning the reviewable proposal", async () => {
+  const verdict={checks:["seoTitle","metaDescription"].map(key=>({key,supported:true,evidenceQuotes:[input.description]})),relevantSourceUrls:["https://example.org/water"]};
+  const result=await service(response(),[],response(),response(),verdict).generateResearchedSeo(input);
+  assert.deepEqual(Array.from(result.suggestion.faq),[]);assert.equal(result.research.sources.length,1);
+});
+test("the completed service refuses sources rejected for topical relevance",async()=>{
+  const verdict={checks:["seoTitle","metaDescription"].map(key=>({key,supported:true,evidenceQuotes:[input.description]})),relevantSourceUrls:[]};
+  await assert.rejects(service(response(),[],response(),response(),verdict).generateResearchedSeo(input),(error:unknown)=>(error as {reason:string}).reason === "SEO_SOURCES_IRRELEVANT");
 });

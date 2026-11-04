@@ -21,7 +21,8 @@ type Context = { params: Promise<{ key: string }> };
 async function access() { const session = await getServerSession(authOptions); return { session, denied: requireAdminOrDashboardPermission(session, "siteContent") }; }
 function failure(error: unknown) {
   const ai = suggestionFailure(error); if (ai) return NextResponse.json({ error: ai.error, reason: ai.reason, details: ai.details, stopBatch: ai.stopBatch }, { status: ai.status });
-  if (error instanceof ContentError || error instanceof SeoResearchError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
+  if (error instanceof SeoResearchError) return NextResponse.json({ error: error.message, reason: error.reason, validation: error.validation }, { status: error.status });
+  if (error instanceof ContentError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error("managed-page-seo operation failed");
   return NextResponse.json({ error: "تعذر تأكيد العملية. احتفظ بالمسودة وأعد المحاولة." }, { status: 500 });
 }

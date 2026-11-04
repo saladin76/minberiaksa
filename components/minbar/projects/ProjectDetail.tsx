@@ -1,5 +1,7 @@
 "use client";
 
+import { PublicRichText } from "@/components/content/PublicRichText";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -195,7 +197,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
               <div style={{ display: "grid", gap: 20 }}>
                 {/* The description as written in the dashboard's editor 
                     headings, paragraphs and list items. */}
-                {project.body.map((block, index) =>
+                {project.richBody?.length ? <PublicRichText nodes={project.richBody} /> : project.body.map((block, index) =>
                   block.kind === "h2" ? (
                     <h2 key={index} style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.5, fontWeight: 900 }}>{block.text}</h2>
                   ) : block.kind === "li" ? (

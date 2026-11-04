@@ -1,3 +1,4 @@
+import { publicRichText } from "../../lib/content/public-rich-text";
 import * as projectOrder from "../../lib/content-editor/project-order";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -47,6 +48,7 @@ function fixture(restoration = false) {
     },
   } };
   const deps: Record<string, unknown> = {
+    "@/lib/content/public-rich-text": { publicRichText },
     "next/server": { NextResponse: { json: Response.json } }, "@prisma/client": {}, "@/lib/prisma": { prisma: db }, "server-only": {},
     "next-auth": {}, "../auth/[...nextauth]/options": {}, "@/lib/dashboard/api-auth": {}, "@/lib/audit-log": {}, "@/lib/dashboard/write-error-message": {}, "@/lib/campaign/admin-create-core": {}, "@/lib/campaign/admin-create": {},
     "@/lib/campaign/priority-filter": { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS }, "@/lib/campaign/soft-delete-filter": { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED },

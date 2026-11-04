@@ -1,5 +1,8 @@
 "use client";
 
+import { SUBSCRIPTION_LIFECYCLE_LABELS, type SubscriptionLifecycle } from "@/lib/donations/subscription-lifecycle";
+
+
 import { useLiveDonationRefresh } from "@/hooks/useLiveDonationRefresh";
 
 import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancialStatus";
@@ -174,6 +177,7 @@ interface DonationRow {
 }
 
 interface SubscriptionRow {
+  lifecycle?: SubscriptionLifecycle;
   reductionEligibility?: ReductionEligibility;
   provider?: string; billingReadiness?: BillingReadiness; lastChargeError?: string | null; chargeAttempts?: number;
   id: string;
@@ -237,7 +241,7 @@ type FrequencyBreakdownRow = {
   paidAmountUSD: number;
 };
 
-type SubscriptionStatusFilter = "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED" | "all";
+type SubscriptionStatusFilter = SubscriptionLifecycle | "all";
 
 interface DashboardStats {
   totalCampaigns: number;
@@ -2678,9 +2682,10 @@ function MonthlySubscriptionsDashboard() {
                         <SelectItem value="CANCELLED" className="text-xs">
                           {dt("ملغاة")}</SelectItem>
                         <SelectItem value="PAYMENT_FAILED" className="text-xs">
-                          {dt("تعذّر الخصم")}</SelectItem>
+                          {dt("معلق — تعثر التجديد")}</SelectItem>
+                        <SelectItem value="AWAITING_FIRST_PAYMENT" className="text-xs">{dt("محاولات لم تتفعّل")}</SelectItem>
                         <SelectItem value="all" className="text-xs">
-                          {dt("الكل")}</SelectItem>
+                          {dt("الاشتراكات المفعلة سابقًا")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2788,19 +2793,19 @@ function MonthlySubscriptionsDashboard() {
                                 <SelectTrigger
                                   className={cn(
                                     "h-7 text-[11px] w-full border-gray-200 bg-white/90 py-0",
-                                    s.status === "ACTIVE" && "text-brand border-brand/20",
+                                    (s.lifecycle || s.status) === "ACTIVE" && "text-brand border-brand/20",
                                     s.status === "PAUSED" && "text-brand-orange border-brand-orange/20",
                                     s.status === "CANCELLED" && "text-slate-700 border-slate-200",
-                                    s.status === "PAYMENT_FAILED" && "text-red-700 border-red-200"
+                                    s.lifecycle === "PAYMENT_FAILED" && "text-red-700 border-red-200"
                                   )}
                                 >
-                                  <SelectValue />
+                                  <span>{dt(SUBSCRIPTION_LIFECYCLE_LABELS[s.lifecycle || s.status])}</span>
                                 </SelectTrigger>
                                 <SelectContent dir={dashDir()}>
                                   {/* Set by the scheduler when the retry ladder is exhausted;
                                       an admin moves it back to نشطة once the card is fixed. */}
                                   <SelectItem value="PAYMENT_FAILED" className="text-xs" disabled>
-                                    {dt("تعذّر الخصم")}</SelectItem>
+                                    {dt("معلق — تعثر التجديد")}</SelectItem>
                                   <SelectItem value="ACTIVE" className="text-xs">
                                     {dt("نشطة")}</SelectItem>
                                   <SelectItem value="PAUSED" className="text-xs">

@@ -1,3 +1,4 @@
+import * as subscriptionLifecycle from "../../lib/donations/subscription-lifecycle";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -34,6 +35,7 @@ function load(file: string, dependencies: Row): Row {
     console: { error() {} },
     process: { env: {} },
     require: (id: string) => {
+      if (id === "@/lib/donations/subscription-lifecycle") return subscriptionLifecycle;
       assert.ok(id in dependencies, id);
       return dependencies[id];
     },

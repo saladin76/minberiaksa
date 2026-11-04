@@ -1,3 +1,4 @@
+import { ACTIVATING_DONATION_WHERE } from "../../lib/donations/subscription-lifecycle";
 import * as requestPolicy from "../../lib/donations/subscription-request-policy";
 import { subscriptionReductionEligibility } from "../../lib/donations/subscription-reduction-policy";
 import test from "node:test";
@@ -16,6 +17,7 @@ function fixture() {
   const matches = (where: Record<string, unknown>) => ["id", "donorId", "subscriptionId"].every(key => !where[key] || where[key] === donorRequest[key as keyof typeof donorRequest]);
   const tx = { subscription: { updateMany: async () => { writes++; return { count: 1 }; } }, subscriptionItem: { update: async () => { writes++; } }, auditLog: { create: async ({ data }: { data: Record<string, unknown> }) => { audits.push(data); } } };
   const prisma = {
+    donation: { findFirst: async () => null },
     subscription: { findMany: async () => [plan], findUnique: async () => plan, updateMany: tx.subscription.updateMany },
     subscriptionServiceRequest: {
       findUnique: async () => { lookups++; return donorRequest; },
@@ -32,6 +34,7 @@ function fixture() {
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => allowed ? null : Response.json({}, { status: 403 }) },
     "@/lib/prisma": { prisma },
     "@/lib/donations/recurring-lease": { billingLeaseAvailable: () => ({}) },
+    "@/lib/donations/subscription-lifecycle": { ACTIVATING_DONATION_WHERE },
     "@/lib/donations/subscription-reduction-policy": { subscriptionReductionEligibility },
     "node:crypto": { randomUUID: () => "fixture-lock" },
     stripe: { default: class { constructor() { throw new Error("No bank/provider call is allowed in this fixture"); } } },
@@ -135,4 +138,13 @@ test("the direct-account picker accepts only an open reduction belonging to this
   }
   assert.equal(requestPolicy.isReductionRequestForPlan(null, plan), false);
   assert.equal(requestPolicy.isReductionRequestForPlan(row, { ...plan, donorId: "" }), false);
+});
+
+
+test("an administrator cannot turn a signup with no confirmed first payment into an active plan", async () => {
+  const f = fixture();
+  const response = await f.patch({ amount: undefined, status: "ACTIVE" });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).code, "FIRST_PAYMENT_NOT_CONFIRMED");
+  assert.equal(f.stats().writes, 0);
 });

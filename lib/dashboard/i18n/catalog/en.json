@@ -9649,5 +9649,20 @@
   "تعذّر تحديث الحركات. البيانات المعروضة قديمة؛ أعد التحديث قبل المراجعة.": "Could not refresh transactions. The displayed data is outdated; refresh before reviewing.",
   "النتائج تتجاوز 10000 حركة. ضيّق التصفية ثم أعد التصدير.": "Results exceed 10,000 transactions. Narrow the filters and export again.",
   "متابعة طلبات المتبرعين لتعديل التبرعات الدورية أو إيقافها، مع سجل واضح لكل إجراء.": "Track requests to change or stop recurring donations, with a clear action history.",
-  "أدخل اسمًا واضحًا للحملة للمتابعة. يظهر لفريق العمل فقط ولا يُرسل إلى المتبرعين.": "Enter a clear campaign name to continue. It is visible to your team only and is not sent to donors."
+  "أدخل اسمًا واضحًا للحملة للمتابعة. يظهر لفريق العمل فقط ولا يُرسل إلى المتبرعين.": "Enter a clear campaign name to continue. It is visible to your team only and is not sent to donors.",
+  "آخر دفعة مؤكدة": "Last confirmed payment",
+  "إعادة المحاولة مجدولة؛ يحتاج متابعة الفريق.": "A retry is scheduled; team follow-up is needed.",
+  "الاشتراكات الدورية": "Recurring subscriptions",
+  "الاشتراكات المفعلة سابقًا": "Previously activated subscriptions",
+  "التجديد القادم": "Next renewal",
+  "توقفت المحاولات؛ يحتاج متابعة الفريق.": "Retries have stopped; team follow-up is needed.",
+  "دوري": "Recurring",
+  "سبب التعثر": "Failure reason",
+  "سبب التعثر غير مسجل؛ راجع تفاصيل بوابة الدفع.": "No failure reason was recorded; review the payment gateway details.",
+  "كل التبرعات": "All donations",
+  "لا توجد اشتراكات دورية": "No recurring subscriptions",
+  "لم تنجح أول دفعة؛ هذه محاولة اشتراك وليست اشتراكًا نشطًا.": "The first payment was not confirmed; this signup is not an active subscription.",
+  "لم يتفعّل — لا توجد دفعة مؤكدة": "Not activated — no confirmed payment",
+  "محاولات لم تتفعّل": "Unactivated signups",
+  "معلق — تعثر التجديد": "Suspended — renewal payment failed"
 }

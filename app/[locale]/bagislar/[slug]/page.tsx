@@ -1,3 +1,4 @@
+import { messagesFor } from "@/i18n/locale-messages";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { SITE_URL, buildPageMetadata, buildLocalizedAlternates, clipSeoDescription } from "@/lib/seo";
@@ -107,12 +108,13 @@ export default async function ProjectPage({ params, searchParams }: Props) {
 
   const { updates, related, donorCount, comments, gallery } = await getProjectPageContent(project, locale);
 
+  const navigation = messagesFor(locale).navigation as Record<string, string>;
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}${miaPath("home", locale)}` },
-      { "@type": "ListItem", position: 2, name: "Projects", item: `${SITE_URL}${miaPath("projects", locale)}` },
+      { "@type": "ListItem", position: 1, name: navigation.home, item: `${SITE_URL}${miaPath("home", locale)}` },
+      { "@type": "ListItem", position: 2, name: navigation.projects, item: `${SITE_URL}${miaPath("projects", locale)}` },
       { "@type": "ListItem", position: 3, name: project.title, item: `${SITE_URL}${miaPath("projectDetail", locale, project.slug)}` },
     ],
   };

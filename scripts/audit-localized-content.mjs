@@ -28,6 +28,7 @@ export async function probeLocalizedContent({ checkGeneration = false, locales =
   describeFailure = error => { void error; return { reason: "LOCALIZED_CONTENT_CHECK_FAILED" }; }, onProgress = progress => { void progress; } }) {
   /** @type {Array<{locale: string, translation: string, seo: string, failure?: string, failureStage?: string, error?: string, details?: unknown, validation?: unknown}>} */
   const results = [];
+  /** @type {{status:string,syntheticInputOnly:boolean,databaseWrites:number,recipientMessages:number,paymentCaptures:number,results:typeof results,homepageResults?:Array<{attempt:number,status:string,titleLength?:number,descriptionLength?:number,reason?:string}>}} */
   const report = { status: "generation_not_requested", syntheticInputOnly: true, databaseWrites: 0, recipientMessages: 0, paymentCaptures: 0, results };
   if (!checkGeneration) return report;
   for (const locale of locales) {
@@ -59,15 +60,34 @@ export async function probeLocalizedContent({ checkGeneration = false, locales =
   return report;
 }
 
+/** Read-only reproduction of the real general-page English SEO path, repeated at most three times. */
+export async function probeHomepageSeo({ checkGeneration = false, runs = 0, source = { title: "", description: "" }, seo, describeFailure = () => ({ reason: "LOCALIZED_CONTENT_CHECK_FAILED" }), onProgress = progress => { void progress; } }) {
+  if (!checkGeneration || !runs) return [];
+  if (!Number.isInteger(runs) || runs < 1 || runs > 3) throw new Error("INVALID_HOMEPAGE_RUNS");
+  const results = [];
+  for (let attempt = 1; attempt <= runs; attempt++) {
+    onProgress({ phase: "homepage-seo-check", locale: "en", attempt, status: "checking" });
+    try {
+      const result = await seo({ ...source, type: "page", locale: "en" });
+      if (!result.suggestion.seoTitle?.trim() || result.suggestion.seoTitle.length > 70 || !result.suggestion.metaDescription?.trim() || result.suggestion.metaDescription.length > 160 || !result.research.sources.length) throw new Error("SEO_CHECK_FAILED");
+      results.push({ attempt, status: "ready", titleLength: result.suggestion.seoTitle.length, descriptionLength: result.suggestion.metaDescription.length });
+    } catch (error) { results.push({ attempt, status: "failed", ...describeFailure(error) }); }
+    onProgress({ phase: "homepage-seo-check", locale: "en", ...results[results.length - 1] });
+  }
+  return results;
+}
+
 async function main() {
   let prisma;
   try {
     const args = process.argv.slice(2);
-    if (args.some(arg => arg !== "--check-generation" && !arg.startsWith("--locales=")) || args.filter(arg => arg.startsWith("--locales=")).length > 1) throw new Error("INVALID_OPTIONS");
+    if (args.some(arg => arg !== "--check-generation" && !arg.startsWith("--locales=") && !arg.startsWith("--homepage-runs=")) || args.filter(arg => arg.startsWith("--locales=")).length > 1 || args.filter(arg => arg.startsWith("--homepage-runs=")).length > 1) throw new Error("INVALID_OPTIONS");
     const requested = args.find(arg => arg.startsWith("--locales="))?.slice("--locales=".length).split(",") || ["en", "tr", "fr"];
     const { isValidLocale } = await loadReleaseModule("lib/locales.ts");
     if (!requested.length || requested.some(locale => !isValidLocale(locale)) || new Set(requested).size !== requested.length) throw new Error("INVALID_LOCALES");
     const checkGeneration = args.includes("--check-generation");
+    const homepageRuns = Number(args.find(arg => arg.startsWith("--homepage-runs="))?.split("=")[1] || 0);
+    if (!Number.isInteger(homepageRuns) || homepageRuns < 0 || homepageRuns > 3 || homepageRuns && !checkGeneration) throw new Error("INVALID_HOMEPAGE_RUNS");
     let translate, seo, describeFailure;
     if (checkGeneration) {
       const require = createRequire(resolve(process.cwd(), "package.json"));
@@ -81,6 +101,17 @@ async function main() {
     const report = await probeLocalizedContent({ checkGeneration, locales: requested, translate, seo, describeFailure,
       onProgress: progress => console.log(JSON.stringify({ phase: "localized-content-check", ...progress })),
     });
+    if (homepageRuns) {
+      report.syntheticInputOnly = false;
+      const { pageSeoDefaults, readPageSeoDocument } = await loadReleaseModule("lib/content-editor/page-seo.ts");
+      const { seoSourceText } = await loadReleaseModule("lib/content-editor/seo-source.ts");
+      const source = pageSeoDefaults("home", "ar"), document = await readPageSeoDocument("home"), overrides = document.overrides.ar || {};
+      report.homepageResults = await probeHomepageSeo({ checkGeneration, runs: homepageRuns, seo, describeFailure,
+        source: { title: overrides.metaTitle || source.values.metaTitle, description: (overrides.metaDescription || source.values.metaDescription) + "\n" + seoSourceText(source.context) },
+        onProgress: progress => console.log(JSON.stringify(progress)),
+      });
+      if (report.homepageResults.some(row => row.status !== "ready")) report.status = "generation_failed";
+    }
     console.log(JSON.stringify({ checkedAt: new Date().toISOString(), ...report }, null, 2));
     if (checkGeneration && report.status !== "generation_ready") process.exitCode = 1;
   } catch {
