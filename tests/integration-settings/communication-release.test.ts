@@ -276,6 +276,7 @@ test("a closed or missing account cannot reuse a previously issued JWT session",
     const loaded = load<{authOptions:{callbacks:{session:(input:unknown)=>Promise<{user?:unknown}>}}}>("app/api/auth/[...nextauth]/options.ts", {
       "@auth/prisma-adapter":{PrismaAdapter:()=>({})}, "next-auth/providers/google":{default:(input:unknown)=>input}, "next-auth/providers/facebook":{default:(input:unknown)=>input}, "next-auth/providers/credentials":{default:(input:unknown)=>input},
       "bcryptjs":{}, "next/headers":{}, "@/lib/otp":{}, "@/lib/locales":locales, "google-auth-library":{OAuth2Client:class{}}, "@/lib/users/account-claim":{}, "@/lib/prisma":{prisma:{user:{findUnique:async()=>account}}},
+      "@/lib/auth/donor-login-service":{},
     });
     const result = await loaded.authOptions.callbacks.session({session:{user:{id:"old-id",role:"ADMIN"}},token:{sub:"old-id",role:"ADMIN"}});
     assert.equal(result.user,undefined);
