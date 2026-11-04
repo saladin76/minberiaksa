@@ -1,3 +1,4 @@
+import { checkoutLineFrequencies, recurringCheckoutLines } from "@/lib/donations/mixed-cart";
 import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 import { NextRequest, NextResponse } from "next/server";
@@ -158,10 +159,12 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     const body = await request.json();
-    if (body?.lineFrequencies !== undefined) {
-      const expected = ({ ONE_TIME: "once", DAILY: "daily", FRIDAY: "friday", MONTHLY: "monthly" } as Record<string,string>)[body.type || "ONE_TIME"];
+    let lineFrequencies: ReturnType<typeof checkoutLineFrequencies>;
+    try {
       const count = [body.items, body.categoryItems, body.waqfItems].reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
-      if (!expected || !Array.isArray(body.lineFrequencies) || body.lineFrequencies.length !== count || body.lineFrequencies.some((value: unknown) => value !== expected)) return NextResponse.json({ error: "Separate checkout is required for different donation frequencies", code: "MIXED_DONATION_FREQUENCIES" }, { status: 400 });
+      lineFrequencies = checkoutLineFrequencies(body.type || "ONE_TIME", body.lineFrequencies, count);
+    } catch {
+      return NextResponse.json({ error: "Different recurring cadences require separate checkout", code: "MIXED_DONATION_FREQUENCIES" }, { status: 400 });
     }
     const {
       items: itemsIn,
@@ -598,10 +601,11 @@ export async function POST(request: NextRequest) {
       : {};
     /* The plan's copy of the lines carries no gift: the recipient is told
        once, off the first (paid) donation, and later instalments are plain. */
-    const planCampaignLines = itemsResolved.length
+    const planLines = recurringCheckoutLines({ items: itemsResolved, categoryItems: categoryItemsResolved, waqfItems: waqfResolved }, lineFrequencies);
+    const planCampaignLines = planLines.items.length
       ? {
           items: {
-            create: itemsResolved.map((item) => ({
+            create: planLines.items.map((item) => ({
               campaignId: item.campaignId,
               amount: item.amount,
               amountUSD: item.amountUSD,
@@ -620,6 +624,10 @@ export async function POST(request: NextRequest) {
             })),
           },
         }
+      : {};
+
+    const planCategoryLines = planLines.categoryItems.length
+      ? { categoryItems: { create: planLines.categoryItems.map(item => ({ categoryId: item.categoryId, amount: item.amount, amountUSD: item.amountUSD })) } }
       : {};
 
     /* Waqf lines on the donation only: they are what the certificates are
@@ -673,8 +681,8 @@ export async function POST(request: NextRequest) {
          both computed, so the three cannot disagree. `nextBillingDate` is
          re-derived from the same rule when the first instalment settles;
          `consentSnapshot` is never rewritten. */
-      const recurringTotal = totalAmount + planTeamSupport + (coverFees ? (totalAmount + planTeamSupport) * 0.03 : 0);
-      const recurringAmountUSD = planTeamSupport === teamSupport ? donationTotalUsd : await convertAmountInCurrencyToUsd(recurringTotal, currencyNorm);
+      const recurringTotal = planLines.amount + planTeamSupport + (coverFees ? (planLines.amount + planTeamSupport) * 0.03 : 0);
+      const recurringAmountUSD = await convertAmountInCurrencyToUsd(recurringTotal, currencyNorm);
       const now = new Date();
       const rule = scheduleRuleFor(frequency, now, timezone, scheduleChoice.value);
       const nextBilling = firstChargeAfterCheckout(rule, now, timezone);
@@ -694,7 +702,7 @@ export async function POST(request: NextRequest) {
         const sub = await tx.subscription.create({
           data: {
             status: "ACTIVE",
-            amount: totalAmount,
+            amount: planLines.amount,
             amountUSD: recurringAmountUSD,
             currency,
             teamSupport: planTeamSupport,
@@ -715,7 +723,7 @@ export async function POST(request: NextRequest) {
                Stripe webhook or the Albaraka callback  never optimistically. */
             lastBillingDate: null,
             ...planCampaignLines,
-            ...categoryLines,
+            ...planCategoryLines,
           },
         });
 
@@ -738,7 +746,7 @@ export async function POST(request: NextRequest) {
             paymentMethod,
             ...(isPayPal ? { provider: "PAYPAL" } : {}),
             cardDetails: null,
-            ...(donationAttribution ? { attribution: donationAttribution } : {}),
+            attribution: { ...((donationAttribution ?? {}) as object), checkout_line_frequencies: lineFrequencies, recurring_principal: planLines.amount, one_time_principal: totalAmount - planLines.amount } as Prisma.InputJsonValue,
             ...campaignLines,
             ...categoryLines,
             ...waqfLines,

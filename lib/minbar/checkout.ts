@@ -148,14 +148,16 @@ export function toOrderItems(
    * not have; without this the row was dropped.
    */
   aliases: Readonly<Record<string, string>> = {}
-): OrderLines & { unmatched: MinbarCartItem[] } {
+): OrderLines & { unmatched: MinbarCartItem[]; lineFrequencies: MinbarCartItem["freqKey"][] } {
   const bySlug = new Map(projects.flatMap((project) => [[project.slug, project.id], [project.id, project.id]]));
-  const lines: OrderLines & { unmatched: MinbarCartItem[] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [] };
+  const lines: OrderLines & { unmatched: MinbarCartItem[]; lineFrequencies: MinbarCartItem["freqKey"][] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [], lineFrequencies: [] };
+  const campaignFrequencies: MinbarCartItem["freqKey"][] = [], categoryFrequencies: MinbarCartItem["freqKey"][] = [], waqfFrequencies: MinbarCartItem["freqKey"][] = [];
 
   for (const item of items) {
     const local = lineLocal(item);
     const campaignId = item.projectId ? bySlug.get(item.projectId) ?? aliases[item.projectId] : undefined;
     if (campaignId) {
+      campaignFrequencies.push(item.freqKey);
       lines.items.push({
         campaignId,
         amount: item.amount,
@@ -176,9 +178,11 @@ export function toOrderItems(
       });
     }
     else if (item.categoryId) {
+      categoryFrequencies.push(item.freqKey);
       lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount, ...(local ? { local } : {}) });
     }
     else if (item.waqf) {
+      waqfFrequencies.push(item.freqKey);
       lines.waqfItems.push({
         unit: item.waqf.unit,
         count: item.waqf.count,
@@ -193,6 +197,7 @@ export function toOrderItems(
     }
   }
 
+  lines.lineFrequencies = [...campaignFrequencies, ...categoryFrequencies, ...waqfFrequencies];
   return lines;
 }
 
@@ -219,8 +224,8 @@ export class OrderRejectedError extends Error {
  * The one type the order carries: `ONE_TIME`, or the cadence of the plan.
  *
  * The order API takes one type for the whole order, so a cart holding any
- * recurring row is a plan at that row's cadence; the cart page does not let
- * cadences mix. This used to return `MONTHLY` for every recurring row, so a
+ * recurring row is a plan at that row's cadence. One-time rows join the
+ * first charge only; different recurring cadences still need separate checkouts. This used to return `MONTHLY` for every recurring row, so a
  * donor who chose "daily" or "every Friday" was billed monthly  the contract
  * mismatch in `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2. The mapping now lives in
  * `lib/donations/recurring-schedule.ts` and is pinned by its tests.
@@ -264,7 +269,7 @@ function conciergeMarker(): { sessionId: string; intent: string | null; campaign
 
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
   if (cartHasMixedCadences(input.items)) throw new OrderRejectedError("Separate checkout is required for different donation frequencies", 400, "MIXED_DONATION_FREQUENCIES");
-  const { items, categoryItems, waqfItems, unmatched } = toOrderItems(input.items, input.projects, input.projectAliases);
+  const { items, categoryItems, waqfItems, unmatched, lineFrequencies } = toOrderItems(input.items, input.projects, input.projectAliases);
   if (unmatched.length) throw new UnpayableItemsError(unmatched);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
 
@@ -283,7 +288,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
          ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
       type: orderType(input.items),
-      lineFrequencies: input.items.map(item => item.freqKey),
+      lineFrequencies,
       timezone: browserTimezone(),
       ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,

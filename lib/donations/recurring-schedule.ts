@@ -91,7 +91,8 @@ export function orderTypeForItems(items: ReadonlyArray<{ freqKey: CartFreqKeyLik
 }
 
 export function cartHasMixedCadences(items: ReadonlyArray<{ freqKey: CartFreqKeyLike }>): boolean {
-  return new Set(items.map(item => item.freqKey)).size > 1;
+  // One-time gifts can share the initial payment with one recurring cadence.
+  return new Set(items.filter(item => item.freqKey !== "once").map(item => item.freqKey)).size > 1;
 }
 
 export function frequencyOfOrderType(type: OrderType): RecurringFrequency | null {

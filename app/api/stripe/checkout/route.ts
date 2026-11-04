@@ -82,7 +82,15 @@ export async function POST(req: NextRequest) {
     let stripeSession: Stripe.Checkout.Session;
 
     if (isMonthly) {
-      // Subscription mode
+      const plan = donation.subscription!;
+      if (plan.frequency !== "MONTHLY" || (plan.provider && plan.provider !== "STRIPE")) {
+        return NextResponse.json({ error: "This recurring plan uses another payment provider" }, { status: 400 });
+      }
+      const principal = plan.amount + plan.teamSupport;
+      const recurringAmount = toStripeMinorUnits(principal + (plan.coverFees ? principal * 0.03 : 0), currency);
+      const oneTimeAmount = amountInSmallestUnit - recurringAmount;
+      if (recurringAmount <= 0 || oneTimeAmount < 0) return NextResponse.json({ error: "Invalid initial or recurring amount" }, { status: 400 });
+      // One combined initial payment; only the recurring price survives on the subscription.
       stripeSession = await stripe.checkout.sessions.create({
         mode: "subscription",
         line_items: [
@@ -93,11 +101,12 @@ export async function POST(req: NextRequest) {
                 name: productName,
                 metadata: { donationId },
               },
-              unit_amount: amountInSmallestUnit,
+              unit_amount: recurringAmount,
               recurring: { interval: "month" },
             },
             quantity: 1,
           },
+          ...(oneTimeAmount > 0 ? [{ price_data: { currency, product_data: { name: productName + " (one-time)" }, unit_amount: oneTimeAmount }, quantity: 1 }] : []),
         ],
         success_url: successUrl,
         cancel_url: cancelUrl,

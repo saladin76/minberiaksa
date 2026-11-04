@@ -1,5 +1,6 @@
 "use client";
 
+import { mixedCartNotice } from "@/lib/donations/mixed-cart-copy";
 import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -752,6 +753,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 </div>
               ) : null}
 
+              {items.some(item => item.freqKey === "once") && items.some(item => item.freqKey !== "once") ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-7 text-emerald-900">{mixedCartNotice(locale)}</p> : null}
               {belowMinimum || mixedCadences ? (
                 <>
                   <Button variant="primary" full disabled style={{ whiteSpace: "nowrap", height: 52, opacity: 0.55, boxShadow: "none", cursor: "not-allowed" }}>

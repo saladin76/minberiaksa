@@ -1,0 +1,22 @@
+const COPY: Record<string, string> = {
+  ar: "الدفع الآن يشمل جميع عناصر السلة. تتجدد التبرعات الدورية فقط؛ التبرعات لمرة واحدة لا تُخصم مجددًا.",
+  en: "Today's payment includes the whole basket. Only recurring donations renew; one-time donations are never charged again.",
+  tr: "Bugünkü ödeme sepetin tamamını kapsar. Yalnızca düzenli bağışlar yenilenir; tek seferlik bağışlar yeniden alınmaz.",
+  fr: "Le paiement actuel couvre tout le panier. Seuls les dons réguliers sont renouvelés ; les dons ponctuels ne sont pas prélevés à nouveau.",
+  de: "Die heutige Zahlung umfasst den gesamten Warenkorb. Nur regelmäßige Spenden werden erneuert; einmalige Spenden werden nicht erneut abgebucht.",
+  es: "El pago de hoy incluye toda la cesta. Solo se renuevan las donaciones periódicas; las donaciones únicas no vuelven a cobrarse.",
+  pt: "O pagamento de hoje inclui todo o carrinho. Apenas os donativos recorrentes se renovam; os donativos únicos não são cobrados novamente.",
+  it: "Il pagamento di oggi comprende tutto il carrello. Si rinnovano solo le donazioni ricorrenti; quelle una tantum non vengono addebitate di nuovo.",
+  nl: "De betaling van vandaag omvat het hele mandje. Alleen terugkerende donaties worden herhaald; eenmalige donaties worden niet opnieuw afgeschreven.",
+  da: "Dagens betaling omfatter hele kurven. Kun faste donationer gentages; engangsdonationer opkræves ikke igen.",
+  sv: "Dagens betalning omfattar hela varukorgen. Endast återkommande donationer förnyas; engångsdonationer debiteras inte igen.",
+  no: "Dagens betaling omfatter hele kurven. Bare faste donasjoner gjentas; engangsdonasjoner belastes ikke på nytt.",
+  sq: "Pagesa e sotme përfshin të gjithë shportën. Përsëriten vetëm donacionet periodike; donacionet njëherëshe nuk tarifohen sërish.",
+  id: "Pembayaran hari ini mencakup seluruh keranjang. Hanya donasi rutin yang diperpanjang; donasi satu kali tidak ditagih lagi.",
+  ms: "Bayaran hari ini merangkumi seluruh bakul. Hanya sumbangan berkala diperbaharui; sumbangan sekali sahaja tidak dicaj semula.",
+  hi: "आज के भुगतान में पूरी टोकरी शामिल है। केवल नियमित दान दोहराए जाएँगे; एकमुश्त दान फिर से नहीं काटे जाएँगे।",
+  ur: "آج کی ادائیگی میں ٹوکری کے تمام عطیات شامل ہیں۔ صرف باقاعدہ عطیات دوبارہ وصول ہوں گے؛ ایک بار کے عطیات دوبارہ نہیں کاٹے جائیں گے۔",
+  ja: "今回のお支払いにはカート内のすべての寄付が含まれます。継続寄付のみが更新され、単発寄付が再度請求されることはありません。",
+  zh: "本次付款包括购物篮中的所有捐款。只有定期捐款会续扣，单次捐款不会再次扣款。",
+};
+export const mixedCartNotice = (locale: string): string => COPY[locale] ?? COPY.en;

@@ -1,4 +1,5 @@
 "use client";
+import { mixedCartNotice } from "@/lib/donations/mixed-cart-copy";
 import { usePaymentRouting } from "@/hooks/usePaymentRouting";
 import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
 import { SavedCardPicker } from "./SavedCardPicker";
@@ -241,7 +242,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      where it is raised. */
   const belowMinimum = items.some(lineTooSmall);
   /* One type for the whole order  `ONE_TIME`, or the plan's cadence; the
-     cart page does not let cadences mix. The same function builds the order,
+     one-time rows are charged only on this first payment. The same function builds the order,
      so what is previewed here is what is sent. */
   const orderTypeForCart = orderType(items);
   const planFrequency = frequencyOfOrderType(orderTypeForCart);
@@ -983,6 +984,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               </div>
             ) : null}
 
+            {planFrequency && items.some(item => item.freqKey === "once") ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-7 text-emerald-900">{mixedCartNotice(locale)}</p> : null}
             {planFrequency && nextChargeText ? (
               <div className="pay-recurring-terms" style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "var(--sand)", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>
                 <b>{tCommon(planFrequency === "DAILY" ? "freqDaily" : planFrequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</b>
