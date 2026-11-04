@@ -82,7 +82,7 @@ async function mergeDonor(tx: Prisma.TransactionClient, sourceId: string, target
 }
 
 /** Called only after consuming a valid challenge or Google's verified-email proof. */
-async function resolveIdentity(tx: Prisma.TransactionClient, channel: LoginChannel, contact: string, linkUserId?: string, invitationUserId?: string) {
+async function resolveIdentity(tx: Prisma.TransactionClient, channel: LoginChannel, contact: string, linkUserId?: string, invitationUserId?: string, allowPrivilegedEmail = false) {
   const key = identityKey(channel, contact);
   const identity = await tx.donorLoginIdentity.findUnique({ where: { id: key } });
   const matches = await tx.user.findMany({ where: { ...activeUser, ...(channel === "EMAIL" ? { email: { equals: contact, mode: "insensitive" } } : { phone: { in: phoneMatchVariants(contact) } }) }, include: { accounts: { select: { id: true } } }, orderBy: { createdAt: "asc" }, take: 50 });
@@ -95,7 +95,16 @@ async function resolveIdentity(tx: Prisma.TransactionClient, channel: LoginChann
   const matchedId = channel === "WHATSAPP" ? established[0]?.id || matches[0]?.id : matches[0]?.id;
   const targetId = linkUserId || identity?.userId || matchedId;
   let target = targetId ? await tx.user.findUniqueOrThrow({ where: { id: targetId } }) : null;
-  if (target && (target.role !== "DONOR" || target.mergedIntoUserId || target.email?.endsWith("@deleted.invalid"))) throw new Error("ACCOUNT_CONFLICT");
+  if (target && (target.mergedIntoUserId || target.email?.endsWith("@deleted.invalid"))) throw new Error("ACCOUNT_CONFLICT");
+  if (target && target.role !== "DONOR") {
+    // Email OTP may authenticate the exact existing staff/admin record. It must
+    // never link identities, merge records, or promote a donor to a staff role.
+    if (allowPrivilegedEmail && channel === "EMAIL" && !linkUserId && !invitationUserId
+      && (target.role === "ADMIN" || target.role === "STAFF")
+      && target.email?.toLowerCase() === contact && matches.length === 1
+      && matches[0].id === target.id && (!identity || identity.userId === target.id)) return target;
+    throw new Error("ACCOUNT_CONFLICT");
+  }
   if (!target) target = await tx.user.create({ data: { email: channel === "EMAIL" ? contact : null, phone: channel === "WHATSAPP" ? contact : null, role: "DONOR", verifiedAt: new Date(), registeredAt: new Date(), emailVerified: channel === "EMAIL" ? new Date() : null } });
   const candidates = new Set(matches.map(u => u.id));
   if (identity) candidates.add(identity.userId);
@@ -120,7 +129,7 @@ async function consumeChallenge(record: { id: string; channel: string; contact: 
   return prisma.$transaction(async tx => {
     const consumed = await tx.donorLoginChallenge.updateMany({ where: { id: record.id, consumed: false, codeHash: loginHash(`${record.id}:${code}`), sent: true, expiresAt: { gt: new Date() } }, data: { consumed: true } });
     if (!consumed.count) throw new Error("INVALID_CODE");
-    return resolveIdentity(tx, record.channel as LoginChannel, record.contact, linkUserId, record.invitationUserId || undefined);
+    return resolveIdentity(tx, record.channel as LoginChannel, record.contact, linkUserId, record.invitationUserId || undefined, true);
   }, { timeout: 30_000, maxWait: 10_000 });
 }
 

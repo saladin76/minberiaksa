@@ -256,3 +256,38 @@ test("contact-and-code entry never falls back to an older code after the latest 
   await assert.rejects(f.service.verifyDonorInvitation("EMAIL", proof.contact, f.sent[0].code), /INVALID_CODE/);
   assert.equal(f.rows("user").length, 0);
 });
+
+test("email OTP authenticates the existing admin or staff account without merging or changing privileges", async () => {
+  for (const role of ["ADMIN", "STAFF"]) {
+    for (const existingCode of [false, true]) {
+      const f = fixture([donor("operator", { role, password: "existing-hash" })]);
+      const ticket = await f.service.requestDonorLogin(proof);
+      const before = structuredClone(f.rows("user")[0]);
+      const user = existingCode
+        ? await f.service.verifyDonorInvitation("EMAIL", proof.contact, f.sent[0].code)
+        : await f.service.verifyDonorLogin({ ...ticket, code: f.sent[0].code });
+      assert.equal(user.id, "operator");
+      assert.equal(user.role, role);
+      assert.equal(f.rows("user").length, 1);
+      assert.deepEqual(f.rows("user")[0], before);
+      assert.equal(f.rows("donorLoginIdentity").length, 0);
+      assert.equal(f.rows("auditLog").length, 0);
+      await assert.rejects(f.service.verifyDonorLogin({ ...ticket, code: f.sent[0].code }), /INVALID_CODE/);
+    }
+  }
+});
+test("privileged email OTP cannot merge a donor, claim a staff phone or authenticate with a wrong code", async () => {
+  const privileged = donor("operator", { role: "ADMIN", phone: "+905527396876" });
+  const wrong = fixture([privileged]);
+  const ticket = await wrong.service.requestDonorLogin(proof);
+  await assert.rejects(wrong.service.verifyDonorLogin({ ...ticket, code: wrong.sent[0].code === "000000" ? "111111" : "000000" }), /INVALID_CODE/);
+  const phone = fixture([privileged]);
+  const phoneTicket = await phone.service.requestDonorLogin({ ...proof, channel: "WHATSAPP", contact: "+905527396876" });
+  await assert.rejects(phone.service.verifyDonorLogin({ ...phoneTicket, code: phone.sent[0].code }), /ACCOUNT_CONFLICT/);
+  const linked = fixture([privileged, donor("donor", { email: "other@example.invalid" })]);
+  const linkTicket = await linked.service.requestDonorLogin({ ...proof, linkUserId: "donor" });
+  await assert.rejects(linked.service.verifyDonorLogin({ ...linkTicket, code: linked.sent[0].code, linkUserId: "donor" }), /ACCOUNT_CONFLICT/);
+  assert.equal(linked.rows("user").find(u => u.id === "donor")?.role, "DONOR");
+  assert.equal(linked.rows("user").find(u => u.id === "operator")?.role, "ADMIN");
+  assert.equal(linked.rows("donorLoginIdentity").length, 0);
+});
