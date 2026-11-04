@@ -1,3 +1,4 @@
+import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutPair } from "./mixed-cart";
 import "server-only";
 import { runAfterResponse } from "@/lib/events/after-response";
 
@@ -38,30 +39,30 @@ export async function failAlbarakaDonation(
 ): Promise<void> {
   console.error("[Albaraka] donation failed:", donationId, reason);
   try {
-    const donation = await prisma.donation.findUnique({ where: { id: donationId } });
-    if (!donation || donation.paidAt != null) return;
-    const failed = await prisma.donation.updateMany({
-      where: donationWhereAll({ id: donationId, status: { not: "FAILED" } }, donationFieldEmpty("paidAt")),
-      data: {
-        status: "FAILED",
-        provider: "ALBARAKA",
-        providerOrderId: donation.providerOrderId ?? orderId ?? null,
-        providerTxnResult: "Failed",
-        ...(responseCode ? { providerProcReturnCode: albarakaIsoCode(responseCode) } : {}),
-        providerErrorMessage: reason.slice(0, 500),
-        providerRaw: asJson({ ...rawObject(donation.providerRaw), ...extra }),
-      },
-    });
-    if (!failed.count) return;
-    runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
-    // Seed Meta with the failed attempt; the browser pixel sends the matching
-    // DonateFailed hit with the same `${donationId}_failed` event id.
-    void sendDonationFailedConversions(donationId);
-    if (donation.subscriptionId) {
-      await prisma.subscription.updateMany({
+    const failedIds: string[] = [];
+    await prisma.$transaction(async tx => {
+      const donation = await tx.donation.findUnique({ where: { id: donationId } });
+      if (!donation || donation.paidAt != null || mixedCheckoutParent(donation.providerRaw)) return;
+      const link = mixedCheckoutPayment(donation.providerRaw);
+      const child = link ? await tx.donation.findUnique({ where: { id: link.oneTimeDonationId } }) : null;
+      if (link && (!validMixedCheckoutPair(donation, child) || child?.paidAt)) throw new Error("INVALID_MIXED_CHECKOUT");
+      for (const row of child ? [donation, child] : [donation]) {
+        const failed = await tx.donation.updateMany({
+          where: donationWhereAll({ id: row.id, status: { not: "FAILED" } }, donationFieldEmpty("paidAt")),
+          data: { status: "FAILED", provider: "ALBARAKA", providerOrderId: donation.providerOrderId ?? orderId ?? null,
+            providerTxnResult: "Failed", ...(responseCode ? { providerProcReturnCode: albarakaIsoCode(responseCode) } : {}),
+            providerErrorMessage: reason.slice(0, 500), providerRaw: asJson({ ...rawObject(row.providerRaw), ...extra }) },
+        });
+        if (failed.count) failedIds.push(row.id);
+      }
+      if (donation.subscriptionId) await tx.subscription.updateMany({
         where: { id: donation.subscriptionId, lastBillingDate: null, status: "ACTIVE" },
         data: { status: "PAYMENT_FAILED", lastChargeError: reason.slice(0, 300) },
       });
+    });
+    for (const id of failedIds) {
+      runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId: id }));
+      void sendDonationFailedConversions(id);
     }
   } catch (e) {
     console.error("[Albaraka] failure bookkeeping error:", e);
@@ -80,6 +81,7 @@ export async function settleAlbarakaDonation(
 ): Promise<boolean> {
   const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
   let newlyPaid = false;
+  const paidIds: string[] = [];
   let subscriptionId: string | null = null;
   let activated = false;
 
@@ -90,42 +92,55 @@ export async function settleAlbarakaDonation(
     });
     if (!fresh) return false;
     if (fresh.paidAt != null) return true;
+    if (mixedCheckoutParent(fresh.providerRaw)) return false;
+    const link = mixedCheckoutPayment(fresh.providerRaw);
+    const child = link ? await tx.donation.findUnique({ where: { id: link.oneTimeDonationId }, include: { items: true, categoryItems: true } }) : null;
+    if (link && (!validMixedCheckoutPair(fresh, child) || child?.paidAt)) throw new Error("INVALID_MIXED_CHECKOUT");
     const requestSnapshot = rawObject(rawObject(fresh.providerRaw).albarakaRequest);
     const bankAmount = Number(requestSnapshot.amount);
     const bankCurrency = ({ TL: "TRY", US: "USD", EU: "EUR" } as Record<string, string>)[String(requestSnapshot.currencyCode)];
 
-    await tx.donation.update({
-      where: { id: fresh.id },
-      data: {
-        status: "PAID",
-        paidAt: new Date(),
-        provider: "ALBARAKA",
-        providerProcReturnCode: responseCode || null,
-        providerTxnResult: "Success",
-        ...(Number.isSafeInteger(bankAmount) && bankAmount > 0 && bankCurrency ? { paidAmount: bankAmount / 100, paidCurrency: bankCurrency } : {}),
-        providerAuthCode: sale.AuthCode ? String(sale.AuthCode) : null,
-        // Albaraka's ReferenceCode is what İptal/İade are later keyed on.
-        providerHostRefNum: sale.ReferenceCode ? String(sale.ReferenceCode) : null,
-        providerErrorMessage: null,
-        providerRaw: asJson({
-          ...rawObject(fresh.providerRaw),
-          ...extra,
-          albarakaSale: sale as unknown as Record<string, unknown>,
-        }),
-      },
-    });
+    if (link && (!Number.isSafeInteger(bankAmount) || bankAmount <= 0 || !bankCurrency)) throw new Error("MISSING_MIXED_PAYMENT_CONFIRMATION");
+    const parentMinor = link ? Math.round(bankAmount * fresh.totalAmount / link.totalAmount) : bankAmount;
+    for (const row of child ? [fresh, child] : [fresh]) {
+      const allocatedMinor = row.id === fresh.id ? parentMinor : bankAmount - parentMinor;
+      await tx.donation.update({
+        where: { id: row.id },
+        data: {
+          status: "PAID",
+          paidAt: new Date(),
+          provider: "ALBARAKA",
+          providerProcReturnCode: responseCode || null,
+          providerTxnResult: "Success",
+          ...(Number.isSafeInteger(bankAmount) && bankAmount > 0 && bankCurrency ? { paidAmount: allocatedMinor / 100, paidCurrency: bankCurrency } : {}),
+          ...(child ? { providerOrderId: fresh.providerOrderId } : {}),
+          providerAuthCode: sale.AuthCode ? String(sale.AuthCode) : null,
+          // Albaraka's ReferenceCode is what İptal/İade are later keyed on.
+          providerHostRefNum: sale.ReferenceCode ? String(sale.ReferenceCode) : null,
+          providerErrorMessage: null,
+          providerRaw: asJson({
+            ...rawObject(row.providerRaw),
+            ...extra,
+            ...(child ? { albarakaRequest: requestSnapshot, sharedPayment: { parentDonationId: fresh.id, totalPaidMinor: bankAmount } } : {}),
+            albarakaSale: sale as unknown as Record<string, unknown>,
+          }),
+        },
+      });
 
-    for (const item of fresh.items) {
-      await tx.campaign.update({
-        where: { id: item.campaignId },
-        data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
-      });
-    }
-    for (const item of fresh.categoryItems) {
-      await tx.category.update({
-        where: { id: item.categoryId },
-        data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
-      });
+      for (const item of row.items) {
+        await tx.campaign.update({
+          where: { id: item.campaignId },
+          data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
+        });
+      }
+      for (const item of row.categoryItems) {
+        await tx.category.update({
+          where: { id: item.categoryId },
+          data: { currentAmount: { increment: item.amountUSD ?? item.amount } },
+        });
+      }
+
+      paidIds.push(row.id);
     }
 
     /* A plan's first instalment: the plan is live from here, and its next
@@ -159,7 +174,7 @@ export async function settleAlbarakaDonation(
   });
 
   if (newlyPaid) {
-    runAfterResponse(() => dispatchDonationPaid(donationId));
+    for (const id of paidIds) runAfterResponse(() => dispatchDonationPaid(id));
     if (subscriptionId && activated) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId }));
   }
   return settled;

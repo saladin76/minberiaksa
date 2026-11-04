@@ -323,6 +323,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
     | {
         donation?: { id: string; accessToken?: string | null };
         subscription?: { id: string };
+        oneTimeDonation?: { id: string; accessToken?: string | null } | null;
         bankTransfer?: { accessToken: string };
         error?: string;
         code?: string;
@@ -336,6 +337,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
 
   // Preserve the server-issued read credential before a payment redirect.
   rememberGuestDonationAccess(payload.donation.id, payload.donation.accessToken);
+  if (payload.oneTimeDonation) rememberGuestDonationAccess(payload.oneTimeDonation.id, payload.oneTimeDonation.accessToken);
 
   return {
     id: payload.donation.id,

@@ -36,10 +36,8 @@ import {
   isOrderType,
   normalizeTimezone,
   parseScheduleChoice,
-  railForFrequency,
   scheduleRuleFor,
 } from "@/lib/donations/recurring-schedule";
-import { parseMainGateway } from "@/lib/payment-gateway";
 import { isAlbarakaRecurringCheckoutReady } from "@/lib/albaraka";
 import { isPayPalConfigured, isPayPalRecurringEnabled } from "@/lib/paypal";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
@@ -275,6 +273,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unsupported donation type" }, { status: 400 });
     }
     const frequency = frequencyOfOrderType(type);
+    if (frequency && paymentMethod !== "CARD") {
+      return NextResponse.json({ error: "Recurring baskets require Albaraka card payment", code: "RECURRING_CARD_ONLY" }, { status: 400 });
+    }
     const timezone = normalizeTimezone(timezoneIn);
     /* Never let a malformed schedule fall back to a different one silently:
        the donor would be charged on a day they did not pick. */
@@ -656,19 +657,8 @@ export async function POST(request: NextRequest) {
         : null;
 
     if (frequency) {
-      /* The rail follows the cadence: Stripe keeps one-time + monthly, so a
-         monthly plan runs on the main gateway; daily and Friday plans are
-         Albaraka's (`railForFrequency`). A plan Albaraka would bill needs the
-         scheduler switched on  refusing here is what stops a donor being
-         promised a cadence nothing will ever charge. */
-      const settings = await prisma.globalSettings.findFirst({
-        orderBy: { createdAt: "asc" },
-        select: { mainGateway: true },
-      });
-      /* A PayPal plan is billed by PayPal at any cadence (its wallet is
-         vaulted at the first instalment); a card plan's rail follows the
-         cadence and the main gateway. */
-      const rail = isPayPal ? ("PAYPAL" as const) : railForFrequency(frequency, parseMainGateway(settings?.mainGateway));
+      // Every new recurring basket uses Albaraka 2D, irrespective of currency/main gateway.
+      const rail = "ALBARAKA" as const;
       if (rail === "ALBARAKA" && !isAlbarakaRecurringCheckoutReady()) {
         return NextResponse.json(
           { error: "Recurring donations at this frequency are not available at the moment", code: "RECURRING_UNAVAILABLE" },
@@ -698,6 +688,19 @@ export async function POST(request: NextRequest) {
         notes: scheduleChoice.value?.notes ?? null,
       });
 
+      const hasOneTime = lineFrequencies.includes("once");
+      const firstRecurringSupport = hasOneTime ? planTeamSupport : teamSupport;
+      const recurringFirstTotal = hasOneTime ? recurringTotal : finalTotalAmount;
+      const recurringFirstUsd = await convertAmountInCurrencyToUsd(recurringFirstTotal, currencyNorm);
+      const onceSupport = teamSupport - firstRecurringSupport;
+      const oncePrincipal = totalAmount - planLines.amount;
+      const onceTotal = Math.round((finalTotalAmount - recurringFirstTotal) * 100) / 100;
+      const onceUsd = donationTotalUsd - recurringFirstUsd;
+      const selectLines = (recurring: boolean) => ({
+        ...(itemsResolved.some((_, i) => (lineFrequencies[i] !== "once") === recurring) ? { items: { create: itemsResolved.filter((_, i) => (lineFrequencies[i] !== "once") === recurring).map(item => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD, ...(item.shareCount ? { shareCount: item.shareCount } : {}), ...giftLineData(item.gift) })) } } : {}),
+        ...(categoryItemsResolved.some((_, i) => (lineFrequencies[itemsResolved.length + i] !== "once") === recurring) ? { categoryItems: { create: categoryItemsResolved.filter((_, i) => (lineFrequencies[itemsResolved.length + i] !== "once") === recurring).map(item => ({ categoryId: item.categoryId, amount: item.amount, amountUSD: item.amountUSD })) } } : {}),
+        ...(waqfResolved.some((_, i) => (lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] !== "once") === recurring) ? { waqfItems: { create: waqfResolved.filter((_, i) => (lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] !== "once") === recurring).map(line => ({ unit: line.unit === "meter" ? ("METER" as const) : ("SHARE" as const), count: line.count, unitPrice: line.unitPrice, amount: line.amount, amountUSD: line.amountUSD, donorName: line.donorName, onBehalf: line.onBehalf })) } } : {}),
+      });
       const result = await prisma.$transaction(async (tx) => {
         const sub = await tx.subscription.create({
           data: {
@@ -730,13 +733,13 @@ export async function POST(request: NextRequest) {
         const donation = await tx.donation.create({
           data: {
             accessToken: mintDonationAccessToken(),
-            amount: totalAmount,
-            amountUSD: donationTotalUsd,
-            teamSupport,
+            amount: planLines.amount,
+            amountUSD: recurringFirstUsd,
+            teamSupport: firstRecurringSupport,
             coverFees,
             currency,
-            fees: coverFees ? fees : 0,
-            totalAmount: finalTotalAmount,
+            fees: coverFees ? recurringFirstTotal - planLines.amount - firstRecurringSupport : 0,
+            totalAmount: recurringFirstTotal,
             status: "PAID",
             locale: validLocale ?? undefined,
             donorCountryCode: donorCountrySnapshot,
@@ -744,12 +747,11 @@ export async function POST(request: NextRequest) {
             referralId: referralId ?? undefined,
             subscriptionId: sub.id,
             paymentMethod,
-            ...(isPayPal ? { provider: "PAYPAL" } : {}),
+            provider: "ALBARAKA",
+            providerRaw: { paymentRouting: { version: 1, gateway: "ALBARAKA" } } as Prisma.InputJsonValue,
             cardDetails: null,
             attribution: { ...((donationAttribution ?? {}) as object), checkout_line_frequencies: lineFrequencies, recurring_principal: planLines.amount, one_time_principal: totalAmount - planLines.amount } as Prisma.InputJsonValue,
-            ...campaignLines,
-            ...categoryLines,
-            ...waqfLines,
+            ...selectLines(true),
           },
           include: {
             donor: { select: { name: true, email: true } },
@@ -771,7 +773,23 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        return { subscription: sub, donation };
+        let oneTimeDonation = null;
+        if (hasOneTime) {
+          oneTimeDonation = await tx.donation.create({ data: {
+            accessToken: mintDonationAccessToken(), amount: oncePrincipal, amountUSD: onceUsd,
+            teamSupport: onceSupport, coverFees, fees: coverFees ? onceTotal - oncePrincipal - onceSupport : 0,
+            totalAmount: onceTotal, currency, status: "PAID", locale: validLocale ?? undefined,
+            donorCountryCode: donorCountrySnapshot, donorId, referralId: referralId ?? undefined,
+            subscriptionId: null, paymentMethod: "CARD", provider: "ALBARAKA", cardDetails: null,
+            providerRaw: { mixedCheckoutParentId: donation.id, paymentRouting: { version: 1, gateway: "ALBARAKA" } } as Prisma.InputJsonValue,
+            ...(donationAttribution ? { attribution: donationAttribution } : {}),
+            ...selectLines(false),
+          } });
+          const providerRaw = { paymentRouting: { version: 1, gateway: "ALBARAKA" }, mixedCheckout: { oneTimeDonationId: oneTimeDonation.id, totalAmount: finalTotalAmount } } as Prisma.InputJsonValue;
+          await tx.donation.update({ where: { id: donation.id }, data: { providerRaw } });
+          Object.assign(donation, { providerRaw });
+        }
+        return { subscription: sub, donation, oneTimeDonation };
       }, { timeout: 15000 });
 
       const d = result.donation;
@@ -782,7 +800,7 @@ export async function POST(request: NextRequest) {
         actorName: donorName,
         actorRole,
         action: "DONATION_RECURRING_CHECKOUT_START",
-        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا ${frequency === "DAILY" ? "يوميًا" : frequency === "FRIDAY" ? "أسبوعياً" : "شهريًا"} عبر السلة (≈ ${donationTotalUsd.toFixed(0)} USD لكل دورة)`,
+        messageAr: `${donorName ?? "متبرع"} بدأ عملية دفع تبرعًا ${frequency === "DAILY" ? "يوميًا" : frequency === "FRIDAY" ? "أسبوعياً" : "شهريًا"} عبر السلة (≈ ${recurringAmountUSD.toFixed(0)} USD لكل دورة)`,
         entityType: "Donation",
         entityId: d.id,
         metadata: { amountUSD: donationTotalUsd, via: "cart_payment", status: "PENDING", provider: rail, frequency, timezone, nextChargeAt: consent.nextChargeAt },
@@ -793,6 +811,7 @@ export async function POST(request: NextRequest) {
         success: true,
         subscription: result.subscription,
         donation: result.donation,
+        oneTimeDonation: result.oneTimeDonation,
       });
     }
 

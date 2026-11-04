@@ -1,9 +1,9 @@
 export type AlbarakaCheckoutMode = "2D" | "3D";
 
 /** Missing mode retains compatibility with older checkout clients. */
-export function albarakaCheckoutMode(requested: unknown, recurring: boolean, mixedBasket = false): AlbarakaCheckoutMode {
+export function albarakaCheckoutMode(requested: unknown, recurring: boolean, _mixedBasket = false): AlbarakaCheckoutMode {
   if (requested !== undefined && requested !== null && requested !== "2D" && requested !== "3D") throw new Error("INVALID_PAYMENT_MODE");
-  return recurring && mixedBasket ? "3D" : recurring ? "2D" : requested === "3D" ? "3D" : "2D";
+  return recurring ? "2D" : requested === "3D" ? "3D" : "2D";
 }
 
 /** Server-written checkout split; never trust a client security-mode downgrade. */

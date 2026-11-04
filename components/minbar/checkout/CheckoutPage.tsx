@@ -246,8 +246,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      so what is previewed here is what is sent. */
   const orderTypeForCart = orderType(items);
   const planFrequency = frequencyOfOrderType(orderTypeForCart);
-  const mixedBasket = Boolean(planFrequency) && items.some(item => item.freqKey === "once");
-  const albarakaSecurityMode = mixedBasket ? "3D" : planFrequency ? "2D" : verificationMode || "2D";
+  const albarakaSecurityMode = planFrequency ? "2D" : verificationMode || "2D";
+  useEffect(() => { if (planFrequency) setMethod("card"); }, [planFrequency]);
 
   /* When the plan will charge  shown before the donor confirms, computed
      the way the server computes it: the same rule from the donor's chosen
@@ -764,7 +764,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               </h2>
 
               <div id="pay-methods" style={{ display: "flex", gap: 10 }}>
-                {methods.filter((m) => m.id !== "bank" || bankAvailable).map((m) => (
+                {methods.filter((m) => planFrequency ? m.id === "card" : m.id !== "bank" || bankAvailable).map((m) => (
                   <button
                     key={m.id}
                     type="button"

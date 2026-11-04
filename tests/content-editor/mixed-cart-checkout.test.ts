@@ -26,7 +26,7 @@ function orderFixture() {
     campaign: { findMany: async ({ where }: Row) => [...new Set(where.id.in)].map(id => ({ id, isActive: true })) },
     category: { findMany: async ({ where }: Row) => [...new Set(where.id.in)].map(id => ({ id, isActive: true })) },
     subscription: { create: async ({ data }: Row) => { plans.push(data); return { id: "plan", ...data }; } },
-    donation: { create: async ({ data }: Row) => { donations.push(data); return { id: "donation", ...data }; } },
+    donation: { update: async ({ where, data }: Row) => Object.assign(donations.find(row => row.id === where.id)!, data), create: async ({ data }: Row) => { const row = { id: String(donations.length + 1).padStart(24, "0"), ...data }; donations.push(row); return row; } },
   };
   db.$transaction = async (callback: (client: Row) => unknown) => callback(db);
   const route = load("app/api/cart/payment/route.ts", {
@@ -75,30 +75,37 @@ for (const type of ["DAILY", "FRIDAY", "MONTHLY"]) test("combined " + type + " i
   const f = orderFixture(), cadence = type.toLowerCase();
   const response = await f.post({ type, items: [{ campaignId: campaign, amount: 10 }, { campaignId: campaign, amount: 5 }], categoryItems: [{ categoryId: category, amount: 7 }, { categoryId: category, amount: 3 }], lineFrequencies: ["once", cadence, "once", cadence] });
   assert.equal(response.status, 200);
-  assert.equal(f.donations[0].totalAmount, 25);
+  assert.equal(f.donations[0].totalAmount, 8);
   assert.equal(f.plans[0].amount, 8);
+  assert.equal(f.donations.length, 2);
+  assert.equal(f.donations[1].subscriptionId, null);
+  assert.equal(f.donations[1].totalAmount, 17);
+  assert.equal(f.donations[0].providerRaw.mixedCheckout.totalAmount, 25);
+  assert.equal(f.donations[1].providerRaw.mixedCheckoutParentId, f.donations[0].id);
+  assert.equal(f.donations[1].items.create[0].amount, 10);
+  assert.equal(f.donations[1].categoryItems.create[0].amount, 7);
   assert.equal(f.plans[0].frequency, type);
   assert.equal(f.plans[0].items.create.length, 1);
   assert.equal(f.plans[0].items.create[0].amount, 5);
   assert.equal(f.plans[0].categoryItems.create.length, 1);
   assert.equal(f.plans[0].categoryItems.create[0].amount, 3);
-  assert.equal(f.donations[0].items.create.length, 2);
-  assert.equal(f.donations[0].categoryItems.create.length, 2);
+  assert.equal(f.donations[0].items.create.length, 1);
+  assert.equal(f.donations[0].categoryItems.create.length, 1);
 });
 test("one-time waqf keeps its certificate lines on the initial donation, not the recurring amount", async () => {
   const f = orderFixture();
   const response = await f.post({ type: "MONTHLY", items: [{ campaignId: campaign, amount: 5 }], waqfItems: [{ unit: "share", count: 2, donorName: "Fixture", onBehalf: "Fixture" }], lineFrequencies: ["monthly", "once"] });
   assert.equal(response.status, 200);
-  assert.equal(f.donations[0].totalAmount, 45);
+  assert.equal(f.donations[0].totalAmount, 5);
   assert.equal(f.plans[0].amount, 5);
-  assert.equal(f.donations[0].waqfItems.create[0].amount, 40);
+  assert.equal(f.donations[1].waqfItems.create[0].amount, 40);
 });
 test("fees and optional team support use the initial and recurring principals separately", async () => {
   for (const teamSupportRecurring of [false, true]) {
     const f = orderFixture();
     const response = await f.post({ type: "MONTHLY", items: [{ campaignId: campaign, amount: 10 }, { campaignId: campaign, amount: 5 }], lineFrequencies: ["once", "monthly"], teamSupport: 2, teamSupportRecurring, coverFees: true });
     assert.equal(response.status, 200);
-    assert.equal(f.donations[0].totalAmount, 17.51);
+    assert.equal(Math.round(f.donations.reduce((sum, row) => sum + row.totalAmount, 0) * 100), 1751);
     assert.equal(f.plans[0].amount, 5);
     assert.equal(f.plans[0].teamSupport, teamSupportRecurring ? 2 : 0);
     assert.equal(f.plans[0].amountUSD, teamSupportRecurring ? 7.21 : 5.15);
@@ -108,7 +115,7 @@ test("server currency conversion occurs before splitting the initial and recurri
   const f = orderFixture();
   const response = await f.post({ type: "DAILY", currency: "TRY", amountsIn: "USD", items: [{ campaignId: campaign, amount: 10 }, { campaignId: campaign, amount: 5 }], lineFrequencies: ["once", "daily"] });
   assert.equal(response.status, 200);
-  assert.equal(f.donations[0].totalAmount, 750);
+  assert.equal(f.donations.reduce((sum, row) => sum + row.totalAmount, 0), 750);
   assert.equal(f.plans[0].amount, 250);
   assert.equal(f.plans[0].amountUSD, 5);
 });
@@ -183,10 +190,8 @@ test("Stripe hosted checkout separates recurring and first-invoice-only prices",
   assert.equal(once.requests[0].mode, "payment");
   assert.equal(once.requests[0].line_items[0].price_data.unit_amount, 1500);
 });
-test("PayPal mixed signup retains the combined initial payment and only the periodic plan amount", async () => {
+test("recurring baskets reject PayPal before creating either accounting record", async () => {
   const f = orderFixture();
-  assert.equal((await f.post({ type: "MONTHLY", paymentMethod: "PAYPAL", items: [{ campaignId: campaign, amount: 10 }, { campaignId: campaign, amount: 5 }], lineFrequencies: ["once", "monthly"] })).status, 200);
-  assert.equal(f.plans[0].provider, "PAYPAL");
-  assert.equal(f.plans[0].amount, 5);
-  assert.equal(f.donations[0].totalAmount, 15);
+  assert.equal((await f.post({ type: "MONTHLY", paymentMethod: "PAYPAL", items: [{ campaignId: campaign, amount: 10 }, { campaignId: campaign, amount: 5 }], lineFrequencies: ["once", "monthly"] })).status, 400);
+  assert.equal(f.plans.length, 0); assert.equal(f.donations.length, 0);
 });

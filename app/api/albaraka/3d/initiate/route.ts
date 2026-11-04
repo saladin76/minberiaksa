@@ -1,3 +1,4 @@
+import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutPair } from "@/lib/donations/mixed-cart";
 import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -163,6 +164,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
 
+    if (mixedCheckoutParent(donation.providerRaw)) {
+      return NextResponse.json({ error: "This donation is paid with its linked recurring checkout", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
+    }
+    const mixedPayment = mixedCheckoutPayment(donation.providerRaw);
+    if (mixedPayment) {
+      const child = await prisma.donation.findUnique({ where: { id: mixedPayment.oneTimeDonationId } });
+      if (!validMixedCheckoutPair(donation, child) || child?.paidAt || child?.status === "FAILED") {
+        return NextResponse.json({ error: "Invalid linked checkout state", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
+      }
+    }
+    const checkoutTotal = mixedPayment?.totalAmount ?? donation.totalAmount;
+
     // Server-side belt matching the PayFor kill-switch: the dialogs already gate the
     // UI on the selected main gateway, but a client could still call this directly.
     // A plan is the exception: daily and Friday plans are Albaraka's whatever the
@@ -223,16 +236,16 @@ export async function POST(req: NextRequest) {
     let currencyCode: AlbarakaCurrencyCode;
 
     if (policy === "USD") {
-      chargeAmount = await toUSD(donation.totalAmount, donation.currency);
+      chargeAmount = await toUSD(checkoutTotal, donation.currency);
       currencyCode = "US";
     } else if (
       policy === "DONOR" &&
       ["TRY", "TL", "USD", "US", "EUR", "EU"].includes(donationCurrency)
     ) {
-      chargeAmount = donation.totalAmount;
+      chargeAmount = checkoutTotal;
       currencyCode = albarakaCurrencyCode(donationCurrency);
     } else {
-      chargeAmount = await toTRY(donation.totalAmount, donation.currency);
+      chargeAmount = await toTRY(checkoutTotal, donation.currency);
       currencyCode = "TL";
     }
 

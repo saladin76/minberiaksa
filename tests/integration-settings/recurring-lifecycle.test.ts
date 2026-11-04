@@ -5,6 +5,7 @@ import fs from "node:fs";
 import * as crypto from "node:crypto";
 import vm from "node:vm";
 import ts from "typescript";
+import { bankRequestsAuthentication } from "../../lib/donations/authentication-recovery";
 import * as mixed from "../../lib/donations/mixed-cart";
 import { albarakaCheckoutMode, isMixedRecurringCheckout } from "../../lib/donations/albaraka-checkout-mode";
 import { albaraka3DLinkageError } from "../../lib/donations/albaraka-3d-verification";
@@ -80,7 +81,8 @@ function fixture(mainGateway = "ALBARAKA") {
   };
   prisma.$transaction = async (operation: unknown) => typeof operation === "function" ? operation(prisma) : Promise.all(operation as Promise<unknown>[]);
   const dependencies: Row = {
-    "@/lib/donations/mixed-cart": mixed,
+    "@/lib/donations/mixed-cart": mixed, "./mixed-cart": mixed,
+    "./mongo-null": load("lib/donations/mongo-null.ts", {}),
     "@/lib/donations/payment-routing-server": { resolveNewCardPaymentRoute: async () => null },
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
     "@/lib/tracking/client-ip": clientIp,
@@ -123,6 +125,17 @@ function fixture(mainGateway = "ALBARAKA") {
       const response = await checkout.POST(request(JSON.parse(String(input.body))));
       return { ok: response.status === 200, status: response.status, json: async () => response.data };
     } });
+  const createCardDonation = driver.createDonation;
+  driver.createDonation = async (input: Row) => {
+    const result = await createCardDonation({ ...input, method: input.method === "PAYPAL" ? "CARD" : input.method });
+    if (input.method === "PAYPAL") {
+      // Legacy PayPal fixture only: new recurring checkout rejects this rail.
+      const plan = plans.get(result.subscriptionId)!;
+      Object.assign(plan, { provider: "PAYPAL" });
+      Object.assign(donations.get(result.id)!, { provider: "PAYPAL", paymentMethod: "PAYPAL", providerRaw: null });
+    }
+    return result;
+  };
   const settlement = load("lib/donations/albaraka-settlement.ts", dependencies);
   const paypalSettlement = load("lib/donations/paypal-donation.ts", dependencies);
   dependencies["@/lib/donations/paypal-donation"] = paypalSettlement;
@@ -400,7 +413,7 @@ for(const rail of ["ALBARAKA","PAYPAL"] as const)test(`${rail}: Friday window is
  const row=[...f.donations.values()].find(row=>row.billingReason==="subscription_cycle")!;assert.equal(row.paidAt,null);assert.match(row.providerErrorMessage,/NOT_SENT/);
 });
 
-for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true], ["MONTHLY", true], ["MONTHLY", false]] as const) test(`mixed TRY ${frequency} ${verificationPassed ? "approved" : "rejected"}: real checkout → 3D callback → recurring-only 2D renewal, with replay and concurrent-worker safety`, async () => {
+for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true], ["MONTHLY", true], ["MONTHLY", false]] as const) test(`mixed TRY ${frequency} ${verificationPassed ? "approved" : "rejected"}: split accounting → single 2D sale → recurring-only renewal`, async () => {
   const f = fixture();
   const cfg = { merchantNo: "900000001", terminalNo: "90000002", posnetId: "900000003", encKey: "test-key-never-live", tdsUrl: "https://bank.invalid/3d", serviceUrl: "https://bank.invalid/api", useOOS: false, useJokerVadaa: false };
   const bankPayloads: Row[] = [], bankTerminals: string[] = [], cards = new Map<string, Row>();
@@ -441,13 +454,18 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
     ], projects: [{ id: "project", slug: "fixture-project" }], currency: "TRY", locale: "ar", method: "CARD", guest: null, teamSupport: 0, teamSupportRecurring: false,
   });
   const plan = f.plans.get(mixedResult.subscriptionId)!, first = f.donations.get(mixedResult.id)!;
-  assert.equal(first.totalAmount, 750);
+  assert.equal(first.totalAmount, 250);
+  const oneTime = [...f.donations.values()].find(row => row.id !== first.id)!;
+  assert.equal(oneTime.totalAmount, 500); assert.equal(oneTime.subscriptionId, null);
+  assert.equal(first.items.length, 1); assert.equal(oneTime.items.length, 1);
   assert.equal(plan.amount, 250); assert.equal(plan.amountUSD, 5);
   assert.equal(plan.items.length, 1); assert.equal(plan.items[0].amount, 250);
   const bankDependencies = { ...f.dependencies, crypto,
     "@/lib/donations/access-token": { withDonationToken: (url: string) => url },
     "next/server": { NextResponse: { ...next.NextResponse, redirect: (url: URL, status: number) => ({ status, location: String(url) }) } },
     "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode, isMixedRecurringCheckout },
+    "@/lib/donations/mixed-cart": mixed,
+    "@/lib/donations/authentication-recovery": { bankRequestsAuthentication },
     "@/lib/donations/albaraka-3d-verification": { albaraka3DLinkageError },
     "@/lib/donations/mongo-null": load("lib/donations/mongo-null.ts", {}),
     "@/lib/payment-public-origin": { paymentPublicOrigin: () => "https://fixture.invalid" },
@@ -456,30 +474,28 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
     "@/lib/donations/albaraka-settlement": f.settlement,
   };
   const initiate = load("app/api/albaraka/3d/initiate/route.ts", bankDependencies);
-  const response = await initiate.POST(request({ donationId: first.id, securityMode: "2D", card: { number: "4242424242424242", expiry: "12/35", cvv: "123", holder: "Fixture" } }));
-  assert.equal(response.status, 200); assert.equal(response.data.actionUrl, cfg.tdsUrl);
-  assert.equal(f.calls(), 0, "3D initiation must not send a sale");
-  assert.equal(first.paidAt, null);
+  const saleBefore = bankAdapter.albarakaService;
+  bankAdapter.albarakaService = async (...args: unknown[]) => verificationPassed ? saleBefore(...args) : { ServiceResponseData: { ResponseCode: "N7", ResponseDescription: "CVV2 validation failed" } };
+  const response = await initiate.POST(request({ donationId: first.id, securityMode: "3D", card: { number: "4242424242424242", expiry: "12/35", cvv: "123", holder: "Fixture" } }));
+  assert.equal(response.status, 200);
+  assert.notEqual(response.data.actionUrl, cfg.tdsUrl);
   assert.ok(plan.paymentCardId); assert.equal(cards.get(plan.paymentCardId)!.cvc, "");
-  const dueBeforePayment = await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: new Date(plan.nextBillingDate) });
-  assert.equal(dueBeforePayment.scanned, 0, "saved card alone cannot authorize an abandoned plan");
-  const raw: Row = { TranType: "Sale", OrderId: first.providerOrderId, MerchantId: cfg.merchantNo, Amount: "75000", Currency: "TL", MdStatus: verificationPassed ? "1" : "0", SecureTransactionId: "fixture-secure", CAVV: "fixture-cavv", ECI: "05", MD: "fixture-md" };
-  raw.MacNew = albaraka.albarakaResponseMac(raw, cfg.encKey);
-  const callback = load("app/api/albaraka/3d/callback/route.ts", bankDependencies);
-  const callbackRequest = () => new Request(`https://fixture.invalid/api/albaraka/3d/callback?donationId=${first.id}&locale=ar`, { method: "POST", body: new URLSearchParams(raw) });
-  await callback.POST(callbackRequest());
+  assert.equal(first.providerRaw.albarakaRequest.mode, "2D");
+  assert.equal((await initiate.POST(request({ donationId: oneTime.id }))).status, 409, "linked one-time record cannot be paid independently");
   if (!verificationPassed) {
-    assert.equal(first.paidAt, null);
-    assert.equal(f.calls(), 0, "failed authentication cannot capture or downgrade to 2D");
+    assert.equal(first.paidAt, null); assert.equal(oneTime.paidAt, null);
+    assert.equal(first.status, "FAILED"); assert.equal(oneTime.status, "FAILED");
+    assert.equal(plan.status, "PAYMENT_FAILED");
     assert.equal((await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: new Date(plan.nextBillingDate) })).scanned, 0);
-    await callback.POST(callbackRequest());
-    assert.equal(f.calls(), 0);
     return;
   }
-  assert.ok(first.paidAt); assert.ok(plan.lastBillingDate); assert.equal(f.calls(), 1);
-  assert.equal(bankTerminals[0], cfg.terminalNo);
+  assert.ok(first.paidAt); assert.ok(oneTime.paidAt); assert.ok(plan.lastBillingDate); assert.equal(f.calls(), 1);
+  assert.equal(first.paidAmount, 250); assert.equal(oneTime.paidAmount, 500);
+  assert.equal(bankTerminals[0], "90000004");
   assert.equal(Number(bankPayloads[0].Amount), 75000);
-  await callback.POST(callbackRequest()); assert.equal(f.calls(), 1, "callback replay must not recapture");
+  await f.settlement.settleAlbarakaDonation(first.id, { ServiceResponseData: { ResponseCode: "00" } });
+  assert.equal(f.calls(), 1, "settlement replay must not recapture");
+  assert.equal(f.increments(), 2, "each disjoint project allocation is counted once");
   const due = new Date(plan.nextBillingDate);
   const runs = await Promise.all([f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due }), f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due })]);
   assert.equal(runs.reduce((n: number, run: Row) => n + run.charged.length, 0), 1);
@@ -489,7 +505,7 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
   assert.equal(bankPayloads[1].IsTDSecureMerchant, "N");
   assert.equal(bankPayloads[1].CardInformationData.Cvc2, "", "renewal cannot carry a stored security code");
   assert.equal(bankPayloads[1].IsRecurring, "Y");
-  const renewal = [...f.donations.values()].find(row => row.id !== first.id)!;
+  const renewal = [...f.donations.values()].find(row => row.id !== first.id && row.id !== oneTime.id)!;
   assert.equal(renewal.totalAmount, 250); assert.equal(renewal.items.length, 1); assert.equal(renewal.items[0].amount, 250);
   await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due });
   assert.equal(f.calls(), 2);

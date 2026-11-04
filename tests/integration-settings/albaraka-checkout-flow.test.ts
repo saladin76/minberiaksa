@@ -1,3 +1,4 @@
+import * as mixedCart from "../../lib/donations/mixed-cart";
 import { frozenPaymentRoute } from "../../lib/donations/payment-routing";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -67,6 +68,7 @@ function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurri
   };
   const modules: Record<string, unknown> = {
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
+    "@/lib/donations/mixed-cart": mixedCart,
     "next/server": { NextResponse: { json: (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), init), redirect: (url: URL, status: number) => new Response(null, { status, headers: { location: url.toString() } }) } },
     "next-auth": { getServerSession: async () => null },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
@@ -232,29 +234,18 @@ test("malformed card authentication nonce never falls through to a valid donatio
  const f=fixture({cardVerification:true});const response=await f.cardCallback("invalid");assert.equal(new URL(response.headers.get("location")!).searchParams.get("cardUpdate"),"failed");assert.equal(f.calls.cardVerifications+f.calls.sales+f.calls.mutations,0);
 });
 
-test("mixed lira checkout authenticates the whole first payment in 3D and links the recurring card before capture", async () => {
-  const f = fixture({ fresh: true, recurring: true, mixed: true, newCard: true, currency: "TRY", totalAmount: 15 });
-  const response = await f.initiate("2D");
+test("mixed lira checkout uses 2D even if the browser requests 3D; no 3D terminal is needed", async () => {
+  const f = fixture({ fresh: true, recurring: true, mixed: true, newCard: true, unavailable3D: true, currency: "TRY", totalAmount: 15 });
+  const response = await f.initiate("3D");
   assert.equal(response.status, 200);
-  const form = await response.json();
-  assert.equal(form.actionUrl, cfg.tdsUrl);
-  assert.equal(f.calls.sales, 0);
+  assert.equal(f.calls.sales, 1);
+  assert.equal(f.calls.terminals[0], twoCfg.terminalNo);
   assert.equal(f.calls.cards, 1);
-  assert.equal(f.calls.storedCards[0].cardNumber, "encrypted-test");
   assert.equal(f.calls.storedCards[0].cvc, "");
   assert.equal((f.state.subscription as { paymentCardId: string }).paymentCardId, "new-fixture-card");
   const snapshot = (f.state.providerRaw as { albarakaRequest: { mode: string; amount: number } }).albarakaRequest;
-  assert.equal(snapshot.mode, "3D");
-  assert.equal(snapshot.amount, 1500);
-  await f.callback(f.raw({ OrderId: String(f.state.providerOrderId), Amount: "1500" }));
-  assert.equal(f.calls.sales, 1);
-  assert.equal(f.calls.terminals[0], cfg.terminalNo);
+  assert.equal(snapshot.mode, "2D"); assert.equal(snapshot.amount, 1500);
   assert.equal(f.calls.settles, 1);
-  await f.callback(f.raw({ OrderId: String(f.state.providerOrderId), Amount: "1500" }));
+  assert.equal((await f.initiate("2D")).status, 400);
   assert.equal(f.calls.sales, 1);
-});
-test("a mixed first payment never falls back to 2D when the 3D terminal is unavailable", async () => {
-  const f = fixture({ fresh: true, recurring: true, mixed: true, newCard: true, unavailable3D: true });
-  assert.equal((await f.initiate("2D")).status, 503);
-  assert.equal(f.calls.sales + f.calls.cards + f.calls.mutations, 0);
 });

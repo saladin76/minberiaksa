@@ -1,3 +1,4 @@
+import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
+    const frozenRoute = frozenPaymentRoute(donation.providerRaw);
+    if (frozenRoute && frozenRoute.gateway !== "STRIPE") return NextResponse.json({ error: "This payment attempt belongs to another gateway", code: "PAYMENT_GATEWAY_LOCKED" }, { status: 409 });
     if (donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
