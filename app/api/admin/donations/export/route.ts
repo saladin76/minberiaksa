@@ -34,6 +34,7 @@ import {
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
+import { loadSubscriptionFrequencies } from "@/lib/dashboard/recurring-frequency-filter";
 import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
 
 export async function GET(request: NextRequest) {
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
+    const frequencyOf = await loadSubscriptionFrequencies(prisma, rows.map(d => d.subscriptionId).filter((id): id is string => Boolean(id)));
     const exportRows: DonationExportRow[] = rows.map((d) => {
       const teamSupport = Number(d.teamSupport ?? 0);
       const fees = Number(d.coverFees ? d.fees ?? 0 : 0);
@@ -140,6 +142,7 @@ export async function GET(request: NextRequest) {
         id: d.id,
         status: d.status,
         type: d.subscriptionId ? "MONTHLY" : "ONE_TIME",
+        frequency: d.subscriptionId ? frequencyOf(d.subscriptionId) : null,
         createdAt: d.createdAt,
         paidAt: d.paidAt ?? null,
         donor: {
@@ -252,3 +255,4 @@ function collectFilterDescriptors(args: {
   out.push({ label: dt("عدد العمليات"), value: String(args.total) });
   return out;
 }
+

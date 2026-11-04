@@ -9664,5 +9664,16 @@
   "لم تنجح أول دفعة؛ هذه محاولة اشتراك وليست اشتراكًا نشطًا.": "The first payment was not confirmed; this signup is not an active subscription.",
   "لم يتفعّل — لا توجد دفعة مؤكدة": "Not activated — no confirmed payment",
   "محاولات لم تتفعّل": "Unactivated signups",
-  "معلق — تعثر التجديد": "Suspended — renewal payment failed"
+  "معلق — تعثر التجديد": "Suspended — renewal payment failed",
+  "الاشتراكات المتكررة فقط": "Recurring subscriptions only",
+  "عرض التبرعات المرتبطة باشتراك دوري": "Show payments linked to a recurring subscription",
+  "إجمالي العملية": "Transaction total",
+  "أُنشئ في: {0} — توقيت إسطنبول": "Generated: {0} — Istanbul time",
+  "الملخص المالي للدفعات المؤكدة فقط؛ لا تُجمع مبالغ العملات المختلفة.": "Financial totals include confirmed payments only; different currencies are not added together.",
+  "المؤشر": "Metric",
+  "المعيار": "Filter",
+  "التحليلات": "Analysis",
+  "إجمالي المحصل المؤكد": "Confirmed receipts",
+  "مسترد": "Refunded",
+  "نقدًا": "Cash"
 }

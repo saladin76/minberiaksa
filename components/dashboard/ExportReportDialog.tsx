@@ -393,7 +393,7 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
                 <SelectContent>
                   <SelectItem value="all">{dt("الكل")}</SelectItem>
                   <SelectItem value="ONE_TIME">{dt("لمرة واحدة")}</SelectItem>
-                  <SelectItem value="MONTHLY">{dt("شهري")}</SelectItem>
+                  <SelectItem value="MONTHLY">{dt("متكرر")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -539,8 +539,8 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
         {enabledFields.subscriptionOnly && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 mt-2">
             <div className="text-start">
-              <div className="text-sm font-medium text-slate-700">{dt("الاشتراكات الشهرية فقط")}</div>
-              <div className="text-xs text-slate-500">{dt("عرض التبرعات المرتبطة بدفعات شهرية")}</div>
+              <div className="text-sm font-medium text-slate-700">{dt("الاشتراكات المتكررة فقط")}</div>
+              <div className="text-xs text-slate-500">{dt("عرض التبرعات المرتبطة باشتراك دوري")}</div>
             </div>
             <Switch
               checked={state.subscriptionOnly}
@@ -581,3 +581,4 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
     </Dialog>
   );
 }
+

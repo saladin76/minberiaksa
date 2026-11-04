@@ -19,7 +19,8 @@
  */
 
 import ExcelJS from "exceljs";
-import { dashIntl, dt } from "@/lib/dashboard/i18n";
+import { dashDir, dashIntl, dt } from "@/lib/dashboard/i18n";
+import { exportCountryName, exportLanguageName, exportPaymentMethod, exportPaymentStatus } from "@/lib/dashboard/export-labels";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ interface ColSpec<T> {
 
 const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
   { key: "id", get header() { return dt("رقم العملية"); }, width: 26, value: (r) => r.id },
-  { key: "status", get header() { return dt("الحالة"); }, width: 10, align: "center", value: (r) => r.status },
+  { key: "status", get header() { return dt("الحالة"); }, width: 16, align: "center", value: (r) => exportPaymentStatus(r.status, r.paidAt) },
   { key: "type", get header() { return dt("النوع"); }, width: 12, align: "center", value: (r) =>
     r.type !== "MONTHLY"
       ? dt("لمرة واحدة")
@@ -156,20 +157,20 @@ const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
   { key: "donorName", get header() { return dt("اسم المتبرع"); }, width: 24, value: (r) => r.donor.name ?? "" },
   { key: "donorEmail", get header() { return dt("بريد المتبرع"); }, width: 28, value: (r) => r.donor.email ?? "" },
   { key: "donorPhone", get header() { return dt("هاتف المتبرع"); }, width: 18, value: (r) => r.donor.phone ?? "" },
-  { key: "country", get header() { return dt("الدولة"); }, width: 10, align: "center", value: (r) => (r.donorCountryCode ?? r.donor.countryCode ?? "").toString().toUpperCase() },
-  { key: "locale", get header() { return dt("اللغة"); }, width: 8, align: "center", value: (r) => r.locale ?? "" },
+  { key: "country", get header() { return dt("الدولة"); }, width: 28, value: (r) => exportCountryName(r.donorCountryCode?.trim() || r.donor.countryCode) },
+  { key: "locale", get header() { return dt("اللغة"); }, width: 18, value: (r) => exportLanguageName(r.locale) },
   { key: "currency", get header() { return dt("العملة"); }, width: 10, align: "center", value: (r) => r.currency },
   { key: "amount", get header() { return dt("مبلغ التبرع"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
   { key: "teamSupport", get header() { return dt("دعم الفريق"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
   { key: "fees", get header() { return dt("رسوم المعالجة"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.fees },
-  { key: "totalAmount", get header() { return dt("الإجمالي المدفوع"); }, width: 16, align: "right", numFmt: "#,##0.00", value: (r) => r.totalAmount },
+  { key: "totalAmount", get header() { return dt("إجمالي العملية"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalAmount },
   { key: "amountUSD", get header() { return dt("بالدولار (USD)"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
   { key: "coverFees", get header() { return dt("غطى الرسوم"); }, width: 12, align: "center", value: (r) => (r.coverFees ? dt("نعم") : dt("لا")) },
   { key: "campaigns", get header() { return dt("الحملات"); }, width: 36, value: (r) => r.campaigns.map((c) => c.title).join(dt("؛ ")) },
   { key: "categories", get header() { return dt("الأقسام"); }, width: 28, value: (r) => r.categories.map((c) => c.name).join(dt("؛ ")) },
   { key: "referralCode", get header() { return dt("رمز الإحالة"); }, width: 14, align: "center", value: (r) => r.referral?.code ?? "" },
   { key: "referralName", get header() { return dt("اسم الإحالة"); }, width: 24, value: (r) => r.referral?.name ?? "" },
-  { key: "paymentMethod", get header() { return dt("وسيلة الدفع"); }, width: 14, align: "center", value: (r) => r.paymentMethod ?? "" },
+  { key: "paymentMethod", get header() { return dt("وسيلة الدفع"); }, width: 18, align: "center", value: (r) => exportPaymentMethod(r.paymentMethod) },
   { key: "provider", get header() { return dt("بوابة الدفع"); }, width: 14, align: "center", value: (r) => r.provider ?? "" },
   { key: "providerOrderId", get header() { return dt("مرجع البوابة"); }, width: 24, value: (r) => r.providerOrderId ?? "" },
   { key: "providerErrorMessage", get header() { return dt("سبب الفشل"); }, width: 30, value: (r) => r.providerErrorMessage ?? "" },
@@ -184,7 +185,7 @@ const SUBSCRIPTION_COLUMNS: ColSpec<SubscriptionExportRow>[] = [
   { key: "donorName", get header() { return dt("اسم المتبرع"); }, width: 24, value: (r) => r.donor.name ?? "" },
   { key: "donorEmail", get header() { return dt("بريد المتبرع"); }, width: 28, value: (r) => r.donor.email ?? "" },
   { key: "donorPhone", get header() { return dt("هاتف المتبرع"); }, width: 18, value: (r) => r.donor.phone ?? "" },
-  { key: "country", get header() { return dt("الدولة"); }, width: 10, align: "center", value: (r) => (r.donor.countryCode ?? "").toString().toUpperCase() },
+  { key: "country", get header() { return dt("الدولة"); }, width: 28, value: (r) => exportCountryName(r.donor.countryCode) },
   { key: "currency", get header() { return dt("العملة"); }, width: 10, align: "center", value: (r) => r.currency },
   { key: "amount", get header() { return dt("قيمة الدورة"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
   { key: "teamSupport", get header() { return dt("دعم الفريق"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
@@ -193,7 +194,7 @@ const SUBSCRIPTION_COLUMNS: ColSpec<SubscriptionExportRow>[] = [
   { key: "totalChargesCount", get header() { return dt("عدد الدفعات الناجحة"); }, width: 18, align: "center", numFmt: "#,##0", value: (r) => r.totalChargesCount },
   { key: "totalChargesAmount", get header() { return dt("إجمالي الدفعات (محلي)"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmount },
   { key: "totalChargesAmountUSD", get header() { return dt("إجمالي الدفعات (USD)"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalChargesAmountUSD },
-  { key: "paymentMethod", get header() { return dt("وسيلة الدفع"); }, width: 14, align: "center", value: (r) => r.paymentMethod ?? "" },
+  { key: "paymentMethod", get header() { return dt("وسيلة الدفع"); }, width: 18, align: "center", value: (r) => exportPaymentMethod(r.paymentMethod) },
   { key: "createdAt", get header() { return dt("تاريخ الإنشاء"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.createdAt },
   { key: "lastBillingDate", get header() { return dt("آخر دفعة"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.lastBillingDate },
   { key: "nextBillingDate", get header() { return dt("الدفعة القادمة"); }, width: 19, numFmt: "yyyy-mm-dd hh:mm", value: (r) => r.nextBillingDate },
@@ -281,10 +282,10 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
 
   // Status bucket (all rows, not just paid  admin still wants visibility on failed/etc.)
   for (const r of rows) {
-    const sKey = r.status || "UNKNOWN";
+    const sKey = r.status === "PAID" && !r.paidAt ? "PENDING" : r.status || "UNKNOWN";
     const sBucket = perStatusMap.get(sKey) ?? {
       key: sKey,
-      label: sKey,
+      label: exportPaymentStatus(sKey, r.paidAt),
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -360,10 +361,10 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     }
 
     // Per-country
-    const countryKey = (r.donorCountryCode || r.donor.countryCode || "_unknown").toUpperCase();
+    const countryKey = (r.donorCountryCode?.trim() || r.donor.countryCode?.trim() || "_unknown").toUpperCase();
     const countryBucket = perCountryMap.get(countryKey) ?? {
       key: countryKey,
-      label: countryKey === "_UNKNOWN" ? dt("غير محدد") : countryKey,
+      label: exportCountryName(countryKey),
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -379,7 +380,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     const locKey = r.locale || "_unknown";
     const locBucket = perLocaleMap.get(locKey) ?? {
       key: locKey,
-      label: locKey === "_unknown" ? dt("غير محدد") : locKey,
+      label: exportLanguageName(r.locale),
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -411,7 +412,7 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
     const pmKey = r.paymentMethod || "_unknown";
     const pmBucket = perPaymentMap.get(pmKey) ?? {
       key: pmKey,
-      label: pmKey === "_unknown" ? dt("غير محدد") : pmKey,
+      label: exportPaymentMethod(r.paymentMethod),
       count: 0,
       donationAmount: 0,
       teamSupport: 0,
@@ -473,16 +474,16 @@ function aggregate(rows: DonationExportRow[]): Aggregates {
 
 // ─── XLSX builder ─────────────────────────────────────────────────────────────
 
-const HEADER_FILL = "FF1E40AF";       // dark blue
+const HEADER_FILL = "FF243F4D";
 const HEADER_TEXT = "FFFFFFFF";
-const TOTAL_FILL = "FFE0F2FE";        // pale blue for total rows
+const TOTAL_FILL = "FFF3E8D1";
 const ALT_ROW_FILL = "FFF8FAFC";      // alternate row tint
-const SECTION_FILL = "FF0F172A";      // section banner (slate-900)
+const SECTION_FILL = "FF892E3C";
 const SECTION_TEXT = "FFFFFFFF";
 
 function styleHeaderRow(row: ExcelJS.Row) {
   row.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: HEADER_TEXT }, size: 11 };
+    cell.font = { name: "Arial", bold: true, color: { argb: HEADER_TEXT }, size: 11 };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } };
     cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
     cell.border = {
@@ -492,25 +493,25 @@ function styleHeaderRow(row: ExcelJS.Row) {
       right: { style: "thin", color: { argb: "FF1E3A8A" } },
     };
   });
-  row.height = 22;
+  row.height = 34;
 }
 
 function styleSectionBanner(row: ExcelJS.Row) {
   row.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: SECTION_TEXT }, size: 12 };
+    cell.font = { name: "Arial", bold: true, color: { argb: SECTION_TEXT }, size: 12 };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: SECTION_FILL } };
-    cell.alignment = { vertical: "middle", horizontal: "right", indent: 1 };
+    cell.alignment = { vertical: "middle", horizontal: dashDir() === "rtl" ? "right" : "left", indent: 1 };
   });
   row.height = 24;
 }
 
 function styleTotalRow(row: ExcelJS.Row) {
   row.eachCell((cell) => {
-    cell.font = { bold: true, size: 11 };
+    cell.font = { name: "Arial", bold: true, size: 11 };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: TOTAL_FILL } };
     cell.border = {
-      top: { style: "medium", color: { argb: "FF1E40AF" } },
-      bottom: { style: "thin", color: { argb: "FF1E40AF" } },
+      top: { style: "medium", color: { argb: "FFD0AE69" } },
+      bottom: { style: "thin", color: { argb: "FFD0AE69" } },
     };
   });
 }
@@ -534,105 +535,145 @@ function fmtMoney(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function addCoverSheet(
-  wb: ExcelJS.Workbook,
-  input: DonationExportInput,
-  agg: Aggregates
-) {
-  const sheet = wb.addWorksheet(dt("ملخص التقرير"), { views: [{ rightToLeft: true, state: "normal" }] });
+const reportClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+});
 
-  sheet.mergeCells("A1:E1");
-  const titleCell = sheet.getCell("A1");
-  titleCell.value = input.title;
-  titleCell.font = { bold: true, size: 18, color: { argb: "FF0F172A" } };
-  titleCell.alignment = { horizontal: "right", vertical: "middle", indent: 1 };
-  sheet.getRow(1).height = 32;
+/** XLSX dates have no zone: store Istanbul's wall clock, as the report states. */
+function reportDate(value: Date): Date {
+  const parts = reportClock.formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find(p => p.type === type)?.value);
+  return new Date(Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second")));
+}
 
-  if (input.subtitle) {
-    sheet.mergeCells("A2:E2");
-    const sub = sheet.getCell("A2");
-    sub.value = input.subtitle;
-    sub.font = { italic: true, size: 12, color: { argb: "FF475569" } };
-    sub.alignment = { horizontal: "right", vertical: "middle", indent: 1 };
-  }
+function configureReportSheet(sheet: ExcelJS.Worksheet, columns: number, detail = false) {
+  sheet.properties.defaultRowHeight = 23;
+  sheet.properties.tabColor = { argb: SECTION_FILL };
+  sheet.views = [{ rightToLeft: dashDir() === "rtl", state: "frozen", ySplit: detail ? 6 : 4, zoomScale: 90, showGridLines: false }];
+  sheet.pageSetup = {
+    paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: detail ? 2 : 1, fitToHeight: 0,
+    printTitlesRow: detail ? "1:6" : "1:4",
+    margins: { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.15, footer: 0.15 },
+  };
+  sheet.headerFooter.oddFooter = "&LMinber Al-Aqsa&C&D&R&P / &N";
+  for (let col = 1; col <= columns; col++) sheet.getColumn(col).width = col === 1 ? 36 : 20;
+}
 
-  sheet.mergeCells("A3:E3");
-  const meta = sheet.getCell("A3");
-  meta.value = dt("أُنشئ في: {0} (UTC)", [new Date().toLocaleString(dashIntl("ar-EG"), { timeZone: "UTC" })]);
-  meta.font = { size: 10, color: { argb: "FF64748B" } };
-  meta.alignment = { horizontal: "right", indent: 1 };
+function addReportHeader(sheet: ExcelJS.Worksheet, input: DonationExportInput, columns: number) {
+  const last = excelCol(columns);
+  for (const r of [1, 2, 3, 4]) sheet.mergeCells(`A${r}:${last}${r}`);
+  const title = sheet.getCell("A1");
+  title.value = input.title;
+  title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: SECTION_FILL } };
+  title.font = { name: "Arial", bold: true, size: 21, color: { argb: HEADER_TEXT } };
+  title.alignment = { horizontal: dashDir() === "rtl" ? "right" : "left", vertical: "middle", indent: 1 };
+  sheet.getRow(1).height = 43;
+  sheet.getCell("A2").value = input.subtitle || dt("الفترة: كل الوقت");
+  sheet.getCell("A2").font = { name: "Arial", size: 12, bold: true, color: { argb: "FF243F4D" } };
+  sheet.getRow(2).height = 26;
+  sheet.getCell("A3").value = dt("أُنشئ في: {0} — توقيت إسطنبول", [
+    new Intl.DateTimeFormat(dashIntl("ar-EG"), { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date()),
+  ]);
+  sheet.getCell("A3").font = { name: "Arial", size: 10, color: { argb: "FF64748B" } };
+  sheet.getCell("A4").value = dt("الملخص المالي للدفعات المؤكدة فقط؛ لا تُجمع مبالغ العملات المختلفة.");
+  sheet.getCell("A4").font = { name: "Arial", size: 10, color: { argb: "FF64748B" } };
+  for (const r of [2, 3, 4]) sheet.getCell(`A${r}`).alignment = {
+    horizontal: dashDir() === "rtl" ? "right" : "left", vertical: "middle", wrapText: true, indent: 1,
+  };
+  sheet.getRow(4).height = 30;
+}
 
-  let row = 5;
+function readableFilters(filters: ExportFilterDescriptor[]): ExportFilterDescriptor[] {
+  return filters.map(f => ({
+    ...f,
+    value: f.label === dt("الدولة") ? exportCountryName(f.value)
+      : f.label === dt("اللغة") ? exportLanguageName(f.value)
+      : f.label === dt("الحالة") || f.label === dt("حالة التبرع") ? exportPaymentStatus(f.value, f.value === "PAID" ? new Date(1) : null)
+      : f.value,
+  }));
+}
 
-  // Filters applied
-  if (input.filters.length > 0) {
-    sheet.mergeCells(`A${row}:E${row}`);
-    const banner = sheet.getCell(`A${row}`);
-    banner.value = dt("المعايير المطبقة");
-    styleSectionBanner(sheet.getRow(row));
-    row += 1;
-    for (const f of input.filters) {
-      sheet.getCell(`A${row}`).value = f.label;
-      sheet.getCell(`B${row}`).value = f.value;
-      sheet.getCell(`A${row}`).font = { bold: true };
-      sheet.getCell(`A${row}`).alignment = { horizontal: "right", indent: 1 };
-      sheet.getCell(`B${row}`).alignment = { horizontal: "right", indent: 1 };
-      row += 1;
-    }
-    row += 1;
-  }
-
-  // KPI grid
-  sheet.mergeCells(`A${row}:E${row}`);
-  sheet.getCell(`A${row}`).value = dt("المؤشرات الرئيسية");
-  styleSectionBanner(sheet.getRow(row));
-  row += 1;
-
-  const kpis: [string, number | string, string?][] = [
+function addCoverSheet(wb: ExcelJS.Workbook, input: DonationExportInput, agg: Aggregates) {
+  const sheet = wb.addWorksheet(dt("ملخص التقرير"));
+  configureReportSheet(sheet, 7);
+  addReportHeader(sheet, input, 7);
+  const moneyKpis = [
+    [dt("إجمالي المبالغ المحصلة (USD)"), agg.totalChargedUSD],
+    [dt("إجمالي التبرعات (USD)"), agg.totalAmountUSD],
+    [dt("إجمالي دعم الفريق (USD)"), agg.totalTeamSupportUSD],
+    [dt("إجمالي الرسوم (USD)"), agg.totalFeesUSD],
+  ] as const;
+  moneyKpis.forEach(([label, value], i) => {
+    const row = 6 + Math.floor(i / 2) * 4;
+    const first = i % 2 === 0 ? "A" : "E", last = i % 2 === 0 ? "C" : "G";
+    sheet.mergeCells(`${first}${row}:${last}${row}`);
+    sheet.mergeCells(`${first}${row + 1}:${last}${row + 2}`);
+    const heading = sheet.getCell(`${first}${row}`), amount = sheet.getCell(`${first}${row + 1}`);
+    heading.value = label;
+    heading.font = { name: "Arial", size: 11, bold: true, color: { argb: "FF475569" } };
+    heading.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    amount.value = fmtMoney(value);
+    amount.numFmt = '"USD" #,##0.00';
+    amount.font = { name: "Arial", size: 23, bold: true, color: { argb: i === 0 ? SECTION_FILL : HEADER_FILL } };
+    amount.fill = { type: "pattern", pattern: "solid", fgColor: { argb: i === 0 ? "FFF3E8D1" : "FFF1F5F9" } };
+    amount.alignment = { horizontal: "center", vertical: "middle" };
+  });
+  const counts = [
     [dt("إجمالي عدد العمليات"), agg.totalCount],
     [dt("العمليات الناجحة"), agg.paidCount],
     [dt("العمليات الفاشلة"), agg.failedCount],
+    [dt("قيد التأكيد"), input.donations.filter(r => r.status === "PENDING" || (r.status === "PAID" && !r.paidAt)).length],
     [dt("لمرة واحدة"), agg.oneTimeCount],
     [dt("متكرر"), agg.monthlyCount],
     [dt("متبرعين فريدين"), agg.uniqueDonors],
-    [dt("إجمالي التبرعات (USD)"), fmtMoney(agg.totalAmountUSD), "$"],
-    [dt("إجمالي دعم الفريق (USD)"), fmtMoney(agg.totalTeamSupportUSD), "$"],
-    [dt("إجمالي الرسوم (USD)"), fmtMoney(agg.totalFeesUSD), "$"],
-    [dt("إجمالي المبالغ المحصلة (USD)"), fmtMoney(agg.totalChargedUSD), "$"],
-    [dt("قيمة العمليات الفاشلة (USD)"), fmtMoney(agg.failedAmountUSD), "$"],
-  ];
-  for (const [label, val, sym] of kpis) {
-    sheet.getCell(`A${row}`).value = label;
-    const valueCell = sheet.getCell(`B${row}`);
-    valueCell.value = val;
-    if (typeof val === "number") {
-      valueCell.numFmt = sym ? `${sym} #,##0.00` : "#,##0";
+  ] as const;
+  const filters = readableFilters(input.filters);
+  sheet.mergeCells("A15:C15");
+  sheet.mergeCells("E15:G15");
+  sheet.getCell("A15").value = dt("المؤشرات الرئيسية");
+  sheet.getCell("E15").value = dt("المعايير المطبقة");
+  styleSectionBanner(sheet.getRow(15));
+  sheet.mergeCells("A16:B16");
+  sheet.mergeCells("F16:G16");
+  sheet.getCell("A16").value = dt("المؤشر");
+  sheet.getCell("C16").value = dt("القيمة");
+  sheet.getCell("E16").value = dt("المعيار");
+  sheet.getCell("F16").value = dt("القيمة");
+  styleHeaderRow(sheet.getRow(16));
+  const panelLength = Math.max(counts.length, filters.length);
+  for (let i = 0; i < panelLength; i++) {
+    const row = i + 17;
+    if (counts[i]) {
+      sheet.mergeCells(`A${row}:B${row}`);
+      sheet.getCell(`A${row}`).value = counts[i][0];
+      sheet.getCell(`C${row}`).value = counts[i][1];
     }
-    sheet.getCell(`A${row}`).font = { bold: true };
-    sheet.getCell(`A${row}`).alignment = { horizontal: "right", indent: 1 };
-    valueCell.font = { bold: true, color: { argb: "FF1E40AF" } };
-    valueCell.alignment = { horizontal: "left" };
-    row += 1;
+    if (filters[i]) {
+      sheet.mergeCells(`F${row}:G${row}`);
+      sheet.getCell(`E${row}`).value = filters[i].label;
+      sheet.getCell(`F${row}`).value = filters[i].value;
+    }
+    sheet.getRow(row).eachCell(cell => {
+      cell.font = { name: "Arial", size: 11, color: { argb: HEADER_FILL } };
+      cell.alignment = { horizontal: dashDir() === "rtl" ? "right" : "left", vertical: "middle", wrapText: true };
+      if (i % 2 === 0) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ALT_ROW_FILL } };
+    });
+    sheet.getRow(row).height = 25;
   }
-  row += 1;
-
-  // Per-currency breakdown
-  row = addBreakdownTable(
-    sheet,
-    row,
-    dt("تفصيل حسب العملة"),
+  addBreakdownTable(sheet, panelLength + 19, dt("تفصيل حسب العملة"),
     [dt("العملة"), dt("العدد"), dt("مبلغ التبرع (محلي)"), dt("دعم الفريق (محلي)"), dt("الرسوم (محلي)"), dt("إجمالي محصل (محلي)"), dt("بالدولار (USD)")],
-    agg.perCurrency.map((c) => [
-      c.currency,
-      c.count,
-      fmtMoney(c.donationAmount),
-      fmtMoney(c.teamSupport),
-      fmtMoney(c.fees),
-      fmtMoney(c.totalCharged),
-      fmtMoney(c.amountUSD),
-    ])
-  );
+    agg.perCurrency.map(c => [c.currency, c.count, fmtMoney(c.donationAmount), fmtMoney(c.teamSupport), fmtMoney(c.fees), fmtMoney(c.totalCharged), fmtMoney(c.amountUSD)]),
+    { noTotal: true });
+  sheet.pageSetup.printArea = `A1:G${sheet.rowCount}`;
+  sheet.pageSetup.fitToHeight = 1;
+}
 
+function addAnalysisSheet(wb: ExcelJS.Workbook, input: DonationExportInput, agg: Aggregates) {
+  const sheet = wb.addWorksheet(dt("التحليلات"));
+  configureReportSheet(sheet, 5);
+  addReportHeader(sheet, input, 5);
+  let row = 6;
   row = addBreakdownTable(
     sheet,
     row,
@@ -728,23 +769,17 @@ function addCoverSheet(
     agg.perStatus.map((b) => [b.label, b.count, fmtMoney(b.amountUSD)])
   );
 
-  // Column widths
-  sheet.getColumn(1).width = 36;
-  sheet.getColumn(2).width = 16;
-  sheet.getColumn(3).width = 22;
-  sheet.getColumn(4).width = 22;
-  sheet.getColumn(5).width = 22;
-  sheet.getColumn(6).width = 22;
-  sheet.getColumn(7).width = 22;
-}
 
+  sheet.getColumn(1).width = 45;
+  sheet.pageSetup.printArea = `A1:E${sheet.rowCount}`;
+}
 function addBreakdownTable(
   sheet: ExcelJS.Worksheet,
   startRow: number,
   title: string,
   headers: string[],
   rows: (string | number)[][],
-  opts?: { highlightTop?: boolean }
+  opts?: { highlightTop?: boolean; noTotal?: boolean }
 ): number {
   let r = startRow;
   if (rows.length === 0) return r;
@@ -767,14 +802,16 @@ function addBreakdownTable(
     rows[i].forEach((v, idx) => {
       const cell = dataRow.getCell(idx + 1);
       cell.value = v;
+      cell.font = { name: "Arial", size: 11, color: { argb: "FF243F4D" } };
       if (typeof v === "number") {
         // First column is text label; numeric columns get currency format starting from col 3.
         cell.numFmt = idx >= 2 ? "#,##0.00" : "#,##0";
-        cell.alignment = { horizontal: "left" };
+        cell.alignment = { horizontal: "right", vertical: "middle" };
       } else {
-        cell.alignment = { horizontal: "right", indent: 1 };
+        cell.alignment = { horizontal: dashDir() === "rtl" ? "right" : "left", vertical: "middle", wrapText: true, indent: 1 };
       }
     });
+    dataRow.height = Math.min(70, Math.max(25, ...rows[i].map(v => typeof v === "string" ? Math.ceil(v.length / 35) * 17 : 25)));
     if (opts?.highlightTop && i === 0) {
       dataRow.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: "FF166534" } };
@@ -785,7 +822,7 @@ function addBreakdownTable(
   applyZebra(sheet, dataStart, r - 1);
 
   // Totals
-  if (rows.length > 1) {
+  if (!opts?.noTotal && rows.length > 1) {
     const totalsRow = sheet.getRow(r);
     totalsRow.getCell(1).value = dt("الإجمالي");
     for (let col = 2; col <= headers.length; col++) {
@@ -793,7 +830,10 @@ function addBreakdownTable(
       const sample = rows[0][col - 1];
       if (typeof sample === "number") {
         const colLetter = String.fromCharCode("A".charCodeAt(0) + col - 1);
-        totalsRow.getCell(col).value = { formula: `SUM(${colLetter}${dataStart}:${colLetter}${r - 1})` };
+        totalsRow.getCell(col).value = {
+          formula: `SUM(${colLetter}${dataStart}:${colLetter}${r - 1})`,
+          result: fmtMoney(rows.reduce((sum, values) => sum + Number(values[col - 1]), 0)),
+        };
         totalsRow.getCell(col).numFmt = col >= 3 ? "#,##0.00" : "#,##0";
       }
     }
@@ -803,12 +843,13 @@ function addBreakdownTable(
   return r + 1; // gap after the table
 }
 
-function addDonationsSheet(wb: ExcelJS.Workbook, rows: DonationExportRow[]) {
-  const sheet = wb.addWorksheet(dt("التبرعات"), {
-    views: [{ rightToLeft: true, state: "frozen", ySplit: 1 }],
-  });
+function addDonationsSheet(wb: ExcelJS.Workbook, input: DonationExportInput) {
+  const rows = input.donations;
+  const sheet = wb.addWorksheet(dt("التبرعات"));
+  configureReportSheet(sheet, DONATION_COLUMNS.length, true);
+  addReportHeader(sheet, input, DONATION_COLUMNS.length);
 
-  const headerRow = sheet.getRow(1);
+  const headerRow = sheet.getRow(6);
   DONATION_COLUMNS.forEach((col, idx) => {
     sheet.getColumn(idx + 1).width = col.width;
     headerRow.getCell(idx + 1).value = col.header;
@@ -816,32 +857,39 @@ function addDonationsSheet(wb: ExcelJS.Workbook, rows: DonationExportRow[]) {
   styleHeaderRow(headerRow);
 
   for (let i = 0; i < rows.length; i++) {
-    const dataRow = sheet.getRow(i + 2);
+    const dataRow = sheet.getRow(i + 7);
     DONATION_COLUMNS.forEach((col, idx) => {
       const cell = dataRow.getCell(idx + 1);
       const v = col.value(rows[i]);
-      cell.value = v == null ? "" : (v as ExcelJS.CellValue);
+      cell.value = v instanceof Date ? reportDate(v) : v == null ? "" : (v as ExcelJS.CellValue);
+      cell.font = { name: "Arial", size: 11, color: { argb: "FF243F4D" } };
       if (col.numFmt) cell.numFmt = col.numFmt;
-      if (col.align) cell.alignment = { horizontal: col.align, vertical: "middle" };
+      cell.alignment = { horizontal: col.align ?? (dashDir() === "rtl" ? "right" : "left"), vertical: "middle", wrapText: true };
 
       // Highlight failed rows
-      if (rows[i].status === "FAILED") {
-        cell.font = { color: { argb: "FFB91C1C" } };
+      if (col.key === "status") {
+        cell.font = { name: "Arial", bold: true, color: { argb: rows[i].status === "FAILED" ? "FFB91C1C" : rows[i].status === "PAID" && rows[i].paidAt ? "FF166534" : "FF92400E" } };
       }
     });
+    dataRow.height = Math.min(160, Math.max(36, ...DONATION_COLUMNS.map(col => Math.ceil(String(col.value(rows[i]) ?? "").length / Math.max(10, col.width - 2)) * 16)));
   }
 
   if (rows.length > 0) {
-    applyZebra(sheet, 2, rows.length + 1);
+    applyZebra(sheet, 7, rows.length + 6);
 
     // Totals row
-    const totalsRow = sheet.getRow(rows.length + 2);
-    totalsRow.getCell(1).value = dt("الإجمالي");
+    const confirmed = rows.filter(r => r.status === "PAID" && r.paidAt != null);
+    const paidCurrencies = new Set(confirmed.map(r => r.currency));
+    const totalsRow = sheet.getRow(rows.length + 7);
+    totalsRow.getCell(1).value = dt("إجمالي المحصل المؤكد");
+    totalsRow.getCell(11).value = paidCurrencies.size === 1 ? [...paidCurrencies][0] : "";
     DONATION_COLUMNS.forEach((col, idx) => {
       const colLetter = excelCol(idx + 1);
       if (col.key === "amount" || col.key === "teamSupport" || col.key === "fees" || col.key === "totalAmount" || col.key === "amountUSD") {
-        totalsRow.getCell(idx + 1).value = {
-          formula: `SUM(${colLetter}2:${colLetter}${rows.length + 1})`,
+        const key = col.key as "amount" | "teamSupport" | "fees" | "totalAmount" | "amountUSD";
+        totalsRow.getCell(idx + 1).value = key !== "amountUSD" && paidCurrencies.size > 1 ? "—" : {
+          formula: `SUMIFS(${colLetter}7:${colLetter}${rows.length + 6},B7:B${rows.length + 6},"${dt("ناجح")}",E7:E${rows.length + 6},">0")`,
+          result: fmtMoney(confirmed.reduce((sum, r) => sum + (r[key] ?? 0), 0)),
         };
         totalsRow.getCell(idx + 1).numFmt = "#,##0.00";
       }
@@ -849,18 +897,20 @@ function addDonationsSheet(wb: ExcelJS.Workbook, rows: DonationExportRow[]) {
     styleTotalRow(totalsRow);
 
     sheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: rows.length + 1, column: DONATION_COLUMNS.length },
+      from: { row: 6, column: 1 },
+      to: { row: rows.length + 6, column: DONATION_COLUMNS.length },
     };
   }
+  sheet.pageSetup.printArea = `A1:${excelCol(DONATION_COLUMNS.length)}${sheet.rowCount}`;
 }
 
-function addSubscriptionsSheet(wb: ExcelJS.Workbook, rows: SubscriptionExportRow[]) {
-  const sheet = wb.addWorksheet(dt("الاشتراكات"), {
-    views: [{ rightToLeft: true, state: "frozen", ySplit: 1 }],
-  });
+function addSubscriptionsSheet(wb: ExcelJS.Workbook, input: DonationExportInput) {
+  const rows = input.subscriptions ?? [];
+  const sheet = wb.addWorksheet(dt("الاشتراكات"));
+  configureReportSheet(sheet, SUBSCRIPTION_COLUMNS.length, true);
+  addReportHeader(sheet, input, SUBSCRIPTION_COLUMNS.length);
 
-  const headerRow = sheet.getRow(1);
+  const headerRow = sheet.getRow(6);
   SUBSCRIPTION_COLUMNS.forEach((col, idx) => {
     sheet.getColumn(idx + 1).width = col.width;
     headerRow.getCell(idx + 1).value = col.header;
@@ -868,38 +918,44 @@ function addSubscriptionsSheet(wb: ExcelJS.Workbook, rows: SubscriptionExportRow
   styleHeaderRow(headerRow);
 
   for (let i = 0; i < rows.length; i++) {
-    const dataRow = sheet.getRow(i + 2);
+    const dataRow = sheet.getRow(i + 7);
     SUBSCRIPTION_COLUMNS.forEach((col, idx) => {
       const cell = dataRow.getCell(idx + 1);
       const v = col.value(rows[i]);
-      cell.value = v == null ? "" : (v as ExcelJS.CellValue);
+      cell.value = v instanceof Date ? reportDate(v) : v == null ? "" : (v as ExcelJS.CellValue);
+      cell.font = { name: "Arial", size: 11 };
       if (col.numFmt) cell.numFmt = col.numFmt;
-      if (col.align) cell.alignment = { horizontal: col.align, vertical: "middle" };
+      cell.alignment = { horizontal: col.align ?? (dashDir() === "rtl" ? "right" : "left"), vertical: "middle", wrapText: true };
       if (rows[i].status === "CANCELLED") {
         cell.font = { color: { argb: "FF9CA3AF" }, italic: true };
       } else if (rows[i].status === "PAUSED") {
         cell.font = { color: { argb: "FFB45309" } };
       }
     });
+    dataRow.height = Math.min(160, Math.max(36, ...SUBSCRIPTION_COLUMNS.map(col => Math.ceil(String(col.value(rows[i]) ?? "").length / Math.max(10, col.width - 2)) * 16)));
   }
 
   if (rows.length > 0) {
-    applyZebra(sheet, 2, rows.length + 1);
+    applyZebra(sheet, 7, rows.length + 6);
 
-    const totalsRow = sheet.getRow(rows.length + 2);
+    const totalsRow = sheet.getRow(rows.length + 7);
     totalsRow.getCell(1).value = dt("الإجمالي");
+    const currencies = new Set(rows.map(r => r.currency));
     SUBSCRIPTION_COLUMNS.forEach((col, idx) => {
       const colLetter = excelCol(idx + 1);
       if (
         col.key === "amount" ||
         col.key === "teamSupport" ||
         col.key === "amountUSD" ||
+        col.key === "monthlyEquivalentUSD" ||
         col.key === "totalChargesCount" ||
         col.key === "totalChargesAmount" ||
         col.key === "totalChargesAmountUSD"
       ) {
-        totalsRow.getCell(idx + 1).value = {
-          formula: `SUM(${colLetter}2:${colLetter}${rows.length + 1})`,
+        const key = col.key as "amount" | "teamSupport" | "amountUSD" | "monthlyEquivalentUSD" | "totalChargesCount" | "totalChargesAmount" | "totalChargesAmountUSD";
+        totalsRow.getCell(idx + 1).value = ["amount", "teamSupport", "totalChargesAmount"].includes(key) && currencies.size > 1 ? "—" : {
+          formula: `SUM(${colLetter}7:${colLetter}${rows.length + 6})`,
+          result: fmtMoney(rows.reduce((sum, r) => sum + (r[key] ?? 0), 0)),
         };
         totalsRow.getCell(idx + 1).numFmt = col.key === "totalChargesCount" ? "#,##0" : "#,##0.00";
       }
@@ -907,10 +963,11 @@ function addSubscriptionsSheet(wb: ExcelJS.Workbook, rows: SubscriptionExportRow
     styleTotalRow(totalsRow);
 
     sheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: rows.length + 1, column: SUBSCRIPTION_COLUMNS.length },
+      from: { row: 6, column: 1 },
+      to: { row: rows.length + 6, column: SUBSCRIPTION_COLUMNS.length },
     };
   }
+  sheet.pageSetup.printArea = `A1:${excelCol(SUBSCRIPTION_COLUMNS.length)}${sheet.rowCount}`;
 }
 
 function excelCol(n: number): string {
@@ -925,15 +982,18 @@ function excelCol(n: number): string {
 
 async function buildXlsx(input: DonationExportInput): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Alafiya Dashboard";
+  wb.creator = "Minber Al-Aqsa";
+  wb.company = "Minber Al-Aqsa International";
+  wb.calcProperties.fullCalcOnLoad = true;
   wb.created = new Date();
   wb.title = input.title;
 
   const agg = aggregate(input.donations);
   addCoverSheet(wb, input, agg);
-  addDonationsSheet(wb, input.donations);
+  addDonationsSheet(wb, input);
+  addAnalysisSheet(wb, input, agg);
   if (input.subscriptions) {
-    addSubscriptionsSheet(wb, input.subscriptions);
+    addSubscriptionsSheet(wb, input);
   }
 
   const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
@@ -945,8 +1005,9 @@ async function buildXlsx(input: DonationExportInput): Promise<Buffer> {
 function csvEscape(v: string | number | Date | null | undefined): string {
   if (v == null) return "";
   let s: string;
-  if (v instanceof Date) s = v.toISOString();
+  if (v instanceof Date) s = reportDate(v).toISOString().replace("Z", "+03:00");
   else s = String(v);
+  if (typeof v === "string" && /^\s*[=+@-]/.test(s)) s = "'" + s;
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -958,7 +1019,7 @@ function buildCsv(input: DonationExportInput): Buffer {
   lines.push(`# generated at: ${new Date().toISOString()}`);
   if (input.filters.length > 0) {
     lines.push(dt("# المعايير المطبقة:"));
-    for (const f of input.filters) lines.push(`# ${f.label}: ${f.value}`);
+    for (const f of readableFilters(input.filters)) lines.push(`# ${f.label}: ${f.value}`);
   }
   lines.push("");
 
@@ -1119,3 +1180,4 @@ export function buildContentDisposition(result: ExportResult): string {
   );
   return `attachment; filename="${safe}"; filename*=UTF-8''${utf8}`;
 }
+

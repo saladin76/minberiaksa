@@ -9656,5 +9656,16 @@
   "لم تنجح أول دفعة؛ هذه محاولة اشتراك وليست اشتراكًا نشطًا.": "İlk ödeme onaylanmadı; bu kayıt etkin bir abonelik değildir.",
   "لم يتفعّل — لا توجد دفعة مؤكدة": "Etkinleştirilmedi — onaylanmış ödeme yok",
   "محاولات لم تتفعّل": "Etkinleştirilmeyen kayıtlar",
-  "معلق — تعثر التجديد": "Askıda — yenileme ödemesi başarısız"
+  "معلق — تعثر التجديد": "Askıda — yenileme ödemesi başarısız",
+  "الاشتراكات المتكررة فقط": "Yalnızca düzenli abonelikler",
+  "عرض التبرعات المرتبطة باشتراك دوري": "Düzenli aboneliğe bağlı ödemeleri göster",
+  "إجمالي العملية": "İşlem toplamı",
+  "أُنشئ في: {0} — توقيت إسطنبول": "Oluşturulma: {0} — İstanbul saati",
+  "الملخص المالي للدفعات المؤكدة فقط؛ لا تُجمع مبالغ العملات المختلفة.": "Finansal toplamlar yalnızca onaylanmış ödemeleri içerir; farklı para birimleri toplanmaz.",
+  "المؤشر": "Gösterge",
+  "المعيار": "Filtre",
+  "التحليلات": "Analiz",
+  "إجمالي المحصل المؤكد": "Onaylanmış tahsilat",
+  "مسترد": "İade edildi",
+  "نقدًا": "Nakit"
 }
