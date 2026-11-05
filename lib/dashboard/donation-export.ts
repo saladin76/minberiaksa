@@ -60,6 +60,7 @@ export interface DonationExportRow {
   fees: number;
   totalAmount: number;     // amount + teamSupport + fees (if coverFees)
   coverFees: boolean;
+  projectAllocations?: { id: string; title: string; amount: number }[];
   campaigns: { id: string; title: string }[];
   categories: { id: string; name: string }[];
   referral: { id: string; code: string | null; name: string | null } | null;
@@ -1006,15 +1007,28 @@ function addManagementSheets(wb: ExcelJS.Workbook, input: DonationExportInput, a
 
   const projects = makeSheet("المشاريع", 4);
   const projectTable = (start: number, title: string, rows: DonationExportRow[]) => {
-    // A cart containing multiple projects remains an explicitly named group. This
-    // avoids inventing line allocations that the export input does not contain.
-    const buckets = metrics(rows, r => JSON.stringify([...new Set(r.campaigns.map(c => c.title))].sort()), key => {
-      const titles = JSON.parse(key) as string[];
-      return titles.length ? titles.join(dt("؛ ")) : dt("غير محدد");
-    });
+    const byProject = new Map<string, { label: string; donations: Set<string>; amount: number }>();
+    for (const row of rows) {
+      const lines = row.projectAllocations ?? (row.campaigns.length === 1 && !row.categories.length
+        ? [{ ...row.campaigns[0], amount: row.amount }] : []);
+      const valid = lines.filter(line => Number.isFinite(line.amount) && line.amount > 0);
+      const allocated = valid.reduce((sum, line) => sum + line.amount, 0);
+      // Never assign an untraceable legacy basket equally or duplicate its total.
+      const entries = allocated > row.amount + 0.000001 ? [] : valid;
+      const remainder = entries.length ? Math.max(0, row.amount - allocated) : row.amount;
+      if (remainder > 0 || !entries.length) entries.push({ id: "_unknown", title: dt("غير محدد"), amount: remainder });
+      for (const line of entries) {
+        const bucket = byProject.get(line.id) ?? { label: line.title, donations: new Set<string>(), amount: 0 };
+        bucket.donations.add(row.id);
+        bucket.amount += ratio(line.amount, row.totalAmount || row.amount + row.teamSupport + row.fees, row.amountUSD);
+        byProject.set(line.id, bucket);
+      }
+    }
+    const buckets = [...byProject.values()].map(b => ({ label: b.label, count: b.donations.size, amount: b.amount }))
+      .sort((a, b) => b.amount - a.amount);
     const total = buckets.reduce((sum, b) => sum + b.amount, 0);
     const end = addBreakdownTable(projects, start, title,
-      [dt("المشروع / مجموعة المشاريع"), dt("عدد التبرعات"), dt("مبلغ التبرع (USD)"), dt("النسبة من التبرعات")],
+      [dt("المشروع"), dt("عدد التبرعات"), dt("مبلغ التبرع (USD)"), dt("النسبة من التبرعات")],
       buckets.map(b => [b.label, b.count, fmtMoney(b.amount), total ? b.amount / total : 0]));
     for (let r = start + 2; r < end - 1; r++) projects.getCell(r, 4).numFmt = "0.0%";
     return end;

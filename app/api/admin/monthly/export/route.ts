@@ -270,6 +270,10 @@ function toDonationRow(
     fees,
     totalAmount: total,
     coverFees: !!d.coverFees,
+    projectAllocations: [
+      ...d.items.map(i => ({ id: `campaign:${i.campaign.id}`, title: i.campaign.title, amount: Number(i.amount) })),
+      ...d.categoryItems.map(i => ({ id: `category:${i.category.id}`, title: i.category.name, amount: Number(i.amount) })),
+    ],
     campaigns: d.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
     categories: d.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
     referral: d.referral ? { id: d.referral.id, code: d.referral.code, name: d.referral.name } : null,

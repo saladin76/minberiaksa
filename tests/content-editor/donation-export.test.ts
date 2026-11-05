@@ -275,3 +275,43 @@ test("plan loader reads authoritative provider and lifetime paid totals without 
   assert.equal(plan.totalChargesCount, 3);
   assert.equal(plan.totalChargesMissingUSD, 1);
 });
+
+test("projects split actual basket lines, count each payment once and reconcile without support", async () => {
+  setDashLocale("ar");
+  const wb = await workbook([gift({ amount: 100, teamSupport: 20, totalAmount: 120, amountUSD: 240,
+    campaigns: [{ id: "a", title: "أ" }, { id: "b", title: "ب" }],
+    projectAllocations: [{ id: "a", title: "أ", amount: 20 }, { id: "a", title: "أ", amount: 10 }, { id: "b", title: "ب", amount: 70 }],
+  }), gift({ id: "second", amount: 10, totalAmount: 10, teamSupport: 0, amountUSD: 20,
+    projectAllocations: [{ id: "a", title: "أ", amount: 10 }] })]);
+  const sheet = wb.getWorksheet("المشاريع")!;
+  assert.deepEqual([sheet.getCell("A8").value, sheet.getCell("B8").value, sheet.getCell("C8").value], ["ب", 1, 140]);
+  assert.deepEqual([sheet.getCell("A9").value, sheet.getCell("B9").value, sheet.getCell("C9").value], ["أ", 2, 80]);
+  assert.equal(Number(sheet.getCell("D8").value) + Number(sheet.getCell("D9").value), 1);
+});
+
+test("unallocated legacy baskets retain unknown amounts instead of inventing project shares", async () => {
+  setDashLocale("ar");
+  const sheet = (await workbook([gift({ campaigns: [{ id: "a", title: "أ" }, { id: "b", title: "ب" }] })])).getWorksheet("المشاريع")!;
+  assert.equal(sheet.getCell("A8").value, "غير محدد");
+  assert.equal(sheet.getCell("C8").value, 15.5);
+});
+
+test("project identity, category lines and unallocated balances remain separate in both report languages", async () => {
+  for (const language of ["ar", "en"] as const) {
+    const out = await buildDonationExport({ language, format: "xlsx", title: "تقرير التبرعات", filters: [], donations: [gift({
+      amount: 100, amountUSD: 110, teamSupport: 10, totalAmount: 110,
+      projectAllocations: [{ id: "campaign:a", title: "Same title", amount: 20 }, { id: "campaign:b", title: "Same title", amount: 30 },
+        { id: "category:a", title: "Category", amount: 40 }],
+    })] });
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(out.body as never);
+    const sheet = wb.worksheets[3];
+    const amounts: number[] = [];
+    for (let row = 8; row <= 11; row++) {
+      amounts.push(Number(sheet.getCell(row, 3).value));
+      assert.equal(sheet.getCell(row, 2).value, 1);
+    }
+    assert.deepEqual(amounts, [40, 30, 20, 10]);
+    assert.equal(amounts.reduce((a, b) => a + b, 0), 100);
+  }
+});
