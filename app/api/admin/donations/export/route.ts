@@ -1,3 +1,5 @@
+import { loadReportSubscriptions } from "@/lib/dashboard/report-subscriptions";
+import { dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
 import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
 /**
  * GET /api/admin/donations/export
@@ -35,11 +37,10 @@ import {
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
 import { loadSubscriptionFrequencies } from "@/lib/dashboard/recurring-frequency-filter";
-import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
+import { DASH_LOCALE_COOKIE, parseDashLocale } from "@/lib/dashboard/i18n";
 
-export async function GET(request: NextRequest) {
+async function localizedGET(request: NextRequest) {
   // Sheet names, headers and labels in the dashboard's interface language.
-  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "revenue");
@@ -198,12 +199,18 @@ export async function GET(request: NextRequest) {
       titleSubtitle = dt("الفترة: كل الوقت");
     }
 
+    const subscriptions = await loadReportSubscriptions(exportRows.map(r => r.subscriptionId).filter((id): id is string => Boolean(id)));
+    exportFilters.push({ label: dt("نطاق الاشتراكات"), value: dt("الاشتراكات المرتبطة بصفوف التبرعات المصدّرة؛ الحالات حالية والإجماليات طوال المدة") });
+    exportFilters.push({ label: dt("أساس الفترة"), value: dt("تاريخ إنشاء التبرع؛ المبالغ المحصّلة تخص الدفعات المؤكدة ضمن النتائج المصدّرة") });
+    exportFilters.push({ label: dt("حد صفوف التبرعات"), value: String(limit) });
     const out = await buildDonationExport({
       format,
+      period: { start: dateFilter.gte, end: dateFilter.lte },
       title: dt("تقرير التبرعات"),
       subtitle: titleSubtitle,
       filters: exportFilters,
       donations: exportRows,
+      subscriptions,
     });
 
     return new NextResponse(out.body as unknown as BodyInit, {
@@ -256,3 +263,9 @@ function collectFilterDescriptors(args: {
   return out;
 }
 
+
+
+export async function GET(request: NextRequest) {
+  const language = request.nextUrl.searchParams.get("reportLanguage") ?? parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value);
+  return withReportLanguage(language, () => localizedGET(request));
+}

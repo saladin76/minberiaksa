@@ -88,6 +88,7 @@ export interface ExportReportDialogProps {
 
 export interface ExportFormState {
   format: ExportFormat;
+  reportLanguage?: "ar" | "en";
   period: "day" | "week" | "month" | "all" | "custom";
   start: string;             // YYYY-MM-DD
   end: string;
@@ -109,6 +110,7 @@ export interface ExportFormState {
 
 export const EXPORT_DEFAULTS: ExportFormState = {
   format: "xlsx",
+  reportLanguage: "ar",
   period: "all",
   start: "",
   end: "",
@@ -144,6 +146,7 @@ function resolveDateRange(state: ExportFormState): { start: string; end: string 
 function buildQuery(endpoint: string, state: ExportFormState, fields: ExportReportDialogProps["enabledFields"]): string {
   const params = new URLSearchParams();
   params.set("format", state.format);
+  params.set("reportLanguage", state.reportLanguage ?? "ar");
 
   if (fields.period || fields.dateRange) {
     const { start, end } = resolveDateRange(state);
@@ -245,6 +248,14 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
           )}
         </DialogHeader>
 
+        <label className="grid gap-2 text-sm font-medium">
+          {dt("لغة التقرير")}
+          <select className="h-10 rounded-md border bg-background px-3" value={state.reportLanguage ?? "ar"}
+            onChange={(event) => setField("reportLanguage", event.target.value as "ar" | "en")}>
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         {/* Format toggle */}
         <div className="grid grid-cols-2 gap-3 my-2">
           <button
@@ -581,4 +592,5 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
     </Dialog>
   );
 }
+
 

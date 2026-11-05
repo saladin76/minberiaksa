@@ -1,4 +1,5 @@
 import test from "node:test";
+import type { PrismaClient } from "@prisma/client";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import { buildDonationExport, type DonationExportRow, type SubscriptionExportRow } from "../../lib/dashboard/donation-export";
@@ -106,7 +107,7 @@ test("CSV also uses full country and language names and keeps formula-looking in
 test("empty reports remain valid workbooks with summary and filterable column headers", async () => {
   setDashLocale("ar");
   const wb = await workbook([]);
-  assert.equal(wb.worksheets.length, 6);
+  assert.equal(wb.worksheets.length, 7);
   assert.equal(wb.getWorksheet(dt("التبرعات"))!.getCell("I6").value, dt("الدولة"));
   assert.equal(wb.getWorksheet(dt("ملخص التقرير"))!.getCell("A7").value, 0);
 });
@@ -131,7 +132,7 @@ test("recurring report country labels are complete and its local totals respect 
 test("management views have integer cart counts, external spend inputs and blank guarded ratios", async () => {
   setDashLocale("ar");
   const wb = await workbook([gift({ campaigns: [{ id: "a", title: "أ" }, { id: "b", title: "ب" }] }), gift({ id: "failed", status: "FAILED", paidAt: null, amountUSD: 999 })]);
-  assert.deepEqual(wb.worksheets.map(s => s.name), ["ملخص التقرير", "الدول", "اللغات", "المشاريع", "المحاولات الفاشلة", "التبرعات"]);
+  assert.deepEqual(wb.worksheets.map(s => s.name), ["ملخص التقرير", "الدول", "اللغات", "المشاريع", "المحاولات الفاشلة", "التبرعات", "بوابات الدفع"]);
   const countries = wb.getWorksheet("الدول")!;
   assert.equal(countries.getCell("B8").value, 1);
   assert.equal(countries.getCell("C8").value, 15.5);
@@ -143,4 +144,134 @@ test("management views have integer cart counts, external spend inputs and blank
   assert.equal(projects.getCell("B8").value, 1);
   assert.equal(projects.getCell("D8").numFmt, "0.0%");
   assert.equal(wb.getWorksheet("المحاولات الفاشلة")!.getCell("C8").value, 999);
+});
+
+function subscription(patch: Partial<SubscriptionExportRow> = {}): SubscriptionExportRow {
+  return { id: "daily", status: "ACTIVE", frequency: "DAILY", provider: "PAYPAL", monthlyEquivalentUSD: 30.4375,
+    donor: { id: "one-donor", name: "Synthetic donor", email: null, phone: null, countryCode: "US" },
+    amount: 1, amountUSD: 1, currency: "USD", teamSupport: 0, paymentMethod: "PAYPAL", createdAt: settled,
+    lastBillingDate: settled, nextBillingDate: settled, campaigns: [], categories: [], referral: null,
+    totalChargesCount: 3, totalChargesAmount: 3, totalChargesAmountUSD: 3, ...patch };
+}
+
+function metric(sheet: ExcelJS.Worksheet, name: string): ExcelJS.CellValue {
+  let result: ExcelJS.CellValue = null;
+  sheet.eachRow(row => { if (row.getCell(1).value === name) result = row.getCell(2).value; });
+  return result;
+}
+
+test("independent report languages remain isolated under concurrent exports", async () => {
+  setDashLocale("tr");
+  const outputs = await Promise.all((["ar", "en", "ar", "en"] as const).map(language => buildDonationExport({
+    language, format: "xlsx", title: "تقرير التبرعات", filters: [], donations: [gift({ donor: { id: "x", name: "Synthetic donor", email: null, phone: null, countryCode: "US" }, campaigns: [] })], subscriptions: [subscription()],
+  })));
+  for (const [i, out] of outputs.entries()) {
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(out.body as never);
+    const arabic = i % 2 === 0;
+    assert.equal(wb.worksheets[0].name, arabic ? "ملخص التقرير" : "Report summary");
+    assert.equal(wb.worksheets[0].views[0].rightToLeft, arabic);
+    const details = wb.getWorksheet(arabic ? "التبرعات" : "Donations")!;
+    assert.equal(details.getCell("I7").value, arabic ? "المملكة العربية السعودية" : "Saudi Arabia");
+    assert.ok(wb.getWorksheet(arabic ? "تحليل الاشتراكات" : "Subscription analysis"));
+  }
+});
+
+test("one donor with several plans is distinct from plan counts; unactivated plans do not inflate forecast", async () => {
+  setDashLocale("ar");
+  const plans = [subscription(), subscription({ id: "friday", frequency: "FRIDAY", monthlyEquivalentUSD: 4.348214 }),
+    subscription({ id: "monthly", frequency: "MONTHLY", monthlyEquivalentUSD: 1 }),
+    subscription({ id: "unpaid", totalChargesCount: 0, monthlyEquivalentUSD: 1000 }),
+    subscription({ id: "paused", status: "PAUSED", monthlyEquivalentUSD: 1000 }),
+    subscription({ id: "cancelled", status: "CANCELLED" }), subscription({ id: "failed", status: "PAYMENT_FAILED" }),
+    subscription({ id: "missing", amountUSD: null, monthlyEquivalentUSD: null })];
+  const wb = await workbook([], plans), summary = wb.getWorksheet("ملخص الاشتراكات")!;
+  assert.equal(metric(summary, "عدد الاشتراكات"), 8);
+  assert.equal(metric(summary, "المتبرعون المعروفون"), 1);
+  assert.equal(metric(summary, "نشط مؤكد"), 4);
+  assert.equal(metric(summary, "بانتظار أول دفعة"), 1);
+  assert.equal(metric(summary, "متوقع شهريًا (USD)"), 35.79);
+  assert.equal(metric(summary, "نشط بلا قيمة USD"), 1);
+  assert.equal(metric(summary, "يومي"), 2);
+  assert.equal(metric(summary, "تبرع كل جمعة"), 1);
+  assert.equal(metric(summary, "شهري"), 1);
+});
+
+test("gateway and recurring breakdowns reconcile gross paid amounts, preserve currencies and disclose missing USD", async () => {
+  setDashLocale("ar");
+  const rows = [gift({ id: "a", subscriptionId: "daily", type: "MONTHLY", frequency: "DAILY", provider: "PAYPAL", amountUSD: null }),
+    gift({ id: "b", subscriptionId: "daily", type: "MONTHLY", frequency: "DAILY", provider: "PAYPAL", status: "FAILED", paidAt: null }),
+    gift({ id: "c", provider: "PAYPAL", currency: "EUR", amountUSD: 99, status: "PAID", paidAt: null })];
+  const wb = await workbook(rows, [subscription()]);
+  const gateways = wb.getWorksheet("بوابات الدفع")!;
+  assert.equal(gateways.getCell("E7").value, 2);
+  assert.equal(gateways.getCell("F7").value, 1);
+  assert.equal(gateways.getCell("G7").value, 1);
+  assert.equal(gateways.getCell("I7").value, 50);
+  assert.equal(gateways.getCell("M7").value, 35.5);
+  assert.equal(gateways.getCell("N7").value, 0);
+  assert.equal(gateways.getCell("O7").value, 1);
+  assert.equal(gateways.getCell("D8").value, "EUR");
+  const analysis = wb.getWorksheet("تحليل الاشتراكات")!;
+  assert.equal(analysis.getCell("A7").value, "الولايات المتحدة");
+  assert.equal(analysis.getCell("C7").value, "PAYPAL");
+  assert.equal(analysis.getCell("P7").value, 1);
+  assert.equal(analysis.getCell("Q7").value, 35.5);
+  assert.equal(analysis.getCell("S7").value, 1);
+  const roster = wb.getWorksheet("الاشتراكات")!;
+  assert.equal(roster.getCell("X7").value, "PAYPAL");
+  assert.equal(roster.getCell("Y7").value, 1);
+  assert.equal(roster.getCell("Z7").value, 35.5);
+});
+
+test("plan creation period is independent from lifetime payment totals and CSV report totals", async () => {
+  const plans = [subscription(), subscription({ id: "old", createdAt: new Date("2020-01-01") })];
+  const out = await buildDonationExport({ language: "en", format: "xlsx", title: "تقرير التبرعات", filters: [],
+    donations: [], subscriptions: plans, period: { start: new Date("2026-11-01"), end: new Date("2026-11-30") } });
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(out.body as never);
+  assert.equal(metric(wb.getWorksheet("Subscription overview")!, "Plans created in the period"), 1);
+  const csv = await buildDonationExport({ language: "en", format: "csv", title: "تقرير التبرعات", filters: [],
+    donations: [gift({ subscriptionId: "daily" })], subscriptions: plans });
+  assert.ok(csv.body.toString().includes("Payments in report results"));
+  assert.ok(csv.body.toString().includes("35.5"));
+  assert.ok(csv.filenameUtf8.startsWith("Donations report"));
+});
+
+test("English workbook has translated headings, notes, and summary labels throughout", async () => {
+  const out = await buildDonationExport({ language: "en", format: "xlsx", title: "تقرير التبرعات", filters: [],
+    donations: [gift({ donor: { id: "x", name: "Synthetic donor", email: null, phone: null, countryCode: "US" }, campaigns: [] })], subscriptions: [subscription()] });
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(out.body as never);
+  const untranslated = new Set<string>();
+  for (const sheet of wb.worksheets) sheet.eachRow(row => row.eachCell(cell => {
+    if (typeof cell.value === "string" && /[\u0600-\u06ff]/.test(cell.value)) untranslated.add(cell.value);
+  }));
+  assert.deepEqual([...untranslated], []);
+});
+
+test("plan loader reads authoritative provider and lifetime paid totals without inferring identities or exchange rates", async () => {
+  const { loadReportSubscriptions } = await import("../../lib/dashboard/report-subscriptions");
+  const calls: unknown[] = [];
+  const client = {
+    subscription: { findMany: async (query: { select: Record<string, unknown> }) => {
+      calls.push(query);
+      if (query.select.frequency) return [{ id: "daily", frequency: "DAILY" }];
+      assert.equal(query.select.cardDetails, undefined);
+      assert.equal(query.select.paypalVaultId, undefined);
+      return [{ id: "daily", status: "ACTIVE", provider: "PAYPAL", amount: 1, amountUSD: 1, currency: "USD", teamSupport: 0,
+        paymentMethod: "PAYPAL", createdAt: settled, lastBillingDate: settled, nextBillingDate: settled,
+        donor: { id: "one-donor", name: "Synthetic", email: null, phone: null, countryCode: "US" }, items: [], categoryItems: [], referral: null }];
+    } },
+    donation: { groupBy: async (query: { where: unknown }) => {
+      calls.push(query);
+      assert.deepEqual(query.where, { subscriptionId: { in: ["daily"] }, status: "PAID", paidAt: { not: null } });
+      return [{ subscriptionId: "daily", currency: "USD", _count: { _all: 3, amountUSD: 2 }, _sum: { amount: 3, amountUSD: 2 } }];
+    } },
+  } as unknown as PrismaClient;
+  assert.deepEqual(await loadReportSubscriptions([], client), []);
+  assert.equal(calls.length, 0);
+  const [plan] = await loadReportSubscriptions(["daily", "daily"], client);
+  assert.equal(plan.provider, "PAYPAL");
+  assert.equal(plan.frequency, "DAILY");
+  assert.equal(plan.monthlyEquivalentUSD, 30.4375);
+  assert.equal(plan.totalChargesCount, 3);
+  assert.equal(plan.totalChargesMissingUSD, 1);
 });

@@ -1,4 +1,4 @@
-import { dashIntl, dt } from "@/lib/dashboard/i18n";
+import { dashIntl, dt } from "@/lib/dashboard/report-i18n";
 
 const regionNames = new Map<string, Intl.DisplayNames>();
 const languageNames = new Map<string, Intl.DisplayNames>();
