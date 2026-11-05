@@ -27,7 +27,7 @@ assert.ok(handler); assert.ok(disabled);
 function handlerHarness(overrides: Record<string, unknown> = {}) {
   const events: string[] = [];
   const context = {
-    cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], requiresVerificationChoice: true, verificationMode: null,
+    submitLock: { current: false }, cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], requiresVerificationChoice: true, verificationMode: null,
     belowMinimum: false, session: null, firstName: "Fixture", email: "fixture@example.invalid", phone: "+905551234567", method: "card", needsOwnCardForm: false, gateway: "ALBARAKA",
     cardNumber: "", cardExpiry: "", cardCvc: "", selectedCardId: null, checkoutFieldIssue,
     t: (key: string) => key, tValidation: (key: string) => key,
@@ -63,4 +63,10 @@ test("selecting either mode continues to donor-field validation instead of inven
 test("an untouched form reports the first missing donor field before the later verification choice", async () => {
   const h = handlerHarness({ firstName: "" }); await h.submit();
   assert.equal(h.events[0], "error:firstName: required");
+});
+
+test("a locked checkout ignores a second submission before validation or payment work", async () => {
+  const h = handlerHarness({ submitLock: { current: true } });
+  await h.submit();
+  assert.deepEqual(h.events, []);
 });
