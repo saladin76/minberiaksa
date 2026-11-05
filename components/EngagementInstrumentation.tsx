@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { trackEngagement, clarityTag, isEngagementEnabled } from "@/lib/analytics";
+import { trackEngagement, clarityTag, clarityEvent, isEngagementEnabled } from "@/lib/analytics";
 import {
   createPointerBurstDetector,
+  donationStageView,
   landingAttribution,
   measurementPath,
   measurementRouteKey,
@@ -22,6 +23,15 @@ export default function EngagementInstrumentation() {
   const routeKey = measurementRouteKey(pathname || "/", searchParams.toString());
   const landingSent = useRef(false);
   const lastRoute = useRef<string | null>(null);
+  const lastStagePath = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isEngagementEnabled() || lastStagePath.current === pathname) return;
+    lastStagePath.current = pathname;
+    const event = donationStageView(pathname || "/");
+    // Keep recording diagnostics out of GA/GTM conversion triggers.
+    if (event) clarityEvent(event);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isEngagementEnabled() || landingSent.current) return;
@@ -120,3 +130,4 @@ export default function EngagementInstrumentation() {
 
   return null;
 }
+

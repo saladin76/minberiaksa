@@ -7,7 +7,7 @@ import ts from "typescript";
 import { clarityProjectId, clarityUserRecordingsUrl } from "../../lib/tracking/clarity-config";
 import { isPublicAnalyticsPath } from "../../lib/tracking/private-path";
 import {
-  createPointerBurstDetector, isMeasurementHost, landingAttribution,
+  createPointerBurstDetector, donationStageView, isMeasurementHost, landingAttribution,
   measurementPath, measurementRouteKey, measurementUrl, referrerOrigin, sanitizeEngagementData,
 } from "../../lib/tracking/engagement-policy";
 
@@ -199,7 +199,7 @@ function browser(raw = "https://minberiaksa.org/ar/zakat?currency=USD&utm_medium
   };
 }
 const policy = {
-  createPointerBurstDetector, landingAttribution, measurementPath, measurementRouteKey, measurementUrl, referrerOrigin,
+  createPointerBurstDetector, donationStageView, landingAttribution, measurementPath, measurementRouteKey, measurementUrl, referrerOrigin,
   isMeasurementHost: (host: string) => isMeasurementHost(host, "production"),
   sanitizeEngagementData,
 };
@@ -296,6 +296,7 @@ test("actual engagement listeners survive replay, ignore cosmetic updates, clean
     "@/lib/analytics": {
       isEngagementEnabled: () => isMeasurementHost(b.win.location.hostname, "production"),
       clarityTag: () => {},
+      clarityEvent: () => {},
       trackEngagement: (name: string, data: Record<string, unknown>) => events.push({ name, data: sanitizeEngagementData(data) }),
     },
   }, b.globals);
@@ -340,10 +341,44 @@ test("preview engagement mounts no listeners and emits nothing", () => {
     "@/lib/analytics": {
       isEngagementEnabled: () => false,
       clarityTag: () => assert.fail("Preview tag emitted"),
+      clarityEvent: () => assert.fail("Preview event emitted"),
       trackEngagement: () => assert.fail("Preview event emitted"),
     },
   }, b.globals);
   h.render(loaded.default as () => unknown);
   assert.equal(b.win.listenerCount() + b.doc.listenerCount(), 0);
+  h.unmount();
+});
+
+
+
+test("donation stage diagnostics distinguish cart/checkout and never prove payment settlement", () => {
+  for (const locale of ["ar", "tr", "en", "pt", "sq", "ja", "hi"]) {
+    assert.equal(donationStageView(`/${locale}/cart`), "donation_cart_view");
+    assert.equal(donationStageView(`/${locale}/checkout`), "donation_checkout_view");
+    assert.equal(donationStageView(`/${locale}/success/private-id`), "donation_success_view");
+    assert.equal(donationStageView(`/${locale}/payment-pending`), "donation_pending_view");
+    assert.equal(donationStageView(`/${locale}/donation-failed`), "donation_failure_view");
+  }
+  for (const path of ["/ar/cart-settings", "/dashboard/checkout", "/tr/blog/checkout", "/xx/cart"]) assert.equal(donationStageView(path), undefined);
+});
+
+test("actual stage recorder ignores query cleanup/replay and records return visits without GA/GTM events", () => {
+  const b = browser("https://minberiaksa.org/tr/cart?currency=TRY"), h = hooks();
+  const stages: string[] = [], events: string[] = [];
+  const loaded = clientModule("components/EngagementInstrumentation.tsx", {
+    react: h.react,
+    "next/navigation": { usePathname: () => b.win.location.pathname, useSearchParams: () => b.win.location.searchParams },
+    "@/lib/tracking/engagement-policy": policy,
+    "@/lib/analytics": { isEngagementEnabled: () => true, clarityTag: () => {}, clarityEvent: (name: string) => stages.push(name), trackEngagement: (name: string) => events.push(name) },
+  }, b.globals);
+  const render = () => h.render(loaded.default as () => unknown);
+  render(); h.replayEffects();
+  b.win.location.searchParams.delete("currency"); render();
+  assert.deepEqual(stages, ["donation_cart_view"]);
+  b.win.location = new URL("https://minberiaksa.org/tr/checkout"); render(); render();
+  b.win.location = new URL("https://minberiaksa.org/tr/cart"); render();
+  assert.deepEqual(stages, ["donation_cart_view", "donation_checkout_view", "donation_cart_view"]);
+  assert.ok(events.every(name => !name.startsWith("donation_")));
   h.unmount();
 });

@@ -260,7 +260,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
    */
   const totalLabel = useMemo(() => {
     const team = teamSupportEnabled && teamAmount > 0 ? teamAmount : 0;
-    if (!inLocal) return format(items.reduce((sum, item) => sum + item.amount, 0) + team);
+    if (!inLocal) return format(items.reduce((sum, item) => sum + item.amount, 0) + team, { maximumFractionDigits: 2 });
     return formatLocal(items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: team, local: teamLocal }), { maximumFractionDigits: 2 });
   }, [items, teamAmount, teamLocal, teamSupportEnabled, inLocal, format, formatLocal, lineValue]);
 
@@ -300,6 +300,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   };
 
   const commitEdit = (index: number) => {
+    if (!supportReady) return;
     const value = Number(draft);
     /* A shares row is edited as a count and re-priced from the share price, so
        its amount can never drift from count × price. A row whose campaign no
@@ -317,6 +318,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   };
 
   const addSuggestion = (id: string, key: string, amount: number, local = false) => {
+    if (local && !supportReady) return;
     if (!(amount > 0)) return;
     const given = local ? fromLocal(amount) : { usd: amount };
     if (tooSmall(given.usd, "local" in given ? given.local : undefined)) {
@@ -336,6 +338,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   /* `local`: the figure is in the visitor's currency (their exception list, or
      typed), stored as its USD value plus the exact figure. Otherwise USD. */
   const addProjectSuggestion = (project: MinbarProject, amount: number, local: boolean) => {
+    if (local && !supportReady) return;
     if (!(amount > 0)) return;
     const given = local ? fromLocal(amount) : { usd: amount };
     if (tooSmall(given.usd, "local" in given ? given.local : undefined)) {
@@ -418,7 +421,9 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       className={`cart-row${addedIndex === index ? " is-added" : ""}`}
                     >
                       <b className="c-title" style={{ gridColumn: 1, minWidth: 0, fontSize: 15.5, overflowWrap: "anywhere", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        {resolveTitle(item)}
+                        {item.projectId && titleBySlug.has(item.projectId) ? (
+                          <Link href={miaPath("projectDetail", locale, encodeURIComponent(item.projectId))} className="underline decoration-transparent underline-offset-4 hover:decoration-current focus-visible:decoration-current">{resolveTitle(item)}</Link>
+                        ) : resolveTitle(item)}
                         {addedIndex === index ? (
                           <span className="cart-added-badge" role="status">
                             {tCommon("added")}
@@ -473,6 +478,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           <button
                             type="button"
                             className="cart-amt-btn"
+                            disabled={!supportReady}
                             onClick={() => {
                               setEditing(index);
                               setDraft(String(item.shareCount && sharesOf(item) ? item.shareCount : Math.round(lineValue(item) * 100) / 100));
@@ -482,7 +488,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                             style={{ display: "inline-flex", alignItems: "stretch", background: "#fff", border: "1px solid rgba(16,33,43,.16)", borderRadius: 10, cursor: "pointer", padding: 0, overflow: "hidden", transition: "all .18s cubic-bezier(.22,.61,.36,1)" }}
                           >
                             <span dir="ltr" style={{ unicodeBidi: "isolate", display: "inline-flex", alignItems: "center", padding: "0 14px", height: 40, fontSize: 16.5, fontWeight: 900, whiteSpace: "nowrap", color: "var(--deep)", fontVariantNumeric: "tabular-nums" }}>
-                              {formatLine(item)}
+                              {supportReady ? formatLocal(lineValue(item), { maximumFractionDigits: 2 }) : formatLine(item)}
                             </span>
                             <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 34, background: "rgba(211,154,39,.14)", borderInlineStart: "1px solid rgba(211,154,39,.35)", color: "var(--gold)" }}>
                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -575,6 +581,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                             type="button"
                             onClick={() => suggestion.add(value)}
                             className="upsell-amt"
+                            disabled={suggestion.localAmounts && !supportReady}
                             style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4, minWidth: 0, height: 44, padding: "0 10px", borderRadius: 999, border: "1px solid var(--border)", background: "#fff", color: "var(--deep)", fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", transition: "all .18s ease" }}
                           >
                             <span aria-hidden="true" style={{ fontWeight: 900 }}>+</span>
@@ -585,6 +592,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       <div className="upsell-actions">
                         <input
                           value={customUpsell[suggestion.id] ?? ""}
+                          disabled={!supportReady}
                           onChange={(e) => setCustomUpsell((c) => ({ ...c, [suggestion.id]: decimalAmount(e.target.value) }))}
                           inputMode="decimal"
                           placeholder={t("suggestedAmount")}
@@ -600,6 +608,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                           }}
                           aria-label={tCommon("add")}
                           className="upsell-add"
+                          disabled={!supportReady}
                           style={{ flex: "0 0 auto", width: 44, height: 44, display: "grid", placeItems: "center", borderRadius: 999, border: 0, background: "var(--red)", color: "#fff", cursor: "pointer", transition: "all .18s ease" }}
                         >
                           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
@@ -628,7 +637,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                       {resolveTitle(item)}
                     </span>
                     <span dir="ltr" style={{ unicodeBidi: "isolate", flex: "0 0 auto", fontWeight: 800, color: "var(--deep)" }}>
-                      {formatLine(item)}
+                      {supportReady ? formatLocal(lineValue(item), { maximumFractionDigits: 2 }) : formatLine(item)}
                     </span>
                   </span>
                 ))}

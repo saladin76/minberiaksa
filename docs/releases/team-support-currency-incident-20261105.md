@@ -1,5 +1,18 @@
 # Team support currency incident — 2026-11-05
 
+## Post-deployment follow-up
+
+The supplied release log confirms `d2714f63cb4bac513657f11addb596f063e7dbe1` activated successfully at 11:57:24 UTC (14:57 Istanbul). A subsequent live Turkish/TRY browser check confirmed 2,500 TRY project + 500 TRY support = 3,000 TRY, visible in checkout and unchanged on returning to cart. No payment was submitted; the test basket was emptied.
+
+Follow-up changes awaiting a separate release:
+
+- Guard cart amount edits and custom/per-currency upsells until a usable exchange rate exists. The old shared conversion helper otherwise falls back to interpreting the number as USD while a non-USD rate is unavailable.
+- Show cents on cart line amounts and USD totals, matching checkout precision.
+- Make known project titles actual localized links, responding to the repeated project-title clicks observed in the reviewed recording. Legacy/unresolved titles remain plain text.
+- Add distinct Clarity-only route events: `donation_cart_view`, `donation_checkout_view`, `donation_pending_view`, `donation_success_view`, `donation_failure_view`. Query cleanup/effect replay does not duplicate them; returning to a page is a new visit. These are page observations, not bank-settlement events, and are not sent to GA/GTM as conversions. Existing Clarity automatic event definitions are unchanged.
+
+Follow-up validation: 58 tests passed across measurement, real cart handlers, currency persistence/recovery, mixed checkout, payment handoff and checkout feedback. Changed-file lint including React hooks passes. The full build remains a release check. Four-day performance/source attribution, in-app browser errors and the reporting donor's specific transaction remain open investigations.
+
 ## Deployment checkpoint
 
 The supplied production release log confirms commit `2f73652212f338da2781ebb801aaeafc0799d241` completed successfully at 2026-11-05 10:18:52 UTC (13:18 Istanbul), with runtime activated. This is the previous release, not deployment evidence for this fix.

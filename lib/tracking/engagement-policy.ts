@@ -3,6 +3,7 @@
  * change a currency cookie, or attribute a server-confirmed donation.
  */
 import { redactAnalyticsPath } from "./private-path";
+import { SUPPORTED_LOCALES } from "../locales";
 
 export const ENGAGEMENT_MEASUREMENT_VERSION = "2";
 
@@ -74,6 +75,18 @@ export function measurementRouteKey(pathname: string, search: string): string {
 
 export function measurementPath(pathname: string): string {
   return redactAnalyticsPath(pathname);
+}
+
+/** Route observations only: a success-page view is not proof of bank settlement. */
+export function donationStageView(pathname: string): string | undefined {
+  const [, locale, stage] = pathname.split("/");
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale)) return undefined;
+  if (stage === "cart") return "donation_cart_view";
+  if (stage === "checkout") return "donation_checkout_view";
+  if (stage === "payment-pending") return "donation_pending_view";
+  if (stage === "success") return "donation_success_view";
+  if (stage === "donation-failed" || stage === "payment-failed") return "donation_failure_view";
+  return undefined;
 }
 
 const PUBLIC_QUERY_KEYS = new Set([...CAMPAIGN_KEYS, "page", "category", "sort", "tab", "type"]);
@@ -152,3 +165,4 @@ export function createPointerBurstDetector() {
     return samples.length;
   };
 }
+
