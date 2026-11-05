@@ -35,10 +35,10 @@ test("lost or failed initiation replies check the existing order; validation fai
 
 function load(path: string, deps: Record<string, unknown>, globals: Record<string, unknown> = {}) {
   const js = ts.transpileModule(readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  const module = { exports: {} as Record<string, (...args: unknown[]) => unknown> };
-  runInNewContext(js, { module, exports: module.exports, URL, URLSearchParams, console, ...globals,
+  const loadedModule = { exports: {} as Record<string, (...args: unknown[]) => unknown> };
+  runInNewContext(js, { module: loadedModule, exports: loadedModule.exports, URL, URLSearchParams, console, ...globals,
     require: (key: string) => { if (key in deps) return deps[key]; throw new Error(`Unexpected dependency ${key}`); } });
-  return module.exports;
+  return loadedModule.exports;
 }
 
 for (const [paidAt, status, expected] of [[new Date(), "PAID", "paid"], [null, "PAID", "processing"], [null, "FAILED", "failed"]] as const) {
