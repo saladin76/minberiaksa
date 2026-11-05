@@ -413,8 +413,11 @@ for(const rail of ["ALBARAKA","PAYPAL"] as const)test(`${rail}: Friday window is
  const row=[...f.donations.values()].find(row=>row.billingReason==="subscription_cycle")!;assert.equal(row.paidAt,null);assert.match(row.providerErrorMessage,/NOT_SENT/);
 });
 
-for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true], ["MONTHLY", true], ["MONTHLY", false]] as const) test(`mixed TRY ${frequency} ${verificationPassed ? "approved" : "rejected"}: split accounting → single 2D sale → recurring-only renewal`, async () => {
+for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true], ["MONTHLY", true], ["MONTHLY", false], ["MULTI", true], ["MULTI", false]] as const) test(`mixed TRY ${frequency} ${verificationPassed ? "approved" : "rejected"}: split accounting → single 2D sale → recurring-only renewal`, async () => {
   const f = fixture();
+  const multi = frequency === "MULTI";
+  const principal = multi ? 1 : 250, onceAmount = multi ? 1 : 500, combined = multi ? 4 : 750;
+  const planFrequency = multi ? "DAILY" : frequency;
   const cfg = { merchantNo: "900000001", terminalNo: "90000002", posnetId: "900000003", encKey: "test-key-never-live", tdsUrl: "https://bank.invalid/3d", serviceUrl: "https://bank.invalid/api", useOOS: false, useJokerVadaa: false };
   const bankPayloads: Row[] = [], bankTerminals: string[] = [], cards = new Map<string, Row>();
   const bankAdapter = f.dependencies["@/lib/albaraka"];
@@ -427,9 +430,9 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
     return originalSale(operation, body, options);
   };
   const rates = f.dependencies["@/lib/exchange/rates-service"];
-  rates.getUsdBaseRatesForServer = async () => ({ USD: 1, TRY: 50 });
-  rates.convertAmountInCurrencyToUsd = (value: number, currency: string) => currency === "TRY" ? value / 50 : value;
-  f.dependencies["@/lib/exchange/convert-amount-in-currency-to-usd"].convertAmountInCurrencyToUsd = async (value: number, currency: string) => currency === "TRY" ? value / 50 : value;
+  rates.getUsdBaseRatesForServer = async () => ({ USD: 1, TRY: multi ? 1 : 50 });
+  rates.convertAmountInCurrencyToUsd = (value: number, currency: string) => currency === "TRY" ? value / (multi ? 1 : 50) : value;
+  f.dependencies["@/lib/exchange/convert-amount-in-currency-to-usd"].convertAmountInCurrencyToUsd = async (value: number, currency: string) => currency === "TRY" ? value / (multi ? 1 : 50) : value;
   f.prisma.creditCard = {
     create: async ({ data }: Row) => { const card = { id: "c".repeat(24), ...data }; cards.set(card.id, card); return card; },
   };
@@ -448,18 +451,23 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
   const originalFindPlans = f.prisma.subscription.findMany;
   f.prisma.subscription.findMany = async (args: Row) => (await originalFindPlans(args)).map((row: Row) => ({ ...row, paymentCard: cards.get(row.paymentCardId) }));
   const mixedResult = await f.driver.createDonation({
-    items: [
+    items: multi ? ["once", "daily", "friday", "monthly"].map(freqKey => ({ projectId: "fixture-project", amount: 1, freqKey, schedule: { hour: 9, minute: 30, ...(freqKey === "monthly" ? { dayOfMonth: 15 } : {}) } })) : [
       { projectId: "fixture-project", amount: 10, freqKey: "once" },
-      { projectId: "fixture-project", amount: 5, freqKey: frequency.toLowerCase(), schedule: { hour: 9, minute: 30, ...(frequency === "MONTHLY" ? { dayOfMonth: 15 } : {}) } },
+      { projectId: "fixture-project", amount: 5, freqKey: planFrequency.toLowerCase(), schedule: { hour: 9, minute: 30, ...(planFrequency === "MONTHLY" ? { dayOfMonth: 15 } : {}) } },
     ], projects: [{ id: "project", slug: "fixture-project" }], currency: "TRY", locale: "ar", method: "CARD", guest: null, teamSupport: 0, teamSupportRecurring: false,
   });
   const plan = f.plans.get(mixedResult.subscriptionId)!, first = f.donations.get(mixedResult.id)!;
-  assert.equal(first.totalAmount, 250);
-  const oneTime = [...f.donations.values()].find(row => row.id !== first.id)!;
-  assert.equal(oneTime.totalAmount, 500); assert.equal(oneTime.subscriptionId, null);
+  assert.equal(first.totalAmount, principal);
+  const oneTime = [...f.donations.values()].find(row => !row.subscriptionId)!;
+  assert.equal(oneTime.totalAmount, onceAmount); assert.equal(oneTime.subscriptionId, null);
   assert.equal(first.items.length, 1); assert.equal(oneTime.items.length, 1);
-  assert.equal(plan.amount, 250); assert.equal(plan.amountUSD, 5);
-  assert.equal(plan.items.length, 1); assert.equal(plan.items[0].amount, 250);
+  assert.equal(plan.amount, principal); assert.equal(plan.amountUSD, multi ? 1 : 5);
+  if (multi) {
+    assert.equal(f.donations.size, 4); assert.equal(f.plans.size, 3);
+    assert.deepEqual([...f.plans.values()].map(row => row.frequency), ["DAILY", "FRIDAY", "MONTHLY"]);
+    assert.equal([...f.donations.values()].reduce((sum, row) => sum + row.totalAmount, 0), 4);
+  }
+  assert.equal(plan.items.length, 1); assert.equal(plan.items[0].amount, principal);
   const bankDependencies = { ...f.dependencies, crypto,
     "@/lib/donations/access-token": { withDonationToken: (url: string) => url },
     "next/server": { NextResponse: { ...next.NextResponse, redirect: (url: URL, status: number) => ({ status, location: String(url) }) } },
@@ -486,27 +494,29 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
     assert.equal(first.paidAt, null); assert.equal(oneTime.paidAt, null);
     assert.equal(first.status, "FAILED"); assert.equal(oneTime.status, "FAILED");
     assert.equal(plan.status, "PAYMENT_FAILED");
+    if (multi) assert.ok([...f.plans.values()].every(row => row.status === "PAYMENT_FAILED"));
     assert.equal((await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: new Date(plan.nextBillingDate) })).scanned, 0);
     return;
   }
+  if (multi) { assert.ok([...f.donations.values()].every(row => row.paidAt)); assert.ok([...f.plans.values()].every(row => row.paymentCardId && row.lastBillingDate)); }
   assert.ok(first.paidAt); assert.ok(oneTime.paidAt); assert.ok(plan.lastBillingDate); assert.equal(f.calls(), 1);
-  assert.equal(first.paidAmount, 250); assert.equal(oneTime.paidAmount, 500);
+  assert.equal(first.paidAmount, principal); assert.equal(oneTime.paidAmount, onceAmount);
   assert.equal(bankTerminals[0], "90000004");
-  assert.equal(Number(bankPayloads[0].Amount), 75000);
+  assert.equal(Number(bankPayloads[0].Amount), combined * 100);
   await f.settlement.settleAlbarakaDonation(first.id, { ServiceResponseData: { ResponseCode: "00" } });
   assert.equal(f.calls(), 1, "settlement replay must not recapture");
-  assert.equal(f.increments(), 2, "each disjoint project allocation is counted once");
+  assert.equal(f.increments(), multi ? 4 : 2, "each disjoint project allocation is counted once");
   const due = new Date(plan.nextBillingDate);
   const runs = await Promise.all([f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due }), f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due })]);
   assert.equal(runs.reduce((n: number, run: Row) => n + run.charged.length, 0), 1);
   assert.equal(f.calls(), 2, "one signup capture plus exactly one renewal");
   assert.equal(bankTerminals[1], "fixture", "renewal must retain its separate recurring terminal");
-  assert.equal(Number(bankPayloads[1].Amount), 25000);
+  assert.equal(Number(bankPayloads[1].Amount), principal * 100);
   assert.equal(bankPayloads[1].IsTDSecureMerchant, "N");
   assert.equal(bankPayloads[1].CardInformationData.Cvc2, "", "renewal cannot carry a stored security code");
   assert.equal(bankPayloads[1].IsRecurring, "Y");
-  const renewal = [...f.donations.values()].find(row => row.id !== first.id && row.id !== oneTime.id)!;
-  assert.equal(renewal.totalAmount, 250); assert.equal(renewal.items.length, 1); assert.equal(renewal.items[0].amount, 250);
+  const renewal = [...f.donations.values()].find(row => row.billingReason === "subscription_cycle")!;
+  assert.equal(renewal.totalAmount, principal); assert.equal(renewal.items.length, 1); assert.equal(renewal.items[0].amount, principal);
   await f.albarakaWorker.chargeDueAlbarakaSubscriptions({ now: due });
   assert.equal(f.calls(), 2);
 });

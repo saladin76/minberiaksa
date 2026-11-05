@@ -2,7 +2,7 @@ import type { MinbarCartItem } from "./cart";
 import { rememberGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
-import { cartHasMixedCadences, orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
+import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
 import { readConciergeAssisted, readConciergeTouched } from "@/lib/ai/concierge/client";
 import { getDonationAttributionPayload } from "@/lib/attribution/client-payload";
 
@@ -225,7 +225,7 @@ export class OrderRejectedError extends Error {
  *
  * The order API takes one type for the whole order, so a cart holding any
  * recurring row is a plan at that row's cadence. One-time rows join the
- * first charge only; different recurring cadences still need separate checkouts. This used to return `MONTHLY` for every recurring row, so a
+ * first charge only; each recurring cadence receives an independent plan. This used to return `MONTHLY` for every recurring row, so a
  * donor who chose "daily" or "every Friday" was billed monthly  the contract
  * mismatch in `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2. The mapping now lives in
  * `lib/donations/recurring-schedule.ts` and is pinned by its tests.
@@ -268,7 +268,6 @@ function conciergeMarker(): { sessionId: string; intent: string | null; campaign
 }
 
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
-  if (cartHasMixedCadences(input.items)) throw new OrderRejectedError("Separate checkout is required for different donation frequencies", 400, "MIXED_DONATION_FREQUENCIES");
   const { items, categoryItems, waqfItems, unmatched, lineFrequencies } = toOrderItems(input.items, input.projects, input.projectAliases);
   if (unmatched.length) throw new UnpayableItemsError(unmatched);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
@@ -289,6 +288,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       amountsIn: "USD",
       type: orderType(input.items),
       lineFrequencies,
+      schedules: Object.fromEntries(["daily", "friday", "monthly"].map(cadence => [cadence, input.items.find(row => row.freqKey === cadence)?.schedule ?? null])),
       timezone: browserTimezone(),
       ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
@@ -323,6 +323,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
     | {
         donation?: { id: string; accessToken?: string | null };
         subscription?: { id: string };
+        donations?: Array<{ id: string; accessToken?: string | null }>;
         oneTimeDonation?: { id: string; accessToken?: string | null } | null;
         bankTransfer?: { accessToken: string };
         error?: string;
@@ -337,6 +338,7 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
 
   // Preserve the server-issued read credential before a payment redirect.
   rememberGuestDonationAccess(payload.donation.id, payload.donation.accessToken);
+  for (const row of payload.donations ?? []) rememberGuestDonationAccess(row.id, row.accessToken);
   if (payload.oneTimeDonation) rememberGuestDonationAccess(payload.oneTimeDonation.id, payload.oneTimeDonation.accessToken);
 
   return {

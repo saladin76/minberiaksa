@@ -8,7 +8,7 @@ import { detectDonationSource } from "../../lib/attribution/detect-source";
 import { computeOverview, type AggregateDonationInput } from "../../lib/attribution/aggregate";
 import { resolveAttribution } from "../../lib/tracking/attribution-resolver";
 import { cartHasMixedCadences } from "../../lib/donations/recurring-schedule";
-import { createDonation, OrderRejectedError, type CreateDonationInput } from "../../lib/minbar/checkout";
+import { createDonation, type CreateDonationInput } from "../../lib/minbar/checkout";
 
 function sale(): BankDonation { return { id:"a".repeat(24),provider:"ALBARAKA",providerOrderId:"B".repeat(24),providerHostRefNum:"private-bank-reference",providerTxnType:"Sale",providerRaw:{albarakaRequest:{orderId:"B".repeat(24),amount:"10000",currencyCode:"US",mode:"2D"}},status:"PAID",paidAt:new Date(),bankOperations:[] }; }
 function adjustment(amountMinor:number,state:BankOperation["state"]="SUCCEEDED"):BankOperation {return {id:"private-operation",key:"private-key",action:"REFUND",state,amountMinor,currency:"USD",createdAt:"2026-11-01",updatedAt:"2026-11-01",actorId:"private-staff",actorName:"private-name",reason:"private refund reason"};}
@@ -83,14 +83,17 @@ test("a click-only signup preserves its historical platform without copying the 
   assert.deepEqual(inherited,{platform:"google_ads",acquisition_kind:"paid",attribution_origin:"subscription_signup"});
   const resolved=resolveAttribution(sourceInput(inherited));assert.equal(resolved.platform,"google");assert.equal(resolved.paidEvidence,true);assert.notEqual(resolved.status,"verified");
 });
-test("different recurring cadences are rejected before payment while one-time rows may accompany a plan",async()=>{
+test("different recurring cadences are serialized together without losing schedules",async()=>{
   assert.equal(cartHasMixedCadences([{freqKey:"daily"},{freqKey:"monthly"}]),true);
   assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"monthly"}]),false);
   assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"daily"}]),false);
   assert.equal(cartHasMixedCadences([{freqKey:"once"},{freqKey:"friday"}]),false);
   assert.equal(cartHasMixedCadences([{freqKey:"friday"},{freqKey:"friday"}]),false);
-  const input: CreateDonationInput={items:[{freqKey:"daily",amount:1,currency:"USD"},{freqKey:"monthly",amount:1,currency:"USD"}],projects:[],currency:"USD",locale:"ar",method:"CARD",teamSupport:0,teamSupportRecurring:true,guest:null};
-  await assert.rejects(createDonation(input),error=>error instanceof OrderRejectedError&&error.code==="MIXED_DONATION_FREQUENCIES");
+  const input: CreateDonationInput={items:[{projectId:"project",freqKey:"daily",amount:1,currency:"USD",schedule:{hour:9,minute:30}},{projectId:"project",freqKey:"monthly",amount:1,currency:"USD",schedule:{hour:14,minute:30,dayOfMonth:15}}],projects:[{id:"campaign",slug:"project"} as CreateDonationInput["projects"][number]],currency:"USD",locale:"ar",method:"CARD",teamSupport:0,teamSupportRecurring:true,guest:null};
+  const originalFetch=globalThis.fetch;
+  let captured:Record<string,unknown>|null=null;
+  globalThis.fetch=async(_url,init)=>{ captured=JSON.parse(String(init?.body)); return new Response(JSON.stringify({donation:{id:"donation"},subscription:{id:"plan"}}),{status:200}); };
+  try { await createDonation(input); const body=captured as unknown as {lineFrequencies:string[];schedules:Record<string,unknown>}; assert.deepEqual(body.lineFrequencies,["daily","monthly"]); assert.deepEqual(body.schedules.daily,{hour:9,minute:30}); assert.deepEqual(body.schedules.monthly,{hour:14,minute:30,dayOfMonth:15}); } finally {globalThis.fetch=originalFetch;}
 });
 
 test("unknown and ambiguous acquisition revenue is neither advertising nor proven non-ad, and total paid revenue stays intact",()=>{

@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       const count = [body.items, body.categoryItems, body.waqfItems].reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
       lineFrequencies = checkoutLineFrequencies(body.type || "ONE_TIME", body.lineFrequencies, count);
     } catch {
-      return NextResponse.json({ error: "Different recurring cadences require separate checkout", code: "MIXED_DONATION_FREQUENCIES" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid donation line frequencies", code: "MIXED_DONATION_FREQUENCIES" }, { status: 400 });
     }
     const {
       items: itemsIn,
@@ -282,6 +282,13 @@ export async function POST(request: NextRequest) {
     const scheduleChoice = parseScheduleChoice(frequency ? scheduleIn : null);
     if (!scheduleChoice.ok) {
       return NextResponse.json({ error: scheduleChoice.error }, { status: 400 });
+    }
+    const cadences = [...new Set(lineFrequencies.filter(value => value !== "once"))];
+    const scheduleChoices = new Map<string, ReturnType<typeof parseScheduleChoice>>();
+    for (const cadence of cadences) {
+      const choice = parseScheduleChoice(body.schedules?.[cadence] ?? (cadence === frequency?.toLowerCase() ? scheduleIn : null));
+      if (!choice.ok) return NextResponse.json({ error: choice.error }, { status: 400 });
+      scheduleChoices.set(cadence, choice);
     }
     const isBankTransfer = paymentMethod === "BANK_TRANSFER";
     /* A transfer is a one-off act by the donor; nothing can be charged again
@@ -655,6 +662,79 @@ export async function POST(request: NextRequest) {
       donationLocale && isValidLocale(String(donationLocale).toLowerCase())
         ? String(donationLocale).toLowerCase()
         : null;
+
+    if (frequency && cadences.length > 1) {
+      if (!isAlbarakaRecurringCheckoutReady()) return NextResponse.json({ error: "Recurring donations are unavailable", code: "RECURRING_UNAVAILABLE" }, { status: 400 });
+      const keys = [...cadences, ...(lineFrequencies.includes("once") ? ["once" as const] : [])];
+      const round = (value: number) => Math.round(value * 100) / 100;
+      const now = new Date();
+      const groups = keys.map(key => {
+        const selected = {
+          items: itemsResolved.filter((_, i) => lineFrequencies[i] === key),
+          categoryItems: categoryItemsResolved.filter((_, i) => lineFrequencies[itemsResolved.length + i] === key),
+          waqfItems: waqfResolved.filter((_, i) => lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] === key),
+        };
+        return { key, ...selected, principal: [...selected.items, ...selected.categoryItems, ...selected.waqfItems].reduce((sum, row) => sum + row.amount, 0) };
+      });
+      let remainingSupport = planTeamSupport;
+      const recurringPrincipal = groups.filter(group => group.key !== "once").reduce((sum, group) => sum + group.principal, 0);
+      let remainingTotal = finalTotalAmount;
+      const priced = await Promise.all(groups.map(async (group, index) => {
+        const periodicSupport = group.key === "once" ? 0 : index === cadences.length - 1 ? remainingSupport : round(planTeamSupport * group.principal / recurringPrincipal);
+        if (group.key !== "once") remainingSupport = round(remainingSupport - periodicSupport);
+        const firstSupport = periodicSupport + (teamSupportRecurringIn === false && (group.key === "once" || (!keys.includes("once") && index === 0)) ? teamSupport : 0);
+        const total = index === groups.length - 1 ? round(remainingTotal) : round((group.principal + firstSupport) * (coverFees ? 1.03 : 1));
+        remainingTotal -= total;
+        const periodicTotal = round((group.principal + periodicSupport) * (coverFees ? 1.03 : 1));
+        const choice = scheduleChoices.get(group.key);
+        const cadence = group.key === "daily" ? "DAILY" as const : group.key === "friday" ? "FRIDAY" as const : "MONTHLY" as const;
+        const rule = group.key !== "once" ? scheduleRuleFor(cadence, now, timezone, choice?.ok ? choice.value : null) : null;
+        return { ...group, periodicSupport, firstSupport, total, cadence, rule, periodicTotal,
+          amountUSD: await convertAmountInCurrencyToUsd(total, currencyNorm),
+          periodicUSD: await convertAmountInCurrencyToUsd(periodicTotal, currencyNorm) };
+      }));
+      const result = await prisma.$transaction(async tx => {
+        const donations: Array<Awaited<ReturnType<typeof tx.donation.create>>> = [];
+        const subscriptions: Array<Awaited<ReturnType<typeof tx.subscription.create>>> = [];
+        for (const group of priced) {
+          const campaignWrites = group.items.map(item => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD, ...(item.shareCount ? { shareCount: item.shareCount } : {}) }));
+          const categoryWrites = group.categoryItems.map(item => ({ categoryId: item.categoryId, amount: item.amount, amountUSD: item.amountUSD }));
+          const sub = group.key !== "once" && group.rule ? await tx.subscription.create({ data: {
+            status: "ACTIVE", amount: group.principal, amountUSD: group.periodicUSD, currency, teamSupport: group.periodicSupport, coverFees,
+            paymentMethod: "CARD", cardDetails: null, donorId, referralId: referralId ?? undefined, frequency: group.cadence, timezone,
+            provider: "ALBARAKA", scheduleRule: group.rule as unknown as Prisma.InputJsonValue,
+            consentSnapshot: consentSnapshotFor({ frequency: group.cadence, amount: group.periodicTotal, currency, timezone, rail: "ALBARAKA", locale: validLocale, now, rule: group.rule, notes: null }) as unknown as Prisma.InputJsonValue,
+            nextBillingDate: firstChargeAfterCheckout(group.rule, now, timezone), lastBillingDate: null,
+            ...(campaignWrites.length ? { items: { create: campaignWrites } } : {}),
+            ...(categoryWrites.length ? { categoryItems: { create: categoryWrites } } : {}),
+          } }) : null;
+          if (sub) subscriptions.push(sub);
+          const donation = await tx.donation.create({ data: {
+            accessToken: mintDonationAccessToken(), amount: group.principal, amountUSD: group.amountUSD, teamSupport: group.firstSupport,
+            coverFees, fees: round(group.total - group.principal - group.firstSupport), totalAmount: group.total, currency,
+            status: "PAID", locale: validLocale ?? undefined, donorCountryCode: donorCountrySnapshot, donorId, referralId: referralId ?? undefined,
+            subscriptionId: sub?.id ?? null, paymentMethod: "CARD", provider: "ALBARAKA", cardDetails: null,
+            providerRaw: { paymentRouting: { version: 1, gateway: "ALBARAKA" }, ...(donations.length ? { mixedCheckoutParentId: donations[0].id } : {}) } as Prisma.InputJsonValue,
+            ...(donationAttribution ? { attribution: donationAttribution } : {}),
+            ...(campaignWrites.length ? { items: { create: campaignWrites.map((row, index) => ({ ...row, ...giftLineData(group.items[index].gift) })) } } : {}),
+            ...(categoryWrites.length ? { categoryItems: { create: categoryWrites } } : {}),
+            ...(group.waqfItems.length ? { waqfItems: { create: group.waqfItems.map(line => ({ unit: line.unit === "meter" ? "METER" as const : "SHARE" as const, count: line.count, unitPrice: line.unitPrice, amount: line.amount, amountUSD: line.amountUSD, donorName: line.donorName, onBehalf: line.onBehalf })) } } : {}),
+          } });
+          donations.push(donation);
+        }
+        const root = donations[0];
+        const providerRaw = { paymentRouting: { version: 1, gateway: "ALBARAKA" }, mixedCheckout: { version: 2, donationIds: donations.slice(1).map(row => row.id), totalAmount: finalTotalAmount } } as Prisma.InputJsonValue;
+        await tx.donation.update({ where: { id: root.id }, data: { providerRaw } });
+        Object.assign(root, { providerRaw });
+        if (validLocale) {
+          const donor = await tx.user.findUnique({ where: { id: donorId }, select: { preferredLang: true } });
+          if (donor && donor.preferredLang == null) await tx.user.update({ where: { id: donorId }, data: { preferredLang: validLocale } });
+        }
+        return { donation: root, donations, subscription: subscriptions[0], subscriptions };
+      }, { timeout: 30000 });
+      await writeAuditLog({ actorId: donorId, actorName: donorName, actorRole: session?.user?.role ?? "DONOR", action: "DONATION_RECURRING_CHECKOUT_START", messageAr: "بدأ دفع سلة باشتراكات مستقلة لكل دورية", entityType: "Donation", entityId: result.donation.id, metadata: { amountUSD: donationTotalUsd, via: "cart_payment", provider: "ALBARAKA", cadences, donationIds: result.donations.map(row => row.id) }, stream: "SITE" });
+      return NextResponse.json({ success: true, ...result });
+    }
 
     if (frequency) {
       // Every new recurring basket uses Albaraka 2D, irrespective of currency/main gateway.

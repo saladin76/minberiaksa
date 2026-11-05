@@ -13,7 +13,6 @@ import { useMinbarCart } from "@/hooks/useMinbarCart";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useDonationAmount, useHealLegacyRows } from "@/hooks/useDonationAmount";
 import { useShareWording } from "@/hooks/useShareWording";
-import { cartHasMixedCadences } from "@/lib/donations/recurring-schedule";
 import { sharePriceFor } from "@/hooks/useProjectPricing";
 import {
   cartHasRecurring,
@@ -89,7 +88,6 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const tCommon = useTranslations("common");
   const tProjects = useTranslations("projects");
   const tCert = useTranslations("certificates");
-  const tValidation = useTranslations("validation");
   const tTeam = useTranslations("TeamSupport");
   const { format, formatNumber, formatLocal, code, rate, currency } = useMinbarMoney();
   const { fromLocal, tooSmall, lineTooSmall, minLocal, minLabel, lineValue, formatLine, inLocal } = useDonationAmount();
@@ -252,7 +250,6 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
 
   /* With the $1 floor on, a row under it holds the checkout until it is raised. */
   const belowMinimum = items.some(lineTooSmall);
-  const mixedCadences = cartHasMixedCadences(items);
   const raiseToMinimum = (index: number) => {
     if (minLocal == null) return;
     const raised = inLocal ? fromLocal(minLocal) : { usd: minLocal };
@@ -351,7 +348,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
 
   /* The donor can move on once the basket is payable. Confirmation comes
      after paying, so it is never a jump from here. */
-  const canCheckout = hydrated && items.length > 0 && !belowMinimum && !mixedCadences;
+  const canCheckout = hydrated && items.length > 0 && !belowMinimum;
   const steps: CheckoutStep[] = [
     { n: 1, label: t("stepCart"), current: true, enabled: true },
     { n: 2, label: t("stepDetails"), href: miaPath("checkout", locale), current: false, enabled: canCheckout },
@@ -754,13 +751,13 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
               ) : null}
 
               {items.some(item => item.freqKey === "once") && items.some(item => item.freqKey !== "once") ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-7 text-emerald-900">{mixedCartNotice(locale)}</p> : null}
-              {belowMinimum || mixedCadences ? (
+              {belowMinimum ? (
                 <>
                   <Button variant="primary" full disabled style={{ whiteSpace: "nowrap", height: 52, opacity: 0.55, boxShadow: "none", cursor: "not-allowed" }}>
                     {t("checkout")}
                   </Button>
                   <span role="status" style={{ marginTop: -8, textAlign: "center", fontSize: 12.5, fontWeight: 800, color: "var(--red)", lineHeight: 1.6 }}>
-                    {mixedCadences ? tValidation("mixedDonationCadences") : tGive("belowMinCheckout", { amount: minLabel })}
+                    {tGive("belowMinCheckout", { amount: minLabel })}
                   </span>
                 </>
               ) : (

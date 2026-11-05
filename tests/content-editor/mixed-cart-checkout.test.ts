@@ -25,7 +25,7 @@ function orderFixture() {
     user: { findUnique: async () => ({ preferredLang: "ar" }) },
     campaign: { findMany: async ({ where }: Row) => [...new Set(where.id.in)].map(id => ({ id, isActive: true })) },
     category: { findMany: async ({ where }: Row) => [...new Set(where.id.in)].map(id => ({ id, isActive: true })) },
-    subscription: { create: async ({ data }: Row) => { plans.push(data); return { id: "plan", ...data }; } },
+    subscription: { create: async ({ data }: Row) => { plans.push(data); return { id: "plan" + plans.length, ...data }; } },
     donation: { update: async ({ where, data }: Row) => Object.assign(donations.find(row => row.id === where.id)!, data), create: async ({ data }: Row) => { const row = { id: String(donations.length + 1).padStart(24, "0"), ...data }; donations.push(row); return row; } },
   };
   db.$transaction = async (callback: (client: Row) => unknown) => callback(db);
@@ -63,10 +63,10 @@ function orderFixture() {
   });
   return { plans, donations, post: (body: Row) => route.POST({ headers: new Headers(), json: async () => ({ currency: "USD", paymentMethod: "CARD", locale: "ar", ...body }) }) };
 }
-test("one-time rows can share daily, Friday or monthly checkout; different recurring cadences remain distinct", () => {
+test("one-time and multiple recurring cadences share checkout while retaining line frequencies", () => {
   for (const freqKey of ["daily", "friday", "monthly"] as const) assert.equal(schedule.cartHasMixedCadences([{ freqKey: "once" }, { freqKey }]), false);
   assert.equal(schedule.cartHasMixedCadences([{ freqKey: "daily" }, { freqKey: "monthly" }]), true);
-  assert.throws(() => mixed.checkoutLineFrequencies("MONTHLY", ["monthly", "daily"], 2), /MIXED_DONATION_FREQUENCIES/);
+  assert.deepEqual(mixed.checkoutLineFrequencies("MONTHLY", ["monthly", "daily"], 2), ["monthly", "daily"]);
   assert.throws(() => mixed.checkoutLineFrequencies("ONE_TIME", ["monthly"], 1), /MIXED_DONATION_FREQUENCIES/);
   assert.throws(() => mixed.checkoutLineFrequencies("MONTHLY", ["once"], 1), /MIXED_DONATION_FREQUENCIES/);
   assert.throws(() => mixed.checkoutLineFrequencies("MONTHLY", ["monthly"], 2), /MIXED_DONATION_FREQUENCIES/);
@@ -194,4 +194,19 @@ test("recurring baskets reject PayPal before creating either accounting record",
   const f = orderFixture();
   assert.equal((await f.post({ type: "MONTHLY", paymentMethod: "PAYPAL", items: [{ campaignId: campaign, amount: 10 }, { campaignId: campaign, amount: 5 }], lineFrequencies: ["once", "monthly"] })).status, 400);
   assert.equal(f.plans.length, 0); assert.equal(f.donations.length, 0);
+});
+
+for (const recurringSupport of [false, true]) test(`multi-cadence support and fees are allocated once (recurring=${recurringSupport})`, async () => {
+  const f=orderFixture();
+  const result=await f.post({type:"DAILY",items:[{campaignId:campaign,amount:1},{campaignId:campaign,amount:1},{campaignId:campaign,amount:1},{campaignId:campaign,amount:1}],lineFrequencies:["once","daily","friday","monthly"],teamSupport:3,teamSupportRecurring:recurringSupport,coverFees:true,schedules:{daily:{hour:8,minute:10},friday:{hour:12,minute:20},monthly:{hour:16,minute:30,dayOfMonth:15}}});
+  assert.equal(result.status,200); assert.equal(f.donations.length,4); assert.equal(f.plans.length,3);
+  assert.equal(Math.round(f.donations.reduce((sum,row)=>sum+row.totalAmount,0)*100),721);
+  assert.equal(f.donations.reduce((sum,row)=>sum+row.teamSupport,0),3);
+  assert.equal(f.plans.reduce((sum,row)=>sum+row.teamSupport,0),recurringSupport?3:0);
+  assert.equal(f.donations.filter(row=>!row.subscriptionId).length,1);
+  assert.deepEqual(f.plans.map(row=>row.scheduleRule.hour),[8,12,16]);
+});
+test("an invalid secondary cadence schedule is rejected before any donation/plan write",async()=>{
+ const f=orderFixture();const result=await f.post({type:"DAILY",items:[{campaignId:campaign,amount:1},{campaignId:campaign,amount:1}],lineFrequencies:["daily","monthly"],schedules:{monthly:{hour:99,minute:0,dayOfMonth:15}}});
+ assert.equal(result.status,400); assert.equal(f.donations.length,0);assert.equal(f.plans.length,0);
 });

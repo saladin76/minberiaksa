@@ -1,4 +1,4 @@
-import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutPair } from "@/lib/donations/mixed-cart";
+import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutGroup, mixedCheckoutIds } from "@/lib/donations/mixed-cart";
 import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -168,11 +168,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "This donation is paid with its linked recurring checkout", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
     }
     const mixedPayment = mixedCheckoutPayment(donation.providerRaw);
-    if (mixedPayment) {
-      const child = await prisma.donation.findUnique({ where: { id: mixedPayment.oneTimeDonationId } });
-      if (!validMixedCheckoutPair(donation, child) || child?.paidAt || child?.status === "FAILED") {
-        return NextResponse.json({ error: "Invalid linked checkout state", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
-      }
+    const linkedDonations = mixedPayment ? (await Promise.all(mixedCheckoutIds(donation.providerRaw).map(id => prisma.donation.findUnique({ where: { id }, include: { subscription: true } })))).filter(row => row !== null) : [];
+    if (mixedPayment && (!validMixedCheckoutGroup(donation, linkedDonations) || linkedDonations.some(row => row.paidAt || row.status === "FAILED" || (row.subscription && row.subscription.provider !== "ALBARAKA")))) {
+      return NextResponse.json({ error: "Invalid linked checkout state", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
     }
     const checkoutTotal = mixedPayment?.totalAmount ?? donation.totalAmount;
 
@@ -394,6 +392,7 @@ export async function POST(req: NextRequest) {
        including hashes. The card is linked before the bank is asked for
        anything, so a plan can never be activated without a card to bill. A
        retry of the same checkout reuses the card already linked. */
+    let linkedCardId = plan?.paymentCardId ?? savedCardId;
     if (plan && !plan.paymentCardId && savedCardId) {
       await prisma.subscription.update({ where: { id: plan.id }, data: { paymentCardId: savedCardId, provider: "ALBARAKA" } });
     } else if (plan && !plan.paymentCardId) {
@@ -411,10 +410,17 @@ export async function POST(req: NextRequest) {
         },
         select: { id: true },
       });
+      linkedCardId = card.id;
       await prisma.subscription.update({
         where: { id: plan.id },
         data: { paymentCardId: card.id, provider: "ALBARAKA" },
       });
+    }
+
+    if (linkedCardId) {
+      for (const row of linkedDonations) if (row.subscriptionId) {
+        await prisma.subscription.update({ where: { id: row.subscriptionId }, data: { paymentCardId: linkedCardId, provider: "ALBARAKA" } });
+      }
     }
 
     if (mode === "3D") {
