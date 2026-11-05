@@ -78,12 +78,14 @@ type InitiateBody = {
 
 /** Convert any amount to TRY using USD-base rates from the database (same as donations). */
 async function toTRY(amount: number, fromCurrency: string): Promise<number> {
+  if (["TRY", "TL"].includes(fromCurrency.toUpperCase())) return amount;
   const rates = await getUsdBaseRatesForServer();
   return convertAmountInCurrencyToTry(amount, fromCurrency, rates);
 }
 
 /** Same rates, one step: the table is USD-based, so this is a single division. */
 async function toUSD(amount: number, fromCurrency: string): Promise<number> {
+  if (["USD", "US"].includes(fromCurrency.toUpperCase())) return amount;
   const rates = await getUsdBaseRatesForServer();
   return convertAmountInCurrencyToUsd(amount, fromCurrency, rates);
 }
@@ -382,7 +384,7 @@ export async function POST(req: NextRequest) {
     });
     if (claim.count !== 1) {
       return NextResponse.json(
-        { error: "A payment for this donation is already in progress or finished." },
+        { error: "A payment for this donation is already in progress or finished.", code: "PAYMENT_ALREADY_PROCESSING" },
         { status: 409 }
       );
     }

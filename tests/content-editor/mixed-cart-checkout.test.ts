@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as schedule from "../../lib/donations/recurring-schedule";
 import * as mixed from "../../lib/donations/mixed-cart";
+import * as handoff from "../../lib/minbar/payment-handoff";
 
 // Heterogeneous synthetic Prisma and Stripe payloads used only by fixture adapters.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -137,6 +138,7 @@ test("malformed cadence metadata and bank transfers with recurring rows are reje
 });
 test("browser line frequencies follow serialized campaign/category/waqf order even when the basket is interleaved", () => {
   const checkout = load("lib/minbar/checkout.ts", {
+    "./payment-handoff": handoff,
     "../donations/guest-access-client": {}, "@/lib/minbar/donation-amount": { lineLocal: () => null },
     "@/lib/donations/recurring-schedule": schedule, "@/lib/ai/concierge/client": {}, "@/lib/attribution/client-payload": {},
   });

@@ -1,4 +1,6 @@
 "use client";
+import { albarakaResultPath, navigatePaymentResult, needsPaymentResultCheck } from "@/lib/minbar/payment-handoff";
+import PaymentResultWatcher from "./PaymentResultWatcher";
 import { mixedCartNotice } from "@/lib/donations/mixed-cart-copy";
 import { usePaymentRouting } from "@/hooks/usePaymentRouting";
 import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
@@ -163,6 +165,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      submit time so the attribution is the one in force when they gave. */
   const readReferralCode = useReferralCode();
   const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
+  const [activeBankPayment, setActiveBankPayment] = useState<{ id: string; token?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invalidField, setInvalidField] = useState<CheckoutFieldIssue | null>(null);
   const fieldProps = (field: CheckoutField) => ({
@@ -366,7 +370,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
    */
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting || !items.length) return;
+    if (submitLock.current || submitting || !items.length) return;
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
       return;
@@ -412,6 +416,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       }
     }
 
+    submitLock.current = true;
     setSubmitting(true);
     setError(null);
 
@@ -426,6 +431,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     }
 
     let cardToUse = selectedCardId;
+    let bankResult: string | null = null;
     try {
       if (method === "card" && needsOwnCardForm && gateway !== "STRIPE" && !cardToUse && signedIn) {
         try {
@@ -487,6 +493,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         const result = await handle.confirmPayment(charge.clientSecret);
         if (result.error) {
           setError(result.error.message ?? tSystem("techErrorLead"));
+          submitLock.current = false;
           setSubmitting(false);
           return;
         }
@@ -504,6 +511,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
          confirmed. */
       const sendCardToServer = gateway === "ALBARAKA" && !bankCollectsCard;
 
+      if (gateway === "ALBARAKA") {
+        bankResult = albarakaResultPath(donation.id, locale, donation.accessToken);
+        setActiveBankPayment({ id: donation.id, token: donation.accessToken });
+      }
       const form = await initiateBankPayment(
         donation.id,
         locale,
@@ -536,9 +547,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
          sitting in their basket ready to be paid twice. */
       /* Kept aside under this order, so a declined donor can retry the same
          basket from the failure page. */
-      clearCart();
-      submitGatewayForm(form, browserFields);
+      navigatePaymentResult(form.actionUrl, clearCart, () => submitGatewayForm(form, browserFields));
     } catch (cause) {
+      // A lost response, a server error after capture, or a handoff problem is
+      // not a decline. Read this SAME order instead of allowing a new checkout.
+      if (bankResult && needsPaymentResultCheck(cause instanceof OrderRejectedError ? cause.status : undefined, cause instanceof OrderRejectedError ? cause.code : undefined)) {
+        navigatePaymentResult(bankResult, clearCart, url => window.location.assign(url));
+        return;
+      }
       console.error("[checkout] payment could not complete");
       /* Say what actually went wrong. Every failure used to read "we are
          fixing the problem", which hid both a basket the order cannot carry
@@ -559,6 +575,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       } else {
         setError(tSystem("techErrorLead"));
       }
+      setActiveBankPayment(null);
+      submitLock.current = false;
       setSubmitting(false);
     }
   };
@@ -1012,12 +1030,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >
+                {submitting && <span aria-hidden="true" className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white align-middle me-2" />}
                 {submitting
                   ? tSystem("processing")
                   : method === "bank" ? t("ctaBankContinue") : t("ctaComplete")}
               </button>
             )}
 
+            {activeBankPayment && <PaymentResultWatcher donationId={activeBankPayment.id} token={activeBankPayment.token} locale={locale} />}
             {error ? (
               <p role="alert" style={{ margin: 0, textAlign: "center", fontSize: 13, fontWeight: 800, color: "var(--red)" }}>
                 {error}

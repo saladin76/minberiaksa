@@ -38,7 +38,7 @@ function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurri
     attribution: options.mixed ? { one_time_principal: 10, recurring_principal: 5 } : null,
     subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: options.newCard ? null : "444444444444444444444444" } : null,
   };
-  const calls = { cardVerifications: 0, sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, storedCards: [] as Record<string, unknown>[], saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
+  const calls = { rateReads: 0, cardVerifications: 0, sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, storedCards: [] as Record<string, unknown>[], saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
   const prisma = {
     donation: {
       async findUnique() { return structuredClone(state); },
@@ -85,7 +85,7 @@ function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurri
     "@/lib/payment-gateway": { parseMainGateway: (value: string) => value },
     "@/lib/security/card-attempts": { checkCardAttempt: async () => ({ ok: true }) },
     "@/lib/exchange/convert": { normalizeCurrencyCode: (currency: string) => currency },
-    "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => ({USD:1,TRY:50}), convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd },
+    "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => { calls.rateReads++; return {USD:1,TRY:50}; }, convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd },
     "@/lib/card-crypto": { encryptCard: () => "encrypted-test", decryptCard: () => pan, detectCardType: () => "visa" },
     "@/lib/donations/albaraka-settlement": {
       async settleAlbarakaDonation() { calls.settles++; if (options.settlementFails) throw new Error("simulated database failure"); state.paidAt = new Date(); state.providerTxnResult = "Success"; return true; },
@@ -248,4 +248,13 @@ test("mixed lira checkout uses 2D even if the browser requests 3D; no 3D termina
   assert.equal(f.calls.settles, 1);
   assert.equal((await f.initiate("2D")).status, 400);
   assert.equal(f.calls.sales, 1);
+});
+
+test("TRY checkout avoids waiting for exchange rates when no currency conversion is needed", async () => {
+  const f = fixture({ fresh: true, currency: "TRY", totalAmount: 4, recurring: true });
+  const response = await f.initiate("2D");
+  assert.equal(response.status, 200);
+  assert.equal(f.calls.rateReads, 0);
+  assert.equal(f.calls.sales, 1);
+  assert.equal(f.calls.settles, 1);
 });

@@ -1,3 +1,5 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { donationTokenMatches, withDonationToken } from "@/lib/donations/access-token";
@@ -24,6 +26,8 @@ async function handle(req: NextRequest) {
   const donationId = searchParams.get("donationId") || "";
   const locale = (searchParams.get("locale") || "en").toLowerCase().replace(/[^a-z-]/g, "") || "en";
   const presented = searchParams.get("t");
+  const statusOnly = searchParams.get("view") === "status";
+  const json = (body: object, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
   const failUrl = new URL(
     donationId ? `/${locale}/donation-failed?donationId=${encodeURIComponent(donationId)}` : `/${locale}/donation-failed`,
@@ -32,12 +36,21 @@ async function handle(req: NextRequest) {
   // A form POST lands here; 303 makes the browser follow with a GET.
   const redirect = (url: URL) => NextResponse.redirect(url, 303);
 
-  if (!/^[0-9a-fA-F]{24}$/.test(donationId)) return redirect(failUrl);
+  if (!/^[0-9a-fA-F]{24}$/.test(donationId)) return statusOnly ? json({ error: "Invalid donation" }, 400) : redirect(failUrl);
 
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
-    select: { paidAt: true, accessToken: true, status: true },
+    select: { paidAt: true, accessToken: true, status: true, donorId: true },
   });
+  if (statusOnly) {
+    if (!donation) return json({ error: "Not found" }, 404);
+    const tokenAccess = Boolean(donation.accessToken && donationTokenMatches(donation.accessToken, presented));
+    if (!tokenAccess) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id || session.user.id !== donation.donorId) return json({ error: "Forbidden" }, 403);
+    }
+    return json({ state: donation.paidAt ? "paid" : donation.status === "FAILED" ? "failed" : "processing" });
+  }
   if (!donation || (!donation.paidAt && donation.status === "FAILED")) return redirect(failUrl);
 
   if (donation.accessToken && !donationTokenMatches(donation.accessToken, presented)) {
@@ -48,3 +61,4 @@ async function handle(req: NextRequest) {
 
 export const GET = handle;
 export const POST = handle;
+

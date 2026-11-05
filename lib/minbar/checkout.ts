@@ -1,3 +1,4 @@
+import { paymentResultTarget } from "./payment-handoff";
 import type { MinbarCartItem } from "./cart";
 import { rememberGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
@@ -386,6 +387,8 @@ export async function initiateBankPayment(
 
   const response = await fetch(endpoint, {
     method: "POST",
+    // A lost reply is resolved against this order, never by sending a second sale.
+    signal: AbortSignal.timeout(90_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       donationId,
@@ -415,9 +418,7 @@ export async function initiateBankPayment(
  */
 export function submitGatewayForm(form: GatewayForm, browserFields: Record<string, string> = {}): void {
   if (form.method === "GET") {
-    const target = new URL(form.actionUrl, window.location.origin);
-    if (target.origin !== window.location.origin || !(target.pathname === "/api/albaraka/2d/result" || /\/(success|donation-failed|payment-processing)(\/|$)/.test(target.pathname))) throw new Error("invalid-payment-result-url");
-    window.location.assign(target.href);
+    window.location.assign(paymentResultTarget(form.actionUrl, window.location.origin));
     return;
   }
   const element = document.createElement("form");
