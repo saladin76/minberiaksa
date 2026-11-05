@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
          converted into the charge currency (the Minbar checkout). */
       amountsIn,
       teamSupport: teamSupportIn = 0,
+      teamSupportLocal: teamSupportLocalIn,
       /* Recurring basket: false charges the team support once, with the
          first payment, instead of with every instalment (the default). */
       teamSupportRecurring: teamSupportRecurringIn = true,
@@ -349,7 +350,7 @@ export async function POST(request: NextRequest) {
     let rates: Record<string, number> = {};
     const needsRates =
       amountsInUsd &&
-      (chargeCode !== "USD" || [...items, ...categoryItems].some((line) => parseLocalAmount(line.local)));
+      (chargeCode !== "USD" || parseLocalAmount(teamSupportLocalIn) || [...items, ...categoryItems].some((line) => parseLocalAmount(line.local)));
     if (needsRates) {
       try {
         rates = await getUsdBaseRatesForServer();
@@ -390,10 +391,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const teamSupport =
-      teamSupportAllowed && typeof teamSupportIn === "number" && Number.isFinite(teamSupportIn) && teamSupportIn > 0
-        ? toCharge(teamSupportIn)
-        : 0;
+    const supportLocal = parseLocalAmount(teamSupportLocalIn);
+    if (teamSupportLocalIn != null && !supportLocal)
+      return NextResponse.json({ error: "Invalid support currency amount" }, { status: 400 });
+    const supportRate = supportLocal ? (supportLocal.currency === "USD" ? 1 : rates[supportLocal.currency]) : undefined;
+    if (amountsInUsd && supportLocal && supportLocal.currency !== chargeCode && !(supportRate && supportRate > 0))
+      return NextResponse.json({ error: "Exchange rate unavailable for support currency" }, { status: 503 });
+    const teamSupport = teamSupportAllowed && typeof teamSupportIn === "number" && Number.isFinite(teamSupportIn) && teamSupportIn > 0
+      ? amountsInUsd && supportLocal
+        ? supportLocal.currency === chargeCode ? Math.round(supportLocal.amount * 100) / 100 : toCharge(supportLocal.amount / (supportRate as number))
+        : toCharge(teamSupportIn)
+      : 0;
     /* What each later instalment carries. The first payment (the donation
        created below) always includes the full amount. */
     const planTeamSupport = teamSupportRecurringIn === false ? 0 : teamSupport;
@@ -496,6 +504,12 @@ export async function POST(request: NextRequest) {
     const fees = (totalAmount + teamSupport) * 0.03;
     const finalTotalAmount = totalAmount + teamSupport + (coverFees ? fees : 0);
 
+    if (body.expectedTotal !== undefined && (typeof body.expectedTotal !== "number" || !Number.isFinite(body.expectedTotal) || body.expectedTotal < 0 || Math.abs(body.expectedTotal - finalTotalAmount) > 0.02)) {
+      const error = donationLocale === "tr" ? "Toplam tutar değişti. Ödeme yapmadan önce sepete dönüp tutarı kontrol edin."
+        : donationLocale === "ar" ? "تغير الإجمالي. ارجع إلى السلة وراجع المبلغ قبل تأكيد الدفع."
+        : "The total changed. Return to the basket and review the amount before paying.";
+      return NextResponse.json({ error, code: "CHECKOUT_TOTAL_CHANGED" }, { status: 409 });
+    }
     const currencyNorm = normalizeDonationCurrencyCode(currency);
     let donationTotalUsd: number;
     try {

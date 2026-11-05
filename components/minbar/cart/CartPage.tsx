@@ -20,6 +20,7 @@ import {
   toggleCartMonthly,
   clearTeamSupport,
   readTeamSupportChoice,
+  readTeamSupportLocal,
   readTeamSupportRecurring,
   teamSupportIsRecurring,
   writeTeamSupport,
@@ -111,6 +112,9 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
      button waits for that answer; nothing is pre-selected on their behalf. */
   const [teamSupport, setTeamSupport] = useState<number | null>(null);
   const teamAmount = teamSupport ?? 0;
+  const [teamLocal, setTeamLocal] = useState<ReturnType<typeof readTeamSupportLocal>>();
+  const teamLabel = teamLocal?.currency === code ? formatLocal(teamLocal.amount, { maximumFractionDigits: 2 }) : format(teamAmount, { maximumFractionDigits: 2 });
+  const supportReady = code === "USD" || (rate != null && rate > 0);
   const [customTeam, setCustomTeam] = useState("");
   /* Recurring basket: with every instalment (default) or once. */
   const [teamRecurringChoice, setTeamRecurringChoice] = useState<boolean | null>(null);
@@ -121,12 +125,17 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
     });
     const choice = readTeamSupportChoice();
     setTeamSupport(choice);
-    if (choice !== null && choice > 0) setCustomTeam(String(choice));
+    setTeamLocal(readTeamSupportLocal());
     setTeamRecurringChoice(readTeamSupportRecurring());
     return () => {
       live = false;
     };
   }, []);
+  useEffect(() => {
+    const value = readTeamSupportChoice();
+    const local = readTeamSupportLocal();
+    if (value !== null && value > 0 && supportReady) setCustomTeam(String(Math.round((local?.currency === code ? local.amount : value * (rate ?? 1)) * 100) / 100));
+  }, [code, rate, supportReady]);
   const chooseTeamRecurring = (value: boolean) => {
     writeTeamSupportRecurring(value);
     setTeamRecurringChoice(value);
@@ -150,14 +159,21 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   );
   const teamSupportEnabled = settings?.teamSupportEnabled !== false;
   const teamAmounts = useMemo(
-    () => resolveFinalTeamSupportAmounts(currency, null, settings?.suggestedTeamSupport ?? null),
-    [currency, settings]
+    () => {
+      const values = resolveFinalTeamSupportAmounts(currency, null, settings?.suggestedTeamSupport ?? null);
+      const localOverride = code !== "USD" && Boolean(settings?.suggestedTeamSupport?.byCurrency[code]?.length);
+      return localOverride ? supportReady ? values.map(value => value / (rate as number)) : [] : values;
+    },
+    [currency, settings, code, rate, supportReady]
   );
   const chooseTeamSupport = (amount: number) => {
     const value = Number.isFinite(amount) && amount > 0 ? amount : 0;
-    writeTeamSupport(value);
+    const local = value > 0 && code !== "USD" && settings?.suggestedTeamSupport?.byCurrency[code]?.length && supportReady
+      ? { amount: Math.round(value * (rate as number) * 100) / 100, currency: code } : undefined;
+    writeTeamSupport(value, local);
+    setTeamLocal(local);
     setTeamSupport(value);
-    if (!teamAmounts.includes(value)) setCustomTeam(value > 0 ? String(value) : "");
+    if (!teamAmounts.includes(value)) setCustomTeam(value > 0 ? String(Math.round(value * (rate ?? 1) * 100) / 100) : "");
     else setCustomTeam("");
   };
   /* Team support is optional: an unanswered choice is treated as no extra support for checkout. */
@@ -245,8 +261,8 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
   const totalLabel = useMemo(() => {
     const team = teamSupportEnabled && teamAmount > 0 ? teamAmount : 0;
     if (!inLocal) return format(items.reduce((sum, item) => sum + item.amount, 0) + team);
-    return formatLocal(items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: team }));
-  }, [items, teamAmount, teamSupportEnabled, inLocal, format, formatLocal, lineValue]);
+    return formatLocal(items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: team, local: teamLocal }), { maximumFractionDigits: 2 });
+  }, [items, teamAmount, teamLocal, teamSupportEnabled, inLocal, format, formatLocal, lineValue]);
 
   /* With the $1 floor on, a row under it holds the checkout until it is raised. */
   const belowMinimum = items.some(lineTooSmall);
@@ -619,10 +635,10 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                 {teamSupportEnabled && teamAmount > 0 ? (
                   <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13.5, color: "var(--muted)", minWidth: 0 }}>
                     <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {teamRecurring ? tTeam("chosenRecurring", { amount: format(teamAmount) }) : tTeam("chosen", { amount: format(teamAmount) })}
+                      {teamRecurring ? tTeam("chosenRecurring", { amount: teamLabel }) : tTeam("chosen", { amount: teamLabel })}
                     </span>
                     <span dir="ltr" style={{ unicodeBidi: "isolate", flex: "0 0 auto", fontWeight: 800, color: "var(--deep)" }}>
-                      {format(teamAmount)}
+                      {teamLabel}
                     </span>
                   </span>
                 ) : null}
@@ -704,6 +720,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                         key={value}
                         type="button"
                         onClick={() => chooseTeamSupport(value)}
+                        disabled={!supportReady}
                         aria-pressed={teamSupport === value}
                         style={teamPill(teamSupport === value)}
                       >
@@ -712,23 +729,27 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                     ))}
                     <input
                       value={customTeam}
+                      disabled={!supportReady}
                       onChange={(e) => {
                         const next = decimalAmount(e.target.value);
                         setCustomTeam(next);
                         const n = Number(next);
-                        if (n > 0) {
-                          writeTeamSupport(n);
-                          setTeamSupport(n);
+                        if (n > 0 && supportReady) {
+                          const given = fromLocal(n);
+                          writeTeamSupport(given.usd, given.local);
+                          setTeamLocal(given.local);
+                          setTeamSupport(given.usd);
                         } else {
                           /* An emptied field is no answer  the question stands. */
                           clearTeamSupport();
+                          setTeamLocal(undefined);
                           setTeamSupport(null);
                         }
                       }}
                       inputMode="decimal"
                       dir="ltr"
-                      placeholder={tTeam("customAmount")}
-                      aria-label={tTeam("customAmount")}
+                      placeholder={`${tTeam("customAmount")} (${code})`}
+                      aria-label={`${tTeam("customAmount")} (${code})`}
                       style={{ flex: "0 1 auto", width: "11ch", minWidth: "8ch", height: 44, padding: "0 10px", borderRadius: 999, border: `1px dashed ${teamAmount > 0 && !teamAmounts.includes(teamAmount) ? "var(--green)" : "rgba(211,154,39,.65)"}`, background: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "var(--deep)", boxSizing: "border-box" }}
                     />
                   </div>
@@ -821,3 +842,4 @@ const iconBtn = (color: string, background: string): CSSProperties => ({
   cursor: "pointer",
   transition: "transform .15s ease, background .15s ease",
 });
+

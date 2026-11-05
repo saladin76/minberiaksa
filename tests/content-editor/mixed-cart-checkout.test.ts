@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { parseLocalAmount } from "../../lib/minbar/donation-amount";
 import * as schedule from "../../lib/donations/recurring-schedule";
 import * as mixed from "../../lib/donations/mixed-cart";
 import * as handoff from "../../lib/minbar/payment-handoff";
@@ -53,7 +54,7 @@ function orderFixture() {
     "@/lib/minbar/cms": {},
     "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => ({ USD: 1, TRY: 50 }) },
     "@/lib/minbar/waqf": { WAQF_MAX_COUNT: 1000, WAQF_UNIT_PRICE_USD: { share: 20, meter: 100 }, isWaqfUnitKey: (v: string) => v === "share" || v === "meter" },
-    "@/lib/minbar/donation-amount": { MIN_DONATION_USD: 1, MIN_DONATION_USD_TOLERANCE: .999, parseLocalAmount: (v: unknown) => v ?? null },
+    "@/lib/minbar/donation-amount": { MIN_DONATION_USD: 1, MIN_DONATION_USD_TOLERANCE: .999, parseLocalAmount },
     "@/lib/donations/recurring-schedule": schedule,
     "@/lib/payment-gateway": { parseMainGateway: () => "ALBARAKA" },
     "@/lib/albaraka": { isAlbarakaRecurringCheckoutReady: () => true },
@@ -211,4 +212,45 @@ for (const recurringSupport of [false, true]) test(`multi-cadence support and fe
 test("an invalid secondary cadence schedule is rejected before any donation/plan write",async()=>{
  const f=orderFixture();const result=await f.post({type:"DAILY",items:[{campaignId:campaign,amount:1},{campaignId:campaign,amount:1}],lineFrequencies:["daily","monthly"],schedules:{monthly:{hour:99,minute:0,dayOfMonth:15}}});
  assert.equal(result.status,400); assert.equal(f.donations.length,0);assert.equal(f.plans.length,0);
+});
+
+
+test("custom team support is charged as 500 TRY, never 500 USD, including recurring baskets", async () => {
+  for (const cadence of ["once", "daily", "friday", "monthly"]) {
+    const f = orderFixture();
+    const response = await f.post({ type: cadence === "once" ? "ONE_TIME" : cadence.toUpperCase(), currency: "TRY", amountsIn: "USD",
+      items: [{ campaignId: campaign, amount: 10 }], lineFrequencies: [cadence], teamSupport: 10,
+      teamSupportLocal: { amount: 500, currency: "TRY" } });
+    assert.equal(response.status, 200);
+    assert.equal(f.donations[0].teamSupport, 500);
+    assert.equal(f.donations[0].totalAmount, 1000);
+    if (cadence !== "once") assert.equal(f.plans[0].teamSupport, 500);
+  }
+});
+
+test("an exact support amount overrides a stale USD estimate and rejects malformed currency snapshots", async () => {
+  const f = orderFixture();
+  const response = await f.post({ currency: "TRY", amountsIn: "USD", type: "ONE_TIME", items: [{ campaignId: campaign, amount: 10 }], teamSupport: 500,
+    teamSupportLocal: { amount: 500, currency: "TRY" } });
+  assert.equal(response.status, 200);
+  assert.equal(f.donations[0].totalAmount, 1000);
+  const invalid = orderFixture();
+  assert.equal((await invalid.post({ currency: "TRY", amountsIn: "USD", items: [{ campaignId: campaign, amount: 10 }], teamSupport: 10,
+    teamSupportLocal: { amount: -500, currency: "TRY" } })).status, 400);
+  assert.equal(invalid.donations.length, 0);
+});
+
+
+test("2500 TRY plus 500 TRY support charges exactly 3000 TRY and a changed total is rejected before order creation", async () => {
+  const input = { currency: "TRY", amountsIn: "USD", type: "ONE_TIME", items: [{ campaignId: campaign, amount: 50, local: { amount: 2500, currency: "TRY" } }],
+    teamSupport: 10, teamSupportLocal: { amount: 500, currency: "TRY" }, expectedTotal: 3000 };
+  const f = orderFixture();
+  assert.equal((await f.post(input)).status, 200);
+  assert.equal(f.donations[0].totalAmount, 3000);
+  const changed = orderFixture();
+  const rejected = await changed.post({ ...input, expectedTotal: 1000 });
+  assert.equal(rejected.status, 409);
+  assert.equal(rejected.body.code, "CHECKOUT_TOTAL_CHANGED");
+  assert.equal(changed.donations.length, 0);
+  assert.equal(changed.plans.length, 0);
 });

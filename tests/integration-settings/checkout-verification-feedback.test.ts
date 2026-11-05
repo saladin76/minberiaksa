@@ -27,7 +27,7 @@ assert.ok(handler); assert.ok(disabled);
 function handlerHarness(overrides: Record<string, unknown> = {}) {
   const events: string[] = [];
   const context = {
-    submitLock: { current: false }, cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], requiresVerificationChoice: true, verificationMode: null,
+    pricingReady: true, submitLock: { current: false }, cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], requiresVerificationChoice: true, verificationMode: null,
     belowMinimum: false, session: null, firstName: "Fixture", email: "fixture@example.invalid", phone: "+905551234567", method: "card", needsOwnCardForm: false, gateway: "ALBARAKA",
     cardNumber: "", cardExpiry: "", cardCvc: "", selectedCardId: null, checkoutFieldIssue,
     t: (key: string) => key, tValidation: (key: string) => key,
@@ -44,7 +44,7 @@ function handlerHarness(overrides: Record<string, unknown> = {}) {
 
 test("a donor can request validation before selecting 2D or 3D; operational blocks still disable submission", () => {
   const expression = disabled!.getText(ast);
-  const valid = { cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], belowMinimum: false, method: "card", cardRailUnavailable: false, requiresVerificationChoice: true, verificationMode: null };
+  const valid = { pricingReady: true, cartHasMixedCadences, submitting: false, items: [{freqKey:"once"}], belowMinimum: false, method: "card", cardRailUnavailable: false, requiresVerificationChoice: true, verificationMode: null };
   assert.equal(vm.runInNewContext(expression, valid), false);
   for (const blocked of [{ submitting: true }, { items: [] }, { belowMinimum: true }, { cardRailUnavailable: true }]) assert.equal(vm.runInNewContext(expression, { ...valid, ...blocked }), true);
 });
@@ -64,6 +64,7 @@ test("an untouched form reports the first missing donor field before the later v
   const h = handlerHarness({ firstName: "" }); await h.submit();
   assert.equal(h.events[0], "error:firstName: required");
 });
+
 
 test("a locked checkout ignores a second submission before validation or payment work", async () => {
   const h = handlerHarness({ submitLock: { current: true } });

@@ -378,6 +378,8 @@ type LastAttempt = {
   at: number;
   items: MinbarCartItem[];
   teamSupport: number | null;
+  teamSupportVersion?: 2;
+  teamSupportLocal?: LocalAmount;
   teamSupportRecurring: boolean | null;
 };
 
@@ -389,6 +391,8 @@ export function rememberCheckoutAttempt(donationId: string): void {
     at: Date.now(),
     items: readCart(),
     teamSupport: readTeamSupportChoice(),
+    teamSupportVersion: 2,
+    teamSupportLocal: readTeamSupportLocal(),
     teamSupportRecurring: readTeamSupportRecurring(),
   };
   if (!attempt.items.length) return;
@@ -411,7 +415,8 @@ export function restoreCheckoutAttempt(donationId: string): boolean {
     if (!attempt || attempt.donationId !== donationId || !Array.isArray(attempt.items) || !attempt.items.length) return false;
     if (Date.now() - Number(attempt.at) > LAST_ATTEMPT_TTL_MS) return false;
     writeCart(attempt.items.map((row) => migrateItem(row as unknown as Record<string, unknown>)));
-    if (attempt.teamSupport !== null && attempt.teamSupport !== undefined) writeTeamSupport(attempt.teamSupport);
+    if (attempt.teamSupportVersion === 2 && attempt.teamSupport !== null && attempt.teamSupport !== undefined) writeTeamSupport(attempt.teamSupport, parseLocalAmount(attempt.teamSupportLocal));
+    else clearTeamSupport();
     writeTeamSupportRecurring(attempt.teamSupportRecurring ?? null);
     window.localStorage.removeItem(CART_LAST_ATTEMPT_KEY);
     return true;
@@ -431,42 +436,31 @@ export function restoreCheckoutAttempt(donationId: string): boolean {
 
 export const CART_TEAM_SUPPORT_KEY = "mia_cart_team_support";
 
-/** The team-support amount chosen in the basket (in the active currency), or 0. */
-export function readTeamSupport(): number {
-  if (!isBrowser()) return 0;
-  try {
-    const n = Number(window.localStorage.getItem(CART_TEAM_SUPPORT_KEY) ?? "0");
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  } catch {
-    return 0;
-  }
-}
-
-/**
- * The donor's explicit choice: an amount, `0` for "no thanks", or `null` when
- * they have not answered yet. The basket will not let them continue to
- * checkout until this is not null.
- */
-export function readTeamSupportChoice(): number | null {
+/** Currency-tagged USD value. Ambiguous positive legacy numbers require a new choice. */
+function storedTeamSupport(): { amountUSD: number; local?: LocalAmount } | null {
   if (!isBrowser()) return null;
   try {
     const raw = window.localStorage.getItem(CART_TEAM_SUPPORT_KEY);
     if (raw === null) return null;
-    const n = Number(raw);
-    return Number.isFinite(n) && n >= 0 ? n : null;
-  } catch {
-    return null;
-  }
+    if (raw === "0") return { amountUSD: 0 };
+    const value = JSON.parse(raw);
+    if (!value || value.version !== 2 || !Number.isFinite(value.amountUSD) || value.amountUSD < 0) return null;
+    const local = parseLocalAmount(value.local);
+    if (value.local && !local) return null;
+    return { amountUSD: value.amountUSD, ...(local ? { local } : {}) };
+  } catch { return null; }
 }
+export function readTeamSupport(): number { return storedTeamSupport()?.amountUSD ?? 0; }
+export function readTeamSupportChoice(): number | null { return storedTeamSupport()?.amountUSD ?? null; }
+export function readTeamSupportLocal(): LocalAmount | undefined { return storedTeamSupport()?.local; }
 
-/** Record the choice; `0` is stored, not removed  "no thanks" is an answer. */
-export function writeTeamSupport(amount: number): void {
+/** Exact local input is retained alongside the USD accounting value. */
+export function writeTeamSupport(amount: number, local?: LocalAmount): void {
   if (!isBrowser()) return;
   try {
-    window.localStorage.setItem(CART_TEAM_SUPPORT_KEY, String(amount > 0 ? amount : 0));
-  } catch {
-    /* Private mode; the in-memory choice still applies to this page view. */
-  }
+    const amountUSD = Number.isFinite(amount) && amount > 0 ? amount : 0;
+    window.localStorage.setItem(CART_TEAM_SUPPORT_KEY, JSON.stringify({ version: 2, amountUSD, ...(amountUSD && local ? { local } : {}) }));
+  } catch { /* Private mode; the in-memory choice remains available. */ }
   window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
 }
 
@@ -520,3 +514,4 @@ export function teamSupportIsRecurring(items: readonly MinbarCartItem[], choice:
   if (!cartHasRecurring(items)) return false;
   return choice ?? true;
 }
+

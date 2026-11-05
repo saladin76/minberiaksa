@@ -65,6 +65,8 @@ export interface CreateDonationInput {
    * instalment, otherwise once.
    */
   teamSupport: number;
+  teamSupportLocal?: LocalAmount;
+  expectedTotal?: number;
   /**
    * Recurring basket only: true charges the team support with every
    * instalment (the default), false charges it once with the first payment.
@@ -287,12 +289,14 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
          rest and the team support at its rate. Sent raw, a $1 row shown as
          ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
+      ...(input.expectedTotal !== undefined ? { expectedTotal: input.expectedTotal } : {}),
       type: orderType(input.items),
       lineFrequencies,
       schedules: Object.fromEntries(["daily", "friday", "monthly"].map(cadence => [cadence, input.items.find(row => row.freqKey === cadence)?.schedule ?? null])),
       timezone: browserTimezone(),
       ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
+      ...(input.teamSupport > 0 && input.teamSupportLocal ? { teamSupportLocal: input.teamSupportLocal } : {}),
       teamSupportRecurring: input.teamSupportRecurring,
       /* Analytics only: marks an order whose basket went through the concierge. */
       ...(conciergeMarker() ? { concierge: conciergeMarker() } : {}),
@@ -484,3 +488,4 @@ export async function chargeWithStripe(donationId: string, locale: string): Prom
   if (!response.ok || !payload?.clientSecret) throw new Error(payload?.error || "stripe-failed");
   return { clientSecret: payload.clientSecret };
 }
+

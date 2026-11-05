@@ -53,7 +53,7 @@ import {
 } from "@/lib/minbar/checkout";
 import { firstChargeAfterCheckout, frequencyOfOrderType, scheduleRuleFor } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
-import { clearCart, readTeamSupport, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
+import { clearCart, readTeamSupport, readTeamSupportLocal, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
@@ -109,6 +109,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
+  const tTeam = useTranslations("TeamSupport");
+  const tCart = useTranslations("cart");
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
   const tCert = useTranslations("certificates");
@@ -145,10 +147,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      storage is not known to the server render. Zeroed when the admin has
      switched the step off, so the summary matches what will be charged. */
   const [teamSupport, setTeamSupport] = useState(0);
+  const [teamSupportLocal, setTeamSupportLocal] = useState<ReturnType<typeof readTeamSupportLocal>>();
   const [teamSupportEnabled, setTeamSupportEnabled] = useState(true);
   const [teamRecurringChoice, setTeamRecurringChoice] = useState<boolean | null>(null);
   useEffect(() => {
     setTeamSupport(readTeamSupport());
+    setTeamSupportLocal(readTeamSupportLocal());
     setTeamRecurringChoice(readTeamSupportRecurring());
   }, []);
   const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
@@ -287,7 +291,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     donationType: orderTypeForCart,
   });
   const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: gatewayConfig?.payforSaudiRoutingEnabled === true && orderTypeForCart === "ONE_TIME", currency, phone, fallback: fallbackGateway });
-  const payableDisplayTotal = items.reduce((sum, item) => sum + lineValue(item), 0) + teamSupportCharged * (money.rate ?? 1);
+  const pricingReady = currency === "USD" || inLocal;
+  const payableDisplayTotal = items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: teamSupportCharged, local: teamSupportCharged > 0 ? teamSupportLocal : undefined });
 
 
   /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
@@ -371,6 +376,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (submitLock.current || submitting || !items.length) return;
+    if (!pricingReady) { setError(tSystem("processing")); return; }
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
       return;
@@ -448,7 +454,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         routingPhone: phone, expectedGateway: method === "card" ? gateway : undefined,
         locale,
         method: methodForServer,
+        expectedTotal: payableDisplayTotal,
         teamSupport: teamSupportCharged,
+        teamSupportLocal: teamSupportCharged > 0 ? teamSupportLocal : undefined,
         teamSupportRecurring: teamRecurring,
         referralCode: readReferralCode(),
         bank:
@@ -594,7 +602,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       cardNumber, cardExpiry, cardCvc,
       savedCard: Boolean(selectedCardId),
     }) === null));
-  const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete && (!requiresVerificationChoice || Boolean(verificationMode));
+  const canConfirm = hydrated && pricingReady && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete && (!requiresVerificationChoice || Boolean(verificationMode));
   const steps: CheckoutStep[] = [
     { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: false, enabled: true },
     { n: 2, label: t("stepDetails"), current: true, enabled: true },
@@ -989,6 +997,11 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
+            <section aria-label={tCart("totalForCurrency", { currency })} className="rounded-xl border bg-white p-4 space-y-2">
+              {pricingReady ? items.map((item, index) => <div key={index} className="flex justify-between gap-3 text-sm"><span>{resolveTitle(item)}</span><b dir="ltr">{money.formatLocal(lineValue(item), { maximumFractionDigits: 2 })}</b></div>) : null}
+              {pricingReady && teamSupportCharged > 0 ? <div className="flex justify-between gap-3 text-sm"><span>{tTeam("title")}</span><b dir="ltr">{money.formatLocal(lineValue({ amount: teamSupportCharged, local: teamSupportLocal }), { maximumFractionDigits: 2 })}</b></div> : null}
+              <div className="flex justify-between gap-3 border-t pt-3 text-lg font-bold"><span>{tCart("totalForCurrency", { currency })}</span><b dir="ltr">{pricingReady ? money.formatLocal(payableDisplayTotal, { maximumFractionDigits: 2 }) : tSystem("processing")}</b></div>
+            </section>
             {method === "card" && (currency === "USD" || inLocal) ? <PaymentCurrencyNotice gateway={gateway} currency={currency} amount={payableDisplayTotal} phone={phone} /> : null}
             {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : method === "card" && (gateway === "PAYFOR" || (gateway === "ALBARAKA" && planFrequency)) ? <AlbarakaVerificationChoice value={gateway === "PAYFOR" ? "3D" : albarakaSecurityMode} onChange={() => {}} fixed /> : null}
 
@@ -1014,7 +1027,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             {method === "paypal" ? (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum}
+                disabled={submitting || !items.length || !pricingReady || belowMinimum}
                 className="pay-paypal"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", height: 52, border: 0, borderRadius: 8, background: "#FFC439", color: "#10212B", fontFamily: "inherit", fontWeight: 900, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 16px rgba(255,196,57,.35)", boxSizing: "border-box", transition: "filter .18s ease, transform .18s ease" }}
               >
@@ -1025,7 +1038,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable)}
+                disabled={submitting || !items.length || !pricingReady || belowMinimum || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
@@ -1087,3 +1100,4 @@ const headingIcon: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = { fontSize: 12.5, fontWeight: 800, color: "var(--deep)" };
+
