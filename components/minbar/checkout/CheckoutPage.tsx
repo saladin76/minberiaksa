@@ -291,7 +291,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     donationType: orderTypeForCart,
   });
   const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: gatewayConfig?.payforSaudiRoutingEnabled === true && orderTypeForCart === "ONE_TIME", currency, phone, fallback: fallbackGateway });
-  const pricingReady = currency === "USD" || inLocal;
+  const pricingReady = hydrated && (currency === "USD" || inLocal);
   const payableDisplayTotal = items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: teamSupportCharged, local: teamSupportCharged > 0 ? teamSupportLocal : undefined });
 
 

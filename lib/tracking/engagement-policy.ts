@@ -28,10 +28,14 @@ const PAID_MEDIA = new Set([
   "paid_social", "paidsocial", "display", "cpm", "cpv", "paid_video", "retargeting",
 ]);
 
+function unresolvedMacro(value: string): boolean {
+  return /\{\{|\}\}|\{[a-z][a-z0-9_.]*\}|__[A-Z][A-Z0-9_]*__|%7b|%7d/i.test(value);
+}
+
 function safeLabel(value: string): string | undefined {
   const text = value.replace(/[\u0000-\u001f\u007f]/g, "").trim();
   // Labels are not a channel for emails, credentials, or arbitrary URLs.
-  if (!text || /@|:\/\//.test(text)) return undefined;
+  if (!text || /@|:\/\//.test(text) || unresolvedMacro(text)) return undefined;
   return text.slice(0, 100);
 }
 
@@ -39,6 +43,7 @@ export function landingAttribution(params: URLSearchParams): Record<string, stri
   const tags: Record<string, string | number> = {
     measurement_version: ENGAGEMENT_MEASUREMENT_VERSION,
   };
+  if ([...params.values()].some(unresolvedMacro)) tags.has_unresolved_macros = 1;
   for (const key of CAMPAIGN_KEYS) {
     const value = params.get(key);
     const safe = value ? safeLabel(value) : undefined;
@@ -124,6 +129,7 @@ const LABEL_KEYS = new Set([
 const NUMBER_KEYS = new Set([
   ...CLICK_KEYS.map((key) => "has_" + key), "is_paid_traffic", "has_campaign_tags",
   "ms_since_navigation_start", "hidden_for_ms", "samples",
+  "has_unresolved_macros",
 ]);
 
 export function sanitizeEngagementData(data: Record<string, unknown> = {}): Record<string, string | number> {

@@ -29,6 +29,7 @@ function readSelectedCurrency(): string {
 const useCurrencyConverter = () => {
   const [exchangeRates, setExchangeRates] = useState<{ [key: string]: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   // Bumped on hydration and on currency-cookie change so every consumer
   // re-renders after middleware/`CurrencyFromUrlSync` settles the real selection.
   const [, setCurrencyTick] = useState(0);
@@ -41,14 +42,14 @@ const useCurrencyConverter = () => {
         const map = (data.conversion_rates || data.rates) as Record<string, number>;
         setExchangeRates(map);
         const updated = data.time_last_update_utc || data.updatedAt || new Date().toISOString();
-        localStorage.setItem(
+        try { localStorage.setItem(
           CACHE_KEY,
           JSON.stringify({
             rates: map,
             timestamp: Date.now(),
             time_last_update_utc: updated,
           })
-        );
+        ); } catch { /* Optional cache: valid server rates remain usable. */ }
       }
     } catch (err) {
       console.error("Failed to fetch exchange rates", err);
@@ -76,13 +77,16 @@ const useCurrencyConverter = () => {
   useEffect(() => {
     // Hydration: re-read in case middleware set the cookie just before paint
     // (SSR `getSelectedCurrency` would otherwise resolve to DEFAULT).
+    setHydrated(true);
     setCurrencyTick((n) => n + 1);
     const onUpdate = () => setCurrencyTick((n) => n + 1);
     window.addEventListener(CURRENCY_COOKIE_UPDATED_EVENT, onUpdate);
     return () => window.removeEventListener(CURRENCY_COOKIE_UPDATED_EVENT, onUpdate);
   }, []);
 
-  const getSelectedCurrency = readSelectedCurrency;
+  // Match the server's first render; a cookie-only first client render can
+  // replace USD markup with TRY before hydration and force a React recovery.
+  const getSelectedCurrency = () => hydrated ? readSelectedCurrency() : "DEFAULT";
 
   const convertToCurrency = (value: number) => {
     const currency = getSelectedCurrency();
@@ -97,3 +101,4 @@ const useCurrencyConverter = () => {
 };
 
 export default useCurrencyConverter;
+

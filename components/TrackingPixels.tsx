@@ -240,11 +240,17 @@ function getUrlParam(key: string): string | undefined {
 /** Persist ttclid / gclid / fbclid in sessionStorage so they survive page navigations */
 function captureClickIds(): { ttclid?: string; gclid?: string; fbclid?: string } {
   if (typeof window === "undefined") return {};
-  const ttclid = getUrlParam("ttclid") || sessionStorage.getItem("_ttclid") || undefined;
-  const gclid  = getUrlParam("gclid")  || sessionStorage.getItem("_gclid")  || undefined;
+  let ttclid = getUrlParam("ttclid");
+  let gclid = getUrlParam("gclid");
   const fbclid = getUrlParam("fbclid") || undefined;
-  if (ttclid) sessionStorage.setItem("_ttclid", ttclid);
-  if (gclid)  sessionStorage.setItem("_gclid",  gclid);
+  try {
+    ttclid ||= sessionStorage.getItem("_ttclid") || undefined;
+    gclid ||= sessionStorage.getItem("_gclid") || undefined;
+  } catch { /* In-app/private browsers may deny storage. URL IDs still work. */ }
+  try {
+    if (ttclid) sessionStorage.setItem("_ttclid", ttclid);
+    if (gclid) sessionStorage.setItem("_gclid", gclid);
+  } catch { /* Cache failure must not abort a donation or its tracking event. */ }
   return { ttclid, gclid, fbclid };
 }
 
@@ -925,3 +931,4 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     </TrackingContext.Provider>
   );
 }
+

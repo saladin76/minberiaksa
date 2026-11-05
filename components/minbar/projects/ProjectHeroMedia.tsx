@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
+import { imageUrl, imageSrcSet } from "@/lib/minbar/image-url";
 
 interface ProjectHeroMediaProps {
   /** The campaign's photos, cover first. */
@@ -89,7 +90,9 @@ export default function ProjectHeroMedia({ images, title, imageAlt, children }: 
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={src}
+                src={imageUrl(src, 760)}
+                srcSet={imageSrcSet(src)}
+                sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1240px) 62vw, 770px"
                 alt={index === 0 ? imageAlt || title : ""}
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "auto"}
@@ -101,7 +104,8 @@ export default function ProjectHeroMedia({ images, title, imageAlt, children }: 
           ))}
         </div>
       ) : images[0] ? (
-        <span role="img" aria-label={title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${images[0]}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl(images[0], 760)} srcSet={imageSrcSet(images[0])} sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1240px) 62vw, 770px" alt={imageAlt || title} loading="eager" fetchPriority="high" decoding="async" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
       ) : null}
 
       <span aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(0deg, rgba(16,33,43,.6), rgba(16,33,43,0) 52%)" }} />
@@ -143,3 +147,4 @@ export default function ProjectHeroMedia({ images, title, imageAlt, children }: 
     </div>
   );
 }
+

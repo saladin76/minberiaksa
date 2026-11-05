@@ -1,5 +1,6 @@
 import { messagesFor } from "@/i18n/locale-messages";
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { SITE_URL, buildPageMetadata, buildLocalizedAlternates, clipSeoDescription } from "@/lib/seo";
 import {
@@ -23,7 +24,12 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["projects", "cart", "homepage", "quran", "ProjectExtras"] as const;
+const NAMESPACES = ["projects", "cart", "homepage", "quran", "ProjectExtras", "Gift"] as const;
+
+// Metadata and page rendering share these public lookups within one render
+// request only. Do not retain project visibility/translation data across requests.
+const projectForRequest = cache((key: string, locale: string) => getProject(key, locale));
+const superCategoryForRequest = cache((key: string, locale: string) => getSuperCategory(key, locale));
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -31,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   /* A super category owns this slug ahead of any campaign  the programme
      pages live under /projects/<slug> and are rows, not files. */
-  const superCategory = await getSuperCategory(key, locale);
+  const superCategory = await superCategoryForRequest(key, locale);
   if (superCategory) {
     return applyEditorialSeo(buildPageMetadata(locale, {
       title: superCategory.metaTitle || superCategory.title,
@@ -44,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }),await readPublicEditorialSeo('super-categories',key,locale));
   }
 
-  const project = await getProject(key, locale);
+  const project = await projectForRequest(key, locale);
   // An unpublished or missing project must not produce indexable metadata 
   // `PRODUCTION_SEO_CONTRACT.md` requires a real 404, not a soft one.
   if (!project) return { title: "", robots: { index: false, follow: false } };
@@ -84,7 +90,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const [{ locale, slug }, query] = await Promise.all([params, searchParams]);
   const key = decodeURIComponent(slug);
 
-  const superCategory = await getSuperCategory(key, locale);
+  const superCategory = await superCategoryForRequest(key, locale);
   if (superCategory) {
     if (key !== superCategory.slug) permanentRedirect(withIncomingQuery(miaPath("projectDetail", locale, encodeURIComponent(superCategory.slug)), query));
     return (
@@ -97,7 +103,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     );
   }
 
-  const project = await getProject(key, locale);
+  const project = await projectForRequest(key, locale);
   if (!project) notFound();
   if (project.redirectedFrom) {
     permanentRedirect(withIncomingQuery(
@@ -131,3 +137,4 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     </>
   );
 }
+

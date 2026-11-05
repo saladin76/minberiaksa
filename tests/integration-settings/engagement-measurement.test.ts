@@ -23,6 +23,22 @@ test("measurement is limited to exact production hosts, independently of a previ
   assert.equal(isMeasurementHost("preview.example.org", "production", "*.example.org"), false);
 });
 
+test("unexpanded ad macros are diagnosed without becoming Clarity campaign labels", () => {
+  const query = new URLSearchParams("utm_source=facebook&utm_medium=paid_social&utm_campaign=campaign-42&device={{device_platform}}&platform={{publisher_platform}}");
+  const result = landingAttribution(query);
+  assert.equal(result.utm_campaign, "campaign-42");
+  assert.equal(result.is_paid_traffic, 1);
+  assert.equal(result.has_unresolved_macros, 1);
+  for (const placeholder of ["{{campaign.name}}", "__CAMPAIGN_NAME__", "{campaignid}", "%7B%7Bcampaign.name%7D%7D"]) {
+    const tags = landingAttribution(new URLSearchParams({ utm_campaign: placeholder, utm_source: "facebook" }));
+    assert.equal(tags.utm_campaign, undefined);
+    assert.equal(tags.has_unresolved_macros, 1);
+    assert.equal(sanitizeEngagementData({ utm_campaign: placeholder }).utm_campaign, undefined);
+  }
+  assert.equal(sanitizeEngagementData({ has_unresolved_macros: 1 }).has_unresolved_macros, 1);
+  assert.equal(query.get("device"), "{{device_platform}}", "diagnostics do not rewrite the donor URL");
+});
+
 test("Clarity recorder and dashboard use the same project, preserving configured overrides and filter encoding", () => {
   for (const configured of ["", "   ", "configured-project"]) {
     const project = clarityProjectId(configured);

@@ -53,8 +53,9 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
   const t = useTranslations("common");
   const tCart = useTranslations("cart");
   const tProjects = useTranslations("projects");
-  const { format, formatNumber } = useMinbarMoney();
-  const { fromLocal, fromChip, labelOf, tooSmall, minLabel } = useDonationAmount();
+  const { format, formatNumber, formatLocal, code, rate } = useMinbarMoney();
+  const pricingReady = code === "USD" || (rate != null && rate > 0);
+  const { fromLocal, fromChip, tooSmall, minLabel } = useDonationAmount();
   const tGive = useTranslations("CardGive");
   const tGift = useTranslations("Gift");
   const shares = project.shares;
@@ -98,6 +99,9 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
       ? fromLocal(Number(custom))
       : fromChip(amountChips[picked]);
   const amount = given.usd;
+  const displayAmount = given.local?.currency === code
+    ? formatLocal(given.local.amount, { maximumFractionDigits: 2 })
+    : format(amount, { maximumFractionDigits: 2 });
   /* With the $1 floor on, less than a dollar is refused here and said so. */
   const belowMinimum = amount > 0 && tooSmall(amount, given.local);
   const [minHint, setMinHint] = useState(false);
@@ -167,6 +171,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
   });
 
   const onDonate = () => {
+    if (!pricingReady) return;
     if (!(amount > 0)) return;
     if (giftConfigured && !giftReady) { setGiftError(true); setGiftOpen(true); return; }
     if (belowMinimum) return setMinHint(true);
@@ -175,6 +180,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
   };
 
   const onAddToBasket = () => {
+    if (!pricingReady) return;
     if (!(amount > 0)) return;
     if (giftConfigured && !giftReady) { setGiftError(true); setGiftOpen(true); return; }
     if (belowMinimum) return setMinHint(true);
@@ -299,6 +305,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
         </div>
         <input
           value={custom}
+          disabled={!pricingReady}
           /* Whole shares only; a count has no leading zero. */
           onChange={(e) => setCustom(shares ? digitsOnly(e.target.value).replace(/^0+/, "").slice(0, 6) : decimalAmount(e.target.value))}
           inputMode={shares ? "numeric" : "decimal"}
@@ -507,7 +514,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
           ) : null}
         </span>
         <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 21, fontWeight: 900, color: "var(--red)" }}>
-          {labelOf(given)}
+          {displayAmount}
         </b>
       </span>
       {minHint && belowMinimum ? (
@@ -519,6 +526,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
       <button
         type="button"
         onClick={onDonate}
+        disabled={!pricingReady}
         className="mia-card-cta"
         style={{ height: 52, border: 0, borderRadius: 10, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontSize: 16.5, fontWeight: 900, cursor: "pointer", transition: "filter .18s ease" }}
       >
@@ -529,6 +537,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
         <button
           type="button"
           onClick={onAddToBasket}
+          disabled={!pricingReady}
           style={{
             flex: "1 1 auto",
             height: 44,
@@ -580,3 +589,4 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
     </div>
   );
 }
+
