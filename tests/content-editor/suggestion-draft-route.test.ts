@@ -14,6 +14,8 @@ function fixture(mode = "ok") {
   const calls: { translations: unknown[]; research: Record<string, unknown>[]; reads: number; auth: number } = { translations: [], research: [], reads: 0, auth: 0 };
   class SeoResearchError extends Error { status = 502; }
   const deps: Record<string, unknown> = {
+    "@/lib/content-editor/create": { emptyWorkspace: () => ({ title: "", description: "", translations: [] }) },
+    "@/lib/content-editor/compose": { composeField: async (input: unknown) => { calls.translations.push(input); return "Suggested title"; } },
     "@/lib/content-editor/seo-source": { seoSourceText },
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status || 200 }) } },
     "next-auth": { getServerSession: async () => { calls.auth++; if (mode === "queued" && calls.auth > 1) throw new Error("request cookies are unavailable after response"); return { user: { id: "operator" } }; } }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
@@ -30,7 +32,7 @@ function fixture(mode = "ok") {
   const loaded = { exports: {} as { POST: (request: unknown, context: unknown) => Promise<{ status: number; body: Record<string, unknown> }> } };
   const source = ts.transpileModule(fs.readFileSync("app/api/admin/content-editor/[kind]/[id]/suggest/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, Headers, console: { error: () => {} }, require: (id: string) => { if (!(id in deps)) throw new Error(id); return deps[id]; } });
-  return { row, calls, post: (body: unknown) => loaded.exports.POST({ json: async () => body, signal: new AbortController().signal, headers: new Headers(mode === "queued" ? { Prefer: "respond-async" } : {}) }, { params: Promise.resolve({ kind: "campaigns", id: row.id }) }) };
+  return { row, calls, post: (body: unknown, contentId = row.id) => loaded.exports.POST({ json: async () => body, signal: new AbortController().signal, headers: new Headers(mode === "queued" ? { Prefer: "respond-async" } : {}) }, { params: Promise.resolve({ kind: "campaigns", id: contentId }) }) };
 }
 test("translation uses the unsaved Arabic snapshot and never mutates saved content", async () => {
   const h = fixture(), original = structuredClone(h.row);
@@ -78,4 +80,26 @@ test("proofreading still edits the requested language without substituting Arabi
   assert.equal((await h.post({ action: "proofread", locale: "en", revision: "revision", keys: ["title"], draft: { title: "English draft" }, sourceDraft: { amount: "invalid ignored source" } })).status, 200);
   const input = h.calls.translations[0] as { mode: string; sourceLocale: string; fields: Record<string, string> };
   assert.equal(input.mode, "proofread"); assert.equal(input.sourceLocale, "en"); assert.equal(input.fields.title, "English draft");
+});
+
+
+test("a new unsaved draft can request one field without reading or persisting a project", async () => {
+  const h = fixture();
+  const result = await h.post({ action: "compose", locale: "ar", revision: "revision", field: "title",
+    brief: "عنوان محايد لمشروع تجريبي فقط", draft: { description: "مثال غير مخصص للنشر" } }, "new");
+  assert.equal(result.status, 200);
+  assert.equal(h.calls.reads, 0);
+  assert.equal(h.calls.translations.length, 1);
+  const proposals = result.body.proposals as Record<string, { values: Record<string, string> }>;
+  assert.deepEqual(JSON.parse(JSON.stringify(proposals.ar.values)), { title: "Suggested title" });
+});
+
+test("field drafting refuses URLs, unknown fields, oversized briefs, invalid locales and unauthorized access", async () => {
+  for (const patch of [{ field: "image" }, { field: "videoUrl" }, { field: "amount" }, { brief: "x".repeat(2001) }, { locale: "unknown" }]) {
+    const h = fixture();
+    const result = await h.post({ action: "compose", locale: "ar", revision: "revision", field: "title", brief: "مثال", ...patch });
+    assert.equal(result.status, 400);
+    assert.equal(h.calls.translations.length, 0);
+  }
+  assert.equal((await fixture("denied").post({ action: "compose" }, "new")).status, 403);
 });

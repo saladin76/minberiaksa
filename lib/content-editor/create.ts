@@ -43,6 +43,11 @@ export async function createWorkspace(db: Store, input: {
     for (const field of cfg.fields.filter((field) => field.required))
       if (!hasText(source[field.key])) throw new ContentError("أكمل المحتوى العربي المطلوب: " + field.label);
     const settings = validateWorkspaceSettings(kind, blank, input.settings);
+    // Arabic Campaign has a gallery; `image` is only a translated cover override.
+    if (kind === "campaigns") {
+      if (source.image) throw new ContentError("عدّل الغلاف الافتراضي من صور المشروع");
+      delete source.image;
+    }
     const data: ContentRecord = { ...blank, ...source, ...settings, editorVersion: randomUUID() };
     for (const key of ["id", "translations", "updates", "blocks", "items", "videos", "values", "infoCards"]) delete data[key];
     if (["blog", "reports", "booklets"].includes(kind)) delete data.isActive;
@@ -90,3 +95,4 @@ export async function createWorkspace(db: Store, input: {
     return saved;
   });
 }
+

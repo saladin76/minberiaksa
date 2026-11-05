@@ -1,3 +1,5 @@
+import { composeField } from "@/lib/content-editor/compose";
+import { emptyWorkspace } from "@/lib/content-editor/create";
 import { queueSuggestion } from "@/lib/content-editor/suggestion-tasks";
 import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
@@ -34,7 +36,7 @@ async function suggestWithSession(
 ): Promise<Response> {
   const { kind: raw, id } = await ctx.params,
     kind = parseKind(raw);
-  if (!kind || !/^[a-f0-9]{24}$/i.test(id))
+  if (!kind || (id !== "new" && !/^[a-f0-9]{24}$/i.test(id)))
     return NextResponse.json({ error: "قسم غير صالح" }, { status: 404 });
   const denied = requireAdminOrDashboardPermission(
       session,
@@ -47,7 +49,7 @@ async function suggestWithSession(
       return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => suggestWithSession(detached, ctx, session), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const body = await request.json();
-    const row = await readContent(contentStore, kind, id);
+    const row = id === "new" ? emptyWorkspace(kind) : await readContent(contentStore, kind, id);
     if (body.revision !== fingerprint(row))
       return NextResponse.json(
         { error: "تغير المحتوى. أعد تحميله قبل طلب اقتراح جديد." },
@@ -62,6 +64,21 @@ async function suggestWithSession(
         return { ...saved, ...validateChanges(fields, changedTextValues(value as Record<string, string>, saved)) };
       } catch (error) { throw new ContentError(error instanceof Error ? error.message : "حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
     };
+    if (body.action === "compose") {
+      if (!isValidLocale(body.locale)) throw new ContentError("اختر لغة صالحة للاقتراح");
+      const field = fields.find(field => field.key === body.field && field.group === "content" && !field.locked && (field.rich || ["title", "name", "question", "answer", "description", "text", "subtitle", "summary"].includes(field.key)));
+      if (!field) throw new ContentError("اختر حقلًا نصيًا صالحًا للاقتراح");
+      if (typeof body.brief !== "string" || body.brief.length > 2000) throw new ContentError("توجيهات الاقتراح يجب ألا تتجاوز 2000 حرف");
+      const draft = draftValues(body.draft, body.locale);
+      const sourceDraft = draftValues(body.sourceDraft, "ar");
+      if (!body.brief.trim() && !fields.some(field => field.group === "content" && !field.locked && (hasText(draft[field.key]) || hasText(sourceDraft[field.key]))))
+        throw new ContentError("أضف معلومات عن المشروع أو توجيهات للاقتراح أولًا");
+      const value = await composeField({ field, locale: body.locale, values: draft, sourceValues: sourceDraft, brief: body.brief, signal: request.signal });
+      const values = validateChanges(fields, { [field.key]: value });
+      return NextResponse.json({ id, kind, revision: body.revision, action: "compose", proposals: {
+        [body.locale]: { values, warnings: [] },
+      }, errors: {} }, { headers: { "Cache-Control": "no-store" } });
+    }
     const source = body.action === "proofread" ? valuesFor(kind, row, "ar") : draftValues(body.sourceDraft, "ar");
     if (body.action === "proofread") {
       if (!isValidLocale(body.locale))
@@ -228,3 +245,4 @@ export async function POST(request: NextRequest, ctx: SuggestionContext): Promis
   catch { return NextResponse.json({ error: "تعذر التحقق من جلسة الدخول. احتفظ بالمسودة وأعد المحاولة.", reason: "SUGGESTION_SESSION_UNAVAILABLE" }, { status: 503 }); }
   return suggestWithSession(request, ctx, session);
 }
+

@@ -145,6 +145,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [message, setMessageText] = useState("");
   const [messageTone, setMessageTone] = useState<"info" | "success" | "error">("info");
   const [invalidField, setInvalidField] = useState<{ locale: string; key: string } | null>(null);
+  const [fieldBriefs, setFieldBriefs] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const setMessage = useCallback((text: string, tone: "info" | "success" | "error" = "info") => { setMessageText(text); setMessageTone(tone); }, []);
   useEffect(() => { if (messageTone !== "success" || !message) return; const timer = setTimeout(() => setMessage(""), 6500); return () => clearTimeout(timer); }, [message, messageTone, setMessage]);
@@ -316,8 +317,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       setBusy("");
     }
   };
-  const suggest = async (action: "seo" | "translate" | "faq" | "proofread", all = false, targetLocales?: string[]) => {
-    if (!document || id === "new" || uploads > 0) {
+  const suggest = async (action: "seo" | "translate" | "faq" | "proofread" | "compose", all = false, targetLocales?: string[], fieldKey?: string) => {
+    if (!document || uploads > 0) {
       setMessage(dt("احفظ المحتوى الجديد وانتظر اكتمال الرفع قبل طلب الاقتراح.")); return;
     }
     const targets = targetLocales ?? (action === "translate"
@@ -331,8 +332,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
     try {
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
-          const response = await requestSuggestion<Proposal>(url + "/suggest", { action, locale: target, locales: [target], keys: selected, revision,
-              ...(action === "proofread" ? { draft: drafts[target] || {} } : { sourceDraft: drafts.ar || {} }),
+          const response = await requestSuggestion<Proposal>(url + "/suggest", { action, locale: target, locales: [target], keys: fieldKey ? [fieldKey] : selected, revision,
+              ...(action === "compose" ? { sourceDraft: drafts.ar || {}, field: fieldKey, brief: fieldBriefs[`${target}:${fieldKey}`] || "" } : {}),
+              ...(["proofread", "compose"].includes(action) ? { draft: drafts[target] || {} } : { sourceDraft: drafts.ar || {} }),
               ...(action === "seo" && analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.id !== id || response.kind !== kind || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return response;
@@ -526,6 +528,23 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           <span className="text-xs text-slate-500">{dt("مراجعة يدوية")}</span>
         )}
       </div>
+      {field.group === "content" && !field.locked && (field.rich || ["title", "name", "question", "answer", "description", "text", "subtitle", "summary"].includes(field.key)) ? (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-3">
+          <label className="min-w-48 flex-1 space-y-1 text-xs text-slate-600">
+            <span>{dt("توجيهات الاقتراح")}</span>
+            <input aria-label={dt("توجيهات اقتراح: {0}", [dt(field.label)])} maxLength={2000}
+              className="w-full rounded-lg border bg-white p-2 text-sm" disabled={Boolean(busy)}
+              placeholder={dt("اكتب الفكرة والحقائق التي تريد تضمينها")}
+              value={fieldBriefs[`${locale}:${field.key}`] || ""}
+              onChange={event => setFieldBriefs(previous => ({ ...previous, [`${locale}:${field.key}`]: event.target.value }))} />
+          </label>
+          <button type="button" className={button} disabled={Boolean(busy) || uploads > 0}
+            onClick={() => void suggest("compose", false, [locale], field.key)}>{dt("اقتراح {0}", [dt(field.label)])}</button>
+          <button type="button" className={button} disabled={Boolean(busy) || uploads > 0 || !current[field.key]?.trim()}
+            onClick={() => void suggest("proofread", false, [locale], field.key)}>{dt("تدقيق {0}", [dt(field.label)])}</button>
+          <p className="w-full text-xs text-slate-500">{dt("راجع الاقتراح وعدّله قبل تطبيقه على المسودة.")}</p>
+        </div>
+      ) : null}
       {field.key === "image" && locale !== "ar" ? (
         <ImageUploadField label={dt("غلاف هذه اللغة")} value={current.image || ""} onChange={url => edit("image", url)} onUploadingChange={onUploadingChange} />
       ) : field.key === "fileUrl" && ["reports", "booklets"].includes(kind) ? (
@@ -697,7 +716,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           <label className="space-y-1 text-sm"><span>{dt("اللغات المستهدفة")}</span><select aria-label={dt("اللغات المستهدفة")} className="w-full rounded-lg border bg-white p-3" value={assistTargetScope} disabled={Boolean(busy)} onChange={event => setAssistScope(event.target.value)}>
             <option value="current">{LOCALES[(assistAction === "translate" && locale === "ar" ? "en" : locale) as keyof typeof LOCALES]?.nativeLabel}</option>{SUPPORTED_LOCALES.filter(code => code !== locale && !(assistAction === "translate" && code === "ar") && !(assistAction === "translate" && locale === "ar" && code === "en")).map(code => <option key={code} value={code}>{LOCALES[code as keyof typeof LOCALES]?.nativeLabel}</option>)}<option value="missing">{dt("اللغات غير المكتملة")}</option><option value="all">{dt("كل اللغات")}</option>
           </select></label>
-          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0 || id === "new"} onClick={() => {
+          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0} onClick={() => {
             const targets = (assistTargetScope === "current" ? [assistAction === "translate" && locale === "ar" ? "en" : locale] : SUPPORTED_LOCALES.includes(assistTargetScope as typeof SUPPORTED_LOCALES[number]) ? [assistTargetScope] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
             void suggest(assistAction, false, targets);
           }}>{assistAction === "translate" ? assistTargetScope === "missing" ? dt("ترجمة اللغات الناقصة") : assistTargetScope === "all" ? dt("ترجمة كل اللغات") : dt("ترجمة الحقول المحددة") : dt("إعداد الاقتراحات")}</button>
@@ -1271,3 +1290,4 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
     </div>
   );
 }
+
