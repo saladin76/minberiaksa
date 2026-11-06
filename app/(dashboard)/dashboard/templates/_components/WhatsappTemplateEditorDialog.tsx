@@ -194,6 +194,18 @@ function formatMegabytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
 }
 
+function normalizeMediaMime(file: File, type: HeaderType): string {
+  const mime = file.type.trim().toLowerCase();
+  if (type === "DOCUMENT" && (mime === "application/pdf" || mime === "")) return "application/pdf";
+  if (type === "IMAGE" && (mime === "image/jpeg" || mime === "image/jpg" || mime === "image/png" || mime === "")) {
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (mime && mime !== "image/jpg") return mime;
+    return ext === "png" ? "image/png" : "image/jpeg";
+  }
+  if (type === "VIDEO" && (mime === "video/mp4" || mime === "")) return "video/mp4";
+  return mime;
+}
+
 async function inspectMediaFile(file: File, type: HeaderType): Promise<MediaInfo> {
   if (type === "IMAGE") {
     const url = URL.createObjectURL(file);
@@ -449,7 +461,8 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     if (type !== "IMAGE" && type !== "VIDEO" && type !== "DOCUMENT") return;
 
     const spec = MEDIA_SPECS[type];
-    if (!spec.accept.includes(file.type as never)) {
+    const mediaMime = normalizeMediaMime(file, type);
+    if (!spec.accept.includes(mediaMime as never)) {
       toast.error(dt("الصيغة غير مدعومة. المطلوب: {0}", [spec.formats]));
       return;
     }
@@ -490,7 +503,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         url: publicUrl,
         publicId,
         name: file.name,
-        type: file.type,
+        type: mediaMime,
         size: file.size,
       });
 
@@ -503,7 +516,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         mediaUrl: publicUrl,
         mediaPublicId: publicId,
         fileName: file.name,
-        mimeType: file.type,
+        mimeType: mediaMime,
       }));
 
       if (inspected.ratioOk === false) {

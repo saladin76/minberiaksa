@@ -76,6 +76,7 @@ test("actual editor sends the signed PDF ID to storage and retains public URL an
   const source = ts.transpileModule("module.exports = " + expression, {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText;
   vm.runInNewContext(source, {module: mod, header, FormData, MEDIA_SPECS: {DOCUMENT: {accept: ["application/pdf"], maxBytes: 1000000}},
     dt: (s: string) => s, formatMegabytes: String, setUploadError: (s: string) => error = s, setUploadingSample: () => {}, setMediaInfo: () => {},
+    normalizeMediaMime: (candidate: File, kind: string) => candidate.type || (kind === "DOCUMENT" ? "application/pdf" : candidate.type),
     inspectMediaFile: async () => ({size: file.size}), setHeader: (fn: (previous: Record<string, string>) => Record<string, string>) => header = fn(header), toast: {success: () => {}, error: assert.fail},
     axios: {post: async (url: string, data: FormData | Record<string, unknown>) => {
       phase++;
