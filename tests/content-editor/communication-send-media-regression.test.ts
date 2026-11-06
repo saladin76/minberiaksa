@@ -9,8 +9,6 @@ function load(path: string, imports: Record<string, unknown>, extra = {}) {
   const js = ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
   vm.runInNewContext(js, { module: mod, exports: mod.exports, require: (name: string) => {
     if (name in imports) return imports[name];
-    if (name === "react") return React;
-    if (name === "react/jsx-runtime") return require("react/jsx-runtime");
     throw new Error(name);
   }, ...extra });
   return mod.exports;
