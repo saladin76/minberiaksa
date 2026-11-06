@@ -219,7 +219,7 @@ export function CampaignRowActions({
   };
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex items-center justify-end gap-1.5" onClick={event => event.stopPropagation()}>
       {canSend ? <button type="button" disabled={busy} onClick={event=>{event.stopPropagation();void openSend();}} className="inline-flex min-h-9 items-center gap-1 rounded-md bg-brand px-3 text-xs font-semibold text-white disabled:opacity-50"><Send className="h-3.5 w-3.5" />{dt("إرسال الآن")}</button> : null}
       {scheduleOpen ? <CampaignScheduleDialog campaign={campaign} onChanged={onChanged} onClose={() => setScheduleOpen(false)} /> : null}
       {campaign.status === "BLOCKED" ? <button type="button" onClick={event => { event.stopPropagation(); setRecoveryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 text-xs font-semibold text-sky-900">{dt("تشخيص واستكمال")}</button> : null}
@@ -310,3 +310,4 @@ export function CampaignRowActions({
     </div>
   );
 }
+

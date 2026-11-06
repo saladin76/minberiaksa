@@ -5,6 +5,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { uploadMetaTemplateSample } from "@/lib/communication/providers/meta-whatsapp/templates";
 import cloudinary from "@/lib/cloudinary";
 import type { UploadApiResponse } from "cloudinary";
+import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -60,7 +61,7 @@ function uploadPublicCopy(buffer: Buffer, file: File): Promise<UploadApiResponse
       {
         folder: "whatsapp-template-media",
         resource_type: isPdf ? "raw" : "auto",
-        ...(isPdf ? { public_id: file.name.replace(/\.[^.]+$/, "") || undefined } : {}),
+        ...(isPdf ? { public_id: `${randomUUID()}.pdf` } : {}),
       },
       (error, result) => {
         if (error) return reject(error);
@@ -174,3 +175,4 @@ export async function POST(request: Request) {
     publicId: publicCopy.public_id,
   });
 }
+
