@@ -326,11 +326,11 @@ export default function BankTransfersPage() {
       setSupportedCurrencies(
         banksRes.data.supportedCurrencies ?? ["USD", "TRY", "EUR"],
       );
-      await loadTransactions(defaultFilters, 1);
     } catch {
       setLoadError(true);
       toast.error(dt("فشل تحميل بيانات التحويلات البنكية"));
     } finally {
+      await loadTransactions(defaultFilters, 1);
       setLoading(false);
     }
   }
@@ -659,18 +659,6 @@ export default function BankTransfersPage() {
     );
   }
 
-  if (loadError)
-    return (
-      <div
-        role="alert"
-        className="rounded-xl border border-rose-200 bg-rose-50 p-6"
-      >
-        <p>{dt("فشل تحميل بيانات التحويلات البنكية")}</p>
-        <Button variant="outline" className="mt-4" onClick={loadInitial}>
-          {dt("إعادة المحاولة")}
-        </Button>
-      </div>
-    );
   const focused = transactions.find((tx) => tx.id === openId);
   const focusedEdit = focused?.id ? edits[focused.id] : undefined;
   const locked = Boolean(
@@ -722,6 +710,14 @@ export default function BankTransfersPage() {
         }
       />
 
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <p>{dt("تعذّر تحميل قائمة البنوك. راجع سجل العمليات أدناه، وأعد تحميل البنوك قبل استيراد كشف جديد.")}</p>
+          <Button variant="outline" className="mt-3" onClick={loadInitial}>
+            {dt("إعادة المحاولة")}
+          </Button>
+        </div>
+      )}
       {transactionsError && (
         <p
           role="alert"
@@ -749,7 +745,7 @@ export default function BankTransfersPage() {
             label: dt("مستبعد ضمن التصفية"),
             value: ignoredCount === null ? "—" : String(ignoredCount),
           },
-          { label: dt("البنوك النشطة"), value: String(activeBanks.length) },
+          { label: dt("البنوك النشطة"), value: loadError ? "—" : String(activeBanks.length) },
         ]}
       />
 
@@ -776,7 +772,7 @@ export default function BankTransfersPage() {
         ))}
       </nav>
       <div hidden={section !== "import"}>
-        <StatementImporter banks={banks} onImported={imported} />
+        {!loadError && <StatementImporter banks={banks} onImported={imported} />}
       </div>
       {section === "history" && (
         <StatementHistory refreshKey={historyKey} bankName={bankName} />
@@ -1640,3 +1636,4 @@ export default function BankTransfersPage() {
     </div>
   );
 }
+

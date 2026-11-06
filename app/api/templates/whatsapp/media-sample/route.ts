@@ -37,6 +37,7 @@ function mediaKindForMime(type: string): keyof typeof MEDIA_LIMITS | null {
 
 function normalizeMime(type: string, name: string): string {
   const normalized = type.trim().toLowerCase();
+  if (normalized === "application/x-pdf") return "application/pdf";
   if (normalized && normalized !== "application/octet-stream") return normalized;
   const extension = name.toLowerCase().split(".").pop();
   if (extension === "pdf") return "application/pdf";
@@ -50,7 +51,7 @@ function validateMedia(type: string, size: number): { ok: true; kind: keyof type
   const kind = mediaKindForMime(type);
   if (!kind) return { ok: false, error: "نوع الملف غير مدعوم. استخدم JPG/PNG للصورة، MP4 للفيديو، أو PDF للمستند.", status: 400 };
   const limit = MEDIA_LIMITS[kind];
-  if (!size || size > limit.maxBytes) {
+  if (!Number.isSafeInteger(size) || size <= 0 || size > limit.maxBytes) {
     return { ok: false, error: `حجم ${kind === "IMAGE" ? "الصورة" : kind === "VIDEO" ? "الفيديو" : "المستند"} يجب ألا يتجاوز ${limit.label}.`, status: 413 };
   }
   return { ok: true, kind };
@@ -135,6 +136,9 @@ export async function POST(request: Request) {
     const bytes = new Uint8Array(await remote.arrayBuffer());
     const actual = validateMedia(type, bytes.byteLength);
     if (!actual.ok) return NextResponse.json({ error: actual.error }, { status: actual.status });
+    if (type === "application/pdf" && !Buffer.from(bytes.subarray(0, 1024)).includes(Buffer.from("%PDF-"))) {
+      return NextResponse.json({ error: "محتوى الملف ليس مستند PDF صالحًا." }, { status: 400 });
+    }
 
     const result = await uploadMetaTemplateSample({ bytes, name, type });
     if (!result.ok) {
@@ -157,6 +161,9 @@ export async function POST(request: Request) {
   if (!checked.ok) return NextResponse.json({ error: checked.error }, { status: checked.status });
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  if (normalizedType === "application/pdf" && !buffer.subarray(0, 1024).includes(Buffer.from("%PDF-"))) {
+    return NextResponse.json({ error: "محتوى الملف ليس مستند PDF صالحًا." }, { status: 400 });
+  }
   const result = await uploadMetaTemplateSample({
     bytes: new Uint8Array(buffer),
     name: file.name,
@@ -187,5 +194,4 @@ export async function POST(request: Request) {
     publicId: publicCopy.public_id,
   });
 }
-
 

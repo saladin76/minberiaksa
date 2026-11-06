@@ -210,7 +210,7 @@ function formatUploadErrorValue(value: unknown): string {
 
 function normalizeMediaMime(file: File, type: HeaderType): string {
   const mime = file.type.trim().toLowerCase();
-  if (type === "DOCUMENT" && (mime === "application/pdf" || mime === "")) return "application/pdf";
+  if (type === "DOCUMENT" && (mime === "application/pdf" || mime === "application/x-pdf" || ((!mime || mime === "application/octet-stream") && /\.pdf$/i.test(file.name)))) return "application/pdf";
   if (type === "IMAGE" && (mime === "image/jpeg" || mime === "image/jpg" || mime === "image/png" || mime === "")) {
     const ext = file.name.toLowerCase().split(".").pop();
     if (mime && mime !== "image/jpg") return mime;
