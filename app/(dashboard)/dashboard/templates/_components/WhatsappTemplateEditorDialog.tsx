@@ -194,6 +194,20 @@ function formatMegabytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
 }
 
+function formatUploadErrorValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const nested = [record.message, record.error_user_msg, record.error_user_title, record.type, record.code]
+      .filter((item) => typeof item === "string" || typeof item === "number")
+      .map(String);
+    if (nested.length) return nested.join(" — ");
+    try { return JSON.stringify(value); } catch { return "تعذر قراءة تفاصيل الخطأ"; }
+  }
+  return value == null ? "" : String(value);
+}
+
 function normalizeMediaMime(file: File, type: HeaderType): string {
   const mime = file.type.trim().toLowerCase();
   if (type === "DOCUMENT" && (mime === "application/pdf" || mime === "")) return "application/pdf";
@@ -525,8 +539,12 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         toast.success(dt("تم رفع الوسائط والتحقق منها وإرسال العينة إلى Meta."));
       }
     } catch (error) {
-      const detail = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
-      const message = [detail?.error, detail?.detail].filter(Boolean).join(" — ") || dt("فشل رفع عينة الوسائط إلى Meta");
+      const responseData = (error as { response?: { data?: unknown; status?: number } }).response?.data;
+      const detail = responseData && typeof responseData === "object" ? responseData as Record<string, unknown> : undefined;
+      const parts = [detail?.error, detail?.reason, detail?.detail, formatUploadErrorValue(responseData)]
+        .map(formatUploadErrorValue)
+        .filter(Boolean);
+      const message = Array.from(new Set(parts)).join(" — ") || dt("فشل رفع عينة الوسائط إلى Meta");
       setUploadError(message);
       toast.error(message);
     } finally {
