@@ -35,6 +35,17 @@ function mediaKindForMime(type: string): keyof typeof MEDIA_LIMITS | null {
   return null;
 }
 
+function normalizeMime(type: string, name: string): string {
+  const normalized = type.trim().toLowerCase();
+  if (normalized && normalized !== "application/octet-stream") return normalized;
+  const extension = name.toLowerCase().split(".").pop();
+  if (extension === "pdf") return "application/pdf";
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "mp4") return "video/mp4";
+  return normalized;
+}
+
 function validateMedia(type: string, size: number): { ok: true; kind: keyof typeof MEDIA_LIMITS } | { ok: false; error: string; status: number } {
   const kind = mediaKindForMime(type);
   if (!kind) return { ok: false, error: "نوع الملف غير مدعوم. استخدم JPG/PNG للصورة، MP4 للفيديو، أو PDF للمستند.", status: 400 };
@@ -56,7 +67,7 @@ function isAllowedCloudinaryUrl(value: string): boolean {
 
 function uploadPublicCopy(buffer: Buffer, file: File): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
-    const isPdf = file.type === "application/pdf";
+    const isPdf = normalizeMime(file.type, file.name) === "application/pdf";
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "whatsapp-template-media",
@@ -92,7 +103,7 @@ export async function POST(request: Request) {
     const url = typeof payload?.url === "string" ? payload.url : "";
     const publicId = typeof payload?.publicId === "string" ? payload.publicId : "";
     const name = typeof payload?.name === "string" ? payload.name : "template-media";
-    const type = typeof payload?.type === "string" ? payload.type : "";
+    const type = normalizeMime(typeof payload?.type === "string" ? payload.type : "", name);
     const declaredSize = typeof payload?.size === "number" ? payload.size : 0;
 
     if (!url || !isAllowedCloudinaryUrl(url)) {
@@ -112,7 +123,7 @@ export async function POST(request: Request) {
     }
 
     const remoteType = (remote.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-    if (remoteType && remoteType !== type.toLowerCase()) {
+    if (remoteType && remoteType !== type.toLowerCase() && !(type === "application/pdf" && remoteType === "application/octet-stream")) {
       return NextResponse.json({ error: "نوع الملف المخزن لا يطابق النوع المرسل.", detail: remoteType }, { status: 400 });
     }
     const contentLength = Number(remote.headers.get("content-length") ?? 0);
@@ -141,14 +152,15 @@ export async function POST(request: Request) {
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "اختر ملفًا صالحًا." }, { status: 400 });
 
-  const checked = validateMedia(file.type, file.size);
+  const normalizedType = normalizeMime(file.type, file.name);
+  const checked = validateMedia(normalizedType, file.size);
   if (!checked.ok) return NextResponse.json({ error: checked.error }, { status: checked.status });
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await uploadMetaTemplateSample({
     bytes: new Uint8Array(buffer),
     name: file.name,
-    type: file.type,
+    type: normalizedType,
   });
   if (!result.ok) {
     return NextResponse.json(
@@ -175,4 +187,5 @@ export async function POST(request: Request) {
     publicId: publicCopy.public_id,
   });
 }
+
 
