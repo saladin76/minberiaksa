@@ -21,3 +21,9 @@ The server audit confirmed P2023 on current/legacy catalogue and transaction fin
 After the read-path change: 344 available behavioral tests passed, including 19 bank statement tests covering cursor-safe reads, malformed/oversized results, pagination, duplicate imports and concurrent approval. The standalone metadata import preflight remains outside this run.
 
 Latest edits are not deployed. One consolidated production activation is intended after outstanding gates pass. Real PDF-to-Meta acceptance and a confirmed production deployment require separate evidence. Legacy advertising URLs also require correction in Ads Manager; source validation does not edit existing advertisements.
+
+## Production build attempt and export fixture correction
+
+Release job 2026-11-06T17-47-38-132Z-770f8169-1765276 stopped before runtime activation: 1790 integration tests passed and two export tests failed because their Prisma fixture exposed findRaw rather than aggregateRaw. Updated that fixture and its assertions to inspect the actual match/sort/limit/project stages, retaining the 1200-row completeness check and explicit 10001-row rejection. The read-failure test now also asserts the fixture's intended error reached the handler, preventing a missing mock method from passing it accidentally.
+
+Targeted bank workspace/export tests: 22 passed. No production payment or export implementation was changed for this fixture correction. The complete server build must be rerun before claiming deployment success.

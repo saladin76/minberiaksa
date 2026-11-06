@@ -6,7 +6,7 @@ import ts from "typescript";
 import * as XLSX from "xlsx";
 
 type RecordValue = Record<string, unknown>;
-type Arguments = { filter: RecordValue; options: RecordValue };
+type Arguments = { pipeline: RecordValue[]; options: RecordValue };
 function fixture(length: number, failure = false, denied = false) {
   const reads: Arguments[] = [];
   const errors: string[] = [];
@@ -25,7 +25,7 @@ function fixture(length: number, failure = false, denied = false) {
   }));
   const prisma = {
     bankTransferTransactionRecord: {
-      findRaw: async (args: Arguments) => {
+      aggregateRaw: async (args: Arguments) => {
         reads.push(args);
         if (failure) throw Error("fixture read failed");
         return rows;
@@ -131,12 +131,16 @@ test("Excel export includes every returned record beyond Mongo first-batch size 
   assert.equal(rows[0]["التاريخ والوقت"], "2026-10-01T12:30:00");
   assert.equal(rows[0]["الرصيد"], 1000);
   assert.equal(rows[0]["القناة"], "FAST");
-  assert.equal(f.reads[0].filter.bankId, "synthetic");
-  assert.equal(f.reads[0].filter.currency, "TRY");
-  assert.equal((f.reads[0].options.sort as RecordValue).amount, 1);
-  assert.equal(f.reads[0].options.limit, 10001);
+  const pipeline = f.reads[0].pipeline;
+  const filter = pipeline.find(stage => stage.$match)?.$match as RecordValue;
+  assert.equal(filter.bankId, "synthetic");
+  assert.equal(filter.currency, "TRY");
+  assert.equal((pipeline.find(stage => stage.$sort)?.$sort as RecordValue).amount, 1);
+  assert.equal(pipeline.find(stage => stage.$limit)?.$limit, 10001);
+  assert.equal((pipeline.find(stage => stage.$project)?.$project as RecordValue).raw, 0);
+  assert.equal(f.reads[0].options.maxTimeMS, 15000);
   assert.equal(
-    ((f.reads[0].filter.$or as RecordValue[])[0].donorName as RecordValue)
+    ((filter.$or as RecordValue[])[0].donorName as RecordValue)
       .$regex,
     "Test\\[1\\]",
   );
@@ -152,8 +156,12 @@ test("over-limit exports return an explicit error instead of a silently truncate
   );
 });
 test("export read failures cannot return an empty successful workbook; permission denial makes no reads", async () => {
-  assert.equal((await fixture(0, true).get()).status, 500);
+  const failed = fixture(0, true);
+  assert.equal((await failed.get()).status, 500);
+  assert.equal(failed.reads.length, 1);
+  assert.match(failed.errors.join("\n"), /fixture read failed/);
   const denied = fixture(1, false, true);
   assert.equal((await denied.get()).status, 403);
   assert.equal(denied.reads.length, 0);
 });
+
