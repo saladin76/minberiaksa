@@ -34,7 +34,7 @@ export class StatementReviewError extends Error {
   }
 }
 
-/** Prisma findRaw drains its cursor in the originating session. A database
+/** Prisma aggregateRaw drains its cursor in the originating session. A database
  * failure or an invalid/oversized result must never mean “no duplicates”. */
 export async function statementRead(
   db: Database,
@@ -54,15 +54,20 @@ export async function statementRead(
             ? db.bankAccount
             : null;
   if (!model) throw new StatementReviewError("STATEMENT_LOOKUP_FAILED");
-  const result = await model.findRaw({
-    filter: rawCommand(filter),
-    options: rawCommand({
-      limit: 20001,
-      batchSize: 500,
-      maxTimeMS: 15000,
-      ...options,
-      ...(projection ? { projection } : {}),
-    }),
+  // Keep paging inside the aggregation pipeline. Production findRaw reads
+  // fail with P2023 while aggregateRaw reads succeed on the same collections.
+  const limit = options.limit ?? 20001;
+  const skip = options.skip ?? 0;
+  if (!Number.isSafeInteger(limit) || Number(limit) < 1 || Number(limit) > 20001 || !Number.isSafeInteger(skip) || Number(skip) < 0)
+    throw new StatementReviewError("STATEMENT_LOOKUP_FAILED");
+  const pipeline: Doc[] = [{ $match: filter }];
+  if (options.sort) pipeline.push({ $sort: options.sort });
+  if (skip) pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: limit });
+  if (projection) pipeline.push({ $project: projection });
+  const result = await model.aggregateRaw({
+    pipeline: pipeline.map(rawCommand),
+    options: { maxTimeMS: 15000 },
   });
   if (
     !Array.isArray(result) ||
@@ -557,3 +562,4 @@ export async function importReviewedStatement(
     invalidCount: input.review.counts.INVALID + input.review.counts.AMBIGUOUS,
   };
 }
+

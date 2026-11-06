@@ -16,6 +16,8 @@ Targeted donation tests cover exact TRY support amounts, initial/recurring alloc
 
 The local checkout is a partial source mirror. The standalone metadata import check and a full production build must run against a complete source checkout. GitHub Actions run 42259931620 failed before any job steps; its detailed annotations are unavailable through the current connector. This is not evidence of passing CI.
 
-The production bank catalogue currently fails. The UI isolation fix does not prove the underlying catalogue/database issue is resolved. Run scripts/audit-bank-transfers-readiness.ts against the server environment before approving the consolidated deployment.
+The server audit confirmed P2023 on current/legacy catalogue and transaction findRaw reads while aggregate statistics and raw counts passed. Shared statementRead now uses a bounded aggregateRaw pipeline, retaining match/sort/skip/limit/projection and propagating errors. This is a targeted remediation pending the updated server audit, not a claim that the production defect is already resolved. Run scripts/audit-bank-transfers-readiness.ts against the server environment before approving the consolidated deployment.
+
+After the read-path change: 344 available behavioral tests passed, including 19 bank statement tests covering cursor-safe reads, malformed/oversized results, pagination, duplicate imports and concurrent approval. The standalone metadata import preflight remains outside this run.
 
 Latest edits are not deployed. One consolidated production activation is intended after outstanding gates pass. Real PDF-to-Meta acceptance and a confirmed production deployment require separate evidence. Legacy advertising URLs also require correction in Ads Manager; source validation does not edit existing advertisements.

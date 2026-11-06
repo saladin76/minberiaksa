@@ -171,13 +171,13 @@ function database(initial: Doc[] = []) {
       throw new Error("unexpected operation");
     },
   };
-  const findRaw = async ({ filter }: Doc) =>
-    [...transactions.values()].filter((row) => matches(row, filter ?? {}));
+  const aggregateRaw = async ({ pipeline }: Doc) =>
+    [...transactions.values()].filter((row) => matches(row, pipeline.find((stage: Doc) => stage.$match)?.$match ?? {}));
   Object.assign(db, {
-    bankTransferTransactionRecord: { findRaw },
-    bankStatementUploadRecord: { findRaw },
-    bankTransferBankRecord: { findRaw },
-    bankAccount: { findRaw },
+    bankTransferTransactionRecord: { aggregateRaw },
+    bankStatementUploadRecord: { aggregateRaw },
+    bankTransferBankRecord: { aggregateRaw },
+    bankAccount: { aggregateRaw },
   });
   return {
     db: db as unknown as Database,
@@ -468,16 +468,16 @@ test("partial and indeterminate writes are not reported as a completed import", 
     assert.equal([...d.uploads.values()][0].status, result.state);
   }
 });
-test("statement reads use Prisma cursor-aware findRaw, and reject malformed or oversized replies", async () => {
+test("statement reads use Prisma cursor-aware aggregateRaw, and reject malformed or oversized replies", async () => {
   const rows = Array.from({ length: 1200 }, (_, index) => ({
     _id: { $oid: index.toString(16).padStart(24, "0") },
   }));
   let reads = 0;
   const db = {
     bankTransferTransactionRecord: {
-      findRaw: async (args: Doc) => {
+      aggregateRaw: async (args: Doc) => {
         reads++;
-        assert.equal(args.options.limit, 20001);
+        assert.equal(args.pipeline.find((stage: Doc) => stage.$limit).$limit, 20001);
         return rows;
       },
     },
@@ -490,6 +490,18 @@ test("statement reads use Prisma cursor-aware findRaw, and reject malformed or o
     1200,
   );
   assert.equal(reads, 1);
+  let captured: Doc = {};
+  await service.statementRead({ bankTransferTransactionRecord: { aggregateRaw: async (args: Doc) => { captured = args; return []; } } } as unknown as Database,
+    "BankTransferTransaction", { bankId: "bank-a" }, { raw: 0 }, { sort: { createdAt: -1 }, skip: 50, limit: 50 });
+  assert.equal(JSON.stringify(captured.pipeline), JSON.stringify([
+    { $match: { bankId: "bank-a" } }, { $sort: { createdAt: -1 } }, { $skip: 50 }, { $limit: 50 }, { $project: { raw: 0 } },
+  ]));
+  assert.equal(captured.options.maxTimeMS, 15000);
+  for (const limit of [0, -1, 20002, NaN, 1.5]) await assert.rejects(
+    service.statementRead(db, "BankTransferTransaction", {}, undefined, { limit }), /STATEMENT_LOOKUP/);
+  const failure = new Error("database read failed");
+  await assert.rejects(service.statementRead({ bankTransferTransactionRecord: { aggregateRaw: async () => { throw failure; } } } as unknown as Database,
+    "BankTransferTransaction", {}), error => error === failure);
   for (const result of [
     { cursor: { firstBatch: [] } },
     [{ invalid: true }, null],
@@ -498,7 +510,7 @@ test("statement reads use Prisma cursor-aware findRaw, and reject malformed or o
     await assert.rejects(
       service.statementRead(
         {
-          bankTransferTransactionRecord: { findRaw: async () => result },
+          bankTransferTransactionRecord: { aggregateRaw: async () => result },
         } as unknown as Database,
         "BankTransferTransaction",
         {},
@@ -824,3 +836,4 @@ test("the import API rejects bypassing the preview before any persistence call",
   }
   assert.equal(writes, 0);
 });
+
