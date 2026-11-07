@@ -1,3 +1,4 @@
+import { listProjectFilters } from "@/lib/minbar/project-filters";
 import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { LOCALE_SEO } from "@/lib/seo";
@@ -38,6 +39,8 @@ export default async function Projects({ params }: Props) {
   const { locale } = await params;
   const [projects, curated] = await Promise.all([listProjects(locale), listSlides(locale)]);
 
+  const filters = await listProjectFilters(locale, projects);
+
   /* The carousel is the one the dashboard curates  an editor picks the
      images, the wording and where each slide leads. With none published it
      falls back to the highest-priority projects that have imagery: a slide
@@ -55,7 +58,7 @@ export default async function Projects({ params }: Props) {
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
         <PageBanners locale={locale} page="projects" slot="top" />
-      <ProjectsPage projects={projects} slides={slides} />
+      <ProjectsPage projects={projects} slides={slides} filters={filters} />
       <PageBanners locale={locale} page="projects" slot="bottom" />
     </MinbarMessages>
   );

@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Uden bekræftelseskode",
     "verificationSecure": "Bankbekræftelse",
     "verificationSecureHelp": "En kode kan være nødvendig",
-    "verificationRequired": "Vælg en betalingsmulighed for at fortsætte."
+    "verificationRequired": "Vælg en betalingsmulighed for at fortsætte.",
+    "verificationSecureOptIn": "Jeg ønsker bankbekræftelse (3D Secure)",
+    "verificationOptionalHelp": "Direkte betaling er standard. Vælg denne mulighed for bekræftelse gennem banken."
   },
   "certificates": {
     "certNoLabel": "Certifikatnr.",
@@ -1560,6 +1562,16 @@
     "sentText": "Vores partnerskabsteam kontakter jer snart via e-mail."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-moskéen",
+      "jerusalem": "Jerusalem",
+      "waqf": "Opret en waqf i Jerusalem",
+      "zakat": "Giv zakat til Palæstina",
+      "restoration": "Restaurer hjem i Jerusalem",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Fast donation"
+    },
     "allProjects": "Alle Projekter",
     "filterByRegion": "Region",
     "filterByType": "Donationstype",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "Kortnummeret er ugyldigt. Kontrollér det.",
     "invalidCardExpiry": "Udløbsdatoen er ugyldig eller overskredet.",
     "invalidCardCvc": "Sikkerhedskoden (CVC) er ugyldig.",
-    "tooManyPaymentAttempts": "For mange betalingsforsøg. Prøv igen senere."
+    "tooManyPaymentAttempts": "For mange betalingsforsøg. Prøv igen senere.",
+    "mixedDonationCadences": "Gennemfør forskellige donationsintervaller med separate betalinger. Kontroller din kurv."
   },
   "waqf": {
     "chooseUnit": "Vælg Enhed",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "Vælg et beløb til teamet eller »Nej tak« for at fortsætte"
   },
   "Gift": {
+    "validationError": "Indtast modtagerens navn og gyldige kontaktoplysninger. Medtag landekoden i WhatsApp-nummeret.",
     "emailSubject": "En gave i dit navn: en donation til {project}",
     "emailTitle": "{recipientName}, du har fået en gave",
     "emailBody": "{donorName} har doneret i dit navn til »{project}« via Minbar Al-Aqsa.",
@@ -2478,7 +2492,8 @@
     "orContinue": "fortsæt med",
     "noAccount": "Har du ikke en konto?",
     "createOne": "Opret en",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Log ind med Google"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "har doneret",
     "for": "til",
     "communitySupporter": "Fra vores fællesskab af støtter"
+  },
+  "DonationDialog": {
+    "rememberCard": "Gem mit kort til fremtidige donationer",
+    "rememberCardFailed": "Kortet kunne ikke gemmes. Fjern markeringen for at fortsætte.",
+    "savedCards": "Dine gemte kort",
+    "useNewCard": "Brug et nyt kort",
+    "bankChargeEstimate": "Din donation er {original}. Den anslåede bankopkrævning er {amount} i tyrkiske lire; den endelige kurs fastsættes ved betalingsstart.",
+    "bankChargeCurrency": "Banken opkræver donationen i tyrkiske lire. Det omregnede beløb vises før bekræftelse.",
+    "paymentRoutingChanged": "Betalingsportalen er ændret. Kontrollér metoden, indtast sikkerhedskoden igen og bekræft."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Login kunne ikke fuldføres",
+    "authAccessDenied": "Tilladelsen til login blev ikke fuldført. Prøv igen eller donér som gæst.",
+    "authAccountConflict": "Denne e-mail bruger en anden loginmetode. Brug den tidligere metode eller donér som gæst.",
+    "authUnavailable": "Login er ikke tilgængeligt lige nu. Du kan donere som gæst.",
+    "authUnknown": "Login blev ikke fuldført. Prøv igen eller fortsæt som gæst.",
+    "donateAsGuest": "Fortsæt donationen som gæst",
+    "signInWithGoogle": "Log ind med Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Fuldt refunderet",
+        "PARTIALLY_REFUNDED": "Delvist refunderet",
+        "VOIDED": "Annulleret af banken",
+        "REVIEW_REQUIRED": "Økonomisk gennemgang påkrævet",
+        "balance": "Refunderet: {returned} · Resterende: {remaining}"
+      },
+      "recurringGivingMonths": "Måneder med faste donationer",
+      "recurringGivingMonthsHint": "Måneder med bekræftede tilbagevendende betalinger i denne periode"
+    }
   }
 }

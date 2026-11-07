@@ -14,6 +14,61 @@ export type CampaignCounters = {
   replied: number; failed: number; skipped: number; unsubscribed: number;
 };
 
+/** One indexed server aggregation, without loading message bodies or donor contacts.
+ * Includes retries and webhook evidence even while a campaign remains blocked. */
+export async function readCampaignDeliveryCounters(ids: readonly string[]): Promise<Map<string, CampaignCounters>> {
+  const unique = [...new Set(ids)];
+  const result = new Map<string, CampaignCounters>(unique.map(id => [id, tallyDeliveryStatuses([])]));
+  if (!unique.length) return result;
+  if (unique.some(id => !/^[a-f0-9]{24}$/i.test(id))) throw new Error("INVALID_CAMPAIGN_ID");
+  const present = (field: string) => ({ $ne: [{ $ifNull: [`$${field}`, null] }, null] });
+  const statusIn = (values: Set<string>) => ({ $in: ["$status", [...values]] });
+  const sum = (conditions: unknown[]) => ({ $sum: { $cond: [{ $or: conditions }, 1, 0] } });
+  let rows:unknown;
+  try { rows = await prisma.communicationDelivery.aggregateRaw({ pipeline: [
+    { $match: { campaignId: { $in: unique.map(id => ({ $oid: id })) } } },
+    { $group: { _id: "$campaignId", total: { $sum: 1 },
+      sent: sum([statusIn(ACCEPTED), present("sentAt"), { $and: [present("providerMessageId"), { $ne: ["$providerMessageId", ""] }] }]),
+      delivered: sum([statusIn(ARRIVED), ...["deliveredAt", "readAt", "openedAt", "clickedAt", "repliedAt"].map(present)]),
+      read: sum([statusIn(READ_LIKE), ...["readAt", "openedAt", "clickedAt", "repliedAt"].map(present)]),
+      clicked: sum([statusIn(CLICKED_LIKE), present("clickedAt")]),
+      replied: sum([{ $eq: ["$status", "REPLIED"] }, present("repliedAt")]),
+      failed: sum([statusIn(FAILURES)]), skipped: sum([{ $eq: ["$status", "SKIPPED"] }]), unsubscribed: sum([{ $eq: ["$status", "UNSUBSCRIBED"] }]),
+    } },
+  ] as never, options: { maxTimeMS: 15000 } }); }
+  catch { return readCampaignDeliveryPages(unique); }
+  if (!Array.isArray(rows)) throw new Error("CAMPAIGN_COUNTERS_UNAVAILABLE");
+  for (const row of rows as Array<Record<string, unknown>>) {
+    const id = typeof row._id === "string" ? row._id : (row._id as { $oid?: string } | null)?.$oid;
+    if (!id || !result.has(id)) throw new Error("INVALID_CAMPAIGN_COUNTER_ROW");
+    const counters = tallyDeliveryStatuses([]);
+    for (const key of Object.keys(counters) as Array<keyof CampaignCounters>) {
+      if (typeof row[key] !== "number" || !Number.isSafeInteger(row[key]) || row[key] < 0) throw new Error("INVALID_CAMPAIGN_COUNTER_VALUE");
+      counters[key] = row[key];
+    }
+    result.set(id, counters);
+  }
+  return result;
+}
+
+/** A complete keyset walk when a Mongo aggregation cannot run. Only event
+ * evidence is selected; no contacts, message bodies or campaign writes. Any
+ * failed page rejects the entire read instead of displaying partial counts. */
+async function readCampaignDeliveryPages(ids:readonly string[]) {
+  const result=new Map(ids.map(id=>[id,tallyDeliveryStatuses([])]));let cursor:string|undefined;
+  for(;;){
+    const rows=await prisma.communicationDelivery.findMany({where:{campaignId:{in:[...ids]},...(cursor?{id:{gt:cursor}}:{})},orderBy:{id:"asc"},take:1000,
+      select:{id:true,campaignId:true,status:true,sentAt:true,providerMessageId:true,deliveredAt:true,readAt:true,openedAt:true,clickedAt:true,repliedAt:true}});
+    for(const row of rows){
+      if(!row.campaignId||!result.has(row.campaignId)||cursor&&row.id<=cursor)throw Error("INVALID_CAMPAIGN_COUNTER_PAGE");
+      const counts=tallyDeliveryRows([row]),total=result.get(row.campaignId)!;
+      for(const key of Object.keys(total) as Array<keyof CampaignCounters>)total[key]+=counts[key];
+      cursor=row.id;
+    }
+    if(rows.length<1000)return result;
+  }
+}
+
 export function computeFinalStatus(total: number, sent: number, skipped: number, failed: number): string {
   if (total <= 0) return "BLOCKED";
   // A partial result or a still-rendered attempt is never an entirely sent audience.

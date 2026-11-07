@@ -29,6 +29,7 @@ export interface WaqfCertificateSheetProps {
   /** The issued number  or a marked preview value before payment. */
   certNo: string;
   certDate: string;
+  details?: string;
   copy: WaqfCopy;
   /** `ar` shows the engraved Arabic title artwork. */
   locale: string;
@@ -40,7 +41,7 @@ export interface WaqfCertificateSheetProps {
 
 const SANS = "var(--font-cairo), Cairo, sans-serif";
 const SERIF = "var(--font-amiri), Amiri, serif";
-const LATIN_SERIF = "Georgia, 'Times New Roman', serif";
+const LATIN_SERIF = "Georgia, 'Times New Roman', var(--font-cairo), serif";
 const INK = "#10212B";
 const RULE = "#b9b0a0";
 
@@ -68,6 +69,7 @@ export default function WaqfCertificateSheet({
   onBehalf,
   certNo,
   certDate,
+  details,
   copy,
   locale,
   dir,
@@ -166,10 +168,10 @@ export default function WaqfCertificateSheet({
               </span>
             </div>
 
-            <div style={{ ...line, display: "flex", alignItems: "baseline", gap: 6 }}>
+            {onBehalf.trim() ? <div style={{ ...line, display: "flex", alignItems: "baseline", gap: 6 }}>
               <span style={{ whiteSpace: "nowrap" }}>{copy.onBehalfLabel}</span>
               <span style={{ flex: 1, borderBottom: `1px solid ${RULE}`, textAlign: "center", fontWeight: 800 }}>{onBehalf}</span>
-            </div>
+            </div> : null}
 
             {/* The waqf's legal wording  reviewed content, never paraphrased. */}
             <p style={{ margin: "1.6cqw 0 0", fontFamily: SERIF, fontSize: "clamp(8px,1.72cqw,15px)", fontWeight: 400, lineHeight: 2.3, color: "#1a1a1a", textAlign: "center" }}>{copy.legalText}</p>
@@ -197,13 +199,14 @@ export default function WaqfCertificateSheet({
         <div
           className="waqf-back"
           dir={dir}
-          style={{ position: "relative", width: "100%", gridColumn: 2, aspectRatio: "845/1178", containerType: "inline-size", boxSizing: "border-box", display: "grid", alignContent: "center", justifyItems: "center", gap: "5.4cqw", padding: "5% 7%", textAlign: "center" }}
+          style={{ position: "relative", width: "100%", gridColumn: 2, aspectRatio: "845/1178", containerType: "inline-size", boxSizing: "border-box", display: "grid", alignContent: "center", justifyItems: "center", gap: details ? "2cqw" : "5.4cqw", padding: "5% 7%", textAlign: "center" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- the foundation's full logotype */}
           <img src={asset("waqf-logo-full-hq.png")} alt="مؤسسة منبر الأقصى الدولية  Minber-i Aksâ Derneği" style={{ display: "block", width: "66cqw", maxWidth: 440, height: "auto", marginBottom: "1cqw" }} />
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative rule */}
           <img src={asset("waqf-divider-rule-hq.png")} alt="" aria-hidden="true" style={{ display: "block", width: "80cqw", maxWidth: 480, height: "auto" }} />
           <p style={{ margin: 0, width: "92%", fontFamily: SANS, fontSize: "clamp(10px,2.9cqw,20px)", fontWeight: 700, lineHeight: 2.05, color: INK }}>{copy.aboutText}</p>
+          {details && <p style={{ margin: 0, width: "92%", fontFamily: SANS, fontSize: "clamp(10px,2.3cqw,14px)", lineHeight: 1.7, color: INK, whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{details}</p>}
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative rule, mirrored */}
           <img src={asset("waqf-divider-rule-hq.png")} alt="" aria-hidden="true" style={{ display: "block", width: "80cqw", maxWidth: 480, height: "auto", transform: "scaleY(-1)" }} />
         </div>

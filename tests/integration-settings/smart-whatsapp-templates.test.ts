@@ -46,14 +46,14 @@ test("unapproved and unknown-category templates never appear in send choices", (
   assert.deepEqual(smartWhatsappTemplateChoices(templates, "ar", routes), { utilityTemplates: [], marketingTemplates: [] });
 });
 
-test("listing and sending share exact-language and Arabic-fallback selection", () => {
+test("one-to-one choices never borrow the legacy Arabic fallback", () => {
   const variants = [variant(), variant({ languageCode: "en_US", locale: "en", category: "MARKETING" })];
   const templates = [{ id: "receipt", name: "Receipt", kind: "SYSTEM", wabaVariants: variants }];
   assert.equal(resolveVariantForLocale(variants, "en").languageCode, "en_US");
   assert.equal(smartWhatsappTemplateChoices(templates, "en", routes).marketingTemplates.length, 0);
   assert.equal(smartWhatsappTemplateChoices(templates, "en", routes).utilityTemplates.length, 0);
   assert.equal(resolveVariantForLocale(variants, "tr").languageCode, "ar");
-  assert.equal(smartWhatsappTemplateChoices(templates, "tr", routes).utilityTemplates.length, 1);
+  assert.equal(smartWhatsappTemplateChoices(templates, "tr", routes).utilityTemplates.length, 0);
 });
 
 test("unrelated approved languages without a supported fallback remain unavailable", () => {

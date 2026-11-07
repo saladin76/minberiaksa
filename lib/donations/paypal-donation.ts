@@ -21,6 +21,7 @@ import {
 import { firstChargeForPlan } from "@/lib/donations/recurring-schedule";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
+import { donationFieldEmpty, donationWhereAll } from "./mongo-null";
 
 /**
  * A donation paid with PayPal, from the checkout to PAID.
@@ -191,12 +192,12 @@ async function verifyAndSettle(donationId: string, order: PayPalOrder, snapshot:
   if (capture.status === "PENDING") {
     /* PayPal holds some payments for review (e.g. an eCheck). Not COMPLETED,
        so not paid; it stays pending for the finance team to follow up. */
-    await prisma.donation.update({
-      where: { id: donationId },
+    await prisma.donation.updateMany({
+      where: donationWhereAll({ id: donationId, status: { not: "FAILED" } }, donationFieldEmpty("paidAt")),
       data: {
         paypalCaptureId: capture.id,
         providerTxnResult: "Pending",
-        providerErrorMessage: "PayPal capture is pending review",
+        providerErrorMessage: `PayPal capture pending: ${/^[A-Z_]+$/.test(capture.status_details?.reason ?? "") ? capture.status_details!.reason : "PROVIDER_REVIEW"}`,
         providerRaw: { ...(await rawOf(donationId)), ...audit } as Prisma.InputJsonValue,
       },
     });
@@ -296,9 +297,12 @@ export async function settlePayPalDonation(input: {
     if (fresh.subscriptionId) {
       const plan = await tx.subscription.findUnique({
         where: { id: fresh.subscriptionId },
-        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true },
+        select: { id: true, frequency: true, timezone: true, scheduleRule: true, lastBillingDate: true, status: true },
       });
-      if (plan && plan.lastBillingDate === null) {
+      if (plan && plan.lastBillingDate === null && (plan.status === "CANCELLED" || plan.status === "PAUSED")) {
+        await tx.subscription.update({where:{id:plan.id},data:{lastBillingDate:paidAt,nextBillingDate:firstChargeForPlan(plan,paidAt),...(input.vault?{paypalVaultId:input.vault.id,paypalCustomerId:input.vault.customerId}:{})}});
+      }
+      if (plan && plan.lastBillingDate === null && (plan.status === "ACTIVE" || plan.status === "PAYMENT_FAILED")) {
         if (input.vault) {
           await tx.subscription.update({
             where: { id: plan.id },
@@ -357,8 +361,8 @@ async function failDonation(
   });
   if (!donation || donation.paidAt) return { kind: "failed", reason };
   if (donation.status !== "FAILED") {
-    await prisma.donation.update({
-      where: { id: donationId },
+    const failed = await prisma.donation.updateMany({
+      where: donationWhereAll({ id: donationId, status: { not: "FAILED" } }, donationFieldEmpty("paidAt")),
       data: {
         status: "FAILED",
         provider: "PAYPAL",
@@ -367,6 +371,7 @@ async function failDonation(
         providerRaw: { ...providerRawObject(donation.providerRaw), ...extra } as Prisma.InputJsonValue,
       },
     });
+    if (!failed.count) return { kind: "failed", reason };
     if (!options.abandoned) {
       runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
       void sendDonationFailedConversions(donationId);
@@ -375,8 +380,8 @@ async function failDonation(
   /* A plan whose first instalment never settled was never started. */
   if (donation.subscriptionId) {
     await prisma.subscription.updateMany({
-      where: { id: donation.subscriptionId, lastBillingDate: null },
-      data: { status: "CANCELLED", lastChargeError: reason.slice(0, 300) },
+      where: { id: donation.subscriptionId, lastBillingDate: null, status: "ACTIVE" },
+      data: { status: "PAYMENT_FAILED", lastChargeError: reason.slice(0, 300) },
     });
   }
   return { kind: "failed", reason };
@@ -397,6 +402,19 @@ export type PayPalReconcileOutcome =
 
 /** Long past the point where an order nobody approved could still be paid. */
 const UNAPPROVED_STALE_HOURS = 24;
+
+/** A verified webhook recovers a completed payment even after an older local
+ * failure; it still passes the original order/custom-id/amount/currency checks.
+ * Only an APPROVED order in the current checkout window is finalized here. */
+export async function reconcilePayPalWebhookOrder(orderId: string): Promise<string> {
+  const donation = await prisma.donation.findFirst({ where: { paypalOrderId: orderId, paymentMethod: "PAYPAL" }, select: { id: true, paidAt: true, providerRaw: true, createdAt: true } });
+  if (!donation || donation.paidAt) return "ignored";
+  if (providerRawObject(donation.providerRaw).paypalRecurring) return "recurring_review";
+  const order = await getPayPalOrder(orderId);
+  if (order.status === "COMPLETED") return (await verifyAndSettle(donation.id, order, snapshotOf(donation.providerRaw))).kind;
+  if (order.status === "APPROVED" && Date.now() - donation.createdAt.getTime() < 86_400_000) return (await completePayPalReturn({ donationId: donation.id, orderId })).kind;
+  return "pending";
+}
 
 /**
  * Ask PayPal what happened to a donation that has no `paidAt` yet, and make
@@ -428,7 +446,7 @@ export async function reconcilePayPalDonation(
      second-guessed from here. */
   if (providerRawObject(donation.providerRaw).paypalRecurring) return { outcome: "skipped", orderStatus: null };
 
-  const stale = (now.getTime() - donation.createdAt.getTime()) / 3_600_000 > staleAfterHours;
+  const stale = (now.getTime() - donation.createdAt.getTime()) / 3_600_000 >= staleAfterHours;
   const snapshot = snapshotOf(donation.providerRaw);
   const orderId = donation.paypalOrderId ?? snapshot.orderId ?? "";
 

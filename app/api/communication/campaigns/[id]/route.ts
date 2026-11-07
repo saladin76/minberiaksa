@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
-import { getCampaign, updateCampaign, deleteDraftCampaign, archiveCampaign } from "@/lib/communication/campaign-service";
+import { getCampaign, updateCampaign, deleteUnsentCampaign, archiveCampaign } from "@/lib/communication/campaign-service";
 import { getRecipientBreakdown } from "@/lib/communication/campaign-recipient-service";
 import { listChannelTemplates } from "@/lib/communication/template-compat";
 import type { CommunicationChannelId } from "@/lib/communication/communication-runtime-types";
@@ -97,8 +97,8 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   if (denied) return denied;
   const { id } = await params;
 
-  // Archives rather than deletes once a campaign has any send history  the service decides which.
-  const result = await deleteDraftCampaign(id, auditActorFromDashboardSession(session!));
+  // The service atomically refuses any send history or concurrent send claim.
+  const result = await deleteUnsentCampaign(id, auditActorFromDashboardSession(session!));
   if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
   return NextResponse.json({ ok: true, ...result.data });
 }

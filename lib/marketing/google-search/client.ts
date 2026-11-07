@@ -12,13 +12,17 @@ export const credentialsReady = (c: GoogleAdsCredentials) => /^\d{10}$/.test(c.c
 export type SearchRow = {
   customer: { currencyCode: string; timeZone: string };
   campaign: { resourceName: string; name: string; status: string; campaignBudget: string };
-  campaignBudget: { amountMicros: string; explicitlyShared: boolean };
-  adGroupCriterion: { resourceName: string; keyword: { text: string }; status: string };
+  campaignBudget: { amountMicros: string; explicitlyShared: boolean; recommendedBudgetAmountMicros?: string };
+  searchTermView?: { searchTerm?: string };
+  adGroup: { resourceName: string; name: string; status: string };
+  adGroupAd: { resourceName: string; status: string; policySummary?: { approvalStatus?: string }; ad: { finalUrls: string[]; responsiveSearchAd: { headlines: { text: string }[]; descriptions: { text: string }[] } } };
+  adGroupCriterion: { resourceName: string; keyword: { text: string; matchType?: string }; status: string; negative?: boolean };
   metrics: Record<string, string | number>;
   languageConstant: { code: string; resourceName: string };
   geoTargetConstant: { countryCode: string; resourceName: string };
   text: string;
   keywordIdeaMetrics?: Record<string, unknown>;
+  segments?: { date?: string };
 };
 type SearchResponse = { results?: SearchRow[]; nextPageToken?: string; mutateOperationResponses?: { campaignResult?: { resourceName?: string } }[] };
 type GoogleErrorDetail = { errors?: { errorCode?: Record<string, unknown> }[] };

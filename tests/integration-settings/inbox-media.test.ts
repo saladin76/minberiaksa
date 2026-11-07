@@ -1,3 +1,4 @@
+import { normalizeCampaignContact } from "../../lib/communication/campaign-contact-validation";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -29,11 +30,12 @@ test("attachments enforce Cloud API sizes and MIME types and never proxy arbitra
 test("provider media payloads contain uploaded ids, voice flags and reply context without browser URLs", async () => {
   const calls: unknown[] = [];
   const provider = load<{ uploadMessageMedia: (...args: unknown[]) => Promise<{ok:boolean}>; sendMediaMessage: (...args: unknown[]) => Promise<{ok:boolean}> }>("lib/communication/providers/meta-whatsapp/media-messages.ts", {
+    "../../campaign-contact-validation": { normalizeCampaignContact },
     "./graph": { graphFetch: async (_config: unknown, _path: unknown, input: RequestInit) => { calls.push(JSON.parse(String(input.body))); return { ok: true, data: { messages: [{ id: "wamid.accepted" }] } }; } },
   }, { fetch: async (_url: unknown, input: RequestInit) => { assert.ok(input.body instanceof FormData); assert.equal((input.headers as Record<string,string>)["Content-Type"], undefined); return Response.json({ id: "999" }); } });
   assert.equal((await provider.uploadMessageMedia({graphVersion:"v24.0",accessToken:"secret"}, "123", new Blob(["OggS"],{type:"audio/ogg"}), "voice.ogg")).ok, true);
-  assert.equal((await provider.sendMediaMessage({}, {phoneNumberId:"123",to:"15555555555",kind:"audio",id:"999",voice:true,replyToMessageId:"incoming"})).ok, true);
-  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), {messaging_product:"whatsapp",to:"15555555555",type:"audio",audio:{id:"999",voice:true},context:{message_id:"incoming"}});
+  assert.equal((await provider.sendMediaMessage({}, {phoneNumberId:"123",to:"12025550123",kind:"audio",id:"999",voice:true,replyToMessageId:"incoming"})).ok, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), {messaging_product:"whatsapp",to:"+12025550123",type:"audio",audio:{id:"999",voice:true},context:{message_id:"incoming"}});
   assert.equal((await provider.sendMediaMessage({}, {phoneNumberId:"123",kind:"image",id:"https://evil.test/file"})).ok, false);assert.equal(calls.length,1);
 });
 

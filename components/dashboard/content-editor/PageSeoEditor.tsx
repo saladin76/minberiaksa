@@ -68,7 +68,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
           const draft = snapshot[target] || {};
-          const response = await requestSuggestion<Proposal>("/api/admin/page-seo/" + pageKey, { locale: target, revision, market, ...(Object.keys(draft).length ? { draft } : {}), ...(analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
+          const response = await requestSuggestion<Proposal>("/api/admin/page-seo/" + pageKey, { locale: target, revision, market, sourceDraft: snapshot.ar || {}, ...(analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.key !== pageKey || response.locale !== target || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return { ...response, base: structuredClone(draft) };
         },
@@ -78,7 +78,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       });
       if (generation.current !== controller) return;
       setSkipped(result.skipped);
-      if (result.sharedFailure && result.skipped.length) { setMessageTone("error"); setMessage(firstFailure + " " + dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])); }
+      if (result.sharedFailure && result.skipped.length) { setMessageTone("error"); setMessage(firstFailure + " " + (result.connectionFailure ? dt("أُوقفت بقية {0} لغات لأن الاتصال بالخادم لم يُؤكَّد. الاقتراحات المكتملة محفوظة للمراجعة.", [result.skipped.length]) : dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]))); }
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } finally { if (generation.current === controller) { generation.current = null; setBusy(""); } }
   };

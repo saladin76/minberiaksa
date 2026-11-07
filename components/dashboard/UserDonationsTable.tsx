@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { dt } from "@/lib/dashboard/i18n";
+import { DonationFinancialStatus } from "./DonationFinancialStatus";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
+
+import { SUBSCRIPTION_LIFECYCLE_LABELS, type SubscriptionLifecycle } from "@/lib/donations/subscription-lifecycle";
+
+type DonorSubscription = { id: string; status: string; lifecycle: SubscriptionLifecycle; activated: boolean; frequency: Frequency; amount: number; currency: string; provider: string; lastBillingDate: string | null; nextBillingDate: string | null; chargeAttempts: number; lastChargeError: string | null; projects: string[] };
 
 type Outcome = "SUCCESS" | "PENDING" | "FAILED";
 type Frequency = "DAILY" | "FRIDAY" | "MONTHLY";
@@ -11,6 +17,7 @@ type Frequency = "DAILY" | "FRIDAY" | "MONTHLY";
 interface DonationRow {
   id: string;
   outcome: Outcome;
+  financialSummary?: DonationFinancialSummary | null;
   subscriptionId: string | null;
   frequency: Frequency | null;
   amount: number;
@@ -24,21 +31,9 @@ interface DonationRow {
   referral: { id: string; code: string } | null;
 }
 
-const OUTCOME_LABEL: Record<Outcome, string> = {
-  get SUCCESS() { return dt("ناجح"); },
-  get PENDING() { return dt("قيد التأكيد"); },
-  get FAILED() { return dt("فشل"); },
-};
-
-const OUTCOME_CLASS: Record<Outcome, string> = {
-  SUCCESS: "bg-green-100 text-green-700",
-  PENDING: "bg-amber-100 text-amber-700",
-  FAILED: "bg-red-100 text-red-700",
-};
-
 const FREQUENCY_LABEL: Record<Frequency, string> = {
   get DAILY() { return dt("يومي"); },
-  get FRIDAY() { return dt("أسبوعياً"); },
+  get FRIDAY() { return dt("تبرع كل جمعة"); },
   get MONTHLY() { return dt("شهري"); },
 };
 
@@ -78,6 +73,8 @@ export function UserDonationsTable({
   formatMoney: (value: number) => string;
 }) {
   const [rows, setRows] = useState<DonationRow[]>([]);
+  const [subscriptions, setSubscriptions] = useState<DonorSubscription[]>([]);
+  const [kind, setKind] = useState<"all" | "once" | "recurring">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -85,6 +82,8 @@ export function UserDonationsTable({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setRows([]);
+    setSubscriptions([]);
     setError(null);
     fetch(`/api/users/${userId}/donations`)
       .then(async (res) => {
@@ -93,7 +92,10 @@ export function UserDonationsTable({
         return data;
       })
       .then((data) => {
-        if (!cancelled) setRows(Array.isArray(data.rows) ? data.rows : []);
+        if (!cancelled) {
+          setRows(Array.isArray(data.rows) ? data.rows : []);
+          setSubscriptions(Array.isArray(data.subscriptions) ? data.subscriptions : []);
+        }
       })
       .catch((e: Error) => {
         if (!cancelled) setError(e.message);
@@ -106,11 +108,29 @@ export function UserDonationsTable({
     };
   }, [userId]);
 
-  const successCount = useMemo(() => rows.filter((r) => r.outcome === "SUCCESS").length, [rows]);
-  const visible = showAll ? rows : rows.filter((r) => r.outcome === "SUCCESS");
+  const selectedRows = rows.filter(row => kind === "all" || (kind === "recurring" ? Boolean(row.subscriptionId) : !row.subscriptionId));
+  const successCount = selectedRows.filter(row => row.outcome === "SUCCESS").length;
+  const visible = showAll ? selectedRows : selectedRows.filter((r) => r.outcome === "SUCCESS");
+  const planOf = new Map(subscriptions.map(plan => [plan.id, plan]));
 
   return (
-    <div className="rounded-md border border-border bg-muted/30">
+    <div className="space-y-3">
+      <section className="rounded-md border border-border bg-muted/30 p-3" aria-label={dt("الاشتراكات الدورية")}>
+        <h3 className="text-xs font-semibold mb-2">{dt("الاشتراكات الدورية")}</h3>
+        {loading ? <p className="text-xs text-muted-foreground">{dt("جاري التحميل…")}</p> : error ? <p role="alert" className="text-xs text-red-700">{error}</p> : !subscriptions.length ? <p className="text-xs text-muted-foreground">{dt("لا توجد اشتراكات دورية")}</p> : <div className="grid gap-2">
+          {subscriptions.map(plan => <div key={plan.id} className="rounded border bg-background p-3 text-xs space-y-1.5">
+            <div className="flex flex-wrap justify-between gap-2"><strong>{FREQUENCY_LABEL[plan.frequency]} · <span dir="ltr">{plan.amount} {plan.currency}</span></strong><span className={plan.lifecycle === "ACTIVE" ? "text-emerald-700" : plan.lifecycle === "PAYMENT_FAILED" ? "text-red-700" : "text-amber-800"}>{dt(SUBSCRIPTION_LIFECYCLE_LABELS[plan.lifecycle])}</span></div>
+            <p className="text-muted-foreground">{plan.projects.join(" · ")} · {plan.provider}</p>
+            {!plan.activated && <p>{dt("لم تنجح أول دفعة؛ هذه محاولة اشتراك وليست اشتراكًا نشطًا.")}</p>}
+            {plan.lastBillingDate && <p>{dt("آخر دفعة مؤكدة")}: {formatDateTime(plan.lastBillingDate)?.date}</p>}
+            {plan.lifecycle === "ACTIVE" && plan.nextBillingDate && <p>{dt("التجديد القادم")}: {formatDateTime(plan.nextBillingDate)?.date}</p>}
+            {plan.lifecycle === "PAYMENT_FAILED" && <p>{plan.status === "ACTIVE" ? dt("إعادة المحاولة مجدولة؛ يحتاج متابعة الفريق.") : dt("توقفت المحاولات؛ يحتاج متابعة الفريق.")}</p>}
+            {plan.lastChargeError && <p dir="auto" className="break-words rounded bg-red-50 p-2 text-red-700">{dt("سبب التعثر")}: {plan.lastChargeError}</p>}
+            {!plan.lastChargeError && plan.lifecycle === "PAYMENT_FAILED" && <p>{dt("سبب التعثر غير مسجل؛ راجع تفاصيل بوابة الدفع.")}</p>}
+          </div>)}
+        </div>}
+      </section>
+      <div className="rounded-md border border-border bg-muted/30">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <Receipt className="w-3.5 h-3.5" />
@@ -120,7 +140,7 @@ export function UserDonationsTable({
           {(
             [
               { all: false, label: dt("الناجحة"), count: successCount },
-              { all: true, label: dt("الكل"), count: rows.length },
+              { all: true, label: dt("الكل"), count: selectedRows.length },
             ]
           ).map((opt) => (
             <button
@@ -138,6 +158,9 @@ export function UserDonationsTable({
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2 p-2" aria-label={dt("نوع التبرع")}>
+        {([ ["all", "كل التبرعات"], ["once", "مرة واحدة"], ["recurring", "دوري"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={kind === value} onClick={() => setKind(value)} className={`rounded border px-3 py-1 text-xs ${kind === value ? "bg-brand text-white" : "bg-background"}`}>{dt(label)}</button>)}
+      </div>
       <div className="max-h-[320px] overflow-auto">
         {loading ? (
           <div className="py-10 text-center">
@@ -195,11 +218,10 @@ export function UserDonationsTable({
                       <span className="block text-[10px] text-slate-500">
                         {r.frequency ? FREQUENCY_LABEL[r.frequency] : dt("مرة واحدة")}
                       </span>
+                      {r.subscriptionId && planOf.get(r.subscriptionId) && <span className="block text-[10px] text-amber-800">{dt(SUBSCRIPTION_LIFECYCLE_LABELS[planOf.get(r.subscriptionId)!.lifecycle])}</span>}
                     </td>
                     <td className="py-2 px-3">
-                      <span className={`inline-block px-1.5 py-px rounded-full text-[11px] font-medium whitespace-nowrap ${OUTCOME_CLASS[r.outcome]}`}>
-                        {OUTCOME_LABEL[r.outcome]}
-                      </span>
+                      <DonationFinancialStatus donation={{status:r.outcome === "FAILED" ? "FAILED" : "PAID",paidAt:r.paidAt,financialSummary:r.financialSummary}} />
                     </td>
                     <td className="py-2 px-3 text-slate-600 max-w-[180px]">
                       {projects ? (
@@ -220,6 +242,7 @@ export function UserDonationsTable({
             </tbody>
           </table>
         )}
+      </div>
       </div>
     </div>
   );

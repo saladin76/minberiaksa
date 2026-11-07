@@ -1,0 +1,22 @@
+{
+  "title": "Düzenli bağış kartını güncelle",
+  "description": "Bu aboneliğin sonraki ödemeleri için kartı yetkilendirin. Şimdi ödeme alınmadan bankanızla doğrulanır; tutar ve takvim aynı kalır.",
+  "submit": "Doğrula ve sonraki ödemeleri yetkilendir",
+  "success": "Kart doğrulandı ve sonraki ödemelere bağlandı. Şimdi ödeme alınmadı.",
+  "error": "Kart güncellemesi doğrulanamadı. Tekrar denemeden önce aboneliği kontrol edin veya dernekle iletişime geçin.",
+  "cardsTitle": "Ödeme kartları",
+  "cardsDescription": "Ana kart yalnızca yeni bağışlar içindir. Mevcut aboneliğin kartını değiştirmek için düzenli bağışları açıp banka doğrulamasını tamamlayın.",
+  "manageSubscriptions": "Düzenli bağış kartını yönet",
+  "emptyCards": "Kayıtlı kart yok.",
+  "nickname": "Kart adı",
+  "save": "Kaydet",
+  "makeDefault": "Ana kart yap",
+  "defaultCard": "Ana kart",
+  "cardInUse": "Kart bir aboneliğe veya bekleyen doğrulamaya bağlı olduğu için silinemez. Önce aboneliğin kartını değiştirin.",
+  "removeWarning": "Kayıtlı kart silinecek. Aboneliğe bağlı kartlar silinemez.",
+  "confirmRemove": "Kartı silmeyi onayla",
+  "refresh": "Yenile",
+  "addCard": "Kart ekle",
+  "saved": "Değişiklik kaydedildi.",
+  "cardsNavDescription": "Ödeme kartları"
+}

@@ -1,3 +1,6 @@
+import { categoryProjectCounts } from "@/lib/campaign/category-project-counts";
+import { deleteEmptyCategory } from "@/lib/campaign/delete-empty-category";
+import { revalidatePath } from "next/cache";
 import { contentWriteWhere, contentVersionPatch, isContentWriteConflict } from "@/lib/content-editor/legacy-write";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
@@ -55,7 +58,7 @@ export async function GET(
               take: 2,
               select: { locale: true, name: true, description: true, slug: true },
             },
-        ...(includeCounts ? { _count: { select: { campaigns: true } } } : {})
+
       }
     });
 
@@ -65,11 +68,14 @@ export async function GET(
 
     const isActive = category.isActive ?? true;
 
+    const counts = includeCounts ? (await categoryProjectCounts(prisma, [category.id])).get(category.id) : null;
     if (allTranslations) {
       return NextResponse.json({
         ...category,
         isActive,
-        campaignCount: (category as any)._count?.campaigns ?? undefined
+        campaignCount: counts?.published,
+        archivedCampaignCount: counts?.archived,
+        linkedCampaignCount: counts?.total
       });
     }
 
@@ -84,7 +90,9 @@ export async function GET(
       icon: category.icon,
       order: category.order,
       isActive,
-      campaignCount: (category as any)._count?.campaigns ?? undefined
+      campaignCount: counts?.published,
+        archivedCampaignCount: counts?.archived,
+        linkedCampaignCount: counts?.total
     });
   } catch (error) {
     console.error('Error fetching category:', error);
@@ -297,7 +305,7 @@ export async function PATCH(
   }
 }
 
-// DELETE: admin-only; refuse to delete if campaigns exist
+// Existing project/history records must survive removal of an empty category.
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -308,33 +316,18 @@ export async function DELETE(
     const denied = requireAdminOrDashboardPermission(session, 'categories');
     if (denied) return denied;
 
-    const cat = await prisma.category.findFirst({
-      where: whereByIdOrSlug(idOrSlug),
-      select: { id: true, name: true, slug: true },
-    });
-    if (!cat) {
+    const result = await deleteEmptyCategory(prisma, whereByIdOrSlug(idOrSlug), auditActorFromDashboardSession(session!));
+    if (result.state === 'not_found') {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
-    const id = cat.id;
-
-    const campaignCount = await prisma.campaign.count({ where: { categoryIds: { has: id } } });
-    if (campaignCount > 0) {
-      return NextResponse.json({ error: 'Category has campaigns. Delete or move campaigns before deleting the category.' }, { status: 400 });
+    if (result.state === 'blocked') {
+      return NextResponse.json({ error: 'CATEGORY_HAS_REFERENCES', code: 'CATEGORY_HAS_REFERENCES', references: result.references }, { status: 409 });
     }
 
-    await prisma.category.delete({ where: { id } });
-
-    const actor = auditActorFromDashboardSession(session!);
-    await writeAuditLog({
-      ...actor,
-      action: 'CATEGORY_DELETE',
-      messageAr: `${actor.actorName ?? 'مسؤول'} حذف الحملة: ${cat?.name ?? id}`,
-      entityType: 'Category',
-      entityId: id,
-    });
-
-    return NextResponse.json({ message: 'Category deleted successfully' }, { status: 200 });
+    revalidatePath('/', 'layout');
+    return NextResponse.json({ message: 'Category deleted successfully', ...result }, { status: 200 });
   } catch (error) {
+    if (isContentWriteConflict(error)) return NextResponse.json({ error: 'CATEGORY_CHANGED_RELOAD', code: 'CATEGORY_CHANGED_RELOAD' }, { status: 409 });
     console.error('Error deleting category:', error);
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });
   }

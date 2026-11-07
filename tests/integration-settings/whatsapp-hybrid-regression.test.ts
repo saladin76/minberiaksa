@@ -36,7 +36,7 @@ test("WhatsApp interval control is visible and defaults to unlimited sending", (
   requires(controlsPath, [/DEFAULT_WHATSAPP_MARKETING_COOLDOWN_DAYS = 0/, /whatsappMarketingCooldownConfigured/]);
 });
 test("WhatsApp campaigns continue to use Meta-approved language/category truth before send", () => {
-  requires(executorPath, [/resolveVariantForLocale/, /META_TEMPLATE_CATEGORY_MISMATCH/, /readiness\.providerTemplateName/, /readiness\.languageCode/]);
+  requires(executorPath, [/resolveExactVariantForLocale/, /META_TEMPLATE_CATEGORY_MISMATCH/, /readiness\.providerTemplateName/, /readiness\.languageCode/]);
 });
 test("dashboard keeps the simple operator-facing Smart WhatsApp flow", () => {
   requires(smartDialog, [/رد مباشر/, /رسالة خدمة/, /رسالة تسويقية/, /سجل المحادثة/, /Direct Send/, /Utility/, /Marketing/]);
@@ -78,10 +78,10 @@ test("campaign controls dialog stays scrollable and cannot bubble clicks into th
   requires("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignControlsDialog.tsx", [/max-h-\[calc\(100dvh-2rem\)\]/, /overflow-y-auto/, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/]);
 });
 test("WhatsApp inbox defaults to all conversations and remembers an available sender", () => {
-  requires(inboxPath, [/useState\("all"\)/, /communication:whatsapp:senderId/, /nextSenders\.length === 1/, /nextConversations\[0\]\.id/, /selectConversation\(nextConversations\[0\]\.id\)/, /عرض كل المحادثات/]);
+  requires(inboxPath, [/useState\("all"\)/, /communication:whatsapp:senderId/, /nextSenders\.length === 1/, /عرض كل المحادثات/], [/selectConversation\(nextConversations\[0\]\.id\)/]);
 });
-test("WhatsApp inbox exposes the greeting-template re-entry path outside the 24-hour window", () => {
-  requires(inboxPath, [/إرسال قالب تحية/, /initialMode=\{smartInitialMode\}/]);
+test("WhatsApp inbox accurately labels its approved-template picker outside the 24-hour window", () => {
+  requires(inboxPath, [/اختيار قالب معتمد/, /initialMode=\{smartInitialMode\}/], [/إرسال قالب تحية/]);
   requires(smartDialog, [/initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/, /const preferred = initialMode/, /setMode\(preferred\)/]);
 });
 test("dashboard topbar makes unread WhatsApp conversations visually prominent", () => {

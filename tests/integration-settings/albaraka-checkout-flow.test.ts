@@ -1,13 +1,18 @@
+import * as mixedCart from "../../lib/donations/mixed-cart";
+import { frozenPaymentRoute } from "../../lib/donations/payment-routing";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import crypto from "node:crypto";
 import ts from "typescript";
+import { convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd } from "../../lib/exchange/convert";
 import * as bank from "../../lib/albaraka";
 import * as nulls from "../../lib/donations/mongo-null";
-import { albarakaCheckoutMode } from "../../lib/donations/albaraka-checkout-mode";
+import { albarakaCheckoutMode, isMixedRecurringCheckout } from "../../lib/donations/albaraka-checkout-mode";
 import { albaraka3DLinkageError } from "../../lib/donations/albaraka-3d-verification";
+import { bankRequestsAuthentication } from "../../lib/donations/authentication-recovery";
+import { paymentPublicOrigin } from "../../lib/payment-public-origin";
 
 const id = "111111111111111111111111", order = "0123456789ABCDEF0123";
 const cfg: bank.AlbarakaConfig = { merchantNo: "900000001", terminalNo: "90000002", posnetId: "900000003", encKey: "test-key-never-live", tdsUrl: "https://bank.invalid/3d", serviceUrl: "https://bank.invalid/api", useOOS: false, useJokerVadaa: false };
@@ -24,15 +29,16 @@ function matches(row: Record<string, unknown>, filter: Record<string, unknown>):
   });
 }
 
-function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "approved" | "declined" | "transport" | "throw"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
+function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurring?: boolean; mixed?: boolean; newCard?: boolean; unavailable3D?: boolean; currency?: string; totalAmount?: number; outcome?: "approved" | "declined" | "transport" | "throw" | "authentication"; inquiry?: "approved" | "absent" | "unknown"; gate?: Promise<void>; settlementFails?: boolean } = {}) {
   const state: Record<string, unknown> = {
     id, donorId: "222222222222222222222222", status: "PAID", paidAt: null, accessToken: "test-guest-token",
-    currency: "USD", totalAmount: 25, locale: "ar", provider: "ALBARAKA",
+    currency: options.currency ?? "USD", totalAmount: options.totalAmount ?? 25, locale: "ar", provider: "ALBARAKA",
     providerOrderId: options.fresh ? null : order, providerTxnResult: options.fresh ? null : "Processing",
     providerRaw: options.fresh ? null : { albarakaRequest: { orderId: order, amount: 125000, currencyCode: "TL", transactionType: "Sale", mode: "3D" } },
-    subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: "444444444444444444444444" } : null,
+    attribution: options.mixed ? { one_time_principal: 10, recurring_principal: 5 } : null,
+    subscription: options.recurring ? { id: "333333333333333333333333", provider: "ALBARAKA", frequency: "DAILY", paymentCardId: options.newCard ? null : "444444444444444444444444" } : null,
   };
-  const calls = { sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
+  const calls = { rateReads: 0, cardVerifications: 0, sales: 0, mutations: 0, settles: 0, failures: 0, failureCode: "", cards: 0, storedCards: [] as Record<string, unknown>[], saleBodies: [] as Record<string, unknown>[], terminals: [] as string[] };
   const prisma = {
     donation: {
       async findUnique() { return structuredClone(state); },
@@ -42,11 +48,11 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "app
       },
     },
     globalSettings: { async findFirst() { return { mainGateway: "ALBARAKA" }; } },
-    creditCard: { async create() { calls.cards++; throw new Error("unexpected card storage"); } },
-    subscription: { async update() { throw new Error("unexpected plan mutation"); } },
+    creditCard: { async create({ data }: { data: Record<string, unknown> }) { calls.cards++; if (!options.newCard) throw new Error("unexpected card storage"); calls.storedCards.push(data); return { id: "new-fixture-card" }; } },
+    subscription: { async update({ data }: { data: Record<string, unknown> }) { if (!options.newCard) throw new Error("unexpected plan mutation"); Object.assign(state.subscription as object, data); return state.subscription; } },
   };
   const bankAdapter = {
-    ...bank, albarakaConfig: () => cfg, albaraka2DConfig: () => twoCfg,
+    ...bank, albarakaConfig: () => options.unavailable3D ? { ...cfg, terminalNo: "" } : cfg, albaraka2DConfig: () => twoCfg,
     albarakaChargeCurrency: () => "TRY", isAlbarakaRecurringEnabled: () => true,
     async albarakaService(_operation: string, body: Record<string, unknown>, settings: { config: bank.AlbarakaConfig }) {
       calls.sales++; calls.saleBodies.push(body); calls.terminals.push(settings.config.terminalNo);
@@ -54,26 +60,32 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "app
       if (options.outcome === "throw") throw new Error("simulated lost bank response");
       if (options.outcome === "transport") return { TransportFailure: true, ServiceResponseData: { ResponseCode: "TRANSPORT", ResponseDescription: "Unreadable" } };
       if (options.outcome === "declined") return { ServiceResponseData: { ResponseCode: "59", ResponseDescription: "Fraud Şüphesi" } };
+      if (options.outcome === "authentication") return { ServiceResponseData: { ResponseCode: "888", ResponseDescription: "AUTHENTICATION_ATTEMPT" } };
       return { ServiceResponseData: { ResponseCode: "00", ResponseDescription: "Approved" }, AuthCode: "TEST-AUTH" };
     },
-    async albarakaInquireSale() { throw new Error("unexpected inquiry"); },
+    async albarakaInquireSale() { if (options.inquiry) return options.inquiry === "approved" ? { state: "approved", authCode: "RECOVERED", raw: { ServiceResponseData: { ResponseCode: "00" } } } : { state: options.inquiry, raw: null }; throw new Error("unexpected inquiry"); },
     async albarakaReverseSale() { throw new Error("unexpected reverse"); },
   };
   const modules: Record<string, unknown> = {
+    "@/lib/donations/payment-routing": { frozenPaymentRoute },
+    "@/lib/donations/mixed-cart": mixedCart,
     "next/server": { NextResponse: { json: (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), init), redirect: (url: URL, status: number) => new Response(null, { status, headers: { location: url.toString() } }) } },
     "next-auth": { getServerSession: async () => null },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@prisma/client": { Prisma: {} }, "@/lib/prisma": { prisma }, crypto,
     "@/lib/albaraka": bankAdapter,
     "@/lib/donations/mongo-null": nulls,
-    "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode },
+    "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode, isMixedRecurringCheckout },
+    "@/lib/donations/authentication-recovery": { bankRequestsAuthentication },
+    "@/lib/payment-public-origin": { paymentPublicOrigin },
     "@/lib/donations/albaraka-3d-verification": { albaraka3DLinkageError },
+    "@/lib/donations/subscription-card-verification": { completeSubscriptionCardVerification: async () => { if (options.cardVerification === undefined) throw new Error("Donation callback must not verify a replacement card"); calls.cardVerifications++; return {ok: options.cardVerification, subscriptionId: "3".repeat(24)}; } },
     "@/lib/locales": { isValidLocale: (locale: string) => ["ar", "en", "tr"].includes(locale) },
     "@/lib/donations/access-token": { withDonationToken: (path: string, token: string | null) => path + (token ? "?t=" + token : "") },
     "@/lib/payment-gateway": { parseMainGateway: (value: string) => value },
     "@/lib/security/card-attempts": { checkCardAttempt: async () => ({ ok: true }) },
     "@/lib/exchange/convert": { normalizeCurrencyCode: (currency: string) => currency },
-    "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => ({}), convertAmountInCurrencyToTry: (amount: number) => amount * 50, convertAmountInCurrencyToUsd: (amount: number) => amount },
+    "@/lib/exchange/rates-service": { getUsdBaseRatesForServer: async () => { calls.rateReads++; return {USD:1,TRY:50}; }, convertAmountInCurrencyToTry, convertAmountInCurrencyToUsd },
     "@/lib/card-crypto": { encryptCard: () => "encrypted-test", decryptCard: () => pan, detectCardType: () => "visa" },
     "@/lib/donations/albaraka-settlement": {
       async settleAlbarakaDonation() { calls.settles++; if (options.settlementFails) throw new Error("simulated database failure"); state.paidAt = new Date(); state.providerTxnResult = "Success"; return true; },
@@ -93,8 +105,33 @@ function fixture(options: { fresh?: boolean; recurring?: boolean; outcome?: "app
   };
   const callback = (values = raw()) => load("callback")(new Request(`https://minber.test/api/albaraka/3d/callback?donationId=${id}&locale=ar`, { method: "POST", body: new URLSearchParams(values) }));
   const initiate = (mode?: unknown) => load("initiate")(new Request("https://minber.test/api/albaraka/3d/initiate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ donationId: id, locale: "ar", ...(mode === undefined ? {} : { securityMode: mode }), card: { number: pan, expiry: "12/35", cvv: "123", holder: "Test Donor" } }) }));
-  return { state, calls, raw, callback, initiate };
+  const cardCallback = (token = "n".repeat(43)) => load("callback")(new Request(`https://minber.test/api/albaraka/3d/callback?cardVerificationId=${"b".repeat(24)}&token=${token}&donationId=${id}&locale=tr`, { method: "POST", body: new URLSearchParams(raw()) }));
+  return { state, calls, raw, callback, initiate, cardCallback };
 }
+
+test("AUTHENTICATION_ATTEMPT upgrades a donor-present 2D attempt only after confirmed no-sale, without another capture", async () => {
+  const f = fixture({ fresh: true, outcome: "authentication", inquiry: "absent" });
+  const response = await f.initiate("2D"), body = await response.json();
+  assert.equal(response.status, 200); assert.equal(body.verificationUpgraded, true);
+  assert.equal(body.actionUrl, cfg.tdsUrl); assert.match(body.fields.OrderId, /^[A-F0-9]{20}$/);
+  assert.equal(body.fields.MacNew, bank.albarakaFormMac(body.fields, cfg.encKey));
+  assert.equal(f.calls.sales, 1); assert.equal(f.calls.settles, 0); assert.equal(f.calls.failures, 0);
+  assert.equal((f.state.providerRaw as { albarakaRequest: { mode: string } }).albarakaRequest.mode, "3D");
+  assert.ok(!JSON.stringify(f.state.providerRaw).includes(pan));
+});
+test("an authentication response already collected by the bank settles the first sale and never launches another payment", async () => {
+  const f = fixture({ fresh: true, outcome: "authentication", inquiry: "approved" });
+  const body = await (await f.initiate("2D")).json();
+  assert.equal(body.paid, true); assert.equal(body.verificationUpgraded, undefined);
+  assert.equal(f.calls.sales, 1); assert.equal(f.calls.settles, 1); assert.equal(f.calls.failures, 0);
+});
+test("an unknown authentication inquiry stays pending, without a decline, reversal or second sale", async () => {
+  const f = fixture({ fresh: true, outcome: "authentication", inquiry: "unknown" });
+  const body = await (await f.initiate("2D")).json();
+  assert.equal(body.verificationUpgraded, undefined); assert.equal(body.paid, false);
+  assert.equal(f.state.providerTxnResult, "PendingConfirmation"); assert.equal(f.state.status, "PAID");
+  assert.equal(f.calls.sales, 1); assert.equal(f.calls.settles, 0); assert.equal(f.calls.failures, 0);
+});
 
 test("one-time 3D initiation returns a signed bank form without a Sale or storing card data", async () => {
   const f = fixture({ fresh: true }); const response = await f.initiate("3D"); const form = await response.json();
@@ -109,6 +146,8 @@ test("one-time 3D initiation returns a signed bank form without a Sale or storin
 
 for (const mode of [undefined, "2D"]) test(`2D initiation preserves the existing terminal, sale contract and settlement (${String(mode)})`, async () => {
   const f = fixture({ fresh: true }); const response = await f.initiate(mode); const result = await response.json();
+  assert.equal(result.method, "GET", "settled 2D checkout navigates to the local result with GET");
+  assert.deepEqual((f.state.providerRaw as unknown as { cardSummary: unknown }).cardSummary, { last4: "4242", brand: "visa" });
   assert.equal(response.status, 200); assert.match(result.actionUrl, /\/api\/albaraka\/2d\/result/);
   assert.equal(f.calls.sales, 1); assert.equal(f.calls.settles, 1); assert.equal(f.calls.terminals[0], twoCfg.terminalNo);
   const body = f.calls.saleBodies[0]; assert.match(String(body.OrderId), /^[A-F0-9]{24}$/);
@@ -116,7 +155,7 @@ for (const mode of [undefined, "2D"]) test(`2D initiation preserves the existing
   assert.equal(body.MACParams, bank.ALBARAKA_NON_SECURE_MAC_PARAMS); assert.equal(body.CurrencyCode, "TL"); assert.equal(String(body.Amount), "125000");
 });
 
-test("a recurring checkout cannot enable 3D even if a client requests it", async () => {
+test("a recurring-only checkout retains 2D even if a client requests 3D", async () => {
   const f = fixture({ fresh: true, recurring: true }); const response = await f.initiate("3D");
   assert.equal(response.status, 200); assert.equal(f.calls.sales, 1); assert.equal(f.calls.terminals[0], twoCfg.terminalNo);
   assert.equal(f.calls.saleBodies[0].IsTDSecureMerchant, "N"); assert.equal(f.calls.cards, 0);
@@ -179,4 +218,43 @@ test("a recorded bank decline retains code59 without successful settlement", asy
 test("a database failure after bank approval cannot mark the payment declined or recapture", async () => {
   const f = fixture({ settlementFails: true }); await f.callback(); await f.callback();
   assert.equal(f.calls.sales, 1); assert.equal(f.calls.failures, 0); assert.equal(f.state.paidAt, null); assert.equal(f.state.providerTxnResult, "Capturing3D");
+});
+
+test("one Turkish lira remains 100 minor units and uses the same safe result handoff", async () => {
+  const f = fixture({ fresh: true, recurring: true, currency: "TRY", totalAmount: 1 });
+  const response = await f.initiate("2D"); const result = await response.json();
+  assert.equal(response.status, 200); assert.equal(result.method, "GET");
+  assert.equal(String(f.calls.saleBodies[0].Amount), "100"); assert.equal(f.calls.saleBodies[0].CurrencyCode, "TL");
+});
+
+for (const verified of [true, false]) test(`replacement card callback (${verified}) never falls through to a Sale or donation mutation`, async () => {
+ const f = fixture({cardVerification: verified});const response = await f.cardCallback();assert.equal(response.status,303);const target=new URL(response.headers.get("location")!);assert.equal(target.pathname,"/tr/profile");assert.equal(target.searchParams.get("cardUpdate"),verified?"success":"failed");assert.equal(target.searchParams.has("verificationId"),verified);assert.equal(f.calls.cardVerifications,1);assert.equal(f.calls.sales+f.calls.mutations+f.calls.settles,0);
+});
+test("malformed card authentication nonce never falls through to a valid donation ID", async()=>{
+ const f=fixture({cardVerification:true});const response=await f.cardCallback("invalid");assert.equal(new URL(response.headers.get("location")!).searchParams.get("cardUpdate"),"failed");assert.equal(f.calls.cardVerifications+f.calls.sales+f.calls.mutations,0);
+});
+
+test("mixed lira checkout uses 2D even if the browser requests 3D; no 3D terminal is needed", async () => {
+  const f = fixture({ fresh: true, recurring: true, mixed: true, newCard: true, unavailable3D: true, currency: "TRY", totalAmount: 15 });
+  const response = await f.initiate("3D");
+  assert.equal(response.status, 200);
+  assert.equal(f.calls.sales, 1);
+  assert.equal(f.calls.terminals[0], twoCfg.terminalNo);
+  assert.equal(f.calls.cards, 1);
+  assert.equal(f.calls.storedCards[0].cvc, "");
+  assert.equal((f.state.subscription as { paymentCardId: string }).paymentCardId, "new-fixture-card");
+  const snapshot = (f.state.providerRaw as { albarakaRequest: { mode: string; amount: number } }).albarakaRequest;
+  assert.equal(snapshot.mode, "2D"); assert.equal(snapshot.amount, 1500);
+  assert.equal(f.calls.settles, 1);
+  assert.equal((await f.initiate("2D")).status, 400);
+  assert.equal(f.calls.sales, 1);
+});
+
+test("TRY checkout avoids waiting for exchange rates when no currency conversion is needed", async () => {
+  const f = fixture({ fresh: true, currency: "TRY", totalAmount: 4, recurring: true });
+  const response = await f.initiate("2D");
+  assert.equal(response.status, 200);
+  assert.equal(f.calls.rateReads, 0);
+  assert.equal(f.calls.sales, 1);
+  assert.equal(f.calls.settles, 1);
 });

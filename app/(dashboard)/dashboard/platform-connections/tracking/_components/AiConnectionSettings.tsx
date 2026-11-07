@@ -67,6 +67,7 @@ export default function AiConnectionSettings({ canManage, canTest }: { canManage
       <button type="button" disabled={loading || Boolean(busy) || dirty} onClick={() => void load()} className="inline-flex min-h-10 items-center gap-2 self-start rounded-lg border bg-white px-3 text-sm disabled:opacity-50"><RefreshCw size={15} />{dt("تحديث")}</button>
     </div>
     <div className="space-y-4 p-5">
+      <p className="rounded-xl bg-emerald-50 p-3 text-xs leading-6 text-emerald-900">{dt("ترشيد الاستهلاك مفعّل: ندمج الطلبات المتطابقة ونُعيد استخدام نتائجها المكتملة لخمس دقائق. البحث يستخدم نموذجًا اقتصاديًا افتراضيًا، مع إبقاء النصوص الطويلة كاملة ومراجعتها قبل الحفظ.")}</p>
       {loading ? <p role="status" className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="animate-spin" size={16} />{dt("جارٍ تحميل الاتصال...")}</p> : null}
       {error || conflict ? <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{conflict ? dt("تغير الاتصال في جلسة أخرى. حدّث الإعدادات قبل الحفظ.") : error}{!saved || conflict ? <button type="button" onClick={() => void load()} className="ms-3 underline">{dt(conflict ? "تحميل الإعدادات الحالية وإلغاء التغييرات" : "إعادة المحاولة")}</button> : null}</div> : null}
       {!loading && saved ? <>

@@ -7,9 +7,9 @@ for (const locale of ["ar", "en", "tr"] as const) {
   test(`${locale}: cadence uses the subscription frequency instead of legacy MONTHLY payment kind`, () => {
     setDashLocale(locale);
     const labels = {
-      ar: ["يومي", "أسبوعياً", "شهري", "مرة واحدة", "تبرع دوري"],
-      en: ["Daily", "Weekly", "Monthly", "One-time", "Recurring donation"],
-      tr: ["Günlük", "Haftalık", "Aylık", "Tek seferlik", "Düzenli bağış"],
+      ar: ["يومي", "تبرع كل جمعة", "شهري", "مرة واحدة", "تبرع دوري"],
+      en: ["Daily", "Every Friday", "Monthly", "One-time", "Recurring donation"],
+      tr: ["Günlük", "Her Cuma", "Aylık", "Tek seferlik", "Düzenli bağış"],
     }[locale];
     try {
       for (const [index, frequency] of ["DAILY", "FRIDAY", "MONTHLY"].entries()) {

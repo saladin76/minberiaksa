@@ -41,6 +41,7 @@ const STATUS_PILL: Record<DonationSourceStatus, string> = {
   "utm-only": "bg-amber-50 text-amber-700 border-amber-200",
   "tracking-error": "bg-rose-50 text-rose-700 border-rose-200",
   organic: "bg-slate-50 text-slate-600 border-slate-200",
+  unknown: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
 const STATUS_DOT: Record<DonationSourceStatus, string> = {
@@ -48,6 +49,7 @@ const STATUS_DOT: Record<DonationSourceStatus, string> = {
   "utm-only": "bg-amber-400",
   "tracking-error": "bg-rose-500",
   organic: "bg-slate-300",
+  unknown: "bg-slate-300",
 };
 
 function formatIstanbulShort(iso: string | null): string {

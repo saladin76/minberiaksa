@@ -4,14 +4,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
-import { transitionCampaign, getCampaign } from "@/lib/communication/campaign-service";
+import { transitionCampaign, getCampaign, cancelSchedule as cancelCampaignSchedule } from "@/lib/communication/campaign-service";
+import { evaluateCoverageGate } from "@/lib/communication/campaign-approval-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const schema = z.object({
   // CONFIRM is a compound of SUBMIT_REVIEW + APPROVE  see below.
-  action: z.enum(["CONFIRM", "SUBMIT_REVIEW", "APPROVE", "SCHEDULE", "CANCEL"]),
+  action: z.enum(["CONFIRM", "SUBMIT_REVIEW", "APPROVE", "SCHEDULE", "UNSCHEDULE", "CANCEL"]),
   scheduledAt: z.string().datetime().nullable().optional(),
 });
 
@@ -40,6 +42,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const actor = auditActorFromDashboardSession(session!);
+  if (parsed.data.action === "SCHEDULE" && (!parsed.data.scheduledAt || new Date(parsed.data.scheduledAt) <= new Date())) return NextResponse.json({ ok: false, error: "اختر موعدًا صحيحًا في المستقبل." }, { status: 400 });
+  if (parsed.data.action === "UNSCHEDULE") {
+    const result = await cancelCampaignSchedule(id, actor);
+    return result.ok ? NextResponse.json({ ok: true, campaign: result.data }) : NextResponse.json({ ok: false, error: result.error }, { status: result.status });
+  }
+
+
+  // Confirming once still belongs to one operator. Check the WHOLE audience
+  // before the first state change, not only the first outgoing batch.
+  if (["CONFIRM", "APPROVE", "SCHEDULE"].includes(parsed.data.action)) {
+    try {
+      const coverage = await evaluateCoverageGate(id);
+      if (!coverage.ok) return NextResponse.json({ ok: false, code: "LANGUAGE_COVERAGE_INCOMPLETE", error: "أكمل لغات القالب للجمهور قبل الإرسال؛ راجع تفاصيل اللغات الناقصة.", coverage }, { status: 409 });
+    } catch {
+      return NextResponse.json({ ok: false, code: "COVERAGE_UNAVAILABLE", error: "تعذّر فحص لغات الجمهور؛ لم تُعتمد الحملة. أعد المحاولة." }, { status: 503 });
+    }
+  }
 
   /**
    * CONFIRM collapses مراجعة and اعتماد into the single "are you sure" step the operator actually
@@ -50,7 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
    * table remains the only authority on what is legal, both audit entries are still written, and a
    * campaign already sitting in REVIEW (from before this change) is simply approved.
    */
-  if (parsed.data.action === "CONFIRM") {
+  if (parsed.data.action === "CONFIRM" || parsed.data.action === "SCHEDULE") {
     const current = await getCampaign(id);
     if (!current) return NextResponse.json({ ok: false, error: "Campaign not found." }, { status: 404 });
 
@@ -58,9 +77,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const toReview = await transitionCampaign(id, "SUBMIT_REVIEW", { actor });
       if (!toReview.ok) return NextResponse.json({ ok: false, error: toReview.error }, { status: toReview.status });
     }
-    const approved = await transitionCampaign(id, "APPROVE", { actor });
-    if (!approved.ok) return NextResponse.json({ ok: false, error: approved.error }, { status: approved.status });
-    return NextResponse.json({ ok: true, campaign: approved.data });
+    if (current.status === "DRAFT" || current.status === "REVIEW" || parsed.data.action === "CONFIRM") {
+      const approved = await transitionCampaign(id, "APPROVE", { actor });
+      if (!approved.ok) return NextResponse.json({ ok: false, error: approved.error }, { status: approved.status });
+      if (parsed.data.action === "CONFIRM") return NextResponse.json({ ok: true, campaign: approved.data });
+    }
   }
 
   const result = await transitionCampaign(id, parsed.data.action, {

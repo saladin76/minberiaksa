@@ -1,11 +1,13 @@
+import {searchTestDependencies} from "./google-search-fixture";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
-import { buildSearchOperations, searchPlanRequest, searchProposal, validateSearchProposal, type SearchPlanRequest, type SearchProposal } from "../../lib/marketing/google-search/contracts";
+import { buildSearchOperations, searchPlanRequest, searchProposal, searchBudgetAllocations, searchPlanRequest as parseRequest, searchAutomationPolicy, validateSearchProposal, type SearchPlanRequest, type SearchProposal } from "../../lib/marketing/google-search/contracts";
 import { googleSearchClient, SearchApiError } from "../../lib/marketing/google-search/client";
 import { recurringReadiness } from "../../lib/donations/recurring-readiness";
+import { collectSearchGrowth } from "../../lib/marketing/google-search/growth";
 const id = "507f1f77bcf86cd799439011", projectId = "507f1f77bcf86cd799439012";
 const request: SearchPlanRequest = { connectionId: id, prompt: "Winter donation campaign", locales: ["ar"], countries: ["TR"], projectIds: [projectId], dailyBudget: 10, containsEuPoliticalAdvertising: false };
 const proposal: SearchProposal = { summary: "Measured proposal", campaigns: [{ locale: "ar", name: "Winter", dailyBudgetMicros: 10000000, adGroups: [{ name: "Warmth", projectId, headlines: ["Warm winter", "Support families", "Donate today"], descriptions: ["Support the published winter project.", "Give through the foundation's website."], keywords: [{ text: "winter donation", matchType: "EXACT" }], negativeKeywords: ["jobs"], rationale: "Relevant published destination" }] }], expansion: [] };
@@ -55,10 +57,10 @@ function executorHarness(uncertain = false) {
   let creations = 0, validations = 0;
   const campaigns: Record<string, unknown>[] = [];
   const db = { marketingPlatformConnection: { findFirst: async () => ({ id }) }, googleSearchPlan: {
-    findUnique: async () => structuredClone(plan), findUniqueOrThrow: async () => structuredClone(plan),
+    findUnique: async () => structuredClone(plan), findFirst: async () => structuredClone(plan), findUniqueOrThrow: async () => structuredClone(plan),
     updateMany: async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
-      if (where.version !== plan.version || where.status !== plan.status) return { count: 0 };
-      plan = { ...plan, ...data, version: plan.version + 1 } as typeof plan; return { count: 1 };
+      if (where.version !== undefined && where.version !== plan.version || where.status !== undefined && where.status !== plan.status || where.workLeaseToken !== undefined && where.workLeaseToken !== (plan as unknown as {workLeaseToken:string}).workLeaseToken || where.OR && plan.workLeaseUntil && new Date(plan.workLeaseUntil).getTime() > Date.now()) return { count: 0 };
+      plan = { ...plan, ...data, version: typeof data.version === "object" ? plan.version + 1 : plan.version } as typeof plan; return { count: 1 };
     }, update: async ({ data }: { data: Record<string, unknown> }) => { plan = { ...plan, ...data, version: plan.version + 1 } as typeof plan; return structuredClone(plan); },
   } };
   const client = { id: "1234567890", query: async (query: string) => query.includes("FROM customer") ? [{ customer: { currencyCode: "USD" } }] : campaigns,
@@ -68,10 +70,10 @@ function executorHarness(uncertain = false) {
       campaigns.push({ campaign: { resourceName: "customers/1234567890/campaigns/123", name: `Minber ${id} | ar | Winter`, status: "PAUSED", campaignBudget: "customers/1234567890/campaignBudgets/124" }, campaignBudget: { amountMicros: "10000000", explicitlyShared: false } });
       return { mutateOperationResponses: [{ campaignResult: { resourceName: "customers/1234567890/campaigns/123" } }] };
     } };
-  const dependencies: Record<string, unknown> = { "@/lib/prisma": { prisma: db }, "./client": { SearchApiError, googleSearchClient: async () => client, searchCredentials: () => credentials }, "./contracts": { searchPlanRequest, searchProposal, buildSearchOperations }, "./planner": { searchDestinations: async () => destinations, searchTargeting: async () => ({ languages: operationInput.languages, locations: operationInput.locations }) } };
+  const dependencies: Record<string, unknown> = { "@/lib/prisma": { prisma: db }, "./client": { SearchApiError, googleSearchClient: async () => client, searchCredentials: () => credentials }, "./contracts": { searchPlanRequest, searchProposal, searchAutomationPolicy, buildSearchOperations }, "./improvements": {verifySearchImprovements:async()=>{}}, "./planner": { searchDestinations: async () => destinations, searchTargeting: async () => ({ languages: operationInput.languages, locations: operationInput.locations }) } };
   const isolated = { exports: {} as { executeSearchPlan: (body: Record<string, unknown>) => Promise<unknown> } };
   const code = ts.transpileModule(fs.readFileSync("lib/marketing/google-search/executor.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new vm.Script(code).runInNewContext({ module: isolated, exports: isolated.exports, Date, Map, URL, JSON, require: (name: string) => { assert.ok(name in dependencies, name); return dependencies[name]; } });
+  new vm.Script(code).runInNewContext({ module: isolated, exports: isolated.exports, Date, Map, URL, JSON, require: (name: string) => { assert.ok(name in searchTestDependencies(dependencies), name); return searchTestDependencies(dependencies)[name]; } });
   return { execute: isolated.exports.executeSearchPlan, plan: () => plan, counts: () => ({ creations, validations }) };
 }
 test("two concurrent create requests can create exactly one paused Google hierarchy", async () => {
@@ -101,12 +103,12 @@ test('automatic Search monitoring is opt-in, bounded to five owned keywords, and
   async function run(enabled: boolean, outside = false) {
     let plan = { id, connectionId: id, status: 'ACTIVE', version: 1, automationEnabled: enabled, automationPolicy: { maxKeywordCost: 5, minClicks: 20 }, proposal, evidence: {}, resources: { campaigns: ['customers/1234567890/campaigns/123'] }, lastReviewAt: null as Date|null, workLeaseToken: null as string|null, workLeaseUntil: null as Date|null, lastError: null as string|null };
     const mutations: {validateOnly:boolean;mutateOperations:Record<string,unknown>[]}[] = [];
-    const client = { id:'1234567890', query:async (query:string) => query.includes('FROM campaign') ? [{campaign:{resourceName:'customers/1234567890/campaigns/123',name:`Minber ${id} | ar | Winter`,status:'ENABLED'},campaignBudget:{amountMicros:'10000000',explicitlyShared:false}}] : query.includes('FROM keyword_view') ? Array.from({length:8},(_,i)=>({campaign:{resourceName:outside?'customers/1234567890/campaigns/999':'customers/1234567890/campaigns/123'},adGroupCriterion:{resourceName:`customers/1234567890/adGroupCriteria/12~${i}`,keyword:{text:'winter '+i}},metrics:{clicks:30,costMicros:6000000,conversions:0}})) : Array.from({length:5},(_,i)=>({adGroupCriterion:{resourceName:`customers/1234567890/adGroupCriteria/12~${i}`,status:'PAUSED'}})),call:async (_method:string,body:{validateOnly:boolean;mutateOperations:Record<string,unknown>[]})=>{mutations.push(body);return {}} };
+    const client = { id:'1234567890', query:async (query:string) => query.includes('FROM conversion_action') ? [{conversionAction:{resourceName:'fixture'}}] : query.includes('FROM customer') ? [{customer:{timeZone:'Europe/Istanbul'}}] : query.includes('FROM ad_group WHERE') ? [{adGroup:{resourceName:'customers/1234567890/adGroups/12'}}] : query.includes('FROM campaign') ? [{campaign:{resourceName:'customers/1234567890/campaigns/123',name:`Minber ${id} | ar | Winter`,status:'ENABLED'},campaignBudget:{amountMicros:'10000000',explicitlyShared:false}}] : (query.includes('FROM keyword_view') || query.includes('FROM ad_group_criterion')) ? Array.from({length:8},(_,i)=>({campaign:{resourceName:outside?'customers/1234567890/campaigns/999':'customers/1234567890/campaigns/123'},adGroup:{resourceName:'customers/1234567890/adGroups/12'},segments:{date:'2026-10-01'},adGroupCriterion:{resourceName:`customers/1234567890/adGroupCriteria/12~${i}`,status:'ENABLED',keyword:{text:'winter '+i}},metrics:{clicks:30,costMicros:6000000,conversions:0,impressions:50}})) : Array.from({length:5},(_,i)=>({adGroupCriterion:{resourceName:`customers/1234567890/adGroupCriteria/12~${i}`,status:'PAUSED'}})),call:async (_method:string,body:{validateOnly:boolean;mutateOperations:Record<string,unknown>[]})=>{mutations.push(body);return {}} };
     const db={marketingPlatformConnection:{findFirst:async()=>({id})},googleSearchPlan:{findUnique:async()=>plan,findFirst:async()=>plan,updateMany:async({data}:{data:Record<string,unknown>})=>{plan={...plan,...data,version:typeof data.version==='object'?plan.version+1:plan.version} as typeof plan;return {count:1}}}};
-    const deps:Record<string,unknown>={'node:crypto':{randomUUID:()=> 'lease'},'@/lib/prisma':{prisma:db},'@/lib/audit-log':{queueAuditLog:()=>{}},'./client':{SearchApiError,googleSearchClient:async()=>client,searchCredentials:()=>credentials},'./executor':{jsonValue:(v:unknown)=>v},'./contracts':{searchProposal}};
+    const deps:Record<string,unknown>={'node:crypto':{randomUUID:()=> 'lease'},'@/lib/prisma':{prisma:db},'@/lib/audit-log':{queueAuditLog:()=>{}},'./client':{SearchApiError,googleSearchClient:async()=>client,searchCredentials:()=>credentials},'./executor':{jsonValue:(v:unknown)=>v},'./contracts':{searchProposal,searchPlanRequest:parseRequest,searchAutomationPolicy},'./planner':{},'./improvements':{searchImprovementOperations:(value:{paused:string[]})=>value.paused.map(resourceName=>({adGroupCriterionOperation:{update:{resourceName,status:'PAUSED'},updateMask:'status'}})),verifySearchImprovements:async()=>{}},'./growth':{collectSearchGrowth}};
     const loaded={exports:{} as {optimizeSearchPlan:(id:string,now:Date)=>Promise<void>}};
     const code=ts.transpileModule(fs.readFileSync('lib/marketing/google-search/optimizer.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-    new vm.Script(code).runInNewContext({module:loaded,exports:loaded.exports,Date,Number,RegExp,JSON,require:(name:string)=>{assert.ok(name in deps,name);return deps[name]}});
+    new vm.Script(code).runInNewContext({module:loaded,exports:loaded.exports,Date,Number,RegExp,JSON,require:(name:string)=>{assert.ok(name in searchTestDependencies(deps),name);return searchTestDependencies(deps)[name]}});
     await loaded.exports.optimizeSearchPlan(id,new Date('2026-10-27T10:00:00Z'));return {plan,mutations};
   }
   assert.equal((await run(false)).mutations.length,0);
@@ -123,13 +125,31 @@ test('durable multilingual planning admits one worker and resumes without repeat
     if(where.version!==undefined&&where.version!==plan.version||where.status!==undefined&&where.status!==plan.status||where.workLeaseToken!==undefined&&where.workLeaseToken!==plan.workLeaseToken||where.OR&&plan.workLeaseUntil&&plan.workLeaseUntil.getTime()>Date.now())return {count:0};
     plan={...plan,...data,version:typeof data.version==='object'?plan.version+1:plan.version} as typeof plan;return {count:1};
   }}};
-  const dependencies:Record<string,unknown>={'@/lib/prisma':{prisma:db},'@/lib/campaign/soft-delete-filter':{NOT_SOFT_DELETED:{}},'@/lib/minbar/routes':{},'node:crypto':{randomUUID:()=>String(Math.random())},'@/lib/ai/core/openai-provider':{getOpenAiProviderStatus:()=>({mode:'ready'}),generateOpenAiDraft:async(input:{prompt:string})=>{
+  const dependencies:Record<string,unknown>={'@/lib/exchange/rates-service':{loadRatesFromDatabase:async()=>({rates:{USD:1}})},'@/lib/prisma':{prisma:db},'@/lib/campaign/soft-delete-filter':{NOT_SOFT_DELETED:{}},'@/lib/minbar/routes':{},'node:crypto':{randomUUID:()=>String(Math.random())},'@/lib/ai/core/openai-provider':{getOpenAiProviderStatus:()=>({mode:'ready'}),generateOpenAiDraft:async(input:{prompt:string})=>{
     const target=JSON.parse(input.prompt).request;const locale=target.locales[0];generated.push(locale);if(locale==='en'&&failEnglish){failEnglish=false;throw new Error('TEMPORARY_PLANNER_FAILURE')}
     return {status:'COMPLETED',mode:'OPENAI',answer:JSON.stringify({...proposal,campaigns:[{...proposal.campaigns[0],locale,dailyBudgetMicros:Math.round(target.dailyBudget*1e6)}]})};
-  }},'@/lib/ai/core/ai-core-service':{getAiContext:()=>({})},'../google-ads-report':{},'./client':{searchCredentials:()=>credentials,googleSearchClient:async()=>({call:async()=>({results:[]})})},'./contracts':{searchPlanRequest,validateSearchProposal}};
-  const load=()=>{const loaded={exports:{} as {continueSearchPlanning:(id:string)=>Promise<void>}};const code=ts.transpileModule(fs.readFileSync('lib/marketing/google-search/planner.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new vm.Script(code).runInNewContext({module:loaded,exports:loaded.exports,Date,Number,Math,JSON,URL,require:(name:string)=>{assert.ok(name in dependencies,name);return dependencies[name]}});return loaded.exports.continueSearchPlanning};
+  }},'@/lib/ai/core/ai-core-service':{getAiContext:()=>({})},'../google-ads-report':{},'./client':{searchCredentials:()=>credentials,googleSearchClient:async()=>({call:async()=>({results:[]})})},'./contracts':{searchPlanRequest,searchBudgetAllocations,validateSearchProposal}};
+  const load=()=>{const loaded={exports:{} as {continueSearchPlanning:(id:string)=>Promise<void>}};const code=ts.transpileModule(fs.readFileSync('lib/marketing/google-search/planner.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new vm.Script(code).runInNewContext({module:loaded,exports:loaded.exports,Date,Number,Math,JSON,URL,require:(name:string)=>{assert.ok(name in searchTestDependencies(dependencies),name);return searchTestDependencies(dependencies)[name]}});return loaded.exports.continueSearchPlanning};
   await Promise.all([load()(id),load()(id)]);assert.deepEqual(generated,['ar']);assert.deepEqual(Array.from(plan.evidence.completedLocales),['ar']);
   await load()(id);assert.equal(plan.status,'PLANNING_FAILED');assert.deepEqual(Array.from(plan.evidence.completedLocales),['ar']);
   plan.status='PLANNING';plan.version++;
   await load()(id);await load()(id);assert.equal(plan.status,'DRAFT');assert.deepEqual(generated,['ar','en','en','tr']);assert.equal(plan.proposal.campaigns.length,3);assert.equal(plan.proposal.campaigns.reduce((sum,c)=>sum+c.dailyBudgetMicros,0),30000000);
+});
+
+
+test("weighted language/country plans preserve every micro and scope targeting, CPC bidding and tracking to each pair",()=>{
+ const input=searchPlanRequest.parse({...request,locales:["ar","en"],countries:["TR","SA"],dailyBudget:10.000001,localeWeights:{ar:70,en:30},splitByCountry:true,cpcBidCeilingMicros:500000});
+ const allocations=searchBudgetAllocations(input);
+ assert.equal(allocations.length,4);assert.equal(allocations.reduce((sum,row)=>sum+row.dailyBudgetMicros,0),10000001);
+ assert.equal(allocations.filter(row=>row.locale==="ar").reduce((sum,row)=>sum+row.dailyBudgetMicros,0),7000000);
+ const next={...proposal,biddingStrategy:"MAXIMIZE_CLICKS" as const,cpcBidCeilingMicros:500000,minCampaignDailyBudgetMicros:1000000,campaigns:allocations.map(allocation=>({...proposal.campaigns[0],...allocation}))};
+ const operations=buildSearchOperations({...operationInput,request:input,proposal:next,destinations:[...destinations,{...destinations[0],locale:"en",url:"https://minberiaksa.org/en/bagislar/winter"}],languages:{ar:"languageConstants/1019",en:"languageConstants/1000"},locations:{TR:"geoTargetConstants/2792",SA:"geoTargetConstants/2682"}}) as Record<string,Record<string,Record<string,unknown>>>[];
+ const campaigns=operations.filter(op=>op.campaignOperation).map(op=>op.campaignOperation.create);
+ assert.equal(campaigns.length,4);assert.ok(campaigns.every(row=>row.status==="PAUSED"&&!row.maximizeConversions));assert.equal((campaigns[0].targetSpend as {cpcBidCeilingMicros:string}).cpcBidCeilingMicros,"500000");
+ const locationOperations=operations.filter(op=>op.campaignCriterionOperation?.create.location);assert.equal(locationOperations.length,4);
+ assert.ok(String(campaigns[0].name).includes("ar-TR"));
+ assert.throws(()=>validateSearchProposal({...next,campaigns:next.campaigns.map((campaign,i)=>i?campaign:{...campaign,dailyBudgetMicros:999999})},input,[...destinations,{...destinations[0],locale:"en"}]),/BUDGET_TOO_SMALL_FOR_LOCALE:ar-TR/);
+ assert.equal(searchPlanRequest.safeParse({...input,localeWeights:{ar:70,en:20}}).success,false);
+ assert.equal(searchPlanRequest.safeParse({...input,locales:["ar","ar"]}).success,false);
+ assert.throws(()=>validateSearchProposal({...next,cpcBidCeilingMicros:undefined},input,destinations),/CPC_CEILING_REQUIRED/);
 });

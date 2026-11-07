@@ -1,5 +1,6 @@
 import { schemaHasInvalidMetaParameterNames } from "./meta-parameter-name";
 import { normalizeMetaTemplateStatus } from "./whatsapp-template-status";
+import { templateLocaleFromLanguage } from "./template-locale-media";
 
 export type VariantReadiness = {
   ready: boolean;
@@ -37,6 +38,15 @@ export type VariantRow = {
   rejectionReason: string | null;
   lastSyncedAt: Date;
 };
+
+/** One-to-one template selection must never borrow another donor language. */
+export function resolveExactVariantForLocale(variants: VariantRow[], locale: string): VariantReadiness {
+  const requested = templateLocaleFromLanguage(locale);
+  return resolveVariantForLocale(
+    variants.filter((variant) => templateLocaleFromLanguage(variant.languageCode) === requested),
+    requested,
+  );
+}
 
 export function resolveVariantForLocale(variants: VariantRow[], locale: string, fallbackLocale = "ar"): VariantReadiness {
   if (!variants.length) return NOT_READY;

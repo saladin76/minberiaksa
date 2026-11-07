@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
   const senderId = sp.get("senderId") || null;
   const filter = sp.get("filter"); // needsReply | unresolved | all
   const search = (sp.get("q") || "").trim().toLowerCase();
-  const limit = Math.min(Math.max(Number(sp.get("limit") ?? 50), 1), 200);
-  const offset = Math.max(Number(sp.get("offset") ?? 0), 0);
+  const limit = Math.min(Math.max(Number.parseInt(sp.get("limit") || "50") || 50, 1), 200);
+  const offset = Math.min(100000, Math.max(Number.parseInt(sp.get("offset") || "0") || 0, 0));
 
   const senderRows = listInboxSenders();
-  const loaded = await Promise.all([listConversations({ senderId, senderRows }), senderRows]).catch(() => null);
+  const loaded = await Promise.all([listConversations({ senderId, senderRows, enrichLimit: !search && (!filter || filter === "all") ? offset + limit : undefined }), senderRows]).catch(() => null);
   if (!loaded) return NextResponse.json({ error: "INBOX_UNAVAILABLE" }, { status: 503 });
   const [all, senders] = loaded;
 

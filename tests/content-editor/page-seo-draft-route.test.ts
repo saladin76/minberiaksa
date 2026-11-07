@@ -8,6 +8,7 @@ import * as locales from "../../lib/locales";
 import { ContentError } from "../../lib/content-editor/service";
 import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
 import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
+import { seoSourceText } from "../../lib/content-editor/seo-source";
 function load(file: string, deps: Record<string, unknown>) {
   const loaded = { exports: {} as Record<string, (...args: unknown[]) => Promise<Record<string, unknown>>> };
   const source = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -24,6 +25,7 @@ function fixture(mode = "ok") {
   class SeoResearchError extends Error { status = 502; }
   class Ga4ReportError extends Error { status = 502; }
   const route = load("app/api/admin/page-seo/[key]/route.ts", {
+    "@/lib/content-editor/seo-source": { seoSourceText },
     "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "next/server": { NextResponse: { json: (body: unknown, options?: {status?:number}) => ({ body, status: options?.status || 200 }) } },
     "next-auth": { getServerSession: async () => ({user:{}}) }, "@/app/api/auth/[...nextauth]/options": {authOptions:{}}, "@/lib/dashboard/api-auth": {requireAdminOrDashboardPermission:()=>mode==="denied"?{status:403}:null},
     "@/lib/content-editor/service": {ContentError}, "@/lib/content-editor/page-seo": {...pageSeo, readPageSeoDocument:async()=>{reads++;return document;}, savePageSeoDocument:async()=>{writes++;throw new Error("Unexpected write");},pageSeoDefaults:()=>({values:{metaTitle:"Default title",metaDescription:"Default description"},context:"Public page context"})},
@@ -46,4 +48,16 @@ test("page SEO keeps saved overrides for legacy callers and refuses stale or una
 test("invalid SEO draft fields never reach the provider and quota errors retain their controlled reason",async()=>{
   const h=fixture();assert.equal((await h.post({locale:"ar",revision:"saved",draft:{amount:"1"}})).status,400);assert.equal(h.calls.length,0);
   const result=await fixture("quota").post({locale:"ar",revision:"saved"});assert.equal(result.status,502);assert.equal((result.body as Record<string,unknown>).reason,"AI_QUOTA_EXCEEDED");
+});
+
+test("foreign page SEO uses unsaved Arabic or saved Arabic defaults instead of a foreign draft", async () => {
+  const h = fixture();
+  const before = structuredClone(h.document);
+  const result = await h.post({ locale: "en", revision: "saved", sourceDraft: { metaTitle: "مصدر عربي حالي", metaDescription: "محتوى الصفحة بالعربية" }, draft: { metaTitle: "Foreign claim" } });
+  assert.equal(result.status, 200); assert.equal(h.calls[0].locale, "en"); assert.equal(h.calls[0].title, "مصدر عربي حالي");
+  assert.match(String(h.calls[0].description), /محتوى الصفحة بالعربية/); assert.doesNotMatch(JSON.stringify(h.calls), /Foreign claim/);
+  await h.post({ locale: "fr", revision: "saved", draft: { metaTitle: "Other foreign claim" } });
+  assert.equal(h.calls[1].title, "Saved override"); assert.equal(h.stats().writes, 0); assert.deepEqual(h.document, before);
+  assert.equal((await h.post({ locale: "en", revision: "saved", sourceDraft: { amount: "1" } })).status, 400);
+  assert.equal(h.calls.length, 2);
 });

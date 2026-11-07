@@ -286,7 +286,7 @@ export function SenderRoutingManager() {
         <div>
           <h2 className="text-lg font-bold text-slate-900">{dt("المُرسِلون والتوجيه")}</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            {dt("أرقام الأعمال وهويات الإرسال، وقواعد اختيار المُرسِل حسب اللغة والدولة والغرض.")}</p>
+            {dt("قوالب واتساب تخرج من الرقم الافتراضي فقط. الأرقام الأخرى تبقى للردود المباشرة في محادثاتها.")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button

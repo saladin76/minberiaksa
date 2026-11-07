@@ -1,9 +1,15 @@
+import * as cadence from "../../lib/templates/recurring-cadence";
+import {trackCampaignBody,campaignTrackingValues} from "../../lib/communication/campaign-message-tracking";
+import {buildMetaComponents} from "../../lib/communication/providers/meta-whatsapp/parameters";
+import * as attributionSanitize from "../../lib/attribution/sanitize";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as emailHistory from "../../lib/communication/campaign-email-history";
 import * as donationScan from "../../lib/communication/campaign-donation-scan";
+import * as attributionDiagnostics from "../../lib/communication/campaign-attribution-diagnostics";
 import {
   buildUniqueCampaignUtmAliases,
   campaignUtmLinksFromWhatsAppTemplates,
@@ -101,12 +107,26 @@ test("approved WhatsApp template links map to campaigns and shared aliases remai
   }, new Set([campaignA, campaignB]), aliases), null);
 });
 
+test("WhatsApp attribution retains every language and WABA variant, regardless of row order", () => {
+  const campaigns = [{ campaignId: campaignA, channel: "WHATSAPP", templateId: "family" }];
+  const destination = (name: string) => `https://minberiaksa.org/ar/bagislar?utm_source=whatsapp&utm_medium=communication&utm_campaign=${name}`;
+  const variant = (name?: string) => ({ templateId: "family", componentsSchema: name ? [{ type: "BUTTONS", buttons: [{ type: "URL", url: destination(name) }] }] : [] });
+  const variants = [variant("arabic-link"), variant("turkish-link"), variant("arabic-link"), variant()];
+  for (const rows of [variants, [...variants].reverse()]) {
+    const links = campaignUtmLinksFromWhatsAppTemplates(campaigns, rows);
+    assert.equal(links.length, 2, "duplicate destinations collapse and empty variants cannot erase earlier URLs");
+    const aliases = buildUniqueCampaignUtmAliases(links);
+    for (const name of ["arabic-link", "turkish-link"]) assert.equal(resolveCommunicationCampaignId({ utm_source: "whatsapp", utm_medium: "communication", utm_campaign: name }, new Set([campaignA]), aliases), campaignA);
+  }
+});
+
 test("campaign reporting credits a paid donation through its unique registered legacy UTM", async () => {
   const linkRows = [link(campaignA)];
   const service = isolated<{
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
+      communicationDelivery: { aggregateRaw: async () => [{ page: [], links: [] }] },
       donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-1", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 75, amountUSD: 75, totalAmount: 75,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
@@ -132,6 +152,7 @@ test("campaign reporting can recover the UTM from the approved template when no 
     getCampaignOutcomeMetrics: (ids: string[]) => Promise<Map<string, { donationCount: number; revenue: number; failedDonationCount: number }>>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
+      communicationDelivery: { aggregateRaw: async () => [{ page: [], links: [] }] },
       donation: { findRaw: async () => [{_id:{$oid:campaignA}}], findMany: async () => [{
         id: "donation-2", status: "PAID", paidAt: new Date("2026-10-01"), currency: "USD", amount: 125, amountUSD: 125, totalAmount: 125,
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
@@ -180,12 +201,19 @@ test("new and attached links replace generic campaign UTMs with a campaign-speci
 type ServiceDependencies = Record<string, unknown>;
 
 type Outcome = { donationCount: number; revenue: number; unpricedPaidCount: number; failedDonationCount?: number };
-function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void> }) {
-  let calls = 0, scans = 0;
+function reportingHarness(input: { donations?: Record<string, unknown>[]; links?: CampaignUtmLink[]; fail?: boolean; paged?: boolean; linksRead?: () => Promise<CampaignUtmLink[]>; waitForCampaigns?: Promise<void>; history?: unknown[]; historyFailure?: boolean; historyPages?: unknown[]; historyFailureAt?: number }) {
+  let calls = 0, scans = 0, historyScans = 0;
   const service = isolated<{
     getCampaignOutcomeSummary: (ids: string[]) => Promise<{ metrics: Map<string, Outcome>; unattributed: Outcome }>;
   }>("lib/communication/campaign-attribution-service.ts", {
     "@/lib/prisma": { prisma: {
+      communicationDelivery: { aggregateRaw: async () => {
+        historyScans++;
+        if (input.historyFailure || input.historyFailureAt === historyScans) throw new Error("email archive offline");
+        if (input.historyPages) return input.historyPages[historyScans - 1];
+        const links = input.history ?? [];
+        return [{ page: links.length ? [{ count: 1, lastId: { $oid: campaignA } }] : [], links }];
+      } },
       donation: { findRaw: async () => {
         scans++;
         if (input.fail) throw new Error("database offline");
@@ -205,7 +233,7 @@ function reportingHarness(input: { donations?: Record<string, unknown>[]; links?
     "@/lib/marketing/campaign-links/campaign-link-registry-service": {},
     "./campaign-attribution-matching": { buildUniqueCampaignUtmAliases, campaignUtmLinksFromWhatsAppTemplates, campaignsNeedingTrackedTemplate, isCommunicationUtmMedium, resolveCommunicationCampaignId },
   });
-  return { service, calls: () => calls };
+  return { service, calls: () => calls, historyCalls: () => historyScans };
 }
 const confirmed = { id: "paid", status: "PAID", paidAt: new Date("2026-10-01"), amount: 10.25, amountUSD: 10.25, totalAmount: 12, currency: "USD", attribution: { utm_source: "whatsapp", utm_medium: "messaging", utm_campaign: campaignA } };
 
@@ -238,7 +266,7 @@ test("campaign income survives the donation display cap and database failure nev
   const { service, calls } = reportingHarness({ donations: [confirmed], paged: true });
   assert.equal((await service.getCampaignOutcomeSummary([campaignA])).metrics.get(campaignA)?.revenue, 10.25);
   assert.equal(calls(), 2);
-  await assert.rejects(reportingHarness({ fail: true }).service.getCampaignOutcomeSummary([campaignA]), /database offline/);
+  await assert.rejects(reportingHarness({ fail: true }).service.getCampaignOutcomeSummary([campaignA]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "DONATIONS");
 });
 
 test("a reply without click evidence never increments campaign click totals", () => {
@@ -289,7 +317,10 @@ function isolated<T>(file: string, dependencies: ServiceDependencies): T {
     process: { env: { DATABASE_URL: "test" } },
     URL,
     require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence;
       if (id === "./campaign-donation-scan") return donationScan;
+      if (id === "./campaign-email-history") return emailHistory;
+      if (id === "./campaign-attribution-diagnostics") return attributionDiagnostics;
       if (!(id in dependencies)) throw new Error(`Unexpected dependency: ${id}`);
       return dependencies[id];
     },
@@ -305,11 +336,69 @@ for (const nested of [false, true]) {
       ? { linksRead: async () => { throw new Error("links offline"); }, waitForCampaigns: pending }
       : { fail: true, linksRead: async () => { await pending; return []; } });
     let finished = false;
-    const result = service.getCampaignOutcomeSummary([campaignA]).then(() => { finished = true; return "unexpected success"; }, error => { finished = true; return String(error); });
+    const result = service.getCampaignOutcomeSummary([campaignA]).then(() => { finished = true; return { stage: "unexpected success" }; }, error => { finished = true; return attributionDiagnostics.campaignAttributionDiagnostic(error); });
     try {
       await new Promise<void>(resolve => setImmediate(resolve));
       assert.equal(finished, false, "the CLI must not disconnect while sibling reads are active");
     } finally { release(); }
-    assert.match(await result, nested ? /links offline/ : /database offline/);
+    assert.equal((await result).stage, nested ? "TRACKING_LINKS" : "DONATIONS");
   });
 }
+
+test("the full report recovers archived email income, exposes ambiguity, and propagates a history-read error", async () => {
+  const donation = { ...confirmed, attribution: { utm_source: "email", utm_medium: "email", utm_campaign: "hotmeals" } };
+  const row = { _id: { campaignId: { $oid: campaignA }, url: "https://minberiaksa.org/ar/bagislar/fixture?utm_source=email&amp;utm_medium=email&amp;utm_campaign=hotmeals" } };
+  const unique = await reportingHarness({ donations: [donation], history: [row] }).service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(unique.metrics.get(campaignA)?.revenue, 10.25); assert.equal(unique.unattributed.donationCount, 0);
+  const shared = await reportingHarness({ donations: [donation], history: [row, { _id: { ...row._id, campaignId: { $oid: campaignB } } }] }).service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(shared.metrics.size, 0); assert.equal(shared.unattributed.revenue, 10.25);
+  await assert.rejects(reportingHarness({ donations: [donation], historyFailure: true }).service.getCampaignOutcomeSummary([campaignA]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "EMAIL_HISTORY");
+});
+
+test("the full financial report cannot credit an alias before checking the last historical email page", async () => {
+  const donation = { ...confirmed, attribution: { utm_source: "email", utm_medium: "email", utm_campaign: "hotmeals" } };
+  const destination = "https://minberiaksa.org/ar/bagislar/fixture?utm_source=email&utm_medium=email&utm_campaign=hotmeals";
+  const page = (id: string, count: number, owner: string) => [{ page: [{ count, lastId: { $oid: id } }], links: [{ _id: { campaignId: { $oid: owner }, url: destination } }] }];
+  const historyPages = [page(campaignA, emailHistory.EMAIL_HISTORY_PAGE_SIZE, campaignA), page(campaignB, 1, campaignB)];
+  const f = reportingHarness({ donations: [donation], historyPages });
+  const result = await f.service.getCampaignOutcomeSummary([campaignA, campaignB]);
+  assert.equal(f.historyCalls(), 2); assert.equal(result.metrics.size, 0);
+  assert.equal(result.unattributed.revenue, 10.25);
+  const failed = reportingHarness({ donations: [donation], historyPages, historyFailureAt: 2 });
+  await assert.rejects(failed.service.getCampaignOutcomeSummary([campaignA, campaignB]), error => attributionDiagnostics.campaignAttributionDiagnostic(error).stage === "EMAIL_HISTORY");
+  assert.equal(failed.historyCalls(), 2);
+});
+
+
+test("actual email, SMS and approved Meta campaign links survive checkout capture and credit only their settled campaign",async()=>{
+ const third="6ada609ef5c859cf26ebba83",donations:Record<string,unknown>[]=[];
+ for(const [index,channel] of ["EMAIL","SMS","WHATSAPP"].entries()){
+  const campaign={id:[campaignA,campaignB,third][index],channel};let url:string;
+  if(channel==="WHATSAPP"){
+   const schema=[{type:"BUTTONS",buttons:[{type:"URL",text:"Donate",url:"https://minberiaksa.org/en/bagislar?utm_source=whatsapp&utm_medium=communication&utm_id={{1}}"}]}];
+   const values=campaignTrackingValues(schema,{"1":"Donor name"},campaign);
+   const components=buildMetaComponents({componentsSchema:schema,values,positionalNames:[],scopedNames:{}});assert.ok(components.ok);if(!components.ok)return;
+   const parameter=components.components[0].parameters[0] as {text:string};url=schema[0].buttons[0].url.replace("{{1}}",parameter.text);
+  }else{
+   const raw=channel==="EMAIL"?'<a href="https://minberiaksa.org/en/bagislar">Donate</a>':"https://minberiaksa.org/en/bagislar";
+   const output=trackCampaignBody(raw,campaign);url=channel==="EMAIL"?/href="([^"]+)"/.exec(output)![1].replaceAll("&amp;","&"):output;
+  }
+  const cookies=new Map<string,string>(),storage=new Map<string,string>();
+  const document={referrer:"",get cookie(){return [...cookies].map(([k,v])=>`${k}=${v}`).join("; ");},set cookie(value:string){const [pair]=value.split(";"),i=pair.indexOf("="),key=pair.slice(0,i);if(/Max-Age=0/i.test(value))cookies.delete(key);else cookies.set(key,pair.slice(i+1));}};
+  const window={location:{href:url,search:new URL(url).search}};
+  const loaded={exports:{} as {captureAttributionFromUrl:()=>void;getDonationAttributionPayload:()=>Record<string,string>}};
+  const output=ts.transpileModule(fs.readFileSync("lib/attribution/client-payload.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,window,document,Date,Math,URLSearchParams,sessionStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value),removeItem:(key:string)=>storage.delete(key)},require:(name:string)=>name==="./sanitize"?attributionSanitize:{captureStoredClickIds:()=>({}),clearStoredClickIds:()=>{}}});
+  loaded.exports.captureAttributionFromUrl();
+  window.location={href:"https://minberiaksa.org/en/checkout?currency=EUR",search:"?currency=EUR"};
+  const snapshot=attributionSanitize.sanitizeDonationAttribution(loaded.exports.getDonationAttributionPayload());
+  assert.equal((snapshot as Record<string,unknown>).utm_id,campaign.id);
+  donations.push({...confirmed,id:channel,amount:10+index,amountUSD:10+index,attribution:snapshot});
+  donations.push({...confirmed,id:channel+"-failed",status:"FAILED",paidAt:null,amountUSD:999,attribution:snapshot});
+  donations.push({...confirmed,id:channel+"-unconfirmed",status:"PENDING",paidAt:null,amountUSD:999,attribution:snapshot});
+ }
+ const result=await reportingHarness({donations}).service.getCampaignOutcomeSummary([campaignA,campaignB,third]);
+ assert.equal(result.metrics.get(campaignA)?.revenue,10);assert.equal(result.metrics.get(campaignB)?.revenue,11);assert.equal(result.metrics.get(third)?.revenue,12);
+ assert.equal([...result.metrics.values()].reduce((sum,row)=>sum+row.revenue,0),33);assert.equal(result.unattributed.revenue,0);
+ for(const metric of result.metrics.values()){assert.equal(metric.donationCount,1);assert.equal(metric.failedDonationCount,1);}
+});

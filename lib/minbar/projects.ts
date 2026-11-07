@@ -1,9 +1,10 @@
+import { publicRichText, type PublicRichNode } from "@/lib/content/public-rich-text";
 import { applyPublicPreview, type PublicPreviewDraft } from "@/lib/content-editor/public-preview";
 import "server-only";
 
 import { describeVideoSource } from "@/lib/content/video-platform";
 import { prisma } from "@/lib/prisma";
-import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
+import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { FUNDRAISING_SHARES, cardShareCounts, parseSuggestedShareCounts } from "@/lib/campaign/campaign-modes";
@@ -13,7 +14,13 @@ import { contentToBlocks, type ArticleBlock } from "@/lib/blog/rich-text";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
 import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
+import { selectProjectImages } from "@/lib/minbar/project-image-fallback";
 import { mergeProjectPriorityGroups } from "@/lib/minbar/project-order";
+import { parseCategoryPriorities } from "@/lib/campaign/categories";
+import { orderProjectsInCategory } from "@/lib/content-editor/project-order";
+import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "@/lib/campaign/priority-filter";
+import { getRestorationProgrammeProjectIds } from "./restoration-programme";
+import { selectProgrammeRelatedProjects } from "./project-filter-options";
 import type { CartFreqKey } from "@/lib/minbar/cart";
 import type { Prisma } from "@prisma/client";
 
@@ -36,7 +43,7 @@ import type { Prisma } from "@prisma/client";
  *   image       ← per-locale cover when set, else images[0]
  *   images      ← the whole gallery, with the per-locale cover first
  *   videoUrl    ← per-locale video when set, else Campaign.videoUrl
- *   categories  ← every category the campaign is filed under, in order
+ *   categories  ← active categories the campaign is filed under, in order
  *   shares      ← set only for a سهوم campaign (fundraisingMode SHARES with a
  *                 positive sharePriceUSD): the donor gives whole shares and
  *                 the amount is always count × price
@@ -48,7 +55,10 @@ import type { Prisma } from "@prisma/client";
 
 export interface MinbarProject {
   id: string;
+  categoryPriorities?: Record<string, number>;
   slug: string;
+  /** Stable Arabic/base slug, independent of the visitor's translated URL. */
+  baseSlug?: string;
   /** Set only when an old saved URL was resolved; the page redirects it. */
   redirectedFrom?: string;
   title: string;
@@ -59,6 +69,7 @@ export interface MinbarProject {
    * by `getProject` only; lists (cards) leave it empty to keep pages light.
    */
   body: ArticleBlock[];
+  richBody?: PublicRichNode[];
   image: string | null;
   imageAlt?: string;
   /** Category slug  the handoff's regional filter key (gaza, al-quds, …). */
@@ -69,6 +80,8 @@ export interface MinbarProject {
   goal: number | null;
   /** Every photo of the campaign, the cover (per-locale when set) first. */
   images: string[];
+  /** Alternate same-campaign images used only when a cover URL fails. */
+  coverFallbacks?: string[];
   /** Per-locale video when set, else the campaign's own. */
   videoUrl: string | null;
   /** Every category the campaign is filed under. `region` is the first. */
@@ -140,10 +153,12 @@ function selectFor(locale: string) {
     categoryPriorities: true,
     createdAt: true,
     categories: {
+      where: CATEGORY_ACTIVE_OR_UNSET,
       select: {
         id: true,
         slug: true,
         name: true,
+        isActive: true,
         translations: { where: translationLocaleWhere(locale), select: { locale: true, name: true } },
       },
     },
@@ -171,10 +186,10 @@ async function findPublishedCampaignRows(
     ],
   };
   const prioritizedWhere: Prisma.CampaignWhereInput = {
-    AND: [baseWhere, { NOT: { priority: null } }],
+    AND: [baseWhere, RANKED_CAMPAIGNS],
   };
   const unprioritizedWhere: Prisma.CampaignWhereInput = {
-    AND: [baseWhere, { priority: null }],
+    AND: [baseWhere, UNRANKED_CAMPAIGNS],
   };
   const limit = Number.isInteger(options.limit) && Number(options.limit) > 0
     ? Number(options.limit)
@@ -182,13 +197,13 @@ async function findPublishedCampaignRows(
   const select = selectFor(locale);
   const readPrioritized = (take?: number) => prisma.campaign.findMany({
     where: prioritizedWhere,
-    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ priority: "asc" }, { createdAt: "desc" }, { id: "desc" }],
     ...(take ? { take } : {}),
     select,
   });
   const readUnprioritized = (take?: number) => prisma.campaign.findMany({
     where: unprioritizedWhere,
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     ...(take ? { take } : {}),
     select,
   });
@@ -241,6 +256,7 @@ type CampaignRow = {
     id: string;
     slug: string | null;
     name: string;
+    isActive?: boolean | null;
     translations: Array<{ locale: string; name: string }>;
   }>;
   translations: Array<{
@@ -278,7 +294,10 @@ function sharesFor(row: CampaignRow, locale: string): MinbarProjectShares | null
 
 function toProject(row: CampaignRow, locale: string, detail = false): MinbarProject {
   const t = pickTranslation(row.translations, locale);
-  const category = row.categories?.[0];
+  // Preview drafts can supply their own category rows; apply the same public
+  // visibility rule here as in the database selection, without changing links.
+  const categories = (row.categories ?? []).filter(category => category.isActive !== false);
+  const category = categories[0];
   const categoryT = pickTranslation(category?.translations ?? [], locale);
 
   // An OPEN campaign has no fixed target, so the design shows no bar and no
@@ -311,20 +330,23 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
 
   const donationConfig = parseSuggestedDonations(row.suggestedDonations);
   const byCurrency = row.suggestedDonations ? donationConfig.byCurrency : {};
-  const cover = t?.image || row.images?.[0] || null;
-  const images = [...new Set([...(cover ? [cover] : []), ...(row.images ?? []).slice(t?.image ? 1 : 0)].filter(Boolean))];
+  const { cover, images, coverFallbacks } = selectProjectImages(t?.image, row.images);
 
   return {
     id: row.id,
+    categoryPriorities: parseCategoryPriorities(row.categoryPriorities),
     slug: t?.slug || row.slug || row.id,
+    baseSlug: row.slug || row.id,
     title: t?.title || row.title,
     text,
+    ...(detail ? { richBody: publicRichText(rawDescription) } : {}),
     body: detail ? (body.length ? body : [{ kind: "p", text }]) : [],
     image: cover,
+    coverFallbacks,
     imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,
     images,
     videoUrl: t?.videoUrl || row.videoUrl || null,
-    categories: (row.categories ?? []).map((c) => ({
+    categories: categories.map((c) => ({
       id: c.id,
       slug: c.slug,
       label: pickTranslation(c.translations ?? [], locale)?.name || c.name,
@@ -389,15 +411,7 @@ export async function listProjectsInCategory(
   /* The order an admin set for THIS category (`categoryPriorities`, from the
      categories dashboard) comes first; campaigns without one follow in the
      site-wide order. Sorted here because the priority lives in a JSON map. */
-  const rank = (row: CampaignRow): number => {
-    const map = row.categoryPriorities;
-    const value = map && typeof map === "object" && !Array.isArray(map) ? (map as Record<string, unknown>)[categoryId] : undefined;
-    return typeof value === "number" && Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
-  };
-  const ordered = rows
-    .map((row, index) => ({ row, index, rank: rank(row) }))
-    .sort((a, b) => (a.rank === b.rank ? a.index - b.index : a.rank - b.rank))
-    .map(({ row }) => row);
+  const ordered = orderProjectsInCategory(rows, categoryId);
 
   return (limit ? ordered.slice(0, limit) : ordered).map((row) => toProject(row, locale));
 }
@@ -570,7 +584,11 @@ export async function listRelatedProjects(
   locale: string,
   count = 3
 ): Promise<MinbarProject[]> {
-  const all = await listProjects(locale);
+  const [all, programmeIds] = await Promise.all([
+    listProjects(locale),
+    project.baseSlug === "al-quds-home-restoration" ? getRestorationProgrammeProjectIds() : Promise.resolve(undefined),
+  ]);
+  if (programmeIds !== undefined) return selectProgrammeRelatedProjects(all, programmeIds, project.id);
   const others = all.filter((p) => p.slug !== project.slug);
   const sameRegion = others.filter((p) => p.region && p.region === project.region);
   const rest = others.filter((p) => !p.region || p.region !== project.region);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import { donationFieldEmpty, donationWhereAll } from "@/lib/donations/mongo-null";
 import { albaraka3DLinkageError } from "@/lib/donations/albaraka-3d-verification";
 import { isValidLocale } from "@/lib/locales";
@@ -18,6 +19,7 @@ import {
 } from "@/lib/albaraka";
 import { failAlbarakaDonation, settleAlbarakaDonation } from "@/lib/donations/albaraka-settlement";
 import { withDonationToken } from "@/lib/donations/access-token";
+import { completeSubscriptionCardVerification } from "@/lib/donations/subscription-card-verification";
 
 // Calls Albaraka's /Sale, which only accepts the project's Static IPs (sin1).
 export const preferredRegion = "sin1";
@@ -61,11 +63,27 @@ function macEquals(a: string, b: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
+  const origin = paymentPublicOrigin(req.url);
   const { searchParams } = new URL(req.url);
   const donationId = searchParams.get("donationId") || "";
   const requestedLocale = (searchParams.get("locale") || "en").toLowerCase();
   const locale = isValidLocale(requestedLocale) ? requestedLocale : "en";
+
+  // A distinct, nonce-bound authentication-only flow for future subscription
+  // cards. It never falls through to the donation Sale/capture branch below.
+  if (searchParams.has("cardVerificationId")) {
+    const verificationId = searchParams.get("cardVerificationId") || "", token = searchParams.get("token") || "";
+    const target = new URL(`/${locale}/profile?tab=subscriptions&cardUpdate=failed`, origin);
+    if (!/^[a-f0-9]{24}$/i.test(verificationId) || !/^[A-Za-z0-9_-]{43}$/.test(token)) return NextResponse.redirect(target, 303);
+    try {
+      const form = await req.formData(), raw = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === "string").map(([k, v]) => [k, String(v)]));
+      const result = await completeSubscriptionCardVerification(prisma, verificationId, token, raw, albarakaConfig());
+      if (result.subscriptionId) target.searchParams.set("subscriptionId", result.subscriptionId);
+      target.searchParams.set("cardUpdate", result.ok ? "success" : "failed");
+      if (result.ok) target.searchParams.set("verificationId", verificationId);
+    } catch { /* No Sale call, and the old card remains the authority. */ }
+    return NextResponse.redirect(target, 303);
+  }
 
   const failUrl = donationId
     ? new URL(

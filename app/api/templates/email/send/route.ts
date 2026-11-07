@@ -71,6 +71,11 @@ export async function POST(request: NextRequest) {
     }
     const locale = pickLocale({ override: parsed.data.locale, recipientLang: ctx.user.preferredLang });
     const variant = resolveEmailVariant(template, locale);
+    if (variant.resolvedLocale !== locale) {
+      skipped += 1;
+      await logSentMessage({ channel: "EMAIL", origin: "MANUAL", status: "SKIPPED", templateId: template.id, templateName: template.name, locale, recipientUserId: ctx.user.id, recipientEmail: ctx.user.email, recipientName: ctx.user.name || null, renderedSubject: "", renderedBody: "", variables: ctx as unknown as Prisma.InputJsonValue, errorMessage: "EXACT_TEMPLATE_LANGUAGE_REQUIRED", actorId: actor.actorId ?? null, actorName: actor.actorName ?? null });
+      continue;
+    }
     const subject = renderEmailSubject(variant.subject, ctx);
     const html = await renderEmailHtml(variant.document as TReaderDocument, ctx, variant.resolvedLocale);
     const result = await sendArchivedEmail({ to: ctx.user.email, subject, html, recipientUserId: ctx.user.id, recipientName: ctx.user.name || null, locale, origin: "MANUAL", purpose: "MARKETING", templateId: template.id, templateName: template.name, createdBy: actor.actorId ?? null }, runtimeConfig);

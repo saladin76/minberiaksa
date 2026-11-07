@@ -1,3 +1,4 @@
+import { inheritRecurringAttribution } from "./recurring-attribution";
 import "server-only";
 import { withRecurringLease } from "./recurring-lease";
 import { runAfterResponse } from "@/lib/events/after-response";
@@ -21,7 +22,8 @@ import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 import { settlePayPalDonation } from "@/lib/donations/paypal-donation";
-import { nextChargeForPlan, nextRetryAt } from "./recurring-schedule";
+import { nextChargeAfterPayment, nextRetryForPlan } from "./recurring-schedule";
+import { inspectRecurringBillingSafety, applyRecurringBillingSafety, deferClosedFridayWindow, fridayBillingWindowClosed } from "./recurring-billing-safety";
 import type { RecurringChargeOutcome, RecurringChargeSummary } from "./albaraka-recurring";
 
 /**
@@ -48,22 +50,6 @@ import type { RecurringChargeOutcome, RecurringChargeSummary } from "./albaraka-
 
 type DueSubscription = Prisma.SubscriptionGetPayload<{ include: { items: true; categoryItems: true } }>;
 
-/**
- * The first cycle still ahead of `now`, stepping from the cycle that was due.
- * Each step follows the plan's own rule (the donor's chosen day and time), so
- * a charge that succeeded on a retry hours later does not drag the next cycle
- * off that slot. Plans without a rule step by frequency, as before.
- */
-function nextCycleAfter(sub: { frequency: string; scheduleRule: unknown; timezone: string | null }, due: Date, now: Date): Date {
-  let next = nextChargeForPlan(sub, due);
-  // Bounded: a daily plan two years behind is 730 steps, which is fine; the
-  // cap only guards against a clock that is wildly wrong.
-  for (let i = 0; i < 2000 && next.getTime() <= now.getTime(); i += 1) {
-    next = nextChargeForPlan(sub, next);
-  }
-  return next;
-}
-
 export async function chargeDuePayPalSubscriptions(options: { now?: Date; dryRun?: boolean; limit?: number } = {}): Promise<RecurringChargeSummary> {
   const now = options.now ?? new Date();
   const dryRun = options.dryRun ?? false;
@@ -85,7 +71,7 @@ export async function chargeDuePayPalSubscriptions(options: { now?: Date; dryRun
       provider: "PAYPAL",
       status: "ACTIVE",
       lastBillingDate: { not: null },
-      donations: { some: { paidAt: { not: null } } },
+      donations: { some: { status: "PAID", paidAt: { not: null } } },
       paypalVaultId: { not: null },
       nextBillingDate: { lte: now },
     },
@@ -104,17 +90,26 @@ export async function chargeDuePayPalSubscriptions(options: { now?: Date; dryRun
       outcome = { subscriptionId: sub.id, donationId: null, result: "unreachable", amountUSD: null, error: err instanceof Error ? err.message : String(err) };
     }
     if (outcome.result === "charged") summary.charged.push(outcome);
-    else if (outcome.result === "already_attempted" || outcome.result === "dry_run") summary.skipped.push(outcome);
+    else if (outcome.result === "already_attempted" || outcome.result === "dry_run" || outcome.result === "schedule_postponed") summary.skipped.push(outcome);
     else summary.failed.push(outcome);
   }
   return summary;
 }
 
 async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Promise<RecurringChargeOutcome> {
+  now = new Date(Math.max(now.getTime(), Date.now()));
   const due = sub.nextBillingDate ?? now;
   const attempt = sub.chargeAttempts + 1;
   const key = `pp-${sub.id}-${due.getTime()}-${attempt}`;
   const base: RecurringChargeOutcome = { subscriptionId: sub.id, donationId: null, result: "declined", amountUSD: null };
+
+  {
+    const safety = await inspectRecurringBillingSafety(prisma, sub, now);
+    if (safety.state !== "ready") {
+      if (!dryRun && !await applyRecurringBillingSafety(prisma, sub, safety)) return { ...base, result: "already_attempted" };
+      return { ...base, result: safety.state === "postpone" ? "schedule_postponed" : "review_required", error: safety.reason };
+    }
+  }
 
   // ── Never twice for one cycle ────────────────────────────────────────────
   const existing = await prisma.donation.findFirst({ where: { subscriptionId: sub.id, providerOrderId: key }, select: { id: true } });
@@ -132,8 +127,10 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   const donorCountrySnapshot = (await getDonorCountryCodeForSnapshot(prisma, sub.donorId)) ?? undefined;
 
   // ── A row before the call ────────────────────────────────────────────────
+  const attribution = await inheritRecurringAttribution(prisma, sub.id, sub.donorId);
   const donation = await prisma.donation.create({
     data: {
+      ...(attribution ? { attribution } : {}),
       accessToken: mintDonationAccessToken(),
       amount: sub.amount,
       amountUSD,
@@ -150,6 +147,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       paymentMethod: "PAYPAL",
       provider: "PAYPAL",
       providerOrderId: key,
+      billingReason: "subscription_cycle",
       providerTxnType: "RecurringCapture",
       providerTxnResult: "Pending",
       providerRaw: {
@@ -166,6 +164,8 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   });
 
   // ── The charge ───────────────────────────────────────────────────────────
+  if (await deferClosedFridayWindow(prisma, sub, donation.id, new Date(Math.max(now.getTime(), Date.now())))) return {...base,donationId:donation.id,result:"schedule_postponed",error:"FRIDAY_ONLY"};
+
   let order: PayPalOrder;
   try {
     order = await chargePayPalVault({ vaultId: sub.paypalVaultId as string, customId: donation.id, value: charge.value, currency: charge.currency, requestId: key });
@@ -175,6 +175,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
       order = await capturePayPalOrder(order.id, `${key}-capture`);
     }
   } catch (err) {
+    now = new Date(Math.max(now.getTime(), Date.now()));
     const unknownOutcome = !(err instanceof PayPalError) || err.status >= 500;
     if (!unknownOutcome) {
       return await recordFailure(sub, donation.id, attempt, now, err instanceof Error ? err.message : "PayPal charge failed", "Failed", amountUSD, err);
@@ -183,6 +184,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
        returns the order it already made instead of charging again, so ask once
        that way; if that also fails, the plan is paused rather than retried with
        a fresh key that PayPal would treat as a new charge. */
+    if (fridayBillingWindowClosed(sub, now)) return await holdUnresolved(sub, donation.id, "PayPal outcome unknown after Friday window closed; verify the original order before resuming", amountUSD, err);
     console.error("[paypal-recurring] unknown outcome, replaying request id", sub.id, err instanceof PayPalError ? err.body : err);
     try {
       order = await chargePayPalVault({ vaultId: sub.paypalVaultId as string, customId: donation.id, value: charge.value, currency: charge.currency, requestId: key });
@@ -197,6 +199,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   // ── Verify ───────────────────────────────────────────────────────────────
   const capture = paypalCaptureOf(order);
   const customId = order.purchase_units?.[0]?.custom_id ?? capture?.custom_id ?? "";
+  now = new Date(Math.max(now.getTime(), Date.now()));
   const audit = { paypalCapture: paypalAuditView(order) };
   const problem =
     customId !== donation.id
@@ -231,7 +234,7 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean): Prom
   });
   await prisma.subscription.update({
     where: { id: sub.id },
-    data: { status: "ACTIVE", lastBillingDate: now, nextBillingDate: nextCycleAfter(sub, due, now), chargeAttempts: 0, lastChargeError: null },
+    data: { lastBillingDate: now, nextBillingDate: nextChargeAfterPayment(sub, now), chargeAttempts: 0, lastChargeError: null },
   });
 
   runAfterResponse(() => dispatchDonationPaid(donation.id));
@@ -254,27 +257,16 @@ async function holdUnresolved(
   audit?: Record<string, unknown>
 ): Promise<RecurringChargeOutcome> {
   console.error("[paypal-recurring] unresolved charge, plan paused", sub.id, reason, err instanceof PayPalError ? err.body : err ?? "");
-  const current = audit ? await prisma.donation.findUnique({ where: { id: donationId }, select: { providerRaw: true } }) : null;
-  const currentRaw =
-    current?.providerRaw && typeof current.providerRaw === "object" && !Array.isArray(current.providerRaw)
-      ? (current.providerRaw as Record<string, unknown>)
-      : {};
-  await prisma.$transaction([
-    prisma.donation.update({
-      where: { id: donationId },
-      data: {
-        status: "FAILED",
-        providerTxnResult: "Unknown",
-        providerErrorMessage: reason.slice(0, 500),
-        ...(audit ? { providerRaw: { ...currentRaw, ...audit } as Prisma.InputJsonValue } : {}),
-      },
-    }),
-    prisma.subscription.update({
-      where: { id: sub.id },
-      data: { status: "PAUSED", lastChargeError: reason.slice(0, 300) },
-    }),
-  ]);
-  return { subscriptionId: sub.id, donationId, result: "unreachable", amountUSD, error: reason };
+  const held = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.donation.findUnique({ where: { id: donationId }, select: { paidAt: true, providerRaw: true } });
+    if (!fresh) throw new Error("Recurring donation no longer exists");
+    if (fresh.paidAt) return false;
+    const raw = fresh.providerRaw && typeof fresh.providerRaw === "object" && !Array.isArray(fresh.providerRaw) ? fresh.providerRaw as Record<string, unknown> : {};
+    await tx.donation.update({where:{id:donationId},data:{status:"FAILED",providerTxnResult:"Unknown",providerErrorMessage:reason.slice(0,500),...(audit?{providerRaw:{...raw,...audit} as Prisma.InputJsonValue}:{})}});
+    await tx.subscription.updateMany({where:{id:sub.id,status:"ACTIVE"},data:{status:"PAUSED",lastChargeError:reason.slice(0,300)}});
+    return true;
+  });
+  return { subscriptionId: sub.id, donationId, result: held ? "unreachable" : "already_attempted", amountUSD, ...(held ? {error:reason} : {}) };
 }
 
 async function recordFailure(
@@ -289,34 +281,22 @@ async function recordFailure(
   audit?: Record<string, unknown>
 ): Promise<RecurringChargeOutcome> {
   if (err) console.error("[paypal-recurring]", reason, sub.id, err instanceof PayPalError ? err.body : err);
-  const retryAt = nextRetryAt(attempt, now);
-  const current = audit ? await prisma.donation.findUnique({ where: { id: donationId }, select: { providerRaw: true } }) : null;
-  const currentRaw =
-    current?.providerRaw && typeof current.providerRaw === "object" && !Array.isArray(current.providerRaw)
-      ? (current.providerRaw as Record<string, unknown>)
-      : {};
-
-  await prisma.$transaction([
-    prisma.donation.update({
-      where: { id: donationId },
-      data: {
-        status: "FAILED",
-        providerTxnResult: txnResult,
-        providerErrorMessage: reason.slice(0, 500),
-        ...(audit ? { providerRaw: { ...currentRaw, ...audit } as Prisma.InputJsonValue } : {}),
-      },
-    }),
-    prisma.subscription.update({
-      where: { id: sub.id },
-      data: retryAt
-        ? { chargeAttempts: attempt, nextBillingDate: retryAt, lastChargeError: reason.slice(0, 300) }
-        : { status: "PAYMENT_FAILED", chargeAttempts: attempt, lastChargeError: reason.slice(0, 300) },
-    }),
-  ]);
+  const retryAt = nextRetryForPlan(sub, attempt, now);
+  const recorded = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.donation.findUnique({where:{id:donationId},select:{paidAt:true,providerRaw:true}});
+    if (!fresh) throw new Error("Recurring donation no longer exists");
+    if (fresh.paidAt) return false;
+    const raw = fresh.providerRaw && typeof fresh.providerRaw === "object" && !Array.isArray(fresh.providerRaw) ? fresh.providerRaw as Record<string, unknown> : {};
+    await tx.donation.update({where:{id:donationId},data:{status:"FAILED",providerTxnResult:txnResult,providerErrorMessage:reason.slice(0,500),...(audit?{providerRaw:{...raw,...audit} as Prisma.InputJsonValue}:{})}});
+    await tx.subscription.updateMany({where:{id:sub.id,status:"ACTIVE"},data:retryAt ? {chargeAttempts:attempt,nextBillingDate:retryAt,lastChargeError:reason.slice(0,300)} : {status:"PAYMENT_FAILED",chargeAttempts:attempt,lastChargeError:reason.slice(0,300)}});
+    return true;
+  });
+  if (!recorded) return {subscriptionId:sub.id,donationId,result:"already_attempted",amountUSD};
 
   runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
   void sendDonationFailedConversions(donationId);
-  if (!retryAt) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: sub.donorId }));
+  // Exhausted retries are PAYMENT_FAILED, not a donor cancellation.
+  // DONATION_FAILED above and the scheduler alert describe the actual result.
 
   return { subscriptionId: sub.id, donationId, result: txnResult === "Unknown" ? "unreachable" : "declined", amountUSD, error: reason };
 }

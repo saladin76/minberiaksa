@@ -1,3 +1,4 @@
+import PaymentResultWatcher from "@/components/minbar/checkout/PaymentResultWatcher";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { miaPath } from "@/lib/minbar/routes";
@@ -7,6 +8,7 @@ import { ProcessingIcon } from "@/components/minbar/states/StatusIcons";
 
 interface Props {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ donationId?: string; t?: string }>;
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
@@ -25,12 +27,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function Page({ params }: Props) {
+export default async function Page({ params, searchParams }: Props) {
   const { locale } = await params;
+  const query = await searchParams;
   const tSystem = await getTranslations({ locale, namespace: "system" });
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+      {query.donationId && <PaymentResultWatcher donationId={query.donationId} token={query.t} locale={locale} />}
       <StatusScreen
         tone="pending"
         icon={ProcessingIcon}
@@ -42,3 +46,4 @@ export default async function Page({ params }: Props) {
     </MinbarMessages>
   );
 }
+

@@ -1,3 +1,6 @@
+import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
+import { donationFieldEmpty, donationWhereAll } from "@/lib/donations/mongo-null";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -14,6 +17,8 @@ import {
   getUsdBaseRatesForServer,
 } from "@/lib/exchange/rates-service";
 import { decryptCard } from "@/lib/card-crypto";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
+import { isValidLocale } from "@/lib/locales";
 
 /** Convert any amount to TRY using USD-base rates from the database (same as donations). */
 async function toTRY(amount: number, fromCurrency: string): Promise<number> {
@@ -22,6 +27,7 @@ async function toTRY(amount: number, fromCurrency: string): Promise<number> {
 }
 
 type InitiateBody = {
+  cardLast4?: string;
   donationId: string;
   locale?: string;
   /** Optional saved-card id. When provided, the server fills Pan/Expiry/CardHolderName
@@ -42,13 +48,6 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: "asc" },
       select: { payforEnabled: true },
     });
-    if (settings && settings.payforEnabled === false) {
-      return NextResponse.json(
-        { error: "PayFor gateway is disabled. Use the Stripe checkout instead." },
-        { status: 403 }
-      );
-    }
-
     const body = (await req.json()) as Partial<InitiateBody>;
     const donationId = String(body.donationId || "").trim();
     if (!donationId) {
@@ -66,6 +65,20 @@ export async function POST(req: NextRequest) {
     if (session?.user?.id && donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    const frozenRoute = frozenPaymentRoute(donation.providerRaw);
+    if (donation.subscriptionId || frozenRoute && frozenRoute.gateway !== "PAYFOR") return NextResponse.json({ error: "This payment attempt belongs to another gateway", code: "PAYMENT_GATEWAY_LOCKED" }, { status: 409 });
+    const returnToResult = () => {
+      const locale = isValidLocale(donation.locale ?? "") ? donation.locale! : "en";
+      return NextResponse.json({ actionUrl: `${paymentPublicOrigin(req.url)}${withDonationToken(`/${locale}/success/${donation.id}`, donation.accessToken)}`, method: "GET", fields: {} });
+    };
+    if (donation.paidAt || ["Processing", "Capturing3D", "PendingConfirmation"].includes(donation.providerTxnResult ?? "")) return returnToResult();
+    if (settings && settings.payforEnabled === false) {
+      return NextResponse.json(
+        { error: "PayFor gateway is disabled. Use the Stripe checkout instead." },
+        { status: 403 }
+      );
+    }
+
     if (donation.status === "FAILED") {
       return NextResponse.json(
         { error: `Donation has already failed (status=${donation.status})` },
@@ -88,8 +101,9 @@ export async function POST(req: NextRequest) {
 
     // Use APP_URL env var so OkUrl/FailUrl match the bank's registered MerchantHomeUrl.
     // Without this, localhost:3000 is sent and the bank's 3D auth server rejects it.
-    const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
-    const locale = (body.locale ?? donation.locale ?? "en").toString().toLowerCase();
+    const origin = paymentPublicOrigin(req.url);
+    const requestedLocale = (body.locale ?? donation.locale ?? "en").toString().toLowerCase();
+    const locale = isValidLocale(requestedLocale) ? requestedLocale : "en";
 
     const orderId = donation.id; // within 50 chars (ObjectId)
     const txnType = "Auth";
@@ -142,31 +156,6 @@ export async function POST(req: NextRequest) {
       currency,
     });
 
-    await prisma.donation.update({
-      where: { id: donation.id },
-      data: {
-        locale,
-        provider: "PAYFOR",
-        providerOrderId: orderId,
-        providerTxnType: txnType,
-        /* Snapshot of what we actually asked the bank to charge, so the callback
-           can detect an amount swap. The FX conversion above is not re-run there:
-           rates move, and re-deriving the expected amount would make a legitimate
-           payment look tampered with. Mirrors the Albaraka rail. */
-        providerRaw: {
-          ...(typeof donation.providerRaw === "object" && donation.providerRaw
-            ? (donation.providerRaw as Record<string, unknown>)
-            : {}),
-          payforRequest: {
-            orderId,
-            purchAmount,
-            currency,
-            txnType,
-            createdAt: new Date().toISOString(),
-          },
-        } as Prisma.InputJsonValue,
-      },
-    });
 
     const formFields: Record<string, string> = {
       MbrId: mbrId,
@@ -194,6 +183,7 @@ export async function POST(req: NextRequest) {
     // Saved-card path: decrypt the stored PAN and pass it to the bank.
     // PayFor returns MR07 "Request CardBrand Error" if the PAN is masked
     // (asterisks), which is what happened before we wired this flow up.
+    let savedCardLast4: string | null = null;
     const savedCardId = body.savedCardId?.trim();
     if (savedCardId) {
       if (!session?.user?.id) {
@@ -220,6 +210,7 @@ export async function POST(req: NextRequest) {
       let pan: string;
       try {
         pan = decryptCard(savedCard.cardNumber).replace(/\D/g, "");
+        savedCardLast4 = pan.slice(-4);
       } catch {
         return NextResponse.json(
           { error: "Failed to decrypt saved card" },
@@ -232,6 +223,39 @@ export async function POST(req: NextRequest) {
       formFields.Expiry = expiry;
       formFields.CardHolderName = savedCard.cardholderName ?? "";
     }
+
+    const claimed = await prisma.donation.updateMany({
+      where: donationWhereAll({ id: donation.id, status: { not: "FAILED" } }, donationFieldEmpty("paidAt"), { OR: [ { providerTxnResult: { isSet: false } }, { providerTxnResult: null }, { providerTxnResult: { notIn: ["Processing", "Capturing3D", "Rejecting3D", "PendingConfirmation"] } } ] }),
+      data: {
+        locale,
+        provider: "PAYFOR",
+        providerTxnResult: "Processing",
+        providerOrderId: orderId,
+        providerTxnType: txnType,
+        /* Snapshot of what we actually asked the bank to charge, so the callback
+           can detect an amount swap. The FX conversion above is not re-run there:
+           rates move, and re-deriving the expected amount would make a legitimate
+           payment look tampered with. Mirrors the Albaraka rail. */
+        providerRaw: {
+          ...(typeof donation.providerRaw === "object" && donation.providerRaw
+            ? (donation.providerRaw as Record<string, unknown>)
+            : {}),
+          ...(/^\d{4}$/.test(String(savedCardLast4 ?? body.cardLast4 ?? "")) ? { cardSummary: { last4: savedCardLast4 ?? body.cardLast4 } } : {}),
+          payforRequest: {
+            merchantId, mbrId,
+            orderId,
+            purchAmount,
+            originalAmount: donation.totalAmount, originalCurrency: donation.currency,
+            conversionRate: tryAmount / donation.totalAmount,
+            currency,
+            txnType,
+            createdAt: new Date().toISOString(),
+          },
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    if (claimed.count !== 1) return returnToResult();
 
     /* On the saved-card path `formFields` carries a decrypted PAN, so the whole
        object can never be spread into a log. Only the non-card fields are named

@@ -6,8 +6,7 @@ import { resolveDashboardPageAccess } from "@/lib/dashboard/page-access";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import { getTrackingReadiness } from "@/lib/platform-connections/readiness";
 import { PageHeader, Card, CardHeader, StatusBadge } from "../_components/ui";
-import TrackingSettingsManager from "./_components/TrackingSettingsManager";
-import AiConnectionSettings from "./_components/AiConnectionSettings";
+import { TrackingWorkspace } from "./_components/TrackingWorkspace";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 export const metadata = { get title() { return dt("بكسلات التتبع | ربط المنصات والإرسال"); } };
@@ -29,7 +28,7 @@ export default async function TrackingPage() {
     <main className="space-y-5 p-4 sm:p-6" dir={dashDir()}>
       <PageHeader
         eyebrow={dt("ربط المنصات والإرسال / بكسلات التتبع")}
-        title={dt("بكسلات التتبع")}
+        title={dt("مركز الربط والتتبع")}
         subtitle={dt("إعداد البكسلات وواجهات التحويل من مكان واحد. نتائج الأحداث الفعلية تُراجع من صفحة التتبع والتحويلات.")}
         actions={
           <Link
@@ -40,8 +39,7 @@ export default async function TrackingPage() {
         }
       />
 
-      <AiConnectionSettings canManage={canManage} canTest={canTest} />
-
+      <TrackingWorkspace canManage={canManage} canTest={canTest}>
       <Card>
         <CardHeader
           title={dt("جاهزية التتبع")}
@@ -73,14 +71,7 @@ export default async function TrackingPage() {
         </div>
       </Card>
 
-      <div id="ga4-settings">
-        {canManage || canTest ? (
-          <TrackingSettingsManager canManage={canManage} canTest={canTest} />
-        ) : (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            {dt("لديك صلاحية عرض حالة الربط فقط. تعديل البكسلات والمفاتيح يحتاج صلاحية «ربط المنصات: حفظ وتفعيل الإعدادات».")}</div>
-        )}
-      </div>
+      </TrackingWorkspace>
     </main>
   );
 }

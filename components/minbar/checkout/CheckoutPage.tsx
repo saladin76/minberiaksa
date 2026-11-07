@@ -1,10 +1,18 @@
 "use client";
+import { albarakaResultPath, navigatePaymentResult, needsPaymentResultCheck } from "@/lib/minbar/payment-handoff";
+import PaymentResultWatcher from "./PaymentResultWatcher";
+import { mixedCartNotice } from "@/lib/donations/mixed-cart-copy";
+import { usePaymentRouting } from "@/hooks/usePaymentRouting";
+import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
+import { SavedCardPicker } from "./SavedCardPicker";
 import { AlbarakaVerificationChoice } from "./AlbarakaVerificationChoice";
 import type { AlbarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
 
 import { useQuietFloatingButtons } from "@/hooks/useQuietFloatingButtons";
 import { digitsOnly } from "@/lib/minbar/numeric-input";
 import { checkoutFieldIssue, type CheckoutField, type CheckoutFieldIssue } from "@/lib/minbar/checkout-validation";
+import { isFutureExpiry } from "@/lib/minbar/card-validation";
+import { recurringBillingPolicy } from "@/lib/donations/recurring-policy-copy";
 
 /** Server refusal codes (`app/api/albaraka/3d/initiate`) → `validation` messages. */
 const CARD_ERROR_KEYS: Record<string, string> = {
@@ -13,6 +21,7 @@ const CARD_ERROR_KEYS: Record<string, string> = {
   INVALID_CARD_EXPIRY: "invalidCardExpiry",
   INVALID_CARD_CVC: "invalidCardCvc",
   TOO_MANY_ATTEMPTS: "tooManyPaymentAttempts",
+  MIXED_DONATION_FREQUENCIES: "mixedDonationCadences",
 };
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import Link from "next/link";
@@ -34,7 +43,6 @@ import {
   chargeWithStripe,
   createDonation,
   initiateBankPayment,
-  markDonationFailed,
   OrderRejectedError,
   orderSchedule,
   orderType,
@@ -45,14 +53,13 @@ import {
 } from "@/lib/minbar/checkout";
 import { firstChargeAfterCheckout, frequencyOfOrderType, scheduleRuleFor } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
-import { clearCart, readTeamSupport, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
+import { clearCart, readTeamSupport, readTeamSupportLocal, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
-import Cards, { type Focused } from "react-credit-cards-2";
-import "react-credit-cards-2/dist/es/styles-compiled.css";
+import { CardPreview } from "./CardPreview";
 import { PhoneInput } from "react-international-phone";
 import "react-international-phone/style.css";
 
@@ -102,16 +109,18 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const locale = useLocale();
   const t = useTranslations("cart");
   const tCommon = useTranslations("common");
+  const tTeam = useTranslations("TeamSupport");
+  const tCart = useTranslations("cart");
   const tValidation = useTranslations("validation");
   const tSystem = useTranslations("system");
   const tCert = useTranslations("certificates");
-  const { lineTooSmall, minLabel } = useDonationAmount();
+  const { lineTooSmall, minLabel, lineValue, inLocal } = useDonationAmount();
   const tGive = useTranslations("CardGive");
   const { items, hydrated, replace } = useMinbarCart();
   useHealLegacyRows(items, replace, hydrated);
 
   const [method, setMethod] = useState<PaymentMethod>("card");
-  const [verificationMode, setVerificationMode] = useState<AlbarakaCheckoutMode | null>(null);
+  const [verificationMode, setVerificationMode] = useState<AlbarakaCheckoutMode>("2D");
   const [firstName, setFirstName] = useState(donor?.firstName ?? "");
   const [lastName, setLastName] = useState(donor?.lastName ?? "");
   const [email, setEmail] = useState(donor?.email ?? "");
@@ -123,8 +132,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
   const [cardName, setCardName] = useState("");
-  /* Which card field has focus  the card preview highlights it and flips for the CVC. */
-  const [cardFocus, setCardFocus] = useState<Focused | undefined>(undefined);
 
   /* Stripe's own card fields, when Stripe is the rail. The card never touches
      this origin: the step confirms the intent in the browser, and the handle
@@ -140,21 +147,30 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      storage is not known to the server render. Zeroed when the admin has
      switched the step off, so the summary matches what will be charged. */
   const [teamSupport, setTeamSupport] = useState(0);
+  const [teamSupportLocal, setTeamSupportLocal] = useState<ReturnType<typeof readTeamSupportLocal>>();
   const [teamSupportEnabled, setTeamSupportEnabled] = useState(true);
   const [teamRecurringChoice, setTeamRecurringChoice] = useState<boolean | null>(null);
   useEffect(() => {
     setTeamSupport(readTeamSupport());
+    setTeamSupportLocal(readTeamSupportLocal());
     setTeamRecurringChoice(readTeamSupportRecurring());
   }, []);
   const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
 
   const router = useRouter();
   const { data: session } = useSession();
-  const { currency } = useMinbarMoney();
+  const tCards = useTranslations("DonationDialog");
+  const [savedCards, setSavedCards] = useState<Array<{ id: string; last4: string; cardType: string; expiryDate: string; cardholderName?: string | null; isDefault: boolean }>>([]);
+  const [selectedCardId, setSelectedCardId] = useState("");
+  const cardInputTouched = useRef(false);
+  const money = useMinbarMoney();
+  const currency = money.code || (money.currency === "DEFAULT" ? "USD" : money.currency) || "USD";
   /* Whoever sent this donor here, if a campaign link set the cookie. Read at
      submit time so the attribution is the one in force when they gave. */
   const readReferralCode = useReferralCode();
   const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
+  const [activeBankPayment, setActiveBankPayment] = useState<{ id: string; token?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invalidField, setInvalidField] = useState<CheckoutFieldIssue | null>(null);
   const fieldProps = (field: CheckoutField) => ({
@@ -176,6 +192,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
        order, from the currency and the admin switch. */
     mainGateway: MainGateway;
     payforEnabled: boolean;
+    payforSaudiRoutingEnabled: boolean;
     albarakaUseOOS: boolean;
     albarakaConfigured: boolean;
     albarakaRecurringReady: boolean;
@@ -190,6 +207,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         setGatewayConfig({
           mainGateway: settings.mainGateway,
           payforEnabled: settings.payforEnabled,
+          payforSaudiRoutingEnabled: settings.payforSaudiRoutingEnabled === true,
           albarakaUseOOS: settings.albarakaUseOOS,
           albarakaConfigured: settings.albarakaConfigured,
           albarakaRecurringReady: settings.albarakaRecurringReady === true,
@@ -231,10 +249,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      where it is raised. */
   const belowMinimum = items.some(lineTooSmall);
   /* One type for the whole order  `ONE_TIME`, or the plan's cadence; the
-     cart page does not let cadences mix. The same function builds the order,
+     one-time rows are charged only on this first payment. The same function builds the order,
      so what is previewed here is what is sent. */
   const orderTypeForCart = orderType(items);
   const planFrequency = frequencyOfOrderType(orderTypeForCart);
+  const albarakaSecurityMode = planFrequency ? "2D" : verificationMode || "2D";
+  useEffect(() => { if (planFrequency) setMethod("card"); }, [planFrequency]);
 
   /* When the plan will charge  shown before the donor confirms, computed
      the way the server computes it: the same rule from the donor's chosen
@@ -264,12 +284,16 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      it, so the card step can render what that rail actually needs. Before the
      settings arrive this is Stripe, which collects the card on our page  the
      same thing the design shows, so nothing flickers. */
-  const gateway = resolveGateway({
+  const fallbackGateway = resolveGateway({
     mainGateway: gatewayConfig?.mainGateway ?? "STRIPE",
     payforEnabled: gatewayConfig?.payforEnabled ?? true,
     currency,
     donationType: orderTypeForCart,
   });
+  const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: gatewayConfig?.payforSaudiRoutingEnabled === true && orderTypeForCart === "ONE_TIME", currency, phone, fallback: fallbackGateway });
+  const pricingReady = hydrated && (currency === "USD" || inLocal);
+  const payableDisplayTotal = items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: teamSupportCharged, local: teamSupportCharged > 0 ? teamSupportLocal : undefined });
+
 
   /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
      page. Asking for it here too would make the donor type it twice, and the
@@ -279,7 +303,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
      Not for a plan: the scheduler charges the card the donor authorised, so it
      has to pass through this origin to be stored. A recurring basket always
      collects the card here, whatever the OOS switch says. */
-  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true && !planFrequency;
+  const bankCollectsCard = gateway === "ALBARAKA" && gatewayConfig?.albarakaUseOOS === true && !planFrequency && verificationMode !== "2D";
 
   /* Albaraka signs everything with ALBARAKA_ENC_KEY. Without it the initiate
      route refuses, and the donor would only find out after an order had been
@@ -291,8 +315,24 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
   /* A card we never collect can't be validated, and the bank rails need one. */
   const needsOwnCardForm = !bankCollectsCard && !cardRailUnavailable;
+  useEffect(() => {
+    const abort = new AbortController();
+    setSavedCards([]); setSelectedCardId(""); setCardCvc("");
+    if (session?.user?.id && needsOwnCardForm && (gateway === "ALBARAKA" || gateway === "PAYFOR")) {
+      void fetch("/api/credit-cards", { signal: abort.signal, cache: "no-store" }).then(async response => {
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!abort.signal.aborted) {
+          const cards = (Array.isArray(data.cards) ? data.cards : []).filter((card: { last4?: string; expiryDate?: string }) => /^\d{4}$/.test(card.last4 ?? "") && isFutureExpiry(card.expiryDate ?? ""));
+          setSavedCards(cards);
+          if (!cardInputTouched.current) setSelectedCardId((cards.find((card: { isDefault?: boolean }) => card.isDefault) ?? cards[0])?.id ?? "");
+        }
+      }).catch(() => {});
+    }
+    return () => abort.abort();
+  }, [session?.user?.id, gateway, needsOwnCardForm]);
   const requiresVerificationChoice = method === "card" && gateway === "ALBARAKA" && !planFrequency;
-  useEffect(() => { setVerificationMode(null); }, [planFrequency]);
+  useEffect(() => { setVerificationMode("2D"); }, [planFrequency]);
   const selectedBank = banks.find((b) => b.id === bankId) ?? banks[0];
 
   /* A transfer is one act by the donor; nothing can be charged again next
@@ -335,12 +375,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
    */
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting || !items.length) return;
-    if (requiresVerificationChoice && !verificationMode) {
-      setError(t("verificationRequired"));
-      document.getElementById("albaraka-2d")?.focus();
-      return;
-    }
+    if (submitLock.current || submitting || !items.length) return;
+    if (!pricingReady) { setError(tSystem("processing")); return; }
     if (belowMinimum) {
       setError(tGive("belowMinCheckout", { amount: minLabel }));
       return;
@@ -351,6 +387,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       firstName, email, phone, requireName: !signedIn,
       requireCard: method === "card" && needsOwnCardForm && gateway !== "STRIPE",
       cardNumber, cardExpiry, cardCvc,
+      savedCard: Boolean(selectedCardId),
     });
     if (issue) {
       setInvalidField(issue);
@@ -362,6 +399,13 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       return;
     }
     setInvalidField(null);
+    if (requiresVerificationChoice && !verificationMode) {
+      setError(t("verificationRequired"));
+      const choice = document.getElementById("albaraka-2d");
+      choice?.focus();
+      choice?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
 
     /* Guard the card rail before an order exists. Creating a donation we then
        can't charge leaves a FAILED row behind for no reason. */
@@ -378,6 +422,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       }
     }
 
+    submitLock.current = true;
     setSubmitting(true);
     setError(null);
 
@@ -391,16 +436,27 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       void fetch("/api/users/me/phone", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: phone.trim() }) }).catch(() => undefined);
     }
 
-    let donationId: string | null = null;
+    let cardToUse = selectedCardId;
+    let bankResult: string | null = null;
     try {
+      if (method === "card" && needsOwnCardForm && gateway !== "STRIPE" && !cardToUse && signedIn) {
+        try {
+          const saved = await fetch("/api/credit-cards", { method: "POST", signal: AbortSignal.timeout(5000), headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cardNumber: cardNumber.replace(/\D/g, ""), expiryDate: cardExpiry, cvc: cardCvc, cardholderName: cardName }) });
+          const result = await saved.json().catch(() => null);
+          if (saved.ok && result?.card?.id) cardToUse = result.card.id;
+        } catch { /* A temporary wallet failure must not prevent a new-card payment. */ }
+      }
       const donation = await createDonation({
         items,
         projects,
         projectAliases,
         currency,
+        routingPhone: phone, expectedGateway: method === "card" ? gateway : undefined,
         locale,
         method: methodForServer,
+        expectedTotal: payableDisplayTotal,
         teamSupport: teamSupportCharged,
+        teamSupportLocal: teamSupportCharged > 0 ? teamSupportLocal : undefined,
         teamSupportRecurring: teamRecurring,
         referralCode: readReferralCode(),
         bank:
@@ -411,7 +467,6 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
            in their own profile (an imported account often lacks a phone). */
         guest: { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone: phone.trim() },
       });
-      donationId = donation.id;
       if (method !== "bank") rememberCheckoutAttempt(donation.id);
 
       if (method === "bank") {
@@ -445,8 +500,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
         if (!handle) throw new Error("stripe-not-ready");
         const result = await handle.confirmPayment(charge.clientSecret);
         if (result.error) {
-          await markDonationFailed(donation.id, result.error.message ?? "stripe_confirm_failed");
           setError(result.error.message ?? tSystem("techErrorLead"));
+          submitLock.current = false;
           setSubmitting(false);
           return;
         }
@@ -464,46 +519,59 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
          confirmed. */
       const sendCardToServer = gateway === "ALBARAKA" && !bankCollectsCard;
 
+      if (gateway === "ALBARAKA") {
+        bankResult = albarakaResultPath(donation.id, locale, donation.accessToken);
+        setActiveBankPayment({ id: donation.id, token: donation.accessToken });
+      }
       const form = await initiateBankPayment(
         donation.id,
         locale,
         gateway,
         sendCardToServer
           ? {
-              number: cardNumber.replace(/\D/g, ""),
-              expiry: cardExpiry,
+              number: cardToUse ? "" : cardNumber.replace(/\D/g, ""),
+              expiry: cardToUse ? "" : cardExpiry,
               cvv: cardCvc,
-              holder: cardName,
+              holder: cardToUse ? "" : cardName,
             }
           : undefined,
-        gateway === "ALBARAKA" ? (planFrequency ? "2D" : verificationMode || "2D") : undefined
+        gateway === "ALBARAKA" ? albarakaSecurityMode : undefined,
+        cardToUse || undefined,
+        cardToUse ? savedCards.find(card => card.id === cardToUse)?.last4 : cardNumber.replace(/\D/g, "").slice(-4),
       );
 
       const browserFields: Record<string, string> =
-        gateway === "PAYFOR"
+        gateway === "PAYFOR" && !cardToUse
           ? {
               Pan: cardNumber.replace(/\D/g, ""),
               Expiry: `${expiryMonth}${expiryYear}`,
               Cvv2: cardCvc,
               CardHolderName: cardName,
             }
-          : {};
+          : gateway === "PAYFOR" ? { Cvv2: cardCvc } : {};
 
       /* The basket is cleared before the redirect: the order now exists on the
          server, and a donor returning from the bank must not find it still
          sitting in their basket ready to be paid twice. */
       /* Kept aside under this order, so a declined donor can retry the same
          basket from the failure page. */
-      clearCart();
-      submitGatewayForm(form, browserFields);
+      navigatePaymentResult(form.actionUrl, clearCart, () => submitGatewayForm(form, browserFields));
     } catch (cause) {
-      if (donationId) await markDonationFailed(donationId, String(cause));
+      // A lost response, a server error after capture, or a handoff problem is
+      // not a decline. Read this SAME order instead of allowing a new checkout.
+      if (bankResult && needsPaymentResultCheck(cause instanceof OrderRejectedError ? cause.status : undefined, cause instanceof OrderRejectedError ? cause.code : undefined)) {
+        navigatePaymentResult(bankResult, clearCart, url => window.location.assign(url));
+        return;
+      }
       console.error("[checkout] payment could not complete");
       /* Say what actually went wrong. Every failure used to read "we are
          fixing the problem", which hid both a basket the order cannot carry
          and the server's own reason for refusing it. */
       const knownCode = cause instanceof OrderRejectedError ? CARD_ERROR_KEYS[cause.code ?? ""] : undefined;
-      if (cause instanceof UnpayableItemsError) {
+      if (cause instanceof OrderRejectedError && cause.code === "PAYMENT_ROUTING_CHANGED") {
+        acceptServerRoute(cause.gateway);
+        setError(tCards("paymentRoutingChanged"));
+      } else if (cause instanceof UnpayableItemsError) {
         setError(t("itemsUnavailable", { items: cause.items.map(resolveTitle).join("، ") }));
       } else if (cause instanceof OrderRejectedError && cause.code === "RECURRING_UNAVAILABLE") {
         setError(t("recurringCardUnavailable"));
@@ -515,6 +583,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
       } else {
         setError(tSystem("techErrorLead"));
       }
+      setActiveBankPayment(null);
+      submitLock.current = false;
       setSubmitting(false);
     }
   };
@@ -530,8 +600,9 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     (gateway === "STRIPE" ? stripeReady : checkoutFieldIssue({
       firstName, email, phone, requireName: !session?.user, requireCard: needsOwnCardForm,
       cardNumber, cardExpiry, cardCvc,
+      savedCard: Boolean(selectedCardId),
     }) === null));
-  const canConfirm = hydrated && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete && (!requiresVerificationChoice || Boolean(verificationMode));
+  const canConfirm = hydrated && pricingReady && items.length > 0 && !belowMinimum && !submitting && detailsComplete && paymentComplete && (!requiresVerificationChoice || Boolean(verificationMode));
   const steps: CheckoutStep[] = [
     { n: 1, label: t("stepCart"), href: miaPath("cart", locale), current: false, enabled: true },
     { n: 2, label: t("stepDetails"), current: true, enabled: true },
@@ -716,7 +787,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               </h2>
 
               <div id="pay-methods" style={{ display: "flex", gap: 10 }}>
-                {methods.filter((m) => m.id !== "bank" || bankAvailable).map((m) => (
+                {methods.filter((m) => planFrequency ? m.id === "card" : m.id !== "bank" || bankAvailable).map((m) => (
                   <button
                     key={m.id}
                     type="button"
@@ -853,29 +924,20 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
 
               {method === "card" && needsOwnCardForm && gateway !== "STRIPE" ? (
                 <div style={{ display: "grid", gap: 14 }}>
+                  <SavedCardPicker cards={savedCards} value={selectedCardId} disabled={submitting} onChange={id => { cardInputTouched.current = true; setSelectedCardId(id); setCardCvc(""); setInvalidField(null); }} />
                   {/* The live card, filling in as the donor types and flipping
-                      for the CVC; the brand is detected from the number. Latin-
+                      the secure fields; the brand is detected from the number. Latin-
                       script data: always LTR. */}
-                  <div data-clarity-mask="True" data-hj-suppress="" data-private="" className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
-                    <Cards
-                      number={cardNumber}
-                      expiry={cardExpiry.replace("/", "")}
-                      cvc={"•".repeat(cardCvc.length)}
-                      name={cardName || `${firstName} ${lastName}`.trim()}
-                      focused={cardFocus}
-                      placeholders={{ name: "" }}
-                      // The library's own label is the English "valid thru" in every language.
-                      locale={{ valid: t("cardExpiry") }}
-                    />
-                  </div>
+                  {!selectedCardId && <div data-clarity-mask="True" data-hj-suppress="" data-private="" className="pay-card-preview" dir="ltr" style={{ display: "flex", justifyContent: "center" }}>
+                    <CardPreview number={cardNumber} expiry={cardExpiry} name={cardName || `${firstName} ${lastName}`.trim()} expiryLabel={t("cardExpiry")} />
+                  </div>}
                   <div data-clarity-mask="True" data-hj-suppress="" data-private="" id="card-fields" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 14 }}>
-                    <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
+                    {!selectedCardId && <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardNumber")}</span>
                       <input
                         {...fieldProps("cardNumber")}
                         value={cardNumber}
-                        onChange={(e) => setCardNumber(digitsOnly(e.target.value, 19))}
-                        onFocus={() => setCardFocus("number")}
+                        onChange={(e) => { cardInputTouched.current = true; setCardNumber(digitsOnly(e.target.value, 19)); }}
                         inputMode="numeric"
                         autoComplete="cc-number"
                         dir="ltr"
@@ -884,17 +946,17 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
                       {fieldFeedback("cardNumber")}
-                    </label>
-                    <label style={{ display: "grid", gap: 6 }}>
+                    </label>}
+                    {!selectedCardId && <label style={{ display: "grid", gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardExpiry")}</span>
                       <input
                         {...fieldProps("cardExpiry")}
                         value={cardExpiry}
                         onChange={(e) => {
+                          cardInputTouched.current = true;
                           const digits = digitsOnly(e.target.value, 4);
                           setCardExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
                         }}
-                        onFocus={() => setCardFocus("expiry")}
                         inputMode="numeric"
                         autoComplete="cc-exp"
                         dir="ltr"
@@ -903,16 +965,14 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                         style={{ ...cardFieldStyle, unicodeBidi: "isolate" }}
                       />
                       {fieldFeedback("cardExpiry")}
-                    </label>
+                    </label>}
                     <label style={{ display: "grid", gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>CVC</span>
                       <input
                         {...fieldProps("cardCvc")}
                         type="password"
                         value={cardCvc}
-                        onChange={(e) => setCardCvc(digitsOnly(e.target.value, 4))}
-                        onFocus={() => setCardFocus("cvc")}
-                        onBlur={() => setCardFocus(undefined)}
+                        onChange={(e) => { cardInputTouched.current = true; setCardCvc(digitsOnly(e.target.value, 4)); }}
                         inputMode="numeric"
                         autoComplete="cc-csc"
                         dir="ltr"
@@ -922,10 +982,10 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       />
                       {fieldFeedback("cardCvc")}
                     </label>
-                    <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
+                    {!selectedCardId && <label style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>{t("cardHolder")}</span>
-                      <input value={cardName} onChange={(e) => setCardName(e.target.value)} onFocus={() => setCardFocus("name")} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
-                    </label>
+                      <input value={cardName} onChange={(e) => { cardInputTouched.current = true; setCardName(e.target.value); }} autoComplete="cc-name" aria-label={t("cardHolder")} style={cardFieldStyle} />
+                    </label>}
                   </div>
                 </div>
               ) : null}
@@ -937,7 +997,13 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               ) : null}
             </div>
 
-            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} /> : null}
+            <section aria-label={tCart("totalForCurrency", { currency })} className="rounded-xl border bg-white p-4 space-y-2">
+              {pricingReady ? items.map((item, index) => <div key={index} className="flex justify-between gap-3 text-sm"><span>{resolveTitle(item)}</span><b dir="ltr">{money.formatLocal(lineValue(item), { maximumFractionDigits: 2 })}</b></div>) : null}
+              {pricingReady && teamSupportCharged > 0 ? <div className="flex justify-between gap-3 text-sm"><span>{tTeam("title")}</span><b dir="ltr">{money.formatLocal(lineValue({ amount: teamSupportCharged, local: teamSupportLocal }), { maximumFractionDigits: 2 })}</b></div> : null}
+              <div className="flex justify-between gap-3 border-t pt-3 text-lg font-bold"><span>{tCart("totalForCurrency", { currency })}</span><b dir="ltr">{pricingReady ? money.formatLocal(payableDisplayTotal, { maximumFractionDigits: 2 }) : tSystem("processing")}</b></div>
+            </section>
+            {method === "card" && (currency === "USD" || inLocal) ? <PaymentCurrencyNotice gateway={gateway} currency={currency} amount={payableDisplayTotal} phone={phone} /> : null}
+            {requiresVerificationChoice ? <AlbarakaVerificationChoice value={verificationMode} onChange={setVerificationMode} disabled={submitting} invalid={!verificationMode && error === t("verificationRequired")} /> : method === "card" && (gateway === "PAYFOR" || (gateway === "ALBARAKA" && planFrequency)) ? <AlbarakaVerificationChoice value={gateway === "PAYFOR" ? "3D" : albarakaSecurityMode} onChange={() => {}} fixed /> : null}
 
             {belowMinimum ? (
               <div role="alert" style={{ display: "grid", gap: 6, fontSize: 13, lineHeight: 1.7, fontWeight: 800, color: "var(--red)", padding: "10px 12px", background: "rgba(169,52,40,.06)", border: "1px solid rgba(169,52,40,.3)", borderRadius: 8 }}>
@@ -948,10 +1014,12 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
               </div>
             ) : null}
 
+            {planFrequency && items.some(item => item.freqKey === "once") ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm leading-7 text-emerald-900">{mixedCartNotice(locale)}</p> : null}
             {planFrequency && nextChargeText ? (
               <div className="pay-recurring-terms" style={{ display: "grid", gap: 2, fontSize: 12.5, lineHeight: 1.7, color: "var(--deep)", padding: "10px 12px", background: "var(--sand)", border: "1px solid rgba(211,154,39,.4)", borderRadius: 8 }}>
                 <b>{tCommon(planFrequency === "DAILY" ? "freqDaily" : planFrequency === "FRIDAY" ? "freqFriday" : "freqMonthly")}</b>
                 <span>{tRecurring("firstChargeToday", { cadence: tRecurring(planFrequency === "DAILY" ? "cadenceDaily" : planFrequency === "FRIDAY" ? "cadenceFriday" : "cadenceMonthly") })}</span>
+                <span>{recurringBillingPolicy(locale, planFrequency)}</span>
                 <span style={{ color: "var(--muted)" }}>{tRecurring("nextChargeOn", { date: nextChargeText })}</span>
               </div>
             ) : null}
@@ -959,7 +1027,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             {method === "paypal" ? (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum}
+                disabled={submitting || !items.length || !pricingReady || belowMinimum}
                 className="pay-paypal"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", height: 52, border: 0, borderRadius: 8, background: "#FFC439", color: "#10212B", fontFamily: "inherit", fontWeight: 900, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 16px rgba(255,196,57,.35)", boxSizing: "border-box", transition: "filter .18s ease, transform .18s ease" }}
               >
@@ -970,17 +1038,19 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             ) : (
               <button
                 type="submit"
-                disabled={submitting || !items.length || belowMinimum || (method === "card" && cardRailUnavailable) || (requiresVerificationChoice && !verificationMode)}
+                disabled={submitting || !items.length || !pricingReady || belowMinimum || (method === "card" && cardRailUnavailable)}
                 className="mia-card-cta"
                 aria-busy={submitting}
                 style={{ width: "100%", minHeight: 52, padding: "8px 14px", border: 0, borderRadius: 8, background: "var(--red)", color: "#fff", fontFamily: "inherit", fontWeight: 900, fontSize: 16, cursor: submitting ? "progress" : "pointer", opacity: submitting ? 0.85 : 1, boxShadow: "var(--shadow-cta)", transition: "filter .18s ease" }}
               >
+                {submitting && <span aria-hidden="true" className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white align-middle me-2" />}
                 {submitting
                   ? tSystem("processing")
                   : method === "bank" ? t("ctaBankContinue") : t("ctaComplete")}
               </button>
             )}
 
+            {activeBankPayment && <PaymentResultWatcher donationId={activeBankPayment.id} token={activeBankPayment.token} locale={locale} />}
             {error ? (
               <p role="alert" style={{ margin: 0, textAlign: "center", fontSize: 13, fontWeight: 800, color: "var(--red)" }}>
                 {error}
@@ -1030,3 +1100,4 @@ const headingIcon: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = { fontSize: 12.5, fontWeight: 800, color: "var(--deep)" };
+

@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     // The global registered-account card must not wait for list joins, sorting or filtered totals.
     if (searchParams.get("summary") === "registered") {
       if (scope !== "donors") return NextResponse.json({ error: "Invalid summary scope" }, { status: 400 });
-      const registeredDonorsTotal = await prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER")] } });
+      const registeredDonorsTotal = await prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER"), { OR: [{ mergedIntoUserId: null }, { mergedIntoUserId: { isSet: false } }] }] } });
       return NextResponse.json({ registeredDonorsTotal }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
 
     let where: Record<string, unknown> = {
       ...roleFilter,
+      AND: [{ OR: [{ mergedIntoUserId: null }, { mergedIntoUserId: { isSet: false } }] }, { OR: [{ email: null }, { email: { isSet: false } }, { email: { not: { endsWith: "@deleted.invalid" } } }] }],
       ...(preferredLang && { preferredLang }),
       ...(search && search.length > 0 && {
         OR: [
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
       }),
     };
 
-    if (accountStatus && scope === 'donors') where.AND = [donorAccountWhere(accountStatus as "MEMBER" | "GUEST" | "UNKNOWN")];
+    if (accountStatus && scope === 'donors') where.AND = [...(where.AND as unknown[]), donorAccountWhere(accountStatus as "MEMBER" | "GUEST" | "UNKNOWN")];
 
     if (scope === 'team' && session?.user?.id) {
       where = { ...where, NOT: { id: session.user.id } };
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
 
     const [total, registeredDonorsTotal] = await Promise.all([
       prisma.user.count({ where }),
-      scope === "donors" && searchParams.get("includeRegisteredCount") !== "0" ? prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER")] } }) : Promise.resolve(null),
+      scope === "donors" && searchParams.get("includeRegisteredCount") !== "0" ? prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER"), { OR: [{ mergedIntoUserId: null }, { mergedIntoUserId: { isSet: false } }] }] } }) : Promise.resolve(null),
     ]);
 
     const isAggregateSort = sortBy === 'donationsCount' || sortBy === 'totalDonated';
@@ -404,3 +405,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

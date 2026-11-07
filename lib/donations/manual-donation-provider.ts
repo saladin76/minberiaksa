@@ -1,5 +1,6 @@
 /** Source metadata for donations already collected outside checkout. */
 export type ManualDonationProvider =
+  | "CASH"
   | "BANK"
   | "PAYFOR"
   | "ALBARAKA"

@@ -19,6 +19,7 @@ const ALL_STATUSES: AttributionStatus[] = [
   "organic",
   "direct",
   "tracking_issue",
+  "unknown",
 ];
 
 type IssueBucket =

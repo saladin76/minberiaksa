@@ -1,3 +1,4 @@
+import { ACTIVATING_DONATION_WHERE, subscriptionLifecycle } from "@/lib/donations/subscription-lifecycle";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
@@ -5,6 +6,7 @@ import { authOptions } from '../../../auth/[...nextauth]/options';
 import { userCanViewUserProfilesInDashboard } from '@/lib/dashboard/permissions';
 import { donationRowUsdApprox } from '@/lib/dashboard/donation-usd-revenue';
 import { loadSubscriptionFrequencies } from '@/lib/dashboard/recurring-frequency-filter';
+import { loadDonationFinancialSummaries } from '@/lib/dashboard/donation-financial-summary';
 
 /**
  * GET /api/users/[id]/donations
@@ -30,10 +32,13 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const donations = await prisma.donation.findMany({
+    const [donations, plans] = await Promise.all([prisma.donation.findMany({
       where: { donorId: id },
       select: {
         id: true,
+        provider: true,
+        providerErrorMessage: true,
+        billingReason: true,
         amount: true,
         amountUSD: true,
         totalAmount: true,
@@ -48,12 +53,32 @@ export async function GET(
         referral: { select: { id: true, code: true } },
       },
       orderBy: { createdAt: 'desc' },
-    });
+    }),
+    prisma.subscription.findMany({
+      where: { donorId: id }, orderBy: { createdAt: "desc" },
+      select: { id: true, status: true, amount: true, amountUSD: true, currency: true, provider: true,
+        createdAt: true, lastBillingDate: true, nextBillingDate: true, chargeAttempts: true, lastChargeError: true,
+        donations: { where: ACTIVATING_DONATION_WHERE, select: { id: true }, take: 1 },
+        items: { select: { campaign: { select: { title: true } } } },
+        categoryItems: { select: { category: { select: { name: true } } } } },
+    })]);
 
-    const frequencyOf = await loadSubscriptionFrequencies(
-      prisma,
-      donations.map((d) => d.subscriptionId).filter((sid): sid is string => Boolean(sid))
-    );
+    const [frequencyOf, financial] = await Promise.all([
+      loadSubscriptionFrequencies(prisma, [...plans.map(plan => plan.id), ...donations.map(donation => donation.subscriptionId).filter((id): id is string => Boolean(id))]),
+      loadDonationFinancialSummaries(prisma, donations.filter(row => ["ALBARAKA", "PAYFOR"].includes(row.provider || "")).map(row => row.id)),
+    ]);
+    const subscriptions = plans.map(plan => {
+      const latest = donations.find(donation => donation.subscriptionId === plan.id && donation.billingReason !== "subscription_test_cycle");
+      const failure = plan.lastChargeError || (latest?.status === "FAILED" ? latest.providerErrorMessage : null);
+      return {
+      id: plan.id, status: plan.status, lifecycle: subscriptionLifecycle({ ...plan, hasPaidDonation: plan.donations.length > 0 }),
+      activated: plan.donations.length > 0, frequency: frequencyOf(plan.id),
+      amount: plan.amount, currency: plan.currency, provider: plan.provider || "STRIPE",
+      lastBillingDate: plan.lastBillingDate, nextBillingDate: plan.nextBillingDate,
+      chargeAttempts: plan.chargeAttempts, lastChargeError: failure,
+      projects: [...plan.items.map(item => item.campaign.title), ...plan.categoryItems.map(item => item.category.name)],
+      };
+    });
 
     const rows = donations.map((d) => {
       const outcome =
@@ -61,6 +86,7 @@ export async function GET(
       return {
         id: d.id,
         outcome,
+        financialSummary: financial.get(d.id) ?? null,
         subscriptionId: d.subscriptionId,
         frequency: d.subscriptionId ? frequencyOf(d.subscriptionId) : null,
         amount: d.totalAmount ?? d.amount,
@@ -78,12 +104,13 @@ export async function GET(
     const successful = rows.filter((r) => r.outcome === 'SUCCESS');
     return NextResponse.json({
       rows,
+      subscriptions,
       totals: {
         count: rows.length,
         successCount: successful.length,
         successAmountUSD: Number(successful.reduce((t, r) => t + r.amountUSD, 0).toFixed(2)),
       },
-    });
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error('Error fetching user donations:', error);
     return NextResponse.json({ error: 'Failed to fetch donations' }, { status: 500 });

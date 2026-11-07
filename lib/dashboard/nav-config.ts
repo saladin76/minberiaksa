@@ -24,7 +24,7 @@ export type DashboardNavItem = {
 };
 
 /** Counters the sidebar knows how to fetch. */
-export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending";
+export type DashboardNavBadgeKey = "inboxUnread" | "transferReceiptsPending" | "subscriptionRequestsOpen";
 
 export type DashboardNavGroup = { group: string; items: DashboardNavItem[] };
 
@@ -46,6 +46,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { key: "revenue", get title() { return dt("اللوحة الرئيسية"); }, href: "/dashboard", icon: "layoutDashboard", keywords: ["home", "overview", "الرئيسية"] },
       { key: "monthly", get title() { return dt("التبرعات المتكررة"); }, href: "/dashboard/monthly", icon: "repeat", keywords: ["monthly", "recurring", "daily", "weekly", "subscriptions", "اشتراكات", "شهري", "يومي", "جمعة"] },
+      { key: "monthly", get title() { return dt("طلبات إدارة التبرع"); }, href: "/dashboard/subscription-requests", icon: "listChecks", keywords: ["requests", "subscription", "طلبات", "إلغاء", "إيقاف", "تعديل"], badge: "subscriptionRequestsOpen" },
       { key: "bankTransfers", get title() { return dt("التحويلات البنكية"); }, href: "/dashboard/bank-transfers", icon: "landmark", keywords: ["bank", "transfers", "حوالات", "statement", "كشف"] },
       // Receipts donors upload after choosing bank transfer at checkout, waiting on a finance
       // decision. A different queue from the statement importer above: that one starts from the
@@ -87,7 +88,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   {
     get group() { return dt("إعدادات المحتوى والتبرعات"); },
     items: [
-      { key: "siteContent", anyPermissions: ["siteContent", "blog"], get title() { return dt("مركز المحتوى وSEO"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "editorial", "weekly", "translation", "metadata", "pages", "مقال", "ترجمة", "فهرسة", "بحث"] },
+      { key: "siteContent", anyPermissions: ["siteContent", "blog", "campaigns", "categories"], get title() { return dt("مركز SEO والترجمات"); }, href: "/dashboard/seo-pages", icon: "globe", keywords: ["seo", "editorial", "weekly", "translation", "metadata", "pages", "مقال", "ترجمة", "فهرسة", "بحث"] },
       { key: "campaigns", get title() { return dt("إعدادات السلة"); }, href: "/dashboard/cart-settings", icon: "shoppingCart", keywords: ["cart", "basket", "السلة", "team", "support", "دعم", "الفريق", "upsell", "suggestions", "مقترحات", "amounts", "مبالغ"] },
       { key: "bankAccounts", get title() { return dt("الحسابات البنكية"); }, href: "/dashboard/bank-accounts", icon: "landmark", keywords: ["bank", "accounts", "iban", "swift", "حسابات", "بنك"] },
     ],
@@ -138,9 +139,10 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "platformConnections", get title() { return dt("مزودو التواصل والإرسال"); }, href: "/dashboard/platform-connections/communication", icon: "server", keywords: ["providers", "meta", "elastic email", "brevo", "netgsm", "whatsapp", "sms", "email"] },
       { key: "platformConnectionsAdmin", get title() { return dt("تيليجرام"); }, href: "/dashboard/telegram", icon: "send", keywords: ["telegram", "bot", "notifications"], adminOnly: true },
       { key: "siteContent", get title() { return dt("التبرع السريع"); }, href: "/dashboard/quick-donation", icon: "heartHandshake", keywords: ["quick", "donation", "donate", "amounts", "presets", "سريع", "مبالغ", "مقترحة", "dock"] },
-      { key: "siteContent", get title() { return dt("نصوص الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إيصال", "وقف", "شكر"] },
+      { key: "siteContent", get title() { return dt("الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إهداء", "إيصال", "وقف", "شكر"] },
       { key: "team", get title() { return dt("الفريق"); }, href: "/dashboard/users/team", icon: "userCog", keywords: ["team", "staff", "permissions", "صلاحيات"] },
       { key: "generalSettings", get title() { return dt("الإعدادات"); }, href: "/dashboard/general/payment-gateways", icon: "settings", keywords: ["settings", "payment", "gateways", "stripe"] },
+      { key: "logs", get title() { return dt("الأمان وسجل الوصول"); }, href: "/dashboard/security", icon: "shield", adminOnly: true, keywords: ["security", "ip", "country", "block", "حظر", "أمان"] },
       { key: "logs", get title() { return dt("سجلات النظام"); }, href: "/dashboard/logs", icon: "scrollText", keywords: ["logs", "audit", "system"] },
     ],
   },

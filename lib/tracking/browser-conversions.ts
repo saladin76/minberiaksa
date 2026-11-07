@@ -1,6 +1,8 @@
 "use client";
+import { googleAdsTargets, type GoogleAdsTarget } from "./google-ads-targets";
 
 export type PublicTrackingConfig = {
+  googleAdsTargets?: GoogleAdsTarget[];
   googleAdsConversionId?: string | null;
   googleAdsConversionLabel?: string | null;
   tiktokPixelId?: string | null;
@@ -38,9 +40,10 @@ async function logBrowser(donationId: string, body: Record<string, unknown>) {
 export async function fireGoogleAdsDonationConversion(config: PublicTrackingConfig, payload: BrowserDonationPayload) {
   if (typeof window === "undefined") return false;
   const w = window as TrackingWindow;
-  if (!config.googleAdsConversionId || !config.googleAdsConversionLabel || !w.gtag) return false;
+  const targets = googleAdsTargets(config).map(target => `${target.conversionId}/${target.conversionLabel}`);
+  if (!targets.length || !w.gtag) return false;
   w.gtag("event", "conversion", {
-    send_to: `${config.googleAdsConversionId}/${config.googleAdsConversionLabel}`,
+    send_to: targets.length === 1 ? targets[0] : targets,
     value: payload.value,
     currency: payload.currency,
     transaction_id: payload.transactionId,

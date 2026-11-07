@@ -14,7 +14,8 @@ import { claimAcceptsReceipt } from "@/lib/donations/bank-transfer-shared";
  * their recurring plans.
  *
  * Only settled donations are counted and listed  `PAID` with `paidAt` set,
- * or charged against a recurring plan. A pending bank transfer is not a
+ * including recurring instalments. A subscription reference alone is not
+ * payment confirmation. A pending bank transfer is not a
  * donation yet  `DONATION_LOGIC_SPEC §3` is explicit that a transfer becomes
  * real only once a finance officer matches the money received  and totalling
  * unconfirmed rows would tell a donor they gave more than they have. Those
@@ -25,7 +26,7 @@ import { claimAcceptsReceipt } from "@/lib/donations/bank-transfer-shared";
 /** Settled: what the history, the totals and the count agree on. */
 const SETTLED: Prisma.DonationWhereInput = {
   status: "PAID",
-  OR: [{ paidAt: { not: null } }, { subscriptionId: { not: null } }],
+  paidAt: { not: null },
 };
 
 export interface MinbarDonorProfile {

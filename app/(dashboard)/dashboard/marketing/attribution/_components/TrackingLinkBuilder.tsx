@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Check, Copy, ExternalLink, Link2, Loader2, Megaphone, RotateCcw, Save, ShieldCheck } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { blockedTrackingMacros, campaignSlug, hasTrackingMacros, serializeAdParameters } from "@/lib/marketing/tracking-link-policy";
 import { cn } from "@/lib/utils";
-import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 type PageKind = "home" | "campaigns" | "campaign" | "category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin";
 type LinkMode = "standard" | "marketing";
@@ -98,8 +98,8 @@ function needsResourcePick(kind: PageKind) {
 function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: string; donationId: string }): string {
   switch (kind) {
     case "home": return "/";
-    case "campaigns": return "/campaigns";
-    case "campaign": return `/campaign/${opts.resourceId}`;
+    case "campaigns": return "/bagislar";
+    case "campaign": return `/bagislar/${encodeURIComponent(opts.resourceId)}`;
     case "category": return `/category/${opts.resourceId}`;
     case "blog": return "/blog";
     case "blog_post": return `/blog/${opts.resourceId}`;
@@ -119,9 +119,7 @@ function entityLabel(row: EntityRow) {
   return row.published === false ? dt("{0} (مسودة)", [text]) : text;
 }
 
-function slugifyCampaignName(value: string) {
-  return value.trim().toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9\-\u0600-\u06FF]/gi, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 90);
-}
+function slugifyCampaignName(value: string) { return campaignSlug(value); }
 
 function platformPreset(platform: MarketingPlatform) {
   return PLATFORM_OPTIONS.find((item) => item.id === platform) || PLATFORM_OPTIONS[0];
@@ -193,21 +191,12 @@ function marketingValidation(form: MarketingForm, loc: string) {
   return issues;
 }
 
-function trackingHealthScore(form: MarketingForm, loc: string) {
-  let score = form.autoPlatformData ? 72 : 35;
-  if (form.campaignName.trim() || form.campaignId.trim() || form.autoPlatformData) score += 20;
-  if (form.campaignId.trim() || form.autoPlatformData) score += 15;
-  if (form.adsetId.trim() || form.autoPlatformData) score += 8;
-  if (form.adId.trim() || form.autoPlatformData) score += 7;
-  if (form.targetCountry.trim()) score += 6;
-  if (form.audienceSegment.trim() || form.messageVariant.trim()) score += 5;
-  if (/^[a-z]{2}(-[A-Z]{2})?$/.test(loc)) score += 4;
-  if (["email", "whatsapp", "sms"].includes(form.platform) && form.messagingCampaignId.trim()) score += 8;
-  return Math.max(0, Math.min(100, score));
-}
 
-function fieldValue(value: string) {
-  return value.trim() || undefined;
+function fieldValue(value: string) { return value.trim() || undefined; }
+
+function identifierValue(value: string) {
+  const text = value.trim();
+  return text && !hasTrackingMacros(text) ? text : undefined;
 }
 
 function pageOptionLabel(kind: PageKind) {
@@ -219,7 +208,7 @@ export default function TrackingLinkBuilder() {
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [linkMode, setLinkMode] = useState<LinkMode>("standard");
+  const [linkMode, setLinkMode] = useState<LinkMode>("marketing");
   const [pageKind, setPageKind] = useState<PageKind>("home");
   const [resourceId, setResourceId] = useState("");
   const [campaignSearch, setCampaignSearch] = useState("");
@@ -228,7 +217,7 @@ export default function TrackingLinkBuilder() {
   const [locale, setLocale] = useState("ar");
   const [autoLocale, setAutoLocale] = useState(false);
   const [currency, setCurrency] = useState("USD");
-  const [autoCurrency, setAutoCurrency] = useState(false);
+  const [autoCurrency, setAutoCurrency] = useState(true);
   const [refCode, setRefCode] = useState("__none__");
   const [openCartPayment, setOpenCartPayment] = useState(false);
   const [marketingForm, setMarketingForm] = useState<MarketingForm>(initialMarketingForm);
@@ -258,7 +247,8 @@ export default function TrackingLinkBuilder() {
   useEffect(() => { void load(); }, [load]);
 
   const resetForm = () => {
-    setLinkMode("standard");
+    setLastSavedLink(null);
+    setLinkMode("marketing");
     setPageKind("home");
     setResourceId("");
     setCampaignSearch("");
@@ -267,7 +257,7 @@ export default function TrackingLinkBuilder() {
     setLocale("ar");
     setAutoLocale(false);
     setCurrency("USD");
-    setAutoCurrency(false);
+    setAutoCurrency(true);
     setRefCode("__none__");
     setOpenCartPayment(false);
     setMarketingForm(initialMarketingForm);
@@ -275,19 +265,19 @@ export default function TrackingLinkBuilder() {
 
   const resourceList = useMemo(() => {
     if (!bundle) return [];
-    if (pageKind === "campaign") return bundle.campaigns;
-    if (pageKind === "category") return bundle.categories;
-    if (pageKind === "blog_post") return bundle.posts;
-    if (pageKind === "blog_post_category") return bundle.postCategories;
+    if (pageKind === "campaign") return bundle.campaigns.filter(row => row.published !== false);
+    if (pageKind === "category") return bundle.categories.filter(row => row.published !== false);
+    if (pageKind === "blog_post") return bundle.posts.filter(row => row.published !== false);
+    if (pageKind === "blog_post_category") return bundle.postCategories.filter(row => row.published !== false);
     return [];
   }, [bundle, pageKind]);
 
   const selectedResource = useMemo(() => resourceList.find((row) => row.id === resourceId), [resourceList, resourceId]);
   const detailsOk = useMemo(() => {
-    if (needsResourcePick(pageKind)) return Boolean(resourceId);
+    if (needsResourcePick(pageKind)) return Boolean(selectedResource);
     if (pageKind === "success_donation") return /^[a-f\d]{24}$/i.test(donationId.trim());
     return true;
-  }, [pageKind, resourceId, donationId]);
+  }, [pageKind, selectedResource, donationId]);
 
   const path = useMemo(() => {
     const localeSlug = selectedResource?.slugByLocale?.[locale] ?? null;
@@ -304,7 +294,6 @@ export default function TrackingLinkBuilder() {
   const effectiveMarketingForm = useMemo(() => withAutomaticPlatformValues(marketingForm), [marketingForm]);
   const marketingParams = useMemo(() => linkMode === "marketing" ? makeMarketingParams(marketingForm, autoLocale ? "auto" : locale) : {}, [linkMode, marketingForm, locale, autoLocale]);
   const marketingIssues = useMemo(() => marketingValidation(marketingForm, autoLocale ? "auto" : locale), [marketingForm, locale, autoLocale]);
-  const healthScore = useMemo(() => trackingHealthScore(marketingForm, autoLocale ? "auto" : locale), [marketingForm, locale, autoLocale]);
 
   const fullUrl = useMemo(() => {
     if (!path || !detailsOk) return "";
@@ -322,10 +311,33 @@ export default function TrackingLinkBuilder() {
     return qs ? `${base}?${qs}` : base;
   }, [path, detailsOk, autoLocale, locale, currency, refCode, pageKind, profileTab, campaignSearch, openCartPayment, marketingParams, autoCurrency]);
 
-  async function copyUrl() {
-    if (!fullUrl) return;
+  useEffect(() => { setLastSavedLink(null); }, [fullUrl, marketingForm]);
+
+  const dynamicTemplate = linkMode === "marketing" && marketingForm.autoPlatformData;
+  const adParameters = serializeAdParameters(marketingParams);
+  const destinationUrl = useMemo(() => {
+    if (!fullUrl) return "";
     try {
-      await navigator.clipboard.writeText(fullUrl);
+      const url = new URL(fullUrl);
+      Object.keys(marketingParams).forEach(key => url.searchParams.delete(key));
+      return url.toString();
+    } catch { return ""; }
+  }, [fullUrl, marketingParams]);
+  const blockedMacros = blockedTrackingMacros(fullUrl + " " + marketingForm.campaignName);
+  const unintendedMacros = linkMode === "marketing" && !dynamicTemplate && hasTrackingMacros(fullUrl + " " + marketingForm.campaignName);
+  const needsCampaignName = linkMode === "marketing" && !dynamicTemplate && !marketingForm.campaignName.trim() && !marketingForm.campaignId.trim();
+  const canUseLink = Boolean(fullUrl) && !needsCampaignName && !blockedMacros.length && !unintendedMacros;
+  const copyValue = dynamicTemplate ? adParameters : fullUrl;
+  async function copyText(value: string) {
+    if (!value || !canUseLink) return;
+    try { await navigator.clipboard.writeText(value); toast.success(dt("تم النسخ")); }
+    catch { toast.error(dt("تعذر النسخ؛ يمكنك تحديد النص ونسخه يدويًا.")); }
+  }
+
+  async function copyUrl() {
+    if (!canUseLink) return;
+    try {
+      await navigator.clipboard.writeText(copyValue);
       toast.success(dt("تم نسخ الرابط"));
     } catch {
       toast.error(dt("تعذر النسخ"));
@@ -333,7 +345,7 @@ export default function TrackingLinkBuilder() {
   }
 
   async function saveRegistryLink(copyAfter = false) {
-    if (!fullUrl) {
+    if (!canUseLink) {
       toast.error(dt("أكمل بيانات الرابط أولًا"));
       return;
     }
@@ -341,12 +353,12 @@ export default function TrackingLinkBuilder() {
     try {
       const isMarketingLink = linkMode === "marketing";
       const registryName = isMarketingLink
-        ? fieldValue(effectiveMarketingForm.campaignName) || fieldValue(effectiveMarketingForm.campaignId) || marketingParams.utm_campaign || "Marketing link"
+        ? identifierValue(marketingForm.campaignName) || identifierValue(effectiveMarketingForm.campaignId) || (dynamicTemplate ? dt("قالب إعلان {0}", [selectedPlatform.label]) : marketingParams.utm_campaign) || "Marketing link"
         : `${pageOptionLabel(pageKind)}${selectedResource ? ` - ${entityLabel(selectedResource)}` : ""}`;
       const standardPlatform = "ORGANIC";
       const standardChannel = "SITE_LINK";
-      const adGroupId = isMarketingLink && effectiveMarketingForm.platform === "google_ads" ? fieldValue(effectiveMarketingForm.adsetId) : undefined;
-      const adsetId = isMarketingLink && effectiveMarketingForm.platform !== "google_ads" ? fieldValue(effectiveMarketingForm.adsetId) : undefined;
+      const adGroupId = isMarketingLink && effectiveMarketingForm.platform === "google_ads" ? identifierValue(effectiveMarketingForm.adsetId) : undefined;
+      const adsetId = isMarketingLink && effectiveMarketingForm.platform !== "google_ads" ? identifierValue(effectiveMarketingForm.adsetId) : undefined;
       const payload = {
         name: registryName,
         platform: isMarketingLink ? effectiveMarketingForm.platform : standardPlatform,
@@ -367,15 +379,15 @@ export default function TrackingLinkBuilder() {
         utm_id: marketingParams.utm_id,
         utmContent: marketingParams.utm_content,
         utm_content: marketingParams.utm_content,
-        campaignId: isMarketingLink ? fieldValue(effectiveMarketingForm.campaignId) : undefined,
-        campaign_id: isMarketingLink ? fieldValue(effectiveMarketingForm.campaignId) : undefined,
+        campaignId: isMarketingLink ? identifierValue(effectiveMarketingForm.campaignId) : undefined,
+        campaign_id: isMarketingLink ? identifierValue(effectiveMarketingForm.campaignId) : undefined,
         adGroupId,
         ad_group_id: adGroupId,
         adsetId,
         adset_id: adsetId,
-        adId: isMarketingLink ? fieldValue(effectiveMarketingForm.adId) : undefined,
-        ad_id: isMarketingLink ? fieldValue(effectiveMarketingForm.adId) : undefined,
-        placement: isMarketingLink ? fieldValue(effectiveMarketingForm.placement) : undefined,
+        adId: isMarketingLink ? identifierValue(effectiveMarketingForm.adId) : undefined,
+        ad_id: isMarketingLink ? identifierValue(effectiveMarketingForm.adId) : undefined,
+        placement: isMarketingLink ? identifierValue(effectiveMarketingForm.placement) : undefined,
         audienceSegment: isMarketingLink ? fieldValue(effectiveMarketingForm.audienceSegment) : undefined,
         audience_segment: isMarketingLink ? fieldValue(effectiveMarketingForm.audienceSegment) : undefined,
         messageVariant: isMarketingLink ? fieldValue(effectiveMarketingForm.messageVariant) : undefined,
@@ -387,6 +399,9 @@ export default function TrackingLinkBuilder() {
         internal_notes: isMarketingLink ? fieldValue(effectiveMarketingForm.internalNotes) : undefined,
         raw: {
           marketingParams,
+          autoPlatformData: dynamicTemplate,
+          destinationUrl,
+          adParameters: dynamicTemplate ? adParameters : undefined,
           pageKind,
           resourceId,
           openCartPayment,
@@ -407,10 +422,11 @@ export default function TrackingLinkBuilder() {
       if (!res.ok || !data?.ok) throw new Error(data?.error || "save failed");
       let copied = false;
       if (copyAfter) {
-        try { await navigator.clipboard.writeText(fullUrl); copied = true; } catch { /* Saving succeeded; the clipboard is a separate capability. */ }
+        try { await navigator.clipboard.writeText(copyValue); copied = true; } catch { /* Saving succeeded; the clipboard is a separate capability. */ }
       }
       const updated = data.upserted === false;
       setLastSavedLink({ name: registryName, mode: linkMode, copied, updated });
+      window.dispatchEvent(new Event("campaign-links:updated"));
       if (copyAfter && !copied) toast.error(dt("تم حفظ الرابط، لكن تعذّر نسخه. استخدم زر نسخ الرابط أو انسخه يدويًا."));
       else toast.success(updated ? dt("تم تحديث رابط موجود") : dt("تم حفظ الرابط في سجل الحملات"));
     } catch {
@@ -420,45 +436,38 @@ export default function TrackingLinkBuilder() {
     }
   }
 
-  if (loading || !bundle) {
-    return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-brand" /></div>;
+  if (loading) {
+    return <div role="status" aria-label={dt("جارٍ تحميل بيانات الروابط")} className="flex min-h-[20vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-brand" /></div>;
   }
 
-  return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-12" dir={dashDir()}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href="/dashboard/marketing/attribution" className="hover:text-brand">{dt("روابط التتبع")}</Link>
-          <span className="opacity-40">/</span>
-          <span className="font-medium text-foreground">{dt("منشئ روابط الموقع والحملات")}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/marketing/attribution#links" className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">{dt("أداء الروابط")}</Link>
-          <Button type="button" variant="ghost" size="sm" onClick={resetForm} className="gap-1.5 text-muted-foreground"><RotateCcw className="h-4 w-4" />{dt("مسح الكل")}</Button>
-        </div>
-      </div>
+  if (!bundle) return <div role="alert" className="rounded-xl border bg-white p-6 text-center"><p>{dt("تعذر تحميل بيانات الروابط")}</p><Button type="button" variant="outline" onClick={load} className="mt-4">{dt("إعادة المحاولة")}</Button></div>;
 
-      <Card className="overflow-hidden border-brand/15 shadow-md">
-        <CardHeader className="bg-gradient-to-l from-brand/8 to-transparent pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl"><Link2 className="h-6 w-6 text-brand" />{dt("منشئ روابط الموقع والحملات")}</CardTitle>
-          <CardDescription className="leading-relaxed">{dt("أنشئ رابط موقع عادي أو رابط حملة تسويقية، واحفظ الروابط التسويقية في Campaign Registry لتحليل الأداء لاحقًا.")}</CardDescription>
+  return (
+    <div className="space-y-5" dir={dashDir()}>
+      <div className="flex items-center justify-between gap-3"><p className="text-sm text-slate-500">{dt("اختر الوجهة ومصدر الزيارة، ثم انسخ الرابط.")}</p><Button type="button" variant="ghost" size="sm" onClick={resetForm} className="shrink-0 gap-1.5"><RotateCcw className="h-4 w-4" />{dt("إعادة الضبط")}</Button></div>
+
+      <Card className="overflow-hidden border-slate-200 shadow-none">
+        <CardHeader className="border-b bg-slate-50/60 pb-4">
+          <CardTitle className="flex items-center gap-2 text-xl"><Link2 className="h-6 w-6 text-brand" />{dt("إعداد الرابط")}</CardTitle>
+          <CardDescription className="leading-relaxed">{dt("ثلاث خطوات: الوجهة، مصدر الزيارة، ثم الحفظ والنسخ.")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 pt-5">
+        <CardContent className="grid items-start gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,.85fr)]">
+          <div className="min-w-0 space-y-6">
           <section className="space-y-3">
-            <Label className="text-base font-semibold">{dt("٠  نوع الرابط")}</Label>
+            <Label className="text-base font-semibold">{dt("١ · استخدام الرابط")}</Label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
-                <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">{dt("رابط موقع عادي")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("صفحة، لغة، عملة، إحالة.")}</p>
+              <button type="button" aria-pressed={linkMode === "standard"} onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
+                <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">{dt("مشاركة مباشرة")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("رابط بسيط للمشاركة دون بيانات حملة.")}</p>
               </button>
-              <button type="button" onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
-                <Megaphone className="mb-2 h-5 w-5" /><div className="font-bold">{dt("حملة تسويقية")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("UTM + بيانات منصة + حفظ في سجل الحملات.")}</p>
+              <button type="button" aria-pressed={linkMode === "marketing"} onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
+                <Megaphone className="mb-2 h-5 w-5" /><div className="font-bold">{dt("تتبع حملة")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("اربط التبرعات بحملة إعلانية أو رسالة تسويقية.")}</p>
               </button>
             </div>
           </section>
 
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
-            <SelectField label={dt("١  نوع الصفحة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
-            {needsResourcePick(pageKind) ? <SelectField label={dt("٢  المحتوى")} value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder={dt("اختر المحتوى")} /> : null}
+            <SelectField label={dt("٢ · الوجهة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
+            {needsResourcePick(pageKind) ? <SelectField label={dt("المشروع أو المحتوى")} value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder={dt("اختر المحتوى")} /> : null}
             {pageKind === "campaigns" ? <Field label={dt("بحث في قائمة المشاريع")} value={campaignSearch} onChange={setCampaignSearch} placeholder={dt("يضاف كـ search")} /> : null}
             {pageKind === "success_donation" ? <Field label={dt("معرف التبرع")} value={donationId} onChange={setDonationId} placeholder={dt("24 حرف")} dir="ltr" /> : null}
             {pageKind === "profile" ? <SelectField label={dt("تبويب الملف")} value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} options={[{ value: "account", label: dt("معلوماتي") }, { value: "donations", label: dt("التبرعات") }, { value: "support", label: dt("الدعم") }]} /> : null}
@@ -467,29 +476,33 @@ export default function TrackingLinkBuilder() {
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
             <SelectField label={dt("لغة الرابط")} value={locale} onValueChange={setLocale} disabled={autoLocale} options={bundle.locales.map((loc) => ({ value: loc, label: loc }))} />
             <SelectField label={dt("العملة")} value={currency} onValueChange={setCurrency} disabled={autoCurrency} options={bundle.currencies.filter((c) => c !== "DEFAULT").map((c) => ({ value: c, label: c }))} />
-            <CheckRow checked={autoLocale} onChange={setAutoLocale} title={dt("اكتشاف اللغة تلقائيًا")} hint={dt("ينشئ الرابط بدون بادئة لغة.")} />
-            <CheckRow checked={autoCurrency} onChange={setAutoCurrency} title={dt("اكتشاف العملة تلقائيًا")} hint={dt("ينشئ الرابط بدون currency.")} />
-            <SelectField label={dt("رمز الإحالة")} value={refCode} onValueChange={setRefCode} options={[{ value: "__none__", label: dt("بدون إحالة") }, ...referrals.map((r) => ({ value: r.code, label: r.name ? `${r.code}  ${r.name}` : r.code }))]} />
-            <CheckRow checked={openCartPayment} onChange={setOpenCartPayment} title={dt("فتح حوار دفع السلة")} hint={dt("يضيف openCartPayment=1.")} />
+            <CheckRow checked={autoLocale} onChange={setAutoLocale} title={dt("لغة الزائر تلقائيًا")} hint={dt("يفتح الموقع باللغة المناسبة للزائر.")} />
+            <CheckRow checked={autoCurrency} onChange={setAutoCurrency} title={dt("عملة الزائر تلقائيًا")} hint={dt("اتركها مفعّلة ما لم تكن الحملة بعملة محددة.")} />
+            <details className="rounded-lg border p-3 sm:col-span-2"><summary className="cursor-pointer text-sm font-semibold">{dt("خيارات إضافية للرابط")}</summary><div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <SelectField label={dt("رمز الإحالة")} value={refCode} onValueChange={setRefCode} options={[{ value: "__none__", label: dt("بدون إحالة") }, ...referrals.map((r) => ({ value: r.code, label: r.name ? `${r.code} · ${r.name}` : r.code }))]} />
+              <CheckRow checked={openCartPayment} onChange={setOpenCartPayment} title={dt("فتح حوار دفع السلة")} hint={dt("لروابط السلة المخصصة فقط.")} />
+            </div></details>
           </section>
 
           {linkMode === "marketing" ? (
             <section className="space-y-4 border-t pt-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <Label className="text-base font-semibold">{dt("٤  إعدادات الحملة التسويقية")}</Label>
+                  <Label className="text-base font-semibold">{dt("٣ · مصدر الزيارة والحملة")}</Label>
                   <p className="mt-1 text-sm text-muted-foreground">{dt("هذه البيانات تحفظ مع الرابط وتساعد صفحة أداء الروابط على مطابقة التبرعات.")}</p>
                 </div>
-                <div className={cn("rounded-full border px-3 py-1 text-sm font-bold", healthScore >= 85 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : healthScore >= 65 ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700")}>{dtx("{0}% جاهزية", [healthScore])}</div>
+
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField label={dt("المنصة / القناة")} value={marketingForm.platform} onValueChange={(v) => updateMarketing({ platform: v as MarketingPlatform })} options={PLATFORM_OPTIONS.map((p) => ({ value: p.id, label: p.label }))} hint={selectedPlatform.hint} />
-                <CheckRow checked={marketingForm.autoPlatformData} onChange={(checked) => updateMarketing({ autoPlatformData: checked })} title={dt("استخدام متغيرات المنصة الديناميكية")} hint={dt("مثل Meta campaign/adset/ad وGoogle ValueTrack.")} />
-                <Field label={dt("اسم الحملة")} value={marketingForm.campaignName} onChange={(v) => updateMarketing({ campaignName: v })} placeholder="ramadan-gaza-donations" />
-                <Field label="Campaign ID" value={marketingForm.campaignId} onChange={(v) => updateMarketing({ campaignId: v })} placeholder={dt("اختياري لكن مهم للمطابقة")} dir="ltr" />
-                <Field label="Ad Set / Ad Group ID" value={marketingForm.adsetId} onChange={(v) => updateMarketing({ adsetId: v })} placeholder={dt("adset أو ad group")} dir="ltr" />
-                <Field label="Ad ID" value={marketingForm.adId} onChange={(v) => updateMarketing({ adId: v })} placeholder={dt("معرف الإعلان")} dir="ltr" />
-                <Field label="Placement" value={marketingForm.placement} onChange={(v) => updateMarketing({ placement: v })} placeholder="facebook_feed / instagram_reels" />
+                <SelectField label={dt("المنصة / القناة")} value={marketingForm.platform} onValueChange={(v) => updateMarketing({ platform: v as MarketingPlatform, autoPlatformData: false })} options={PLATFORM_OPTIONS.map((p) => ({ value: p.id, label: p.label }))} hint={selectedPlatform.hint} />
+                <Field label={dynamicTemplate ? dt("اسم الرابط في السجل") : dt("اسم الحملة")} value={marketingForm.campaignName} onChange={(v) => updateMarketing({ campaignName: v })} placeholder={dt("مثال: إغاثة غزة · نوفمبر")} />
+              </div>
+              {["meta", "google_ads", "tiktok", "x"].includes(marketingForm.platform) ? <CheckRow checked={marketingForm.autoPlatformData} onChange={(checked) => updateMarketing({ autoPlatformData: checked })} title={dt("تعبئة بيانات الحملة من منصة الإعلان تلقائيًا")} hint={dt("للإعلانات فقط. سنجهّز رابط الصفحة ومعلمات التتبع في خانتين منفصلتين.")} /> : null}
+              <details className="rounded-xl border p-4"><summary className="cursor-pointer text-sm font-semibold">{dt("معرّفات الإعلان وخيارات التتبع الإضافية")}</summary><div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Campaign ID" value={dynamicTemplate ? effectiveMarketingForm.campaignId : marketingForm.campaignId} disabled={dynamicTemplate} onChange={(v) => updateMarketing({ campaignId: v })} placeholder={dt("اختياري لكن مهم للمطابقة")} dir="ltr" />
+                <Field label="Ad Set / Ad Group ID" value={dynamicTemplate ? effectiveMarketingForm.adsetId : marketingForm.adsetId} disabled={dynamicTemplate} onChange={(v) => updateMarketing({ adsetId: v })} placeholder={dt("adset أو ad group")} dir="ltr" />
+                <Field label="Ad ID" value={dynamicTemplate ? effectiveMarketingForm.adId : marketingForm.adId} disabled={dynamicTemplate} onChange={(v) => updateMarketing({ adId: v })} placeholder={dt("معرف الإعلان")} dir="ltr" />
+                <Field label="Placement" value={dynamicTemplate ? effectiveMarketingForm.placement : marketingForm.placement} disabled={dynamicTemplate} onChange={(v) => updateMarketing({ placement: v })} placeholder="facebook_feed / instagram_reels" />
                 <Field label="Target Country" value={marketingForm.targetCountry} onChange={(v) => updateMarketing({ targetCountry: v })} placeholder="TR / DE / US" dir="ltr" />
                 <Field label="Audience Segment" value={marketingForm.audienceSegment} onChange={(v) => updateMarketing({ audienceSegment: v })} placeholder="donors_30d / lookalike" />
                 <Field label="Message Variant" value={marketingForm.messageVariant} onChange={(v) => updateMarketing({ messageVariant: v })} placeholder="v1_image / v2_video" />
@@ -502,30 +515,28 @@ export default function TrackingLinkBuilder() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">{dt("ملاحظات داخلية")}</Label>
-                <Textarea value={marketingForm.internalNotes} onChange={(event) => updateMarketing({ internalNotes: event.target.value })} placeholder={dt("سبب إنشاء الرابط، مالك الحملة، أو ملاحظة مراجعة قبل الإطلاق.")} className="min-h-24 resize-y" />
+                <Textarea aria-label={dt("ملاحظات داخلية")} value={marketingForm.internalNotes} onChange={(event) => updateMarketing({ internalNotes: event.target.value })} placeholder={dt("سبب إنشاء الرابط، مالك الحملة، أو ملاحظة مراجعة قبل الإطلاق.")} className="min-h-24 resize-y" />
               </div>
-              <div className="grid gap-2">
-                {marketingIssues.map((issue, index) => (
-                  <Alert key={`${issue.text}-${index}`} className={issue.level === "warn" ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}>
-                    <ShieldCheck className="h-4 w-4" />
-                    <AlertTitle>{issue.level === "warn" ? dt("تنبيه") : dt("جيد")}</AlertTitle>
-                    <AlertDescription>{issue.text}</AlertDescription>
-                  </Alert>
-                ))}
-              </div>
+              </details>
+              {marketingIssues.filter(issue => issue.level === "warn").length ? <details className="rounded-lg bg-slate-50 p-3"><summary className="cursor-pointer text-sm text-slate-600">{dt("ملاحظات اختيارية لتحسين التتبع")}</summary><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-600">{marketingIssues.filter(issue => issue.level === "warn").map(issue => <li key={issue.text}>{issue.text}</li>)}</ul></details> : null}
             </section>
           ) : null}
 
-          <section className="space-y-3 border-t pt-5">
-            <Label className="text-base font-semibold">{dt("٥  الرابط النهائي")}</Label>
-            <div className="rounded-xl border bg-muted/30 p-3">
-              <div dir="ltr" className="min-h-[3rem] break-all rounded-lg bg-white p-3 text-left font-mono text-sm text-slate-700">{fullUrl || dt("أكمل البيانات لظهور الرابط")}</div>
-            </div>
+          </div>
+          <section className="min-w-0 space-y-4 rounded-xl border bg-slate-50/70 p-4 lg:sticky lg:top-6">
+            <div className="flex flex-wrap items-center justify-between gap-2"><Label className="text-base font-semibold">{dt("الرابط الجاهز")}</Label><span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{dynamicTemplate ? dt("قالب لإعداد الإعلان") : dt("رابط للمشاركة")}</span></div>
+            {needsCampaignName ? <p role="status" className="text-sm text-amber-800">{dt("أدخل اسم الحملة أو معرّفها لإكمال الرابط.")}</p> : null}
+            {unintendedMacros && !blockedMacros.length ? <p role="alert" className="text-sm text-amber-800">{dt("المتغيرات التلقائية مخصصة للإعلانات. فعّل التعبئة التلقائية أو استخدم قيمًا ثابتة.")}</p> : null}
+            {blockedMacros.length ? <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{dt("احذف المتغيرات غير الصالحة قبل نسخ الرابط أو حفظه:")} <bdi dir="ltr">{blockedMacros.join(", ")}</bdi></p> : null}
+            {dynamicTemplate ? <div className="space-y-4 rounded-xl border bg-slate-50 p-4">
+              <p className="text-sm leading-6 text-slate-600">{dt("ضع رابط الصفحة في خانة رابط الموقع داخل الإعلان، ومعلمات التتبع في خانة URL Parameters. هذه المتغيرات تُستبدل عند تشغيل الإعلان؛ لا تشارك القالب كرابط مباشر.")}</p>
+              <CopyOutput label={dt("١ · رابط الموقع Website URL")} value={destinationUrl} disabled={!canUseLink} onCopy={() => copyText(destinationUrl)} />
+              <CopyOutput label={dt("٢ · معلمات التتبع URL Parameters")} value={adParameters} disabled={!canUseLink} onCopy={() => copyText(adParameters)} />
+            </div> : <CopyOutput label={dt("الرابط الكامل")} value={needsCampaignName ? "" : fullUrl} disabled={!canUseLink} onCopy={copyUrl} />}
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={copyUrl} disabled={!fullUrl} className="gap-2"><Copy className="h-4 w-4" />{dt("نسخ الرابط")}</Button>
-              <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!fullUrl || saving} variant="outline" className="gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{dt("حفظ في سجل الحملات")}</Button>
-              <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!fullUrl || saving} className="gap-2 bg-brand-orange hover:bg-[#c6613c]">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{dt("حفظ ونسخ الرابط")}</Button>
-              {fullUrl ? <Button asChild type="button" variant="secondary" className="gap-2"><a href={fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{dt("فتح")}</a></Button> : null}
+              <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!canUseLink || saving} className="min-h-11 gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{dynamicTemplate ? dt("حفظ ونسخ معلمات الإعلان") : dt("حفظ ونسخ الرابط")}</Button>
+              <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!canUseLink || saving} variant="outline" className="min-h-11 gap-2"><Save className="h-4 w-4" />{dt("حفظ فقط")}</Button>
+              {fullUrl && canUseLink ? <Button asChild type="button" variant="ghost" className="min-h-11 gap-2"><a href={destinationUrl || fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{dt("معاينة الصفحة")}</a></Button> : null}
             </div>
             {lastSavedLink ? (
               <Alert className="border-emerald-200 bg-emerald-50">
@@ -535,9 +546,9 @@ export default function TrackingLinkBuilder() {
                   <span className="block">
                     {lastSavedLink.name} · {lastSavedLink.mode === "marketing" ? dt("رابط حملة") : dt("رابط موقع")}{lastSavedLink.copied ? dt(" · تم نسخه أيضًا") : ""}
                   </span>
-                  <Link href="/dashboard/marketing/attribution#links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
+                  <a href="#links" className="inline-flex text-xs font-semibold text-emerald-800 underline-offset-4 hover:underline">
                     {dt("سجل الحملات")}
-                  </Link>
+                  </a>
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -548,14 +559,22 @@ export default function TrackingLinkBuilder() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, dir }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; dir?: "rtl" | "ltr" }) {
-  return <div className="space-y-2"><Label className="text-sm text-muted-foreground">{label}</Label><Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cn("h-10", dir === "ltr" && "font-mono text-sm text-left")} dir={dir || "rtl"} /></div>;
+function Field({ label, value, onChange, placeholder, dir, disabled }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; dir?: "rtl" | "ltr"; disabled?: boolean }) {
+  const id = useId();
+  return <div className="space-y-2"><Label htmlFor={id} className="text-sm text-muted-foreground">{label}</Label><Input id={id} disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cn("h-10", dir === "ltr" && "font-mono text-sm text-left")} dir={dir || dashDir()} /></div>;
 }
 
 function SelectField({ label, value, onValueChange, options, placeholder = dt("اختر"), disabled, hint }: { label: string; value: string; onValueChange: (value: string) => void; options: { value: string; label: string }[]; placeholder?: string; disabled?: boolean; hint?: string }) {
-  return <div className="space-y-2"><Label className="text-sm text-muted-foreground">{label}</Label><Select value={value} onValueChange={onValueChange} disabled={disabled}><SelectTrigger className="h-10"><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select>{hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}</div>;
+  const id = useId();
+  return <div className="space-y-2"><Label htmlFor={id} className="text-sm text-muted-foreground">{label}</Label><Select value={value} onValueChange={onValueChange} disabled={disabled}><SelectTrigger id={id} className="h-10"><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select>{hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}</div>;
 }
 
 function CheckRow({ checked, onChange, title, hint }: { checked: boolean; onChange: (checked: boolean) => void; title: string; hint: string }) {
   return <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/80 bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"><Checkbox checked={checked} onCheckedChange={(c) => onChange(c === true)} className="mt-0.5" /><span className="text-sm leading-snug">{title}<span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span></span></label>;
+}
+
+
+function CopyOutput({ label, value, disabled, onCopy }: { label: string; value: string; disabled: boolean; onCopy: () => void }) {
+  const id = useId();
+  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}</Label><div className="flex items-start gap-2"><Textarea id={id} readOnly dir="ltr" value={value} onFocus={event => event.target.select()} className="min-h-20 min-w-0 resize-y bg-white text-left font-mono text-xs leading-6" /><Button type="button" variant="outline" disabled={disabled} onClick={onCopy} aria-label={dt("نسخ {0}", [label])} className="min-h-11 shrink-0 gap-1"><Copy className="h-4 w-4" />{dt("نسخ")}</Button></div></div>;
 }

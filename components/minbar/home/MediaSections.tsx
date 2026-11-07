@@ -12,7 +12,7 @@ import type { HomeEvent } from "@/lib/minbar/home-layout-read";
 import type { BuiltinEventId } from "@/lib/minbar/home-layout";
 import { ArrowGlyph } from "./TopSections";
 import ViewAllLink from "./ViewAllLink";
-import { cssImage } from "@/lib/minbar/image-url";
+import DeferredPhoto from "@/components/minbar/DeferredPhoto";
 import { describeVideoSource } from "@/lib/content/video-platform";
 
 /**
@@ -65,9 +65,10 @@ function EventVideo({ src, title, playLabel }: { src: string; title: string; pla
         position: "relative",
         width: "100%",
         aspectRatio: "16/9",
-        background: thumb ? `var(--navy) ${cssImage(thumb, 400)} center / cover no-repeat` : "var(--navy)",
+        background: "var(--navy)",
       }}
     >
+      {!playing && thumb ? <DeferredPhoto src={thumb} label={title} width={400} /> : null}
       {playing ? (
         <iframe
           src={withAutoplay(src)}
@@ -183,11 +184,7 @@ function ReelRail({
         const content = (
           <>
             {image ? (
-              <span
-                role="img"
-                aria-label={label}
-                style={{ position: "absolute", inset: 0, display: "block", backgroundImage: cssImage(image, 232), backgroundSize: "cover", backgroundPosition: "center" }}
-              />
+              <DeferredPhoto src={image} label={label} width={232} />
             ) : null}
             <span style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.94) 8%, rgba(16,33,43,.55) 44%, rgba(16,33,43,.05) 74%)" }} />
             {playable ? (
@@ -329,15 +326,7 @@ export function ProgramsRail({ playlists }: { playlists: CmsPlaylist[] }) {
               style={{ flex: "0 0 285px", scrollSnapAlign: "start", display: "grid", gap: 10, textDecoration: "none", color: "var(--deep)" }}
             >
               <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16/9", borderRadius: 10, overflow: "hidden", background: "var(--sand)", boxShadow: "0 12px 30px rgba(16,33,43,.12)" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    backgroundImage: cssImage(program.coverImage || program.episodes[0]?.thumbnail || youtubeThumb(program.episodes[0]?.youtubeId ?? ""), 285),
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
-                />
+                <DeferredPhoto src={program.coverImage || program.episodes[0]?.thumbnail || youtubeThumb(program.episodes[0]?.youtubeId ?? "")} label={program.title} width={285} />
                 <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(16,33,43,.35), transparent 55%)" }} />
                 <span aria-hidden="true" style={{ position: "absolute", insetInlineStart: 10, bottom: 10, display: "grid", placeItems: "center", width: 34, height: 34, borderRadius: "50%", background: "rgba(255,253,248,.92)", color: "var(--red)" }}>
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -381,7 +370,7 @@ export function CoursesRail({ onPlay, courses }: { onPlay: (embed: string) => vo
             const cover = course.coverImage || (course.introVideoId ? youtubeThumb(course.introVideoId) : "");
             const inner = (
               <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16/9", borderRadius: 10, overflow: "hidden", background: "var(--navy)", boxShadow: "0 12px 30px rgba(16,33,43,.12)" }}>
-                <span role="img" aria-label={label} style={{ position: "absolute", inset: 0, backgroundImage: cssImage(cover, 285), backgroundSize: "cover", backgroundPosition: "center" }} />
+                <DeferredPhoto src={cover} label={label} width={285} />
                 <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(16,33,43,.55), transparent 60%)" }} />
                 <b style={{ position: "absolute", insetInlineStart: 12, bottom: 10, color: "#fff", fontSize: 14.5, fontWeight: 900, textShadow: "0 1px 8px rgba(16,33,43,.6)" }}>{label}</b>
               </span>

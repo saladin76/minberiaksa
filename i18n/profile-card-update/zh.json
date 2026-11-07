@@ -1,0 +1,22 @@
+{
+  "title": "更新定期捐赠银行卡",
+  "description": "授权此卡用于本订阅的后续付款。银行验证不会立即扣款；金额和付款日期保持不变。",
+  "submit": "验证并授权后续付款",
+  "success": "银行卡已验证并用于后续付款。现在没有扣款。",
+  "error": "无法确认银行卡更新。请先检查订阅或联系机构，再重试。",
+  "cardsTitle": "支付卡",
+  "cardsDescription": "默认卡仅用于新的捐赠。要更换现有定期捐赠的卡，请打开定期捐赠并完成银行验证。",
+  "manageSubscriptions": "管理定期捐赠的支付卡",
+  "emptyCards": "尚无已保存的卡。",
+  "nickname": "卡片名称",
+  "save": "保存",
+  "makeDefault": "设为主卡",
+  "defaultCard": "主卡",
+  "cardInUse": "此卡关联了定期捐赠或待完成的验证，请先更换定期捐赠的卡。",
+  "removeWarning": "将删除已保存的卡。关联定期捐赠的卡无法删除。",
+  "confirmRemove": "确认删除",
+  "refresh": "刷新",
+  "addCard": "添加卡",
+  "saved": "更改已保存。",
+  "cardsNavDescription": "支付卡"
+}

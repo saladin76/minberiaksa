@@ -1,5 +1,6 @@
 "use client";
 
+import { trackedTemplateButtons } from "@/lib/communication/tracked-template-draft";
 import { templateButtonProblem } from "@/lib/communication/template-locale-media";
 import * as React from "react";
 import axios from "axios";
@@ -193,6 +194,32 @@ function formatMegabytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 1 : 2)} MB`;
 }
 
+function formatUploadErrorValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const nested = [record.message, record.error_user_msg, record.error_user_title, record.type, record.code]
+      .filter((item) => typeof item === "string" || typeof item === "number")
+      .map(String);
+    if (nested.length) return nested.join(" — ");
+    try { return JSON.stringify(value); } catch { return "تعذر قراءة تفاصيل الخطأ"; }
+  }
+  return value == null ? "" : String(value);
+}
+
+function normalizeMediaMime(file: File, type: HeaderType): string {
+  const mime = file.type.trim().toLowerCase();
+  if (type === "DOCUMENT" && (mime === "application/pdf" || mime === "application/x-pdf" || ((!mime || mime === "application/octet-stream") && /\.pdf$/i.test(file.name)))) return "application/pdf";
+  if (type === "IMAGE" && (mime === "image/jpeg" || mime === "image/jpg" || mime === "image/png" || mime === "")) {
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (mime && mime !== "image/jpg") return mime;
+    return ext === "png" ? "image/png" : "image/jpeg";
+  }
+  if (type === "VIDEO" && (mime === "video/mp4" || mime === "")) return "video/mp4";
+  return mime;
+}
+
 async function inspectMediaFile(file: File, type: HeaderType): Promise<MediaInfo> {
   if (type === "IMAGE") {
     const url = URL.createObjectURL(file);
@@ -271,10 +298,12 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
   const [publishError,setPublishError]=React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [uploadingSample, setUploadingSample] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState("");
   const [loadedTemplate, setLoadedTemplate] = React.useState<ApiTemplate | null>(null);
   const [mediaInfo, setMediaInfo] = React.useState<MediaInfo | null>(null);
   const [insertTarget, setInsertTarget] = React.useState<"body" | "header">("body");
   const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+  const nameRef = React.useRef<HTMLInputElement>(null);
   const headerRef = React.useRef<HTMLInputElement>(null);
 
   const current = locales[activeLocale] ?? emptyLocale();
@@ -441,11 +470,13 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
   };
 
   const uploadSample = async (file: File) => {
+    setUploadError("");
     const type = header.type;
     if (type !== "IMAGE" && type !== "VIDEO" && type !== "DOCUMENT") return;
 
     const spec = MEDIA_SPECS[type];
-    if (!spec.accept.includes(file.type as never)) {
+    const mediaMime = normalizeMediaMime(file, type);
+    if (!spec.accept.includes(mediaMime as never)) {
       toast.error(dt("الصيغة غير مدعومة. المطلوب: {0}", [spec.formats]));
       return;
     }
@@ -466,6 +497,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         timestamp: number;
         folder: string;
         signature: string;
+        publicId?: string;
       };
 
       const direct = new FormData();
@@ -474,6 +506,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
       direct.set("timestamp", String(signed.timestamp));
       direct.set("folder", signed.folder);
       direct.set("signature", signed.signature);
+      if (signed.publicId) direct.set("public_id", signed.publicId);
 
       const cloud = await axios.post(signed.uploadUrl, direct);
       const publicUrl = cloud.data?.secure_url as string | undefined;
@@ -484,7 +517,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         url: publicUrl,
         publicId,
         name: file.name,
-        type: file.type,
+        type: mediaMime,
         size: file.size,
       });
 
@@ -497,7 +530,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         mediaUrl: publicUrl,
         mediaPublicId: publicId,
         fileName: file.name,
-        mimeType: file.type,
+        mimeType: mediaMime,
       }));
 
       if (inspected.ratioOk === false) {
@@ -506,8 +539,14 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         toast.success(dt("تم رفع الوسائط والتحقق منها وإرسال العينة إلى Meta."));
       }
     } catch (error) {
-      const detail = (error as { response?: { data?: { error?: string; detail?: string } } }).response?.data;
-      toast.error([detail?.error, detail?.detail].filter(Boolean).join(" — ") || dt("فشل رفع عينة الوسائط إلى Meta"));
+      const responseData = (error as { response?: { data?: unknown; status?: number } }).response?.data;
+      const detail = responseData && typeof responseData === "object" ? responseData as Record<string, unknown> : undefined;
+      const parts = [detail?.error, detail?.reason, detail?.detail, formatUploadErrorValue(responseData)]
+        .map(formatUploadErrorValue)
+        .filter(Boolean);
+      const message = Array.from(new Set(parts)).join(" — ") || dt("فشل رفع عينة الوسائط إلى Meta");
+      setUploadError(message);
+      toast.error(message);
     } finally {
       setUploadingSample(false);
     }
@@ -599,7 +638,11 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
         return;
       }
     }
-    if (!name.trim()) return void toast.error(dt("اسم القالب مطلوب"));
+    if (!name.trim()) {
+      setPublishError(dt("اسم القالب مطلوب"));
+      nameRef.current?.focus();
+      return;
+    }
     if (!/^[a-z][a-z0-9_]{0,119}$/.test(name)) return void toast.error(dt("اسم Meta يجب أن يبدأ بحرف ويحتوي حروفًا إنجليزية صغيرة وأرقامًا وشرطة سفلية فقط"));
     if (category !== "AUTHENTICATION" && !arabic.body.trim()) return void toast.error(dt("نص القالب بالعربية مطلوب"));
     if (category !== "AUTHENTICATION" && Object.entries(locales).some(([locale,draft]) => { if (submittedLocales.has(locale as SupportedLocale)) return false; const h = locale === DEFAULT_LOCALE ? rootHeader : draft?.header ?? rootHeader; return ["IMAGE", "VIDEO", "DOCUMENT"].includes(h.type) && !h.exampleHandle; })) {
@@ -715,6 +758,30 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     toast.success(dt("أُعدت نسخة بروابط اللغات الصحيحة للمراجعة. لم تُرسل إلى Meta بعد."));
   };
 
+  const createTrackedCopy = () => {
+    let prepared = 0;
+    let unchanged = 0;
+    const next = Object.fromEntries(Object.entries(locales).map(([locale, draft]) => {
+      if (!draft) return [locale, draft];
+      const tracked = trackedTemplateButtons(draft.buttons, locale);
+      prepared += tracked.prepared;
+      unchanged += tracked.unchanged;
+      return [locale, addMarketingUnsubscribe({ ...draft, buttons: tracked.buttons }, locale as SupportedLocale)];
+    })) as Partial<Record<SupportedLocale, LocaleDraft>>;
+    if (!prepared) {
+      toast.error(dt("أضف زر رابط لصفحة تبرع على الموقع أولًا؛ لم يتم تغيير القالب."));
+      return;
+    }
+    setLocales(next);
+    setWorkingId(null);
+    setLoadedTemplate(null);
+    setSubmittedLocales(new Set());
+    setProviderCategoriesByLocale({});
+    setName(previous => previous.replace(/_tracked_[a-z0-9]+$/, "").slice(0, 96) + "_tracked_" + Date.now().toString(36));
+    setPublishError("");
+    toast.success(dt("أُعدت نسخة مستقلة للمراجعة: {0} رابط تبرع بتتبع الحملة، و{1} رابط بقي كما هو. لم تُحفظ أو تُرسل إلى Meta بعد.", [prepared, unchanged]));
+  };
+
   const previewBody = React.useMemo(
     () => category === "AUTHENTICATION"
       ? dt("رمز التحقق الخاص بك هو 123456\nلا تشارك هذا الرمز مع أي شخص.")
@@ -755,6 +822,14 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     >
       {publishError ? <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-800">{publishError}</p> : null}
       <div className="space-y-5">
+        {initialKind === "CAMPAIGN" && category === "MARKETING" ? (
+          <section aria-label={dt("قياس إيرادات الحملات")} className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-7 text-blue-950">
+            <p>{dt("جهّز نسخة مستقلة بأزرار تبرع تحمل معرّف كل حملة تلقائيًا. تبقى النسخة الأصلية والحملات السابقة كما هي. راجع كل لغة ثم احفظ النسخة وأرسلها إلى Meta للاعتماد قبل اختيارها في حملة جديدة.")}</p>
+            <Button type="button" variant="outline" disabled={loading || saving || uploadingSample} onClick={createTrackedCopy} className="h-auto whitespace-normal text-start">
+              <Link2 className="me-2 h-4 w-4 shrink-0" />{dt("إعداد نسخة بتتبع إيرادات الحملات")}
+            </Button>
+          </section>
+        ) : null}
         {incorrectFailureLocales.length > 0 && submittedLocales.size > 0 ? (
           <section role="alert" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
             <p>{dt("روابط إعادة محاولة التبرع لا تطابق لغة بعض النسخ المعتمدة. يلزم اعتماد نسخة مصححة لدى Meta.")}</p>
@@ -815,6 +890,8 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
           <div className="space-y-1.5">
             <FieldLabel hint={dt("اسم Provider ثابت بعد الإرسال")}>{dt("اسم القالب")}</FieldLabel>
             <Input
+              ref={nameRef}
+              aria-label={dt("اسم القالب")}
               value={name}
               onChange={(event) => setName(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
               placeholder="donation_success"
@@ -916,8 +993,9 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
                       <button
                         key={option.value}
                         type="button"
-                        disabled={submittedLocales.has(activeLocale)}
+                        disabled={uploadingSample || submittedLocales.has(activeLocale)}
                         onClick={() => {
+                          setUploadError("");
                           setHeader((previous) => ({
                             ...previous,
                             type: option.value,
@@ -968,6 +1046,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
                         </div>
 
                         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+                          {uploadError ? <p role="alert" className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-800">{uploadError}</p> : null}
                           <label className="flex cursor-pointer items-center justify-center gap-2 text-sm text-slate-600">
                             {uploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                             {header.exampleHandle ? dt("تم رفع العينة: {0}", [header.fileName ?? dt("ملف")]) : dt("ارفع عينة إلى Meta")}
@@ -1162,3 +1241,4 @@ function WhatsappPreview({
     </aside>
   );
 }
+

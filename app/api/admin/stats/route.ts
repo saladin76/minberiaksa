@@ -1,3 +1,4 @@
+import { subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecycle";
 import { mergeDonationProviderFilter } from "@/lib/dashboard/donation-provider-filter";
 import { recurringPlanTotals } from "@/lib/dashboard/recurring-plan-totals";
 import { NextRequest, NextResponse } from 'next/server';
@@ -233,7 +234,7 @@ export async function GET(request: NextRequest) {
     }
     // ACTIVE subscription without any settled charge isn't really earning revenue 
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
-    const activeMonthlyWhere = { ...subscriptionWhere, donations: { some: PAID_DONATION_FILTER } };
+    const activeMonthlyWhere = { AND: [subscriptionWhere, subscriptionLifecycleWhere("ACTIVE")] };
 
     const [
       totalCampaigns,
@@ -487,10 +488,7 @@ export async function GET(request: NextRequest) {
     // NOT affected by the period/category/campaign filters. The filtered `paidCount`,
     // `activeMonthlyCount` and `monthlyRecurringRevenue` above cannot be shown next to that
     // claim  on a filtered view they would quietly contradict the figure they sit beside.
-    const globalActiveSubscriptionWhere = {
-      status: 'ACTIVE' as const,
-      donations: { some: PAID_DONATION_FILTER },
-    };
+    const globalActiveSubscriptionWhere = subscriptionLifecycleWhere("ACTIVE");
     const [paidCountAllTimeUnfiltered, activeMonthlyCountUnfiltered, mrrUnfilteredResult] =
       await Promise.all([
         prisma.donation.count({ where: globalPaidWhere }),

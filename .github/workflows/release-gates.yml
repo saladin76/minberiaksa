@@ -3,16 +3,18 @@ name: Release gates
 # The checks that must pass before a change can ship. Each one is a separate job so a failure names
 # itself in the PR list rather than hiding behind "build failed".
 #
-# `next build` is deliberately NOT run here. It needs the full environment (database, provider
-# credentials, blob token) and Vercel already runs it on every push; duplicating it in CI would either
-# need those secrets or give a false green. What CI owns is everything that can be judged from the
-# source alone.
+# The fixture build below has no production credentials and performs no live payment or message.
+# Passing it verifies compilation and public styles; VPS activation and provider acceptance are
+# separate release checks.
 
 on:
   push:
     branches: [main, master]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: release-gates-${{ github.ref }}
@@ -80,10 +82,11 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
+        timeout-minutes: 5
         run: |
           if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends ffmpeg
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
           fi
       - run: npm run test:integration-settings
       - name: Content editor and audit regressions
@@ -103,10 +106,76 @@ jobs:
       - run: npm run locale:audit:strict
 
   content-browser:
-    name: Content editor browser fixtures
+    name: Browser · ${{ matrix.name }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Content editors
+            artifact: editors
+            script: scripts/content-editor-browser-test.mjs
+          - name: Major projects and previews
+            artifact: major-projects
+            script: scripts/major-projects-browser-test.mjs
+          - name: Inbox media
+            artifact: inbox-media
+            script: scripts/inbox-media-browser-test.mjs
+          - name: Inbox microphone
+            artifact: inbox-microphone
+            script: scripts/inbox-permissions-browser-test.mjs
+          - name: Public media
+            artifact: public-media
+            script: scripts/public-media-browser-test.mjs
+          - name: Dashboard flows
+            artifact: dashboard
+            script: scripts/dashboard-followup-browser-test.mjs
+          - name: Operations and Search
+            artifact: operations
+            script: scripts/operations-review-browser-test.mjs
+          - name: Scheduling and routing
+            artifact: scheduling
+            script: scripts/saudi-mobile-browser-test.mjs
+          - name: Project ordering and donor profile
+            artifact: project-profile-requests
+            script: scripts/project-profile-requests-browser-test.mjs
+          - name: Donor requests and payment cards
+            artifact: donor-management
+            script: scripts/donor-management-browser-test.mjs
+          - name: Donor lifecycle and public content
+            artifact: donor-lifecycle
+            script: scripts/donor-lifecycle-browser-test.mjs
+          - name: Subscription management
+            artifact: subscriptions
+            script: scripts/subscription-management-browser-test.mjs
+          - name: Certificates and saved cards
+            artifact: certificates-saved-cards
+            script: scripts/certificates-saved-cards-browser-test.mjs
+          - name: Bank operations
+            artifact: bank-operations
+            script: scripts/bank-operations-browser-test.mjs
+          - name: Donation experience
+            artifact: donation-experience
+            script: scripts/donation-experience-browser-test.mjs
+          - name: Campaign single operator
+            artifact: campaign-operator
+            script: scripts/brand-campaign-browser-test.mjs
+          - name: Campaign revenue and recovery
+            artifact: campaign-recovery
+            script: scripts/campaign-recovery-browser-test.mjs
+          - name: Search emergency and recovery
+            artifact: google-search-recovery
+            script: scripts/google-search-recovery-browser-test.mjs
+          - name: Subscription card authentication
+            artifact: subscription-card
+            script: scripts/subscription-card-browser-test.mjs
+          - name: Checkout
+            artifact: checkout
+            script: scripts/checkout-readiness-browser-test.mjs
     env:
-      CONTENT_EDITOR_ARTIFACTS: .artifacts/content-editor
+      CONTENT_EDITOR_ARTIFACTS: .artifacts/${{ matrix.artifact }}
+      CAMPAIGNS_ONLY: "1"
       DATABASE_URL: mongodb://127.0.0.1:27017/minberiaksa_ci
     steps:
       - uses: actions/checkout@v4
@@ -116,36 +185,15 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
-      # This hosted image already has Chromium runtime libraries; fixtures serve bundled Cairo.
-      # Keep the Playwright-pinned browser without unrelated apt/font upgrades.
       - run: npx playwright install chromium
-      - run: npm run test:content-editors:browser
-      - name: Major projects, private previews and live ticker
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/major-projects-browser-test.mjs
-      - name: Inbox media playback and download
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/inbox-media-browser-test.mjs
-      - name: Inbox microphone with production permission headers
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/inbox-permissions-browser-test.mjs
-      - name: Public programme and course playback
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/public-media-browser-test.mjs
-      - name: Dashboard donation, communication and analytics flows
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/dashboard-followup-browser-test.mjs
-      - name: Operations editors, gallery, cart, Search and renewal readiness
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/operations-review-browser-test.mjs
-      - name: Checkout validation, privacy and gateway handoff
-        if: ${{ !cancelled() }}
-        run: node --import tsx scripts/checkout-readiness-browser-test.mjs
+      - name: Run read-only browser fixtures
+        run: node --import tsx ${{ matrix.script }}
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: content-editor-browser-fixtures
-          path: .artifacts/content-editor/
+          name: browser-${{ matrix.artifact }}
+          path: ${{ env.CONTENT_EDITOR_ARTIFACTS }}/
+          if-no-files-found: error
           retention-days: 7
 
   e2e:
@@ -189,4 +237,38 @@ jobs:
         with:
           name: playwright-report
           path: e2e/.artifacts/
+          retention-days: 7
+
+  fixture-build:
+    name: Production build and public style fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      DATABASE_URL: mongodb://127.0.0.1:27018/minberi_fixture?serverSelectionTimeoutMS=500&connectTimeoutMS=500
+      GOOGLE_CLIENT_ID: fixture-client
+      GOOGLE_CLIENT_SECRET: fixture-secret
+      NEXTAUTH_SECRET: fixture-auth-build-secret
+      NEXTAUTH_URL: http://127.0.0.1:3106
+      STRIPE_SECRET_KEY: sk_test_fixture_no_network
+      CONTENT_EDITOR_ARTIFACTS: .artifacts/public-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - run: npm run preflight:release-metadata
+      # Deliberately bypass the package build's post-build production index writes.
+      - run: npx --no-install next build
+      - run: npx playwright install chromium
+      - run: node --import tsx scripts/public-style-build-test.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-build-fixtures
+          path: .artifacts/public-build/
           retention-days: 7

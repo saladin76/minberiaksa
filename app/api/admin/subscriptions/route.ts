@@ -1,4 +1,6 @@
+import { ACTIVATING_DONATION_WHERE, subscriptionLifecycle, subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecycle";
 import { recurringReadiness } from "@/lib/donations/recurring-readiness";
+import { subscriptionReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +26,8 @@ export async function GET(request: NextRequest) {
     const categoryId = sp.get("categoryId");
     const campaignId = sp.get("campaignId");
     const userId = sp.get("userId");
+    const subscriptionId = sp.get("subscriptionId");
+    if (subscriptionId && !/^[a-f0-9]{24}$/i.test(subscriptionId)) return NextResponse.json({ error: "INVALID_SUBSCRIPTION_ID" }, { status: 400 });
     const search = sp.get("search")?.trim();
     const referralIdParam = sp.get("referralId");
     const frequency = parseFrequencyParam(sp.get("frequency"));
@@ -40,21 +44,15 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Prisma.SubscriptionWhereInput = {};
+    if (subscriptionId) where.id = subscriptionId;
 
     if (referralIdParam) {
       where.referralId = referralIdParam;
     }
 
-    if (statusParam !== "ALL") {
-      if (
-        statusParam === "ACTIVE" ||
-        statusParam === "PAUSED" ||
-        statusParam === "CANCELLED" ||
-        statusParam === "PAYMENT_FAILED"
-      ) {
-        where.status = statusParam;
-      }
-    }
+    const allowedStatuses = ["ALL", "ACTIVE", "PAUSED", "CANCELLED", "PAYMENT_FAILED", "AWAITING_FIRST_PAYMENT"];
+    if (!allowedStatuses.includes(statusParam)) return NextResponse.json({ error: "INVALID_STATUS" }, { status: 400 });
+    where.AND = [subscriptionLifecycleWhere(statusParam)];
 
     if (userId && userId !== "all") {
       where.donorId = userId;
@@ -119,7 +117,7 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           nextBillingDate: true,
           lastBillingDate: true,
-          donations: { where: { paidAt: { not: null } }, select: { id: true }, take: 1 },
+          donations: { where: ACTIVATING_DONATION_WHERE, select: { id: true }, take: 1 },
           provider: true, paymentCardId: true, paypalVaultId: true, stripeSubscriptionId: true, payforToken: true,
           amountChangeLock: true, billingLeaseUntil: true, chargeAttempts: true, lastChargeError: true,
           donor: {
@@ -150,6 +148,7 @@ export async function GET(request: NextRequest) {
       return {
         id: s.id,
         status: s.status,
+        lifecycle: subscriptionLifecycle({ ...s, hasPaidDonation: s.donations.length > 0 }),
         amount: s.amount,
         amountUSD: s.amountUSD,
         /** The plan's per-charge USD amount on a monthly scale (daily ×30.44, Friday ×4.35). */
@@ -162,6 +161,7 @@ export async function GET(request: NextRequest) {
         lastBillingDate: s.lastBillingDate,
         provider: s.provider || "STRIPE",
         billingReadiness: recurringReadiness({ ...s, hasPaidDonation: s.donations.length > 0 }),
+        reductionEligibility: subscriptionReductionEligibility(s),
         chargeAttempts: s.chargeAttempts,
         lastChargeError: s.lastChargeError,
         donor: s.donor,
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       subscriptions,
       pagination: { total, page, limit, pages: Math.ceil(total / limit) || 1 },
-    });
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Error listing subscriptions:", error);
     return NextResponse.json(

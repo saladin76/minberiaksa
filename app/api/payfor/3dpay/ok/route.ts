@@ -2,6 +2,8 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withDonationToken } from "@/lib/donations/access-token";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
+import { isValidLocale } from "@/lib/locales";
 // Donate (success) CAPI now fires server-side from `dispatchDonationPaid`
 // the moment the donation flips to PAID  that's the only path that
 // reliably catches donors whose browser never returns from 3DS (mobile
@@ -16,13 +18,16 @@ import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { mergePayForProviderRaw, PAYFOR_UNVERIFIED_APPROVAL, payForErrorMessage, redactPayForResponse, verifyPayForResponseHash } from "@/lib/payfor";
 
 export async function POST(req: NextRequest) {
-  const origin = new URL(req.url).origin;
+  const origin = paymentPublicOrigin(req.url);
+  // The bank posts here; follow the result page with GET, never replay its POST.
+  const redirect = (url: URL) => NextResponse.redirect(url, 303);
   const { searchParams } = new URL(req.url);
   const donationId = searchParams.get("donationId") || "";
-  const locale = (searchParams.get("locale") || "en").toLowerCase();
+  const requestedLocale = (searchParams.get("locale") || "en").toLowerCase();
+  const locale = isValidLocale(requestedLocale) ? requestedLocale : "en";
 
   if (!donationId) {
-    return NextResponse.redirect(new URL(`/${locale}/donation-failed`, origin));
+    return redirect(new URL(`/${locale}/donation-failed`, origin));
   }
 
   const form = await req.formData();
@@ -170,7 +175,7 @@ export async function POST(req: NextRequest) {
 
     if (result.ok) {
       after(() => dispatchDonationPaid(donationId));
-      return NextResponse.redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, result.accessToken), origin));
+      return redirect(new URL(withDonationToken(`/${locale}/success/${donationId}`, result.accessToken), origin));
     }
     if (result.reason === "failed") {
       after(async () => {
@@ -184,12 +189,12 @@ export async function POST(req: NextRequest) {
       after(() => sendDonationFailedConversions(donationId));
     }
 
-    return NextResponse.redirect(
+    return redirect(
       new URL(`/${locale}/donation-failed?donationId=${encodeURIComponent(donationId)}`, origin)
     );
   } catch (e) {
     console.error("PayFor OK callback error:", e);
-    return NextResponse.redirect(
+    return redirect(
       new URL(`/${locale}/donation-failed?donationId=${encodeURIComponent(donationId)}`, origin)
     );
   }

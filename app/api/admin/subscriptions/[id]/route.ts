@@ -1,4 +1,6 @@
+import { ACTIVATING_DONATION_WHERE } from "@/lib/donations/subscription-lifecycle";
 import { billingLeaseAvailable } from "@/lib/donations/recurring-lease";
+import { subscriptionReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
 import { NextRequest, NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
@@ -52,6 +54,7 @@ export async function PATCH(
       where: { id },
       select: {
         id: true,
+        donorId: true,
         status: true,
         amount: true,
         currency: true,
@@ -60,6 +63,7 @@ export async function PATCH(
         nextBillingDate: true,
         chargeAttempts: true,
         amountChangeLock: true,
+        billingLeaseUntil: true,
         items: { select: { id: true, amount: true, amountUSD: true } },
         categoryItems: { select: { id: true, amount: true, amountUSD: true } },
         frequency: true,
@@ -77,10 +81,22 @@ export async function PATCH(
 
     if (loweringAmount) {
       const amount = body.amount;
-      const evidence = typeof body.consentEvidence === "string" ? body.consentEvidence.trim() : "";
+      let evidence = typeof body.consentEvidence === "string" ? body.consentEvidence.trim() : "";
       const proofType = body.consentMethod;
-      if (!Number.isFinite(amount) || amount < 1 || Math.round(amount * 100) !== amount * 100 || amount >= sub.amount ||
-          evidence.length < 12 || evidence.length > 2000 || !["PHONE", "EMAIL", "WHATSAPP", "SIGNED"].includes(proofType)) {
+      if (proofType === "DONOR_REQUEST") {
+        if (typeof body.consentRequestId !== "string" || !/^[a-f0-9]{24}$/i.test(body.consentRequestId)) return NextResponse.json({ error: "A verified donor request is required", code: "DONOR_REQUEST_MISMATCH" }, { status: 400 });
+        const donorRequest = await prisma.subscriptionServiceRequest.findUnique({ where: { id: body.consentRequestId } });
+        if (!donorRequest || donorRequest.subscriptionId !== sub.id || donorRequest.donorId !== sub.donorId ||
+            donorRequest.kind !== "AMOUNT_CHANGE" || !["NEW", "IN_PROGRESS"].includes(donorRequest.status) ||
+            donorRequest.currency !== sub.currency || donorRequest.requestedAmount !== amount) {
+          return NextResponse.json({ error: "Donor request does not match this plan or amount", code: "DONOR_REQUEST_MISMATCH" }, { status: 409 });
+        }
+        // The authenticated donor's stored request is the evidence. Never trust
+        // a reference or consent text supplied by the dashboard for this method.
+        evidence = `Donor account request ${donorRequest.id}; ${donorRequest.createdAt.toISOString()}; ${donorRequest.requestedAmount} ${donorRequest.currency}`;
+      }
+      if (!Number.isFinite(amount) || amount < 1 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || amount >= sub.amount ||
+          evidence.length < 12 || evidence.length > 2000 || !["PHONE", "EMAIL", "WHATSAPP", "SIGNED", "DONOR_REQUEST"].includes(proofType)) {
         return NextResponse.json({ error: "Enter a lower amount of at least 1, and documented donor consent (method + reference)" }, { status: 400 });
       }
       if (sub.status !== "ACTIVE" && sub.status !== "PAUSED") {
@@ -88,8 +104,9 @@ export async function PATCH(
       }
       // Prevent editing a due/retrying charge while a scheduled worker might
       // already have loaded the old amount. Defer the request for review.
-      if (!sub.nextBillingDate || sub.nextBillingDate.getTime() - Date.now() < 24 * 3600_000 || sub.chargeAttempts) {
-        return NextResponse.json({ error: "Billing is due soon, already pending, or under retry. Schedule a reduction after this cycle settles.", code: "BILLING_WINDOW_LOCKED" }, { status: 409 });
+      const reductionEligibility = subscriptionReductionEligibility(sub);
+      if (!reductionEligibility.allowed) {
+        return NextResponse.json({ error: "Reduction is blocked by the current billing state", code: reductionEligibility.reason === "RECONCILIATION_REQUIRED" ? "RECONCILE_REQUIRED" : "BILLING_WINDOW_LOCKED", reductionEligibility }, { status: 409 });
       }
       const newAmount = Math.round(amount * 100) / 100;
       const usd = await convertAmountInCurrencyToUsd(newAmount, sub.currency);
@@ -115,7 +132,7 @@ export async function PATCH(
         where: { id: sub.id, amount: sub.amount, status: sub.status, nextBillingDate: sub.nextBillingDate, chargeAttempts: 0, AND: [billingLeaseAvailable(new Date())], OR: [{ amountChangeLock: null }, { amountChangeLock: { isSet: false } }] },
         data: { amountChangeLock: token, amountChangeStartedAt: new Date() },
       });
-      if (lock.count !== 1) return NextResponse.json({ error: "Plan changed concurrently" }, { status: 409 });
+      if (lock.count !== 1) return NextResponse.json({ error: "Plan changed concurrently", code: "PLAN_CHANGED_CONCURRENTLY" }, { status: 409 });
       const unlock = async () => { await prisma.subscription.updateMany({ where: { id: sub.id, amountChangeLock: token }, data: { amountChangeLock: null, amountChangeStartedAt: null } }); };
       let providerUpdated = false;
       if (rail === "STRIPE") {
@@ -165,7 +182,7 @@ export async function PATCH(
               action: "SUBSCRIPTION_AMOUNT_REDUCED", entityType: "Subscription", entityId: sub.id,
               messageAr: `تخفيض التبرع الدوري من ${sub.amount} إلى ${newAmount} ${sub.currency} بموافقة المتبرع`,
               messageEn: `Recurring plan reduced ${sub.amount} -> ${newAmount} ${sub.currency} with documented donor consent`,
-              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, nextBillingDate: sub.nextBillingDate?.toISOString() },
+              metadata: { oldAmount: sub.amount, newAmount, currency: sub.currency, rail, consentMethod: proofType, consentEvidence: evidence, consentRequestId: proofType === "DONOR_REQUEST" ? body.consentRequestId : null, nextBillingDate: sub.nextBillingDate?.toISOString() },
             },
           });
         });
@@ -184,6 +201,10 @@ export async function PATCH(
         { error: "A cancelled plan cannot be reactivated. The donor must start a new plan." },
         { status: 409 }
       );
+    }
+
+    if (nextStatus === "ACTIVE" && !(await prisma.donation.findFirst({ where: { subscriptionId: id, ...ACTIVATING_DONATION_WHERE }, select: { id: true } }))) {
+      return NextResponse.json({ error: "لا يمكن تفعيل اشتراك لم تنجح دفعته الأولى.", code: "FIRST_PAYMENT_NOT_CONFIRMED" }, { status: 409 });
     }
 
     // The provider first. If Stripe refuses, nothing local changes and the

@@ -701,7 +701,9 @@
     "verificationDirectHelp": "无需验证码",
     "verificationSecure": "银行验证",
     "verificationSecureHelp": "可能需要验证码",
-    "verificationRequired": "请选择一种支付方式以继续。"
+    "verificationRequired": "请选择一种支付方式以继续。",
+    "verificationSecureOptIn": "我希望使用银行验证（3D Secure）",
+    "verificationOptionalHelp": "默认使用直接支付。选择此项可通过银行验证。"
   },
   "certificates": {
     "certNoLabel": "证书编号",
@@ -1560,6 +1562,16 @@
     "sentText": "我们的合作团队将很快通过电子邮件与您联系。"
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "加沙",
+      "aqsa": "阿克萨清真寺",
+      "jerusalem": "耶路撒冷",
+      "waqf": "在耶路撒冷设立瓦克夫",
+      "zakat": "向巴勒斯坦缴纳天课",
+      "restoration": "修复耶路撒冷住宅",
+      "ibadan": "伊巴丹·拉纳",
+      "recurring": "定期捐赠"
+    },
     "allProjects": "全部项目",
     "filterByRegion": "地区",
     "filterByType": "捐赠类型",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "卡号无效，请检查。",
     "invalidCardExpiry": "有效期无效或已过期。",
     "invalidCardCvc": "安全码（CVC）无效。",
-    "tooManyPaymentAttempts": "付款尝试次数过多，请稍后再试。"
+    "tooManyPaymentAttempts": "付款尝试次数过多，请稍后再试。",
+    "mixedDonationCadences": "请分别支付不同频率的捐款，并检查您的捐款清单。"
   },
   "waqf": {
     "chooseUnit": "选择单位",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "请选择团队支持金额或“不用了，谢谢”以继续"
   },
   "Gift": {
+    "validationError": "请输入收件人姓名和有效联系方式。WhatsApp号码须包含国家代码。",
     "emailSubject": "以您的名义捐赠：{project}",
     "emailTitle": "{recipientName}，您收到一份礼物",
     "emailBody": "{donorName} 通过阿克萨讲坛以您的名义向“{project}”项目捐款。",
@@ -2478,7 +2492,8 @@
     "orContinue": "继续使用",
     "noAccount": "还没有账户？",
     "createOne": "立即注册",
-    "logoAlt": "标志"
+    "logoAlt": "标志",
+    "signInWithGoogle": "使用 Google 登录"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "已捐赠",
     "for": "用于",
     "communitySupporter": "来自我们的支持者社区"
+  },
+  "DonationDialog": {
+    "rememberCard": "保存我的银行卡以便下次捐款",
+    "rememberCardFailed": "无法保存银行卡。取消勾选此选项即可继续。",
+    "savedCards": "已保存的银行卡",
+    "useNewCard": "使用新银行卡",
+    "bankChargeEstimate": "您的捐款为{original}。预计银行扣款为{amount}土耳其里拉；最终汇率在付款开始时确定。",
+    "bankChargeCurrency": "银行以土耳其里拉收取此捐款。确认付款前会显示换算金额。",
+    "paymentRoutingChanged": "此次付款的支付网关已更新。请检查付款方式，重新输入安全码并确认付款。"
+  },
+  "SignInDialog": {
+    "authErrorTitle": "无法完成登录",
+    "authAccessDenied": "登录授权未完成。请重试，或以访客身份捐赠。",
+    "authAccountConflict": "此邮箱使用其他登录方式。请使用原来的方式，或以访客身份捐赠。",
+    "authUnavailable": "当前无法登录。您可以以访客身份继续捐赠。",
+    "authUnknown": "登录未完成。请重试，或以访客身份继续。",
+    "donateAsGuest": "以访客身份继续捐赠",
+    "signInWithGoogle": "使用Google登录"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "已全额退款",
+        "PARTIALLY_REFUNDED": "已部分退款",
+        "VOIDED": "已由银行撤销",
+        "REVIEW_REQUIRED": "需要财务审核",
+        "balance": "已退：{returned} · 剩余：{remaining}"
+      },
+      "recurringGivingMonths": "定期捐赠月数",
+      "recurringGivingMonthsHint": "所选期间内有已确认定期捐款的月份数"
+    }
   }
 }

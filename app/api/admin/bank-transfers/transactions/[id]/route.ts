@@ -1,195 +1,316 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
-import {
-  createDonationFromBankTransfer,
-  type BankTransferDonationFailure,
-} from "@/lib/donations/bank-transfer-donation";
+import { createDonationFromBankTransfer } from "@/lib/donations/bank-transfer-donation";
 import { isValidLocale } from "@/lib/locales";
 import { rawCommand } from "@/lib/prisma-raw-command";
-
+import { statementDate } from "@/lib/bank-transfers/statement-metadata";
+import { statementRead } from "@/lib/bank-transfers/statement-import";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 const COLLECTION = "BankTransferTransaction";
-const ALLOWED_STATUSES = new Set(["PENDING_REVIEW", "APPROVED", "IGNORED", "DELETED"]);
-/** Why an approval was refused, in the reviewer's language. */
-const APPROVAL_FAILURE_AR: Record<BankTransferDonationFailure, string> = {
+const approvalFailure: Record<string, string> = {
   DATABASE_UNAVAILABLE: "قاعدة البيانات غير متاحة",
   MISSING_HASH: "العملية بلا معرّف فريد",
   INVALID_AMOUNT: "قيمة العملية غير صالحة",
   DONOR_NOT_FOUND: "المتبرع المختار غير موجود",
   DONOR_CONTACT_NOT_FOUND: "لا يوجد متبرع بهذا البريد أو الهاتف",
-  DONOR_CONTACT_AMBIGUOUS: "أكثر من متبرع بهذا البريد أو الهاتف  حدّد المتبرع يدويًا",
+  DONOR_CONTACT_AMBIGUOUS:
+    "أكثر من متبرع بهذا البريد أو الهاتف  حدّد المتبرع يدويًا",
   CAMPAIGN_NOT_FOUND: "المشروع المختار غير موجود أو محذوف",
   DONOR_CREATE_FAILED: "تعذّر إنشاء سجل المتبرع",
   DONATION_CREATE_FAILED: "تعذّر إنشاء التبرع",
+  DONATION_CREATE_UNRESOLVED:
+    "تعذّر تأكيد الإجراء. راجع حالة العملية قبل تكراره.",
+  DONATION_REVIEW_REQUIRED:
+    "الإجراء يحتاج تحققًا. لا تكرر الاعتماد قبل مراجعة الحالة.",
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function cleanString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : null;
-}
-
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+const statuses = new Set(["PENDING_REVIEW", "APPROVED", "IGNORED", "DELETED"]);
+const obj = (v: unknown): Record<string, unknown> =>
+  v && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : {};
+const clean = (v: unknown) =>
+  typeof v === "string" && v.trim() ? v.trim() : null;
+const ready = {
+  donationId: { $in: [null, ""] },
+  approvalClaim: { $exists: false },
+  status: { $nin: ["APPROVED", "IMPORTED", "DELETED"] },
+};
+async function mutate(
+  request: NextRequest,
+  params: Promise<{ id: string }>,
+  deleting = false,
+) {
+  const session = await getServerSession(authOptions);
+  const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
+  if (denied) return denied;
   try {
-    const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
-    if (denied) return denied;
-
     const { id } = await params;
-    if (!id) return NextResponse.json({ error: "Transaction id is required" }, { status: 400 });
-
-    const body = await request.json().catch(() => null);
-    if (!isRecord(body)) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-
-    const now = new Date();
+    if (!/^[a-f\d]{24}$/i.test(id))
+      return NextResponse.json(
+        { error: "معرّف العملية غير صالح" },
+        { status: 400 },
+      );
+    const body = deleting ? { status: "DELETED" } : obj(await request.json());
+    const status = clean(body.status);
+    if (status && !statuses.has(status))
+      return NextResponse.json({ error: "الحالة غير صالحة" }, { status: 400 });
+    const doc = (
+      await statementRead(prisma, COLLECTION, { _id: { $oid: id } })
+    )[0];
+    if (!doc)
+      return NextResponse.json(
+        { error: "العملية غير موجودة" },
+        { status: 404 },
+      );
+    if (doc.donationId || ["APPROVED", "IMPORTED"].includes(String(doc.status)))
+      return NextResponse.json(
+        {
+          error:
+            "العملية معتمدة. يجب معالجة أي تعديل مالي من سجل التبرع المرتبط.",
+          code: "TRANSFER_ALREADY_APPROVED",
+        },
+        { status: 409 },
+      );
+    if (doc.approvalClaim || doc.status === "DELETED")
+      return NextResponse.json(
+        {
+          error:
+            "العملية مقفلة أو يجري اعتمادها. راجع حالتها قبل تكرار الإجراء.",
+          code: "TRANSFER_REVIEW_LOCKED",
+        },
+        { status: 409 },
+      );
     const actor = auditActorFromDashboardSession(session!);
-    const $set: Record<string, unknown> = { updatedAt: now, reviewedBy: actor.actorId, reviewedByName: actor.actorName };
-
-    const donorName = cleanString(body.donorName);
-    if ("donorName" in body) $set.donorName = donorName;
-
-    const finalProject = cleanString(body.finalProject ?? body.suggestedProject);
-    if (finalProject) $set.finalProject = finalProject;
-
-    const donorLocale = cleanString(body.donorLocale);
-    if (donorLocale && isValidLocale(donorLocale)) $set.donorLocale = donorLocale;
-
-    // Explicit links chosen by the reviewer. Stored on the transaction so a
-    // "save" before "approve" keeps them.
-    if ("campaignId" in body) $set.campaignId = cleanString(body.campaignId);
-    if ("donorContact" in body) $set.donorContact = cleanString(body.donorContact);
-    if ("donorUserId" in body) $set.donorUserIdChoice = cleanString(body.donorUserId);
-
-    const status = cleanString(body.status);
-    if (status) {
-      if (!ALLOWED_STATUSES.has(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-      $set.status = status;
-      if (status === "APPROVED") $set.approvedAt = now;
-      if (status === "IGNORED") $set.ignoredAt = now;
-      if (status === "DELETED") {
-        $set.deletedAt = now;
-        $set.deletedBy = actor.actorId;
-        $set.deletedByName = actor.actorName;
-      }
-    }
-
-    // On approval → create a real Donation (provider BANK_TRANSFER) so it shows on the dashboards with
-    // a "تحويل بنكي" hint. Deduped by donorName; idempotent per transaction hash; no messages sent.
+    const now = { $date: new Date().toISOString() };
+    const $set: Record<string, unknown> = {
+      updatedAt: now,
+      reviewedBy: actor.actorId,
+      reviewedByName: actor.actorName,
+    };
+    for (const field of [
+      "donorName",
+      "finalProject",
+      "campaignId",
+      "donorContact",
+    ])
+      if (field in body) $set[field] = clean(body[field]);
+    if ("donorUserId" in body) $set.donorUserIdChoice = clean(body.donorUserId);
+    if (typeof body.donorLocale === "string" && isValidLocale(body.donorLocale))
+      $set.donorLocale = body.donorLocale;
+    if (status) $set.status = status;
+    if (status === "IGNORED") $set.ignoredAt = now;
+    if (status === "DELETED")
+      Object.assign($set, {
+        deletedAt: now,
+        deletedBy: actor.actorId,
+        deletedByName: actor.actorName,
+      });
     let donationId: string | null = null;
+    let claim: string | null = null;
     if (status === "APPROVED") {
-      const found = await prisma.$runCommandRaw(rawCommand({ find: COLLECTION, filter: { _id: { $oid: id } }, limit: 1 })).catch(() => null);
-      const doc = isRecord(found) && isRecord(found.cursor) && Array.isArray(found.cursor.firstBatch)
-        ? (found.cursor.firstBatch[0] as Record<string, unknown> | undefined) ?? null
-        : null;
-      if (doc && !doc.donationId) {
-        const pick = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-        const result = await createDonationFromBankTransfer({
-          transactionHash: String(doc.transactionHash ?? ""),
-          donorName: (typeof $set.donorName === "string" ? $set.donorName : pick(doc.donorName)) ?? null,
-          amount: typeof doc.amount === "number" ? doc.amount : Number(doc.amount) || 0,
-          currency: String(doc.currency ?? "TRY"),
-          transactionDate: pick(doc.transactionDate),
-          donorLocale: (typeof $set.donorLocale === "string" ? $set.donorLocale : pick(doc.donorLocale)) ?? null,
-          project: (typeof $set.finalProject === "string" ? $set.finalProject : pick(doc.finalProject) ?? pick(doc.suggestedProject)) ?? null,
-          note: pick(doc.note),
-          description: pick(doc.description),
-          reference: pick(doc.reference),
-          bankId: pick(doc.bankId),
-          bankIban: pick(doc.bankIban),
-          campaignId: "campaignId" in $set ? ($set.campaignId as string | null) : pick(doc.campaignId),
-          donorContact: "donorContact" in $set ? ($set.donorContact as string | null) : pick(doc.donorContact),
-          donorUserId: "donorUserIdChoice" in $set ? ($set.donorUserIdChoice as string | null) : pick(doc.donorUserIdChoice),
-        });
-        if (!result.ok) {
-          // Do not mark the transfer approved when no donation exists behind it.
+      if (body.approvalConfirmed !== true)
+        return NextResponse.json(
+          {
+            error: "راجع المبلغ والمشروع والمتبرع ثم أكد الاعتماد.",
+            code: "TRANSFER_CONFIRM_REQUIRED",
+          },
+          { status: 422 },
+        );
+      if (
+        doc.direction !== "CREDIT" ||
+        typeof doc.amount !== "number" ||
+        !Number.isFinite(doc.amount) ||
+        doc.amount <= 0 ||
+        !statementDate(doc.transactionDate)
+      )
+        return NextResponse.json(
+          { error: "لا يمكن اعتماد حركة غير واردة أو ناقصة البيانات." },
+          { status: 422 },
+        );
+      claim = randomUUID();
+      const reviewFields = { ...$set };
+      delete reviewFields.status;
+      const claimed = obj(
+        await prisma.$runCommandRaw(
+          rawCommand({
+            update: COLLECTION,
+            updates: [
+              {
+                q: { _id: { $oid: id }, ...ready },
+                u: {
+                  $set: {
+                    ...reviewFields,
+                    approvalClaim: claim,
+                    approvalStartedAt: now,
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      );
+      if (
+        claimed.ok !== 1 ||
+        claimed.writeConcernError ||
+        claimed.n !== 1 ||
+        (Array.isArray(claimed.writeErrors) && claimed.writeErrors.length)
+      )
+        return NextResponse.json(
+          {
+            error: "تغيّرت العملية أثناء المراجعة. حدّث الصفحة.",
+            code: "TRANSFER_REVIEW_CONFLICT",
+          },
+          { status: 409 },
+        );
+      const effective = { ...doc, ...$set };
+      const result = await createDonationFromBankTransfer({
+        transactionHash: String(doc.transactionHash ?? ""),
+        amount: doc.amount,
+        currency: String(doc.currency ?? "TRY"),
+        transactionDate: clean(doc.transactionDate),
+        donorName: clean(effective.donorName),
+        donorLocale: clean(effective.donorLocale),
+        project: clean(effective.finalProject) ?? clean(doc.suggestedProject),
+        note: clean(doc.note),
+        description: clean(doc.description),
+        reference: clean(doc.reference),
+        bankId: clean(doc.bankId),
+        bankIban: clean(doc.bankIban),
+        campaignId: clean(effective.campaignId),
+        donorContact: clean(effective.donorContact),
+        donorUserId: clean(effective.donorUserIdChoice),
+      });
+      if (!result.ok) {
+        const unresolved = [
+          "DONATION_CREATE_UNRESOLVED",
+          "DONATION_REVIEW_REQUIRED",
+        ].includes(result.reason);
+        // Keep the claim when a commit is uncertain or historical records need
+        // review. Only confirmed pre-write/transaction rejections can be retried.
+        const released = obj(
+          await prisma.$runCommandRaw(
+            rawCommand({
+              update: COLLECTION,
+              updates: [
+                {
+                  q: { _id: { $oid: id }, approvalClaim: claim },
+                  u: unresolved
+                    ? {
+                        $set: {
+                          approvalState: "UNRESOLVED",
+                          approvalFailureReason: result.reason,
+                          updatedAt: now,
+                        },
+                      }
+                    : { $unset: { approvalClaim: "", approvalStartedAt: "" } },
+                },
+              ],
+            }),
+          ),
+        );
+        if (
+          released.ok !== 1 ||
+          released.n !== 1 ||
+          released.writeConcernError ||
+          (Array.isArray(released.writeErrors) && released.writeErrors.length)
+        )
           return NextResponse.json(
-            { error: APPROVAL_FAILURE_AR[result.reason], code: result.reason },
-            { status: 422 }
+            {
+              error: "تعذّر تأكيد حفظ العملية. راجع حالتها قبل إعادة الإجراء.",
+              code: "TRANSFER_WRITE_UNRESOLVED",
+            },
+            { status: 409 },
           );
-        }
-        donationId = result.donationId;
-        $set.donationId = result.donationId;
-        $set.donorUserId = result.donorId;
-        $set.convertedToDonation = true;
-        $set.convertedAt = now;
-      } else if (doc && typeof doc.donationId === "string") {
-        donationId = doc.donationId;
+        return NextResponse.json(
+          {
+            error:
+              approvalFailure[result.reason] ??
+              "تعذّر اعتماد التبرع. راجع بيانات المتبرع والمشروع.",
+            code: result.reason,
+          },
+          { status: unresolved ? 409 : 422 },
+        );
       }
+      donationId = result.donationId;
+      Object.assign($set, {
+        donationId,
+        approvalState: "CONFIRMED",
+        donorUserId: result.donorId,
+        campaignId: result.campaignId,
+        approvedAt: now,
+        convertedToDonation: true,
+        convertedAt: now,
+      });
     }
-
-    await prisma.$runCommandRaw(rawCommand({
-      update: COLLECTION,
-      updates: [{ q: { _id: { $oid: id } }, u: { $set }, upsert: false }],
-    }));
-
+    const saved = obj(
+      await prisma.$runCommandRaw(
+        rawCommand({
+          update: COLLECTION,
+          updates: [
+            {
+              q: {
+                _id: { $oid: id },
+                ...(claim ? { approvalClaim: claim } : ready),
+              },
+              u: {
+                $set,
+                ...(claim
+                  ? { $unset: { approvalClaim: "", approvalStartedAt: "" } }
+                  : {}),
+              },
+            },
+          ],
+        }),
+      ),
+    );
+    if (
+      saved.ok !== 1 ||
+      saved.writeConcernError ||
+      saved.n !== 1 ||
+      (Array.isArray(saved.writeErrors) && saved.writeErrors.length)
+    )
+      return NextResponse.json(
+        {
+          error: "تعذّر تأكيد حفظ العملية. راجع حالتها قبل إعادة الإجراء.",
+          code: "TRANSFER_WRITE_UNRESOLVED",
+        },
+        { status: 409 },
+      );
     await writeAuditLog({
       ...actor,
       stream: "TEAM",
-      action: status === "DELETED" ? "BANK_TRANSFER_DELETED" : "BANK_TRANSFER_REVIEWED",
-      messageAr: status === "DELETED" ? `${actor.actorName ?? "مسؤول"} حذف عملية تحويل بنكي نهائيًا` : `${actor.actorName ?? "مسؤول"} راجع عملية تحويل بنكي`,
-      entityType: "BankTransferTransaction",
+      action:
+        status === "DELETED"
+          ? "BANK_TRANSFER_DELETED"
+          : "BANK_TRANSFER_REVIEWED",
+      messageAr: "مراجعة حركة تحويل بنكي",
+      entityType: COLLECTION,
       entityId: id,
-      metadata: {
-        status: $set.status,
-        donorLocale: $set.donorLocale,
-        finalProject: $set.finalProject,
-        campaignId: $set.campaignId,
-        donorUserId: $set.donorUserId,
-        donationId,
-      },
+      metadata: { status, donationId, softDelete: status === "DELETED" },
     });
-
     return NextResponse.json({ ok: true, donationId });
-  } catch (error) {
-    console.error("[bank-transfers] failed to update transaction", error);
-    return NextResponse.json({ error: "Failed to update bank transfer transaction" }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: "تعذّر تأكيد الإجراء. راجع حالة العملية قبل تكراره." },
+      { status: 503 },
+    );
   }
 }
-
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-    const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
-    if (denied) return denied;
-
-    const { id } = await params;
-    if (!id) return NextResponse.json({ error: "Transaction id is required" }, { status: 400 });
-
-    const now = new Date();
-    const actor = auditActorFromDashboardSession(session!);
-
-    await prisma.$runCommandRaw(rawCommand({
-      update: COLLECTION,
-      updates: [{
-        q: { _id: { $oid: id } },
-        u: { $set: { status: "DELETED", deletedAt: now, deletedBy: actor.actorId, deletedByName: actor.actorName, updatedAt: now } },
-        upsert: false,
-      }],
-    }));
-
-    await writeAuditLog({
-      ...actor,
-      stream: "TEAM",
-      action: "BANK_TRANSFER_DELETED",
-      messageAr: `${actor.actorName ?? "مسؤول"} حذف عملية تحويل بنكي نهائيًا`,
-      entityType: "BankTransferTransaction",
-      entityId: id,
-      metadata: { softDelete: true },
-    });
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[bank-transfers] failed to delete transaction", error);
-    return NextResponse.json({ error: "Failed to delete bank transfer transaction" }, { status: 500 });
-  }
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return mutate(request, params);
+}
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  return mutate(request, params, true);
 }

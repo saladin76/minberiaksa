@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Utan verifieringskod",
     "verificationSecure": "Bankverifiering",
     "verificationSecureHelp": "En kod kan krävas",
-    "verificationRequired": "Välj ett betalningsalternativ för att fortsätta."
+    "verificationRequired": "Välj ett betalningsalternativ för att fortsätta.",
+    "verificationSecureOptIn": "Jag vill använda bankverifiering (3D Secure)",
+    "verificationOptionalHelp": "Direktbetalning är standard. Välj detta alternativ för verifiering via banken."
   },
   "certificates": {
     "certNoLabel": "Certifikatnr",
@@ -1560,6 +1562,16 @@
     "sentText": "Vårt partnerskapsteam kontaktar er snart via e-post."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-moskén",
+      "jerusalem": "Jerusalem",
+      "waqf": "Skapa en waqf i Jerusalem",
+      "zakat": "Ge zakat till Palestina",
+      "restoration": "Restaurera hem i Jerusalem",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Återkommande donation"
+    },
     "allProjects": "Alla Projekt",
     "filterByRegion": "Per Region",
     "filterByType": "Per Donationstyp",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "Kortnumret är ogiltigt. Kontrollera det.",
     "invalidCardExpiry": "Utgångsdatumet är ogiltigt eller har passerat.",
     "invalidCardCvc": "Säkerhetskoden (CVC) är ogiltig.",
-    "tooManyPaymentAttempts": "För många betalningsförsök. Försök igen senare."
+    "tooManyPaymentAttempts": "För många betalningsförsök. Försök igen senare.",
+    "mixedDonationCadences": "Slutför olika donationsintervall med separata betalningar. Kontrollera din varukorg."
   },
   "waqf": {
     "chooseUnit": "Välj typ och antal för ditt bidrag",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "Välj ett belopp för teamet eller ”Nej tack” för att fortsätta"
   },
   "Gift": {
+    "validationError": "Ange mottagarens namn och giltiga kontaktuppgifter. Ta med landskoden i WhatsApp-numret.",
     "emailSubject": "En gåva i ditt namn: en donation till {project}",
     "emailTitle": "{recipientName}, du har fått en gåva",
     "emailBody": "{donorName} har skänkt i ditt namn till ”{project}” via Minbar Al-Aqsa.",
@@ -2478,7 +2492,8 @@
     "orContinue": "fortsätt med",
     "noAccount": "Har du inget konto?",
     "createOne": "Skapa ett",
-    "logoAlt": "Logotyp"
+    "logoAlt": "Logotyp",
+    "signInWithGoogle": "Logga in med Google"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "donerade",
     "for": "för",
     "communitySupporter": "Från vår gemenskap av supportrar"
+  },
+  "DonationDialog": {
+    "rememberCard": "Spara mitt kort för framtida donationer",
+    "rememberCardFailed": "Kortet kunde inte sparas. Avmarkera alternativet för att fortsätta.",
+    "savedCards": "Dina sparade kort",
+    "useNewCard": "Använd ett nytt kort",
+    "bankChargeEstimate": "Din donation är {original}. Den beräknade bankdebiteringen är {amount} i turkiska lira; slutkursen fastställs när betalningen startar.",
+    "bankChargeCurrency": "Banken tar emot donationen i turkiska lira. Det omräknade beloppet visas före bekräftelsen.",
+    "paymentRoutingChanged": "Betalningsportalen har ändrats. Kontrollera metoden, ange säkerhetskoden igen och bekräfta."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Inloggningen kunde inte slutföras",
+    "authAccessDenied": "Inloggningen godkändes inte. Försök igen eller donera som gäst.",
+    "authAccountConflict": "Den här e-postadressen använder en annan inloggningsmetod. Använd den tidigare metoden eller donera som gäst.",
+    "authUnavailable": "Inloggning är inte tillgänglig just nu. Du kan donera som gäst.",
+    "authUnknown": "Inloggningen slutfördes inte. Försök igen eller fortsätt som gäst.",
+    "donateAsGuest": "Fortsätt donera som gäst",
+    "signInWithGoogle": "Logga in med Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Helt återbetald",
+        "PARTIALLY_REFUNDED": "Delvis återbetald",
+        "VOIDED": "Makulerad av banken",
+        "REVIEW_REQUIRED": "Ekonomisk granskning krävs",
+        "balance": "Återbetalt: {returned} · Återstående: {remaining}"
+      },
+      "recurringGivingMonths": "Månader med återkommande gåvor",
+      "recurringGivingMonthsHint": "Månader med bekräftade återkommande betalningar under denna period"
+    }
   }
 }

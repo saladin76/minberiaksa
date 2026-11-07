@@ -79,14 +79,14 @@ const APPROVAL_PILL: Record<string, string> = {
 };
 
 const APPROVAL_LABEL: Record<string, string> = {
-  get approved() { return dt("معتمد"); },
+  get approved() { return dt("معتمد في الحساب الافتراضي"); },
   get in_review() { return dt("قيد المراجعة"); },
   get pending() { return dt("قيد المراجعة"); },
   get rejected() { return dt("مرفوض"); },
   get paused() { return dt("موقوف مؤقتًا"); },
   get disabled() { return dt("معطّل"); },
   get in_appeal() { return dt("قيد الاستئناف"); },
-  get missing_in_waba() { return dt("غير متاح في كل الحسابات"); },
+  get missing_in_waba() { return dt("غير متاح في الحساب الافتراضي"); },
   get unknown() { return dt("غير معروف"); },
 };
 
@@ -258,7 +258,8 @@ export function WhatsappTemplateList() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border overflow-hidden">
+      <p className="text-xs leading-6 text-slate-500">{dt("تُعرض حالات الاعتماد للحساب الافتراضي فقط. الأرقام الأخرى للمحادثات المباشرة.")}</p>
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm text-start">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80">

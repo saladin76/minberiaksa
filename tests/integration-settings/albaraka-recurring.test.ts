@@ -8,6 +8,7 @@ import {
   albarakaRecurringOrderId,
   buildAlbarakaRecurringSale,
   isAlbarakaRecurringEnabled,
+  albarakaRecurringConfig,
   isAlbarakaConfigured,
   isAlbarakaRecurringCheckoutReady,
   isStoredCardExpired,
@@ -64,7 +65,7 @@ test("the scheduled /Sale payload is a merchant-initiated recurring charge on a 
   ) as Record<string, unknown> & { CardInformationData: Record<string, string> };
 
   assert.equal(body.IsRecurring, "Y");
-  assert.equal(body.IsMailOrder, "Y");
+  assert.equal(body.IsMailOrder, "N");
   assert.equal(body.IsTDSecureMerchant, "N");
   assert.equal(body.ThreeDSecureData, null);
   assert.equal(body.CardInformationData.Cvc2, "", "a stored card has no CVC to send");
@@ -82,6 +83,21 @@ test("the scheduled /Sale payload is a merchant-initiated recurring charge on a 
     body.MAC,
     albarakaNonSecureSaleMac({ merchantNo: cfg.merchantNo, terminalNo: cfg.terminalNo, cardNo: "5400619360964581", cvc2: "", expireDate: "2612", amount: 17500 }, cfg.encKey)
   );
+});
+
+test("Mail Order is a separate explicit mode; it never follows merely from recurring", () => {
+  const input = { orderId: "A".repeat(24), amount: 100, currencyCode: "TL" as const, card: { number: "5400619360964581", expireDate: "2912", holderName: "Fixture" } };
+  assert.equal(buildAlbarakaRecurringSale(input, { ...cfg, mailOrder: true }).IsMailOrder, "Y");
+  assert.equal(buildAlbarakaRecurringSale(input, { ...cfg, mailOrder: false }).IsMailOrder, "N");
+  const previous = process.env.ALBARAKA_RECURRING_MAIL_ORDER;
+  try {
+    delete process.env.ALBARAKA_RECURRING_MAIL_ORDER;
+    assert.equal(albarakaRecurringConfig().mailOrder, false);
+    process.env.ALBARAKA_RECURRING_MAIL_ORDER = "Y";
+    assert.equal(albarakaRecurringConfig().mailOrder, true);
+    process.env.ALBARAKA_RECURRING_MAIL_ORDER = "invalid";
+    assert.equal(albarakaRecurringConfig().enabled, false);
+  } finally { if (previous === undefined) delete process.env.ALBARAKA_RECURRING_MAIL_ORDER; else process.env.ALBARAKA_RECURRING_MAIL_ORDER = previous; }
 });
 
 test("stored MM/YY becomes the bank's YYMM; malformed values become empty", () => {

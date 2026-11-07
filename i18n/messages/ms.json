@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Tanpa kod pengesahan",
     "verificationSecure": "Pengesahan bank",
     "verificationSecureHelp": "Kod mungkin diminta",
-    "verificationRequired": "Pilih satu kaedah pembayaran untuk meneruskan."
+    "verificationRequired": "Pilih satu kaedah pembayaran untuk meneruskan.",
+    "verificationSecureOptIn": "Saya mahu pengesahan bank (3D Secure)",
+    "verificationOptionalHelp": "Pembayaran terus ialah pilihan lalai. Pilih pilihan ini untuk pengesahan melalui bank."
   },
   "certificates": {
     "certNoLabel": "No. sijil",
@@ -1560,6 +1562,16 @@
     "sentText": "Pasukan Perkongsian kami akan menghubungi anda melalui e-mel tidak lama lagi."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Masjid Al-Aqsa",
+      "jerusalem": "Al-Quds",
+      "waqf": "Berwakaf di Al-Quds",
+      "zakat": "Tunaikan Zakat untuk Palestin",
+      "restoration": "Pemulihan Rumah di Al-Quds",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Sumbangan Berkala"
+    },
     "allProjects": "Semua Projek",
     "filterByRegion": "Wilayah",
     "filterByType": "Jenis Sumbangan",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "Nombor kad tidak sah. Sila semak semula.",
     "invalidCardExpiry": "Tarikh luput tidak sah atau telah berlalu.",
     "invalidCardCvc": "Kod keselamatan (CVC) tidak sah.",
-    "tooManyPaymentAttempts": "Terlalu banyak cubaan pembayaran. Sila cuba lagi kemudian."
+    "tooManyPaymentAttempts": "Terlalu banyak cubaan pembayaran. Sila cuba lagi kemudian.",
+    "mixedDonationCadences": "Lengkapkan kekerapan derma yang berbeza melalui pembayaran berasingan. Semak bakul anda."
   },
   "waqf": {
     "chooseUnit": "Pilih Unit",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "Pilih jumlah sokongan pasukan atau “Tidak, terima kasih” untuk meneruskan"
   },
   "Gift": {
+    "validationError": "Masukkan nama penerima dan butiran hubungan yang sah. Sertakan kod negara dalam nombor WhatsApp.",
     "emailSubject": "Hadiah atas nama anda: derma untuk {project}",
     "emailTitle": "{recipientName}, anda menerima hadiah",
     "emailBody": "{donorName} menderma atas nama anda untuk projek “{project}” melalui Minbar Al-Aqsa.",
@@ -2478,7 +2492,8 @@
     "orContinue": "teruskan dengan",
     "noAccount": "Tiada akaun?",
     "createOne": "Cipta akaun",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Log masuk dengan Google"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "menderma",
     "for": "untuk",
     "communitySupporter": "Daripada komuniti penyokong kami"
+  },
+  "DonationDialog": {
+    "rememberCard": "Simpan kad saya untuk sumbangan akan datang",
+    "rememberCardFailed": "Kad tidak dapat disimpan. Nyahpilih pilihan ini untuk meneruskan.",
+    "savedCards": "Kad tersimpan anda",
+    "useNewCard": "Gunakan kad baharu",
+    "bankChargeEstimate": "Derma anda ialah {original}. Anggaran caj bank ialah {amount} dalam lira Turki; kadar akhir ditetapkan apabila pembayaran bermula.",
+    "bankChargeCurrency": "Bank mengutip derma ini dalam lira Turki. Amaun pertukaran dipaparkan sebelum pengesahan.",
+    "paymentRoutingChanged": "Gerbang pembayaran telah berubah. Semak kaedah, masukkan semula kod keselamatan dan sahkan."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Log masuk tidak dapat diselesaikan",
+    "authAccessDenied": "Kebenaran log masuk belum selesai. Cuba lagi atau derma sebagai tetamu.",
+    "authAccountConflict": "E-mel ini menggunakan kaedah log masuk lain. Gunakan kaedah terdahulu atau derma sebagai tetamu.",
+    "authUnavailable": "Log masuk tidak tersedia sekarang. Anda boleh menderma sebagai tetamu.",
+    "authUnknown": "Log masuk belum selesai. Cuba lagi atau teruskan sebagai tetamu.",
+    "donateAsGuest": "Teruskan derma sebagai tetamu",
+    "signInWithGoogle": "Log masuk dengan Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Dipulangkan sepenuhnya",
+        "PARTIALLY_REFUNDED": "Dipulangkan sebahagian",
+        "VOIDED": "Dibatalkan oleh bank",
+        "REVIEW_REQUIRED": "Semakan kewangan diperlukan",
+        "balance": "Dipulangkan: {returned} · Baki: {remaining}"
+      },
+      "recurringGivingMonths": "Bulan sumbangan berkala",
+      "recurringGivingMonthsHint": "Bulan dengan bayaran berkala yang disahkan dalam tempoh ini"
+    }
   }
 }

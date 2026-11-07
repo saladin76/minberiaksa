@@ -1,15 +1,13 @@
+import { messagesFor } from "@/i18n/locale-messages";
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { SITE_URL, buildPageMetadata, buildLocalizedAlternates, clipSeoDescription } from "@/lib/seo";
 import {
   getProject,
-  getProjectDonorCount,
   getProjectSeo,
-  listProjectComments,
-  listProjectUpdates,
-  listRelatedProjects,
 } from "@/lib/minbar/projects";
-import { galleryFor } from "@/lib/minbar/content/media";
+import { getProjectPageContent } from "@/lib/minbar/project-page-content";
 import { miaPath, slugFor } from "@/lib/minbar/routes";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import ProjectDetail from "@/components/minbar/projects/ProjectDetail";
@@ -26,7 +24,12 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["projects", "cart", "homepage", "quran", "ProjectExtras"] as const;
+const NAMESPACES = ["projects", "cart", "homepage", "quran", "ProjectExtras", "Gift"] as const;
+
+// Metadata and page rendering share these public lookups within one render
+// request only. Do not retain project visibility/translation data across requests.
+const projectForRequest = cache((key: string, locale: string) => getProject(key, locale));
+const superCategoryForRequest = cache((key: string, locale: string) => getSuperCategory(key, locale));
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -34,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   /* A super category owns this slug ahead of any campaign  the programme
      pages live under /projects/<slug> and are rows, not files. */
-  const superCategory = await getSuperCategory(key, locale);
+  const superCategory = await superCategoryForRequest(key, locale);
   if (superCategory) {
     return applyEditorialSeo(buildPageMetadata(locale, {
       title: superCategory.metaTitle || superCategory.title,
@@ -47,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }),await readPublicEditorialSeo('super-categories',key,locale));
   }
 
-  const project = await getProject(key, locale);
+  const project = await projectForRequest(key, locale);
   // An unpublished or missing project must not produce indexable metadata 
   // `PRODUCTION_SEO_CONTRACT.md` requires a real 404, not a soft one.
   if (!project) return { title: "", robots: { index: false, follow: false } };
@@ -87,7 +90,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const [{ locale, slug }, query] = await Promise.all([params, searchParams]);
   const key = decodeURIComponent(slug);
 
-  const superCategory = await getSuperCategory(key, locale);
+  const superCategory = await superCategoryForRequest(key, locale);
   if (superCategory) {
     if (key !== superCategory.slug) permanentRedirect(withIncomingQuery(miaPath("projectDetail", locale, encodeURIComponent(superCategory.slug)), query));
     return (
@@ -100,7 +103,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     );
   }
 
-  const project = await getProject(key, locale);
+  const project = await projectForRequest(key, locale);
   if (!project) notFound();
   if (project.redirectedFrom) {
     permanentRedirect(withIncomingQuery(
@@ -109,26 +112,15 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     ));
   }
 
-  const [updates, related, donorCount, comments] = await Promise.all([
-    listProjectUpdates(project.id, locale),
-    listRelatedProjects(project, locale),
-    getProjectDonorCount(project.id),
-    listProjectComments(project.id),
-  ]);
+  const { updates, related, donorCount, comments, gallery } = await getProjectPageContent(project, locale);
 
-  /* The campaign's own photos first (the cover is already the hero), then
-     the region's field photography to fill the tab. A campaign with neither
-     has no Gallery tab. */
-  const own = project.images.slice(1);
-  const regional = project.region ? galleryFor(project.region, 6) : [];
-  const gallery = [...new Set([...own, ...regional])].slice(0, Math.max(6, own.length));
-
+  const navigation = messagesFor(locale).navigation as Record<string, string>;
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}${miaPath("home", locale)}` },
-      { "@type": "ListItem", position: 2, name: "Projects", item: `${SITE_URL}${miaPath("projects", locale)}` },
+      { "@type": "ListItem", position: 1, name: navigation.home, item: `${SITE_URL}${miaPath("home", locale)}` },
+      { "@type": "ListItem", position: 2, name: navigation.projects, item: `${SITE_URL}${miaPath("projects", locale)}` },
       { "@type": "ListItem", position: 3, name: project.title, item: `${SITE_URL}${miaPath("projectDetail", locale, project.slug)}` },
     ],
   };
@@ -145,3 +137,4 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     </>
   );
 }
+

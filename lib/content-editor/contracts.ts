@@ -335,6 +335,19 @@ export function statuses(kind: ContentKind, row: ContentRecord) {
     ]),
   );
 }
+/** Shared by model requests, review controls and the persistence boundary. */
+export function contentFieldLimit(key: string): number {
+  return /(?:meta|seo|og)Title$/.test(key) ? 70
+    : /(?:meta|seo|og)Description$/.test(key) ? 170
+    : ["imageAlt", "seoKeyword"].includes(key) ? 200
+    : ["ogImage", "videoUrl", "fileUrl", "image"].includes(key) ? 2048 : 200000;
+}
+export class ContentFieldError extends Error {
+  constructor(public field: string, message: string) { super(message); }
+}
+export function changedTextValues(current: TextValues, saved: TextValues): TextValues {
+  return Object.fromEntries(Object.entries(current).filter(([key, value]) => !(key in saved) || value !== saved[key]));
+}
 export function validateChanges(
   fields: ContentField[],
   value: unknown,
@@ -342,20 +355,11 @@ export function validateChanges(
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("حقول غير صالحة");
   const allowed = new Set(fields.map((f) => f.key));
-  const limit = (key: string) =>
-    /(?:meta|seo|og)Title$/.test(key)
-      ? 70
-      : /(?:meta|seo|og)Description$/.test(key)
-        ? 170
-        : key === "imageAlt"
-          ? 200
-          : key === "seoKeyword"
-            ? 200
-            : ["ogImage", "videoUrl"].includes(key)
-              ? 2048
-              : 200000;
   const entries = Object.entries(value);
   for (const [key, val] of entries) {
+    const field = fields.find(field => field.key === key);
+    if (!field || typeof val !== "string") throw new ContentFieldError(key, "حقل غير معروف أو قيمة نصية غير صالحة");
+    if (val.length > contentFieldLimit(key)) throw new ContentFieldError(key, `حقل «${field.label}» يتجاوز الحد (${contentFieldLimit(key)} حرفًا).`);
     if (
       ["videoUrl", "fileUrl"].includes(key) &&
       typeof val === "string" &&
@@ -396,10 +400,9 @@ export function validateChanges(
     }
   }
   if (
-    !entries.length ||
     entries.some(
       ([key, val]) =>
-        !allowed.has(key) || typeof val !== "string" || val.length > limit(key),
+        !allowed.has(key) || typeof val !== "string",
     )
   )
     throw new Error("حقول غير صالحة");

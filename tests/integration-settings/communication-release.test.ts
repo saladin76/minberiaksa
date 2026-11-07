@@ -1,3 +1,5 @@
+import * as subscriptionLifecycle from "../../lib/donations/subscription-lifecycle";
+import * as unsubscribe from "../../lib/communication/whatsapp-template-unsubscribe";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -6,6 +8,7 @@ import ts from "typescript";
 import * as metaErrors from "../../lib/communication/providers/meta-whatsapp/errors";
 import * as phone from "../../lib/communication/phone";
 import * as locales from "../../lib/locales";
+import * as runtimeTypes from "../../lib/communication/communication-runtime-types";
 import { donorAccountStatus } from "../../lib/dashboard/donor-account";
 import { donorProfileSchema } from "../../lib/dashboard/donor-profile";
 import type { NormalizedWebhookEvent } from "../../lib/communication/providers/meta-whatsapp/types";
@@ -17,7 +20,7 @@ function load<T>(file: string, dependencies: Record<string, unknown>) {
   const loaded = { exports: {} as T };
   const code = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(code).runInNewContext({ module: loaded, exports: loaded.exports, Date, Map, Set, Buffer, URL, console: { ...console, error() {} }, process: { env: { DATABASE_URL: "fixture", GOOGLE_CLIENT_ID: "fixture-id", GOOGLE_CLIENT_SECRET: "fixture-secret", NEXTAUTH_SECRET: "fixture-auth" } },
-    require: (name: string) => { if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name); return dependencies[name]; } });
+    require: (name: string) => { if (name === "@/lib/donations/subscription-lifecycle") return subscriptionLifecycle; if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name); return dependencies[name]; } });
   return loaded.exports;
 }
 
@@ -48,7 +51,8 @@ test("echo webhook redelivery archives once, never opts out the donor or attribu
       communicationProviderEvent: { findMany: async () => [], create: async ({ data }: { data: Record<string, unknown> }) => {
         if (records.length) throw { code: "P2002" }; records.push(data);
       } },
-    } }, "./phone": phone, "./delivery-log-service": {}, "./delivery-status-progress": {},
+    } }, "./phone": phone, "./whatsapp-template-unsubscribe": unsubscribe,
+    "./delivery-log-service": {}, "./delivery-status-progress": {},
   });
   const events = parser().parseWebhookPayload(payload());
   const first = await service.processWhatsappEvents(events); const duplicate = await service.processWhatsappEvents(events);
@@ -61,7 +65,8 @@ test("archive errors request webhook retry instead of claiming successful persis
   const service = load<{ processWhatsappEvents: (events: NormalizedWebhookEvent[]) => Promise<{ persistenceErrors: number }> }>("lib/communication/webhook-service.ts", {
     "@/lib/prisma": { prisma: { communicationSender: { findFirst: async () => ({ id: "sender" }) }, communicationDelivery: { findFirst: async () => null },
       communicationProviderEvent: { findMany: async () => [], create: async () => { throw new Error("database unavailable"); } } } },
-    "./phone": phone, "./delivery-log-service": {}, "./delivery-status-progress": {},
+    "./phone": phone, "./whatsapp-template-unsubscribe": unsubscribe,
+    "./delivery-log-service": {}, "./delivery-status-progress": {},
   });
   assert.equal((await service.processWhatsappEvents(parser().parseWebhookPayload(payload()))).persistenceErrors, 1);
 });
@@ -78,7 +83,8 @@ test("app message status persists monotonically even when receipts precede the e
           for (const row of rows) if (row.eventType === "outbound_echo" && where.status.in.includes(String(row.status))) Object.assign(row, data);
         },
       },
-    } }, "./phone": phone, "./delivery-log-service": {}, "./delivery-status-progress": statusProgress,
+    } }, "./phone": phone, "./whatsapp-template-unsubscribe": unsubscribe,
+    "./delivery-log-service": {}, "./delivery-status-progress": statusProgress,
   });
   const event = parser().parseWebhookPayload(payload())[0];
   const receipt = (status: "SENT" | "DELIVERED" | "READ"): NormalizedWebhookEvent => ({ kind: "status", providerMessageId: event.providerMessageId, status,
@@ -106,7 +112,7 @@ test("app replies resolve only their conversation and old timeline pages retain 
   assert.equal(detail.timeline[0].kind, "outbound"); assert.equal(detail.timeline[0].status, "READ");
 });
 
-const router = load<{ resolveSender: (request: SenderRoutingRequest, senders: CommunicationSenderConfig[], rules: SenderRoutingRuleConfig[]) => SenderRoutingResult }>("lib/communication/sender-router.ts", { "@/lib/locales": locales });
+const router = load<{ resolveSender: (request: SenderRoutingRequest, senders: CommunicationSenderConfig[], rules: SenderRoutingRuleConfig[]) => SenderRoutingResult }>("lib/communication/sender-router.ts", { "@/lib/locales": locales, "./communication-runtime-types": runtimeTypes });
 const sender = (id: string, patch: Partial<CommunicationSenderConfig> = {}): CommunicationSenderConfig => ({ id, name: id, channel: "WHATSAPP", provider: "META_WHATSAPP", status: "ACTIVE", enabled: true, ...patch });
 const request: SenderRoutingRequest = { channel: "WHATSAPP", locale: "ar", country: "TR", purpose: "MARKETING" };
 const rule: SenderRoutingRuleConfig = { id: "rule", channel: "WHATSAPP", locale: "ar", senderId: "primary", fallbackSenderId: "fallback", enabled: true };
@@ -158,6 +164,7 @@ test("verified Google One Tap records explicit membership for new and returning 
       "next/headers": { cookies: async () => ({ get: () => ({ value: "ar" }) }) }, "@/lib/otp": {}, "@/lib/locales": locales,
       "google-auth-library": { OAuth2Client: class { async verifyIdToken() { return { getPayload: () => ({ email: "fixture@example.test", email_verified: true, sub: "google-user" }) }; } } },
       "@/lib/users/account-claim": { completionData: () => ({}), findUserByEmail: async () => existing ? { id: "user", email: "fixture@example.test", emailVerified: new Date(), role: "DONOR" } : null },
+      "@/lib/auth/donor-login-service": { verifiedGoogleIdentity: async () => {} },
       "@/lib/prisma": { prisma: { user: { create: async ({ data }: { data: Record<string, unknown> }) => { writes.push(data); return { ...data, id: "user" }; }, update: async ({ data }: { data: Record<string, unknown> }) => { writes.push(data); } } } },
     });
     const oneTap = options.authOptions.providers.find(provider => provider.id === "google-onetap");
@@ -181,7 +188,7 @@ function profileRoute(role = "ADMIN", allowed = true, conflict = false) {
   const route = load<{ PUT: (request: { json: () => Promise<unknown> }, context: { params: Promise<{ id: string }> }) => Promise<RouteResponse> }>("app/api/dashboard/donors/[id]/profile/route.ts", {
     "next/server": { NextResponse: { json: (data: unknown, init?: { status?: number }) => ({ data, status: init?.status ?? 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: "staff", role } }) }, "@/app/api/auth/[...nextauth]/options": {},
-    "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => allowed ? null : { status: 403 } },
+    "@/lib/dashboard/api-auth": { requireAdminSession: () => allowed && role === "ADMIN" ? null : { status: 403 } },
     "@/lib/dashboard/donor-profile": { donorProfileSchema }, "@/lib/locales": locales, "@/lib/geo/country-to-locale": { localeForCountry: () => "ar" }, "@/lib/communication/phone": phone,
     "@/lib/audit-log": { writeAuditLog: async (query: unknown) => { calls.push({ operation: "audit", query }); } },
     "@/lib/prisma": { prisma: {
@@ -200,11 +207,11 @@ const profile = { name: "Fixture", phone: "+15555555555", preferredLang: "ar", u
 test("donor profile mutation checks permission before reading and staff cannot change login or authority", async () => {
   const denied = profileRoute("STAFF", false); assert.equal((await denied.put(profile)).status, 403); assert.equal(denied.calls.length, 0);
   const staff = profileRoute("STAFF"); assert.equal((await staff.put({ ...profile, email: "other@example.test" })).status, 403); assert.equal(staff.calls.length, 0);
-  assert.equal((await staff.put({ ...profile, role: "ADMIN" })).status, 400); assert.equal(staff.calls.length, 0);
+  assert.equal((await staff.put({ ...profile, role: "ADMIN" })).status, 403); assert.equal(staff.calls.length, 0);
 });
 
 test("profile edits atomically update contact routing and audit field names without touching donations or consent", async () => {
-  const h = profileRoute("STAFF"); assert.equal((await h.put(profile)).status, 200);
+  const h = profileRoute("ADMIN"); assert.equal((await h.put(profile)).status, 200);
   assert.deepEqual(h.calls.map(call => call.operation), ["lookup", "profile", "contact", "audit"]);
   const json = JSON.stringify(h.calls);
   assert.ok(!json.includes("whatsappOptIn")); assert.ok(!json.includes("doNotContact")); assert.ok(!json.includes("paidAt"));
@@ -220,6 +227,7 @@ function paypalFixture(paid = false, missing = false) {
     completePayPalReturn: (input: { donationId: string; orderId: string }) => Promise<{ kind: string; accessToken?: string }>;
     reconcilePayPalDonation: (id: string) => Promise<{ outcome: string }>;
   }>("lib/donations/paypal-donation.ts", {
+    "./mongo-null": { donationFieldEmpty: () => ({}), donationWhereAll: () => ({}) },
     "server-only": {}, "@/lib/events/after-response": {}, "@/lib/donations/recurring-schedule": {}, "@/lib/events/dispatch": {}, "@/lib/tracking/donation-conversion-server": {},
     "@/lib/prisma": { prisma: { donation: {
       findUnique: async () => ({ id: "donation", paidAt: paid ? new Date() : null, accessToken: "private-token", status: "PAID", paymentMethod: "PAYPAL", createdAt: new Date("2020-01-01"), paypalOrderId: "ORDER", providerRaw: { paypalRequest: { value: "10.00", currency: "USD" } } }),
@@ -251,6 +259,7 @@ test("the existing user-update endpoint never serializes a stored password hash"
     "next/server": { NextResponse: { json: (data: unknown) => ({ data }) } }, "next-auth": { getServerSession: async () => ({ user: { id: "admin", role: "ADMIN" } }) },
     "../../auth/[...nextauth]/options": {}, "@/lib/dashboard/permissions": {}, "@/lib/dashboard/api-auth": {}, "@/lib/audit-log": {}, "@/lib/badge-criteria": {},
     "@/lib/dashboard/donation-usd-revenue": {}, "@/lib/communication/donor-communication-profile-service": {}, "@/lib/dashboard/donor-account": { donorAccountStatus },
+    "@/lib/dashboard/donation-financial-summary": {},
     "@/lib/prisma": { prisma: { user: {
       findUnique: async () => ({ role: "DONOR", name: "Fixture", email: "fixture@example.test" }),
       update: async () => ({ id: "donor", role: "DONOR", name: "Updated", password: "FIXTURE_HASH_DO_NOT_RETURN" }),
@@ -260,3 +269,17 @@ test("the existing user-update endpoint never serializes a stored password hash"
   assert.equal(response.data.password, undefined); assert.equal(response.data.hasPassword, true);
   assert.equal(JSON.stringify(response.data).includes("FIXTURE_HASH_DO_NOT_RETURN"), false);
 });
+
+
+test("a closed or missing account cannot reuse a previously issued JWT session", async () => {
+  for (const account of [null, {role:"DONOR", email:"deleted+fixture@deleted.invalid", dashboardPermissions:[]}]) {
+    const loaded = load<{authOptions:{callbacks:{session:(input:unknown)=>Promise<{user?:unknown}>}}}>("app/api/auth/[...nextauth]/options.ts", {
+      "@auth/prisma-adapter":{PrismaAdapter:()=>({})}, "next-auth/providers/google":{default:(input:unknown)=>input}, "next-auth/providers/facebook":{default:(input:unknown)=>input}, "next-auth/providers/credentials":{default:(input:unknown)=>input},
+      "bcryptjs":{}, "next/headers":{}, "@/lib/otp":{}, "@/lib/locales":locales, "google-auth-library":{OAuth2Client:class{}}, "@/lib/users/account-claim":{}, "@/lib/prisma":{prisma:{user:{findUnique:async()=>account}}},
+      "@/lib/auth/donor-login-service":{},
+    });
+    const result = await loaded.authOptions.callbacks.session({session:{user:{id:"old-id",role:"ADMIN"}},token:{sub:"old-id",role:"ADMIN"}});
+    assert.equal(result.user,undefined);
+  }
+});
+

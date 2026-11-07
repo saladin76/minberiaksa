@@ -3,6 +3,7 @@
  * change a currency cookie, or attribute a server-confirmed donation.
  */
 import { redactAnalyticsPath } from "./private-path";
+import { SUPPORTED_LOCALES } from "../locales";
 
 export const ENGAGEMENT_MEASUREMENT_VERSION = "2";
 
@@ -27,10 +28,14 @@ const PAID_MEDIA = new Set([
   "paid_social", "paidsocial", "display", "cpm", "cpv", "paid_video", "retargeting",
 ]);
 
+function unresolvedMacro(value: string): boolean {
+  return /\{\{|\}\}|\{[a-z][a-z0-9_.]*\}|__[A-Z][A-Z0-9_]*__|%7b|%7d/i.test(value);
+}
+
 function safeLabel(value: string): string | undefined {
   const text = value.replace(/[\u0000-\u001f\u007f]/g, "").trim();
   // Labels are not a channel for emails, credentials, or arbitrary URLs.
-  if (!text || /@|:\/\//.test(text)) return undefined;
+  if (!text || /@|:\/\//.test(text) || unresolvedMacro(text)) return undefined;
   return text.slice(0, 100);
 }
 
@@ -38,6 +43,7 @@ export function landingAttribution(params: URLSearchParams): Record<string, stri
   const tags: Record<string, string | number> = {
     measurement_version: ENGAGEMENT_MEASUREMENT_VERSION,
   };
+  if ([...params.values()].some(unresolvedMacro)) tags.has_unresolved_macros = 1;
   for (const key of CAMPAIGN_KEYS) {
     const value = params.get(key);
     const safe = value ? safeLabel(value) : undefined;
@@ -76,6 +82,18 @@ export function measurementPath(pathname: string): string {
   return redactAnalyticsPath(pathname);
 }
 
+/** Route observations only: a success-page view is not proof of bank settlement. */
+export function donationStageView(pathname: string): string | undefined {
+  const [, locale, stage] = pathname.split("/");
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale)) return undefined;
+  if (stage === "cart") return "donation_cart_view";
+  if (stage === "checkout") return "donation_checkout_view";
+  if (stage === "payment-pending") return "donation_pending_view";
+  if (stage === "success") return "donation_success_view";
+  if (stage === "donation-failed" || stage === "payment-failed") return "donation_failure_view";
+  return undefined;
+}
+
 const PUBLIC_QUERY_KEYS = new Set([...CAMPAIGN_KEYS, "page", "category", "sort", "tab", "type"]);
 
 export function measurementUrl(raw: string, base?: string): string | undefined {
@@ -111,6 +129,7 @@ const LABEL_KEYS = new Set([
 const NUMBER_KEYS = new Set([
   ...CLICK_KEYS.map((key) => "has_" + key), "is_paid_traffic", "has_campaign_tags",
   "ms_since_navigation_start", "hidden_for_ms", "samples",
+  "has_unresolved_macros",
 ]);
 
 export function sanitizeEngagementData(data: Record<string, unknown> = {}): Record<string, string | number> {
@@ -152,3 +171,4 @@ export function createPointerBurstDetector() {
     return samples.length;
   };
 }
+

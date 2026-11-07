@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import DeferredGTM from "@/components/DeferredGTM";
 import MicrosoftClarity from "@/components/MicrosoftClarity";
 import EngagementInstrumentation from "@/components/EngagementInstrumentation";
 import { Analytics } from "@vercel/analytics/next";
 import { LOCALES, LOCALE_SEO, OG_IMAGE, OG_LOCALE_MAP, SITE_NAME, SITE_URL, buildHreflang, isProductionDeployment, isVercelDeployment } from "@/lib/seo";
 import { isValidLocale, localeDirection } from "@/lib/locales";
-import DeferredContentsquare from "@/components/DeferredContentsquare";
 import { InboxPermissionsBoundary } from "@/components/dashboard/InboxPermissionsBoundary";
 import "./[locale]/globals.css";
 import "@/styles/self-hosted-fonts.css";
@@ -74,6 +72,7 @@ export const metadata: Metadata = {
   authors: [{ name: SITE_NAME, url: SITE }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
+  applicationName: SITE_NAME,
 
   /* `app/favicon.ico` is the icon now  a real file, which is also what stops a
      browser's automatic `/favicon.ico` request from falling through to the
@@ -153,23 +152,13 @@ export default async function RootLayout({
 
       </head>
       <body className="font-arabic antialiased" style={SITE_FONT_VARIABLES}>
-        <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-MMNBQQWB"
-            height="0"
-            width="0"
-            style={{ display: "none", visibility: "hidden" }}
-          />
-        </noscript>
         <InboxPermissionsBoundary>{children}</InboxPermissionsBoundary>
         <MicrosoftClarity />
         <Suspense fallback={null}>
           <EngagementInstrumentation />
         </Suspense>
-        <DeferredGTM />
         {/* Vercel-only: on the VPS `/_vercel/insights/script.js` is a 404 and a console error. */}
         {isVercelDeployment() ? <Analytics /> : null}
-        <DeferredContentsquare />
       </body>
     </html>
   );

@@ -519,7 +519,7 @@
     "and": "dan",
     "privacyPolicy": "Kebijakan Privasi",
     "skipAndDonate": "Lewati",
-    "donateAsGuest": "Donasi sebagai tamu",
+    "donateAsGuest": "Lanjutkan donasi sebagai tamu",
     "withoutLoginBadge": "tanpa login",
     "googleFastestWay": "Cara tercepat",
     "orContinueWith": "atau",
@@ -563,7 +563,12 @@
     "genderMale": "Laki-laki",
     "genderFemale": "Perempuan",
     "genderPreferNotToSay": "Tidak ingin menyebutkan",
-    "noPasswordYet": "Anda sudah memiliki akun dengan email ini, tetapi belum ada kata sandi. Daftar dengan email yang sama untuk membuatnya, atau lanjutkan dengan Google."
+    "noPasswordYet": "Anda sudah memiliki akun dengan email ini, tetapi belum ada kata sandi. Daftar dengan email yang sama untuk membuatnya, atau lanjutkan dengan Google.",
+    "authErrorTitle": "Tidak dapat menyelesaikan login",
+    "authAccessDenied": "Izin login belum selesai. Coba lagi atau berdonasi sebagai tamu.",
+    "authAccountConflict": "Email ini menggunakan metode login lain. Gunakan metode sebelumnya atau berdonasi sebagai tamu.",
+    "authUnavailable": "Login sedang tidak tersedia. Anda dapat berdonasi sebagai tamu.",
+    "authUnknown": "Login belum selesai. Coba lagi atau lanjutkan sebagai tamu."
   },
   "SharePopup": {
     "shareCampaign": "Bagikan proyek ini kepada orang lain",
@@ -676,7 +681,12 @@
     "stripeMinDonation": "Donasi minimum: {amount} {currency}",
     "certificateNoteTitle": "Dapatkan sertifikat donasi Anda ✨",
     "certificateNoteBody": "Masukkan email asli Anda agar kami dapat mengirimkan sertifikat donasi resmi dan kuitansi kepada Anda.",
-    "free": "Gratis"
+    "free": "Gratis",
+    "rememberCard": "Simpan kartu saya untuk donasi berikutnya",
+    "rememberCardFailed": "Kartu tidak dapat disimpan. Hapus centang opsi ini untuk melanjutkan.",
+    "bankChargeEstimate": "Donasi Anda {original}. Perkiraan debit bank {amount} dalam lira Turki; kurs akhir ditetapkan saat pembayaran dimulai.",
+    "bankChargeCurrency": "Bank menagih donasi ini dalam lira Turki. Nilai konversi ditampilkan sebelum konfirmasi.",
+    "paymentRoutingChanged": "Gerbang pembayaran berubah. Periksa metode, masukkan kembali kode keamanan dan konfirmasikan."
   },
   "DonationSuccess": {
     "thankYou": "Terima kasih banyak",
@@ -865,7 +875,16 @@
       "paymentMethodCard": "Kartu",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Anda menanggung biaya transaksi",
-      "emptyHistoryFiltered": "Tidak ada donasi yang cocok dengan filter. Coba status atau periode lain."
+      "emptyHistoryFiltered": "Tidak ada donasi yang cocok dengan filter. Coba status atau periode lain.",
+      "financial": {
+        "REFUNDED": "Dikembalikan seluruhnya",
+        "PARTIALLY_REFUNDED": "Dikembalikan sebagian",
+        "VOIDED": "Dibatalkan oleh bank",
+        "REVIEW_REQUIRED": "Perlu tinjauan keuangan",
+        "balance": "Dikembalikan: {returned} · Tersisa: {remaining}"
+      },
+      "recurringGivingMonths": "Bulan donasi rutin",
+      "recurringGivingMonthsHint": "Bulan dengan pembayaran donasi rutin terkonfirmasi dalam periode ini"
     },
     "subscriptions": {
       "settingsTableTitle": "Langganan & pengaturan",
@@ -1741,7 +1760,9 @@
     "verificationDirectHelp": "Tanpa kode verifikasi",
     "verificationSecure": "Verifikasi bank",
     "verificationSecureHelp": "Kode mungkin diminta",
-    "verificationRequired": "Pilih satu opsi pembayaran untuk melanjutkan."
+    "verificationRequired": "Pilih satu opsi pembayaran untuk melanjutkan.",
+    "verificationSecureOptIn": "Saya ingin verifikasi bank (3D Secure)",
+    "verificationOptionalHelp": "Pembayaran langsung digunakan secara default. Pilih opsi ini untuk verifikasi melalui bank."
   },
   "certificates": {
     "certNoLabel": "No. sertifikat",
@@ -2600,6 +2621,16 @@
     "sentText": "Tim Kemitraan kami akan segera menghubungi Anda melalui email."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Masjid Al-Aqsa",
+      "jerusalem": "Al-Quds",
+      "waqf": "Berwakaf di Al-Quds",
+      "zakat": "Tunaikan Zakat untuk Palestina",
+      "restoration": "Renovasi Rumah di Al-Quds",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Donasi Rutin"
+    },
     "allProjects": "Semua Proyek",
     "filterByRegion": "Menurut Wilayah",
     "filterByType": "Menurut Jenis Donasi",
@@ -2881,7 +2912,8 @@
     "invalidCardNumber": "Nomor kartu tidak valid. Silakan periksa kembali.",
     "invalidCardExpiry": "Tanggal kedaluwarsa tidak valid atau sudah lewat.",
     "invalidCardCvc": "Kode keamanan (CVC) tidak valid.",
-    "tooManyPaymentAttempts": "Terlalu banyak percobaan pembayaran. Silakan coba lagi nanti."
+    "tooManyPaymentAttempts": "Terlalu banyak percobaan pembayaran. Silakan coba lagi nanti.",
+    "mixedDonationCadences": "Selesaikan frekuensi donasi yang berbeda melalui pembayaran terpisah. Periksa keranjang Anda."
   },
   "waqf": {
     "chooseUnit": "Pilih jenis dan jumlah kontribusi Anda",
@@ -3214,6 +3246,7 @@
     "chooseFirst": "Pilih jumlah dukungan tim atau “Tidak, terima kasih” untuk melanjutkan"
   },
   "Gift": {
+    "validationError": "Masukkan nama penerima dan detail pengiriman yang valid. Sertakan kode negara pada nomor WhatsApp.",
     "emailSubject": "Hadiah atas nama Anda: donasi untuk {project}",
     "emailTitle": "{recipientName}, Anda menerima hadiah",
     "emailBody": "{donorName} berdonasi atas nama Anda untuk proyek “{project}” melalui Minbar Al-Aqsa.",
@@ -3531,6 +3564,7 @@
     "orContinue": "lanjutkan dengan",
     "noAccount": "Belum punya akun?",
     "createOne": "Buat akun",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Masuk dengan Google"
   }
 }

@@ -16,7 +16,7 @@ import { shareProgress, useShareWording } from "@/hooks/useShareWording";
 import { useProjectPricing } from "@/hooks/useProjectPricing";
 import { useDonationAmount } from "@/hooks/useDonationAmount";
 import { roundSuggestedDonationAmount } from "@/lib/campaign/suggested-donations";
-import { cssImage } from "@/lib/minbar/image-url";
+import ProjectImage from "@/components/minbar/projects/ProjectImage";
 
 /**
  * The site's project card  a full-bleed field photograph under a dark scrim,
@@ -217,20 +217,12 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
         transition: "transform .22s ease, box-shadow .22s ease",
       }}
     >
-      {project.image ? (
-        <span
-          role="img"
-          aria-label={project.title}
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "block",
-            backgroundImage: cssImage(project.image, 360),
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-      ) : null}
+      <ProjectImage
+        sources={[project.image, ...(project.coverFallbacks ?? [])]}
+        alt={project.title}
+        width={360}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+      />
       <span
         style={{
           position: "absolute",

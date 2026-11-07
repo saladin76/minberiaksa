@@ -1,4 +1,5 @@
 import test from "node:test";
+import * as paymentHandoff from "../../lib/minbar/payment-handoff";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
@@ -73,9 +74,10 @@ test("the actual order driver remembers only the returned credential without cha
     if (blocked) store.setItem = () => { throw new Error("quota"); };
     const guest = guestClient(store), requests: { url: string; body: Record<string, unknown> }[] = [];
     const driver = loadClient("lib/minbar/checkout.ts", {
+      "./payment-handoff": paymentHandoff,
       "../donations/guest-access-client": guest,
       "@/lib/minbar/donation-amount": { lineLocal: () => null },
-      "@/lib/donations/recurring-schedule": { orderTypeForItems: () => "ONE_TIME" },
+      "@/lib/donations/recurring-schedule": { orderTypeForItems: () => "ONE_TIME", cartHasMixedCadences: () => false },
       "@/lib/ai/concierge/client": { readConciergeAssisted: () => null, readConciergeTouched: () => null },
       "@/lib/attribution/client-payload": { getDonationAttributionPayload: () => ({}) },
     }, {

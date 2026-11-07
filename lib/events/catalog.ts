@@ -52,7 +52,7 @@ export const EVENT_CATALOG: EventDefinition[] = [
   },
   {
     event: "SUBSCRIPTION_CREATED",
-    label: "اشتراك شهري جديد",
+    label: "اشتراك تبرع دوري جديد",
     description: "يُرسل عند إنشاء اشتراك تبرّع متكرّر.",
     hasDonation: false,
   },

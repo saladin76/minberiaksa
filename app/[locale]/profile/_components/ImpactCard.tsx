@@ -49,10 +49,6 @@ export default function ImpactCard(props: ImpactCardProps) {
   const t = useTranslations("Profile.impact");
   const { convertToCurrency } = useCurrency();
 
-  const total = formatAmountInDisplayCurrency(
-    props.totalDonatedAmountUSD ?? 0,
-    convertToCurrency
-  );
   const mrr = formatAmountInDisplayCurrency(
     props.currentMonthlyMrrUSD ?? 0,
     convertToCurrency
@@ -70,9 +66,8 @@ export default function ImpactCard(props: ImpactCardProps) {
       Icon: HandHeart,
       accent: "text-[#A5243D]",
       bg: "from-[#A5243D]/10 to-[#A5243D]/5 border-[#A5243D]/20",
-      label: t("totalGiven"),
-      value: total,
-      hint: t("acrossDonations", { count: props.totalDonationsCount ?? 0 }),
+      label: t("acrossDonations", { count: props.totalDonationsCount ?? 0 }),
+      value: String(props.totalDonationsCount ?? 0),
     },
     {
       Icon: Repeat,
@@ -108,7 +103,7 @@ export default function ImpactCard(props: ImpactCardProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {cards.map(({ Icon, accent, bg, label, value, hint }) => (
           <Card
             key={label}
@@ -149,20 +144,13 @@ export default function ImpactCard(props: ImpactCardProps) {
 /** Compact, single-line variant for the sidebar (desktop). */
 export function ImpactCompact(props: ImpactCardProps) {
   const t = useTranslations("Profile.impact");
-  const { convertToCurrency } = useCurrency();
-
-  const total = formatAmountInDisplayCurrency(
-    props.totalDonatedAmountUSD ?? 0,
-    convertToCurrency
-  );
-
   return (
     <div className="flex flex-col items-stretch gap-2 mt-4 p-3 rounded-xl bg-[#A5243D]/5 border border-[#A5243D]/10">
       <div className="flex items-center gap-2 text-xs text-[#A5243D]">
         <TrendingUp className="w-3.5 h-3.5" />
-        <span className="uppercase font-semibold tracking-wider">{t("totalGiven")}</span>
+        <span className="uppercase font-semibold tracking-wider">{t("acrossSubs", { count: props.activeSubscriptionsCount ?? 0 })}</span>
       </div>
-      <div className="text-xl font-bold text-gray-900">{total}</div>
+
       <div className="flex items-center justify-between text-xs text-gray-600">
         <span className="flex items-center gap-1">
           <Calendar className="w-3.5 h-3.5" />

@@ -36,7 +36,7 @@ import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
 /** Legacy whole path → canonical whole path, whichever locale had it. */
 const PATH_REDIRECTS: Record<string, string> = {};
 /** Legacy first segment → canonical first segment. */
-const HEAD_REDIRECTS: Record<string, string> = {};
+const HEAD_REDIRECTS: Record<string, string> = { iletisim: "contact-us" };
 /** Exact public URLs copied by older Gaza ads; their obsolete nested paths
  * should land on the live project catalogue rather than a missing route. */
 const ARABIC_EXACT_REDIRECTS: Record<string, string> = {
@@ -89,6 +89,8 @@ export function redirectLegacyPath(pathname: string): string | null {
 
   if (locale === "ar") {
     const exactPath = decoded.filter(Boolean).join("/");
+    // Old numeric ids have no verified current recipient mapping: preserve entry to the live catalogue.
+    if (/^bagis\/ar\/project\/\d+$/.test(exactPath)) return `/${locale}/bagislar`;
     const exactTarget = ARABIC_EXACT_REDIRECTS[exactPath];
     if (exactTarget) return `/${locale}/${exactTarget}`;
   }

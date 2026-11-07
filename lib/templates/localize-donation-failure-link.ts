@@ -1,4 +1,4 @@
-import { isValidLocale, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
+import { isValidLocale, SUPPORTED_LOCALES, type SupportedLocale } from "../locales";
 
 const SUPPORTED_LOCALE_PATTERN = SUPPORTED_LOCALES.join("|");
 

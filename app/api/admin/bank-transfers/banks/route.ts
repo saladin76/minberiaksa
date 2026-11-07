@@ -1,4 +1,8 @@
-import { TRANSFER_BANK_COLLECTION, LEGACY_TRANSFER_BANK_FILTER } from "@/lib/bank-transfers/bank-registry";
+import { statementRead } from "@/lib/bank-transfers/statement-import";
+import {
+  TRANSFER_BANK_COLLECTION,
+  LEGACY_TRANSFER_BANK_FILTER,
+} from "@/lib/bank-transfers/bank-registry";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -7,7 +11,6 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 
 const COLLECTION = TRANSFER_BANK_COLLECTION;
-const TRANSACTIONS_COLLECTION = "BankTransferTransaction";
 const SUPPORTED_CURRENCIES = ["USD", "TRY", "EUR"] as const;
 
 type BankRaw = Record<string, unknown>;
@@ -38,42 +41,81 @@ function cleanString(value: unknown): string | null {
 
 function cleanCurrency(value: unknown): "USD" | "TRY" | "EUR" {
   const upper = typeof value === "string" ? value.trim().toUpperCase() : "USD";
-  return SUPPORTED_CURRENCIES.includes(upper as "USD" | "TRY" | "EUR") ? upper as "USD" | "TRY" | "EUR" : "USD";
+  return SUPPORTED_CURRENCIES.includes(upper as "USD" | "TRY" | "EUR")
+    ? (upper as "USD" | "TRY" | "EUR")
+    : "USD";
 }
 
 async function getStats() {
-  const result = await prisma.$runCommandRaw({
-    aggregate: TRANSACTIONS_COLLECTION,
+  const result = await prisma.bankTransferTransactionRecord.aggregateRaw({
     pipeline: [
-      { $match: { direction: "CREDIT", status: { $in: ["APPROVED", "IMPORTED"] } } },
-      { $group: { _id: { bankId: "$bankId", currency: "$currency", donorLocale: "$donorLocale" }, count: { $sum: 1 }, total: { $sum: "$amount" } } },
+      {
+        $match: {
+          direction: "CREDIT",
+          status: { $in: ["APPROVED", "IMPORTED"] },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            bankId: "$bankId",
+            currency: "$currency",
+            donorLocale: "$donorLocale",
+          },
+          count: { $sum: 1 },
+          total: { $sum: "$amount" },
+        },
+      },
     ],
-    cursor: {},
+    options: { maxTimeMS: 15000 },
   });
-  const rows = isRecord(result) && isRecord(result.cursor) && Array.isArray(result.cursor.firstBatch)
-    ? result.cursor.firstBatch as StatsRaw[]
-    : [];
-  const map = new Map<string, { operationCount: number; totals: Record<string, number>; localeTotals: Record<string, Record<string, number>> }>();
+  if (!Array.isArray(result)) throw new Error("Incomplete bank statistics");
+  const rows = result as StatsRaw[];
+  const map = new Map<
+    string,
+    {
+      operationCount: number;
+      totals: Record<string, number>;
+      localeTotals: Record<string, Record<string, number>>;
+    }
+  >();
   for (const row of rows) {
     const id = isRecord(row._id) ? row._id : {};
     const bankId = typeof id.bankId === "string" ? id.bankId : "";
     if (!bankId) continue;
     const currency = typeof id.currency === "string" ? id.currency : "USD";
-    const donorLocale = typeof id.donorLocale === "string" ? id.donorLocale : "ar";
-    const item = map.get(bankId) ?? { operationCount: 0, totals: {}, localeTotals: {} };
+    const donorLocale =
+      typeof id.donorLocale === "string" ? id.donorLocale : "ar";
+    const item = map.get(bankId) ?? {
+      operationCount: 0,
+      totals: {},
+      localeTotals: {},
+    };
     item.operationCount += typeof row.count === "number" ? row.count : 0;
-    item.totals[currency] = (item.totals[currency] ?? 0) + (typeof row.total === "number" ? row.total : 0);
+    item.totals[currency] =
+      (item.totals[currency] ?? 0) +
+      (typeof row.total === "number" ? row.total : 0);
     item.localeTotals[donorLocale] = item.localeTotals[donorLocale] ?? {};
-    item.localeTotals[donorLocale][currency] = (item.localeTotals[donorLocale][currency] ?? 0) + (typeof row.total === "number" ? row.total : 0);
+    item.localeTotals[donorLocale][currency] =
+      (item.localeTotals[donorLocale][currency] ?? 0) +
+      (typeof row.total === "number" ? row.total : 0);
     map.set(bankId, item);
   }
   return map;
 }
 
-function serializeBank(row: BankRaw, statsMap: Awaited<ReturnType<typeof getStats>>) {
+function serializeBank(
+  row: BankRaw,
+  statsMap: Awaited<ReturnType<typeof getStats>>,
+) {
   const id = mongoId(row._id) ?? mongoId(row.id);
   const code = cleanString(row.code);
-  const stats = (id ? statsMap.get(id) : null) ?? (code ? statsMap.get(code) : null) ?? { operationCount: 0, totals: {}, localeTotals: {} };
+  const stats = (id ? statsMap.get(id) : null) ??
+    (code ? statsMap.get(code) : null) ?? {
+      operationCount: 0,
+      totals: {},
+      localeTotals: {},
+    };
   return {
     id,
     code,
@@ -93,16 +135,19 @@ function serializeBank(row: BankRaw, statsMap: Awaited<ReturnType<typeof getStat
 
 async function listRawBanks(): Promise<BankRaw[]> {
   const [current, legacy] = await Promise.all([
-    prisma.$runCommandRaw({ find: COLLECTION, sort: { displayOrder: 1, createdAt: 1 } }),
-    prisma.$runCommandRaw({ find: "BankAccount", filter: LEGACY_TRANSFER_BANK_FILTER }),
+    statementRead(prisma, COLLECTION, {}, undefined, {
+      sort: { displayOrder: 1, createdAt: 1 },
+    }),
+    statementRead(prisma, "BankAccount", LEGACY_TRANSFER_BANK_FILTER),
   ]);
-  const rows = (value: unknown): BankRaw[] => isRecord(value) && isRecord(value.cursor) && Array.isArray(value.cursor.firstBatch) ? value.cursor.firstBatch as BankRaw[] : [];
   const byId = new Map<string, BankRaw>();
-  for (const row of [...rows(legacy), ...rows(current)]) {
+  for (const row of [...legacy, ...current]) {
     const id = mongoId(row._id) ?? mongoId(row.id);
     if (id) byId.set(id, row);
   }
-  return [...byId.values()].sort((a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0));
+  return [...byId.values()].sort(
+    (a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0),
+  );
 }
 
 export async function GET() {
@@ -111,10 +156,16 @@ export async function GET() {
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
     if (denied) return denied;
     const [banks, stats] = await Promise.all([listRawBanks(), getStats()]);
-    return NextResponse.json({ banks: banks.map((bank) => serializeBank(bank, stats)), supportedCurrencies: SUPPORTED_CURRENCIES });
+    return NextResponse.json({
+      banks: banks.map((bank) => serializeBank(bank, stats)),
+      supportedCurrencies: SUPPORTED_CURRENCIES,
+    });
   } catch (error) {
     console.error("[bank-transfers] failed to list banks", error);
-    return NextResponse.json({ error: "Failed to list bank accounts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to list bank accounts" },
+      { status: 500 },
+    );
   }
 }
 
@@ -124,18 +175,53 @@ export async function POST(request: NextRequest) {
     const denied = requireAdminOrDashboardPermission(session, "bankTransfers");
     if (denied) return denied;
     const body = await request.json().catch(() => null);
-    if (!isRecord(body)) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    if (!isRecord(body))
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     const nameAr = cleanString(body.nameAr);
-    if (!nameAr) return NextResponse.json({ error: "Bank Arabic name is required" }, { status: 400 });
+    if (!nameAr)
+      return NextResponse.json(
+        { error: "Bank Arabic name is required" },
+        { status: 400 },
+      );
     const now = new Date();
-    const doc = { code: cleanString(body.code) ?? `CUSTOM_${Date.now()}`, nameAr, nameEn: cleanString(body.nameEn), nameTr: cleanString(body.nameTr), accountName: cleanString(body.accountName), ibanLast4: cleanString(body.ibanLast4), currency: cleanCurrency(body.currency), supportedCurrencies: [...SUPPORTED_CURRENCIES], isActive: true, displayOrder: typeof body.displayOrder === "number" ? body.displayOrder : 100, createdAt: now, updatedAt: now };
+    const doc = {
+      code: cleanString(body.code) ?? `CUSTOM_${Date.now()}`,
+      nameAr,
+      nameEn: cleanString(body.nameEn),
+      nameTr: cleanString(body.nameTr),
+      accountName: cleanString(body.accountName),
+      ibanLast4: cleanString(body.ibanLast4),
+      currency: cleanCurrency(body.currency),
+      supportedCurrencies: [...SUPPORTED_CURRENCIES],
+      isActive: true,
+      displayOrder:
+        typeof body.displayOrder === "number" ? body.displayOrder : 100,
+      createdAt: now,
+      updatedAt: now,
+    };
     await prisma.$runCommandRaw({ insert: COLLECTION, documents: [doc] });
     const [banks, stats] = await Promise.all([listRawBanks(), getStats()]);
     const actor = auditActorFromDashboardSession(session!);
-    await writeAuditLog({ ...actor, stream: "TEAM", action: "BANK_ACCOUNT_CREATED", messageAr: `${actor.actorName ?? "مسؤول"} أضاف بنكًا جديدًا للتحويلات البنكية`, entityType: "BankTransferBank", metadata: { bankName: nameAr, currency: doc.currency } });
-    return NextResponse.json({ banks: banks.map((bank) => serializeBank(bank, stats)), supportedCurrencies: SUPPORTED_CURRENCIES }, { status: 201 });
+    await writeAuditLog({
+      ...actor,
+      stream: "TEAM",
+      action: "BANK_ACCOUNT_CREATED",
+      messageAr: `${actor.actorName ?? "مسؤول"} أضاف بنكًا جديدًا للتحويلات البنكية`,
+      entityType: "BankTransferBank",
+      metadata: { bankName: nameAr, currency: doc.currency },
+    });
+    return NextResponse.json(
+      {
+        banks: banks.map((bank) => serializeBank(bank, stats)),
+        supportedCurrencies: SUPPORTED_CURRENCIES,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("[bank-transfers] failed to create bank", error);
-    return NextResponse.json({ error: "Failed to create bank account" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create bank account" },
+      { status: 500 },
+    );
   }
 }

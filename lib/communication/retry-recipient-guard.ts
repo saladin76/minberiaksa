@@ -76,5 +76,5 @@ export function retryDefinitelyNotSent(reason: string): boolean {
   return reason.endsWith("_NOT_CONFIGURED") || reason.endsWith("_NOT_IMPLEMENTED") ||
     reason.startsWith("SENDER_MISSING_") || reason.includes("_SENDER_MISSING_") ||
     reason.startsWith("TEMPLATE_") || reason === "META_TEMPLATE_REQUIRED" ||
-    ["PROVIDER_DISABLED", "EMAIL_SUPPRESSED", "INTEGRATION_DECRYPTION_FAILED", "INTEGRATION_DATABASE_UNAVAILABLE"].includes(reason);
+    ["INVALID_CONTACT", "ELASTIC_EMAIL_REJECTED", "ELASTIC_EMAIL_UNAUTHORIZED", "ELASTIC_EMAIL_RATE_LIMITED", "PROVIDER_DISABLED", "EMAIL_SUPPRESSED", "INTEGRATION_DECRYPTION_FAILED", "INTEGRATION_DATABASE_UNAVAILABLE"].includes(reason);
 }

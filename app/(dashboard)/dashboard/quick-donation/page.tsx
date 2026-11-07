@@ -49,7 +49,7 @@ import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 const FREQ_LABEL: Record<CartFreqKey, string> = {
   get once() { return dt("تبرع لمرة"); },
   get daily() { return dt("يوميًا"); },
-  get friday() { return dt("أسبوعياً"); },
+  get friday() { return dt("تبرع كل جمعة"); },
   get monthly() { return dt("شهريًا"); },
 };
 

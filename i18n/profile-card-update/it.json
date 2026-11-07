@@ -1,0 +1,22 @@
+{
+  "title": "Aggiorna la carta della donazione ricorrente",
+  "description": "Autorizza la carta per i prossimi pagamenti di questo abbonamento. Verifica bancaria senza addebito immediato; importo e scadenze invariati.",
+  "submit": "Verifica e autorizza i pagamenti futuri",
+  "success": "Carta verificata e collegata ai pagamenti futuri. Nessun addebito immediato.",
+  "error": "Impossibile confermare la modifica. Controlla l’abbonamento o contatta l’associazione prima di riprovare.",
+  "cardsTitle": "Carte di pagamento",
+  "cardsDescription": "La carta predefinita vale solo per nuove donazioni. Per sostituire quella di un abbonamento, apri le donazioni ricorrenti e completa la verifica bancaria.",
+  "manageSubscriptions": "Gestisci la carta della donazione ricorrente",
+  "emptyCards": "Nessuna carta salvata.",
+  "nickname": "Nome della carta",
+  "save": "Salva",
+  "makeDefault": "Imposta come principale",
+  "defaultCard": "Principale",
+  "cardInUse": "La carta è collegata a un abbonamento o a una verifica in corso. Cambia prima la carta dell’abbonamento.",
+  "removeWarning": "La carta salvata sarà rimossa. Le carte collegate a un abbonamento non possono essere rimosse.",
+  "confirmRemove": "Conferma rimozione",
+  "refresh": "Aggiorna",
+  "addCard": "Aggiungi carta",
+  "saved": "Modifica salvata.",
+  "cardsNavDescription": "Carte di pagamento"
+}

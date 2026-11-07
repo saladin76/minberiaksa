@@ -88,6 +88,7 @@ export interface ExportReportDialogProps {
 
 export interface ExportFormState {
   format: ExportFormat;
+  reportLanguage?: "ar" | "en";
   period: "day" | "week" | "month" | "all" | "custom";
   start: string;             // YYYY-MM-DD
   end: string;
@@ -109,6 +110,7 @@ export interface ExportFormState {
 
 export const EXPORT_DEFAULTS: ExportFormState = {
   format: "xlsx",
+  reportLanguage: "ar",
   period: "all",
   start: "",
   end: "",
@@ -144,6 +146,7 @@ function resolveDateRange(state: ExportFormState): { start: string; end: string 
 function buildQuery(endpoint: string, state: ExportFormState, fields: ExportReportDialogProps["enabledFields"]): string {
   const params = new URLSearchParams();
   params.set("format", state.format);
+  params.set("reportLanguage", state.reportLanguage ?? "ar");
 
   if (fields.period || fields.dateRange) {
     const { start, end } = resolveDateRange(state);
@@ -245,6 +248,14 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
           )}
         </DialogHeader>
 
+        <label className="grid gap-2 text-sm font-medium">
+          {dt("لغة التقرير")}
+          <select className="h-10 rounded-md border bg-background px-3" value={state.reportLanguage ?? "ar"}
+            onChange={(event) => setField("reportLanguage", event.target.value as "ar" | "en")}>
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         {/* Format toggle */}
         <div className="grid grid-cols-2 gap-3 my-2">
           <button
@@ -393,7 +404,7 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
                 <SelectContent>
                   <SelectItem value="all">{dt("الكل")}</SelectItem>
                   <SelectItem value="ONE_TIME">{dt("لمرة واحدة")}</SelectItem>
-                  <SelectItem value="MONTHLY">{dt("شهري")}</SelectItem>
+                  <SelectItem value="MONTHLY">{dt("متكرر")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -431,7 +442,7 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
                 <SelectContent>
                   <SelectItem value="all">{dt("كل الدوريات")}</SelectItem>
                   <SelectItem value="DAILY">{dt("يومي")}</SelectItem>
-                  <SelectItem value="FRIDAY">{dt("أسبوعياً")}</SelectItem>
+                  <SelectItem value="FRIDAY">{dt("تبرع كل جمعة")}</SelectItem>
                   <SelectItem value="MONTHLY">{dt("شهري")}</SelectItem>
                 </SelectContent>
               </Select>
@@ -539,8 +550,8 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
         {enabledFields.subscriptionOnly && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 mt-2">
             <div className="text-start">
-              <div className="text-sm font-medium text-slate-700">{dt("الاشتراكات الشهرية فقط")}</div>
-              <div className="text-xs text-slate-500">{dt("عرض التبرعات المرتبطة بدفعات شهرية")}</div>
+              <div className="text-sm font-medium text-slate-700">{dt("الاشتراكات المتكررة فقط")}</div>
+              <div className="text-xs text-slate-500">{dt("عرض التبرعات المرتبطة باشتراك دوري")}</div>
             </div>
             <Switch
               checked={state.subscriptionOnly}
@@ -581,3 +592,5 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
     </Dialog>
   );
 }
+
+

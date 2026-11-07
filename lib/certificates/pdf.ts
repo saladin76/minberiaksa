@@ -182,6 +182,14 @@ export async function htmlToPdf(html: string, options: PdfOptions): Promise<Buff
     await page.setContent(html, { waitUntil: "load", timeout: 45_000 });
     await page.waitForNetworkIdle({ idleTime: 500, timeout: 30_000 }).catch(() => undefined);
     await page.evaluate(() => (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready);
+    const scriptFontReady = await page.evaluate(async () => {
+      const root = document.documentElement;
+      const family = root.dataset.documentFont;
+      if (!family) return true;
+      const faces = await document.fonts.load(`14px "${family}"`, root.dataset.documentFontSample || "").catch(() => []);
+      return faces.length > 0 && faces.every(face => face.status === "loaded");
+    });
+    if (!scriptFontReady) throw new Error("DOCUMENT_FONT_UNAVAILABLE");
     const margin = `${options.marginMm ?? 0}mm`;
     const pdf = await page.pdf({
       format: "a4",

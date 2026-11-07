@@ -1,15 +1,23 @@
 import { loadEnvConfig } from "@next/env";
-import { PrismaClient } from "@prisma/client";
+import { createMongoIndexClient } from "../lib/database/mongo-index-client";
+import { ensureOptionalUserEmailIndex } from "../lib/donations/optional-user-email-index";
 
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
 
 const indexes = [
+  // Scope Google Search revenue before aggregation rather than scanning every paid donation.
+
   {
     collection: "CampaignSlugRedirect",
     key: { locale: 1, slug: 1 },
     unique: true,
   },
   { collection: "CampaignSlugRedirect", key: { campaignId: 1 }, unique: false },
+  { collection: "DonorLoginIdentity", key: { userId: 1 }, unique: false },
+  { collection: "DonorLoginChallenge", key: { channel: 1, contact: 1, createdAt: -1 }, unique: false },
+  { collection: "DonorLoginChallenge", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "DonorLoginThrottle", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "DonorAccountInvitation", key: { userId: 1 }, unique: false },
   { collection: "Category", key: { previousSlugs: 1 }, unique: false },
   { collection: "SuperCategory", key: { slug: 1 }, unique: true },
   {
@@ -61,12 +69,37 @@ const indexes = [
   { collection: "GoogleSearchPlan", key: { automationEnabled: 1, lastReviewAt: 1 }, unique: false },
   { collection: "AuditLog", key: { action: 1, entityType: 1, createdAt: -1 }, unique: false },
   { collection: "AuditLog", key: { action: 1, entityType: 1, entityId: 1 }, unique: false },
+  { collection: "AuditLog", key: { stream: 1, createdAt: -1, _id: -1 }, unique: false },
+  { collection: "AuditLog", key: { actorId: 1, action: 1, createdAt: -1 }, unique: false },
+  { collection: "Donation", key: { createdAt: -1, _id: -1 }, unique: false },
   { collection: "AiSuggestionTask", key: { ownerId: 1, status: 1, deadlineAt: 1 }, unique: false },
   { collection: "AiSuggestionTask", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
   { collection: "CommunicationProviderEvent", key: { channel: 1, eventType: 1, receivedAt: -1 }, unique: false },
+  { collection: "CommunicationDelivery", key: { campaignId: 1, _id: 1 }, unique: false },
+  { collection: "CommunicationAudienceMember", key: { listId: 1, status: 1, contactType: 1, _id: 1 }, unique: false },
   { collection: "CommunicationDelivery", key: { channel: 1, senderId: 1, recipientPhone: 1, createdAt: -1, status: 1 }, unique: false },
   { collection: "Donation", key: { "attribution.utm_medium": 1, status: 1, _id: 1 }, unique: false },
+  { collection: "IssuedCertificate", key: { requestKey: 1 }, unique: true },
+  { collection: "IssuedCertificate", key: { createdAt: -1 }, unique: false },
+  { collection: "Donation", key: { status: 1, paidAt: 1, reconciliationNextAt: 1 }, unique: false },
 
+  { collection: "SubscriptionServiceRequest", key: { activeKey: 1 }, unique: true },
+  { collection: "SubscriptionServiceRequest", key: { status: 1, createdAt: -1 }, unique: false },
+  { collection: "SubscriptionServiceRequest", key: { donorId: 1, subscriptionId: 1, createdAt: -1 }, unique: false },
+  { collection: "SiteVisitor", key: { lastSeenAt: -1 }, unique: false },
+  { collection: "SiteVisitor", key: { userId: 1, lastSeenAt: -1 }, unique: false },
+  { collection: "SiteVisitor", key: { ip: 1 }, unique: false },
+  { collection: "SiteVisitor", key: { expiresAt: 1 }, unique: false, expireAfterSeconds: 0 },
+  { collection: "SiteAccessRule", key: { enabled: 1, updatedAt: -1 }, unique: false },
+  { collection: "SubscriptionCardVerification", key: { orderId: 1 }, unique: true },
+  { collection: "SubscriptionCardVerification", key: { subscriptionId: 1, donorId: 1, createdAt: 1 }, unique: false },
+  { collection: "SubscriptionCardVerification", key: { status: 1, expiresAt: 1 }, unique: false },
+  { collection: "Donation", key: { "attribution.utm_campaign": 1, status: 1, paidAt: 1 }, unique: false },
+  // Bound actual-renewal audits by their stored cycle markers and date.
+  { collection: "Donation", key: { billingReason: 1, createdAt: -1 }, unique: false },
+  { collection: "Donation", key: { providerTxnType: 1, createdAt: -1 }, unique: false },
+  { collection: "Subscription", key: { provider: 1, status: 1, nextBillingDate: 1 }, unique: false },
+  { collection: "Donation", key: { subscriptionId: 1, status: 1, paidAt: -1, _id: -1 }, unique: false },
 ];
 
 async function run() {
@@ -84,9 +117,10 @@ async function run() {
     return;
   }
 
-  const prisma = new PrismaClient();
+  const prisma = await createMongoIndexClient();
   let missing = 0;
   try {
+    if (!await ensureOptionalUserEmailIndex(prisma, checkOnly)) missing += 1;
     for (const spec of indexes) {
       const collection = await prisma.$runCommandRaw({
         listCollections: 1,
@@ -161,3 +195,4 @@ run().catch((error) => {
   console.error(error instanceof Error ? error.message : "Index setup failed");
   process.exitCode = 1;
 });
+

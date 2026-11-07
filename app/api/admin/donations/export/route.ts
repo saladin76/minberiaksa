@@ -1,3 +1,5 @@
+import { loadReportSubscriptions } from "@/lib/dashboard/report-subscriptions";
+import { dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
 import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
 /**
  * GET /api/admin/donations/export
@@ -34,11 +36,11 @@ import {
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
-import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
+import { loadSubscriptionFrequencies } from "@/lib/dashboard/recurring-frequency-filter";
+import { DASH_LOCALE_COOKIE, parseDashLocale } from "@/lib/dashboard/i18n";
 
-export async function GET(request: NextRequest) {
+async function localizedGET(request: NextRequest) {
   // Sheet names, headers and labels in the dashboard's interface language.
-  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "revenue");
@@ -129,6 +131,7 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
+    const frequencyOf = await loadSubscriptionFrequencies(prisma, rows.map(d => d.subscriptionId).filter((id): id is string => Boolean(id)));
     const exportRows: DonationExportRow[] = rows.map((d) => {
       const teamSupport = Number(d.teamSupport ?? 0);
       const fees = Number(d.coverFees ? d.fees ?? 0 : 0);
@@ -140,6 +143,7 @@ export async function GET(request: NextRequest) {
         id: d.id,
         status: d.status,
         type: d.subscriptionId ? "MONTHLY" : "ONE_TIME",
+        frequency: d.subscriptionId ? frequencyOf(d.subscriptionId) : null,
         createdAt: d.createdAt,
         paidAt: d.paidAt ?? null,
         donor: {
@@ -158,6 +162,10 @@ export async function GET(request: NextRequest) {
         fees,
         totalAmount: total,
         coverFees: !!d.coverFees,
+        projectAllocations: [
+          ...d.items.map(i => ({ id: `campaign:${i.campaign.id}`, title: i.campaign.title, amount: Number(i.amount) })),
+          ...d.categoryItems.map(i => ({ id: `category:${i.category.id}`, title: i.category.name, amount: Number(i.amount) })),
+        ],
         campaigns: d.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
         categories: d.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
         referral: d.referral ? { id: d.referral.id, code: d.referral.code, name: d.referral.name } : null,
@@ -195,12 +203,18 @@ export async function GET(request: NextRequest) {
       titleSubtitle = dt("الفترة: كل الوقت");
     }
 
+    const subscriptions = await loadReportSubscriptions(exportRows.map(r => r.subscriptionId).filter((id): id is string => Boolean(id)));
+    exportFilters.push({ label: dt("نطاق الاشتراكات"), value: dt("الاشتراكات المرتبطة بصفوف التبرعات المصدّرة؛ الحالات حالية والإجماليات طوال المدة") });
+    exportFilters.push({ label: dt("أساس الفترة"), value: dt("تاريخ إنشاء التبرع؛ المبالغ المحصّلة تخص الدفعات المؤكدة ضمن النتائج المصدّرة") });
+    exportFilters.push({ label: dt("حد صفوف التبرعات"), value: String(limit) });
     const out = await buildDonationExport({
       format,
+      period: { start: dateFilter.gte, end: dateFilter.lte },
       title: dt("تقرير التبرعات"),
       subtitle: titleSubtitle,
       filters: exportFilters,
       donations: exportRows,
+      subscriptions,
     });
 
     return new NextResponse(out.body as unknown as BodyInit, {
@@ -251,4 +265,11 @@ function collectFilterDescriptors(args: {
   out.push({ label: dt("الفرز"), value: `${args.sortBy === "amount" ? dt("بالقيمة") : dt("بالتاريخ")} • ${args.sortOrder === "asc" ? dt("تصاعدي") : dt("تنازلي")}` });
   out.push({ label: dt("عدد العمليات"), value: String(args.total) });
   return out;
+}
+
+
+
+export async function GET(request: NextRequest) {
+  const language = request.nextUrl.searchParams.get("reportLanguage") ?? parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value);
+  return withReportLanguage(language, () => localizedGET(request));
 }

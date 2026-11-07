@@ -37,20 +37,20 @@ export function resolveEmailVariant(
   fallbackLocale: SupportedLocale = DEFAULT_LOCALE,
 ): { subject: string; document: unknown; resolvedLocale: SupportedLocale } {
   const t = (template.translations ?? null) as EmailTranslations | null;
-  if (locale !== DEFAULT_LOCALE && t && t[locale]) {
+  if (locale !== DEFAULT_LOCALE && t && t[locale]?.subject?.trim() && t[locale]?.document) {
     const variant = t[locale]!;
     return {
-      subject: variant.subject?.trim() ? variant.subject : template.subject,
-      document: variant.document ?? template.document,
-      resolvedLocale: variant.subject?.trim() || variant.document ? locale : DEFAULT_LOCALE,
+      subject: variant.subject!,
+      document: variant.document,
+      resolvedLocale: locale,
     };
   }
-  if (fallbackLocale !== DEFAULT_LOCALE && t && t[fallbackLocale]) {
+  if (locale !== DEFAULT_LOCALE && fallbackLocale !== DEFAULT_LOCALE && t && t[fallbackLocale]) {
     const fallback = t[fallbackLocale]!;
-    if (fallback.subject?.trim() || fallback.document) {
+    if (fallback.subject?.trim() && fallback.document) {
       return {
-        subject: fallback.subject?.trim() ? fallback.subject : template.subject,
-        document: fallback.document ?? template.document,
+        subject: fallback.subject,
+        document: fallback.document,
         resolvedLocale: fallbackLocale,
       };
     }
@@ -75,7 +75,7 @@ export function resolveWhatsappBody(
   if (locale !== DEFAULT_LOCALE && t && t[locale]?.body?.trim()) {
     return { body: t[locale]!.body!, resolvedLocale: locale };
   }
-  if (fallbackLocale !== DEFAULT_LOCALE && t && t[fallbackLocale]?.body?.trim()) {
+  if (locale !== DEFAULT_LOCALE && fallbackLocale !== DEFAULT_LOCALE && t && t[fallbackLocale]?.body?.trim()) {
     return { body: t[fallbackLocale]!.body!, resolvedLocale: fallbackLocale };
   }
   return { body: template.body, resolvedLocale: DEFAULT_LOCALE };

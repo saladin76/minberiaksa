@@ -86,6 +86,7 @@ const PLATFORM_PILL_COLOR: Record<AdPlatform, string> = {
   reddit: "bg-[#FF4500]/10 text-[#FF4500] border-[#FF4500]/20",
   "other-paid": "bg-violet-100 text-violet-700 border-violet-200",
   organic: "bg-slate-100 text-slate-600 border-slate-200",
+  unknown: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 function fmtMoney(n: number) {

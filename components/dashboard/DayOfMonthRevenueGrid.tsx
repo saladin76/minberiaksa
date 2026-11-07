@@ -6,7 +6,8 @@ import {
   DayOfMonthDetailsDialog,
   type DayOfMonthDetailFilters,
 } from "@/components/dashboard/DayOfMonthDetailsDialog";
-import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
+import { calendarMonthLayout, calendarWeekLabels, calendarDateLabel } from "@/lib/dashboard/calendar-layout";
+import { dashDir, dt, dtx, getDashLocale } from "@/lib/dashboard/i18n";
 
 export type DayOfMonthPoint = {
   /** 1..31 */
@@ -65,6 +66,10 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
   /** Which day's drill-down is open, if any. */
   const [openDay, setOpenDay] = useState<number | null>(null);
   const data = mode === "collected" ? collected : expected;
+  const calendar = calendarMonthLayout(month);
+  const locale = getDashLocale();
+  const weekdays = calendarWeekLabels(locale);
+  const byDay = new Map(data.map(point => [point.day, point]));
 
   const stats = useMemo(() => {
     const total = data.reduce((s, d) => s + (d.amountUSD ?? 0), 0);
@@ -82,7 +87,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <div className="mb-4 h-5 w-56 animate-pulse rounded bg-slate-100" />
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+        <div className="grid grid-cols-7 gap-2">
           {Array.from({ length: 31 }).map((_, i) => (
             <div key={i} className="h-[74px] animate-pulse rounded-lg bg-slate-50" />
           ))}
@@ -94,7 +99,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
   return (
     <section
       dir={dashDir()}
-      className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+      className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
     >
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5">
         <div className="flex items-center gap-2.5">
@@ -106,7 +111,7 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             <p className="text-xs text-slate-500">
               {mode === "collected"
                 ? dt("الدفعات المحصّلة فعليًا خلال الشهر المحدد بتوقيت إسطنبول")
-                : dt("تجديدات يومية وأسبوعية وشهرية من موعد الاستحقاق القادم")}
+                : dt("تجديدات يومية وكل جمعة وشهرية من موعد الاستحقاق القادم")}
             </p>
           </div>
         </div>
@@ -153,40 +158,48 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             {dt("بيانات غير مكتملة: {0} جدول تجديد و{1} مبلغ بالدولار. الإجمالي لا يشملها.", [missingSchedules, missingAmounts])}
           </p>
         )}
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
-          {data.map((d) => {
+        <div className="overflow-x-auto pb-1" aria-label={dt("تقويم التبرعات حسب أيام الأسبوع")}>
+        <div className="min-w-[490px]">
+          <div className="mb-2 grid grid-cols-7 gap-2" aria-label={dt("أيام الأسبوع")}>
+            {weekdays.map((label, index) => <div key={index} data-weekday-header={index} className={`rounded-md px-2 py-1.5 text-center text-[11px] font-semibold ${index === 5 ? "bg-emerald-50 text-emerald-800" : "text-slate-600"}`}>{label}</div>)}
+          </div>
+        <div className="grid grid-cols-7 gap-2" data-month={month}>
+          {Array.from({ length: calendar?.leading ?? 0 }, (_, i) => <div key={`blank-${i}`} aria-hidden="true" data-calendar-blank />)}
+          {(calendar?.days ?? []).map(({ day, date, weekday }) => {
+            const d = byDay.get(day) ?? { day, amountUSD: 0, count: 0 };
+            const dateLabel = calendarDateLabel(month, d.day, locale);
             const amount = d.amountUSD ?? 0;
             const step = rampStep(amount, stats.max);
             const tone = RAMP[step];
             const isPeak = stats.peak?.day === d.day && amount > 0;
 
             return (
-              <div key={d.day} className="group relative">
+              <div key={d.day} className="group relative" data-calendar-date={date} data-weekday={weekday}>
                 <button
                   type="button"
                   // Empty days have nothing to drill into  leave them inert rather than
                   // opening a dialog that can only say "no data".
                   disabled={amount <= 0}
                   onClick={() => setOpenDay(d.day)}
-                  aria-label={dt("عرض تفاصيل اليوم {0} من الشهر", [d.day])}
-                  title={amount > 0 ? dt("اضغط لعرض التفاصيل") : undefined}
+                  aria-label={`${dt("عرض تفاصيل اليوم {0} من الشهر", [d.day])} — ${dateLabel}`}
+                  title={`${dateLabel}${amount > 0 ? ` · ${dt("اضغط لعرض التفاصيل")}` : ""}`}
                   className={`flex h-[74px] w-full flex-col justify-between rounded-lg p-2 text-start transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 ${
                     amount > 0 ? "cursor-pointer group-hover:-translate-y-0.5" : "cursor-default"
                   } ${isPeak ? "ring-2 ring-brand ring-offset-1" : ""}`}
                   style={{ backgroundColor: tone.bg, color: tone.ink }}
                 >
-                  <span className="text-[11px] font-bold tabular-nums opacity-70">{d.day}</span>
+                  <span className="text-[11px] font-bold tabular-nums">{d.day}</span>
                   <span className="truncate text-[12px] font-bold tabular-nums leading-tight">
                     {amount > 0 ? formatMoney(amount) : "—"}
                   </span>
-                  <span className="text-[10px] tabular-nums opacity-65">
+                  <span className="max-w-full truncate text-[10px] tabular-nums">
                     {d.count > 0 ? (mode === "collected" ? dt("{0} تبرع", [d.count]) : dt("{0} دفعة متوقعة", [d.count])) : ""}
                   </span>
                 </button>
 
                 {amount > 0 && (
                   <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg group-hover:block">
-                    <p className="font-semibold">{`${month}-${String(d.day).padStart(2, "0")}`}</p>
+                    <p className="font-semibold">{dateLabel}</p>
                     <p className="tabular-nums text-slate-200">{formatMoney(amount)}</p>
                     {mode === "collected" ? (
                       <p className="tabular-nums text-slate-400">
@@ -201,6 +214,9 @@ export function DayOfMonthRevenueGrid({ collected, expected, loading, formatMone
             );
           })}
         </div>
+        </div>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-500">{dt("التقويم بتوقيت إسطنبول؛ تكرار كل جمعة حسب المنطقة الزمنية المحفوظة للاشتراك.")}</p>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
           <div className="flex items-center gap-2">

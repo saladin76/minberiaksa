@@ -1,10 +1,9 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type CommunicationAudienceMember } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit-log";
 import { DEFAULT_LOCALE, isValidLocale, type SupportedLocale } from "@/lib/locales";
 import { donorChannelEligibility } from "./audience-service";
 import type { CommunicationChannelId } from "./communication-runtime-types";
-import { AUDIENCE_SELECTION_MAX } from "./audience-limits";
 
 /**
  * Custom & TEST audience lists. Automatic language segments are NOT stored here (they are computed
@@ -207,7 +206,7 @@ export async function duplicateAudienceList(id: string, actor: Actor): Promise<S
 export async function addDonorMembers(listId: string, userIds: string[], actor: Actor): Promise<ServiceResult<{ added: number }>> {
   const list = await prisma.communicationAudienceList.findUnique({ where: { id: listId }, select: { id: true } }).catch(() => null);
   if (!list) return { ok: false, status: 404, error: "القائمة غير موجودة." };
-  const ids = [...new Set(userIds.filter(Boolean))].slice(0, AUDIENCE_SELECTION_MAX);
+  const ids = [...new Set(userIds.filter(Boolean))];
   if (ids.length === 0) return { ok: false, status: 400, error: "لا يوجد متبرعون للإضافة." };
   try {
     // Only add donors not already present.
@@ -215,7 +214,7 @@ export async function addDonorMembers(listId: string, userIds: string[], actor: 
     const have = new Set(existing.map((e) => e.userId));
     const toAdd = ids.filter((id) => !have.has(id));
     if (toAdd.length) {
-      await prisma.communicationAudienceMember.createMany({ data: toAdd.map((userId) => ({ listId, userId, contactType: "DONOR", status: "ACTIVE" })) });
+      for (let index = 0; index < toAdd.length; index += 1000) await prisma.communicationAudienceMember.createMany({ data: toAdd.slice(index, index + 1000).map((userId) => ({ listId, userId, contactType: "DONOR", status: "ACTIVE" })) });
     }
     await prisma.communicationAudienceList.update({ where: { id: listId }, data: { updatedAt: new Date() } }).catch(() => {});
     await audit(actor, "communication.audience-list.members.add", `إضافة ${toAdd.length} متبرعًا لقائمة`, `Added ${toAdd.length} donors to list`, listId, { added: toAdd.length });
@@ -277,12 +276,19 @@ export type ResolvedListMember = { userId: string | null; name: string | null; e
 /** Resolve a list's ACTIVE members into send-ready contacts (donor data read live). */
 export async function loadListMembers(listId: string): Promise<ResolvedListMember[]> {
   if (!process.env.DATABASE_URL) return [];
-  const rows = await prisma.communicationAudienceMember.findMany({ where: { listId, status: "ACTIVE" }, orderBy: { id: "asc" }, take: AUDIENCE_SELECTION_MAX }).catch(() => []);
+  const rows: CommunicationAudienceMember[] = []; let cursor: string | null = null;
+  for (;;) {
+    const page: CommunicationAudienceMember[] = await prisma.communicationAudienceMember.findMany({ where: { listId, status: "ACTIVE", ...(cursor ? { id: { gt: cursor } } : {}) }, orderBy: { id: "asc" }, take: 1000 });
+    rows.push(...page); if (page.length < 1000) break;
+    const next: string | undefined = page.at(-1)?.id; if (!next || next === cursor) throw new Error("AUDIENCE_CURSOR_STALLED"); cursor = next;
+  }
   const donorIds = rows.filter((m) => m.contactType === "DONOR" && m.userId).map((m) => m.userId!) as string[];
-  const donors = donorIds.length
-    ? await prisma.user.findMany({ where: { id: { in: donorIds } }, select: { id: true, name: true, email: true, phone: true, preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true } }).catch(() => [])
-    : [];
-  const dMap = new Map(donors.map((d) => [d.id, d]));
+  type DonorContact = Prisma.UserGetPayload<{ select: { id: true; name: true; email: true; phone: true; preferredLang: true; countryCode: true; emailNotifications: true; smsNotifications: true } }>;
+  const dMap = new Map<string, DonorContact>();
+  for (let offset = 0; offset < donorIds.length; offset += 1000) {
+    const donors = await prisma.user.findMany({ where: { id: { in: donorIds.slice(offset, offset + 1000) } }, select: { id: true, name: true, email: true, phone: true, preferredLang: true, countryCode: true, emailNotifications: true, smsNotifications: true } });
+    for (const donor of donors) dMap.set(donor.id, donor);
+  }
   const out: ResolvedListMember[] = [];
   for (const m of rows) {
     if (m.contactType === "DONOR" && m.userId) {

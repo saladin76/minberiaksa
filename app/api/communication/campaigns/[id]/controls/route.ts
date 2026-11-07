@@ -8,7 +8,7 @@ import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { getCampaign } from "@/lib/communication/campaign-service";
 import { campaignSendControls, isValidTimeZone, readCampaignGlobalControls, whatsappSentLast24Hours } from "@/lib/communication/campaign-send-controls";
 import { mutateCampaignMetadata } from "@/lib/communication/campaign-metadata-store";
-import { isCampaignControlTerminalStatus } from "@/lib/communication/communication-runtime-types";
+import { isCampaignControlTerminalStatus, isResumableBlockedCampaign } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +18,8 @@ const schema = z.object({
   speedMode: z.enum(["SAFE", "BALANCED", "FAST", "MAX"]).optional(),
   autoSpeed: z.boolean().optional(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
-  dailyCap: z.number().int().min(1).max(1_000_000).optional(),
+  dailyCap: z.number().int().min(0).max(1_000_000).optional(),
+  dailyCapEnabled: z.boolean().optional(),
   scheduledStopAt: z.string().datetime().nullable().optional(),
   resumeAt: z.string().datetime().nullable().optional(),
   quietHours: z.object({
@@ -59,7 +60,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     controls,
     usage: {
       usedLast24h,
-      remaining: campaign.channel === "WHATSAPP" ? Math.max(controls.dailyCap - usedLast24h, 0) : null,
+      remaining: campaign.channel === "WHATSAPP" && controls.dailyCap > 0 ? Math.max(controls.dailyCap - usedLast24h, 0) : null,
     },
     global: {
       ...globalControls.controls,
@@ -85,7 +86,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const campaign = await getCampaign(id);
   if (!campaign) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-  if (isCampaignControlTerminalStatus(campaign.status)) {
+  if (isCampaignControlTerminalStatus(campaign.status) && !isResumableBlockedCampaign(campaign)) {
     return NextResponse.json({ ok: false, error: "لا يمكن تعديل تحكمات حملة منتهية." }, { status: 409 });
   }
 
@@ -96,12 +97,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     autoSpeed: parsed.data.autoSpeed ?? current.autoSpeed,
     priority: parsed.data.priority ?? current.priority,
     dailyCap: parsed.data.dailyCap ?? current.dailyCap,
+    dailyCapEnabled: parsed.data.dailyCapEnabled ?? current.dailyCapEnabled,
     scheduledStopAt: parsed.data.scheduledStopAt !== undefined ? parsed.data.scheduledStopAt : current.scheduledStopAt,
     resumeAt: parsed.data.resumeAt !== undefined ? parsed.data.resumeAt : current.resumeAt,
     quietHours: parsed.data.quietHours ?? current.quietHours,
   };
 
-  // Normalize through the same rules the sender uses (notably the global WhatsApp cap),
+  // Normalize through the same operator-selected rules the sender uses,
   // then merge into the freshest metadata document so an in-flight send-progress write
   // cannot erase an operator's Pause/Resume or quiet-hours change.
   const normalized = campaignSendControls({
@@ -109,7 +111,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } as Pick<CommunicationCampaign, "metadata">);
   const next = normalized;
 
-  const saved = await mutateCampaignMetadata(id, (latest) => ({ ...latest, sendControls: next }));
+  const saved = await mutateCampaignMetadata(id, (latest) => campaign.status === "BLOCKED" && !isResumableBlockedCampaign({ status: campaign.status, metadata: latest }) ? null : ({ ...latest, sendControls: next }), { expectedStatus: campaign.status });
   if (!saved) {
     return NextResponse.json({ ok: false, error: "تعذّر حفظ التحكمات بسبب تعديل متزامن. أعد المحاولة." }, { status: 409 });
   }

@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Zonder verificatiecode",
     "verificationSecure": "Bankverificatie",
     "verificationSecureHelp": "Een code kan nodig zijn",
-    "verificationRequired": "Kies een betaaloptie om door te gaan."
+    "verificationRequired": "Kies een betaaloptie om door te gaan.",
+    "verificationSecureOptIn": "Ik wil bankverificatie gebruiken (3D Secure)",
+    "verificationOptionalHelp": "Direct betalen is de standaard. Kies deze optie voor verificatie via de bank."
   },
   "certificates": {
     "certNoLabel": "Certificaatnr.",
@@ -1560,6 +1562,16 @@
     "sentText": "Ons partnershipteam neemt binnenkort per e-mail contact met u op."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-moskee",
+      "jerusalem": "Jeruzalem",
+      "waqf": "Sticht een waqf in Jeruzalem",
+      "zakat": "Geef zakat aan Palestina",
+      "restoration": "Herstel huizen in Jeruzalem",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Periodieke donatie"
+    },
     "allProjects": "Alle Projecten",
     "filterByRegion": "Per Regio",
     "filterByType": "Per Donatietype",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "Het kaartnummer is ongeldig. Controleer het.",
     "invalidCardExpiry": "De vervaldatum is ongeldig of verstreken.",
     "invalidCardCvc": "De beveiligingscode (CVC) is ongeldig.",
-    "tooManyPaymentAttempts": "Te veel betaalpogingen. Probeer het later opnieuw."
+    "tooManyPaymentAttempts": "Te veel betaalpogingen. Probeer het later opnieuw.",
+    "mixedDonationCadences": "Rond verschillende donatiefrequenties af met afzonderlijke betalingen. Controleer uw mandje."
   },
   "waqf": {
     "chooseUnit": "Kies het type en aantal van uw bijdrage",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "Kies een bedrag voor het team of “Nee, bedankt” om verder te gaan"
   },
   "Gift": {
+    "validationError": "Vul de naam en geldige contactgegevens van de ontvanger in. Vermeld de landcode bij het WhatsApp-nummer.",
     "emailSubject": "Een geschenk op uw naam: een gift voor {project}",
     "emailTitle": "{recipientName}, u heeft een geschenk",
     "emailBody": "{donorName} heeft op uw naam gedoneerd aan “{project}” via Minbar Al-Aqsa.",
@@ -2478,7 +2492,8 @@
     "orContinue": "doorgaan met",
     "noAccount": "Nog geen account?",
     "createOne": "Maak er een aan",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Inloggen met Google"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "heeft gedoneerd",
     "for": "voor",
     "communitySupporter": "Uit onze gemeenschap van supporters"
+  },
+  "DonationDialog": {
+    "rememberCard": "Mijn kaart bewaren voor toekomstige donaties",
+    "rememberCardFailed": "De kaart kon niet worden opgeslagen. Vink deze optie uit om verder te gaan.",
+    "savedCards": "Uw opgeslagen kaarten",
+    "useNewCard": "Een nieuwe kaart gebruiken",
+    "bankChargeEstimate": "Uw donatie is {original}. De geschatte bankafschrijving is {amount} in Turkse lira; de definitieve koers wordt bij de start vastgelegd.",
+    "bankChargeCurrency": "De bank int deze donatie in Turkse lira. Het omgerekende bedrag verschijnt vóór bevestiging.",
+    "paymentRoutingChanged": "Het betaalportaal is gewijzigd. Controleer de methode, voer de beveiligingscode opnieuw in en bevestig."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Aanmelden niet voltooid",
+    "authAccessDenied": "De toestemming is niet voltooid. Probeer opnieuw of doneer als gast.",
+    "authAccountConflict": "Dit e-mailadres gebruikt een andere aanmeldmethode. Gebruik de vorige methode of doneer als gast.",
+    "authUnavailable": "Aanmelden is nu niet beschikbaar. U kunt als gast doneren.",
+    "authUnknown": "Aanmelden is niet voltooid. Probeer opnieuw of ga verder als gast.",
+    "donateAsGuest": "Ga verder met doneren als gast",
+    "signInWithGoogle": "Aanmelden met Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Volledig terugbetaald",
+        "PARTIALLY_REFUNDED": "Gedeeltelijk terugbetaald",
+        "VOIDED": "Geannuleerd door de bank",
+        "REVIEW_REQUIRED": "Financiële controle nodig",
+        "balance": "Terugbetaald: {returned} · Resterend: {remaining}"
+      },
+      "recurringGivingMonths": "Maanden met periodieke donaties",
+      "recurringGivingMonthsHint": "Maanden met bevestigde periodieke betalingen in deze periode"
+    }
   }
 }

@@ -1,3 +1,5 @@
+import { composeField } from "@/lib/content-editor/compose";
+import { emptyWorkspace } from "@/lib/content-editor/create";
 import { queueSuggestion } from "@/lib/content-editor/suggestion-tasks";
 import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
@@ -5,8 +7,9 @@ import { loadGa4DashboardReport } from "@/lib/marketing/ga4-server";
 import { ga4ContentPagePath, ga4SeoEvidence } from "@/lib/marketing/ga4-seo";
 import { faqTranslationFields, translatedFaq } from "@/lib/content-editor/faq";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
+import { seoSourceText } from "@/lib/content-editor/seo-source";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import {
@@ -16,24 +19,26 @@ import {
   parseKind,
   valuesFor,
   validateChanges,
+  contentFieldLimit,
+  changedTextValues,
 } from "@/lib/content-editor/contracts";
 import { translateItem } from "@/lib/content-localization/translate";
 import { contentStore } from "@/lib/content-editor/store";
 import { ContentError, documentFor, fingerprint, readContent } from "@/lib/content-editor/service";
-import { translateResearchedItem } from "@/lib/content-localization/research-translate";
 import { isValidLocale } from "@/lib/locales";
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
-export async function POST(
-  request: NextRequest,
-  ctx: { params: Promise<{ kind: string; id: string }> },
+type SuggestionContext = { params: Promise<{ kind: string; id: string }> };
+
+// after() cannot read request cookies. Authenticate once while the request is open.
+async function suggestWithSession(
+  request: NextRequest, ctx: SuggestionContext, session: Session | null,
 ): Promise<Response> {
   const { kind: raw, id } = await ctx.params,
     kind = parseKind(raw);
-  if (!kind || !/^[a-f0-9]{24}$/i.test(id))
+  if (!kind || (id !== "new" && !/^[a-f0-9]{24}$/i.test(id)))
     return NextResponse.json({ error: "قسم غير صالح" }, { status: 404 });
-  const session = await getServerSession(authOptions),
-    denied = requireAdminOrDashboardPermission(
+  const denied = requireAdminOrDashboardPermission(
       session,
       CONFIG[kind].permission,
     );
@@ -41,10 +46,10 @@ export async function POST(
   try {
     if (request.headers?.get("Prefer") === "respond-async") {
       if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
+      return await queueSuggestion(request, session.user.id, CONFIG[kind].permission, detached => suggestWithSession(detached, ctx, session), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const body = await request.json();
-    const row = await readContent(contentStore, kind, id);
+    const row = id === "new" ? emptyWorkspace(kind) : await readContent(contentStore, kind, id);
     if (body.revision !== fingerprint(row))
       return NextResponse.json(
         { error: "تغير المحتوى. أعد تحميله قبل طلب اقتراح جديد." },
@@ -53,10 +58,28 @@ export async function POST(
     const fields = fieldsFor(kind, row);
     const draftValues = (value: unknown, locale: string) => {
       if (value === undefined) return valuesFor(kind, row, locale);
-      try { return { ...valuesFor(kind, row, locale), ...validateChanges(fields, value) }; }
-      catch { throw new ContentError("حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
+      try {
+        const saved = valuesFor(kind, row, locale);
+        if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("حقول المسودة غير صالحة");
+        return { ...saved, ...validateChanges(fields, changedTextValues(value as Record<string, string>, saved)) };
+      } catch (error) { throw new ContentError(error instanceof Error ? error.message : "حقول المسودة غير صالحة. راجع الحقول قبل طلب الاقتراح."); }
     };
-    const source = body.action === "translate" ? draftValues(body.sourceDraft, "ar") : valuesFor(kind, row, "ar");
+    if (body.action === "compose") {
+      if (!isValidLocale(body.locale)) throw new ContentError("اختر لغة صالحة للاقتراح");
+      const field = fields.find(field => field.key === body.field && field.group === "content" && !field.locked && (field.rich || ["title", "name", "question", "answer", "description", "text", "subtitle", "summary"].includes(field.key)));
+      if (!field) throw new ContentError("اختر حقلًا نصيًا صالحًا للاقتراح");
+      if (typeof body.brief !== "string" || body.brief.length > 2000) throw new ContentError("توجيهات الاقتراح يجب ألا تتجاوز 2000 حرف");
+      const draft = draftValues(body.draft, body.locale);
+      const sourceDraft = draftValues(body.sourceDraft, "ar");
+      if (!body.brief.trim() && !fields.some(field => field.group === "content" && !field.locked && (hasText(draft[field.key]) || hasText(sourceDraft[field.key]))))
+        throw new ContentError("أضف معلومات عن المشروع أو توجيهات للاقتراح أولًا");
+      const value = await composeField({ field, locale: body.locale, values: draft, sourceValues: sourceDraft, brief: body.brief, signal: request.signal });
+      const values = validateChanges(fields, { [field.key]: value });
+      return NextResponse.json({ id, kind, revision: body.revision, action: "compose", proposals: {
+        [body.locale]: { values, warnings: [] },
+      }, errors: {} }, { headers: { "Cache-Control": "no-store" } });
+    }
+    const source = body.action === "proofread" ? valuesFor(kind, row, "ar") : draftValues(body.sourceDraft, "ar");
     if (body.action === "proofread") {
       if (!isValidLocale(body.locale))
         return NextResponse.json({ error: "اختر لغة صالحة للتدقيق" }, { status: 400 });
@@ -104,7 +127,7 @@ export async function POST(
           { status: 400 },
         );
       const target = body.locales[0] as string;
-      const researched = await translateResearchedItem(
+      const translation = await translateItem(
         {
           fields: {
             ...Object.fromEntries(selected.filter((f) => !f.rich && f.key !== "faqContent").map((f) => [f.key, source[f.key]])),
@@ -114,13 +137,16 @@ export async function POST(
             selected.filter((f) => f.rich).map((f) => [f.key, source[f.key]]),
           ),
           itemLabel: CONFIG[kind].label,
+          fieldLimits: {
+            ...Object.fromEntries(selected.filter(field => !field.rich && field.group === "seo" && field.key !== "faqContent").map(field => [field.key, contentFieldLimit(field.key)])),
+            ...(selected.some(field => field.key === "faqContent") ? Object.fromEntries(Object.keys(faqTranslationFields(source.faqContent)).map(key => [key, key.endsWith("_q") ? 500 : 5000])) : {}),
+          },
           sourceLocale: "ar",
+          signal: request.signal,
         },
         target,
-        request.signal,
-        typeof body.market === "string" ? body.market : undefined,
       );
-      const result = { translations: { [target]: researched.translation }, errors: {} };
+      const result = { translations: { [target]: translation }, errors: {} };
       return NextResponse.json(
         {
           id,
@@ -137,7 +163,7 @@ export async function POST(
                   ...(selected.some((field) => field.key === "faqContent") && translatedFaq(source.faqContent, t.fields)
                     ? { faqContent: translatedFaq(source.faqContent, t.fields)! } : {}),
                 },
-                research: researched.research,
+                research: { sources: [] },
                 warnings: [
                   ...t.warnings,
                   ...selected
@@ -159,10 +185,10 @@ export async function POST(
     }
     if (!["seo", "faq"].includes(body.action) || !isValidLocale(body.locale))
       return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
-    const values = draftValues(body.draft, body.locale);
+    const values = source;
     const context = fields.filter((field) => field.group === "content" && hasText(values[field.key]));
     if (!context.length)
-      return NextResponse.json({ error: "احفظ محتوى هذه اللغة أولًا" }, { status: 400 });
+      return NextResponse.json({ error: "اكتب المحتوى بالعربية أولًا ثم اطلب اقتراحات SEO أو الأسئلة الشائعة." }, { status: 400 });
     const seoFields = fields.filter((field) =>
       field.group === "seo" && !["seoNoIndex", "ogImage"].includes(field.key) &&
       (body.action !== "faq" || field.key === "faqContent"),
@@ -182,7 +208,7 @@ export async function POST(
       locale: body.locale,
       analyticsEvidence,
       title: values.title || values.name || values.question || "",
-      description: context.map((field) => values[field.key]).join("\n"),
+      description: context.filter(field => !field.locked).map((field) => seoSourceText(values[field.key])).join("\n\n"),
       keywords: values.seoKeyword ? [values.seoKeyword] : [],
     }, request.signal);
     const seo = generated.suggestion;
@@ -207,8 +233,16 @@ export async function POST(
     if (error instanceof ContentError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("content-editor suggestions failed");
     return NextResponse.json(
-      { error: error instanceof SeoResearchError ? error.message : "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ." },
+      { error: error instanceof SeoResearchError ? error.message : "تعذر إكمال الاقتراح. لم يتغير المحتوى المحفوظ.", ...(error instanceof SeoResearchError ? { reason: error.reason, validation: error.validation } : {}) },
       { status: error instanceof SeoResearchError ? error.status : 502 },
     );
   }
 }
+
+export async function POST(request: NextRequest, ctx: SuggestionContext): Promise<Response> {
+  let session: Session | null;
+  try { session = await getServerSession(authOptions); }
+  catch { return NextResponse.json({ error: "تعذر التحقق من جلسة الدخول. احتفظ بالمسودة وأعد المحاولة.", reason: "SUGGESTION_SESSION_UNAVAILABLE" }, { status: 503 }); }
+  return suggestWithSession(request, ctx, session);
+}
+

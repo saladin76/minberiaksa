@@ -196,6 +196,7 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
         title={title}
         description={`${description || ""}\n${content || ""}`}
         imageCount={image ? 1 : 0}
+        arabicSource={{ title: ctx?.arabic.title || "", description: `${ctx?.arabic.description || ""}\n${ctx?.arabic.content || ""}` }}
       />
 
       <Card>

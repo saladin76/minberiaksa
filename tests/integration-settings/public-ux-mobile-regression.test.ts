@@ -209,7 +209,7 @@ test("projects responsive fixes are page scoped and take precedence across phone
   const page = read("components/minbar/projects/ProjectsPage.tsx");
   const css = read("styles/minbar/minbar.css");
   assert.match(page, /className="mia-projects-page"/);
-  assert.match(page, /aria-pressed=\{category === c\.id\}/);
+  assert.match(page, /aria-pressed=\{category === c\.key\}/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*\.mia-projects-page #proj-filters \{[\s\S]*flex-wrap: nowrap !important/);
   assert.match(css, /\.mia-projects-page #all \{[\s\S]*padding: 6px 0/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mia-projects-page \.proj-grid \{ grid-template-columns: minmax\(0, 1fr\)/);
@@ -245,7 +245,7 @@ test("responsive public catalogue and donor account preserve readable narrow gri
   const css = read("styles/minbar/minbar.css");
   assert.match(css, /\.blog-layout \{ grid-template-columns: minmax\(0,1fr\) !important/);
   assert.match(css, /\.mia-site-search-page__grid \{ grid-template-columns: minmax\(0,1fr\)/);
-  assert.match(css, /\.acc-page \.acc-stats \{ grid-template-columns: repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.acc-page \.acc-stats \{ grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test("mobile project hero keeps photography visible under a light overlay", () => {

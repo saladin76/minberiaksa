@@ -16,6 +16,7 @@ type Controls = {
   autoSpeed: boolean;
   priority: CampaignPriority;
   dailyCap: number;
+  dailyCapEnabled: boolean;
   scheduledStopAt: string | null;
   resumeAt: string | null;
   quietHours: { enabled: boolean; start: string; end: string; timezone: string };
@@ -402,10 +403,10 @@ export function CampaignControlsDialog({
               <div className="max-w-xs">
                 <input
                   type="number"
-                  min={1}
+                  min={0}
                   max={1_000_000}
                   value={controls.dailyCap}
-                  onChange={(e) => setControls({ ...controls, dailyCap: Math.max(1, Number(e.target.value) || 1) })}
+                  onChange={(e) => setControls({ ...controls, dailyCap: Math.max(0, Number(e.target.value) || 0), dailyCapEnabled: Number(e.target.value) > 0 })}
                   className="h-10 w-full rounded-lg border border-slate-200 px-3"
                   dir="ltr"
                 />
@@ -418,7 +419,7 @@ export function CampaignControlsDialog({
                   </div>
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                     <div className="text-[10px] text-emerald-700">{dt("المتبقي حسب الحد الحالي")}</div>
-                    <div className="mt-0.5 text-sm font-bold tabular-nums text-emerald-800">{Math.max(controls.dailyCap - usage.usedLast24h, 0).toLocaleString("en-US")}</div>
+                    <div className="mt-0.5 text-sm font-bold tabular-nums text-emerald-800">{controls.dailyCap > 0 ? Math.max(controls.dailyCap - usage.usedLast24h, 0).toLocaleString("en-US") : dt("بلا حد داخلي")}</div>
                   </div>
                 </div>
               )}

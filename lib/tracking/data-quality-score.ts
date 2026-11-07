@@ -106,7 +106,7 @@ export function scoreDonationDataQuality(input: ScoringInput): ScoringResult {
   }
 
   // Organic / direct paths short-circuit with no positive points.
-  if (!input.platform || input.platform === "organic") {
+  if (!input.platform || input.platform === "organic" || input.platform === "unknown") {
     if (!utmSource && !gaSource) {
       reasons.push(
         reason("organic_or_direct", "لا يوجد utm أو إحالة", "info")

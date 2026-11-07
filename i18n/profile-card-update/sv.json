@@ -1,0 +1,22 @@
+{
+  "title": "Uppdatera kort för återkommande gåvor",
+  "description": "Godkänn kortet för framtida betalningar i denna prenumeration. Bankverifiering utan debitering nu; belopp och schema är oförändrade.",
+  "submit": "Verifiera och godkänn framtida betalningar",
+  "success": "Kortet har verifierats och kopplats till framtida betalningar. Ingen debitering nu.",
+  "error": "Ändringen kunde inte bekräftas. Kontrollera prenumerationen eller kontakta föreningen innan du försöker igen.",
+  "cardsTitle": "Betalkort",
+  "cardsDescription": "Standardkortet gäller bara nya donationer. Öppna återkommande donationer och slutför bankverifieringen för att byta kort i ett befintligt abonnemang.",
+  "manageSubscriptions": "Hantera kort för återkommande donationer",
+  "emptyCards": "Inga sparade kort.",
+  "nickname": "Kortnamn",
+  "save": "Spara",
+  "makeDefault": "Ange som primärt kort",
+  "defaultCard": "Primärt kort",
+  "cardInUse": "Kortet är kopplat till ett abonnemang eller en pågående verifiering. Byt först abonnemangets kort.",
+  "removeWarning": "Det sparade kortet tas bort. Kort kopplade till abonnemang kan inte tas bort.",
+  "confirmRemove": "Bekräfta borttagning",
+  "refresh": "Uppdatera",
+  "addCard": "Lägg till kort",
+  "saved": "Ändringen sparades.",
+  "cardsNavDescription": "Betalkort"
+}

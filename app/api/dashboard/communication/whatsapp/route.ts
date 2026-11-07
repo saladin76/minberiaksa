@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       // Template readiness is the usual reason this channel is silent  see the note above.
       prisma.whatsappTemplate.findMany({
         select: {
-          id: true, name: true, category: true, updatedAt: true,
+          id: true, name: true, category: true, status: true, updatedAt: true,
           /* Meta's own answer, per language  the single readiness contract. The local
              `approvalStatus`/`externalTemplateId` fields are deliberately not read here. */
           wabaVariants: { select: { businessAccountId: true, languageCode: true, locale: true, approvalStatus: true, category: true, providerTemplateName: true, componentsSchema: true, rejectionReason: true, lastSyncedAt: true } },
@@ -118,11 +118,12 @@ export async function GET(request: NextRequest) {
       prisma.communicationSender.findMany({
         where: {
           channel: "WHATSAPP",
+          isDefault: true,
           enabled: true,
           status: "ACTIVE",
           businessAccountId: { not: null },
         },
-        select: { businessAccountId: true },
+        select: { businessAccountId: true, isDefault: true },
       }),
       prisma.auditLog.findFirst({
         where: { action: WHATSAPP_CATALOGUE_SYNC_ACTION, entityType: "WhatsappTemplate" },
@@ -156,10 +157,14 @@ export async function GET(request: NextRequest) {
        row's hand-set `approvalStatus` and `externalTemplateId`, which is how this page could report
        a template READY while every send of it failed with META_TEMPLATE_REQUIRED. Two functions
        cannot agree; one cannot disagree with itself. */
-    const activeWabaIds = [...new Set(activeSenders.map((sender) => sender.businessAccountId).filter((id): id is string => Boolean(id)))];
-    const templateRows = templates.map((t) => {
+    // Automated templates use the default account. Another account's approval
+    // cannot establish readiness here; multiple different defaults are ambiguous.
+    const defaultWabaIds = [...new Set(activeSenders.filter(sender => sender.isDefault).map((sender) => sender.businessAccountId).filter((id): id is string => Boolean(id)))];
+    const activeWabaIds = defaultWabaIds.length === 1 ? defaultWabaIds : [];
+    const templateRows = templates.filter(t => t.status !== "ARCHIVED").map((t) => {
+      const defaultVariants = t.wabaVariants.filter(variant => activeWabaIds.includes(variant.businessAccountId));
       const byWaba = new Map<string, typeof t.wabaVariants>();
-      for (const variant of t.wabaVariants) {
+      for (const variant of defaultVariants) {
         const bucket = byWaba.get(variant.businessAccountId) ?? [];
         bucket.push(variant);
         byWaba.set(variant.businessAccountId, bucket);
@@ -187,9 +192,9 @@ export async function GET(request: NextRequest) {
         ?? resolveVariantForLocale([], "ar");
 
       const approvedLanguages = [...new Set(
-        t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode),
+        defaultVariants.filter((v) => v.approvalStatus === "APPROVED").map((v) => v.languageCode),
       )];
-      const synced = templateSyncTimestamps(t.wabaVariants.map((v) => v.lastSyncedAt));
+      const synced = templateSyncTimestamps(defaultVariants.map((v) => v.lastSyncedAt));
 
       return {
         id: t.id,
@@ -197,13 +202,13 @@ export async function GET(request: NextRequest) {
         approvalStatus: canonical.approvalStatus,
         category: t.category,
         language: canonical.languageCode,
-        registered: t.wabaVariants.length > 0,
+        registered: defaultVariants.length > 0,
         ready: anyReady,
         partiallyReady,
         wabaCoverage: { ready: readyWabas, total: activeWabaIds.length },
         approvedLanguages,
         approvedLocales: [...new Set(
-          t.wabaVariants.filter((v) => v.approvalStatus === "APPROVED" && v.locale).map((v) => v.locale as string),
+          defaultVariants.filter((v) => v.approvalStatus === "APPROVED" && v.locale).map((v) => v.locale as string),
         )],
         rejectionReason: canonical.rejectionReason,
         // Preserve the existing complete-coverage contract; report the most

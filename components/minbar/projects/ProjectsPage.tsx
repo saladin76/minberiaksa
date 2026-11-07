@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { miaPath } from "@/lib/minbar/routes";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { publicProjectFilters, type ProjectFilterOption } from "@/lib/minbar/project-filter-options";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import ProjectDonateCard from "@/components/minbar/ProjectDonateCard";
 import { NoResults } from "@/components/minbar/states/ContentStates";
 import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
-import CategoryIcon, { type CategoryIconName } from "./CategoryIcons";
+import CategoryIcon from "./CategoryIcons";
 import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
+import { orderProjectsInCategory } from "@/lib/content-editor/project-order";
 
 /**
  * Projects catalogue  ported from `Minbar/المشاريع.dc.html`.
@@ -27,63 +29,45 @@ import ProjectsHero, { type ProjectSlide } from "./ProjectsHero";
  * detaches the filter from its state the moment the labels are translated (the
  * same trap the handoff calls out for the FAQ and frequency chips).
  *
- * The chip set is driven by the categories that actually exist in the CMS, so a
- * category with no published projects does not appear as a filter that returns
- * nothing.
+ * Regional chips filter the published pool. Giving programmes link to their
+ * locale's dedicated page; they must not look like empty category filters.
  */
 
 const PAGE_SIZE = 6;
 
-/**
- * The projects page intentionally exposes only the eight destinations approved
- * for the public information architecture. Other CMS categories remain usable
- * internally, but never grow the public filter rail automatically.
- *
- * Three entries filter the project grid; three are direct site destinations
- * (zakat, waqf, Jerusalem-home restoration); "all" clears the filter.
- */
-const PUBLIC_PROJECT_FILTERS = [
-  { id: "all", icon: "layout-grid" as CategoryIconName, kind: "filter" as const },
-  { id: "region-al-quds", icon: "landmark" as CategoryIconName, kind: "filter" as const },
-  { id: "region-gaza", icon: "hand-heart" as CategoryIconName, kind: "filter" as const },
-  { id: "region-al-aqsa", icon: "moon-star" as CategoryIconName, kind: "filter" as const },
-  { id: "zakat", icon: "hand-coins" as CategoryIconName, kind: "link" as const, route: "zakat" as const },
-  { id: "waqf", icon: "scroll-text" as CategoryIconName, kind: "link" as const, route: "waqf" as const },
-  { id: "ibadan", icon: "book-open" as CategoryIconName, kind: "link" as const, route: "ibadan" as const },
-  { id: "repair", icon: "home" as CategoryIconName, kind: "link" as const, route: "restoration" as const },
-] as const;
-
 export interface ProjectsPageProps {
   projects: MinbarProject[];
   slides: ProjectSlide[];
+  filters: ProjectFilterOption[];
 }
 
-export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
-  const locale = useLocale();
-  const t = useTranslations("projects");
+export default function ProjectsPage({ projects, slides, filters }: ProjectsPageProps) {
   const tCommon = useTranslations("common");
-  const tHome = useTranslations("homepage");
-  const tNav = useTranslations("navigation");
   const tSystem = useTranslations("system");
+  const tNavigation = useTranslations("projects.catalogueNavigation");
 
   const [category, setCategory] = useState("all");
   const [limit, setLimit] = useState(PAGE_SIZE);
 
-  const categories = useMemo(() => PUBLIC_PROJECT_FILTERS.map((item) => {
-    if (item.id === "all") return { ...item, label: tSystem("allFilter") };
-    if (item.id === "region-al-quds") return { ...item, label: tHome("regionQuds") };
-    if (item.id === "region-gaza") return { ...item, label: tHome("storyGaza") };
-    if (item.id === "region-al-aqsa") return { ...item, label: tNav("aqsa") };
-    if (item.id === "zakat") return { ...item, label: locale === "ar" ? "زكاة" : tNav("zakat") };
-    if (item.id === "waqf") return { ...item, label: locale === "ar" ? "أوقاف" : tNav("waqf") };
-    if (item.id === "ibadan") return { ...item, label: locale === "ar" ? "عبادًا لنا" : tHome("ibadanHeading1") };
-    return { ...item, label: t("catHomeRepair") };
-  }), [locale, t, tHome, tNav, tSystem]);
-
-  const filtered = useMemo(
-    () => (category === "all" ? projects : projects.filter((p) => p.categories.some((c) => c.slug === category))),
-    [projects, category]
-  );
+  const categories: ProjectFilterOption[] = useMemo(() => [{ key: "all", id: "all", kind: "category", slug: "all", order: -1, name: tSystem("allFilter"), icon: "layout-grid", projectIds: projects.map(project => project.id) }, ...publicProjectFilters(filters, Object.fromEntries(["gaza", "aqsa", "jerusalem", "zakat", "waqf", "restoration", "recurring"].map(key => [key, tNavigation(key)])))], [filters, projects, tSystem, tNavigation]);
+  useEffect(() => {
+    let hash: string; try { hash = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
+    const match = filters.find(option => option.slug === hash || option.slug === `region-${hash}` || option.key === hash || option.hashes?.includes(hash));
+    if (match?.href) {
+      const target = new URL(match.href, window.location.origin);
+      target.search = window.location.search;
+      window.location.replace(target.pathname + target.search);
+      return;
+    }
+    if (match) { setCategory(match.key); setLimit(PAGE_SIZE); }
+  }, [filters]);
+  const filtered = useMemo(() => {
+    if (category === "all") return projects;
+    const filter = filters.find(option => option.key === category);
+    const ids = new Set(filter?.projectIds ?? []);
+    const matching = projects.filter(project => ids.has(project.id));
+    return filter?.kind === "category" ? orderProjectsInCategory(matching, filter.id) : matching;
+  }, [projects, category, filters]);
 
   const visible = filtered.slice(0, limit);
   const remaining = Math.max(0, filtered.length - limit);
@@ -159,40 +143,36 @@ export default function ProjectsPage({ projects, slides }: ProjectsPageProps) {
                 textDecoration: "none",
               };
 
-              if (c.kind === "link") {
-                const href =
-                  c.route === "zakat" ? miaPath("zakat", locale)
-                    : c.route === "waqf" ? miaPath("waqf", locale)
-                      : c.route === "ibadan" ? miaPath("ibadanProject", locale)
-                        : miaPath("restorationProject", locale);
-                return (
-                  <a key={c.id} href={href} className="proj-cat" style={style}>
-                    <span style={{ display: "inline-flex", width: 15, height: 15 }}>
-                      <CategoryIcon name={c.icon} />
-                    </span>
-                    {c.label}
-                  </a>
-                );
-              }
+              const content = <>
+                <span style={{ display: "inline-flex", width: 15, height: 15 }}>
+                  <CategoryIcon name={c.icon} />
+                </span>
+                {c.name}
+                {!c.href ? <span className="proj-cat-count" style={{ fontSize: 11, opacity: .7 }} aria-hidden="true">{c.projectIds.length}</span> : null}
+              </>;
+
+              if (c.href) return (
+                <Link key={c.key} href={c.href} prefetch={false} data-filter-key={c.key} className="proj-cat" style={style}>
+                  {content}
+                </Link>
+              );
 
               return (
                 <button
-                  key={c.id}
+                  key={c.key}
                   type="button"
-                  data-cat={category === c.id ? "1" : ""}
-                  aria-pressed={category === c.id}
+                  data-filter-key={c.key}
+                  data-cat={category === c.key ? "1" : ""}
+                  aria-pressed={category === c.key}
                   aria-controls="all"
                   onClick={() => {
-                    setCategory(c.id);
+                    setCategory(c.key);
                     setLimit(PAGE_SIZE);
                   }}
                   className="proj-cat"
                   style={style}
                 >
-                  <span style={{ display: "inline-flex", width: 15, height: 15 }}>
-                    <CategoryIcon name={c.icon} />
-                  </span>
-                  {c.label}
+                  {content}
                 </button>
               );
             })}

@@ -1,0 +1,16 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { dt } from "@/lib/dashboard/i18n";
+type Report = { totals: { attempts: number; donors: number; paid: number; paidUSD: number; failed: number; pending: number; newRouting: number; unpricedPaid: number }; reasons: { _id: string; attempts: number; paid: number }[]; declines: { _id: string; count: number }[] };
+export function SaudiPayforReport() {
+ const [data, setData] = useState<Report | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(false);
+ const load = useCallback(async (signal?: AbortSignal) => {
+  setBusy(true); setError(false);
+  try { const r = await fetch("/api/admin/payments/routing-report?hours=72", { cache: "no-store", signal }); if (!r.ok) throw new Error(); const json = await r.json(); if (!signal?.aborted) setData(json); }
+  catch { if (!signal?.aborted) setError(true); }
+  finally { if (!signal?.aborted) setBusy(false); }
+ }, []);
+ useEffect(() => { const c = new AbortController(); void load(c.signal); return () => c.abort(); }, [load]);
+ const rows = data ? [[dt("المحاولات"), data.totals.attempts], [dt("المتبرعون"), data.totals.donors], [dt("مدفوعات مؤكدة"), data.totals.paid], [dt("إيراد مؤكد بالدولار"), new Intl.NumberFormat("en", { style: "currency", currency: "USD" }).format(data.totals.paidUSD)], [dt("فشل"), data.totals.failed], [dt("قيد التأكيد"), data.totals.pending], [dt("محاولات غيّرت بوابتها"), data.totals.newRouting]] : [];
+ return <section className="space-y-3 rounded-xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{dt("نتائج توجيه السعودية — آخر 72 ساعة")}</h3><button type="button" disabled={busy} onClick={() => void load()} className="rounded-lg border px-3 py-2 text-sm">{busy ? dt("جارٍ التحميل...") : dt("تحديث")}</button></div><p className="text-xs leading-6 text-slate-500">{dt("يشمل محاولات التجربة الجديدة فقط. لا تُحسب الحالات غير المؤكدة إيرادًا، ولا تُنسب العمليات التاريخية إلى التجربة.")}</p>{error ? <p role="alert" className="text-sm text-rose-700">{dt("تعذّر تحميل تقرير التوجيه")}</p> : null}{data ? <><dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">{rows.map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-bold" dir="ltr">{value}</dd></div>)}</dl>{data.totals.unpricedPaid > 0 ? <p role="status" className="text-sm text-amber-800">{dt("توجد مدفوعات مؤكدة ينقصها تقييم بالدولار؛ لم تُضف إلى الإيراد المعروض.")}</p> : null}<div className="overflow-x-auto"><table className="w-full text-start text-sm"><thead><tr><th>{dt("سبب التوجيه")}</th><th>{dt("المحاولات")}</th><th>{dt("مدفوعات مؤكدة")}</th></tr></thead><tbody>{data.reasons.map(row => <tr key={row._id}><td className="py-2">{row._id === "SA_IP" ? dt("بلد عنوان IP") : row._id === "SA_PHONE" ? dt("بلد الهاتف") : dt("عنوان IP والهاتف")}</td><td>{row.attempts}</td><td>{row.paid}</td></tr>)}</tbody></table></div>{data.declines.length ? <p className="text-xs text-slate-600">{dt("أكواد الرفض")}: {data.declines.map(row => `${row._id}: ${row.count}`).join(" · ")}</p> : null}</> : null}</section>;
+}

@@ -1,3 +1,4 @@
+import { aiRequestSavings } from "@/lib/ai/core/economical-fetch";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -16,7 +17,7 @@ async function body(request: NextRequest) {
 }
 export async function GET() {
   const denied = requireIntegrationSettingsView(await getServerSession(authOptions)); if (denied) return denied;
-  try { return json({ ok: true, settings: await (await getAiConnectionConfig()).snapshot() }); } catch (error) { return failure(error); }
+  try { return json({ ok: true, settings: await (await getAiConnectionConfig()).snapshot(), optimization: aiRequestSavings() }); } catch (error) { return failure(error); }
 }
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);

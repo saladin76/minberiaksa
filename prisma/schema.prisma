@@ -162,6 +162,51 @@ model OtpCode {
   @@index([email, purpose])
 }
 
+/// Verified sign-in addresses, independent of editable checkout contact details.
+model DonorLoginIdentity {
+  id String @id @map("_id")
+  userId String @db.ObjectId
+  channel String
+  contact String
+  verifiedAt DateTime @default(now())
+  @@index([userId])
+}
+
+/// One active challenge per address and purpose. Only keyed hashes are stored.
+model DonorLoginChallenge {
+  id String @id @map("_id")
+  channel String
+  contact String
+  codeHash String
+  ticketHash String
+  linkUserId String? @db.ObjectId
+  invitationUserId String? @db.ObjectId
+  attempts Int @default(0)
+  consumed Boolean @default(false)
+  sent Boolean @default(false)
+  providerMessageId String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model DonorLoginThrottle {
+  id String @id @map("_id")
+  attempts Int @default(1)
+  expiresAt DateTime
+}
+
+model DonorAccountInvitation {
+  id String @id @map("_id")
+  userId String @db.ObjectId
+  channel String
+  status String
+  deliveryId String?
+  sentAt DateTime?
+  activatedAt DateTime?
+  updatedAt DateTime @updatedAt
+  @@index([userId])
+}
+
 /**
  * ===================== USER =====================
  */
@@ -171,6 +216,9 @@ model User {
   name                  String?
   email                 String?   @unique
   emailVerified         DateTime?
+  mergedIntoUserId      String? @db.ObjectId
+  mergedOriginalEmail   String?
+  mergedOriginalPhone   String?
   image                 String?
   password              String?
   /// @deprecated Prefer countryName + countryCode; kept for legacy receipts / data
@@ -822,6 +870,15 @@ model Donation {
   providerHostRefNum     String?
   providerErrorMessage   String?
   providerRaw            Json?
+  /// Append-only financial adjustment ledger. A durable lock survives lost bank responses.
+  bankOperations Json?
+  bankOperationLock String?
+  bankOperationsRevision Int?
+  bankLastInquiry Json?
+  reconciliationCheckedAt DateTime?
+  reconciliationNextAt DateTime?
+  reconciliationLeaseToken String?
+  reconciliationLeaseUntil DateTime?
 
   /// PayPal Orders v2: the order created for this donation. Set when the order
   /// is created, before the donor leaves for PayPal; the return route refuses
@@ -834,6 +891,8 @@ model Donation {
   paidAmount       Float?
   paidCurrency     String?
   donorId          String    @db.ObjectId
+  /// Preserved on the first verified account consolidation; financial provenance is immutable.
+  originalDonorId  String?   @db.ObjectId
   donor            User      @relation(fields: [donorId], references: [id])
   /// ISO 3166-1 alpha-2 snapshot from donor User.countryCode at donation time
   donorCountryCode String?
@@ -907,7 +966,7 @@ model Subscription {
   /// for the dashboards. Rows created before this field existed are monthly,
   /// which is the only cadence that was ever actually billed.
   /// See lib/donations/recurring-schedule.ts.
-  frequency            RecurringFrequency @default(MONTHLY)
+  frequency            RecurringFrequency? @default(MONTHLY)
   /// IANA zone captured at sign-up (`Europe/Istanbul`), never a fixed offset:
   /// "Friday" and "the 15th" are resolved in it, so daylight saving is absorbed.
   timezone             String?
@@ -952,6 +1011,7 @@ model Subscription {
   paypalCustomerId      String?
 
   donorId    String    @db.ObjectId
+  originalDonorId String? @db.ObjectId
   donor      User      @relation(fields: [donorId], references: [id])
   referralId String?   @db.ObjectId
   referral   Referral? @relation(fields: [referralId], references: [id])
@@ -967,6 +1027,36 @@ model Subscription {
   categoryItems SubscriptionCategoryItem[]
   donations     Donation[]
   @@index([donorId, status])
+}
+
+/// A donor-owned 3DS card check. It never creates a donation or captures money.
+model SubscriptionCardVerification {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  subscriptionId    String @db.ObjectId
+  donorId           String @db.ObjectId
+  paymentCardId     String @db.ObjectId
+  oldPaymentCardId  String? @db.ObjectId
+  orderId           String @unique
+  tokenHash         String
+  cardDigest        String
+  status            String @default("PENDING")
+  amount            Float
+  currency          String
+  frequency         RecurringFrequency
+  teamSupport       Float
+  coverFees         Boolean
+  amountMinor       Int
+  currencyCode      String
+  merchantNo        String
+  terminalNo        String
+  nextBillingDate   DateTime?
+  consentSnapshot   Json
+  expiresAt         DateTime
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([subscriptionId, donorId, createdAt])
+  @@index([status, expiresAt])
 }
 
 model SubscriptionItem {
@@ -987,6 +1077,29 @@ model SubscriptionItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// A donor's request for staff review. Creating a request never changes billing.
+model SubscriptionServiceRequest {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  subscriptionId  String   @db.ObjectId
+  donorId         String   @db.ObjectId
+  activeKey       String   @unique
+  kind            String // AMOUNT_CHANGE | PAUSE | CANCEL
+  status          String   @default("NEW") // NEW | IN_PROGRESS | COMPLETED | REJECTED | WITHDRAWN
+  requestedAmount Float?
+  currency        String
+  locale          String
+  note            String
+  staffNote       String?
+  resolutionNote  String?
+  history         Json?
+  handledById     String?  @db.ObjectId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime? // Resolution time; status distinguishes execution, rejection and withdrawal.
+  @@index([status, createdAt])
+  @@index([donorId, subscriptionId, createdAt])
 }
 
 model SubscriptionCategoryItem {
@@ -1030,6 +1143,11 @@ model DonationItem {
   giftShowAmount     Boolean   @default(true)
   /// Set when the recipient was told; a replayed webhook does not tell them twice.
   giftDeliveredAt    DateTime?
+  /// Per-channel accepted/failed/uncertain outcomes; old records may omit it.
+  giftDeliveryState Json?
+  giftDeliveryLock String?
+  giftDeliveryLockUntil DateTime?
+  giftDeliveryError String?
 
   donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
   campaign Campaign @relation(fields: [campaignId], references: [id])
@@ -1138,6 +1256,27 @@ model Certificate {
 /// The official receipt number for a confirmed donation. The donation id is
 /// the internal reference; this is the number the accounting document shows
 /// and the finance team files by.
+model IssuedCertificate {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  requestKey String @unique
+  inputHash String
+  kind String
+  locale String
+  donorName String
+  recipientName String
+  recipientEmail String?
+  recipientPhone String?
+  serial String
+  issuedAt DateTime
+  document Json
+  deliveryState Json?
+  deliveryLock String?
+  deliveryLockUntil DateTime?
+  createdById String @db.ObjectId
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+
 model DonationReceipt {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   receiptNo  String   @unique
@@ -1550,16 +1689,19 @@ model WhatsappTemplate {
   body         String
   /// Per-locale overrides: Record<locale, { body?: string }>.
   translations Json?
+  /// Staged notification replacement: source id/hash, draft hash and required locales.
+  /// Separate from providerRaw because provider sync/publish owns that payload.
+  notificationUpgrade Json?
   createdById  String?  @db.ObjectId
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // ── Twilio / WhatsApp Content metadata (all optional for back-compat)
-  /// "TWILIO" when imported from Twilio Content API, "MANUAL" otherwise.
+  // ── Historical WhatsApp content metadata (all optional for back-compat)
+  /// Provider identifier for historical imports, or "MANUAL" for a local draft.
   provider           String?
   /// "WHATSAPP"  kept explicit for the future Marketing Intelligence module.
   channel            String?
-  /// Twilio Content SID (HX-prefixed) or other provider id.
+  /// Historical external template identifier.
   externalTemplateId String?
   /// "text" | "media" | "card" | "quick_reply" | "call_to_action" | "list_picker" | "location"
   templateType       String?
@@ -1567,7 +1709,7 @@ model WhatsappTemplate {
   language           String?
   /// WhatsApp template category  MARKETING / UTILITY / AUTHENTICATION (etc.)
   category           String?
-  /// "approved" | "pending" | "rejected" | "unknown"  Twilio whatsapp/approval state.
+  /// "approved" | "pending" | "rejected" | "unknown"  provider approval state.
   approvalStatus     String?
   /// Header descriptor when the template has a header.
   /// Shape: { type, text?, mediaUrl?, mediaSid?, mimeType?, fileName?, previewUrl?, latitude?, longitude?, address? }
@@ -1580,7 +1722,7 @@ model WhatsappTemplate {
   authentication     Json?
   /// Template variable catalog. Shape: Array<{ key, exampleValue?, mapping?, validationStatus? }>
   variables          Json?
-  /// Last successful sync from Twilio.
+  /// Last successful provider synchronization.
   lastImportedAt     DateTime?
   /// "ok" | "missing_config" | "not_implemented" | "failed"
   lastSyncStatus     String?
@@ -1849,7 +1991,15 @@ model TrackingSettings {
 /// Single-record settings collection for site-wide defaults. Read by clients
 /// (currently for team-support quick-pick amounts in the donation flow);
 /// writable only from the admin dashboard.
+model RecurringPageSettings {
+  id            String   @id @map("_id")
+  configuration Json
+  revision      String
+  updatedAt     DateTime @updatedAt
+}
+
 model GlobalSettings {
+  paypalWebhookId String?
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   /// { "amounts": number[], "byCurrency"?: Record<string, number[]> }  the
   /// team-support quick-pick amounts shown in the basket. Team support belongs
@@ -1872,6 +2022,8 @@ model GlobalSettings {
   /// items show and how they rank. Shape and defaults in `lib/minbar/home-layout.ts`;
   /// null means "the homepage as designed".
   homeLayout           Json?
+  /// Stable category:/programme: identities; new published items append automatically.
+  projectFilterOrder   Json?
   /// Dashboard overrides for the certificate / receipt wording, per template and
   /// per locale: `{ thanks: { ar: { title, body, … } }, waqf: {…}, receipt: {…} }`.
   /// Shape and defaults in `lib/certificates/copy.ts`; null means "the i18n text".
@@ -1879,6 +2031,7 @@ model GlobalSettings {
   /// Master switch for the PayFor (Ziraat Katılım) 3D Secure gateway. When false,
   /// every donation is forced through the main gateway regardless of currency.
   payforEnabled        Boolean  @default(true)
+  payforSaudiRoutingEnabled Boolean @default(false)
   /// Main card gateway: "STRIPE" or "ALBARAKA". Handles every case PayFor doesn't
   /// take, except monthly subscriptions which always run on Stripe.
   mainGateway          String   @default("STRIPE")
@@ -1906,7 +2059,7 @@ model MarketingPlatformConnection {
   id                  String  @id @default(auto()) @map("_id") @db.ObjectId
   /// "ADS" | "ANALYTICS" | "MESSAGING" | "EMAIL" | "CUSTOM"
   category            String
-  /// "META" | "GOOGLE_ADS" | "TIKTOK" | "X" | "GA4" | "TWILIO" |
+  /// "META" | "GOOGLE_ADS" | "TIKTOK" | "X" | "GA4" |
   /// "EMAIL_PROVIDER" | "WHATSAPP_PROVIDER" | "SMS_PROVIDER" | "CUSTOM"
   platform            String
   name                String
@@ -2081,15 +2234,15 @@ model AdSnapshot {
   @@index([adId, date])
 }
 
-/// Daily messaging-campaign snapshot. Used by Twilio campaign analytics and
+/// Daily messaging-campaign snapshot. Used by historical messaging analytics and
 /// any future email/SMS analytics aggregation. SentMessage stays the
 /// per-recipient log  this model is for fast dashboard rollups.
 model MarketingCampaignSnapshot {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   connectionId    String?  @db.ObjectId
-  /// "TWILIO" | "CUSTOM" | "EMAIL_PROVIDER" | "OTHER"
+  /// "CUSTOM" | "EMAIL_PROVIDER" | "OTHER"
   provider        String
-  /// "TWILIO_EMAIL" | "TWILIO_WHATSAPP" | "TWILIO_SMS" | "EMAIL" | "WHATSAPP" | "SMS"
+  /// "EMAIL" | "WHATSAPP" | "SMS"
   channel         String
   campaignId      String?
   campaignName    String?
@@ -2272,7 +2425,7 @@ model OperationTask {
 model CommunicationSender {
   id                 String    @id @default(auto()) @map("_id") @db.ObjectId
   channel            String // WHATSAPP | EMAIL | SMS
-  provider           String // META_WHATSAPP | TWILIO | SENDGRID | NETGSM | CUSTOM
+  provider           String // META_WHATSAPP | ELASTIC_EMAIL | NETGSM_SMS | BREVO_SMS
   name               String
   displayName        String?
   phoneNumberId      String? // Meta WhatsApp Cloud API phone number id
@@ -2403,7 +2556,7 @@ model CommunicationGlobalControl {
 model CommunicationDelivery {
   id                     String    @id @default(auto()) @map("_id") @db.ObjectId
   channel                String // WHATSAPP | EMAIL | SMS
-  provider               String? // META_WHATSAPP | TWILIO | SENDGRID | NETGSM | CUSTOM
+  provider               String? // META_WHATSAPP | ELASTIC_EMAIL | NETGSM_SMS | BREVO_SMS
   senderId               String?   @db.ObjectId
   campaignId             String?   @db.ObjectId
   templateId             String?
@@ -3584,3 +3737,24 @@ model AiSuggestionTask {
 
   @@index([ownerId, status, deadlineAt], map: "content_editor_ownerId_status_deadlineAt")
 }
+
+/// Read adapters for legacy statement collections. Documents remain managed by
+/// the review service; these models add no indexes or database migration.
+model BankTransferTransactionRecord {
+  id String @id @map("_id") @db.ObjectId
+
+  @@map("BankTransferTransaction")
+}
+
+model BankStatementUploadRecord {
+  id String @id @map("_id") @db.ObjectId
+
+  @@map("BankStatementUpload")
+}
+
+model BankTransferBankRecord {
+  id String @id @map("_id") @db.ObjectId
+
+  @@map("BankTransferBank")
+}
+

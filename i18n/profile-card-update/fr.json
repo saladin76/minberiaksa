@@ -1,0 +1,22 @@
+{
+  "title": "Modifier la carte du don récurrent",
+  "description": "Autorisez cette carte pour les prochains paiements de cet abonnement. Vérification bancaire sans débit immédiat ; montant et calendrier inchangés.",
+  "submit": "Vérifier et autoriser les prochains paiements",
+  "success": "Carte vérifiée et associée aux prochains paiements, sans débit immédiat.",
+  "error": "La modification ne peut pas être confirmée. Vérifiez l’abonnement ou contactez l’association avant de réessayer.",
+  "cardsTitle": "Cartes de paiement",
+  "cardsDescription": "La carte par défaut concerne les nouveaux dons. Pour changer celle d’un abonnement, ouvrez les dons réguliers et effectuez la vérification bancaire.",
+  "manageSubscriptions": "Gérer la carte du don régulier",
+  "emptyCards": "Aucune carte enregistrée.",
+  "nickname": "Nom de la carte",
+  "save": "Enregistrer",
+  "makeDefault": "Définir comme principale",
+  "defaultCard": "Principale",
+  "cardInUse": "Carte liée à un abonnement ou à une vérification en cours. Changez d’abord la carte de l’abonnement.",
+  "removeWarning": "La carte enregistrée sera supprimée. Une carte liée à un abonnement ne peut pas être supprimée.",
+  "confirmRemove": "Confirmer la suppression",
+  "refresh": "Actualiser",
+  "addCard": "Ajouter une carte",
+  "saved": "Modification enregistrée.",
+  "cardsNavDescription": "Cartes de paiement"
+}

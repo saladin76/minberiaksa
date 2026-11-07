@@ -1,3 +1,4 @@
+import { categoryProjectCounts } from "@/lib/campaign/category-project-counts";
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
 import {
@@ -17,13 +18,7 @@ import {
   generateUniqueLocaleSlug,
   normalizeUserSlug,
 } from "@/lib/slug";
-import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
-
-/* Campaigns a category count reflects: neither soft-deleted nor archived
-   (isActive false). */
-const LIVE_CAMPAIGN = {
-  AND: [NOT_SOFT_DELETED, { isActive: true }],
-};
+import { CATEGORY_ACTIVE_OR_UNSET } from "@/lib/campaign/soft-delete-filter";
 
 // GET: supports locale-aware translations, search, cursor pagination, optional counts, and sorting
 export async function GET(request: NextRequest) {
@@ -70,9 +65,7 @@ export async function GET(request: NextRequest) {
           take: 2,
           select: { locale: true, name: true, description: true, slug: true }
         },
-        ...(includeCounts
-          ? { _count: { select: { campaigns: { where: LIVE_CAMPAIGN } } } }
-          : {})
+
       }
     });
 
@@ -94,6 +87,7 @@ export async function GET(request: NextRequest) {
     const items = hasMore ? filtered.slice(0, -1) : filtered;
     const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
+    const counts = includeCounts ? await categoryProjectCounts(prisma, items.map(row => row.id)) : null;
     const transformed = items.map(cat => {
       const t = pickTranslation(cat.translations, locale);
       return {
@@ -107,7 +101,9 @@ export async function GET(request: NextRequest) {
         icon: cat.icon,
         order: cat.order,
         isActive: cat.isActive ?? true,
-        campaignCount: cat._count?.campaigns ?? undefined,
+        campaignCount: counts?.get(cat.id)?.published,
+        archivedCampaignCount: counts?.get(cat.id)?.archived,
+        linkedCampaignCount: counts?.get(cat.id)?.total,
       };
     });
 

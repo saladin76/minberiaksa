@@ -701,7 +701,9 @@
     "verificationDirectHelp": "تصدیقی کوڈ کے بغیر",
     "verificationSecure": "بینک کی تصدیق",
     "verificationSecureHelp": "تصدیقی کوڈ مانگا جا سکتا ہے",
-    "verificationRequired": "جاری رکھنے کے لیے ادائیگی کا ایک طریقہ منتخب کریں۔"
+    "verificationRequired": "جاری رکھنے کے لیے ادائیگی کا ایک طریقہ منتخب کریں۔",
+    "verificationSecureOptIn": "میں بینک کی تصدیق (3D Secure) چاہتا ہوں",
+    "verificationOptionalHelp": "براہ راست ادائیگی پہلے سے منتخب ہے۔ بینک کے ذریعے تصدیق کے لیے یہ اختیار منتخب کریں۔"
   },
   "certificates": {
     "certNoLabel": "شہادت نمبر",
@@ -1560,6 +1562,16 @@
     "sentText": "شراکت داری کی ٹیم جلد آپ سے ای میل کے ذریعے رابطہ کرے گی۔"
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "غزہ",
+      "aqsa": "مسجد اقصیٰ",
+      "jerusalem": "القدس",
+      "waqf": "القدس میں وقف کریں",
+      "zakat": "فلسطین کے لیے زکوٰۃ دیں",
+      "restoration": "القدس کے گھروں کی بحالی",
+      "ibadan": "عبادًا لنا",
+      "recurring": "باقاعدہ عطیہ"
+    },
     "allProjects": "تمام منصوبے",
     "filterByRegion": "علاقے کے مطابق",
     "filterByType": "عطیہ کی قسم کے مطابق",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "کارڈ نمبر درست نہیں، براہ کرم چیک کریں۔",
     "invalidCardExpiry": "میعاد ختم ہونے کی تاریخ غلط ہے یا گزر چکی ہے۔",
     "invalidCardCvc": "سیکیورٹی کوڈ (CVC) درست نہیں۔",
-    "tooManyPaymentAttempts": "ادائیگی کی بہت زیادہ کوششیں، براہ کرم بعد میں کوشش کریں۔"
+    "tooManyPaymentAttempts": "ادائیگی کی بہت زیادہ کوششیں، براہ کرم بعد میں کوشش کریں۔",
+    "mixedDonationCadences": "مختلف وقفوں کے عطیات کی الگ الگ ادائیگی کریں۔ اپنی ٹوکری دیکھیں۔"
   },
   "waqf": {
     "chooseUnit": "اپنی شرکت کی نوعیت اور تعداد منتخب کریں",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "جاری رکھنے کے لیے ٹیم کی مدد کی رقم یا «نہیں، شکریہ» منتخب کریں"
   },
   "Gift": {
+    "validationError": "وصول کنندہ کا نام اور درست رابطے کی تفصیلات درج کریں۔ واٹس ایپ نمبر میں ملک کا کوڈ شامل کریں۔",
     "emailSubject": "آپ کے نام ایک تحفہ: {project} کے لیے عطیہ",
     "emailTitle": "{recipientName}، آپ کے لیے ایک تحفہ ہے",
     "emailBody": "{donorName} نے منبر الاقصیٰ کے ذریعے «{project}» منصوبے میں آپ کے نام عطیہ دیا۔",
@@ -2478,7 +2492,8 @@
     "orContinue": "کے ساتھ جاری رکھیں",
     "noAccount": "اکاؤنٹ نہیں ہے؟",
     "createOne": "اکاؤنٹ بنائیں",
-    "logoAlt": "لوگو"
+    "logoAlt": "لوگو",
+    "signInWithGoogle": "Google کے ساتھ سائن اِن کریں"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "نے عطیہ دیا",
     "for": "کے لیے",
     "communitySupporter": "ہمارے معاونین کی برادری سے"
+  },
+  "DonationDialog": {
+    "rememberCard": "آئندہ عطیات کے لیے میرا کارڈ محفوظ کریں",
+    "rememberCardFailed": "کارڈ محفوظ نہیں ہو سکا۔ اس اختیار کو ہٹا کر آگے بڑھ سکتے ہیں۔",
+    "savedCards": "آپ کے محفوظ کارڈ",
+    "useNewCard": "نیا کارڈ استعمال کریں",
+    "bankChargeEstimate": "آپ کا عطیہ {original} ہے۔ ترک لیرے میں متوقع بینک کٹوتی {amount} ہے؛ حتمی شرح ادائیگی شروع ہوتے وقت مقرر ہوتی ہے۔",
+    "bankChargeCurrency": "بینک یہ عطیہ ترک لیرے میں وصول کرتا ہے۔ تصدیق سے پہلے تبدیل شدہ رقم دکھائی جاتی ہے۔",
+    "paymentRoutingChanged": "اس کوشش کا ادائیگی گیٹ وے بدل گیا ہے۔ طریقہ دیکھیں، حفاظتی کوڈ دوبارہ درج کریں اور تصدیق کریں۔"
+  },
+  "SignInDialog": {
+    "authErrorTitle": "لاگ اِن مکمل نہیں ہو سکا",
+    "authAccessDenied": "لاگ اِن کی اجازت مکمل نہیں ہوئی۔ دوبارہ کوشش کریں یا مہمان کے طور پر عطیہ دیں۔",
+    "authAccountConflict": "یہ ای میل لاگ اِن کے دوسرے طریقے سے منسلک ہے۔ سابقہ طریقہ استعمال کریں یا مہمان کے طور پر عطیہ دیں۔",
+    "authUnavailable": "فی الحال لاگ اِن دستیاب نہیں۔ آپ مہمان کے طور پر عطیہ دے سکتے ہیں۔",
+    "authUnknown": "لاگ اِن مکمل نہیں ہوا۔ دوبارہ کوشش کریں یا مہمان کے طور پر جاری رکھیں۔",
+    "donateAsGuest": "مہمان کے طور پر عطیہ جاری رکھیں",
+    "signInWithGoogle": "Google سے لاگ اِن کریں"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "مکمل رقم واپس کر دی گئی",
+        "PARTIALLY_REFUNDED": "جزوی رقم واپس کر دی گئی",
+        "VOIDED": "بینک نے منسوخ کر دیا",
+        "REVIEW_REQUIRED": "مالی جائزہ درکار ہے",
+        "balance": "واپس شدہ: {returned} · باقی: {remaining}"
+      },
+      "recurringGivingMonths": "باقاعدہ عطیات کے مہینے",
+      "recurringGivingMonthsHint": "منتخب مدت میں باقاعدہ عطیات کی تصدیق شدہ ادائیگیوں والے مہینے"
+    }
   }
 }

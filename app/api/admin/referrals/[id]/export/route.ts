@@ -1,3 +1,4 @@
+import { dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
 /**
  * GET /api/admin/referrals/[id]/export
  *
@@ -25,14 +26,13 @@ import {
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
 import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
-import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
+import { DASH_LOCALE_COOKIE, parseDashLocale } from "@/lib/dashboard/i18n";
 
-export async function GET(
+async function localizedGET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Sheet names, headers and labels in the dashboard's interface language.
-  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "referrals");
@@ -182,6 +182,10 @@ export async function GET(
         fees,
         totalAmount: total,
         coverFees: !!d.coverFees,
+        projectAllocations: [
+          ...d.items.map(i => ({ id: `campaign:${i.campaign.id}`, title: i.campaign.title, amount: Number(i.amount) })),
+          ...d.categoryItems.map(i => ({ id: `category:${i.category.id}`, title: i.category.name, amount: Number(i.amount) })),
+        ],
         campaigns: d.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
         categories: d.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
         referral: d.referral ? { id: d.referral.id, code: d.referral.code, name: d.referral.name } : null,
@@ -265,4 +269,10 @@ export async function GET(
     console.error("export referral:", e);
     return NextResponse.json({ error: "Export failed" }, { status: 500 });
   }
+}
+
+
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const language = request.nextUrl.searchParams.get("reportLanguage") ?? parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value);
+  return withReportLanguage(language, () => localizedGET(request, context));
 }

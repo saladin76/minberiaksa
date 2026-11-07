@@ -1,7 +1,8 @@
 import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
-import { donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
-import { donationMoneyFields } from "./donation-money";
+import { donationMessageLocale, donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
+import { donationMoneyFields, receiptDate } from "./donation-money";
+import { recurringFrequency, recurringFrequencyLabel, type RecurringFrequency } from "./recurring-cadence";
 
 /** ---------------- types ---------------- */
 
@@ -26,7 +27,13 @@ export interface TemplateDonationItem {
 }
 
 export interface TemplateDonation {
+  subscriptionId?: string;
+  billingReason?: string | null;
+  providerTxnType?: string | null;
+  settled?: boolean;
   id: string;
+  /** Effective language of this donation's notification, independent of the account preference. */
+  locale?: string;
   amount: string;
   amountUSD: string;
   currency: string;
@@ -37,6 +44,9 @@ export interface TemplateDonation {
   fees?: string;
   amountBreakdown?: string;
   notificationAmount?: string;
+  /** One total, in the original currency and notification language. */
+  receiptSummary?: string;
+  displayDate?: string;
   status: string;
   createdAt: string;
   campaignTitle: string;
@@ -80,6 +90,7 @@ export interface TemplateContext {
   totals: TemplateTotals;
   /** Set for trigger-driven flows where one specific donation is the focus */
   donation?: TemplateDonation;
+  subscription?: { status?:string; id:string; frequency:RecurringFrequency; frequencyLabel:string; amount:string; currency:string; nextBillingDate:string };
   /** Set for a campaign-update email. */
   update?: TemplateUpdate;
 }
@@ -120,18 +131,20 @@ const donationSelect = {
   fees: true,
   paidAt: true,
   status: true,
+  billingReason: true,
+  providerTxnType: true,
   createdAt: true,
   items: {
     select: {
       amount: true,
       amountUSD: true,
       shareCount: true,
-      campaign: { select: { title: true } },
+      campaign: { select: { title: true, translations: { select: { locale: true, title: true } } } },
     },
   },
   waqfItems: {select:{amount:true,amountUSD:true,unit:true,count:true}},
   categoryItems: {
-    select: { amount: true, amountUSD: true, category: { select: { name: true } } },
+    select: { amount: true, amountUSD: true, category: { select: { name: true, translations: { select: { locale: true, name: true } } } } },
   },
 } as const;
 
@@ -146,10 +159,17 @@ type RawDonation = DonationProjectSource & {
   paidAt?: Date | null;
   status: string;
   createdAt: Date;
+  provider?: string | null;
+  providerOrderId?: string | null;
+  providerRaw?: unknown;
+  billingReason?: string | null;
+  providerTxnType?: string | null;
+  subscription?: {status?:string;id:string;frequency:string|null;amount:number;currency:string;nextBillingDate:Date|null}|null;
 };
 
 function donationToContext(d: RawDonation, locale?: string | null): TemplateDonation {
-  const projects = donationProjectSummary({ ...d, locale: locale || d.locale });
+  locale = donationMessageLocale(locale, d.locale);
+  const projects = donationProjectSummary({ ...d, locale });
   const items: TemplateDonationItem[] = projects.lines.map((it) => ({
     campaignTitle: it.campaignTitle,
     amount: formatTemplateMoney(it.amount, locale || d.locale, d.currency),
@@ -159,13 +179,15 @@ function donationToContext(d: RawDonation, locale?: string | null): TemplateDona
   }));
   return {
     id: d.id,
-    ...donationMoneyFields(d, locale || d.locale || "ar"),
+    locale,
+    ...donationMoneyFields({...d,frequency:d.subscription?recurringFrequency(d.subscription.frequency)??undefined:undefined}, locale || d.locale || "ar"),
     amount: formatTemplateMoney(d.amount, locale || d.locale, d.currency),
     amountUSD: formatTemplateMoney(donationUsdAmount(d), locale || d.locale, "USD"),
     currency: d.currency,
     totalAmount: formatTemplateMoney(d.totalAmount, locale || d.locale, d.currency),
     status: d.status,
     createdAt: formatDate(d.createdAt),
+    displayDate: receiptDate(d.createdAt, locale),
     campaignTitle: projects.campaignTitle,
     itemCount: String(items.length),
     items,
@@ -177,11 +199,12 @@ function donationsToContext(donations: RawDonation[], locale?: string | null): T
 }
 
 function userToContext(
-  u: { id: string; name: string | null; email: string | null; phone: string | null; countryName: string | null; country: string | null; countryCode: string | null; city: string | null; region: string | null; preferredLang: string | null }
+  u: { id: string; name: string | null; email: string | null; phone: string | null; countryName: string | null; country: string | null; countryCode: string | null; city: string | null; region: string | null; preferredLang: string | null },
+  locale?: string | null,
 ): TemplateUser {
   return {
     id: u.id,
-    name: templateDonorName(u.name,u.preferredLang),
+    name: templateDonorName(u.name, locale || u.preferredLang),
     email: u.email ?? "",
     phone: u.phone ?? "",
     countryName: u.countryName ?? u.country ?? "",
@@ -192,12 +215,13 @@ function userToContext(
   };
 }
 
-export async function loadContext(userId: string): Promise<TemplateContext | null> {
+export async function loadContext(userId: string, localeOverride?: string | null): Promise<TemplateContext | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: userSelect,
   });
   if (!user) return null;
+  const locale = donationMessageLocale(localeOverride, user.preferredLang);
 
   const donations = await prisma.donation.findMany({
     where: { donorId: userId, status: "PAID" },
@@ -210,11 +234,11 @@ export async function loadContext(userId: string): Promise<TemplateContext | nul
   const lastAt = donations[0]?.createdAt ?? null;
 
   return {
-    user: userToContext(user),
-    donations: donationsToContext(donations as RawDonation[], user.preferredLang),
+    user: userToContext(user, locale),
+    donations: donationsToContext(donations as RawDonation[], locale),
     totals: {
       count: String(donations.length),
-      amountUSD: formatTemplateMoney(totalUSD, user.preferredLang, "USD"),
+      amountUSD: formatTemplateMoney(totalUSD, locale, "USD"),
       lastAt: formatDate(lastAt),
     },
   };
@@ -226,23 +250,39 @@ export async function loadContext(userId: string): Promise<TemplateContext | nul
  * built for manual sends still work in trigger flows.
  */
 export async function loadContextForDonation(
-  donationId: string
+  donationId: string,
+  localeOverride?: string | null,
 ): Promise<TemplateContext | null> {
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
-    select: { ...donationSelect, donorId: true },
+    // Notifications use the saved donor currency and total only; bank request
+    // snapshots are not needed and must not enter template rendering.
+    select: { ...donationSelect, donorId: true, subscription: {select:{id:true,status:true,frequency:true,amount:true,currency:true,nextBillingDate:true}} },
   });
   if (!donation) return null;
-  const base = await loadContext(donation.donorId);
+  const base = await loadContext(donation.donorId, localeOverride || donation.locale);
   if (!base) return null;
   return {
     ...base,
-    donation: donationToContext(donation as RawDonation, base.user.preferredLang),
+    donation: { ...donationToContext(donation as RawDonation, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)), subscriptionId: donation.subscription?.id, billingReason: donation.billingReason, providerTxnType: donation.providerTxnType, settled: donation.status === "PAID" && donation.paidAt != null },
+    subscription: subscriptionToContext(donation.subscription, donationMessageLocale(localeOverride, donation.locale, base.user.preferredLang)),
   };
 }
 
+function subscriptionToContext(subscription:RawDonation["subscription"],locale:string):TemplateContext["subscription"] {
+  if(!subscription)return undefined;const frequency=recurringFrequency(subscription.frequency);if(!frequency)return undefined;
+  return {status:subscription.status,id:subscription.id,frequency,frequencyLabel:recurringFrequencyLabel(frequency,locale),amount:formatTemplateMoney(subscription.amount,locale,subscription.currency),currency:subscription.currency,nextBillingDate:formatDate(subscription.nextBillingDate)};
+}
+
+export async function loadContextForSubscription(subscriptionId:string,userId?:string):Promise<TemplateContext|null> {
+  const subscription=await prisma.subscription.findUnique({where:{id:subscriptionId},select:{id:true,status:true,donorId:true,frequency:true,amount:true,currency:true,nextBillingDate:true}});
+  if(!subscription||userId&&subscription.donorId!==userId)return null;
+  const context=await loadContext(subscription.donorId);return context?{...context,subscription:subscriptionToContext(subscription,context.user.preferredLang)}:null;
+}
+
 export async function loadContextsForUserIds(
-  ids: string[]
+  ids: string[],
+  localeOverride?: string | null,
 ): Promise<Map<string, TemplateContext>> {
   if (ids.length === 0) return new Map();
   const [users, donations] = await Promise.all([
@@ -263,16 +303,17 @@ export async function loadContextsForUserIds(
 
   const out = new Map<string, TemplateContext>();
   for (const u of users) {
+    const locale = donationMessageLocale(localeOverride, u.preferredLang);
     const ds = byDonor.get(u.id) ?? [];
     const usd = ds.map(donationUsdAmount);
     const totalUSD = usd.some((n) => n === null) ? null : usd.reduce<number>((s, n) => s + (n ?? 0), 0);
     const lastAt = ds[0]?.createdAt ?? null;
     out.set(u.id, {
-      user: userToContext(u),
-      donations: donationsToContext(ds, u.preferredLang),
+      user: userToContext(u, locale),
+      donations: donationsToContext(ds, locale),
       totals: {
         count: String(ds.length),
-        amountUSD: formatTemplateMoney(totalUSD, u.preferredLang, "USD"),
+        amountUSD: formatTemplateMoney(totalUSD, locale, "USD"),
         lastAt: formatDate(lastAt),
       },
     });
@@ -326,6 +367,7 @@ export function mergeText(template: string, ctx: TemplateContext): string {
     totals: ctx.totals,
     donations: ctx.donations,
     donation: ctx.donation,
+    subscription: ctx.subscription,
     update: ctx.update,
   };
   return renderInScope(template, scope);

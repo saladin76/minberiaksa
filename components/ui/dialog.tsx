@@ -31,15 +31,17 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 type DialogContentExtendedProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   closeClassName?: string
+  overlayClassName?: string
+  closeLabel?: string
   hideCloseButton?: boolean
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentExtendedProps
->(({ className, children, closeClassName, hideCloseButton, ...props }, ref) => (
+>(({ className, children, closeClassName, overlayClassName, closeLabel = "Close", hideCloseButton, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
@@ -57,7 +59,7 @@ const DialogContent = React.forwardRef<
           )}
         >
           <Cross2Icon className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{closeLabel}</span>
         </DialogPrimitive.Close>
       )}
     </DialogPrimitive.Content>

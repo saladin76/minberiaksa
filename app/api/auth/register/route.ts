@@ -1,3 +1,4 @@
+import { queueAuditLog } from "@/lib/audit-log";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { track as vercelTrack } from "@vercel/analytics/server";
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest) {
       if (existing.password || linked > 0) return NextResponse.json({ error: "EMAIL_EXISTS" }, { status: 409 });
       claim = { passwordHash: hashed, name, phone: phone?.trim() || null, birthdate: dateOfBirth?.trim() || null, gender: gender?.trim() || null };
     } else {
-      await prisma.user.create({ data: { name, email: normalizedEmail, password: hashed, phone: phone?.trim() || null, birthdate: dateOfBirth?.trim() || null, gender: gender?.trim() || null, role: "DONOR", emailVerified: null, preferredLang } });
+      const registered = await prisma.user.create({ data: { name, email: normalizedEmail, password: hashed, phone: phone?.trim() || null, birthdate: dateOfBirth?.trim() || null, gender: gender?.trim() || null, role: "DONOR", emailVerified: null, preferredLang } });
+      queueAuditLog({actorId:registered.id,actorName:name,actorRole:"DONOR",action:"SITE_USER_REGISTERED",stream:"SITE",entityType:"User",entityId:registered.id,messageAr:"إنشاء حساب متبرع جديد بانتظار التحقق"});
     }
     const token = await createVerificationToken(normalizedEmail, "VERIFY_EMAIL", undefined, claim ? JSON.stringify(claim) : null);
     const baseUrl = process.env.NEXTAUTH_URL ?? `${req.nextUrl.protocol}//${req.nextUrl.host}`;

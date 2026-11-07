@@ -106,7 +106,7 @@ function runtimeDefault(snapshot: SenderRoutingSnapshot): ResolvedSender | null 
  */
 export function resolveSenderFromSnapshot(
   snapshot: SenderRoutingSnapshot,
-  request: { locale?: string | null; country?: string | null; purpose: CommunicationPurposeId },
+  request: { locale?: string | null; country?: string | null; purpose: CommunicationPurposeId; template?: boolean },
 ): SenderResolution {
   /* No sender rows for this channel: nothing has been configured to route BETWEEN, so the
      environment default is the configuration rather than an override of one. */
@@ -116,6 +116,11 @@ export function resolveSenderFromSnapshot(
     return { ok: true, sender: fallback, matchedBy: "runtime-default" };
   }
 
+  // Templates have one business identity. Other active numbers remain available
+  // to the inbox, whose replies explicitly retain the conversation's sender.
+  const templateOnly = snapshot.channel === "WHATSAPP" && request.template === true;
+  const candidates = templateOnly ? snapshot.senders.filter(sender => sender.isDefault) : snapshot.senders;
+  if (templateOnly && candidates.length !== 1) return { ok: false, reason: "WHATSAPP_DEFAULT_SENDER_REQUIRED" };
   const routed = resolveSender(
     {
       channel: snapshot.channel as CommunicationChannel,
@@ -126,8 +131,8 @@ export function resolveSenderFromSnapshot(
          flattened into TRANSACTIONAL, which would make a rule about one match the other. */
       purpose: request.purpose as unknown as CommunicationPurpose,
     },
-    snapshot.senders,
-    snapshot.rules,
+    candidates,
+    templateOnly ? [] : snapshot.rules,
   );
 
   /* The router looked and declined. That is the answer  see the note at the top of this file. */

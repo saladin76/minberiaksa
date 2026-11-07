@@ -61,8 +61,11 @@ export async function sendElasticEmail(input: ElasticEmailInput, runtime?: Elast
       parsed = raw;
     }
 
-    if (!res.ok) {
-      const { reason, detail } = mapElasticEmailError(res.status, parsed, cfg.values.apiKey);
+    const explicitError = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      && ((parsed as Record<string, unknown>).Success === false || (parsed as Record<string, unknown>).success === false
+        || Boolean((parsed as Record<string, unknown>).Error || (parsed as Record<string, unknown>).error));
+    if (!res.ok || explicitError) {
+      const { reason, detail } = mapElasticEmailError(res.ok ? 400 : res.status, parsed, cfg.values.apiKey);
       return { ok: false, reason, detail };
     }
 

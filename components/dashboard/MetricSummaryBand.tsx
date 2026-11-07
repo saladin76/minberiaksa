@@ -1,3 +1,4 @@
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ReactNode } from "react";
 import { Info, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -78,7 +79,7 @@ export function MetricSummaryBand({
         className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-4 px-5 py-4">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-3 px-3 py-3 sm:gap-y-4 sm:px-5 sm:py-4">
         {/* Headline: label row over figure row. */}
         <div className="flex min-w-0 items-center gap-3">
           {Icon && (
@@ -92,14 +93,14 @@ export function MetricSummaryBand({
                 {eyebrow}
               </p>
               {note && (
-                <button
+                <Popover><PopoverTrigger asChild><button
                   type="button"
                   className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   title={note}
                   aria-label={note}
                 >
                   <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
+                </button></PopoverTrigger><PopoverContent className="max-w-[calc(100vw-2rem)] text-xs leading-6">{note}</PopoverContent></Popover>
               )}
               {badge && (
                 <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
@@ -115,14 +116,14 @@ export function MetricSummaryBand({
 
         {/* Secondary figures  hairline-separated, same two-line rhythm as the headline. */}
         {stats && stats.length > 0 && (
-          <div className="ms-auto flex flex-wrap items-center gap-y-3">
+          <div className="grid w-full grid-cols-2 gap-x-3 gap-y-3 sm:ms-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             {stats.map((stat, i) => {
               const StatIcon = stat.icon;
               const tone = STAT_TONES[i % STAT_TONES.length];
               return (
                 <div
                   key={stat.label}
-                  className="border-s border-slate-200 px-5 first:border-s-0 first:ps-0 last:pe-0"
+                  className="min-w-0 sm:border-s sm:border-slate-200 sm:px-5 sm:first:border-s-0 sm:first:ps-0 sm:last:pe-0"
                 >
                   <div className="flex items-center gap-1.5">
                     {StatIcon && (
@@ -130,12 +131,12 @@ export function MetricSummaryBand({
                         <StatIcon className="h-3 w-3" />
                       </span>
                     )}
-                    <p className="whitespace-nowrap text-[11px] font-medium text-slate-500">
+                    <p className="text-[11px] font-medium sm:whitespace-nowrap text-slate-500">
                       {stat.label}
                     </p>
                   </div>
                   <div className="mt-0.5 flex items-baseline gap-1.5">
-                    <p className="text-[19px] font-bold leading-tight tabular-nums text-slate-900">
+                    <p className="break-words text-lg font-bold sm:text-[19px] leading-tight tabular-nums text-slate-900">
                       {stat.value}
                     </p>
                     {stat.delta && (

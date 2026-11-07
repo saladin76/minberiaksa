@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactElement } from "react";
+import { useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/minbar/ds";
@@ -112,6 +112,13 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
   /* On a phone the certificate sits behind a button (`#waqf-cert-toggle`);
      on wider screens it is always beside the picker. */
   const [certPreviewOpen, setCertPreviewOpen] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null), onBehalfInput = useRef<HTMLInputElement>(null);
+  const errorId = useId();
+  const nameInvalid = error && !name.trim(), onBehalfInvalid = error && !onBehalf.trim();
+  const focusMissingName = () => {
+    const field = !name.trim() ? nameInput.current : !onBehalf.trim() ? onBehalfInput.current : null;
+    field?.focus();
+  };
 
   const unitPrice = unit === "meter" ? METER_PRICE : SHARE_PRICE;
   const total = unitPrice * count;
@@ -120,6 +127,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
   const validate = () => {
     const ok = name.trim().length > 0 && onBehalf.trim().length > 0;
     setError(!ok);
+    if (!ok) focusMissingName();
     return ok;
   };
 
@@ -236,7 +244,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
 
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: "var(--muted)" }}>{t("certName")}</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} className="wq-input" style={inputStyle(error && !name.trim())} />
+                <input ref={nameInput} required aria-invalid={nameInvalid || undefined} aria-describedby={nameInvalid ? errorId : undefined} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} className="wq-input" style={inputStyle(nameInvalid)} />
                 {donorName && !name ? (
                   <button type="button" onClick={() => setName(donorName)} className="wq-link" style={linkBtn}>
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -250,19 +258,21 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
 
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: "var(--muted)" }}>{t("endowedOnBehalfOf")}</span>
-                <input value={onBehalf} onChange={(e) => setOnBehalf(e.target.value)} placeholder={t("onBehalfPlaceholder")} className="wq-input" style={inputStyle(error && !onBehalf.trim())} />
-                <button type="button" onClick={() => setOnBehalf(name || donorName || "")} className="wq-link" style={linkBtn}>
+                <input ref={onBehalfInput} required aria-invalid={onBehalfInvalid || undefined} aria-describedby={onBehalfInvalid ? errorId : undefined} value={onBehalf} onChange={(e) => setOnBehalf(e.target.value)} placeholder={t("onBehalfPlaceholder")} className="wq-input" style={inputStyle(onBehalfInvalid)} />
+                <button type="button" onClick={() => { setOnBehalf(name.trim() || donorName?.trim() || t("selfAndLoved")); if (!name.trim()) nameInput.current?.focus(); }} className="wq-link" style={linkBtn}>
                   {t("suggestSelf")}
                 </button>
               </label>
 
-              {error ? (
-                <div className="wq-error" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "rgba(169,52,40,.08)", border: "1px solid rgba(169,52,40,.3)", color: "var(--red)", fontSize: 13, fontWeight: 800 }}>
+              {nameInvalid || onBehalfInvalid ? (
+                <div id={errorId} role="alert" className="wq-error" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "rgba(169,52,40,.08)", border: "1px solid rgba(169,52,40,.3)", color: "var(--red)", fontSize: 13, fontWeight: 800 }}>
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 8v5M12 16h.01" />
                   </svg>
-                  {tValidation("required")}
+                  <button type="button" onClick={focusMissingName} style={{ border: 0, background: "transparent", color: "inherit", font: "inherit", textAlign: "start", cursor: "pointer", textDecoration: "underline" }}>
+                    {nameInvalid ? t("certName") : t("endowedOnBehalfOf")}: {tValidation("required")}
+                  </button>
                 </div>
               ) : null}
 

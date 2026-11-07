@@ -519,7 +519,7 @@
     "and": "und",
     "privacyPolicy": "Datenschutzerklärung",
     "skipAndDonate": "Überspringen",
-    "donateAsGuest": "Als Gast spenden",
+    "donateAsGuest": "Als Gast weiter spenden",
     "withoutLoginBadge": "ohne Anmeldung",
     "googleFastestWay": "Schnellster Weg",
     "orContinueWith": "oder",
@@ -563,7 +563,12 @@
     "genderMale": "Männlich",
     "genderFemale": "Weiblich",
     "genderPreferNotToSay": "Keine Angabe",
-    "noPasswordYet": "Sie haben bereits ein Konto mit dieser E-Mail, aber noch kein Passwort. Registrieren Sie sich mit derselben E-Mail, um eines festzulegen, oder fahren Sie mit Google fort."
+    "noPasswordYet": "Sie haben bereits ein Konto mit dieser E-Mail, aber noch kein Passwort. Registrieren Sie sich mit derselben E-Mail, um eines festzulegen, oder fahren Sie mit Google fort.",
+    "authErrorTitle": "Anmeldung nicht abgeschlossen",
+    "authAccessDenied": "Die Anmeldeberechtigung wurde nicht bestätigt. Versuchen Sie es erneut oder spenden Sie als Gast.",
+    "authAccountConflict": "Diese E-Mail nutzt eine andere Anmeldemethode. Nutzen Sie die bisherige Methode oder spenden Sie als Gast.",
+    "authUnavailable": "Die Anmeldung ist derzeit nicht verfügbar. Sie können als Gast spenden.",
+    "authUnknown": "Die Anmeldung wurde nicht abgeschlossen. Versuchen Sie es erneut oder fahren Sie als Gast fort."
   },
   "SharePopup": {
     "shareCampaign": "Projekt mit anderen teilen",
@@ -676,7 +681,12 @@
     "stripeMinDonation": "Mindestspende: {amount} {currency}",
     "certificateNoteTitle": "Erhalte deine Spendenbescheinigung ✨",
     "certificateNoteBody": "Gib deine echte E-Mail-Adresse an, damit wir dir die offizielle Spendenbescheinigung und Quittung der Stiftung zusenden können.",
-    "free": "Kostenlos"
+    "free": "Kostenlos",
+    "rememberCard": "Meine Karte für weitere Spenden speichern",
+    "rememberCardFailed": "Die Karte konnte nicht gespeichert werden. Deaktivieren Sie diese Option, um fortzufahren.",
+    "bankChargeEstimate": "Ihre Spende beträgt {original}. Die geschätzte Bankabbuchung beträgt {amount} in türkischen Lira; der endgültige Kurs wird beim Zahlungsbeginn festgelegt.",
+    "bankChargeCurrency": "Die Bank zieht diese Spende in türkischen Lira ein. Der umgerechnete Betrag wird vor der Bestätigung angezeigt.",
+    "paymentRoutingChanged": "Das Zahlungsportal wurde aktualisiert. Prüfen Sie die Methode, geben Sie den Sicherheitscode erneut ein und bestätigen Sie."
   },
   "DonationSuccess": {
     "thankYou": "Vielen Dank",
@@ -865,7 +875,16 @@
       "paymentMethodCard": "Karte",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Du hast die Transaktionsgebühren übernommen",
-      "emptyHistoryFiltered": "Keine Spenden entsprechen deinen Filtern. Versuche einen anderen Zahlungsstatus oder Zeitraum."
+      "emptyHistoryFiltered": "Keine Spenden entsprechen deinen Filtern. Versuche einen anderen Zahlungsstatus oder Zeitraum.",
+      "financial": {
+        "REFUNDED": "Vollständig erstattet",
+        "PARTIALLY_REFUNDED": "Teilweise erstattet",
+        "VOIDED": "Von der Bank storniert",
+        "REVIEW_REQUIRED": "Finanzprüfung erforderlich",
+        "balance": "Erstattet: {returned} · Verbleibend: {remaining}"
+      },
+      "recurringGivingMonths": "Monate mit regelmäßigen Spenden",
+      "recurringGivingMonthsHint": "Monate mit bestätigten regelmäßigen Zahlungen in diesem Zeitraum"
     },
     "subscriptions": {
       "settingsTableTitle": "Abonnements & Einstellungen",
@@ -1741,7 +1760,9 @@
     "verificationDirectHelp": "Ohne Bestätigungscode",
     "verificationSecure": "Bankbestätigung",
     "verificationSecureHelp": "Ein Code kann nötig sein",
-    "verificationRequired": "Wählen Sie eine Zahlungsoption, um fortzufahren."
+    "verificationRequired": "Wählen Sie eine Zahlungsoption, um fortzufahren.",
+    "verificationSecureOptIn": "Ich möchte die Bankbestätigung (3D Secure) verwenden",
+    "verificationOptionalHelp": "Direktzahlung ist die Standardeinstellung. Wählen Sie diese Option für eine Bestätigung durch Ihre Bank."
   },
   "certificates": {
     "certNoLabel": "Zertifikat-Nr.",
@@ -2600,6 +2621,16 @@
     "sentText": "Unser Partnerschaftsteam wird sich in Kürze per E-Mail bei Ihnen melden."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa-Moschee",
+      "jerusalem": "Jerusalem",
+      "waqf": "Waqf in Jerusalem",
+      "zakat": "Zakat für Palästina",
+      "restoration": "Häuser in Jerusalem restaurieren",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Regelmäßige Spende"
+    },
     "allProjects": "Alle Projekte",
     "filterByRegion": "Nach Region",
     "filterByType": "Nach Spendenart",
@@ -2881,7 +2912,8 @@
     "invalidCardNumber": "Die Kartennummer ist ungültig. Bitte prüfen Sie sie.",
     "invalidCardExpiry": "Das Ablaufdatum ist ungültig oder abgelaufen.",
     "invalidCardCvc": "Der Sicherheitscode (CVC) ist ungültig.",
-    "tooManyPaymentAttempts": "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut."
+    "tooManyPaymentAttempts": "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut.",
+    "mixedDonationCadences": "Schließen Sie verschiedene Spendenintervalle mit getrennten Zahlungen ab. Prüfen Sie Ihren Warenkorb."
   },
   "waqf": {
     "chooseUnit": "Wählen Sie Art und Anzahl Ihres Beitrags",
@@ -3214,6 +3246,7 @@
     "chooseFirst": "Wählen Sie einen Betrag für das Team oder „Nein danke“, um fortzufahren"
   },
   "Gift": {
+    "validationError": "Geben Sie den Namen und gültige Kontaktdaten ein. Die WhatsApp-Nummer muss die Ländervorwahl enthalten.",
     "emailSubject": "Ein Geschenk in Ihrem Namen: eine Spende für {project}",
     "emailTitle": "{recipientName}, Sie haben ein Geschenk",
     "emailBody": "{donorName} hat in Ihrem Namen über Minbar Al-Aqsa für „{project}“ gespendet.",
@@ -3531,6 +3564,7 @@
     "orContinue": "weiter mit",
     "noAccount": "Noch kein Konto?",
     "createOne": "Konto erstellen",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Mit Google anmelden"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
@@ -46,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { ACTION_PERMISSION_ROWS, DASHBOARD_PERMISSION_ROWS } from "@/lib/dashboard/nav-config";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import type { UserProfileCardData } from "@/lib/dashboard/user-profile-card";
+import DonorAccountInvitation from "@/components/dashboard/DonorAccountInvitation";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import {
   GENDER_LABEL_AR,
@@ -466,6 +468,7 @@ export function ViewUserProfileDialog({
 
               {/* Every donation of this donor; the default view is the successful rows «الإجمالي» sums. */}
               <UserDonationsTable userId={user.id} formatMoney={formatMoney} />
+              {user.role === "DONOR" && <DonorAccountInvitation userId={user.id} />}
 
               {/* Two-column info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -653,6 +656,13 @@ export function ViewUserProfileDialog({
 
               <div className="flex items-center gap-2">
                 {canOpenCommunication && (
+                  <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
+                    <Link href={`/dashboard/users/donors/${user.id}/communication`} onClick={() => onOpenChange(false)}>
+                      <Clock className="h-3.5 w-3.5" />{dt("سجل المحادثات")}
+                    </Link>
+                  </Button>
+                )}
+                {canOpenCommunication && (
                   <Button
                     size="sm"
                     onClick={() => setSmartWhatsappOpen(true)}
@@ -698,3 +708,4 @@ export function ViewUserProfileDialog({
     </Dialog>
   );
 }
+

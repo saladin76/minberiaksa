@@ -25,6 +25,8 @@ import {
   type ReceiptOrgData,
 } from "@/lib/certificates/copy-defaults";
 import { dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
+import { ManualCertificatePanel } from "@/components/dashboard/certificates/ManualCertificatePanel";
+import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 
 /**
  * The wording on the three documents  thank-you certificate, waqf
@@ -60,6 +62,7 @@ export default function CertificateCopyPage() {
   const [template, setTemplate] = useState<CertificateTemplateId>("thanks");
   const [locale, setLocale] = useState<string>("ar");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [section, setSection] = useState("send");
 
   const load = async () => {
     setLoading(true);
@@ -125,18 +128,21 @@ export default function CertificateCopyPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={dt("نصوص الشهادات والإيصال")}
-        description={dt("الصياغة التي تُطبع على شهادة الشكر وشهادة الوقف وإيصال التبرع، لكل قالب ولكل لغة. الفارغ يعني النص الافتراضي من حزمة الترجمة.")}
+        title={dt("الشهادات")}
+        description={dt("إدارة نصوص الشهادات وإصدار وإرسال شهادات التبرع والوقف والإهداءات والإيصالات بلغات الموقع.")}
         icon={Award}
         actions={
-          <div className="flex items-center gap-2">
+          section === "copy" ? <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
               <RefreshCw className="me-1 h-4 w-4" /> {dt(" تحديث")}</Button>
             <Button size="sm" onClick={() => void save()} disabled={saving || loading}>
               {saving ? <Loader2 className="me-1 h-4 w-4 animate-spin" /> : <Save className="me-1 h-4 w-4" />} {dt(" حفظ")}</Button>
-          </div>
+          </div> : undefined
         }
       />
+      <Tabs value={section} onValueChange={setSection}><TabsList className="h-auto flex-wrap gap-1"><TabsTrigger value="copy">{dt("نصوص الشهادات")}</TabsTrigger><TabsTrigger value="send">{dt("إرسال الشهادات والإهداءات")}</TabsTrigger></TabsList>
+      <TabsContent value="send" forceMount hidden={section !== "send"}><ManualCertificatePanel canSendEmail={userHasDashboardPermission(session?.user, "templates")} canSendWhatsapp={userHasDashboardPermission(session?.user, "messages")} /></TabsContent>
+      <TabsContent value="copy">
 
       {updatedAt ? <p className="text-xs text-muted-foreground">{dtx("آخر حفظ: {0}", [new Date(updatedAt).toLocaleString(dashIntl("ar-EG"))])}</p> : null}
 
@@ -230,6 +236,8 @@ export default function CertificateCopyPage() {
         {dt("الآيات القرآنية على شهادة الشكر ثابتة من حزمة ")}<code>quran</code> {dt(" ولا تُعدَّل من هنا. تخطيط شهادة الشكر الطولي متاح للمشرف من صفحة الشهادة بإضافة ")}<code>?layout=portrait</code>{" "}
         <ExternalLink className="inline h-3 w-3" />
       </p>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

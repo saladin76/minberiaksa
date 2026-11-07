@@ -1,0 +1,22 @@
+{
+  "title": "Opdater kort til faste donationer",
+  "description": "Godkend kortet til fremtidige betalinger i dette abonnement. Bankverificering uden betaling nu; beløb og tidsplan er uændrede.",
+  "submit": "Bekræft og godkend fremtidige betalinger",
+  "success": "Kortet er verificeret og knyttet til fremtidige betalinger. Intet beløb er trukket nu.",
+  "error": "Ændringen kunne ikke bekræftes. Tjek abonnementet eller kontakt foreningen, før du prøver igen.",
+  "cardsTitle": "Betalingskort",
+  "cardsDescription": "Standardkortet gælder kun nye donationer. Åbn faste donationer og gennemfør bankbekræftelsen for at skifte kort på et eksisterende abonnement.",
+  "manageSubscriptions": "Administrer kort til faste donationer",
+  "emptyCards": "Ingen gemte kort.",
+  "nickname": "Kortnavn",
+  "save": "Gem",
+  "makeDefault": "Gør til primært kort",
+  "defaultCard": "Primært kort",
+  "cardInUse": "Kortet er knyttet til et abonnement eller en igangværende bekræftelse. Skift først abonnementets kort.",
+  "removeWarning": "Det gemte kort fjernes. Kort knyttet til abonnementer kan ikke fjernes.",
+  "confirmRemove": "Bekræft fjernelse",
+  "refresh": "Opdater",
+  "addCard": "Tilføj kort",
+  "saved": "Ændringen er gemt.",
+  "cardsNavDescription": "Betalingskort"
+}

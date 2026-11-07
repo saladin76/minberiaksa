@@ -7,6 +7,7 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { ContentError } from "@/lib/content-editor/service";
 import { pageSeoDefaults, readPageSeoDocument, savePageSeoDocument, validatePageSeoOverrides } from "@/lib/content-editor/page-seo";
 import { generateResearchedSeo, SeoResearchError } from "@/lib/content-editor/seo-research";
+import { seoSourceText } from "@/lib/content-editor/seo-source";
 import { managedPagePath } from "@/lib/content-editor/page-seo-registry";
 import { parseGa4Period } from "@/lib/marketing/ga4-period";
 import { loadGa4DashboardReport, Ga4ReportError } from "@/lib/marketing/ga4-server";
@@ -20,7 +21,8 @@ type Context = { params: Promise<{ key: string }> };
 async function access() { const session = await getServerSession(authOptions); return { session, denied: requireAdminOrDashboardPermission(session, "siteContent") }; }
 function failure(error: unknown) {
   const ai = suggestionFailure(error); if (ai) return NextResponse.json({ error: ai.error, reason: ai.reason, details: ai.details, stopBatch: ai.stopBatch }, { status: ai.status });
-  if (error instanceof ContentError || error instanceof SeoResearchError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
+  if (error instanceof SeoResearchError) return NextResponse.json({ error: error.message, reason: error.reason, validation: error.validation }, { status: error.status });
+  if (error instanceof ContentError || error instanceof Ga4ReportError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error("managed-page-seo operation failed");
   return NextResponse.json({ error: "تعذر تأكيد العملية. احتفظ بالمسودة وأعد المحاولة." }, { status: 500 });
 }
@@ -40,19 +42,21 @@ export async function PUT(request: NextRequest, ctx: Context) {
     return NextResponse.json(saved);
   } catch (error) { return failure(error); }
 }
-export async function POST(request: NextRequest, ctx: Context): Promise<Response> {
-  const { session, denied } = await access(); if (denied) return denied;
+async function suggestWithSession(request: NextRequest, ctx: Context, authorized: Awaited<ReturnType<typeof access>>): Promise<Response> {
+  const { session, denied } = authorized; if (denied) return denied;
   try {
     if (request.headers?.get("Prefer") === "respond-async") {
       if (!session?.user?.id) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-      return await queueSuggestion(request, session.user.id, "siteContent", detached => POST(detached, ctx), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
+      return await queueSuggestion(request, session.user.id, "siteContent", detached => suggestWithSession(detached, ctx, authorized), { denied: requireAdminOrDashboardPermission(session, "platformConnections") });
     }
     const { key } = await ctx.params, body = await request.json();
     if (!isValidLocale(body.locale)) throw new ContentError("لغة غير صالحة");
     const document = await readPageSeoDocument(key);
     if (document.revision !== body.revision) throw new ContentError("تغيرت إعدادات الصفحة. أعد تحميلها أولًا.", 409);
-    const source = pageSeoDefaults(key, body.locale);
-    const overrides = body.draft === undefined ? document.overrides[body.locale] || {} : validatePageSeoOverrides({ [body.locale]: body.draft })[body.locale];
+    const source = pageSeoDefaults(key, "ar");
+    // Older Arabic clients sent draft. A foreign draft must never become source copy.
+    const sourceDraft = body.sourceDraft ?? (body.locale === "ar" ? body.draft : undefined);
+    const overrides = sourceDraft === undefined ? document.overrides.ar || {} : validatePageSeoOverrides({ ar: sourceDraft }).ar;
     const values = Object.fromEntries(Object.entries(source.values).map(([field, fallback]) => [field, overrides[field] || fallback]));
     let analyticsEvidence;
     if (body.analyticsPeriod) {
@@ -62,7 +66,12 @@ export async function POST(request: NextRequest, ctx: Context): Promise<Response
       analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}${managedPagePath(key, body.locale)}`);
     }
 
-    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + source.context, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
+    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + seoSourceText(source.context), market: typeof body.market === "string" ? body.market : undefined }, request.signal);
     return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
+}
+
+export async function POST(request: NextRequest, ctx: Context): Promise<Response> {
+  try { return await suggestWithSession(request, ctx, await access()); }
+  catch (error) { return failure(error); }
 }

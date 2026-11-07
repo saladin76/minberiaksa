@@ -37,3 +37,17 @@ test("only controlled provider codes become actionable failures, never raw messa
   assert.equal(failure.reason, "AI_ACCESS_DENIED"); assert.equal(failure.stopBatch, true); assert.doesNotMatch(JSON.stringify(failure), /private-key|donor@/);
   assert.equal(suggestionFailure(new Error("private-key")), null);
 });
+
+test("an eighteen-language batch stays within the durable queue capacity without rate-limiting itself", async () => {
+  let active = 0, maximum = 0; const results: string[] = [], errors: unknown[] = [];
+  const targets = Array.from({ length: 18 }, (_, index) => String(index));
+  const batch = await runSuggestionBatch({ targets, signal: new AbortController().signal,
+    request: async locale => {
+      active++; maximum = Math.max(maximum, active);
+      try { if (active > 2) throw new SuggestionRequestError("Queue busy", "AI_RATE_LIMITED"); await new Promise(resolve => setTimeout(resolve, 2)); return locale; }
+      finally { active--; }
+    }, onSuccess: locale => results.push(locale), onError: (_locale, error) => errors.push(error), onProgress: () => {},
+  });
+  assert.equal(maximum, 2); assert.equal(results.length, 18); assert.deepEqual(errors, []);
+  assert.equal(batch.done, 18); assert.equal(batch.sharedFailure, false); assert.deepEqual(batch.skipped, []);
+});

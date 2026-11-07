@@ -1,3 +1,4 @@
+import { resolveDonationSourceSignals, type SourceKind } from "./source-signals";
 /**
  * Detect the advertising source / tracking quality of a donation from data
  * already captured on the donation row: utm fields, click ids, fbp/fbc, and
@@ -16,7 +17,8 @@ export type AdPlatform =
   | "linkedin"
   | "reddit"
   | "other-paid"
-  | "organic";
+  | "organic"
+  | "unknown";
 
 /**
  * - verified: paid platform identified AND a click-id is present AND the
@@ -31,9 +33,13 @@ export type DonationSourceStatus =
   | "verified"
   | "utm-only"
   | "tracking-error"
-  | "organic";
+  | "organic"
+  | "unknown";
 
 export interface DonationSourceResult {
+  sourceKind: SourceKind;
+  sourceLabel: string;
+  sourceDetails: Array<{ key: string; value: string }>;
   platform: AdPlatform;
   status: DonationSourceStatus;
   /** 0–100. Drives the color tier in the UI (≥80 green, 40–79 yellow, 1–39 red, 0 = organic gray). */
@@ -55,28 +61,6 @@ export interface DetectSourceInput {
   status: string | null | undefined;
 }
 
-const META_SOURCES = new Set(["fb", "facebook", "ig", "instagram", "meta"]);
-const GOOGLE_SOURCES = new Set(["google", "youtube", "yt", "gdn", "adwords"]);
-const TIKTOK_SOURCES = new Set(["tiktok", "tt"]);
-const X_SOURCES = new Set(["x", "twitter"]);
-const SNAPCHAT_SOURCES = new Set(["snapchat", "snap"]);
-const LINKEDIN_SOURCES = new Set(["linkedin", "li"]);
-const REDDIT_SOURCES = new Set(["reddit"]);
-
-const PAID_MEDIUMS = new Set([
-  "cpc",
-  "ppc",
-  "paid",
-  "paid_social",
-  "paidsocial",
-  "social_paid",
-  "display",
-  "banner",
-  "video",
-  "retargeting",
-  "remarketing",
-]);
-
 function pickString(src: Record<string, unknown>, key: string): string | null {
   const v = src[key];
   if (typeof v === "string") {
@@ -87,73 +71,27 @@ function pickString(src: Record<string, unknown>, key: string): string | null {
   return null;
 }
 
-function classifyBySource(utmSource: string | null): AdPlatform | null {
-  if (!utmSource) return null;
-  const s = utmSource.toLowerCase();
-  if (META_SOURCES.has(s)) return "meta";
-  if (GOOGLE_SOURCES.has(s)) return "google";
-  if (TIKTOK_SOURCES.has(s)) return "tiktok";
-  if (X_SOURCES.has(s)) return "x";
-  if (SNAPCHAT_SOURCES.has(s)) return "snapchat";
-  if (LINKEDIN_SOURCES.has(s)) return "linkedin";
-  if (REDDIT_SOURCES.has(s)) return "reddit";
-  return null;
-}
-
 export function detectDonationSource(input: DetectSourceInput): DonationSourceResult {
   const attr = (input.attribution ?? {}) as Record<string, unknown>;
+  const signals = resolveDonationSourceSignals(attr);
+  const sourceInfo = { sourceKind: signals.sourceKind, sourceLabel: signals.sourceLabel, sourceDetails: signals.sourceDetails };
   const utmSource = pickString(attr, "utm_source");
-  const utmMedium = pickString(attr, "utm_medium");
-  const fbclid = pickString(attr, "fbclid");
-  const gclid = pickString(attr, "gclid");
-  const ttclid = pickString(attr, "ttclid");
-  const snapClickId = pickString(attr, "snap_click_id") ?? pickString(attr, "scid");
   const fbp = pickString(attr, "fbp");
   const fbc = pickString(attr, "fbc");
-  const campaignName = pickString(attr, "utm_campaign");
-  const campaignId = pickString(attr, "campaign_id");
-  const adsetId = pickString(attr, "adset_id");
+  const campaignName = pickString(attr, "campaign_name") ?? pickString(attr, "utm_campaign");
+  const campaignId = pickString(attr, "campaign_id") ?? pickString(attr, "utm_id");
+  const adsetId = pickString(attr, "adset_id") ?? pickString(attr, "ad_group_id");
   const adId = pickString(attr, "ad_id");
   const placement = pickString(attr, "placement");
 
-  // Click-id alone is enough to identify the platform even if utm fields were dropped.
-  let platform: AdPlatform | null = classifyBySource(utmSource);
-  if (!platform) {
-    if (fbclid) platform = "meta";
-    else if (gclid) platform = "google";
-    else if (ttclid) platform = "tiktok";
-    else if (snapClickId) platform = "snapchat";
+  const platform = signals.platform;
+  if (platform === "organic" || platform === "unknown") {
+    return { ...sourceInfo, platform, status: platform, confidence: platform === "unknown" ? 0 : 30,
+      campaignName, campaignId, adsetId, adId, placement,
+      reasons: [platform === "unknown" ? "لا تتوفر بيانات كافية لتحديد المصدر؛ غياب التتبع لا يثبت أن الزيارة غير إعلانية" : `المصدر المسجل: ${signals.sourceLabel}`] };
   }
 
-  // utm_medium of cpc/ppc/paid_social on an unknown source still means paid traffic.
-  const mediumLooksPaid = utmMedium ? PAID_MEDIUMS.has(utmMedium.toLowerCase()) : false;
-  if (!platform && mediumLooksPaid) platform = "other-paid";
-
-  if (!platform) {
-    return {
-      platform: "organic",
-      status: "organic",
-      confidence: 0,
-      campaignName,
-      campaignId,
-      adsetId,
-      adId,
-      placement,
-      reasons: ["لا يوجد utm أو click id"],
-    };
-  }
-
-  const platformClickId =
-    platform === "meta"
-      ? fbclid
-      : platform === "google"
-      ? gclid
-      : platform === "tiktok"
-      ? ttclid
-      : platform === "snapchat"
-      ? snapClickId
-      : null;
-  const hasPlatformClickId = !!platformClickId;
+  const hasPlatformClickId = signals.clickKeys.length > 0;
   const conversionSent = !!input.conversionEventsSentAt;
   const conversionFailed = !!input.conversionFailedEventsSentAt;
   const metaHasCookies = platform === "meta" ? !!fbp && !!fbc : true;
@@ -196,9 +134,16 @@ export function detectDonationSource(input: DetectSourceInput): DonationSourceRe
 
   confidence = Math.max(0, Math.min(100, confidence));
 
+  if (signals.conflict) { reasons.push("إشارات مصدر متعارضة؛ يلزم مراجعة تفاصيل الزيارة"); confidence = Math.min(confidence, 20); }
+  if (!signals.paidEvidence) reasons.push("تحديد المنصة لا يثبت بمفرده أن الزيارة جاءت من إعلان مدفوع");
+
   // Status tier.
   let status: DonationSourceStatus;
-  if (!isPaidStatus) {
+  if (signals.conflict) {
+    status = "tracking-error";
+  } else if (!signals.paidEvidence) {
+    status = signals.sourceKind === "social" || signals.sourceKind === "organic" ? "organic" : "utm-only";
+  } else if (!isPaidStatus) {
     // FAILED donation that was at least linked to an ad  useful for waste analysis,
     // never "verified" since money never settled.
     status = "tracking-error";
@@ -217,6 +162,7 @@ export function detectDonationSource(input: DetectSourceInput): DonationSourceRe
   }
 
   return {
+    ...sourceInfo,
     platform,
     status,
     confidence,
@@ -238,14 +184,16 @@ export const PLATFORM_LABEL_AR: Record<AdPlatform, string> = {
   linkedin: "LinkedIn",
   reddit: "Reddit",
   "other-paid": "إعلان مدفوع",
-  organic: "غير إعلاني",
+  organic: "مصدر مرصود",
+  unknown: "مصدر غير معروف",
 };
 
 export const STATUS_LABEL_AR: Record<DonationSourceStatus, string> = {
   verified: "موثّق",
   "utm-only": "UTM فقط",
   "tracking-error": "مشكلة تتبع",
-  organic: "غير إعلاني",
+  organic: "مصدر مرصود",
+  unknown: "مصدر غير معروف",
 };
 
 export const STATUS_COLOR_CLASS: Record<DonationSourceStatus, string> = {
@@ -253,4 +201,5 @@ export const STATUS_COLOR_CLASS: Record<DonationSourceStatus, string> = {
   "utm-only": "bg-amber-100 text-amber-700 border-amber-200",
   "tracking-error": "bg-red-100 text-red-700 border-red-200",
   organic: "bg-slate-100 text-slate-600 border-slate-200",
+  unknown: "bg-slate-100 text-slate-600 border-slate-200",
 };

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -18,13 +19,14 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { ContentMetricStrip } from "@/components/dashboard/content-editor/ContentMetricStrip";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
-import { compareProjectOrder } from "@/lib/content-editor/project-order";
+import { compareProjectOrder, categoryProjectRank } from "@/lib/content-editor/project-order";
 type State = { complete: boolean; seoComplete: boolean; reviewed: boolean };
 type Row = {
   id: string;
   title: string;
   searchTitles: string[];
   priority: number | null;
+  categoryPriorities?: Record<string, number>;
   createdAt: string;
   image: string;
   isActive: boolean;
@@ -63,6 +65,14 @@ export function CampaignWorkspaceList() {
     [views, setViews] = useState<View[]>([]);
   const [orderDraft, setOrderDraft] = useState<Record<string, string>>({});
   const orderCount = Object.keys(orderDraft).length;
+  const savedOrder = (row: Row) => {
+    const rank = category === "all" ? row.priority : categoryProjectRank(row.categoryPriorities, category);
+    return rank === null || !Number.isFinite(rank) ? "" : String(rank);
+  };
+  const changeCategory = (value: string) => {
+    if (busy || orderCount) { setMessage(dt("احفظ تغييرات الترتيب أو تراجع عنها أولًا.")); return; }
+    setCategory(value);
+  };
   const invalidOrder = Object.values(orderDraft).some((value) => value !== "" && (!Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 1000000));
   useDashboardUnsavedChanges(orderCount > 0);
   useEffect(() => {
@@ -76,7 +86,7 @@ export function CampaignWorkspaceList() {
                 v &&
                 typeof v.name === "string" &&
                 typeof v.query==='string'&&typeof v.category==='string'&&['all','ongoing','complete'].includes(v.progress)&&
-                ["active", "inactive", "archive"].includes(v.tab),
+                ["all", "active", "inactive", "archive"].includes(v.tab),
             )
             .slice(0, 12),
         );
@@ -141,16 +151,16 @@ export function CampaignWorkspaceList() {
       rows
         .filter(
           (r) =>
-            (tab === "archive"
+            (tab === "all" ? true : tab === "archive"
               ? r.archived
               : !r.archived && (tab === "active" ? r.isActive : !r.isActive)) &&
             (category === "all" ||
               r.categories.some((c) => c.id === category)) &&
-            (!query ||
+            (!query.trim() ||
               [r.id, r.title, ...r.searchTitles]
                 .join(" ")
                 .toLocaleLowerCase()
-                .includes(query.toLocaleLowerCase())) &&
+                .includes(query.trim().toLocaleLowerCase())) &&
             (progress === "all" ||
               (progress === "complete"
                 ? r.targetAmount > 0 && r.currentAmount >= r.targetAmount
@@ -161,10 +171,16 @@ export function CampaignWorkspaceList() {
             ? a.title.localeCompare(b.title)
             : sort === "raised"
               ? b.currentAmount - a.currentAmount
-              : compareProjectOrder(a, b),
+              : (category === "all" ? 0 : categoryProjectRank(a.categoryPriorities, category) - categoryProjectRank(b.categoryPriorities, category)) || compareProjectOrder(a, b),
         ),
     [rows, query, category, progress, tab, sort],
   );
+  const matchingOtherStates = query.trim() && tab !== "all" ? rows.filter(row =>
+    [row.id, row.title, ...row.searchTitles].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()) &&
+    (category === "all" || row.categories.some(item => item.id === category)) &&
+    (progress === "all" || (progress === "complete" ? row.targetAmount > 0 && row.currentAmount >= row.targetAmount : row.goalType === "OPEN" || row.currentAmount < row.targetAmount)) &&
+    (tab === "archive" ? !row.archived : row.archived || (tab === "active" ? !row.isActive : row.isActive)),
+  ).length : 0;
   const visible = filtered.slice((page - 1) * 20, page * 20),
     pages = Math.max(1, Math.ceil(filtered.length / 20));
   const stats = useMemo(() => {
@@ -213,7 +229,7 @@ export function CampaignWorkspaceList() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, items }),
+        body: JSON.stringify({ action, items, ...(action === "order" && category !== "all" ? { categoryId: category } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -291,8 +307,9 @@ export function CampaignWorkspaceList() {
       ]} />
       <section className="overflow-hidden rounded-xl border bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 pt-3">
-          <nav aria-label={dt("حالة المشاريع")} className="flex gap-5">
+          <nav aria-label={dt("حالة المشاريع")} className="flex min-w-0 max-w-full gap-4 overflow-x-auto">
             {[
+              ["all", dt("كل الحالات")],
               ["active", dt("النشطة")],
               ["inactive", dt("غير النشطة")],
               ["archive", dt("الأرشيف")],
@@ -300,7 +317,7 @@ export function CampaignWorkspaceList() {
               <button
                 type="button"
                 key={id}
-                className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm ${tab === id ? "border-brand font-bold text-brand" : "border-transparent text-slate-500"}`}
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-1 py-4 text-sm ${tab === id ? "border-brand font-bold text-brand" : "border-transparent text-slate-500"}`}
                 aria-pressed={tab === id}
                 onClick={() => setTab(id)}
               >
@@ -309,7 +326,7 @@ export function CampaignWorkspaceList() {
                 <small className="rounded bg-slate-100 px-2 py-0.5">
                   {
                     rows.filter((r) =>
-                      id === "archive"
+                      id === "all" ? true : id === "archive"
                         ? r.archived
                         : !r.archived &&
                           (id === "active" ? r.isActive : !r.isActive),
@@ -331,6 +348,7 @@ export function CampaignWorkspaceList() {
                   type="button"
                   className="px-3 py-2 text-xs"
                   onClick={() => {
+                    if (busy || orderCount) { setMessage(dt("احفظ تغييرات الترتيب أو تراجع عنها أولًا.")); return; }
                     setQuery(v.query);
                     setCategory(v.category);
                     setProgress(v.progress);
@@ -377,7 +395,7 @@ export function CampaignWorkspaceList() {
             aria-label={dt("فلترة التصنيف")}
             className={input}
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => changeCategory(e.target.value)}
           >
             <option value="all">{dt("جميع التصنيفات")}</option>
             {categories.map((c) => (
@@ -410,6 +428,8 @@ export function CampaignWorkspaceList() {
             </select>
           </label>
         </div>
+        <p className="mx-5 mb-4 text-sm text-slate-600" data-order-scope={category}>{category === "all" ? dt("تعديل الأرقام يحفظ ترتيب الكل فقط. ترتيب كل تصنيف مستقل.") : dt("تعديل الأرقام يحفظ ترتيب التصنيف المحدد فقط؛ الترتيب العام وبقية التصنيفات لا تتغير.")}</p>
+        {matchingOtherStates ? <div role="status" className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm"><span>{dt("يوجد {0} مشروعًا مطابقًا للبحث في حالات أخرى.", [matchingOtherStates])}</span><button type="button" className={btn} onClick={() => setTab("all")}>{dt("عرض كل الحالات")}</button></div> : null}
         {message ? (
           <p
             role="status"
@@ -421,7 +441,7 @@ export function CampaignWorkspaceList() {
         {selected.length ? (
           <div className="mx-5 mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-brand/5 p-3">
             <span className="me-auto text-sm">{dtx("محدد: {0}", [selected.length])}</span>
-            {tab === "archive" ? (
+            {tab === "all" ? <p className="text-xs text-slate-600">{dt("اختر تبويب الحالة لتنفيذ التفعيل أو الأرشفة الجماعية.")}</p> : tab === "archive" ? (
               <button
                 type="button"
                 className={btn}
@@ -452,7 +472,24 @@ export function CampaignWorkspaceList() {
             )}
           </div>
         ) : null}
-        <div className="overflow-x-auto">
+        <div className="space-y-3 p-3 md:hidden">
+          {loading ? <p role="status" className="py-8 text-center text-sm text-slate-500">{dt("تحميل المشاريع…")}</p> : visible.map(row => {
+            const translated = SUPPORTED_LOCALES.filter(code => code !== "ar" && row.statuses[code]?.complete).length;
+            return <article key={row.id} className="min-w-0 space-y-3 rounded-xl border bg-white p-3">
+              <div className="flex items-start gap-3"><input type="checkbox" className="mt-1 h-4 w-4" aria-label={dt("تحديد {0}", [row.title])} checked={selected.includes(row.id)} disabled={busy} onChange={event => setSelected(previous => event.target.checked ? [...previous, row.id] : previous.filter(id => id !== row.id))} />
+                {row.image ? <Image src={row.image} alt="" width={64} height={64} unoptimized className="h-16 w-16 shrink-0 rounded-lg object-cover" /> : null}
+                <div className="min-w-0 flex-1"><Link className="text-sm font-bold leading-6 text-brand" href={`/dashboard/campaigns/edit/${row.id}`}>{row.title}</Link><p className={`mt-1 text-xs ${row.archived ? "text-slate-500" : row.isActive ? "text-emerald-700" : "text-amber-700"}`}>{row.archived ? dt("مؤرشف") : row.isActive ? dt("نشط") : dt("غير نشط")}</p></div>
+              </div>
+              <div className="flex flex-wrap gap-1">{row.categories.map(category => <span key={category.id} className="rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-600">{category.name}</span>)}</div>
+              <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-[11px] text-slate-500">{dt("المحصّل")}</p><p dir="ltr" className="text-lg font-bold">${row.currentAmount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</p><p className="mt-1 text-xs text-slate-500">{dt("{0} / {1} ترجمة", [translated, SUPPORTED_LOCALES.length - 1])}</p></div>
+                <label className="space-y-1 text-xs text-slate-500"><span className="block">{dt("الترتيب")}</span><input type="number" min="0" max="1000000" aria-label={dt("ترتيب {0}", [row.title])} className="min-h-10 w-20 rounded-lg border p-2 text-center text-base" value={orderDraft[row.id] ?? savedOrder(row)} disabled={busy} onChange={event => { const value = event.target.value; setOrderDraft(previous => { const next = { ...previous }; if (value === savedOrder(row)) delete next[row.id]; else next[row.id] = value; return next; }); }} /></label>
+                <Link className={btn + " min-h-10"} href={`/dashboard/campaigns/edit/${row.id}`}>{dt("تحرير")}</Link>
+              </div>
+            </article>;
+          })}
+          {!loading && !visible.length ? <p className="py-8 text-center text-sm text-slate-500">{dt("لا توجد مشاريع مطابقة.")}</p> : null}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[900px] text-start text-sm">
             <thead className="border-y bg-slate-50 text-xs text-slate-500">
               <tr>
@@ -531,14 +568,14 @@ export function CampaignWorkspaceList() {
                           max="1000000"
                           aria-label={dt("ترتيب {0}", [row.title])}
                           className="w-16 rounded border p-2 text-center"
-                          value={orderDraft[row.id] ?? (row.priority === null ? "" : String(row.priority))}
+                          value={orderDraft[row.id] ?? savedOrder(row)}
                           placeholder="—"
                           disabled={busy}
                           onChange={(event) => {
                             const value = event.target.value;
                             setOrderDraft((previous) => {
                               const next = { ...previous };
-                              if (value === (row.priority === null ? "" : String(row.priority))) delete next[row.id];
+                              if (value === savedOrder(row)) delete next[row.id];
                               else next[row.id] = value;
                               return next;
                             });

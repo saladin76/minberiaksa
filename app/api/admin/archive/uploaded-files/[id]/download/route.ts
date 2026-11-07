@@ -5,7 +5,7 @@ import { requireArchiveApiAccess, requireArchiveUploadedFileListAccess } from ".
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> | { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: Params) {
   const { denied } = await requireArchiveApiAccess();

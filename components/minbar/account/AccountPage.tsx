@@ -1,5 +1,7 @@
 "use client";
 
+import { subscriptionRequestCopy } from "@/lib/donations/subscription-request-copy";
+import { fetchDocument, saveDocument } from "@/lib/minbar/document-download";
 import { type ReactElement, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -8,6 +10,7 @@ import type { MinbarAccountSummary } from "@/lib/minbar/account";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { formatMoney } from "@/lib/minbar/money";
 import { Button } from "@/components/minbar/ds";
+import DonorLinkedIdentities from "@/components/auth/DonorLinkedIdentities";
 
 /**
  * The donor account  ported from `Minbar/حساب المتبرع.dc.html`.
@@ -104,10 +107,18 @@ const FIELD = {
 export default function AccountPage({ summary }: { summary: MinbarAccountSummary }) {
   const locale = useLocale();
   const t = useTranslations("account");
+  const tSystem = useTranslations("system");
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
+  const download = async (id: string, kind: "receipt" | "thanks") => {
+    setDownloading(`${id}:${kind}`); setDownloadError(false);
+    try { saveDocument(await fetchDocument(kind === "receipt" ? `/api/receipts/${id}` : `/api/certificates/thanks/${id}`, `${kind}-${id.slice(-8)}.pdf`)); }
+    catch { setDownloadError(true); } finally { setDownloading(null); }
+  };
   const tTransfer = useTranslations("transferReceipt");
-  const { format, formatNumber } = useMinbarMoney();
+  const { formatNumber } = useMinbarMoney();
 
-  const { profile, donations, pendingTransfers, totalDonatedUSD, donationCount, activeSubscriptions } = summary;
+  const { profile, donations, pendingTransfers, donationCount, activeSubscriptions } = summary;
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -172,7 +183,6 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
   };
 
   const stats: Array<{ icon: string; value: string; label: string }> = [
-    { icon: "wallet", value: format(totalDonatedUSD), label: t("totalDonated") },
     { icon: "list", value: formatNumber(donationCount), label: t("donationCount") },
     { icon: "refresh", value: formatNumber(activeSubscriptions), label: t("activeSubs") },
   ];
@@ -206,7 +216,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
           {/* The handoff points this at the contact page  plainly a placeholder.
               It leads to the real settings screen, where a donor can also change
               their password, country and notification preferences. */}
-          <Link href={`/${locale}/profile`} className="acc-settings" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid rgba(211,154,39,.5)", background: "#fff", fontSize: 13.5, fontWeight: 800, color: "var(--deep)", transition: "all .18s ease" }}>
+          <Link href={`/${locale}/profile?tab=settings`} className="acc-settings" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid rgba(211,154,39,.5)", background: "#fff", fontSize: 13.5, fontWeight: 800, color: "var(--deep)", transition: "all .18s ease" }}>
             <Icon name="settings" />
             {t("settings")}
           </Link>
@@ -214,7 +224,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
       </section>
 
       <section style={{ padding: "34px 0 70px" }}>
-        <div className="acc-stats" style={{ ...SECTION, display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18, marginBottom: 34, marginTop: -30 }}>
+        <div className="acc-stats" style={{ ...SECTION, display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 18, marginBottom: 34, marginTop: -30 }}>
           {stats.map((stat) => (
             <div key={stat.label} className="acc-row acc-card acc-in acc-in-1" style={{ display: "flex", alignItems: "center", gap: 12, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 12 }}>
               <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 38, height: 38, borderRadius: 10, background: "var(--sand)", color: "var(--gold)", flex: "0 0 auto" }}>
@@ -228,8 +238,8 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
           ))}
         </div>
 
-        <div className="acc-body" style={{ ...SECTION, display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,.8fr)", gap: 30, alignItems: "start" }}>
-          <div style={{ display: "grid", gap: 14 }}>
+        <div className="acc-body" style={{ ...SECTION, display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+          <div style={{ display: "grid", gap: 16, minWidth: 0, width: "100%" }}>
             {/* Bank transfers the finance team has not confirmed yet. Shown
                 above the history, apart from it and never in the totals: the
                 donor should see where each one stands and what it needs of
@@ -282,41 +292,34 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             ) : null}
 
             <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900 }}>{t("donationHistory")}</h2>
+            {downloadError && <p role="alert" className="text-sm text-red-700">{tSystem("techErrorLead")}</p>}
             <div style={{ display: "grid", gap: 10 }}>
               {donations.map((donation) => (
-                <div key={donation.id} className="acc-row acc-card acc-in" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 18px", background: "#fff", border: "1px solid var(--border)", borderRadius: 10 }}>
-                  <span style={{ flex: "1 1 auto", minWidth: 0 }}>
-                    <b style={{ display: "block", fontSize: 15 }}>
-                      {donation.titles.length ? donation.titles.join("، ") : t("dearDonor")}
+                <article key={donation.id} className="acc-card acc-in min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="m-0 break-words text-sm font-bold leading-7 sm:text-base">
+                        {donation.titles.length ? donation.titles.join("، ") : t("dearDonor")}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-[var(--muted)]">
+                        <time dateTime={donation.date} className="inline-flex items-center gap-1.5"><Icon name="calendar" size={13} />{dateFormat.format(new Date(donation.date))}</time>
+                        {donation.recurring ? <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-2.5 py-1 font-semibold text-[var(--gold)]"><Icon name="refresh" size={12} />{t("recurringTitle")}</span> : null}
+                      </div>
+                    </div>
+                    <b dir="ltr" className="shrink-0 whitespace-nowrap rounded-lg bg-slate-50 px-3 py-2 text-base font-bold text-[var(--deep)]" style={{ unicodeBidi: "isolate" }}>
+                      {chargedAmount(donation.amount, donation.currency)}
                     </b>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted)", fontSize: 12.5, marginTop: 2 }}>
-                      <time dateTime={donation.date}>{dateFormat.format(new Date(donation.date))}</time>
-                      {donation.recurring ? (
-                        <>
-                          <span aria-hidden="true" style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--muted)" }} />
-                          <span style={{ display: "inline-flex", padding: "2px 8px", borderRadius: 999, background: "var(--sand)", color: "var(--gold)", fontWeight: 800 }}>
-                            {t("recurringTitle")}
-                          </span>
-                        </>
-                      ) : null}
-                    </span>
-                  </span>
-                  <b dir="ltr" style={{ unicodeBidi: "isolate", whiteSpace: "nowrap" }}>
-                    {chargedAmount(donation.amount, donation.currency)}
-                  </b>
-                  {/* The receipt is the server-generated PDF, not a page: it is
-                      the document a donor keeps, and it is issued per donation. */}
-                  <a
-                    href={`/api/donations/${donation.id}/receipt?locale=${encodeURIComponent(locale)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="acc-receipt"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", fontSize: 12.5, fontWeight: 800, color: "var(--deep)", whiteSpace: "nowrap", transition: "all .18s ease" }}
-                  >
-                    <Icon name="receipt" size={13} />
-                    {t("receipt")}
-                  </a>
-                </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-2 border-t border-[var(--border)] pt-3 sm:grid-cols-2 xl:flex xl:flex-wrap">
+                    {(["receipt", "thanks"] as const).map(kind => (
+                      <button key={kind} type="button" disabled={downloading !== null} aria-busy={downloading === `${donation.id}:${kind}`} onClick={() => void download(donation.id, kind)}
+                        className={`acc-receipt inline-flex min-h-11 min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${kind === "receipt" ? "border-[#A5243D]/20 bg-[#A5243D]/5 text-[#A5243D]" : "border-[var(--border)] bg-white text-[var(--deep)]"}`}>
+                        <span className="shrink-0"><Icon name="receipt" size={15} /></span>
+                        {downloading === `${donation.id}:${kind}` ? tSystem("processing") : tSystem(kind === "receipt" ? "downloadReceipt" : "downloadThankYouCert")}
+                      </button>
+                    ))}
+                  </div>
+                </article>
               ))}
 
               {donations.length === 0 ? (
@@ -331,7 +334,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 12 }}>
+          <div className="grid w-full min-w-0 gap-4 md:grid-cols-2">
             <div className="acc-in acc-in-1" style={{ display: "grid", gap: 10, padding: 22, background: "var(--sand)", borderRadius: 12 }}>
               <b style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15 }}>
                 <Icon name="user" size={16} />
@@ -342,7 +345,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
                 <>
                   <span style={{ display: "grid", gap: 8 }}>
                     <EditField label={t("fullName")} value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} autoComplete="name" />
-                    <EditField label={t("email")} value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} type="email" dir="ltr" autoComplete="email" />
+                    <div className="space-y-1"><span className="text-sm">{t("email")}</span><p dir="ltr">{saved.email}</p><a href="#linked-login-identities" className="text-sm underline">{locale === "ar" ? "إدارة البريد من طرق الدخول المرتبطة" : "Manage email in linked sign-in methods"}</a></div>
                     <EditField label={t("phone")} value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} type="tel" dir="ltr" autoComplete="tel" />
                     <EditField label={t("birthDate")} value={form.birthdate} onChange={(v) => setForm((f) => ({ ...f, birthdate: v }))} type="date" dir="ltr" />
                     <EditField label={t("address")} value={form.address} onChange={(v) => setForm((f) => ({ ...f, address: v }))} autoComplete="address-level2" />
@@ -390,13 +393,14 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
               <span style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.8 }}>
                 {activeSubscriptions > 0 ? `${formatNumber(activeSubscriptions)} ${t("activeSubs")}` : t("noActivePlan")}
               </span>
-              <Button variant="light" href={miaPath("recurring", locale)} style={{ whiteSpace: "nowrap" }}>
-                {t("startRecurring")}
+              <Button variant="light" href={activeSubscriptions > 0 ? `/${locale}/profile?tab=subscriptions` : miaPath("recurring", locale)} style={{ whiteSpace: "nowrap" }}>
+                {activeSubscriptions > 0 ? subscriptionRequestCopy(locale)[0] : t("startRecurring")}
               </Button>
             </div>
           </div>
         </div>
       </section>
+      <DonorLinkedIdentities />
     </div>
   );
 }
@@ -430,3 +434,4 @@ function EditField({
     </label>
   );
 }
+

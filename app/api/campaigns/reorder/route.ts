@@ -5,10 +5,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { queueAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { writeErrorMessage } from "@/lib/dashboard/write-error-message";
-import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
+import { parseProjectRanks, replaceProjectRanks } from "@/lib/campaign/reorder";
+import { revalidatePath } from "next/cache";
 
-/** Guards against a malformed or unbounded payload reaching the transaction. */
-const MAX_REORDER_ITEMS = 500;
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,45 +18,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { campaigns } = body;
 
-    if (!Array.isArray(campaigns)) {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
-    }
-    if (campaigns.length === 0) {
-      return NextResponse.json({ message: "Nothing to reorder" }, { status: 200 });
-    }
-    if (campaigns.length > MAX_REORDER_ITEMS) {
-      return NextResponse.json({ error: "عدد المشاريع كبير جدًا" }, { status: 400 });
-    }
-
-    // Validate up front. An entry missing an id or carrying a non-numeric order
-    // used to reach Prisma and fail the transaction part-way through.
-    const updates: { id: string; order: number }[] = [];
-    for (const raw of campaigns) {
-      const id = raw?.id;
-      const order = raw?.order;
-      if (typeof id !== "string" || !id || typeof order !== "number" || !Number.isFinite(order)) {
-        return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-      }
-      updates.push({ id, order });
-    }
-
-    await prisma.$transaction([
-      // The selected list is the whole priority set. Clearing first is essential:
-      // removing a project in the dialog must really remove its old priority.
-      prisma.campaign.updateMany({
-        where: { AND: [{ priority: { not: null } }, NOT_SOFT_DELETED] },
-        data: { priority: null },
-      }),
-      ...updates.map(({ id, order }) =>
-        prisma.campaign.update({
-          where: { id },
-          data: { priority: order },
-        })
-      ),
-    ]);
+    const updates = parseProjectRanks(campaigns);
+    if (!updates) return NextResponse.json({ error: "ترتيب غير صالح" }, { status: 400 });
+    await replaceProjectRanks(prisma, updates);
+    revalidatePath("/", "layout");
 
     const actor = auditActorFromDashboardSession(session!);
     queueAuditLog({
@@ -73,6 +37,8 @@ export async function POST(req: NextRequest) {
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
+    if ((error as { code?: string }).code === "P2034" || error instanceof Error && error.message === "CONFLICT") return NextResponse.json({ error: "تغير الترتيب أثناء الحفظ. أعد تحميل القائمة." }, { status: 409 });
+    if (error instanceof Error && error.message === "INVALID_SCOPE") return NextResponse.json({ error: "اختيار غير صالح" }, { status: 400 });
     console.error("Error reordering campaigns:", error);
     return NextResponse.json(
       { error: writeErrorMessage(error, "تعذّر حفظ الترتيب") },

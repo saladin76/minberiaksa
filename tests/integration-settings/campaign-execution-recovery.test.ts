@@ -1,3 +1,6 @@
+import { buildMetaComponents } from "../../lib/communication/providers/meta-whatsapp/parameters";
+import { buildWhatsappRenderedPreview } from "../../lib/communication/whatsapp-rendered-preview";
+import * as readiness from "../../lib/communication/whatsapp-template-readiness";
 import * as campaignTracking from "../../lib/communication/campaign-message-tracking";
 import { recentMarketingDeliveryWhere } from "../../lib/communication/recent-marketing-filter";
 import { templateLocaleHeader } from "../../lib/communication/template-locale-media";
@@ -25,9 +28,10 @@ type Progress = { cursor: string | null; total: number; sent: number; skipped: n
 type State = { id: string; name: string; status: string; channel: string; purpose: string; templateGroupId: string; audienceSegmentKey: null; scheduledAt: Date; metadata: Dict };
 type Recipient = { cursorId: string; userId: string; name: string; email: string; phone: string; locale: string; country: string };
 type Delivery = Dict & { id: string; status: string; recipientUserId: string; recipientEmail?: string; recipientPhone?: string; providerMessageId?: string; errorMessage?: string };
-type Options = { trackingBody?: string; denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
+type Options = { renderedLocale?: string; trackingBody?: string; denyRouting?: boolean; channel?: string; recentMarketing?: boolean; size?: number; resumeAtEnd?: boolean; allSkipped?: boolean; failSkip?: boolean; failCreate?: boolean; failSentArchive?: boolean; failContext?: boolean; failQueueCount?: boolean; failQueueDelete?: boolean; failFinal?: boolean; cancelAtFinal?: boolean; pauseAtWorker?: boolean; guardBlocks?: boolean; sendThrows?: boolean; quiet?: boolean; duplicateContact?: boolean; failCounter?: boolean };
 type Result = { ok: boolean; status: string; sent: number; skipped: number; failed: number; total: number; hasMore?: boolean; blocked?: string };
 type Engine = {
+  runDueCampaigns: () => Promise<Result[]>;
   executeCampaignSend: (id: string, opts?: { mode?: string; maxBatches?: number; batchSize?: number; timeBudgetMs?: number }) => Promise<Result>;
   __test: { mapWithConcurrency: <T,R>(items: T[], limit: number, work: (item: T) => Promise<R>) => Promise<R[]> };
 };
@@ -64,6 +68,9 @@ function engineHarness(options: Options = {}) {
     "./smart-audience": { getSmartAudienceDefinitionForSegmentKey: async () => options.recentMarketing ? { filters: { excludeMarketedWithinDays: 7 } } : null },
     "./recent-marketing-filter": { recentMarketingDeliveryWhere },
     "@/lib/prisma": { prisma: {
+      whatsappTemplateWabaVariant: { findMany: async () => [{ businessAccountId: "waba", languageCode: "en", locale: "en", approvalStatus: "APPROVED", category: "MARKETING", providerTemplateName: "fixture", componentsSchema: [{ type: "BODY", text: "Fixture donation" }], lastSyncedAt: new Date() }] },
+      whatsappTemplate: { findUnique: async () => ({ variables: [], header: {}, translations: {} }) },
+      communicationCampaign: { findMany: async ({ where }: { where: { status: string; scheduledAt?: { lte: Date } } }) => campaign.status === where.status && (!where.scheduledAt || campaign.scheduledAt <= where.scheduledAt.lte) ? [clone(campaign)] : [] },
       communicationCampaignDeferredRecipient: {
         count: async () => { if (options.failQueueCount) throw new Error("QUEUE_READ_FAILED"); return queue.length; },
         findMany: async () => clone(queue.filter((row) => row.nextAttemptAt <= new Date())),
@@ -75,6 +82,7 @@ function engineHarness(options: Options = {}) {
     } },
     "@/lib/audit-log": { writeAuditLog: async () => {} },
     "./campaign-service": { getCampaign: async () => clone(campaign) },
+    "./campaign-approval-service": { evaluateCoverageGate: async () => ({ ok: !(options as Options & { missingLanguage?: boolean }).missingLanguage }) },
     "./campaign-send-planner": { planCampaignSend: async (_id: string, opts: { cursor?: string | null; batchSize: number }) => {
       const page = recipients.filter((row) => !opts.cursor || row.cursorId > opts.cursor).slice(0, opts.batchSize);
       const skippedList = options.allSkipped ? page.map((r) => ({ cursorId: r.cursorId, userId: r.userId, locale: r.locale, reason: "DO_NOT_CONTACT" })) : [];
@@ -84,7 +92,7 @@ function engineHarness(options: Options = {}) {
         nextCursor: page.at(-1)?.cursorId ?? opts.cursor ?? null, exhausted: page.length < opts.batchSize, truncated: page.length >= opts.batchSize,
         ...(page.length ? {} : { blocked: "AUDIENCE_EXHAUSTED" }) };
     } },
-    "./template-compat": { renderChannelTemplate: async () => ({ templateName: "template", subject: "Subject", body: options.trackingBody ?? "Body", usedFallback: false }) },
+    "./template-compat": { renderChannelTemplate: async () => ({ templateName: "template", subject: "Subject", body: options.trackingBody ?? "Body", resolvedLocale: options.renderedLocale ?? "en", usedFallback: options.renderedLocale ? options.renderedLocale !== "en" : false }) },
     "@/lib/templates/variables": { loadContextsForUserIds: async (ids: string[]) => { if (options.failContext) throw new Error("CONTEXT_READ_FAILED"); return new Map(ids.map((id) => [id, { user: { name: id } }])); } },
     "./update-campaign": { sourceUpdateOf: () => null, loadUpdateSource: async () => null, updateContextFor: () => ({}) },
     "./delivery-log-service": {
@@ -97,8 +105,8 @@ function engineHarness(options: Options = {}) {
       sendPreparedDelivery: async (payload: Dict) => { payloads.push(payload); calls++; events.push("send"); if (options.sendThrows) throw new Error("socket error"); return { ok: true, providerMessageId: `p-${calls}`, internalAccepted: false }; } },
     "./providers/email/client": { EMAIL_PROVIDER_ID: "ELASTIC_EMAIL" },
     "./runtime-config": { getActiveCommunicationRuntimeBundle: async () => ({}) },
-    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test" } }) },
-    "./whatsapp-template-sync": {}, "./providers/meta-whatsapp/parameters": {}, "./whatsapp-rendered-preview": {},
+    "./sender-resolution": { loadSenderRoutingSnapshot: async () => ({}), resolveSenderFromSnapshot: () => options.denyRouting ? ({ ok: false, reason: "NO_SENDER_AVAILABLE" }) : ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test", businessAccountId: "waba" } }) },
+    "./whatsapp-template-readiness": readiness, "./whatsapp-template-sync": { META_PROVIDER: "META_WHATSAPP", NOT_READY: readiness.NOT_READY }, "./providers/meta-whatsapp/parameters": { buildMetaComponents }, "./whatsapp-rendered-preview": { buildWhatsappRenderedPreview },
     "./audience-list-service": { resolveAudienceOrigin: async () => "CAMPAIGN" },
     "./campaign-counter-service": { ...counter, recomputeCampaignCounters: async () => ({ ok: !options.failCounter, status: campaign.status }) },
     "./campaign-send-controls": { autoSpeedMode: () => "BALANCED", campaignPriorityRank: () => 1, campaignSendControls: controls,
@@ -122,6 +130,12 @@ function engineHarness(options: Options = {}) {
     releaseQuiet: () => { options.quiet = false; for (const row of queue) row.nextAttemptAt = new Date(0); } };
 }
 
+test("a full-audience language missing beyond the first page prevents any provider call", async () => {
+  const h = engineHarness({ ...({ missingLanguage: true } as Options), size: 2 });
+  const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(result.blocked, "LANGUAGE_COVERAGE_INCOMPLETE");
+  assert.equal(h.campaign.status, "APPROVED"); assert.equal(h.state().calls, 0); assert.equal(h.state().creates, 0);
+});
 test("executor sends each recipient once and checkpoints done only with final status", async () => {
   const h = engineHarness(); const result = await h.engine.executeCampaignSend("campaign");
   assert.equal(result.ok, true); assert.equal(result.status, "SENT"); assert.equal(result.total, 2); assert.equal(result.sent, 2);
@@ -281,4 +295,23 @@ for (const channel of ["EMAIL", "SMS"]) test(`${channel} executor never bypasses
     assert.ok(String(payload.html).includes("utm_id=campaign"));
     assert.equal(payload.html, h.deliveries.find(row => row.recipientEmail === payload.to)?.renderedBody);
   }
+});
+
+ test("legacy campaign fallback decisions never send another donor language", async () => {
+  const h = engineHarness({ renderedLocale: "ar" });
+  h.campaign.metadata.coverageDecisions = { en: "FALLBACK" };
+  const result = await h.engine.executeCampaignSend("campaign");
+  assert.equal(h.state().calls, 0); assert.equal(result.skipped, 2);
+  assert.ok(h.deliveries.every(row => row.errorMessage === "EXACT_TEMPLATE_LANGUAGE_REQUIRED"));
+ });
+
+for (const channel of ["EMAIL", "WHATSAPP"]) test(`${channel}: future schedules wait; concurrent due ticks send each recipient once and cancelled schedules never send`, async () => {
+ const h = engineHarness({ channel }); h.campaign.status = "SCHEDULED"; h.campaign.scheduledAt = new Date(Date.now() + 3600_000);
+ assert.equal((await h.engine.runDueCampaigns()).length, 0); assert.equal(h.state().calls, 0);
+ h.campaign.scheduledAt = new Date(Date.now() - 1000);
+ await Promise.all([h.engine.runDueCampaigns(), h.engine.runDueCampaigns()]);
+ assert.equal(h.state().calls, 2); assert.equal(h.campaign.status, "SENT");
+ await h.engine.runDueCampaigns(); assert.equal(h.state().calls, 2);
+ const cancelled = engineHarness({ channel }); cancelled.campaign.status = "CANCELLED";
+ assert.equal((await cancelled.engine.runDueCampaigns()).length, 0); assert.equal(cancelled.state().calls, 0);
 });

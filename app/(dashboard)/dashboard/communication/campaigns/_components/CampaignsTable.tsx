@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { LOCALE_LABELS } from "@/lib/locales";
 import { type CampaignRow, channelMeta, statusMeta, hasResults, audienceLabel } from "./campaign-ui";
 import { CampaignRowActions } from "./CampaignRowActions";
+import { campaignBlockLabel } from "./CampaignRecoveryDialog";
 import { dashIntl, dt } from "@/lib/dashboard/i18n";
 
 /**
@@ -102,9 +103,10 @@ function CountCell({ value, show, tone }: { value: number | null; show: boolean;
 }
 
 export function CampaignsTable({
-  campaigns, sort, onSort, onChanged,
+  campaigns, sort, onSort, onChanged, includeFinancials = false,
 }: {
   campaigns: CampaignRow[];
+  includeFinancials?: boolean;
   sort: CampaignSort;
   onSort: (key: SortKey) => void;
   /** Re-fetch the list after a row action changes a campaign's status. */
@@ -114,13 +116,21 @@ export function CampaignsTable({
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="divide-y md:hidden">
+        {campaigns.map(c => { const channel=channelMeta(c.channel), status=statusMeta(c.status);return <article key={c.id} className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><Link className="break-words text-sm font-semibold text-slate-900 hover:text-brand" href={`${channel.href}?campaign=${c.id}`}>{c.name}</Link><p className="mt-1 text-xs text-slate-500">{channel.label} · {rowDate(c).label}</p></div><span className={cn("shrink-0 rounded-full border px-2 py-1 text-[10px]",status.tone)}>{status.label}</span></div>
+          {c.status === "BLOCKED" && c.metadata?.lastRun?.blocked ? <p className="text-xs leading-6 text-rose-700">{campaignBlockLabel(c.metadata.lastRun.blocked)}</p> : null}
+          <dl className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-3 text-xs">{[[dt("أُرسلت"),c.sentCount],[dt("وصلت"),c.deliveredCount],[dt("فشلت"),c.failedCount]].map(([label,value])=><div key={label}><dt className="text-slate-500">{label}</dt><dd className="mt-1 font-semibold tabular-nums">{hasResults(c)?Number(value).toLocaleString("en-US"):"—"}</dd></div>)}</dl>
+          <CampaignRowActions campaign={c} onChanged={onChanged}/>
+        </article>; })}
+      </div>
       {/* Wide content scrolls inside its own container so the page body never scrolls sideways. */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1300px] text-start text-xs">
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[980px] text-start text-xs">
           <thead>
             {/* Sticky so the numeric columns stay labelled while scrolling a long list. */}
             <tr className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50/90 text-[11px] font-semibold text-slate-500 backdrop-blur">
-              <SortHeader label={dt("الحملة")} sortKey="name" sort={sort} onSort={onSort} className="min-w-[16rem] text-start" />
+              <SortHeader label={dt("الحملة")} sortKey="name" sort={sort} onSort={onSort} className="min-w-[12rem] text-start" />
               <SortHeader label={dt("القناة")} sortKey="channel" sort={sort} onSort={onSort} />
               <SortHeader label={dt("الحالة")} sortKey="status" sort={sort} onSort={onSort} />
               <SortHeader label={dt("أُرسلت")} sortKey="sentCount" sort={sort} onSort={onSort} align="left" className="text-end" />
@@ -128,8 +138,10 @@ export function CampaignsTable({
               <SortHeader label={dt("فتح/قرأ")} sortKey="readCount" sort={sort} onSort={onSort} align="left" className="text-end" />
               <SortHeader label={dt("ضغط")} sortKey="clickedCount" sort={sort} onSort={onSort} align="left" className="text-end" />
               <SortHeader label={dt("رد")} sortKey="repliedCount" sort={sort} onSort={onSort} align="left" className="text-end" />
+              {includeFinancials ? <>
               <SortHeader label={dt("تبرعات")} sortKey="donationCount" sort={sort} onSort={onSort} align="left" className="text-end" />
               <SortHeader label={dt("إيراد $")} sortKey="revenue" sort={sort} onSort={onSort} align="left" className="text-end" />
+              </> : null}
               <SortHeader label={dt("فشلت")} sortKey="failedCount" sort={sort} onSort={onSort} align="left" className="text-end" />
               <SortHeader label={dt("التاريخ")} sortKey="date" sort={sort} onSort={onSort} />
               <th scope="col" className="sticky end-0 z-20 w-px bg-slate-50 px-3 py-2.5 shadow-sm">
@@ -153,10 +165,16 @@ export function CampaignsTable({
               return (
                 <tr
                   key={c.id}
-                  onClick={() => router.push(href)}
+                  onClick={event => {
+                    // React portal events bubble through this row even though the dialog is
+                    // outside the table. Actions must never navigate away from an active send.
+                    const target = event.target as HTMLElement;
+                    if (!event.currentTarget.contains(target) || target.closest("button, a, input, select, textarea, [role='dialog'], [role='alertdialog'], [role='menu']")) return;
+                    router.push(href);
+                  }}
                   className="cursor-pointer border-b border-slate-50 transition-colors last:border-0 hover:bg-slate-50/70"
                 >
-                  <td className="min-w-[16rem] max-w-[24rem] px-3 py-2.5 align-middle">
+                  <td className="min-w-[12rem] max-w-[20rem] px-3 py-2.5 align-middle">
                     <div className="flex items-center gap-2.5">
                       <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg", ch.tile)}>
                         <Icon className="h-4 w-4" />
@@ -191,6 +209,7 @@ export function CampaignsTable({
                       <span className={cn("inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium", st.tone)}>
                         {st.label}
                       </span>
+                      {c.status === "BLOCKED" && c.metadata?.lastRun?.blocked ? <p className="max-w-56 whitespace-normal text-[11px] leading-5 text-rose-700">{campaignBlockLabel(c.metadata.lastRun.blocked)}</p> : null}
                       {c.metadata?.sendControls?.paused && (
                         <span className="inline-block rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
                           {dt("متوقفة مؤقتًا")}</span>
@@ -203,6 +222,7 @@ export function CampaignsTable({
                   <CountCell value={c.readCount} show={showResults} tone="text-sky-700" />
                   <CountCell value={c.clickedCount} show={showResults} tone="text-violet-700" />
                   <CountCell value={c.repliedCount} show={showResults} tone="text-amber-700" />
+                  {includeFinancials ? <>
                   <CountCell value={c.donationCount} show={showResults} tone="text-emerald-700" />
                   <td className="whitespace-nowrap px-3 py-2.5 text-end align-middle tabular-nums">
                     {!showResults || c.revenue == null ? (
@@ -213,6 +233,7 @@ export function CampaignsTable({
                       </span>
                     )}
                   </td>
+                  </> : null}
                   <CountCell value={c.failedCount} show={showResults} tone="text-rose-700" />
 
                   <td className="whitespace-nowrap px-3 py-2.5 align-middle text-slate-600">
@@ -236,4 +257,5 @@ export function CampaignsTable({
     </div>
   );
 }
+
 

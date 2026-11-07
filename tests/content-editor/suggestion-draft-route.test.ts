@@ -7,19 +7,23 @@ import * as contracts from "../../lib/content-editor/contracts";
 import { ContentError } from "../../lib/content-editor/service";
 import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
 import { OpenAiResponseError } from "../../lib/ai/core/openai-response";
+import { seoSourceText } from "../../lib/content-editor/seo-source";
 
 function fixture(mode = "ok") {
   const row = { id: "111111111111111111111111", title: "Saved Arabic title", description: "Saved source", translations: [{ locale: "en", title: "Saved English title", description: "Saved English copy" }] };
-  const calls: { translations: unknown[]; research: Record<string, unknown>[]; reads: number } = { translations: [], research: [], reads: 0 };
+  const calls: { translations: unknown[]; research: Record<string, unknown>[]; reads: number; auth: number } = { translations: [], research: [], reads: 0, auth: 0 };
   class SeoResearchError extends Error { status = 502; }
   const deps: Record<string, unknown> = {
+    "@/lib/content-editor/create": { emptyWorkspace: () => ({ title: "", description: "", translations: [] }) },
+    "@/lib/content-editor/compose": { composeField: async (input: unknown) => { calls.translations.push(input); return "Suggested title"; } },
+    "@/lib/content-editor/seo-source": { seoSourceText },
     "next/server": { NextResponse: { json: (body: unknown, options?: { status?: number }) => ({ body, status: options?.status || 200 }) } },
-    "next-auth": { getServerSession: async () => ({ user: {} }) }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
+    "next-auth": { getServerSession: async () => { calls.auth++; if (mode === "queued" && calls.auth > 1) throw new Error("request cookies are unavailable after response"); return { user: { id: "operator" } }; } }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => mode === "denied" ? { status: 403 } : null },
-    "@/lib/content-editor/suggestion-tasks": {}, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
+    "@/lib/content-editor/suggestion-tasks": { queueSuggestion: async (_request: unknown, _owner: string, _permission: string, execute: (request: unknown) => Promise<unknown>) => execute({ json: async () => ({ action: "translate", locales: ["fr"], keys: ["title"], revision: "revision" }), signal: new AbortController().signal, headers: new Headers() }) }, "@/lib/ai/core/suggestion-failure": { suggestionFailure }, "@/lib/content-editor/contracts": contracts,
     "@/lib/content-editor/service": { ContentError, readContent: async () => { calls.reads++; return row; }, fingerprint: () => "revision", documentFor: () => ({ slugs: {} }) },
     "@/lib/content-editor/store": { contentStore: {} }, "@/lib/locales": { isValidLocale: (value: string) => ["ar", "en", "fr"].includes(value) },
-    "@/lib/content-localization/translate": { translateItem: async () => ({ fields: {}, richFields: {}, warnings: [] }) },
+    "@/lib/content-localization/translate": { translateItem: async (input: unknown) => { calls.translations.push(input); if (mode === "quota") throw new OpenAiResponseError("AI_QUOTA_EXCEEDED"); return { fields: { title: "Reviewed translation" }, richFields: {}, warnings: [] }; } },
     "@/lib/content-localization/research-translate": { translateResearchedItem: async (input: unknown) => { calls.translations.push(input); if (mode === "quota") throw new OpenAiResponseError("AI_QUOTA_EXCEEDED"); return { translation: { fields: { title: "Reviewed translation" }, richFields: {}, warnings: [] }, research: { sources: [] } }; } },
     "@/lib/content-editor/seo-research": { SeoResearchError, generateResearchedSeo: async (input: Record<string, unknown>) => { calls.research.push(input); return { suggestion: { seoTitle: "Proposal", metaDescription: "Proposal description", primaryKeyword: "Keyword", altText: "Alt", faq: [], notes: [] }, research: { sources: [] } }; } },
     "@/lib/content-editor/faq": { faqTranslationFields: () => ({}), translatedFaq: () => null },
@@ -27,8 +31,8 @@ function fixture(mode = "ok") {
   };
   const loaded = { exports: {} as { POST: (request: unknown, context: unknown) => Promise<{ status: number; body: Record<string, unknown> }> } };
   const source = ts.transpileModule(fs.readFileSync("app/api/admin/content-editor/[kind]/[id]/suggest/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, console: { error: () => {} }, require: (id: string) => { if (!(id in deps)) throw new Error(id); return deps[id]; } });
-  return { row, calls, post: (body: unknown) => loaded.exports.POST({ json: async () => body, signal: new AbortController().signal }, { params: Promise.resolve({ kind: "campaigns", id: row.id }) }) };
+  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, Headers, console: { error: () => {} }, require: (id: string) => { if (!(id in deps)) throw new Error(id); return deps[id]; } });
+  return { row, calls, post: (body: unknown, contentId = row.id) => loaded.exports.POST({ json: async () => body, signal: new AbortController().signal, headers: new Headers(mode === "queued" ? { Prefer: "respond-async" } : {}) }, { params: Promise.resolve({ kind: "campaigns", id: contentId }) }) };
 }
 test("translation uses the unsaved Arabic snapshot and never mutates saved content", async () => {
   const h = fixture(), original = structuredClone(h.row);
@@ -37,10 +41,10 @@ test("translation uses the unsaved Arabic snapshot and never mutates saved conte
   const input = h.calls.translations[0] as { fields: Record<string, string>; richFields: Record<string, string> };
   assert.deepEqual(JSON.parse(JSON.stringify({ ...input.fields, ...input.richFields })), { title: "Unsaved Arabic title", description: "Unsaved source" });
 });
-test("SEO uses an unsaved language draft while keeping revision and authorization checks", async () => {
+test("SEO uses the Arabic master even when a conflicting foreign draft is supplied", async () => {
   const h = fixture();
-  assert.equal((await h.post({ action: "seo", locale: "en", revision: "revision", draft: { title: "Unsaved English title", description: "Current draft copy" } })).status, 200);
-  assert.equal(h.calls.research[0].title, "Unsaved English title"); assert.match(String(h.calls.research[0].description), /Current draft copy/);
+  assert.equal((await h.post({ action: "seo", locale: "en", revision: "revision", sourceDraft: { title: "عنوان عربي غير محفوظ", description: "محتوى المصدر العربي" }, draft: { title: "Conflicting English claim", description: "Invented foreign content" } })).status, 200);
+  assert.equal(h.calls.research[0].title, "عنوان عربي غير محفوظ"); assert.match(String(h.calls.research[0].description), /محتوى المصدر العربي/); assert.doesNotMatch(JSON.stringify(h.calls.research), /Conflicting|Invented/);
   assert.equal((await h.post({ action: "seo", locale: "en", revision: "stale" })).status, 409); assert.equal(h.calls.research.length, 1);
   const denied = fixture("denied"); assert.equal((await denied.post({})).status, 403); assert.equal(denied.calls.reads, 0);
 });
@@ -52,4 +56,50 @@ test("translation quota failures expose a controlled actionable reason without p
   const result = await fixture("quota").post({ action: "translate", locales: ["fr"], keys: ["title"], revision: "revision" });
   assert.equal(result.status, 502); assert.equal(result.body.reason, "AI_QUOTA_EXCEEDED"); assert.equal(result.body.stopBatch, true);
   assert.match(String(result.body.error), /رصيد|فوترة/);
+});
+
+
+test("queued translation uses the initiating authorized session after the response instead of reading expired request cookies", async () => {
+  const h = fixture("queued"); const result = await h.post({});
+  assert.equal(result.status,200); assert.equal(h.calls.auth,1); assert.equal(h.calls.translations.length,1);
+});
+
+test("SEO and FAQ fall back to saved Arabic, never foreign text, and refuse missing Arabic before the provider", async () => {
+  for (const action of ["seo", "faq"]) {
+    const h = fixture();
+    await h.post({ action, locale: "fr", revision: "revision", draft: { title: "Foreign" } });
+    assert.equal(h.calls.research[0].title, "Saved Arabic title");
+    const missing = await h.post({ action, locale: "en", revision: "revision", sourceDraft: { title: "", description: "" } });
+    assert.equal(missing.status, 400); assert.match(String(missing.body.error), /بالعربية/);
+    assert.equal(h.calls.research.length, 1);
+  }
+});
+
+test("proofreading still edits the requested language without substituting Arabic", async () => {
+  const h = fixture();
+  assert.equal((await h.post({ action: "proofread", locale: "en", revision: "revision", keys: ["title"], draft: { title: "English draft" }, sourceDraft: { amount: "invalid ignored source" } })).status, 200);
+  const input = h.calls.translations[0] as { mode: string; sourceLocale: string; fields: Record<string, string> };
+  assert.equal(input.mode, "proofread"); assert.equal(input.sourceLocale, "en"); assert.equal(input.fields.title, "English draft");
+});
+
+
+test("a new unsaved draft can request one field without reading or persisting a project", async () => {
+  const h = fixture();
+  const result = await h.post({ action: "compose", locale: "ar", revision: "revision", field: "title",
+    brief: "عنوان محايد لمشروع تجريبي فقط", draft: { description: "مثال غير مخصص للنشر" } }, "new");
+  assert.equal(result.status, 200);
+  assert.equal(h.calls.reads, 0);
+  assert.equal(h.calls.translations.length, 1);
+  const proposals = result.body.proposals as Record<string, { values: Record<string, string> }>;
+  assert.deepEqual(JSON.parse(JSON.stringify(proposals.ar.values)), { title: "Suggested title" });
+});
+
+test("field drafting refuses URLs, unknown fields, oversized briefs, invalid locales and unauthorized access", async () => {
+  for (const patch of [{ field: "image" }, { field: "videoUrl" }, { field: "amount" }, { brief: "x".repeat(2001) }, { locale: "unknown" }]) {
+    const h = fixture();
+    const result = await h.post({ action: "compose", locale: "ar", revision: "revision", field: "title", brief: "مثال", ...patch });
+    assert.equal(result.status, 400);
+    assert.equal(h.calls.translations.length, 0);
+  }
+  assert.equal((await fixture("denied").post({ action: "compose" }, "new")).status, 403);
 });

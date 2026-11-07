@@ -1,9 +1,13 @@
+import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutGroup, mixedCheckoutIds } from "@/lib/donations/mixed-cart";
+import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
-import { albarakaCheckoutMode } from "@/lib/donations/albaraka-checkout-mode";
+import { albarakaCheckoutMode, isMixedRecurringCheckout } from "@/lib/donations/albaraka-checkout-mode";
+import { bankRequestsAuthentication } from "@/lib/donations/authentication-recovery";
+import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import {
   albaraka2DConfig,
   albaraka2DOrderId,
@@ -17,7 +21,6 @@ import {
   buildAlbaraka2DSale,
   ALBARAKA_MERCHANT_SIDE_CODES,
   albarakaInquireSale,
-  albarakaReverseSale,
   isAlbarakaApproved,
   isAlbarakaConfigured,
   isAlbarakaRecurringEnabled,
@@ -75,12 +78,14 @@ type InitiateBody = {
 
 /** Convert any amount to TRY using USD-base rates from the database (same as donations). */
 async function toTRY(amount: number, fromCurrency: string): Promise<number> {
+  if (["TRY", "TL"].includes(fromCurrency.toUpperCase())) return amount;
   const rates = await getUsdBaseRatesForServer();
   return convertAmountInCurrencyToTry(amount, fromCurrency, rates);
 }
 
 /** Same rates, one step: the table is USD-based, so this is a single division. */
 async function toUSD(amount: number, fromCurrency: string): Promise<number> {
+  if (["USD", "US"].includes(fromCurrency.toUpperCase())) return amount;
   const rates = await getUsdBaseRatesForServer();
   return convertAmountInCurrencyToUsd(amount, fromCurrency, rates);
 }
@@ -97,7 +102,7 @@ function toBankExpiry(raw: string): string {
   return `${yy}${mm}`;
 }
 
-// Room for the sale, plus a status inquiry and a void when its answer is lost.
+// Room for the sale and an inquiry when its answer is lost.
 export const maxDuration = 90;
 // Albaraka only accepts calls from the IPs on the terminal's "Sabit IP" list.
 // Those are the project's Vercel Static IPs, which exist in ap-southeast-1 only,
@@ -107,8 +112,8 @@ export const preferredRegion = "sin1";
 /**
  * A /Sale whose answer never arrived. The bank is asked by order id: an
  * approved sale settles the donation, no record fails it. When even that is
- * unclear, the order is voided (same-day İptal) before the donation is failed,
- * so the donor is never charged for a donation the site shows as failed.
+ * unclear, keep it pending for half-hour polling. A lost response is not
+ * authorization for a new charge or an automatic reversal.
  * Returns whether the donation ended up paid.
  */
 async function resolveUnknownOutcome(
@@ -133,29 +138,10 @@ async function resolveUnknownOutcome(
     return true;
   }
 
-  /* Void even when the bank reports no record: a sale still being processed
-     can land after the inquiry, and voiding an order that never existed is
-     harmless. */
-  const reverse: AlbarakaServiceResponse | null = await albarakaReverseSale(orderId, cfg);
-  console.error("[Albaraka 2D SALE] unresolved sale", {
-    donationId,
-    orderId,
-    inquiry: inquiry.state,
-    reverse: reverse?.ServiceResponseData ?? null,
-  });
-
-  await failAlbarakaDonation(
-    donationId,
-    inquiry.state === "absent"
-      ? "Bank connection failed; the bank has no record of the sale"
-      : `Bank connection failed; outcome unknown, void ${isAlbarakaApproved(reverse) ? "succeeded" : "not confirmed"}; check order ${orderId} in the merchant panel`,
-    {
-      albarakaInquiry: inquiry.raw as unknown as Record<string, unknown>,
-      albarakaReverse: reverse as unknown as Record<string, unknown>,
-    },
-    orderId,
-    ""
-  );
+  await prisma.donation.updateMany({ where: donationWhereAll({ id: donationId, providerOrderId: orderId }, donationFieldEmpty("paidAt")), data: {
+    providerTxnResult: "PendingConfirmation", providerErrorMessage: "PAYMENT_CONFIRMATION_PENDING",
+    reconciliationNextAt: new Date(Date.now() + 1_800_000),
+  } });
   return false;
 }
 
@@ -180,6 +166,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
 
+    if (mixedCheckoutParent(donation.providerRaw)) {
+      return NextResponse.json({ error: "This donation is paid with its linked recurring checkout", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
+    }
+    const mixedPayment = mixedCheckoutPayment(donation.providerRaw);
+    const linkedDonations = mixedPayment ? (await Promise.all(mixedCheckoutIds(donation.providerRaw).map(id => prisma.donation.findUnique({ where: { id }, include: { subscription: true } })))).filter(row => row !== null) : [];
+    if (mixedPayment && (!validMixedCheckoutGroup(donation, linkedDonations) || linkedDonations.some(row => row.paidAt || row.status === "FAILED" || (row.subscription && row.subscription.provider !== "ALBARAKA")))) {
+      return NextResponse.json({ error: "Invalid linked checkout state", code: "PAYMENT_GROUP_LOCKED" }, { status: 409 });
+    }
+    const checkoutTotal = mixedPayment?.totalAmount ?? donation.totalAmount;
+
     // Server-side belt matching the PayFor kill-switch: the dialogs already gate the
     // UI on the selected main gateway, but a client could still call this directly.
     // A plan is the exception: daily and Friday plans are Albaraka's whatever the
@@ -190,7 +186,7 @@ export async function POST(req: NextRequest) {
     });
     const plan = donation.subscription;
     let mode: "2D" | "3D";
-    try { mode = albarakaCheckoutMode(body.securityMode, Boolean(plan)); }
+    try { mode = albarakaCheckoutMode(body.securityMode, Boolean(plan), isMixedRecurringCheckout(donation.attribution)); }
     catch { return NextResponse.json({ error: "Invalid payment verification mode", code: "INVALID_PAYMENT_MODE" }, { status: 400 }); }
     const cfg = mode === "3D" ? albarakaConfig() : albaraka2DConfig();
     if (!isAlbarakaConfigured(cfg)) return NextResponse.json({ error: "Albaraka is not configured on server" }, { status: 503 });
@@ -201,12 +197,14 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
-    } else if (parseMainGateway(settings?.mainGateway) !== "ALBARAKA") {
+    } else if (parseMainGateway(settings?.mainGateway) !== "ALBARAKA" && frozenPaymentRoute(donation.providerRaw)?.gateway !== "ALBARAKA") {
       return NextResponse.json(
         { error: "Albaraka is not the selected main gateway." },
         { status: 403 }
       );
     }
+    const frozenRoute = frozenPaymentRoute(donation.providerRaw);
+    if (frozenRoute && frozenRoute.gateway !== "ALBARAKA") return NextResponse.json({ error: "This payment attempt belongs to another gateway", code: "PAYMENT_GATEWAY_LOCKED" }, { status: 409 });
     // Authenticated users: verify ownership. Guests have no session  trust the donationId.
     if (session?.user?.id && donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -223,7 +221,7 @@ export async function POST(req: NextRequest) {
 
     // APP_URL keeps OkUrl/ReturnURL on the domain registered with the bank; a bare
     // localhost origin gets the 3D form rejected.
-    const origin = process.env.APP_URL?.replace(/\/$/, "") ?? new URL(req.url).origin;
+    const origin = paymentPublicOrigin(req.url);
     const locale = (body.locale ?? donation.locale ?? "en").toString().toLowerCase();
 
     /* The site takes 14 currencies and Albaraka understands three, so something
@@ -238,16 +236,16 @@ export async function POST(req: NextRequest) {
     let currencyCode: AlbarakaCurrencyCode;
 
     if (policy === "USD") {
-      chargeAmount = await toUSD(donation.totalAmount, donation.currency);
+      chargeAmount = await toUSD(checkoutTotal, donation.currency);
       currencyCode = "US";
     } else if (
       policy === "DONOR" &&
       ["TRY", "TL", "USD", "US", "EUR", "EU"].includes(donationCurrency)
     ) {
-      chargeAmount = donation.totalAmount;
+      chargeAmount = checkoutTotal;
       currencyCode = albarakaCurrencyCode(donationCurrency);
     } else {
-      chargeAmount = await toTRY(donation.totalAmount, donation.currency);
+      chargeAmount = await toTRY(checkoutTotal, donation.currency);
       currencyCode = "TL";
     }
 
@@ -370,7 +368,10 @@ export async function POST(req: NextRequest) {
         // Snapshot of what we actually asked the bank to charge.
         providerRaw: {
           ...(typeof donation.providerRaw === "object" && donation.providerRaw ? (donation.providerRaw as object) : {}),
+          cardSummary: { last4: cardNo.slice(-4), brand: detectCardType(cardNo) },
           albarakaRequest: {
+            merchantNo: cfg.merchantNo,
+            terminalNo: cfg.terminalNo,
             orderId,
             amount,
             currencyCode,
@@ -383,28 +384,20 @@ export async function POST(req: NextRequest) {
     });
     if (claim.count !== 1) {
       return NextResponse.json(
-        { error: "A payment for this donation is already in progress or finished." },
+        { error: "A payment for this donation is already in progress or finished.", code: "PAYMENT_ALREADY_PROCESSING" },
         { status: 409 }
       );
     }
     unsentClaim = donation.id;
-    if (mode === "3D") {
-      const fields = buildAlbaraka3DForm({
-        orderId, amount, currencyCode, locale,
-        returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
-        card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
-      }, cfg);
-      // No Sale here: the bank authenticates first, then the callback claims capture.
-      unsentClaim = null;
-      return NextResponse.json({ actionUrl: cfg.tdsUrl, fields }, { headers: { "Cache-Control": "no-store" } });
-    }
-
     /* A plan: keep the card the donor is authorising, so the scheduler can
        charge the later instalments. PAN is encrypted at rest; no CVC is stored,
        including hashes. The card is linked before the bank is asked for
        anything, so a plan can never be activated without a card to bill. A
        retry of the same checkout reuses the card already linked. */
-    if (plan && !plan.paymentCardId) {
+    let linkedCardId = plan?.paymentCardId ?? savedCardId;
+    if (plan && !plan.paymentCardId && savedCardId) {
+      await prisma.subscription.update({ where: { id: plan.id }, data: { paymentCardId: savedCardId, provider: "ALBARAKA" } });
+    } else if (plan && !plan.paymentCardId) {
       const card = await prisma.creditCard.create({
         data: {
           userId: donation.donorId,
@@ -419,10 +412,28 @@ export async function POST(req: NextRequest) {
         },
         select: { id: true },
       });
+      linkedCardId = card.id;
       await prisma.subscription.update({
         where: { id: plan.id },
         data: { paymentCardId: card.id, provider: "ALBARAKA" },
       });
+    }
+
+    if (linkedCardId) {
+      for (const row of linkedDonations) if (row.subscriptionId) {
+        await prisma.subscription.update({ where: { id: row.subscriptionId }, data: { paymentCardId: linkedCardId, provider: "ALBARAKA" } });
+      }
+    }
+
+    if (mode === "3D") {
+      const fields = buildAlbaraka3DForm({
+        orderId, amount, currencyCode, locale,
+        returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
+        card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName },
+      }, cfg);
+      // No Sale here: the bank authenticates first, then the callback claims capture.
+      unsentClaim = null;
+      return NextResponse.json({ actionUrl: cfg.tdsUrl, fields }, { headers: { "Cache-Control": "no-store" } });
     }
 
     // ── 2D sale ──────────────────────────────────────────────────────────────
@@ -449,16 +460,43 @@ export async function POST(req: NextRequest) {
 
     /* The request left but no readable answer came back (timeout, dropped
        connection, an HTML error page). The card may have been charged, so this
-       is not a decline: ask the bank, and if it cannot say, void the order so
-       a donation recorded as failed never keeps the donor's money. */
+       is not a decline: ask the bank, and if it cannot say, leave the order
+       pending for scheduled confirmation. */
     if (transportError || isAlbarakaTransportFailure(sale)) {
       const paid = await resolveUnknownOutcome(donation.id, orderId, cfg, transportError ?? sale);
-      return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid });
+      return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid });
     }
 
     const approved = isAlbarakaApproved(sale);
     const responseCode = sale?.ServiceResponseData?.ResponseCode ?? "";
     const responseDescription = sale?.ServiceResponseData?.ResponseDescription ?? "";
+    if (!approved && bankRequestsAuthentication(responseCode, responseDescription)) {
+      const inquiry = await albarakaInquireSale(orderId, cfg);
+      if (inquiry.state === "approved") {
+        await settleAlbarakaDonation(donation.id, { ...inquiry.raw, AuthCode: inquiry.authCode }, { authenticationRecovery: "confirmed-original-sale" });
+        return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: true });
+      }
+      if (inquiry.state === "unknown") {
+        await prisma.donation.updateMany({ where: donationWhereAll({ id: donation.id, providerOrderId: orderId }, donationFieldEmpty("paidAt")), data: { providerTxnResult: "PendingConfirmation", providerErrorMessage: "AUTHENTICATION_OUTCOME_UNCONFIRMED", reconciliationNextAt: new Date(Date.now() + 1_800_000) } });
+        return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: false });
+      }
+      const secureConfig = albarakaConfig();
+      if (!plan && isAlbarakaConfigured(secureConfig)) {
+        const secureOrderId = albarakaOrderId();
+        const fields = buildAlbaraka3DForm({ orderId: secureOrderId, amount, currencyCode, locale,
+          returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
+          card: { number: cardNo, expireDate: expiredDate, cvc2: cvv, holderName: cardHolderName } }, secureConfig);
+        const changed = await prisma.donation.updateMany({ where: donationWhereAll({ id: donation.id, providerOrderId: orderId, providerTxnResult: "Processing" }, donationFieldEmpty("paidAt")), data: {
+          providerOrderId: secureOrderId, providerTxnResult: "Processing", providerErrorMessage: null,
+          providerRaw: { ...(typeof donation.providerRaw === "object" && donation.providerRaw ? donation.providerRaw as object : {}),
+            cardSummary: { last4: cardNo.slice(-4), brand: detectCardType(cardNo) },
+            authenticationRecovery: { from: "2D", to: "3D", previousOrderId: orderId, reason: responseDescription, bankConfirmedNoSale: true },
+            albarakaRequest: { orderId: secureOrderId, amount, currencyCode, merchantNo: secureConfig.merchantNo, terminalNo: secureConfig.terminalNo, transactionType: "Sale", mode: "3D", createdAt: new Date().toISOString() } } as Prisma.InputJsonValue,
+        } });
+        if (changed.count !== 1) return NextResponse.json({ error: "Payment state changed; refresh the result" }, { status: 409 });
+        return NextResponse.json({ actionUrl: secureConfig.tdsUrl, fields, verificationUpgraded: true }, { headers: { "Cache-Control": "no-store" } });
+      }
+    }
 
     // The bank's answer, never the card: nothing card-bearing is logged.
     console.log("[Albaraka 2D SALE]", {
@@ -487,7 +525,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ actionUrl: resultUrl, fields: {}, paid: approved });
+    return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: approved });
   } catch (error) {
     console.error("Albaraka initiate error:", error);
     if (unsentClaim) {

@@ -40,7 +40,7 @@ const bodySchema = z.object({
   richFields: z.record(z.string(), z.string().max(200000)).default({}),
   locales: z.array(z.string()).max(SUPPORTED_LOCALES.length).optional(),
   itemLabel: z.string().max(80).optional(),
-  sourceLocale: z.enum(SUPPORTED_LOCALES).optional(),
+  sourceLocale: z.literal("ar").optional(),
   policy: z.enum(["STANDARD", "LEGAL_REVIEW_REQUIRED", "RELIGIOUS_LOCKED", "SEO"]).default("STANDARD"),
 });
 

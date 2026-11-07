@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Senza codice di verifica",
     "verificationSecure": "Verifica bancaria",
     "verificationSecureHelp": "Potrebbe essere richiesto un codice",
-    "verificationRequired": "Scegli una modalità di pagamento per continuare."
+    "verificationRequired": "Scegli una modalità di pagamento per continuare.",
+    "verificationSecureOptIn": "Desidero la verifica bancaria (3D Secure)",
+    "verificationOptionalHelp": "Il pagamento diretto è predefinito. Seleziona questa opzione per la verifica tramite la banca."
   },
   "certificates": {
     "certNoLabel": "N. certificato",
@@ -1560,6 +1562,16 @@
     "sentText": "Il nostro team Partnership vi contatterà presto via email."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Moschea di Al-Aqsa",
+      "jerusalem": "Gerusalemme",
+      "waqf": "Crea un waqf a Gerusalemme",
+      "zakat": "Dona la zakat alla Palestina",
+      "restoration": "Restauro delle case di Gerusalemme",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Donazione ricorrente"
+    },
     "allProjects": "Tutti i Progetti",
     "filterByRegion": "Per Regione",
     "filterByType": "Per Tipo di Donazione",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "Il numero della carta non è valido. Controllalo.",
     "invalidCardExpiry": "La data di scadenza non è valida o è già passata.",
     "invalidCardCvc": "Il codice di sicurezza (CVC) non è valido.",
-    "tooManyPaymentAttempts": "Troppi tentativi di pagamento. Riprova più tardi."
+    "tooManyPaymentAttempts": "Troppi tentativi di pagamento. Riprova più tardi.",
+    "mixedDonationCadences": "Completa le diverse frequenze di donazione con pagamenti separati. Controlla il carrello."
   },
   "waqf": {
     "chooseUnit": "Scegli tipo e quantità del tuo contributo",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "Scegli un importo di sostegno al team o “No, grazie” per continuare"
   },
   "Gift": {
+    "validationError": "Inserisci il nome del destinatario e recapiti validi. Includi il prefisso internazionale nel numero WhatsApp.",
     "emailSubject": "Un regalo a tuo nome: una donazione per {project}",
     "emailTitle": "{recipientName}, hai ricevuto un regalo",
     "emailBody": "{donorName} ha donato a tuo nome al progetto “{project}” tramite Minbar Al-Aqsa.",
@@ -2478,7 +2492,8 @@
     "orContinue": "continua con",
     "noAccount": "Non hai un account?",
     "createOne": "Creane uno",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Accedi con Google"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "ha donato",
     "for": "per",
     "communitySupporter": "Dalla nostra comunità di sostenitori"
+  },
+  "DonationDialog": {
+    "rememberCard": "Salva la mia carta per le prossime donazioni",
+    "rememberCardFailed": "Impossibile salvare la carta. Deseleziona questa opzione per continuare.",
+    "savedCards": "Le tue carte salvate",
+    "useNewCard": "Usa una nuova carta",
+    "bankChargeEstimate": "La tua donazione è di {original}. L’addebito bancario stimato è di {amount} in lire turche; il cambio definitivo viene fissato all’avvio del pagamento.",
+    "bankChargeCurrency": "La banca incassa questa donazione in lire turche. L’importo convertito appare prima della conferma.",
+    "paymentRoutingChanged": "Il gateway è cambiato. Verifica il metodo, reinserisci il codice di sicurezza e conferma."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Accesso non completato",
+    "authAccessDenied": "L’autorizzazione non è stata completata. Riprova o dona come ospite.",
+    "authAccountConflict": "Questa email usa un altro metodo di accesso. Usa il metodo precedente o dona come ospite.",
+    "authUnavailable": "L’accesso non è disponibile. Puoi donare come ospite.",
+    "authUnknown": "L’accesso non è stato completato. Riprova o continua come ospite.",
+    "donateAsGuest": "Continua a donare come ospite",
+    "signInWithGoogle": "Accedi con Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Rimborso completo",
+        "PARTIALLY_REFUNDED": "Rimborso parziale",
+        "VOIDED": "Annullata dalla banca",
+        "REVIEW_REQUIRED": "Verifica finanziaria necessaria",
+        "balance": "Rimborsato: {returned} · Residuo: {remaining}"
+      },
+      "recurringGivingMonths": "Mesi con donazioni periodiche",
+      "recurringGivingMonthsHint": "Mesi con pagamenti periodici confermati in questo periodo"
+    }
   }
 }

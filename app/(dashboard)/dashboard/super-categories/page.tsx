@@ -1,5 +1,7 @@
 'use client';
 
+import { ProjectFilterOrderDialog } from "@/components/dashboard/ProjectFilterOrderDialog";
+import { useLocale } from "next-intl";
 import { TranslationOverview } from "@/components/dashboard/content-editor/TranslationOverview";
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -36,6 +38,7 @@ interface SuperCategoryRow {
 
 export default function SuperCategoriesPage() {
   const router = useRouter();
+  const locale = useLocale();
   const [search, setSearch] = useState(""), [visibility, setVisibility] = useState("all"), [loadError, setLoadError] = useState("");
   const [rows, setRows] = useState<SuperCategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +115,7 @@ export default function SuperCategoriesPage() {
         title={dt("المشاريع الكبرى")}
         description={dt("صفحات برامج تجمع المشاريع والمقالات والوسائط في واجهة واحدة. راجع ترتيب الصفحة ومحتواها وترجماتها قبل إتاحتها.")}
         icon={Layers}
-        actions={<Button onClick={() => router.push('/dashboard/super-categories/new')}><Plus className="me-1 h-4 w-4" />{dt("مشروع كبير جديد")}</Button>}
+        actions={<div className="flex flex-wrap gap-2"><ProjectFilterOrderDialog locale={locale}/><Button onClick={() => router.push('/dashboard/super-categories/new')}><Plus className="me-1 h-4 w-4" />{dt("مشروع كبير جديد")}</Button></div>}
       />
       <ContentMetricStrip items={[
         { label: dt("كل الصفحات"), value: rows.length, detail: dt("صفحات برامج محفوظة"), icon: Layers, tone: "brand" },

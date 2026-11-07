@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { blockedTrackingMacros, splitTrackingUrl, resolvedTrackingIdentifier } from "@/lib/marketing/tracking-link-policy";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
@@ -49,6 +50,8 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as JsonMap;
   const payload = readCampaignLinkPayload(body);
   if (!payload.url) return jsonNoStore({ ok: false, error: "missing url" }, { status: 400 });
+  if (!splitTrackingUrl(payload.url)) return jsonNoStore({ ok: false, error: "Invalid website URL", code: "INVALID_LINK_URL" }, { status: 400 });
+  if (blockedTrackingMacros(payload.url).length) return jsonNoStore({ ok: false, error: "Remove device_platform/publisher_platform placeholders before saving", code: "INVALID_TRACKING_MACRO" }, { status: 400 });
   if (!payload.platform) return jsonNoStore({ ok: false, error: "missing platform" }, { status: 400 });
   const link = await createOrUpdateCampaignLink({
     name: payload.name ?? payload.utmCampaign ?? payload.campaignId ?? "Marketing link",
@@ -61,10 +64,10 @@ export async function POST(request: NextRequest) {
     utmCampaign: payload.utmCampaign ?? null,
     utmId: payload.utmId ?? null,
     utmContent: payload.utmContent ?? null,
-    campaignId: payload.campaignId ?? null,
-    adGroupId: payload.adGroupId ?? null,
-    adsetId: payload.adsetId ?? null,
-    adId: payload.adId ?? null,
+    campaignId: resolvedTrackingIdentifier(payload.campaignId),
+    adGroupId: resolvedTrackingIdentifier(payload.adGroupId),
+    adsetId: resolvedTrackingIdentifier(payload.adsetId),
+    adId: resolvedTrackingIdentifier(payload.adId),
     audienceSegment: payload.audienceSegment ?? null,
     messageVariant: payload.messageVariant ?? null,
     targetCountry: payload.targetCountry ?? null,
@@ -102,10 +105,10 @@ async function updateLink(filter: JsonMap, body: JsonMap, userId: string | null,
   if (payload.utmCampaign !== undefined) editable.utmCampaign = payload.utmCampaign ?? null;
   if (payload.utmId !== undefined) editable.utmId = payload.utmId ?? null;
   if (payload.utmContent !== undefined) editable.utmContent = payload.utmContent ?? null;
-  if (payload.campaignId !== undefined) editable.campaignId = payload.campaignId ?? null;
-  if (payload.adGroupId !== undefined) editable.adGroupId = payload.adGroupId ?? null;
-  if (payload.adsetId !== undefined) editable.adsetId = payload.adsetId ?? null;
-  if (payload.adId !== undefined) editable.adId = payload.adId ?? null;
+  if (payload.campaignId !== undefined) editable.campaignId = resolvedTrackingIdentifier(payload.campaignId);
+  if (payload.adGroupId !== undefined) editable.adGroupId = resolvedTrackingIdentifier(payload.adGroupId);
+  if (payload.adsetId !== undefined) editable.adsetId = resolvedTrackingIdentifier(payload.adsetId);
+  if (payload.adId !== undefined) editable.adId = resolvedTrackingIdentifier(payload.adId);
   if (payload.audienceSegment !== undefined) editable.audienceSegment = payload.audienceSegment ?? null;
   if (payload.messageVariant !== undefined) editable.messageVariant = payload.messageVariant ?? null;
   if (payload.targetCountry !== undefined) editable.targetCountry = payload.targetCountry ?? null;
@@ -123,3 +126,4 @@ async function setLinkStatus(filter: JsonMap, status: CampaignLinkStatus, userId
   const result = await prisma.$runCommandRaw(rawCommand({ update: "MarketingCampaignLink", updates: [{ q: filter, u: { $set: update }, multi: false }] })) as JsonMap;
   return jsonNoStore({ ok: true, matched: result.n ?? 0, status });
 }
+

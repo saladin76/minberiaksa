@@ -11,6 +11,7 @@ export type CampaignSendControls = {
   autoSpeed: boolean;
   priority: CampaignPriority;
   dailyCap: number;
+  dailyCapEnabled: boolean;
   scheduledStopAt: string | null;
   resumeAt: string | null;
   quietHours: {
@@ -63,10 +64,8 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
   };
-  const configuredGlobalCap = process.env.COMMUNICATION_WHATSAPP_DAILY_CAP
-    ? positiveInt(process.env.COMMUNICATION_WHATSAPP_DAILY_CAP, 100_000)
-    : null;
-  const requestedCap = positiveInt(raw.dailyCap, configuredGlobalCap ?? 100_000);
+  const dailyCapEnabled = raw.dailyCapEnabled === true;
+  const requestedCap = dailyCapEnabled ? positiveInt(raw.dailyCap, 0) : 0;
 
   return {
     paused: raw.paused === true,
@@ -75,9 +74,8 @@ export function campaignSendControls(campaign: Pick<CommunicationCampaign, "meta
     priority: ["LOW", "NORMAL", "HIGH", "URGENT"].includes(priority) ? priority : "NORMAL",
     scheduledStopAt: isoOrNull(raw.scheduledStopAt),
     resumeAt: isoOrNull(raw.resumeAt),
-    // An explicitly configured environment ceiling remains a hard safety cap. When there is no
-    // environment override, the campaign value can come directly from Meta's current account tier.
-    dailyCap: configuredGlobalCap ? Math.min(requestedCap, configuredGlobalCap) : requestedCap,
+    dailyCapEnabled,
+    dailyCap: requestedCap,
     quietHours: {
       enabled: quiet.enabled === true,
       start: hhmm(quiet.start, "00:00"),
@@ -279,7 +277,7 @@ export async function evaluateCampaignSendControls(
     return { ok: false, controls, reason: "QUIET_HOURS", remainingDaily: null };
   }
 
-  if (campaign.channel === "WHATSAPP") {
+  if (campaign.channel === "WHATSAPP" && controls.dailyCap > 0) {
     const used = await whatsappSentLast24Hours();
     const remaining = Math.max(controls.dailyCap - used, 0);
     if (remaining <= 0) return { ok: false, controls, reason: "DAILY_CAP_REACHED", remainingDaily: 0 };

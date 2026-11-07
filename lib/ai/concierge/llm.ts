@@ -1,3 +1,4 @@
+import { economicalAiFetch } from "@/lib/ai/core/economical-fetch";
 import { getOpenAiRuntime } from "@/lib/ai/core/connection-settings";
 import "server-only";
 
@@ -144,7 +145,7 @@ export async function askModel(input: LlmInput): Promise<LlmOutcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const response = await fetch(`${status.baseUrl}/responses`, {
+    const response = await economicalAiFetch(`${status.baseUrl}/responses`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

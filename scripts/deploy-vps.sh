@@ -93,9 +93,21 @@ ensure_node_toolchain
 
 APP="${PM2_APP:-minberiaksa}"
 BRANCH="${BRANCH:-main}"
+export GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never
 
 lock_before="$(sha1sum package-lock.json | cut -d' ' -f1)"
-git pull --ff-only origin "$BRANCH"
+if [[ -n "${MINBER_REVIEWED_SOURCE_SHA:-}" ]]; then
+  if [[ ! "$MINBER_REVIEWED_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || [[ "$(git rev-parse HEAD)" != "$MINBER_REVIEWED_SOURCE_SHA" ]]; then
+    echo "Reviewed source does not match HEAD; nothing built or activated." >&2
+    exit 1
+  fi
+else
+  if timeout --kill-after=5s 120s git -c credential.interactive=false pull --ff-only origin "$BRANCH"; then :; else
+    FETCH_STATUS=$?
+    echo "GIT_SOURCE_UNAVAILABLE: source fetch failed or timed out. Configure read-only GitHub access on this VPS and retry; nothing built or activated." >&2
+    exit "$FETCH_STATUS"
+  fi
+fi
 lock_after="$(sha1sum package-lock.json | cut -d' ' -f1)"
 DEPLOY_SHA="$(git rev-parse HEAD)"
 

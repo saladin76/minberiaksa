@@ -87,3 +87,28 @@ test("campaign creation rejects missing images and categories without writing mo
   assert.equal(db.count("campaign"), 0);
   assert.equal(db.count("contentCreationRequest"), 0);
 });
+
+
+test("campaign creation drops the translation-only Arabic cover field and retains the gallery", async () => {
+  const db = database();
+  await db.store.model("category").create({ data: { id: "222222222222222222222222", name: "التعليم", isActive: true } });
+  const baseModel = db.store.model.bind(db.store);
+  let campaignData: ContentRecord | undefined;
+  db.store.model = name => {
+    const model = baseModel(name);
+    if (name !== "campaign") return model;
+    return { ...model, create: async args => {
+      const data = (args as { data: ContentRecord }).data;
+      campaignData = data;
+      assert.equal("image" in data, false, "Prisma Campaign has images, not image");
+      return model.create(args);
+    } };
+  };
+  const saved = await createWorkspace(db.store, { kind: "campaigns", creationKey, locale: "ar",
+    changes: { title: "مشروع تجريبي", description: "محتوى افتراضي فقط", image: "", imageAlt: "حقيبة مدرسية" },
+    settings: { images: ["https://example.org/test.png"], categoryIds: ["222222222222222222222222"] },
+  });
+  assert.equal(saved.values.ar.title, "مشروع تجريبي");
+  assert.deepEqual(campaignData?.images, ["https://example.org/test.png"]);
+  assert.equal(campaignData?.isActive, false);
+});

@@ -82,4 +82,6 @@ for (const f of FAMILIES) {
 }
 
 writeFileSync("styles/self-hosted-fonts.css", `${cssOut.join("\n")}\n`, "utf8");
+// Standalone certificate HTML runs outside the Next stylesheet graph.
+writeFileSync("public/fonts/certificates.css", cssOut.join("\n").match(/\/\* (?:Cairo|Amiri) [^*]+\*\/\s*@font-face\s*\{[^}]+\}/g).join("\n\n") + "\n", "utf8");
 console.log(`[vendor-google-fonts] ${files} files under public/fonts, stylesheet at styles/self-hosted-fonts.css`);

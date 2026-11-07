@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import cloudinary from "@/lib/cloudinary";
+import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,11 @@ export async function POST(request: Request) {
   }
 
   const timestamp = Math.round(Date.now() / 1000);
-  const signature = cloudinary.utils.api_sign_request({ folder: FOLDER, timestamp }, apiSecret);
+  // Cloudinary raw assets keep the extension as part of the public ID. Without
+  // .pdf the delivery URL can return an octet stream and fail Meta validation.
+  const publicId = kind === "DOCUMENT" ? `${randomUUID()}.pdf` : undefined;
+  const uploadParams = { folder: FOLDER, timestamp, ...(publicId ? { public_id: publicId } : {}) };
+  const signature = cloudinary.utils.api_sign_request(uploadParams, apiSecret);
   const type = resourceType(kind);
 
   return NextResponse.json({
@@ -45,6 +50,8 @@ export async function POST(request: Request) {
     folder: FOLDER,
     signature,
     resourceType: type,
+    publicId,
     uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/${type}/upload`,
   });
 }
+

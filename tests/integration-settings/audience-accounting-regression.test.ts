@@ -40,6 +40,11 @@ for (const channel of ["WHATSAPP", "EMAIL", "SMS"] as const) {
       assert.equal(recipientExclusionReason(contact, channel, {}), null);
       assert.equal(recipientExclusionReason(contact, channel, { ...allowed, whatsappOptIn: false }), null);
       assert.equal(recipientExclusionReason(contact, channel, { consentSource: "meta-whatsapp-inbound-opt-out" }), "DO_NOT_CONTACT");
+    } else if (channel === "EMAIL") {
+      assert.equal(recipientExclusionReason(contact, channel, null), null);
+      assert.equal(recipientExclusionReason(contact, channel, {}), null);
+      assert.equal(recipientExclusionReason(contact, channel, { emailOptIn: false }), null);
+      assert.equal(recipientExclusionReason(contact, channel, { consentSource: "elastic-email:unsubscribe" }), "DO_NOT_CONTACT");
     } else {
       assert.equal(recipientExclusionReason(contact, channel, null), "NEEDS_CONSENT_REVIEW");
       assert.equal(recipientExclusionReason(contact, channel, {}), `${channel}_OPT_IN_REQUIRED`);
@@ -152,7 +157,7 @@ test("preview keeps WhatsApp opt-out separate from email/SMS preferences", () =>
   assert.equal(recipientExclusionReason(legacy, "SMS", previewConsentForLegacyDonor(legacy, "SMS", null)), null);
   assert.equal(recipientExclusionReason(legacy, "WHATSAPP", previewConsentForLegacyDonor(legacy, "WHATSAPP", null)), null);
   const legacyOptedOut = { ...legacy, emailNotifications: false };
-  assert.equal(recipientExclusionReason(legacyOptedOut, "EMAIL", previewConsentForLegacyDonor(legacyOptedOut, "EMAIL", null)), "EMAIL_OPT_IN_REQUIRED");
+  assert.equal(recipientExclusionReason(legacyOptedOut, "EMAIL", previewConsentForLegacyDonor(legacyOptedOut, "EMAIL", null)), null);
   assert.equal(recipientExclusionReason(legacy, "EMAIL", previewConsentForLegacyDonor(legacy, "EMAIL", { doNotContact: true, emailOptIn: true })), "DO_NOT_CONTACT");
 });
 test("legacy email/SMS previews account for the whole matching audience instead of discarding non-profile donors", async () => {
@@ -162,6 +167,6 @@ test("legacy email/SMS previews account for the whole matching audience instead 
     row(3, { communicationProfile: allowed }),
   ]), "EMAIL");
   assert.equal(outcome.matched, 3);
-  assert.equal(outcome.eligible, 2);
-  assert.equal(outcome.needsReview, 1);
+  assert.equal(outcome.eligible, 3);
+  assert.equal(outcome.needsReview, 0);
 });

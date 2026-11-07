@@ -701,7 +701,9 @@
     "verificationDirectHelp": "認証コードなし",
     "verificationSecure": "銀行による認証",
     "verificationSecureHelp": "コードが必要な場合があります",
-    "verificationRequired": "支払い方法を選択して続行してください。"
+    "verificationRequired": "支払い方法を選択して続行してください。",
+    "verificationSecureOptIn": "銀行認証（3Dセキュア）を利用する",
+    "verificationOptionalHelp": "通常は直接決済です。銀行による認証を行う場合は、この項目を選択してください。"
   },
   "certificates": {
     "certNoLabel": "証明書番号",
@@ -1560,6 +1562,16 @@
     "sentText": "パートナーシップチームより間もなくメールにてご連絡いたします。"
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "ガザ",
+      "aqsa": "アル・アクサー・モスク",
+      "jerusalem": "エルサレム",
+      "waqf": "エルサレムでワクフ",
+      "zakat": "パレスチナにザカートを",
+      "restoration": "エルサレムの住宅修復",
+      "ibadan": "イバーダン・ラナー",
+      "recurring": "継続寄付"
+    },
     "allProjects": "すべてのプロジェクト",
     "filterByRegion": "地域",
     "filterByType": "寄付の種類",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "カード番号が無効です。ご確認ください。",
     "invalidCardExpiry": "有効期限が無効か、すでに過ぎています。",
     "invalidCardCvc": "セキュリティコード（CVC）が無効です。",
-    "tooManyPaymentAttempts": "支払いの試行回数が多すぎます。しばらくしてから再度お試しください。"
+    "tooManyPaymentAttempts": "支払いの試行回数が多すぎます。しばらくしてから再度お試しください。",
+    "mixedDonationCadences": "寄付の頻度ごとに別々のお支払いを完了してください。カートをご確認ください。"
   },
   "waqf": {
     "chooseUnit": "単位を選ぶ",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "続けるには、チーム支援の金額か「結構です」を選んでください"
   },
   "Gift": {
+    "validationError": "受取人の名前と有効な連絡先を入力してください。WhatsApp番号には国番号を含めてください。",
     "emailSubject": "あなたの名前で贈られた寄付：{project}",
     "emailTitle": "{recipientName} さん、贈り物が届いています",
     "emailBody": "{donorName} さんが、ミンバル・アル＝アクサを通じて「{project}」にあなたの名前で寄付をされました。",
@@ -2478,7 +2492,8 @@
     "orContinue": "で続行",
     "noAccount": "アカウントをお持ちでないですか？",
     "createOne": "新規登録",
-    "logoAlt": "ロゴ"
+    "logoAlt": "ロゴ",
+    "signInWithGoogle": "Google でログイン"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "寄付しました",
     "for": "へ",
     "communitySupporter": "支援者コミュニティより"
+  },
+  "DonationDialog": {
+    "rememberCard": "今後の寄付のためにカードを保存する",
+    "rememberCardFailed": "カードを保存できませんでした。このオプションを外すと続行できます。",
+    "savedCards": "保存済みのカード",
+    "useNewCard": "新しいカードを使う",
+    "bankChargeEstimate": "寄付額は{original}です。銀行からの引落見込額はトルコリラで{amount}です。最終レートは支払い開始時に確定します。",
+    "bankChargeCurrency": "銀行はこの寄付をトルコリラで受領します。換算額は支払いの確認前に表示されます。",
+    "paymentRoutingChanged": "この支払いの決済ゲートウェイが変更されました。方法を確認し、セキュリティコードを再入力して確定してください。"
+  },
+  "SignInDialog": {
+    "authErrorTitle": "ログインを完了できませんでした",
+    "authAccessDenied": "ログインの許可が完了しませんでした。再試行するか、ゲストとして寄付できます。",
+    "authAccountConflict": "このメールアドレスは別のログイン方法に関連付けられています。以前の方法を使うか、ゲストとして寄付してください。",
+    "authUnavailable": "現在ログインを利用できません。ゲストとして寄付を続けられます。",
+    "authUnknown": "ログインが完了しませんでした。再試行するか、ゲストとして続けてください。",
+    "donateAsGuest": "ゲストとして寄付を続ける",
+    "signInWithGoogle": "Googleでログイン"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "全額返金済み",
+        "PARTIALLY_REFUNDED": "一部返金済み",
+        "VOIDED": "銀行による取消",
+        "REVIEW_REQUIRED": "会計上の確認が必要",
+        "balance": "返金済み: {returned} · 残額: {remaining}"
+      },
+      "recurringGivingMonths": "継続寄付を行った月数",
+      "recurringGivingMonthsHint": "選択した期間内に継続寄付の入金が確認された月数"
+    }
   }
 }

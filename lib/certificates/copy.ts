@@ -54,7 +54,7 @@ export async function getReceiptCopy(
 ): Promise<{ copy: ReceiptCopy; org: ReceiptOrgData }> {
   const o = overrides ?? (await loadCopyOverrides());
   return {
-    copy: resolveReceiptCopy(certificatesNamespace(locale), o.receipt?.[locale]),
+    copy: resolveReceiptCopy(certificatesNamespace(locale), o.receipt?.[locale], locale),
     org: resolveReceiptOrg(o.receiptOrg),
   };
 }

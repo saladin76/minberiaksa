@@ -30,11 +30,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const documentPath = parseDonationDocumentPathToken(rawDonationId);
   if (!documentPath) return NextResponse.json({ error: "Donation not found" }, { status: 404 });
   try {
+    const denied = await authorizeDonationAccess(documentPath.donationId, request, documentPath.token);
+    if (denied) return denied;
+
     const docs = await documentsOrError(documentPath.donationId);
     if (isErrorResponse(docs)) return docs;
-
-    const denied = await authorizeDonationAccess(docs.donationId, request, documentPath.token);
-    if (denied) return denied;
 
     const edited = request.nextUrl.searchParams.get("name")?.trim().slice(0, 120);
     if (edited && edited !== docs.thanks.donorName) {

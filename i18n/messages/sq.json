@@ -701,7 +701,9 @@
     "verificationDirectHelp": "Pa kod verifikimi",
     "verificationSecure": "Verifikim bankar",
     "verificationSecureHelp": "Mund të kërkohet një kod",
-    "verificationRequired": "Zgjidhni një mënyrë pagese për të vazhduar."
+    "verificationRequired": "Zgjidhni një mënyrë pagese për të vazhduar.",
+    "verificationSecureOptIn": "Dua verifikim nga banka (3D Secure)",
+    "verificationOptionalHelp": "Pagesa e drejtpërdrejtë është parazgjedhja. Zgjidhni këtë opsion për verifikim nga banka."
   },
   "certificates": {
     "certNoLabel": "Nr. i certifikatës",
@@ -1560,6 +1562,16 @@
     "sentText": "Ekipi ynë i Partneriteteve do t'ju kontaktojë së shpejti me email."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Xhamia Al-Aksa",
+      "jerusalem": "Kudsi",
+      "waqf": "Krijo vakëf në Kuds",
+      "zakat": "Jep zekatin për Palestinën",
+      "restoration": "Restaurimi i shtëpive në Kuds",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Dhurim periodik"
+    },
     "allProjects": "Të Gjitha Projektet",
     "filterByRegion": "Sipas Regjionit",
     "filterByType": "Sipas Tipit të Donacionit",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "Numri i kartës nuk është i vlefshëm. Ju lutem kontrollojeni.",
     "invalidCardExpiry": "Data e skadimit është e pavlefshme ose ka kaluar.",
     "invalidCardCvc": "Kodi i sigurisë (CVC) nuk është i vlefshëm.",
-    "tooManyPaymentAttempts": "Shumë përpjekje pagese. Ju lutem provoni më vonë."
+    "tooManyPaymentAttempts": "Shumë përpjekje pagese. Ju lutem provoni më vonë.",
+    "mixedDonationCadences": "Përfundoni frekuencat e ndryshme të dhurimit me pagesa të veçanta. Kontrolloni shportën."
   },
   "waqf": {
     "chooseUnit": "Zgjidhni tipin dhe numrin e kontributit",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "Zgjidhni një shumë për ekipin ose “Jo, faleminderit” për të vazhduar"
   },
   "Gift": {
+    "validationError": "Shkruani emrin e marrësit dhe të dhëna të vlefshme kontakti. Përfshini kodin e shtetit në numrin WhatsApp.",
     "emailSubject": "Një dhuratë në emrin tuaj: një dhurim për {project}",
     "emailTitle": "{recipientName}, keni një dhuratë",
     "emailBody": "{donorName} dhuroi në emrin tuaj për projektin “{project}” përmes Minbar Al-Aqsa.",
@@ -2478,7 +2492,8 @@
     "orContinue": "vazhdo me",
     "noAccount": "Nuk keni llogari?",
     "createOne": "Krijo një",
-    "logoAlt": "Logoja"
+    "logoAlt": "Logoja",
+    "signInWithGoogle": "Hyr me Google"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "dhuroi",
     "for": "për",
     "communitySupporter": "Nga komuniteti ynë i mbështetësve"
+  },
+  "DonationDialog": {
+    "rememberCard": "Ruaj kartën time për dhurimet e ardhshme",
+    "rememberCardFailed": "Karta nuk mund të ruhej. Hiqni shenjën nga ky opsion për të vazhduar.",
+    "savedCards": "Kartat tuaja të ruajtura",
+    "useNewCard": "Përdor një kartë të re",
+    "bankChargeEstimate": "Dhurimi juaj është {original}. Debitimi bankar i parashikuar është {amount} në lira turke; kursi përfundimtar fiksohet në fillim të pagesës.",
+    "bankChargeCurrency": "Banka e mbledh këtë dhurim në lira turke. Shuma e konvertuar shfaqet para konfirmimit.",
+    "paymentRoutingChanged": "Porta e pagesës ndryshoi. Kontrolloni mënyrën, rivendosni kodin e sigurisë dhe konfirmoni."
+  },
+  "SignInDialog": {
+    "authErrorTitle": "Hyrja nuk u përfundua",
+    "authAccessDenied": "Autorizimi i hyrjes nuk u përfundua. Provoni sërish ose dhuroni si vizitor.",
+    "authAccountConflict": "Ky email përdor një mënyrë tjetër hyrjeje. Përdorni mënyrën e mëparshme ose dhuroni si vizitor.",
+    "authUnavailable": "Hyrja nuk është e disponueshme tani. Mund të dhuroni si vizitor.",
+    "authUnknown": "Hyrja nuk u përfundua. Provoni sërish ose vazhdoni si vizitor.",
+    "donateAsGuest": "Vazhdoni dhurimin si vizitor",
+    "signInWithGoogle": "Hyni me Google"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "Rimbursuar plotësisht",
+        "PARTIALLY_REFUNDED": "Rimbursuar pjesërisht",
+        "VOIDED": "Anuluar nga banka",
+        "REVIEW_REQUIRED": "Nevojitet shqyrtim financiar",
+        "balance": "Rimbursuar: {returned} · Mbetur: {remaining}"
+      },
+      "recurringGivingMonths": "Muaj me dhurime periodike",
+      "recurringGivingMonthsHint": "Muaj me pagesa periodike të konfirmuara në këtë periudhë"
+    }
   }
 }

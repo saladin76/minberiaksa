@@ -12,6 +12,7 @@ import type { ReceiptLine } from "@/components/minbar/certificates/ReceiptSheet"
 import { getReceiptCopy, getThanksCopy, getWaqfCopy, loadCopyOverrides } from "./copy";
 import type { ReceiptCopy, ReceiptOrgData, ThanksCopy, WaqfCopy } from "./copy-defaults";
 import type { IssuedDocuments, IssuedWaqfCertificate } from "./issue";
+import { documentDate } from "./date";
 
 /**
  * From the persisted records to the props each sheet renders  the one place
@@ -28,6 +29,7 @@ export interface ThanksDocument {
   certificateId: string;
   donationId: string;
   serial: string;
+  issuedDate?: string;
   donorName: string;
   copy: ThanksCopy;
   verse: CertificateVerse;
@@ -48,6 +50,7 @@ export interface WaqfDocument {
   onBehalf: string;
   certNo: string;
   certDate: string;
+  details?: string;
   copy: WaqfCopy;
   locale: string;
   dir: "rtl" | "ltr";
@@ -82,20 +85,14 @@ function t(locale: string, ns: string, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
-function certificateVerse(locale: string, id: string): CertificateVerse {
+export function certificateVerse(locale: string, id: string): CertificateVerse {
   const quran = messagesFor(locale).quran as Parameters<typeof verseBlock>[0];
   const block = verseBlock(quran, id, locale);
   return { arabic: block.arabic, translation: block.translation };
 }
 
 /** Numeric date with Latin digits in every locale  a number on a document, not prose. */
-export function documentDate(date: Date, locale: string): string {
-  try {
-    return new Intl.DateTimeFormat(`${locale}-u-nu-latn`, { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
+export { documentDate } from "./date";
 
 function money(amount: number, currency: string, locale: string): string {
   try {
@@ -285,6 +282,7 @@ export async function receiptPagesFor(docs: IssuedDocuments): Promise<ReceiptDoc
  * serials, and the download links wait for the records.
  */
 export interface SuccessDocuments {
+  gifts?: Array<{ id: string; recipientName: string }>;
   /** Whether the records exist yet. */
   issued: boolean;
   receiptNo: string | null;
@@ -295,12 +293,13 @@ export interface SuccessDocuments {
 
 export async function successDocumentsFor(donationId: string, docs: IssuedDocuments | null): Promise<SuccessDocuments | null> {
   if (docs) {
-    const [thanks, waqf, receipt] = await Promise.all([
+    const [thanks, waqf, receipt, gifts] = await Promise.all([
       thanksDocumentFor(docs),
       waqfDocumentsFor(docs),
       receiptDocumentFor(docs, docs.locale, { index: 1, total: docs.locale === "tr" ? 1 : 2 }),
+      prisma.donationItem.findMany({ where: { donationId, giftRecipientName: { not: null } }, select: { id: true, giftRecipientName: true } }),
     ]);
-    return { issued: true, receiptNo: docs.receipt.receiptNo, thanks, waqf, receipt };
+    return { issued: true, receiptNo: docs.receipt.receiptNo, thanks, waqf, receipt, gifts: gifts.filter(gift => Boolean(gift.giftRecipientName)).map(gift => ({ id: gift.id, recipientName: gift.giftRecipientName! })) };
   }
 
   if (!/^[0-9a-fA-F]{24}$/.test(donationId)) return null;

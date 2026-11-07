@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorizationValid } from "@/lib/communication/cron-auth";
 import { chargeDueAlbarakaSubscriptions } from "@/lib/donations/albaraka-recurring";
 import { chargeDuePayPalSubscriptions } from "@/lib/donations/paypal-recurring";
+import { tgNotify } from "@/lib/telegram/client";
+import { runAfterResponse } from "@/lib/events/after-response";
 import { writeAuditLog } from "@/lib/audit-log";
 
 export const runtime = "nodejs";
@@ -52,6 +54,10 @@ export async function GET(request: NextRequest) {
       if (!run || dryRun || (run.charged.length === 0 && run.failed.length === 0)) continue;
       const usd = run.charged.reduce((sum, c) => sum + (c.amountUSD ?? 0), 0);
       const railEn = rail === "PayPal" ? "PayPal" : "Albaraka";
+      if (run.failed.length) runAfterResponse(async () => {
+        await tgNotify(`تنبيه دفعات دورية: فشل أو تعلّق ${run.failed.length} تجديد عبر ${railEn}. راجع حالة الاشتراكات قبل إعادة الخصم.
+https://minberiaksa.org/dashboard/monthly`);
+      });
       await writeAuditLog({
         actorRole: "SYSTEM",
         action: "RECURRING_CHARGES_RUN",

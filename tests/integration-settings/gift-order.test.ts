@@ -62,7 +62,9 @@ test("a gift with no channel is kept: the certificate is still issued in the rec
 });
 
 test("phones normalise to E.164 digits or are rejected", () => {
-  assert.equal(normalizeGiftPhone("00 90 532 123 45 67"), "+00905321234567".replace("+00", "+00"));
+  assert.equal(normalizeGiftPhone("00 90 532 123 45 67"), "+905321234567");
+  assert.equal(normalizeGiftPhone("٠٠٩٠٥٣٢١٢٣٤٥٦٧"), "+905321234567");
+  assert.equal(normalizeGiftPhone("05321234567"), null);
   assert.equal(normalizeGiftPhone("+1 555 0100"), "+15550100");
   assert.equal(normalizeGiftPhone("12345"), null);
 });

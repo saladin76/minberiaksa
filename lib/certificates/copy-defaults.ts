@@ -17,6 +17,8 @@
  * This module is pure so the dashboard form can import the field lists.
  */
 
+import type { SupportedLocale } from "../locales";
+
 export type CertificateTemplateId = "thanks" | "waqf" | "receipt";
 
 export interface ThanksCopy {
@@ -167,6 +169,30 @@ export const RECEIPT_LITERAL_DEFAULTS: Pick<ReceiptCopy, "docTitleLatin" | "pair
   pairNote: "Bu makbuz Türkçe nüshası ile birlikte geçerlidir.",
 };
 
+/** The paired Turkish page stays separate; its explanation belongs to the
+ * language of the donor's page. The dashboard can override this wording. */
+export const RECEIPT_PAIR_NOTES: Record<SupportedLocale, string> = {
+  ar: "يُعتد بهذا الإيصال مع النسخة التركية المرفقة.",
+  tr: RECEIPT_LITERAL_DEFAULTS.pairNote,
+  en: "This receipt is valid together with the accompanying Turkish copy.",
+  fr: "Ce reçu est valable avec l’exemplaire turc joint.",
+  de: "Diese Quittung ist zusammen mit der beigefügten türkischen Ausfertigung gültig.",
+  es: "Este recibo es válido junto con la copia adjunta en turco.",
+  id: "Kuitansi ini berlaku bersama salinan berbahasa Turki yang terlampir.",
+  pt: "Este recibo é válido juntamente com a cópia em turco em anexo.",
+  ur: "یہ رسید منسلک ترکی نقل کے ساتھ معتبر ہے۔",
+  sq: "Kjo faturë është e vlefshme së bashku me kopjen e bashkëngjitur në turqisht.",
+  it: "Questa ricevuta è valida insieme alla copia in turco allegata.",
+  nl: "Dit ontvangstbewijs is geldig samen met de bijgevoegde Turkse kopie.",
+  sv: "Detta kvitto är giltigt tillsammans med den bifogade turkiska kopian.",
+  no: "Denne kvitteringen er gyldig sammen med den vedlagte tyrkiske kopien.",
+  da: "Denne kvittering er gyldig sammen med den vedlagte tyrkiske kopi.",
+  ms: "Resit ini sah bersama salinan bahasa Turki yang dilampirkan.",
+  ja: "この領収書は、添付のトルコ語の写しと併せて有効です。",
+  zh: "本收据须与随附的土耳其语副本一并使用。",
+  hi: "यह रसीद संलग्न तुर्की प्रति के साथ मान्य है।",
+};
+
 /**
  * Build a template's copy for one locale from the i18n namespace plus the
  * stored overrides. `messages` is the locale's `certificates` namespace.
@@ -189,15 +215,19 @@ export function resolveWaqfCopy(messages: Record<string, unknown>, overrides?: P
   return out;
 }
 
-export function resolveReceiptCopy(messages: Record<string, unknown>, overrides?: Partial<ReceiptCopy>): ReceiptCopy {
+export function resolveReceiptCopy(messages: Record<string, unknown>, overrides: Partial<ReceiptCopy> | undefined, locale: string): ReceiptCopy {
   const out = {} as ReceiptCopy;
   for (const field of RECEIPT_FIELDS) {
     const override = overrides?.[field.name];
-    if (typeof override === "string" && override.trim()) {
+    // Older forms could persist the shared Turkish seed as an override in all
+    // languages. Correct only that exact seed; retain operator-written copy.
+    const legacyPairNote = field.name === "pairNote" && locale !== "tr" && override?.trim() === RECEIPT_LITERAL_DEFAULTS.pairNote;
+    if (typeof override === "string" && override.trim() && !legacyPairNote) {
       out[field.name] = override;
       continue;
     }
-    if (field.i18nKey) out[field.name] = String(messages[field.i18nKey] ?? "");
+    if (field.name === "pairNote") out[field.name] = RECEIPT_PAIR_NOTES[locale as SupportedLocale] ?? RECEIPT_PAIR_NOTES.ar;
+    else if (field.i18nKey) out[field.name] = String(messages[field.i18nKey] ?? "");
     else out[field.name] = RECEIPT_LITERAL_DEFAULTS[field.name as keyof typeof RECEIPT_LITERAL_DEFAULTS] ?? "";
   }
   return out;

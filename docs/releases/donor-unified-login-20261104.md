@@ -1,0 +1,40 @@
+# Unified donor login and account invitations
+
+Email codes, verified WhatsApp numbers and verified Google emails resolve to one donor account. The linked methods panel supports multiple emails and a verified primary email. Codes expire after ten minutes, allow five attempts, are hashed with the authentication secret and are consumed atomically. A successfully delivered replacement invalidates earlier codes in the same scope. Resend throttles are durable database counters.
+
+A correct code delivered to an existing donor's unique email or WhatsApp contact activates and signs into the existing record, including historical guests. No earlier email or Google login is required for WhatsApp. Several established accounts sharing one phone are an explicit conflict rather than an automatic merge. Phone proof does not verify mailbox ownership; additional mailboxes must each be verified.
+
+When an authenticated donor proves another account's verified sign-in address, the donor records are consolidated transactionally. Guest records matching a newly verified phone can also be consolidated. Financial values, statuses, schedules and provider references are retained; only ownership references change. Retired source records preserve their original contacts for administrative traceability, are hidden from active user lists and cannot retain sessions or credentials. Privileged/closed accounts and accounts currently billing or verifying a card cannot be merged. No payment provider is called by linking. Source communication profiles are stopped to avoid duplicate sends.
+
+Donations and subscriptions retain `originalDonorId` on their first consolidation, including across subsequent links. The original source donor record remains available for administrative provenance.
+
+Administrators can send or resend an account invitation from the donor profile. A guest becomes a registered member only after verification. Existing accounts are reused. The invitation panel separates accepted, delivered, expired, failed and activated states. WhatsApp recipients use the existing-code option with their international number; email invitations also include the challenge-bound sign-in page. Invitation attempts are audited.
+
+Authentication messages use the configured Elastic Email and default Meta sender. Message archives contain a redacted placeholder, never the code or sign-in URL. Only a provider message ID establishes SENT. Existing signed webhooks establish DELIVERED/READ; provider acceptance alone does not prove arrival.
+
+WhatsApp reads the active default `CommunicationSender` row for its phone and WABA, including the AUTHENTICATION purpose permission. Legacy app-level phone IDs are never used to select a sender or to certify template approval. The selected sender must be enabled/ACTIVE with authentication allowed before template setup or recipient delivery.
+
+## Deployment
+
+The build generates Prisma clients and installs the new account-identity lookup and expiry indexes through the existing index setup. The identities and challenges use string `_id` uniqueness; no bulk account migration is performed.
+
+The release metadata step `donor-login-template` prepares `mia_donor_login_v1` in Arabic when metadata publishing is enabled. `DONOR_LOGIN_WHATSAPP_TEMPLATE` and `DONOR_LOGIN_WHATSAPP_LANGUAGE` optionally select another AUTHENTICATION copy-code template. The runtime refuses unapproved or differently categorized templates. Meta approval must be checked on the actual default WABA before live acceptance.
+
+Explicit preparation command, if needed after deployment:
+
+```bash
+node --conditions=react-server --import tsx scripts/prepare-donor-login-whatsapp.mjs --apply --publish
+```
+
+This command creates/reads provider template metadata and sends no recipient messages. PENDING is not APPROVED. A real recipient code and corresponding authenticated session, followed by a DELIVERED/READ webhook, are required for live acceptance. No live recipient has been selected in this work session.
+
+## Validation
+
+Focused TypeScript, Prisma schema validation and ESLint pass. Thirteen authentication service/delivery/boundary tests cover code replay, expiration, attempts, contact throttling, linking, privileged accounts, in-flight billing, invitation activation, verified primary email routing and redacted message records. Four existing registration/profile regressions pass. Browser fixtures exercised the Arabic mobile code flow, linked addresses and invitation states, plus English rendering, with no mobile overflow or browser exceptions. These tests use synthetic data and mocked provider responses; they do not prove live delivery or production database behavior. Full repository release gates and live acceptance remain required before production approval.
+
+Five release-metadata fixture regressions also pass, including all independent setup steps, selective retries and runtime guards.
+
+
+## Follow-up validation
+
+Added regression coverage for direct WhatsApp login, guest activation without duplicates, WhatsApp invitations, ambiguous shared phones and branded RTL/LTR email rendering. The execution environment is unavailable for this follow-up; these new tests have not been run locally. Earlier validation above describes the prior revision. GitHub Actions and live acceptance are required for the updated revision.

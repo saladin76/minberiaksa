@@ -93,7 +93,7 @@ test("private preview authorizes before reading or parsing drafts and returns no
     "next-auth": { getServerSession: async () => ({ user: {} }) }, "@/app/api/auth/[...nextauth]/options": {}, "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => denied ? { status: 403 } : null },
     "@/lib/content-editor/contracts": contracts, "@/lib/content-editor/service": { readContent: async () => { reads++; return { title: "Saved", blocks: [], translations: [], internal: "private-data" }; } },
     "@/lib/content-editor/create": {}, "@/lib/content-editor/store": {}, "@/lib/content-editor/preview-draft": { preparePreviewDraft }, "@/lib/locales": locales,
-    "@/lib/minbar/projects": {}, "@/lib/minbar/super-category": { getSuperCategory: async (_id: string, _locale: string, draft: preview.PublicPreviewDraft) => ({ title: draft.changes.title, blocks: [] }) }, "@/lib/minbar/category-page": {}, "@/lib/minbar/posts": {},
+    "@/lib/minbar/project-page-content": {}, "@/lib/minbar/projects": {}, "@/lib/minbar/super-category": { getSuperCategory: async (_id: string, _locale: string, draft: preview.PublicPreviewDraft) => ({ title: draft.changes.title, blocks: [] }) }, "@/lib/minbar/category-page": {}, "@/lib/minbar/posts": {},
     "@/i18n/locale-messages": { pickNamespaces: () => ({}), SHELL_NAMESPACES: [] }, "@/lib/prisma": {},
   });
   const request = { text: async () => { bodies++; return JSON.stringify({ locale: "ar", changes: { title: "Draft" }, settings: {} }); } }, context = { params: Promise.resolve({ kind: "super-categories", id: "a".repeat(24) }) };

@@ -32,8 +32,9 @@ function str(value: unknown, max: number): string {
 
 /** Digits only, with a leading `+`: what WhatsApp's API takes. */
 export function normalizeGiftPhone(raw: string): string | null {
-  const digits = raw.replace(/[^\d]/g, "");
-  if (digits.length < 8 || digits.length > 15) return null;
+  const latin = raw.replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 0x6f0));
+  const digits = latin.replace(/[^\d]/g, "").replace(/^00/, "");
+  if (!/^[1-9]\d{7,14}$/.test(digits)) return null;
   return `+${digits}`;
 }
 

@@ -1,3 +1,5 @@
+import * as receiptPolicy from "../../lib/events/payment-receipt-policy";
+import * as cadence from "../../lib/templates/recurring-cadence";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -23,20 +25,19 @@ test("all 19 locales show the stored total with project/support breakdown and di
     assert.ok(paid.amountBreakdown.startsWith(labels[3] + ":"));
     assert.ok(failed.amountBreakdown.startsWith(labels[4] + ":"));
     assert.ok(paid.amountBreakdown.includes(labels[0]) && paid.amountBreakdown.includes(labels[1]));
-    assert.ok(paid.notificationAmount.includes(paid.projectsAmount));
-    assert.ok(paid.notificationAmount.includes(paid.teamSupport));
+    assert.equal(paid.notificationAmount, money.formatTemplateMoney(order.totalAmount, locale, order.currency));
     assert.ok(!paid.notificationAmount.includes("\n"));
   }
   assert.equal(donationMoneyFields(order, "en").amountBreakdown, "Total: 300 USD (Projects: 250 USD; Team support: 50 USD)");
 });
 
 test("zero support, covered fees, fractions and zero-decimal currencies do not add support twice", () => {
-  assert.equal(donationMoneyFields({ ...order, teamSupport: 0, totalAmount: 250 }, "en").notificationAmount, "Total: 250 (Projects: 250; Team support: 0)");
+  assert.equal(donationMoneyFields({ ...order, teamSupport: 0, totalAmount: 250 }, "en").notificationAmount, "250");
   const fields = donationMoneyFields({ ...order, amount: 10.25, teamSupport: 1.5, fees: 0.35, totalAmount: 12.1 }, "en");
-  assert.equal(fields.notificationAmount, "Total: 12.1 (Projects: 10.25; Team support: 1.5; Fees: 0.35)");
+  assert.equal(fields.notificationAmount, "12.1");
   // The saved order total is authoritative even for legacy records that do not add up.
-  assert.ok(donationMoneyFields({ ...order, totalAmount: 299 }, "en").notificationAmount.startsWith("Total: 299 "));
-  assert.ok(donationMoneyFields({ ...order, currency: "JPY" }, "en").notificationAmount.startsWith("Total: 300 "));
+  assert.ok(donationMoneyFields({ ...order, totalAmount: 299 }, "en").notificationAmount === "299");
+  assert.ok(donationMoneyFields({ ...order, currency: "JPY" }, "en").notificationAmount === "300");
   assert.equal(donationMoneyFields({ ...order, totalAmount: NaN }, "en").notificationAmount, "");
   assert.equal(donationMoneyFields({ ...order, currency: "<img>" }, "en").notificationAmount, "");
 });
@@ -45,7 +46,7 @@ test("legacy body values are upgraded without modifying URL/HTML attributes or e
   const ctx = { donation: donationMoneyFields(order, "en") };
   const input = 'Amount {{donation.amount}} {{donation.currency}} <a href="/receipt?value={{donation.amount}}">receipt</a> https://example.org/?amount={{donation.totalAmount}} /receipt?amount={{donation.amount}}';
   const value = donationNotificationText(input, ctx);
-  assert.ok(value.startsWith("Amount {{donation.notificationAmount}} {{donation.currency}}"));
+  assert.ok(value.startsWith("Amount {{donation.receiptSummary}}"));
   assert.ok(value.includes('href="/receipt?value={{donation.amount}}"'));
   assert.ok(value.includes("https://example.org/?amount={{donation.totalAmount}}"));
   assert.ok(value.includes("/receipt?amount={{donation.amount}}"));
@@ -57,7 +58,7 @@ test("legacy body values are upgraded without modifying URL/HTML attributes or e
 test("email preparation clones the document and never rewrites button links", () => {
   const document = { root: { type: "EmailLayout", data: { childrenIds: ["text", "button"] } }, text: { type: "Text", data: { props: { text: "Amount: {{donation.amount}} USD" } } }, button: { type: "Button", data: { props: { text: "Donate", url: "/ar/checkout?amount={{donation.amount}}" } } } };
   const copy = donationNotificationDocument(document, { donation: donationMoneyFields(order, "en") });
-  assert.equal(copy.text.data.props.text, "Amount: {{donation.notificationAmount}} USD");
+  assert.equal(copy.text.data.props.text, "{{donation.receiptSummary}}");
   assert.equal(copy.button.data.props.url, document.button.data.props.url);
   assert.equal(document.text.data.props.text, "Amount: {{donation.amount}} USD");
 });
@@ -73,7 +74,7 @@ for (const named of [false, true]) {
     assert.equal(built.components.length, 3);
     const text = (i: number) => (built.components[i].parameters[0] as { text: string }).text;
     assert.equal(text(0), "250");
-    assert.equal(text(1), "Total: 300 (Projects: 250; Team support: 50)");
+    assert.equal(text(1), "300");
     assert.equal(text(2), "250");
   });
 }
@@ -85,11 +86,12 @@ test("an explicit Meta breakdown keeps each numeric binding unchanged", () => {
 
 test("the actual context loader reads support/fees/paid evidence and retains all project lines", async () => {
   let selection: Record<string, unknown> = {};
-  const row = { ...order, id: "donation", donorId: "donor", locale: "ar", status: "FAILED", paidAt: null, createdAt: new Date(), amountUSD: 250, items: [{ amount: 100, amountUSD: 100, campaign: { title: "Project A" } }, { amount: 150, amountUSD: 150, campaign: { title: "Project B" } }], categoryItems: [] };
+  const row = { ...order, id: "donation", donorId: "donor", locale: "en", status: "FAILED", paidAt: null, createdAt: new Date(), amountUSD: 250, items: [{ amount: 100, amountUSD: 100, campaign: { title: "Project A" } }, { amount: 150, amountUSD: 150, campaign: { title: "Project B" } }], categoryItems: [] };
   const prisma = { user: { findUnique: async () => ({ id: "donor", name: "Supporter", preferredLang: "en" }) }, donation: { findMany: async () => [], findUnique: async (input: { select: Record<string, unknown> }) => { selection = input.select; return row; } } };
   const mod = { exports: {} as { loadContextForDonation: (id: string) => Promise<{ donation: Record<string, unknown> }> } };
   const output = ts.transpileModule(readFileSync("lib/templates/variables.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(output).runInNewContext({ module: mod, exports: mod.exports, require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence;
     if (id === "@/lib/prisma") return { prisma };
     if (id === "./money") return money;
     if (id === "./donation-money") return donationMoney;
@@ -101,6 +103,9 @@ test("the actual context loader reads support/fees/paid evidence and retains all
   assert.equal(selection.teamSupport, true);
   assert.equal(selection.fees, true);
   assert.equal(selection.paidAt, true);
+  assert.equal(selection.provider, undefined);
+  assert.equal(selection.providerOrderId, undefined);
+  assert.equal(selection.providerRaw, undefined);
   assert.equal(ctx.donation.amount, "250");
   assert.equal(ctx.donation.totalAmount, "300");
   assert.equal(ctx.donation.teamSupport, "50");
@@ -115,11 +120,12 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const body = "Amount: {{donation.amount}} {{donation.currency}}";
   const document = { text: { type: "Text", data: { props: { text: body } } } };
   const dependencies: Record<string, unknown> = {
+    "./payment-receipt-policy": receiptPolicy,
     "@/lib/prisma": { prisma: { emailTemplate: { findUnique: async () => ({ id: "email", name: "email", document }) }, smsTemplate: { findUnique: async () => ({ id: "sms", name: "sms", body }) }, whatsappTemplate: { findUnique: async () => ({ id: "whatsapp", name: "whatsapp", body }) } } },
     "@/lib/templates/variables": { mergeText },
     "@/lib/templates/donation-money": donationMoney,
     "@/lib/templates/render": { renderEmailHtml: async (doc: typeof document, ctx: Parameters<typeof mergeText>[1]) => mergeText(doc.text.data.props.text, ctx), renderEmailSubject: () => "Notification" },
-    "@/lib/templates/locale-resolver": { resolveEmailVariant: () => ({ document }), resolveWhatsappBody: () => ({ body }) },
+    "@/lib/templates/locale-resolver": { resolveEmailVariant: () => ({ document, subject: "Notification" }), resolveWhatsappBody: () => ({ body }) },
     "@/lib/templates/localize-donation-failure-link": { localizeDonationFailureLinks: (text: string) => text },
     "@/lib/communication/sender-resolution": { resolveSenderFromSnapshot: () => ({ ok: true, sender: { id: "sender", senderEmail: "sender@example.test", businessAccountId: "waba", phoneNumberId: "number" } }) },
     "@/lib/communication/automatic-message-dispatcher": {
@@ -132,6 +138,8 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const source = ts.transpileModule(readFileSync("lib/events/dispatch.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const mod = { exports: {} as { sendTriggerMessage: (trigger: unknown, ctx: unknown, opts: unknown) => Promise<unknown> } };
   new vm.Script(source).runInNewContext({ module: mod, exports: mod.exports, require: (id: string) => {
+    if (id === "./recurring-cadence" || id === "@/lib/templates/recurring-cadence") return cadence;
+    if (id === "@/lib/templates/font") return { automaticEmailHtml: (html: string) => html };
     if (id in dependencies) return dependencies[id];
     // These imports belong to the uninvoked claim/settlement helpers, not the renderer.
     if (["@vercel/analytics/server", "@/lib/audit-log", "@/lib/dashboard/audit-log-display", "@/lib/telegram/notify", "@/lib/tracking/donation-conversion-server", "@/lib/communication/donor-communication-profile-service", "@/lib/certificates/generate", "@/lib/certificates/issue", "@/lib/server-base-url"].includes(id)) return {};
@@ -140,9 +148,9 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   const ctx = { user: { id: "donor", name: "Supporter", email: "supporter@example.test", phone: "+15555555555" }, donation: { id: "donation", amount: "250", totalAmount: "300", currency: "USD", ...donationMoneyFields({ ...order, paidAt: null }, "en") } };
   for (const channel of ["EMAIL", "SMS", "WHATSAPP"]) await mod.exports.sendTriggerMessage({ channel, templateId: channel }, ctx, { event: "DONATION_FAILED", donationId: "donation", locale: "en", config: {} });
   assert.equal(sent.length, 3);
-  for (const message of sent) {
-    assert.equal(message.renderedBody, "Amount: Attempted total — collection not confirmed: 300 (Projects: 250; Team support: 50) USD");
-  }
+  for (const message of sent.slice(0, 2)) assert.equal(message.renderedBody, ctx.donation.receiptSummary);
+  // An approved legacy Meta schema still uses a numeric body slot + currency.
+  assert.equal(sent[2].renderedBody, "Amount: 300 USD");
   const values = sent[2].templateValues as Record<string, string>;
   assert.equal(values["body.1"], ctx.donation.notificationAmount);
   assert.equal(values["body.2"], undefined);
@@ -152,4 +160,22 @@ test("actual automatic email, SMS and Meta dispatch render the same attempted to
   // An unrelated marketing reminder is not silently converted into a receipt.
   await mod.exports.sendTriggerMessage({ channel: "SMS", templateId: "sms" }, ctx, { event: "DONATION_LAPSED", donationId: "donation", locale: "en", config: {} });
   assert.equal(sent[3].renderedBody, "Amount: 250 USD");
+});
+
+
+test("renewal failures retain the unconfirmed total in every language and never label the first payment as a renewal",()=>{
+  assert.deepEqual(Object.keys(donationMoney.RECURRING_RENEWAL_LABELS).sort(),[...SUPPORTED_LOCALES].sort());
+  for(const locale of SUPPORTED_LOCALES){
+    const renewal=donationMoneyFields({...order,paidAt:null,billingReason:"subscription_cycle"},locale);
+    assert.ok(renewal.receiptSummary.startsWith(donationMoney.RECURRING_RENEWAL_LABELS[locale]+" — "));
+    assert.ok(renewal.receiptSummary.includes(DONATION_MONEY_LABELS[locale][4]));
+    assert.equal(renewal.notificationAmount,donationMoneyFields({...order,paidAt:null},locale).notificationAmount);
+    assert.ok(!donationMoneyFields({...order,paidAt:null},locale).receiptSummary.startsWith(donationMoney.RECURRING_RENEWAL_LABELS[locale]));
+    assert.equal(donationMoneyFields({...order,paidAt:null,providerTxnType:"RecurringSale"},locale).receiptSummary,renewal.receiptSummary);
+  }
+});
+test("a short project summary deduplicates display titles without dropping any allocation or changing money",()=>{
+ const repeated={title:"Hot meals",translations:[]};
+ const source={locale:"ar",items:[{amount:25,amountUSD:25,campaign:repeated},{amount:10,amountUSD:10,campaign:repeated}],categoryItems:[]};
+ const result=projects.donationProjectSummary(source);assert.equal(result.campaignTitle,"Hot meals");assert.equal(result.lines.length,2);assert.equal(result.lines.reduce((sum,row)=>sum+row.amount,0),35);
 });

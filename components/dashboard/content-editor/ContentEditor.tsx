@@ -58,6 +58,10 @@ import {
   CONFIG,
   hasText,
   localeStatus,
+  contentFieldLimit,
+  changedTextValues,
+  validateChanges,
+  ContentFieldError,
   type ContentField,
   type ContentKind,
   type TextValues,
@@ -90,6 +94,7 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...options,
     cache: "no-store",
+    signal: options?.signal ?? AbortSignal.timeout(30_000),
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
   return readSuggestionJson<T>(res, dt("تعذر إكمال الطلب"));
@@ -139,6 +144,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [locale, setLocale] = useState(SUPPORTED_LOCALES.includes(initialLocale as typeof SUPPORTED_LOCALES[number]) ? initialLocale : "ar");
   const [message, setMessageText] = useState("");
   const [messageTone, setMessageTone] = useState<"info" | "success" | "error">("info");
+  const [invalidField, setInvalidField] = useState<{ locale: string; key: string } | null>(null);
+  const [fieldBriefs, setFieldBriefs] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const setMessage = useCallback((text: string, tone: "info" | "success" | "error" = "info") => { setMessageText(text); setMessageTone(tone); }, []);
   useEffect(() => { if (messageTone !== "success" || !message) return; const timer = setTimeout(() => setMessage(""), 6500); return () => clearTimeout(timer); }, [message, messageTone, setMessage]);
@@ -159,7 +166,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const [section, setSection] = useState(EDITOR_SECTIONS[kind].some(item => item.id === initialSection) ? initialSection : "content");
   const [settingsDraft, setSettingsDraft] = useState<ContentRecord>({});
   const [assistAction, setAssistAction] = useState<"translate" | "seo" | "proofread" | "faq">("translate");
-  const [assistScope, setAssistScope] = useState("auto");
+  const [assistScope, setAssistScope] = useState("current");
   const assistTargetScope = assistScope === "auto" ? (assistAction === "translate" && locale === "ar" ? "missing" : "current") : assistScope;
   const [languageReview, setLanguageReview] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -219,9 +226,19 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       window.document.removeEventListener("click", navigation, true);
     };
   }, [dirty]);
+  useEffect(() => {
+    if (!invalidField || invalidField.locale !== locale) return;
+    const frame = requestAnimationFrame(() => {
+      const field = window.document.getElementById(`content-${locale}-${invalidField.key}`);
+      field?.scrollIntoView({ block: "center", behavior: "smooth" });
+      field?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [invalidField, locale, section]);
   const edit = (key: string, value: string) => {
     if (busy === "save" || busy === "slug") return;
     if (key === "fileUrl" && locale === "ar" && ["reports", "booklets"].includes(kind)) setSettingsDraft((previous) => ({ ...previous, fileUrl: value }));
+    setInvalidField(null);
     setValues((prev) => ({
       ...prev,
       [locale]: { ...prev[locale], [key]: value },
@@ -236,8 +253,23 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       setMessage(dt("انتظر اكتمال رفع الصور قبل الحفظ"));
       return;
     }
-    const captured = { ...values[locale] },
-      target = locale;
+    const target = locale;
+    const localeChanges = Object.fromEntries(Object.entries(values).map(([code, draft]) => [code,
+      id === "new" ? draft : changedTextValues(draft, document.values[code] || {}),
+    ]).filter(([, draft]) => Object.keys(draft).length));
+    for (const [code, changes] of Object.entries(localeChanges)) {
+      try { validateChanges(document.fields, changes); }
+      catch (error) {
+        if (error instanceof ContentFieldError) {
+          setLocale(code);
+          setSection(document.fields.find(field => field.key === error.field)?.group === "seo" ? "seo" : "content");
+          setInvalidField({ locale: code, key: error.field });
+        }
+        setMessage(`${LOCALES[code as SupportedLocale]?.nativeLabel || code}: ${error instanceof Error ? error.message : dt("حقول غير صالحة")}`, "error");
+        return;
+      }
+    }
+    const captured = localeChanges[target] || {};
     setBusy("save");
     setMessage("");
     try {
@@ -249,12 +281,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           locale: target,
           changes: captured,
           reviewed,
-          localeChanges: Object.fromEntries(
-            Object.entries(values).filter(
-              ([code, v]) =>
-                JSON.stringify(v) !== JSON.stringify(document.values[code]),
-            ),
-          ),
+          localeChanges,
           settings: { ...Object.fromEntries(
             Object.entries(settingsDraft).filter(
               ([key, v]) =>
@@ -290,8 +317,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       setBusy("");
     }
   };
-  const suggest = async (action: "seo" | "translate" | "faq" | "proofread", all = false, targetLocales?: string[]) => {
-    if (!document || id === "new" || uploads > 0) {
+  const suggest = async (action: "seo" | "translate" | "faq" | "proofread" | "compose", all = false, targetLocales?: string[], fieldKey?: string) => {
+    if (!document || uploads > 0) {
       setMessage(dt("احفظ المحتوى الجديد وانتظر اكتمال الرفع قبل طلب الاقتراح.")); return;
     }
     const targets = targetLocales ?? (action === "translate"
@@ -305,8 +332,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
     try {
       const result = await runSuggestionBatch({ targets, signal: controller.signal,
         request: async target => {
-          const response = await requestSuggestion<Proposal>(url + "/suggest", { action, locale: target, locales: [target], keys: selected, revision,
-              ...(action === "translate" ? { sourceDraft: drafts.ar || {} } : { draft: drafts[target] || {} }),
+          const response = await requestSuggestion<Proposal>(url + "/suggest", { action, locale: target, locales: [target], keys: fieldKey ? [fieldKey] : selected, revision,
+              ...(action === "compose" ? { sourceDraft: drafts.ar || {}, field: fieldKey, brief: fieldBriefs[`${target}:${fieldKey}`] || "" } : {}),
+              ...(["proofread", "compose"].includes(action) ? { draft: drafts[target] || {} } : { sourceDraft: drafts.ar || {} }),
               ...(action === "seo" && analyticsPeriod ? { analyticsPeriod } : {}) }, controller.signal);
           if (response.id !== id || response.kind !== kind || response.revision !== revision) throw new Error(dt("الاقتراح لا يطابق المحتوى الجاري تحريره"));
           return response;
@@ -318,8 +346,11 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       if (generationAbort.current !== controller) return;
       if (snapshot !== JSON.stringify(valuesRef.current)) throw new Error(dt("تغير النص أثناء الطلب. اطلب اقتراحًا جديدًا."));
       combined.skipped = result.skipped;
+      // Failed batches still need their per-language reason and recovery action.
+      // Keep completed proposals and failures together without duplicating the
+      // provider error in the page-level summary.
       if (Object.keys(combined.proposals).length || Object.keys(combined.errors).length) setProposal(combined);
-      if (result.sharedFailure && result.skipped.length) setMessage((Object.values(combined.errors)[0] || "") + " " + dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length]), "error");
+      if (result.sharedFailure && result.skipped.length) setMessage((result.connectionFailure ? dt("أُوقفت بقية {0} لغات لأن الاتصال بالخادم لم يُؤكَّد. الاقتراحات المكتملة محفوظة للمراجعة.", [result.skipped.length]) : dt("أُوقفت بقية {0} لغات بسبب مشكلة مشتركة في خدمة الذكاء الاصطناعي. راجع السبب قبل إعادة الطلب.", [result.skipped.length])), "error");
       else if (controller.signal.aborted) setMessage(dt("أُوقف الطلب. الاقتراحات المكتملة متاحة للمراجعة."));
     } catch (error) { if (generationAbort.current === controller) setMessage(error instanceof Error ? dtMaybe(error.message) : dt("تعذر إعداد الاقتراح"), "error"); }
     finally { if (generationAbort.current === controller) { generationAbort.current = null; setGenerationProgress(null); setBusy(""); } }
@@ -468,7 +499,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const renderField = (field: ContentField) => (
     <section
       key={field.key}
-      className="space-y-2 rounded-xl border bg-white p-4"
+      className={`min-w-0 space-y-2 rounded-xl border bg-white p-4 ${field.rich ? "sm:col-span-2" : ""}`}
     >
       <div className="flex items-center justify-between gap-3">
         <label
@@ -497,6 +528,23 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           <span className="text-xs text-slate-500">{dt("مراجعة يدوية")}</span>
         )}
       </div>
+      {field.group === "content" && !field.locked && (field.rich || ["title", "name", "question", "answer", "description", "text", "subtitle", "summary"].includes(field.key)) ? (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-3">
+          <label className="min-w-48 flex-1 space-y-1 text-xs text-slate-600">
+            <span>{dt("توجيهات الاقتراح")}</span>
+            <input aria-label={dt("توجيهات اقتراح: {0}", [dt(field.label)])} maxLength={2000}
+              className="w-full rounded-lg border bg-white p-2 text-sm" disabled={Boolean(busy)}
+              placeholder={dt("اكتب الفكرة والحقائق التي تريد تضمينها")}
+              value={fieldBriefs[`${locale}:${field.key}`] || ""}
+              onChange={event => setFieldBriefs(previous => ({ ...previous, [`${locale}:${field.key}`]: event.target.value }))} />
+          </label>
+          <button type="button" className={button} disabled={Boolean(busy) || uploads > 0}
+            onClick={() => void suggest("compose", false, [locale], field.key)}>{dt("اقتراح {0}", [dt(field.label)])}</button>
+          <button type="button" className={button} disabled={Boolean(busy) || uploads > 0 || !current[field.key]?.trim()}
+            onClick={() => void suggest("proofread", false, [locale], field.key)}>{dt("تدقيق {0}", [dt(field.label)])}</button>
+          <p className="w-full text-xs text-slate-500">{dt("راجع الاقتراح وعدّله قبل تطبيقه على المسودة.")}</p>
+        </div>
+      ) : null}
       {field.key === "image" && locale !== "ar" ? (
         <ImageUploadField label={dt("غلاف هذه اللغة")} value={current.image || ""} onChange={url => edit("image", url)} onUploadingChange={onUploadingChange} />
       ) : field.key === "fileUrl" && ["reports", "booklets"].includes(kind) ? (
@@ -527,15 +575,8 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           disabled={busy === "save" || busy === "slug"}
           value={current[field.key] || ""}
           onChange={(e) => edit(field.key, e.target.value)}
-          maxLength={
-            /(?:meta|seo)Title$/.test(field.key)
-              ? 70
-              : /(?:meta|seo)Description$/.test(field.key)
-                ? 170
-                : field.key === "imageAlt"
-                  ? 200
-                  : 200000
-          }
+          aria-invalid={invalidField?.locale === locale && invalidField.key === field.key || (current[field.key] || "").length > contentFieldLimit(field.key)}
+          maxLength={contentFieldLimit(field.key)}
         />
       )}
       {locale !== "ar" && source[field.key] ? (
@@ -548,12 +589,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       ) : null}
       {field.group === "seo" ? (
         <p dir="ltr" className="text-left text-xs text-slate-500">
-          {(current[field.key] || "").length} /{" "}
-          {/(?:meta|seo)Title$/.test(field.key)
-            ? 70
-            : /(?:meta|seo)Description$/.test(field.key)
-              ? 170
-              : 200}
+          {(current[field.key] || "").length} / {contentFieldLimit(field.key)}
         </p>
       ) : null}
       {status.missing.includes(field.key) ? (
@@ -569,12 +605,12 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
       data-content-workspace="true"
       className="mx-auto max-w-[1500px] space-y-6 pb-12 text-slate-800"
     >
-      <header className="sticky top-16 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white/95 p-4 shadow-sm backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-4 shadow-sm">
         <div>
           <Link className="text-sm text-slate-500" href={`/dashboard/${kind}`}>
             {dt(CONFIG[kind].label)}
           </Link>
-          <h1 className="mt-2 text-2xl font-bold">
+          <h1 className="mt-1 text-xl font-bold">
             {current.title || current.name || current.question || document.title || dt("محتوى جديد")}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -636,21 +672,52 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           </button>
         </div>
       </header>
+      <div
+        className="grid items-start gap-5 md:grid-cols-[200px_minmax(0,1fr)]"
+      >
+        <nav
+          aria-label={dt("أقسام المحرر")}
+          className="grid min-w-0 grid-cols-2 gap-1 rounded-xl border bg-white p-2 md:sticky md:top-24 md:flex md:max-h-[calc(100vh-7rem)] md:flex-col md:overflow-y-auto"
+        >
+          {EDITOR_SECTIONS[kind].map((item, index) => {
+            const Icon = sectionIcons[item.icon as keyof typeof sectionIcons];
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-current={section === item.id ? "page" : undefined}
+                className={`flex min-w-0 items-center gap-2 rounded-lg px-3 py-3 text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
+                onClick={() => setSection(item.id)}
+              >
+                <Icon size={17} className="shrink-0" />
+                <span className="min-w-0 flex-1 break-words leading-5">{dtMaybe(item.label)}</span>
+                <small className="text-[10px] opacity-50">
+                  {String(index + 1).padStart(2, "0")}
+                </small>
+              </button>
+            );
+          })}
+          <button type="button" className="mt-2 hidden items-center justify-center gap-2 rounded-lg bg-brand px-3 py-3 text-sm text-white disabled:opacity-50 md:flex" disabled={Boolean(busy) || uploads > 0 || (!dirty && id !== "new")} onClick={save}><Save size={16} />{busy === "save" ? dt("جار الحفظ…") : dt("حفظ جميع التغييرات")}</button>
+          <p className="hidden px-3 py-3 text-xs leading-6 text-slate-400 md:block">
+            {dt("كل الأقسام تخص العنصر نفسه. راجع التغييرات ثم احفظها من الشريط العلوي.")}
+          </p>
+        </nav>
+        <div className="min-w-0 space-y-5">
       {languageButtons}
       <section aria-label={dt("الترجمة وSEO")} className="space-y-4 rounded-2xl border border-sky-100 bg-gradient-to-l from-sky-50 to-white p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-semibold"><Globe2 size={18} aria-hidden="true" /><h2>{dt("الترجمة وSEO")}</h2></div>
           <p className="text-xs text-slate-500">{dt("١. إعداد الاقتراحات · ٢. مراجعتها · ٣. حفظ التغييرات")}</p>
         </div>
-        <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="grid items-end gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))]">
           <label className="space-y-1 text-sm"><span>{dt("المهمة")}</span><select aria-label={dt("المهمة")} className="w-full rounded-lg border bg-white p-3" value={assistAction} disabled={Boolean(busy)} onChange={event => setAssistAction(event.target.value as typeof assistAction)}>
             <option value="translate">{dt("ترجمة المحتوى")}</option><option value="seo">{dt("تحسين الظهور في البحث")}</option><option value="proofread">{dt("تدقيق النصوص")}</option>{!isBanner ? <option value="faq">{dt("إعداد أسئلة شائعة")}</option> : null}
           </select></label>
           <label className="space-y-1 text-sm"><span>{dt("اللغات المستهدفة")}</span><select aria-label={dt("اللغات المستهدفة")} className="w-full rounded-lg border bg-white p-3" value={assistTargetScope} disabled={Boolean(busy)} onChange={event => setAssistScope(event.target.value)}>
-            <option value="current" disabled={assistAction === "translate" && locale === "ar"}>{LOCALES[locale as keyof typeof LOCALES]?.nativeLabel}</option><option value="missing">{dt("اللغات غير المكتملة")}</option><option value="all">{dt("كل اللغات")}</option>
+            <option value="current">{LOCALES[(assistAction === "translate" && locale === "ar" ? "en" : locale) as keyof typeof LOCALES]?.nativeLabel}</option>{SUPPORTED_LOCALES.filter(code => code !== locale && !(assistAction === "translate" && code === "ar") && !(assistAction === "translate" && locale === "ar" && code === "en")).map(code => <option key={code} value={code}>{LOCALES[code as keyof typeof LOCALES]?.nativeLabel}</option>)}<option value="missing">{dt("اللغات غير المكتملة")}</option><option value="all">{dt("كل اللغات")}</option>
           </select></label>
-          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0 || id === "new" || (assistAction === "translate" && assistTargetScope === "current" && locale === "ar")} onClick={() => {
-            const targets = (assistTargetScope === "current" ? [locale] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
+          <button type="button" className={button + " bg-brand text-white"} disabled={Boolean(busy) || uploads > 0} onClick={() => {
+            const targets = (assistTargetScope === "current" ? [assistAction === "translate" && locale === "ar" ? "en" : locale] : SUPPORTED_LOCALES.includes(assistTargetScope as typeof SUPPORTED_LOCALES[number]) ? [assistTargetScope] : SUPPORTED_LOCALES.filter(code => assistTargetScope === "all" || !(assistAction === "seo" ? document.statuses[code]?.seoComplete : document.statuses[code]?.complete))).filter(code => assistAction !== "translate" || code !== "ar");
             void suggest(assistAction, false, targets);
           }}>{assistAction === "translate" ? assistTargetScope === "missing" ? dt("ترجمة اللغات الناقصة") : assistTargetScope === "all" ? dt("ترجمة كل اللغات") : dt("ترجمة الحقول المحددة") : dt("إعداد الاقتراحات")}</button>
         </div>
@@ -747,6 +814,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
                   <b className="text-sm">
                     {dtMaybe(document.fields.find((f) => f.key === key)?.label || key)}
                   </b>
+                  {value.length > contentFieldLimit(key) ? <p role="alert" className="mt-2 text-sm text-red-700">{dt("النص يتجاوز الحد: {0} / {1} حرفًا. عدّله قبل الحفظ.", [value.length, contentFieldLimit(key)])}</p> : null}
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     <div className="whitespace-pre-wrap break-words text-sm text-slate-500">
                       <p className="mb-2 text-xs font-semibold">{dt("المسودة قبل الاقتراح")}</p>{previewText((proposal.base || values)[code]?.[key] || dt("فارغ"))}
@@ -765,7 +833,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
                         <RichEditor defaultValue={parseRich(value)} onUpdate={(editor) => { if (editor) reviseProposal(code, key, JSON.stringify(editor.getJSON())); }}
                           className="rounded border bg-white [&_.ProseMirror]:min-h-40 [&_.ProseMirror]:p-3" />
                       ) : (
-                        <textarea aria-label={dt("الاقتراح: {0}", [key])} className="w-full rounded border bg-white p-3" rows={4} value={value} onChange={(event) => reviseProposal(code, key, event.target.value)} />
+                        <textarea aria-label={dt("الاقتراح: {0}", [key])} className="w-full rounded border bg-white p-3" rows={4} maxLength={contentFieldLimit(key)} aria-invalid={value.length > contentFieldLimit(key)} value={value} onChange={(event) => reviseProposal(code, key, event.target.value)} />
                       )}
                     </div>
                   </div>
@@ -782,37 +850,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           ))}
         </section>
       ) : null}
-      <div
-        inert={busy === "save" || busy === "slug"}
-        className="grid items-start gap-5 xl:grid-cols-[180px_minmax(0,1fr)]"
-      >
-        <nav
-          aria-label={dt("أقسام المحرر")}
-          className="grid grid-cols-2 gap-1 rounded-xl border bg-white p-2 sm:grid-cols-3 xl:sticky xl:top-56 xl:flex xl:flex-col"
-        >
-          {EDITOR_SECTIONS[kind].map((item, index) => {
-            const Icon = sectionIcons[item.icon as keyof typeof sectionIcons];
-            return (
-              <button
-                key={item.id}
-                type="button"
-                aria-current={section === item.id ? "page" : undefined}
-                className={`flex min-w-0 items-center gap-2 rounded-lg px-3 py-4 text-start text-sm ${section === item.id ? "bg-brand/5 font-bold text-brand" : "text-slate-500 hover:bg-slate-50"}`}
-                onClick={() => setSection(item.id)}
-              >
-                <Icon size={17} className="shrink-0" />
-                <span className="flex-1">{dtMaybe(item.label)}</span>
-                <small className="text-[10px] opacity-50">
-                  {String(index + 1).padStart(2, "0")}
-                </small>
-              </button>
-            );
-          })}
-          <p className="hidden px-3 py-5 text-xs leading-6 text-slate-400 xl:block">
-            {dt("كل الأقسام تخص العنصر نفسه. راجع التغييرات ثم احفظها من الشريط العلوي.")}
-          </p>
-        </nav>
-        <div className="min-w-0 space-y-5">
+        <div className="space-y-5" inert={busy === "save" || busy === "slug"}>
           <h2 className="text-lg font-bold">
             {dtMaybe(EDITOR_SECTIONS[kind].find((s) => s.id === section)?.label || "")}{" "}
             <small className="font-normal text-slate-400">
@@ -840,7 +878,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
             </section>
           ) : null}
           {["content", "page", "layout", "links", "media"].includes(section) ? (
-            <>
+            <div className="grid gap-4 sm:grid-cols-2">
               {document.fields
                 .filter((f) => {
                   if (section === "media")
@@ -874,7 +912,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
                     .filter((f) => f.key === "amountLabels")
                     .map(renderField)
                 : null}
-            </>
+            </div>
           ) : null}
           <WorkspaceSettings
             onUploadingChange={onUploadingChange}
@@ -933,6 +971,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
           {section === "seo" ? (
             <SeoWorkspace
               onUploadingChange={onUploadingChange}
+              focusField={invalidField?.locale === locale ? invalidField.key : undefined}
               values={current}
               fields={document.fields}
               renderField={renderField}
@@ -1060,6 +1099,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
             </section>
           ) : null}
         </div>
+      </div>
       </div>
       {languageReview ? (
         <EditorModal
@@ -1250,3 +1290,4 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
     </div>
   );
 }
+

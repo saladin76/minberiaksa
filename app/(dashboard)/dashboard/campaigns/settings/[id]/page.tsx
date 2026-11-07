@@ -1200,7 +1200,7 @@ export default function EditCampaignPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="monthly">{dt("شهريًا (الافتراضي)")}</SelectItem>
-                        <SelectItem value="friday">{dt("أسبوعياً")}</SelectItem>
+                        <SelectItem value="friday">{dt("تبرع كل جمعة")}</SelectItem>
                         <SelectItem value="daily">{dt("يوميًا")}</SelectItem>
                         <SelectItem value="once">{dt("مرة واحدة")}</SelectItem>
                         <SelectItem value="none">{dt("بدون توصية")}</SelectItem>

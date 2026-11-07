@@ -139,7 +139,7 @@ const TEXT_PATTERNS: Array<{ pattern: RegExp; key: PaymentErrorKey }> = [
   { pattern: /withdrawal[_\s]*count[_\s]*exceeded|amount[_\s]*limit[_\s]*exceeded|spending[_\s]*limit/i, key: "limitExceeded" },
   { pattern: /currency[_\s]*not[_\s]*supported|currency.*not[_\s]*allowed/i, key: "currencyNotSupported" },
   // 3-D Secure / SCA authentication failures
-  { pattern: /authentication[_\s]*(required|failed)|3d[_\s_]?secure|sca[_\s]*failed|impossible.*authentifier/i, key: "authenticationFailed" },
+  { pattern: /authentication[_\s]*(required|failed|attempt)|3d[_\s_]?secure|sca[_\s]*failed|impossible.*authentifier/i, key: "authenticationFailed" },
   { pattern: /processing[_\s]*error|try[_\s]*again|temporary[_\s]*error/i, key: "processingError" },
   { pattern: /network[_\s]*error|connection[_\s]*(error|failed)|timeout/i, key: "networkError" },
   { pattern: /issuer[_\s]*not[_\s]*available|issuer[_\s]*unavailable|issuer[_\s]*declined/i, key: "issuerUnavailable" },

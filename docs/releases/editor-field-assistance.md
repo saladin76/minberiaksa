@@ -1,0 +1,9 @@
+# Editor field assistance and campaign creation
+
+The production create failure was a Prisma validation error: the editor's Arabic draft contained an empty `image` field, but Campaign stores its default cover in `images`. Creation now removes the translation-only field before the parent write, retaining the Arabic gallery and translated image overrides. Nonempty Arabic image overrides are rejected consistently with normal saves.
+
+Content fields have independent drafting instructions, suggestion and proofreading buttons. Suggestions use the selected field and current language, keep the Arabic master as factual context, and appear in the existing editable proposal review. Applying changes only updates the draft; saving remains explicit. Plain generated paragraphs become safe Tiptap text nodes. Media URLs and locked fields cannot be generated. Suggestions also accept the unsaved `new` workspace while retaining authentication, permissions, revision checks, draft validation and asynchronous task behavior.
+
+The existing report-project fix, bilingual financial reports and payment handoff fixes remain included through commit ancestry.
+
+Validation: 38 focused local tests cover project creation, field request payloads, no automatic application, unsaved drafts, unauthorized/invalid requests, provider failures, paragraph structure and donation export regressions. Changed-file unused-variable and explicit-any checks pass. Full TypeScript/build validation is unavailable in this partial local mirror because Next and other dependencies/source modules are absent; the server release must run its complete gates. No production activation or successful live AI request is claimed. The original live project remains an unsaved inactive draft until the creation fix is deployed; save/reopen/AI persistence must be retested afterward.

@@ -35,6 +35,7 @@ interface DonationDetail {
   fees: number;
   coverFees: boolean;
   currency: string;
+  provider?: string | null;
   status: "PAID" | "FAILED";
   paidAt: string | null;
   // null on one-time donations; set for recurring plan rows. A plan row with
@@ -78,6 +79,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
   // option so admins can either leave it pending or confirm it (stamp paidAt
   // and let the server roll the amount into campaign/category totals).
   const [statusChoice, setStatusChoice] = useState<"PAID" | "PAID_PENDING" | "FAILED">("PAID");
+  const [currency, setCurrency] = useState("USD");
+  const [provider, setProvider] = useState("");
   const [teamSupport, setTeamSupport] = useState("0");
   const [editableItems, setEditableItems] = useState<EditableItem[]>([]);
 
@@ -99,6 +102,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
         const d = donRes.data as DonationDetail;
         setDonation(d);
+        setCurrency(d.currency);
+        setProvider(d.provider ?? "MANUAL");
         setTeamSupport(String(d.teamSupport ?? 0));
         // Unconfirmed (paidAt=null) opens as قيد التأكيد for every donation,
         // one-time or recurring: "PAID" is the admin saying the money arrived.
@@ -213,7 +218,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
         : donation.paidAt === null
           ? "PAID_PENDING"
           : "PAID";
-    if (originalChoice !== statusChoice || supportAmount !== (donation.teamSupport ?? 0)) return true;
+    if (currency !== donation.currency || provider !== (donation.provider ?? "MANUAL") || originalChoice !== statusChoice || supportAmount !== (donation.teamSupport ?? 0)) return true;
     const old: EditableItem[] = [
       ...donation.items.map((i) => ({
         key: "",
@@ -237,7 +242,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
         .sort()
         .join("|");
     return sig(old) !== sig(editableItems);
-  }, [donation, editableItems, statusChoice, supportAmount]);
+  }, [donation, editableItems, statusChoice, supportAmount, currency, provider]);
 
   const setLineAmount = (idx: number, val: string) => {
     setEditableItems((prev) => prev.map((it, i) => (i === idx ? { ...it, amount: val } : it)));
@@ -284,6 +289,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
       // donation actually settled  server stamps paidAt when it was null.
       const confirmPaidAt = statusChoice === "PAID";
       await axios.patch(`/api/donations/${donationId}`, {
+        ...(currency !== donation?.currency ? { currency } : {}),
+        ...(provider !== (donation?.provider ?? "MANUAL") ? { provider } : {}),
         status,
         confirmPaidAt,
         teamSupport: supportAmount,
@@ -315,8 +322,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => (!open && !submitting ? onClose() : null)}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
-        <DialogHeader className="text-start">
+      <DialogContent className="w-[calc(100%-1rem)] min-w-0 rounded-2xl max-w-2xl max-h-[90vh] overflow-y-auto" dir={dashDir()}>
+        <DialogHeader className="pr-8 text-start">
           <DialogTitle>{dt("تعديل التبرع")}</DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
             {dt("أي تغيير في القيمة أو الحالة سيُحدّث تلقائيًا إجماليات المشاريع والحملات. تأكّد من القيم قبل الحفظ.")}</DialogDescription>
@@ -335,7 +342,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                 {donor}
               </span>
               <span className="text-slate-500">{dt("العملة")}</span>
-              <span className="font-medium text-slate-800 text-end">{donation.currency}</span>
+              <select aria-label={dt("العملة")} value={currency} onChange={event => setCurrency(event.target.value)} className="rounded border p-2">{Array.from(new Set([donation.currency, "USD", "EUR", "GBP", "TRY", "SAR", "AED", "EGP", "KWD", "QAR"])).map(code => <option key={code} value={code}>{code}</option>)}</select>
               <span className="text-slate-500">{dt("القيمة الحالية")}</span>
               <span className="font-medium text-slate-800 text-left" dir="ltr">
                 {donation.amount} {donation.currency}
@@ -347,6 +354,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
             </div>
 
             {/* Status */}
+            {currency !== donation.currency ? <p role="status" className="rounded-lg bg-amber-50 p-3 text-xs leading-6 text-amber-900">{dt("تغيير العملة يُبقي الأرقام كما هي، ويعيد حساب قيمتها بالدولار وإجماليات المشاريع عند الحفظ.")}</p> : null}
+            <label className="flex items-center justify-between gap-3 text-sm"><span>{dt("مصدر التبرع")}</span><select aria-label={dt("مصدر التبرع")} value={provider} onChange={event => setProvider(event.target.value)} className="min-w-0 rounded border p-2">{Array.from(new Set([donation.provider ?? "MANUAL", "CASH", "BANK", "PAYFOR", "ALBARAKA", "STRIPE", "PAYPAL", "CHARITY_GIVING", "MANUAL"])).map(value => <option key={value} value={value}>{value === "CASH" ? dt("نقدي / كاش") : value}</option>)}</select></label>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700">{dt("الحالة")}</label>
               <Select
@@ -499,7 +508,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
               <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2 text-xs">
                 <span className="text-slate-600">{dt("إجمالي العناصر الجديد")}</span>
                 <span className="font-bold text-slate-900" dir="ltr">
-                  {newAmountSum} {donation.currency}
+                  {newAmountSum} {currency}
                 </span>
               </div>
 
@@ -510,8 +519,8 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
                   className="w-full rounded border border-slate-300 px-3 py-2" />
                 {invalidSupport && <p className="text-xs text-rose-600">{dt("أدخل مبلغًا صحيحًا لدعم الفريق، صفر أو أكثر.")}</p>}
                 <p className="text-xs text-slate-500">{dt("تعديل السجل لا يخصم مبلغًا إضافيًا من المتبرع ولا يغيّر قيمة الاشتراك القادم.")}</p>
-                <div className="flex justify-between text-xs"><span>{dt("الرسوم المشمولة")}</span><span dir="ltr">{donation.coverFees ? donation.fees : 0} {donation.currency}</span></div>
-                <div className="flex justify-between font-bold"><span>{dt("الإجمالي الجديد شامل دعم الفريق والرسوم")}</span><span dir="ltr">{newTotal} {donation.currency}</span></div>
+                <div className="flex justify-between text-xs"><span>{dt("الرسوم المشمولة")}</span><span dir="ltr">{donation.coverFees ? donation.fees : 0} {currency}</span></div>
+                <div className="flex justify-between font-bold"><span>{dt("الإجمالي الجديد شامل دعم الفريق والرسوم")}</span><span dir="ltr">{newTotal} {currency}</span></div>
               </div>
 
               {hasDuplicateLine && (
@@ -522,7 +531,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
           </div>
         )}
 
-        <DialogFooter className="!justify-between flex-row-reverse">
+        <DialogFooter className="sticky bottom-0 z-10 !justify-between flex-row-reverse border-t bg-white py-3">
           <Button
             type="button"
             onClick={() => {
@@ -553,7 +562,7 @@ export function EditDonationDialog({ donationId, onClose, onSaved }: Props) {
               </div>
               <div className="mt-4 space-y-1 text-start">
                 <label className="block text-xs font-medium text-slate-700">
-                  {dt("للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (")}<span dir="ltr">{confirmExpected}</span>):
+                  {dt("للتأكيد، اكتب الإجمالي الجديد شامل دعم الفريق والرسوم (")}<span dir="ltr">{confirmExpected} {currency}</span>):
                 </label>
                 <input
                   type="text"

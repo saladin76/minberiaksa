@@ -300,7 +300,7 @@ export type AlbarakaServiceResponse = {
  */
 export function isAlbarakaApproved(res: AlbarakaServiceResponse | null): boolean {
   const code = res?.ServiceResponseData?.ResponseCode;
-  return code === "00" || code === "0000";
+  return !res?.TransportFailure && (code === "00" || code === "0000");
 }
 
 /**
@@ -332,7 +332,9 @@ export async function albarakaService(
 
   const text = await res.text();
   try {
-    return JSON.parse(text) as AlbarakaServiceResponse;
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Malformed bank response");
+    return res.ok ? parsed as AlbarakaServiceResponse : { ...parsed, TransportFailure: true };
   } catch {
     return {
       ServiceResponseData: {
@@ -437,8 +439,9 @@ export async function albarakaInquireSale(orderId: string, cfg: AlbarakaConfig):
 
   const rows = Array.isArray(res.TransactionData) ? (res.TransactionData as Array<Record<string, unknown>>) : [];
   const sale = rows.find(
-    (r) => String(r.TransactionType ?? "").toLowerCase() === "sale" && String(r.AuthCode ?? "").trim() !== ""
+    (r) => String(r.TransactionType ?? "").toLowerCase() === "sale" && String(r.AuthCode ?? "").trim() !== "" && (!r.OrderId || r.OrderId === orderId)
   );
+  if (!sale && rows.some(row => String(row.TransactionType ?? "").toLowerCase() === "sale" && row.AuthCode)) return { state: "unknown", raw: res, error: "Order identity mismatch" };
   return sale ? { state: "approved", authCode: String(sale.AuthCode), raw: res } : { state: "absent", raw: res };
 }
 
@@ -530,25 +533,29 @@ export function albarakaMdStatusMessage(mdStatus: string): string {
 // A recurring plan's first instalment uses the donor-present 2D checkout. Every
 // later one is charged by the site's scheduler (`lib/donations/albaraka-recurring.ts`)
 // through the bank's direct /Sale  the "Standart Satış" of the document  with the
-// card the donor authorised, flagged `IsRecurring` / `IsMailOrder` so the bank treats
-// it as a merchant-initiated transaction on a stored credential.
+// card the donor authorised, flagged `IsRecurring`. Mail order is a separate
+// transaction class, not a synonym for recurring or for non-3D.
 //
 // Two things the document states, and this depends on:
-//   - Non-3D sales need a Non-3D (mail-order) terminal, which the bank provisions
+//   - Non-3D sales need a Non-3D terminal, which the bank provisions
 //     separately from the 3D one; its numbers go in ALBARAKA_RECURRING_TERMINAL_NO /
 //     ALBARAKA_RECURRING_POSNET_ID (falling back to the configured 2D terminal).
 //   - The field table marks Cvc2 as required for a standard sale, and CVCs are never
-//     stored here. Recurring transactions are sent without it, as merchant-initiated
-//     transactions are; the bank must have enabled that on the terminal. Until it
-//     has, ALBARAKA_RECURRING_ENABLED stays unset and no scheduler charge is made.
+//     stored here. Approval without it still depends on the bank's stored-card
+//     recurring contract. The December 2025 guide p17 explicitly says Mail Order
+//     checks BOTH the merchant's Posnet Mail Order type and the card's permission.
+//     It must not be enabled merely because this is a recurring instalment.
 
 export type AlbarakaRecurringConfig = AlbarakaConfig & {
   /** Master switch: nothing is charged by the scheduler while this is off. */
   enabled: boolean;
+  /** Explicit bank-confirmed Mail Order mode; ordinary ecommerce is the default. */
+  mailOrder?: boolean;
 };
 
 export function albarakaRecurringConfig(): AlbarakaRecurringConfig {
   const base = albarakaConfig();
+  const mailOrder = (process.env.ALBARAKA_RECURRING_MAIL_ORDER || "N").trim().toUpperCase();
   /* A scheduled instalment is a non-3D sale, like the checkout's 2D sale, so
      without a dedicated recurring terminal it runs on the 2D (non-3D) terminal
      with that terminal's own key  never the 3D terminal, which refuses a sale
@@ -559,7 +566,8 @@ export function albarakaRecurringConfig(): AlbarakaRecurringConfig {
     terminalNo: process.env.ALBARAKA_RECURRING_TERMINAL_NO || process.env.ALBARAKA_2D_TERMINAL_NO || base.terminalNo,
     posnetId: process.env.ALBARAKA_RECURRING_POSNET_ID || process.env.ALBARAKA_2D_POSNET_ID || base.posnetId,
     encKey: process.env.ALBARAKA_RECURRING_ENC_KEY || process.env.ALBARAKA_2D_ENC_KEY || base.encKey,
-    enabled: process.env.ALBARAKA_RECURRING_ENABLED === "1",
+    mailOrder: mailOrder === "Y",
+    enabled: process.env.ALBARAKA_RECURRING_ENABLED === "1" && ["N", "Y"].includes(mailOrder),
   };
 }
 
@@ -635,8 +643,8 @@ export function albarakaNonSecureSaleMac(
 /**
  * The /Sale body for one scheduled charge. Pure, so the tests can pin the shape
  * without a bank: the card is a stored credential, so it carries no Cvc2, and the
- * transaction is declared recurring and mail-order (the bank's own terms for a
- * merchant-initiated charge without the cardholder present).
+ * transaction remains recurring. Mail Order is independently selected only when
+ * the merchant has configured that bank-confirmed transaction class.
  */
 export function buildAlbarakaRecurringSale(
   input: {
@@ -666,7 +674,7 @@ export function buildAlbarakaRecurringSale(
     PaymentInstrumentType: "CARD",
     IsEncrypted: "N",
     IsTDSecureMerchant: "N",
-    IsMailOrder: "Y",
+    IsMailOrder: cfg.mailOrder === true ? "Y" : "N",
     IsRecurring: "Y",
     CardInformationData: {
       CardHolderName: input.card.holderName,

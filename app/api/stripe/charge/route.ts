@@ -1,3 +1,4 @@
+import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -62,6 +63,8 @@ export async function POST(req: NextRequest) {
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
     }
+    const frozenRoute = frozenPaymentRoute(donation.providerRaw);
+    if (frozenRoute && frozenRoute.gateway !== "STRIPE") return NextResponse.json({ error: "This payment attempt belongs to another gateway", code: "PAYMENT_GATEWAY_LOCKED" }, { status: 409 });
     // Authenticated users: verify ownership. Guests have no session  trust the donationId.
     if (session?.user?.id && donation.donorId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -159,7 +162,8 @@ export async function POST(req: NextRequest) {
        falls on the same day and time. Today's payment  the first month's
        gift, with any once-only team support  is charged now as a one-off
        line on the signup invoice. */
-    const firstScheduledCharge = plan.nextBillingDate ?? firstChargeForPlan(plan, donation.createdAt ?? now);
+    const safeFirstCharge = firstChargeForPlan(plan, now);
+    const firstScheduledCharge = plan.nextBillingDate && plan.nextBillingDate > safeFirstCharge ? plan.nextBillingDate : safeFirstCharge;
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,

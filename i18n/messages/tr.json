@@ -519,7 +519,7 @@
     "and": "ve",
     "privacyPolicy": "Gizlilik Politikası",
     "skipAndDonate": "Atla",
-    "donateAsGuest": "Misafir olarak bağışla",
+    "donateAsGuest": "Misafir olarak bağışa devam et",
     "withoutLoginBadge": "kayıt olmadan",
     "googleFastestWay": "En hızlı yol",
     "orContinueWith": "veya",
@@ -563,7 +563,12 @@
     "genderMale": "Erkek",
     "genderFemale": "Kadın",
     "genderPreferNotToSay": "Belirtmek istemiyorum",
-    "noPasswordYet": "Bu e-posta ile zaten bir hesabınız var ancak henüz şifreniz yok. Şifre belirlemek için aynı e-posta ile kayıt olun veya Google ile devam edin."
+    "noPasswordYet": "Bu e-posta ile zaten bir hesabınız var ancak henüz şifreniz yok. Şifre belirlemek için aynı e-posta ile kayıt olun veya Google ile devam edin.",
+    "authErrorTitle": "Giriş tamamlanamadı",
+    "authAccessDenied": "Giriş izni tamamlanmadı. Yeniden deneyebilir veya misafir olarak bağış yapabilirsiniz.",
+    "authAccountConflict": "Bu e-posta başka bir giriş yöntemine bağlı. Önceki yöntemi kullanın veya misafir olarak bağış yapın.",
+    "authUnavailable": "Giriş şu anda kullanılamıyor. Misafir olarak bağış yapabilirsiniz.",
+    "authUnknown": "Giriş tamamlanmadı. Tekrar deneyin veya misafir olarak devam edin."
   },
   "SharePopup": {
     "shareCampaign": "Projeyi Başkalarıyla Paylaş",
@@ -676,7 +681,12 @@
     "stripeMinDonation": "Minimum bağış: {amount} {currency}",
     "certificateNoteTitle": "Bağış sertifikanızı alın ✨",
     "certificateNoteBody": "Resmi bağış sertifikanızı ve makbuzunuzu gönderebilmemiz için gerçek e-posta adresinizi girin.",
-    "free": "Ücretsiz"
+    "free": "Ücretsiz",
+    "rememberCard": "Kartımı sonraki bağışlar için kaydet",
+    "rememberCardFailed": "Kart kaydedilemedi. Kaydetme seçeneğini kaldırıp devam edebilirsiniz.",
+    "bankChargeEstimate": "Bağışınız {original}. Tahmini banka tahsilatı Türk lirası olarak {amount}; kesin kur ödeme başlatıldığında sabitlenir.",
+    "bankChargeCurrency": "Banka bu bağışı Türk lirası olarak tahsil eder. Dönüştürülen tutar ödeme onayından önce gösterilir.",
+    "paymentRoutingChanged": "Bu denemenin ödeme geçidi güncellendi. Yöntemi kontrol edin, güvenlik kodunu yeniden girin ve ödemeyi onaylayın."
   },
   "DonationSuccess": {
     "thankYou": "Çok teşekkür ederiz",
@@ -865,7 +875,16 @@
       "paymentMethodCard": "Kart",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "İşlem ücretlerini karşıladınız",
-      "emptyHistoryFiltered": "Filtrelere uyan bağış yok. Başka bir durum veya dönem deneyin."
+      "emptyHistoryFiltered": "Filtrelere uyan bağış yok. Başka bir durum veya dönem deneyin.",
+      "financial": {
+        "REFUNDED": "Tamamen iade edildi",
+        "PARTIALLY_REFUNDED": "Kısmen iade edildi",
+        "VOIDED": "Banka tarafından iptal edildi",
+        "REVIEW_REQUIRED": "Mali inceleme gerekli",
+        "balance": "İade: {returned} · Kalan: {remaining}"
+      },
+      "recurringGivingMonths": "Düzenli bağış yapılan aylar",
+      "recurringGivingMonthsHint": "Seçili dönemde düzenli bağışın tahsil edildiği aylar"
     },
     "subscriptions": {
       "settingsTableTitle": "Abonelikler ve ayarlar",
@@ -1258,7 +1277,7 @@
     "domeOfRockFull": "Kubbetü’s-Sahra",
     "inCentreAndBuilding": ", güneydeki kurşun kubbeli yapı ise",
     "qibliMusalla": "Kıble Mescidi’dir.",
-    "bothArePart": "Her ikisi de Mescid-i Aksâ yerleşkesinin birer parçasıdır; bu yapılardan yalnızca birini \"Aksâ\" olarak adlandırmak doğru değildir.",
+    "bothArePart": " Her ikisi de Mescid-i Aksâ yerleşkesinin birer parçasıdır; bu yapılardan yalnızca birini \"Aksâ\" olarak adlandırmak doğru değildir.",
     "bewareConfusion": "Bu Karışıklığa Dikkat!",
     "confusionText": "\"Aksâ\" ismini yalnızca Kubbetü’s-Sahra’ya ya da sadece Kıble Mescidi’ne indirgemek, zihinlerde Mescid-i Aksâ'nın gerçek sınırlarını daraltır. Aksâ; surları, avluları, mescitleri ve kubbeleriyle birlikte bu mukaddes alanın tamamıdır.",
     "mosqueMap": "Mescidin Planı ve Simgeleri",
@@ -1741,7 +1760,9 @@
     "verificationDirectHelp": "Doğrulama kodu olmadan",
     "verificationSecure": "Banka doğrulaması",
     "verificationSecureHelp": "Kod istenebilir",
-    "verificationRequired": "Devam etmek için bir ödeme seçeneği seçin."
+    "verificationRequired": "Devam etmek için bir ödeme seçeneği seçin.",
+    "verificationSecureOptIn": "Banka doğrulaması kullan (3D Secure)",
+    "verificationOptionalHelp": "Varsayılan yöntem doğrudan ödemedir. Banka doğrulaması için bu seçeneği işaretleyin."
   },
   "certificates": {
     "certNoLabel": "Sertifika no",
@@ -2600,6 +2621,16 @@
     "sentText": "Ortaklıklar ekibi yakında e-postanız üzerinden sizinle iletişime geçecek."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gazze",
+      "aqsa": "Mescid-i Aksâ",
+      "jerusalem": "Kudüs",
+      "waqf": "Kudüs’te Vakfet",
+      "zakat": "Filistin’e Zekât Ver",
+      "restoration": "Kudüs Evlerini Restore Et",
+      "ibadan": "İbâden Lenâ",
+      "recurring": "Düzenli Bağış"
+    },
     "allProjects": "Tüm Projeler",
     "filterByRegion": "Bölgeye Göre",
     "filterByType": "Bağış Türüne Göre",
@@ -2881,7 +2912,8 @@
     "invalidCardNumber": "Kart numarası geçersiz, lütfen kontrol edin.",
     "invalidCardExpiry": "Son kullanma tarihi geçersiz veya geçmiş.",
     "invalidCardCvc": "Güvenlik kodu (CVC) geçersiz.",
-    "tooManyPaymentAttempts": "Çok fazla ödeme denemesi. Lütfen daha sonra tekrar deneyin."
+    "tooManyPaymentAttempts": "Çok fazla ödeme denemesi. Lütfen daha sonra tekrar deneyin.",
+    "mixedDonationCadences": "Farklı bağış sıklıkları için ayrı ödeme yapın. Sepetinizi kontrol edin."
   },
   "waqf": {
     "chooseUnit": "Katkı Türünüzü ve Adedini Seçin",
@@ -3283,6 +3315,7 @@
     "chooseFirst": "Devam etmek için bir ekip desteği tutarı ya da “Hayır, teşekkürler” seçin"
   },
   "Gift": {
+    "validationError": "Alıcının adını ve geçerli iletişim bilgilerini girin. WhatsApp numarasına ülke kodunu ekleyin.",
     "emailSubject": "Adınıza bir hediye: {project} projesine bağış",
     "emailTitle": "{recipientName}, size bir hediye var",
     "emailBody": "{donorName}, Minber-i Aksa aracılığıyla “{project}” projesine sizin adınıza bağış yaptı.",
@@ -3531,6 +3564,7 @@
     "orContinue": "ile devam et",
     "noAccount": "Hesabınız yok mu?",
     "createOne": "Üye ol",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Google ile giriş yap"
   }
 }

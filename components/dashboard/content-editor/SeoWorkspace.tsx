@@ -1,7 +1,8 @@
 "use client";
+import { clipSeoDescription } from "@/lib/seo-description";
 import { dt } from "@/lib/dashboard/i18n";
-import { useState, type ReactNode } from "react";
-import type { ContentField, TextValues } from "@/lib/content-editor/contracts";
+import { useState, useEffect, type ReactNode } from "react";
+import { contentFieldLimit, type ContentField, type TextValues } from "@/lib/content-editor/contracts";
 import { ImageUploadField } from "@/app/(dashboard)/dashboard/_components/ImageUploadField";
 type Faq = { q: string; a: string; structuredData?: boolean };
 export function SeoWorkspace({
@@ -11,7 +12,9 @@ export function SeoWorkspace({
   onChange,
   locale,
   onUploadingChange,
+  focusField,
 }: {
+  focusField?: string;
   values: TextValues;
   fields: ContentField[];
   renderField: (field: ContentField) => ReactNode;
@@ -20,6 +23,17 @@ export function SeoWorkspace({
   onUploadingChange?: (uploading: boolean) => void;
 }) {
   const [tab, setTab] = useState("search");
+  useEffect(() => {
+    if (focusField) setTab(focusField.startsWith("og") ? "share" : "search");
+  }, [focusField]);
+  useEffect(() => {
+    if (!focusField) return;
+    const frame = requestAnimationFrame(() => {
+      const field = document.getElementById(`content-${locale}-${focusField}`);
+      field?.scrollIntoView({ block: "center", behavior: "smooth" }); field?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusField, locale, tab]);
   let faq: Faq[] = [];
   try {
     faq = JSON.parse(values.faqContent || "[]");
@@ -29,6 +43,8 @@ export function SeoWorkspace({
   const title =
       values.seoTitle || values.metaTitle || values.title || values.name || "",
     description = values.seoDescription || values.metaDescription || "";
+  const publishedDescription = clipSeoDescription(description, locale);
+  const descriptionLimit = locale === "ja" || locale === "zh" ? 90 : 160;
   const writeFaq = (next: Faq[]) =>
     onChange("faqContent", JSON.stringify(next));
   const checks = [
@@ -45,6 +61,11 @@ export function SeoWorkspace({
   ] as const;
   return (
     <div className="space-y-5">
+      <section className="rounded-xl border border-sky-100 bg-sky-50 p-4" aria-label={dt("جاهزية بيانات البحث")}>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><strong>{dt("جاهزية بيانات البحث")}</strong><span>{checks.filter(([, passed]) => passed).length} / {checks.length}</span></div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" role="progressbar" aria-valuemin={0} aria-valuemax={checks.length} aria-valuenow={checks.filter(([, passed]) => passed).length} aria-label={dt("جاهزية بيانات البحث")}><div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${checks.filter(([, passed]) => passed).length / checks.length * 100}%` }} /></div>
+        <p className="mt-2 text-xs leading-6 text-slate-600">{dt("أكمل العنوان والوصف ثم راجع المعاينة لكل لغة. هذه فحوص تحريرية وليست ضمانًا للترتيب في Google.")}</p>
+      </section>
       <nav
         aria-label={dt("أقسام SEO")}
         className="flex flex-wrap gap-2 rounded-xl border bg-white p-2"
@@ -70,26 +91,31 @@ export function SeoWorkspace({
           <label className="block space-y-2 rounded-xl border bg-white p-5">
             <span className="font-semibold">{dt("العبارة الرئيسية المستهدفة")}</span>
             <input
+              id={`content-${locale}-seoKeyword`}
+              maxLength={contentFieldLimit("seoKeyword")}
               className="w-full rounded-lg border p-3"
               value={values.seoKeyword || ""}
               onChange={(e) => onChange("seoKeyword", e.target.value)}
             />
           </label>
-          {fields
+          <div className="grid gap-4 sm:grid-cols-2">{fields
             .filter((f) =>
               /^(seoTitle|seoDescription|metaTitle|metaDescription|imageAlt)$/.test(
                 f.key,
               ),
             )
-            .map(renderField)}
+            .map(renderField)}</div>
           <section className="rounded-xl border bg-white p-5">
             <h3 className="mb-4 font-semibold">
               {dt("معاينة Google ·")} {locale.toUpperCase()}
             </h3>
-            <p className="text-xl text-blue-800">{title}</p>
-            <p className="mt-2 text-sm leading-7 text-slate-600">
-              {description || dt("أضف وصف نتيجة البحث")}
+            <p dir="ltr" className="mb-2 text-start text-xs text-slate-500">minberiaksa.org</p>
+            <p className="max-w-2xl break-words text-xl text-blue-800">{title}</p>
+            <p className="mt-2 max-w-2xl break-words text-sm leading-7 text-slate-600">
+              {publishedDescription || dt("أضف وصف نتيجة البحث")}
             </p>
+            <div className="mt-4 grid gap-2 border-t pt-3 text-xs sm:grid-cols-2"><p>{dt("طول العنوان: {0} حرفًا؛ المقترح 30–60", [Array.from(title).length])}</p><p>{dt("طول الوصف: {0} حرفًا؛ الحد المعروض لهذه اللغة {1}", [Array.from(description).length, descriptionLimit])}</p></div>
+            {publishedDescription !== description.trim() ? <p role="status" className="mt-3 text-xs text-amber-800">{dt("تعرض المعاينة الوصف المنشور بعد تنسيقه واختصاره. اختصر النص لرؤيته كاملًا.")}</p> : null}
           </section>
           <label className="flex items-center justify-between gap-3 rounded-xl border bg-white p-5">
             <span>{dt("السماح لمحركات البحث بفهرسة هذه اللغة")}</span>
@@ -121,6 +147,7 @@ export function SeoWorkspace({
                 <label className="block text-sm">
                   {dt("السؤال")} {i + 1}
                   <input
+                    maxLength={500}
                     className="mt-2 w-full rounded border p-3"
                     value={item.q}
                     onChange={(e) =>
@@ -135,6 +162,7 @@ export function SeoWorkspace({
                 <label className="block text-sm">
                   {dt("الإجابة")}
                   <textarea
+                    maxLength={5000}
                     className="mt-2 w-full rounded border p-3"
                     rows={3}
                     value={item.a}
@@ -170,9 +198,9 @@ export function SeoWorkspace({
           <p className="rounded-xl bg-sky-50 p-4 text-sm">
             {dt("عند ترك حقول المشاركة فارغة، تُستخدم إعدادات البحث لهذه اللغة.")}
           </p>
-          {fields
+          <div className="grid gap-4 sm:grid-cols-2">{fields
             .filter((f) => ["ogTitle", "ogDescription"].includes(f.key))
-            .map(renderField)}
+            .map(renderField)}</div>
           <section className="rounded-xl border bg-white p-5">
             <ImageUploadField
               onUploadingChange={onUploadingChange}

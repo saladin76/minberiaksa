@@ -18,8 +18,8 @@ export const dynamic = "force-dynamic";
  *
  *  1. `confirm: true` in the body  a bare POST cannot send. Guards against a mis-wired button or a
  *     retried request doing it by accident.
- *  2. The executor refuses anything not already `APPROVED`, so approval stays a separate human act
- *     performed through a different route.
+ *  2. The executor refuses anything not already `APPROVED`, the same authorized operator confirms their send through the
+ *     transition route. No second operator approval is required.
  *  3. The executor itself skips recipients that already have a processed delivery for this
  *     campaign+template, so a double-click cannot double-send.
  *
@@ -38,8 +38,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   if (denied) return denied;
   const { id } = await params;
 
-  const plan = await planCampaignSend(id);
-  return NextResponse.json({ ok: true, plan });
+  try {
+    const plan = await planCampaignSend(id);
+    return NextResponse.json({ ok: true, plan });
+  } catch {
+    return NextResponse.json({ ok: false, error: "تعذّر تحميل خطة الإرسال. أعد المحاولة." }, { status: 503 });
+  }
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

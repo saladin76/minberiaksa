@@ -68,6 +68,7 @@ const PLATFORM_ACCENT: Record<AdPlatform, string> = {
   reddit: "bg-[#FF4500]",
   "other-paid": "bg-violet-500",
   organic: "bg-slate-400",
+  unknown: "bg-slate-400",
 };
 
 function FirstTouchTable({

@@ -21,6 +21,9 @@ export type SmartAudienceDraft = {
     projectIds?: string[];
     badgeIds?: string[];
     recurringOnly?: boolean;
+    oneTimeOnly?: boolean;
+    recurringFrequencies?: string[];
+    excludeRecurringFrequencies?: string[];
     minDonationAmountUSD?: number | null;
     hasContact?: boolean;
   };
@@ -174,7 +177,7 @@ export function SmartAudienceBuilder({
         {previewError ? <Button type="button" variant="outline" onClick={() => setPreviewAttempt((attempt) => attempt + 1)} disabled={loading}>{dt("إعادة المحاولة")}</Button> : null}
         <div className="mb-3">
           <h3 className="text-sm font-semibold text-slate-900">{dt("من تريد أن تصل إليه الحملة؟")}</h3>
-          <p className="mt-1 text-xs text-slate-500" role={previewError ? "alert" : undefined}>{previewError ?? dt("تُحفظ كل السجلات المطابقة كجمهور للحملة. تُراجع بيانات الاتصال والموافقة عند التنفيذ؛ الأهلية المبدئية ليست ضمانًا للتسليم.")}</p>
+          <p className="mt-1 text-xs text-slate-500" role={previewError ? "alert" : undefined}>{previewError ?? dt("تُحفظ كل السجلات المطابقة كجمهور للحملة. تُراجع بيانات الاتصال وحالة إيقاف التواصل عند التنفيذ؛ الأهلية المبدئية ليست ضمانًا للتسليم.")}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -269,6 +272,12 @@ export function SmartAudienceBuilder({
             />
           </label>
 
+          <fieldset className="space-y-2 rounded-lg border p-3">
+            <legend className="px-1 text-xs font-bold">{dt("الدورية في اختيار الجمهور")}</legend>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={value.filters.oneTimeOnly === true} onChange={event => updateFilters({ oneTimeOnly: event.target.checked, ...(event.target.checked ? { recurringOnly: false, recurringFrequencies: [] } : {}) })} />{dt("متبرعو المرة الواحدة فقط")}</label>
+            {(["recurringFrequencies", "excludeRecurringFrequencies"] as const).map(key => <div key={key} className="grid gap-2"><b className="text-xs">{key === "recurringFrequencies" ? dt("تضمين اشتراكات نشطة") : dt("استثناء اشتراكات نشطة")}</b><div className="flex flex-wrap gap-3">{[["DAILY", dt("يومي")], ["MONTHLY", dt("شهري")], ["FRIDAY", dt("كل جمعة")]].map(([frequency, label]) => <label key={frequency} className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={value.filters[key]?.includes(frequency) === true} onChange={event => updateFilters({ [key]: event.target.checked ? [...(value.filters[key] ?? []), frequency] : (value.filters[key] ?? []).filter(item => item !== frequency), ...(key === "recurringFrequencies" && event.target.checked ? { oneTimeOnly: false } : {}) })} />{label}</label>)}</div></div>)}
+          </fieldset>
+
           <div className="space-y-2 pt-5">
             <label className="flex items-center gap-2 text-xs text-slate-700">
               <input
@@ -331,7 +340,7 @@ export function SmartAudienceBuilder({
           <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">{dt("جمهور الحملة")}</p><p className="mt-1 text-xl font-bold">{preview ? preview.matched.toLocaleString("en-US") : "—"}</p></div>
           <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">{dt("مؤهل مبدئيًا")}</p><p className="mt-1 text-xl font-bold text-emerald-700">{preview ? preview.eligible.toLocaleString("en-US") : "—"}</p></div>
           <div className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">{dt("بدون وسيلة اتصال")}</p><p className="mt-1 text-xl font-bold">{preview ? preview.missingContact.toLocaleString("en-US") : "—"}</p></div>
-          <div className="rounded-lg bg-white p-3" title={preview ? dt("إيقاف التواصل: {0}؛ مراجعة الموافقة: {1}", [preview.doNotContact.toLocaleString("en-US"), reviewCount.toLocaleString("en-US")]) : undefined}><p className="text-[11px] text-slate-500">{dt("تواصل موقوف / يحتاج مراجعة")}</p><p className="mt-1 text-xl font-bold">{preview ? contactRestrictions.toLocaleString("en-US") : "—"}</p></div>
+          <div className="rounded-lg bg-white p-3" title={preview ? dt("إيقاف التواصل: {0}؛ مراجعة بيانات الاتصال: {1}", [preview.doNotContact.toLocaleString("en-US"), reviewCount.toLocaleString("en-US")]) : undefined}><p className="text-[11px] text-slate-500">{dt("تواصل موقوف / يحتاج مراجعة")}</p><p className="mt-1 text-xl font-bold">{preview ? contactRestrictions.toLocaleString("en-US") : "—"}</p></div>
         </div>
 
         {topLanguages.length > 0 && (
@@ -350,7 +359,7 @@ export function SmartAudienceBuilder({
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">{dt("عينة من الجمهور")}</h3>
-              <p className="mt-1 text-xs text-slate-500">{dtx("تُحفظ كل السجلات المطابقة. إيقاف التواصل: {0}؛ مراجعة الموافقة: {1}. تُراجع الحالة مجددًا عند التنفيذ.", [preview.doNotContact.toLocaleString("en-US"), reviewCount.toLocaleString("en-US")])}</p>
+              <p className="mt-1 text-xs text-slate-500">{dtx("تُحفظ كل السجلات المطابقة. إيقاف التواصل: {0}؛ مراجعة بيانات الاتصال: {1}. تُراجع الحالة مجددًا عند التنفيذ.", [preview.doNotContact.toLocaleString("en-US"), reviewCount.toLocaleString("en-US")])}</p>
             </div>
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
           </div>

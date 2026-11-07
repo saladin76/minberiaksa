@@ -519,7 +519,7 @@
     "and": "e a",
     "privacyPolicy": "Política de privacidade",
     "skipAndDonate": "Pular",
-    "donateAsGuest": "Doar como convidado",
+    "donateAsGuest": "Continuar a doação como visitante",
     "withoutLoginBadge": "sem login",
     "googleFastestWay": "Mais rápido",
     "orContinueWith": "ou",
@@ -563,7 +563,12 @@
     "genderMale": "Masculino",
     "genderFemale": "Feminino",
     "genderPreferNotToSay": "Prefiro não informar",
-    "noPasswordYet": "Você já tem uma conta com este e-mail, mas ainda sem senha. Cadastre-se com o mesmo e-mail para definir uma, ou continue com o Google."
+    "noPasswordYet": "Você já tem uma conta com este e-mail, mas ainda sem senha. Cadastre-se com o mesmo e-mail para definir uma, ou continue com o Google.",
+    "authErrorTitle": "Não foi possível entrar",
+    "authAccessDenied": "A autorização não foi concluída. Tente novamente ou doe como visitante.",
+    "authAccountConflict": "Este e-mail usa outro método de acesso. Use o método anterior ou doe como visitante.",
+    "authUnavailable": "O acesso está indisponível. Você pode doar como visitante.",
+    "authUnknown": "O acesso não foi concluído. Tente novamente ou continue como visitante."
   },
   "SharePopup": {
     "shareCampaign": "Compartilhar o projeto com outras pessoas",
@@ -676,7 +681,12 @@
     "stripeMinDonation": "Doação mínima: {amount} {currency}",
     "certificateNoteTitle": "Receba seu certificado de doação ✨",
     "certificateNoteBody": "Informe seu e-mail real para que possamos enviar o certificado oficial de doação e o recibo.",
-    "free": "Grátis"
+    "free": "Grátis",
+    "rememberCard": "Guardar o meu cartão para futuros donativos",
+    "rememberCardFailed": "Não foi possível guardar o cartão. Desmarque esta opção para continuar.",
+    "bankChargeEstimate": "Sua doação é de {original}. O débito bancário estimado é de {amount} em liras turcas; a taxa final é fixada no início do pagamento.",
+    "bankChargeCurrency": "O banco cobra esta doação em liras turcas. O valor convertido aparece antes da confirmação.",
+    "paymentRoutingChanged": "O gateway foi atualizado. Confira o método, digite novamente o código de segurança e confirme."
   },
   "DonationSuccess": {
     "thankYou": "Muito obrigado",
@@ -865,7 +875,16 @@
       "paymentMethodCard": "Cartão",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "Você cobriu as taxas da transação",
-      "emptyHistoryFiltered": "Nenhuma doação corresponde aos filtros. Tente outro status ou período."
+      "emptyHistoryFiltered": "Nenhuma doação corresponde aos filtros. Tente outro status ou período.",
+      "financial": {
+        "REFUNDED": "Reembolso total",
+        "PARTIALLY_REFUNDED": "Reembolso parcial",
+        "VOIDED": "Anulada pelo banco",
+        "REVIEW_REQUIRED": "Revisão financeira necessária",
+        "balance": "Reembolsado: {returned} · Restante: {remaining}"
+      },
+      "recurringGivingMonths": "Meses de donativos recorrentes",
+      "recurringGivingMonthsHint": "Meses com pagamentos recorrentes confirmados neste período"
     },
     "subscriptions": {
       "settingsTableTitle": "Assinaturas e configurações",
@@ -1741,7 +1760,9 @@
     "verificationDirectHelp": "Sem código de verificação",
     "verificationSecure": "Verificação bancária",
     "verificationSecureHelp": "Pode ser pedido um código",
-    "verificationRequired": "Escolha uma opção de pagamento para continuar."
+    "verificationRequired": "Escolha uma opção de pagamento para continuar.",
+    "verificationSecureOptIn": "Quero verificar o pagamento com o banco (3D Secure)",
+    "verificationOptionalHelp": "O pagamento direto é a opção padrão. Selecione esta opção para verificar com o banco."
   },
   "certificates": {
     "certNoLabel": "N.º do certificado",
@@ -2600,6 +2621,16 @@
     "sentText": "A nossa equipa de parcerias entrará em contacto consigo brevemente por e-mail."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Mesquita de Al-Aqsa",
+      "jerusalem": "Jerusalém",
+      "waqf": "Criar um waqf em Jerusalém",
+      "zakat": "Dar zakat à Palestina",
+      "restoration": "Restaurar casas em Jerusalém",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Doação recorrente"
+    },
     "allProjects": "Todos os Projetos",
     "filterByRegion": "Por Região",
     "filterByType": "Por Tipo de Doação",
@@ -2881,7 +2912,8 @@
     "invalidCardNumber": "O número do cartão não é válido. Verifique-o.",
     "invalidCardExpiry": "A data de validade é inválida ou já passou.",
     "invalidCardCvc": "O código de segurança (CVC) não é válido.",
-    "tooManyPaymentAttempts": "Demasiadas tentativas de pagamento. Tente novamente mais tarde."
+    "tooManyPaymentAttempts": "Demasiadas tentativas de pagamento. Tente novamente mais tarde.",
+    "mixedDonationCadences": "Conclua cada frequência de doação em um pagamento separado. Revise sua cesta."
   },
   "waqf": {
     "chooseUnit": "Escolha o tipo e a quantidade da sua contribuição",
@@ -3214,6 +3246,7 @@
     "chooseFirst": "Escolha um valor de apoio à equipa ou «Não, obrigado» para continuar"
   },
   "Gift": {
+    "validationError": "Introduza o nome do destinatário e contactos válidos. Inclua o indicativo do país no número de WhatsApp.",
     "emailSubject": "Um presente em seu nome: uma doação para {project}",
     "emailTitle": "{recipientName}, você recebeu um presente",
     "emailBody": "{donorName} doou em seu nome ao projeto «{project}» através do Minbar Al-Aqsa.",
@@ -3531,6 +3564,7 @@
     "orContinue": "continuar com",
     "noAccount": "Não tem uma conta?",
     "createOne": "Criar conta",
-    "logoAlt": "Logotipo"
+    "logoAlt": "Logotipo",
+    "signInWithGoogle": "Entrar com o Google"
   }
 }

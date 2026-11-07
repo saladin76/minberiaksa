@@ -1,5 +1,8 @@
 "use client";
 
+import { usePaymentRouting } from "@/hooks/usePaymentRouting";
+import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
+import { SavedCardPicker } from "@/components/minbar/checkout/SavedCardPicker";
 import { rememberGuestDonationAccess } from "@/lib/donations/guest-access-client";
 
 import Image from "next/image";
@@ -42,7 +45,7 @@ import useConvetToUSD from "@/hooks/useConvetToUSD";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { useRouter } from "@/i18n/routing";
 import { appendCurrencyQuery, getCurrencyCodeForLinks } from "@/lib/currency-link";
-import { shouldSkipPopup } from "@/lib/in-app-browser";
+import { submitGatewayForm, type GatewayForm } from "@/lib/minbar/checkout";
 import { resolveGateway } from "@/lib/payment-gateway";
 import { withDonationToken } from "@/lib/donations/access-token-link";
 import { useTranslations, useLocale } from "next-intl";
@@ -162,13 +165,16 @@ const CartPaymentDialog = ({
   // TRY while the admin leaves it on, and everything else goes to the selected main
   // gateway. A fallback secret means a 3D attempt already failed and the donor holds a
   // Stripe intent, so Stripe wins from then on.
-  const gateway = resolveGateway({
+  const [phoneValue, setPhoneValue]       = useState("");
+  const fallbackGateway = resolveGateway({
     mainGateway,
     payforEnabled,
     currency: getCurrency(),
     donationType: "ONE_TIME",
     forceStripe: Boolean(fallbackClientSecret),
   });
+  const { gateway, acceptServerRoute } = usePaymentRouting({ enabled: globalSettings?.payforSaudiRoutingEnabled === true && !fallbackClientSecret, currency: getCurrency(), phone: phoneValue, fallback: fallbackGateway });
+
   const use3D = gateway === "PAYFOR";
   const useAlbaraka = gateway === "ALBARAKA";
   /** Both 3D rails post an HTML form to the bank instead of confirming via stripe.js. */
@@ -184,7 +190,6 @@ const CartPaymentDialog = ({
   const [redirecting, setRedirecting]     = useState(false);
   const payforSwitching = false;
   const [mounted, setMounted]             = useState(false);
-  const [phoneValue, setPhoneValue]       = useState("");
   const ipCountry = useIpCountry();
   const [currentUser, setCurrentUser]     = useState<{ phone: string | null } | null>(null);
   const [guestFirstName, setGuestFirstName] = useState("");
@@ -506,6 +511,7 @@ const CartPaymentDialog = ({
         items,
         attribution: getDonationAttributionPayload(),
         currency: getCurrency(),
+        routingPhone: phoneValue, expectedGateway: paymentMethod === "CARD" ? gateway : undefined,
         teamSupport: teamSupport ?? 0,
         coverFees,
         type: "ONE_TIME",
@@ -621,6 +627,7 @@ const CartPaymentDialog = ({
           useAlbaraka ? "/api/albaraka/3d/initiate" : "/api/payfor/3dpay/initiate",
           {
             donationId,
+            cardLast4: newPan.length >= 4 ? newPan.slice(-4) : undefined,
             locale,
             savedCardId: selectedCardId ?? undefined,
             ...(useAlbaraka && useOwnCardForm
@@ -635,110 +642,17 @@ const CartPaymentDialog = ({
               : {}),
           }
         );
-        const { actionUrl, fields } = init.data as { actionUrl: string; fields: Record<string, string> };
-
-        const form = document.createElement("form");
-          form.setAttribute("data-clarity-mask", "True");
-          form.setAttribute("data-hj-suppress", "");
-          form.setAttribute("data-private", "");
-        form.method = "POST";
-        form.action = actionUrl;
-        Object.entries(fields).forEach(([name, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden"; input.name = name; input.value = String(value ?? "");
-          form.appendChild(input);
-        });
-
-        // Card fields the browser still has to add  PayFor only. Albaraka's fields
-        // are already signed into `fields` server-side (or collected on the bank's
-        // own page), so appending anything here would break its MAC.
         const browserCardFields: Record<string, string> = {};
         if (use3D) {
-          if (selectedCardId) {
-            // Pan/Expiry/CardHolderName already in `fields`; add CVC only.
-            browserCardFields.Cvv2 = cardDetails.cvv;
-          } else {
-            const [mm, yy] = cardDetails.expiryDate.split("/");
+          browserCardFields.Cvv2 = cardDetails.cvv;
+          if (!selectedCardId) {
             browserCardFields.Pan = newPan;
-            browserCardFields.Expiry = `${mm ?? ""}${yy ?? ""}`; // MMYY
-            browserCardFields.Cvv2 = cardDetails.cvv;
+            browserCardFields.Expiry = cardDetails.expiryDate.replace(/\D/g, "");
             browserCardFields.CardHolderName = cardDetails.cardholderName;
           }
         }
-        Object.entries(browserCardFields).forEach(([name, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden"; input.name = name; input.value = value;
-          form.appendChild(input);
-        });
-
-        // Skip the popup attempt entirely on mobile / in-app browsers (FB, IG, TikTok,
-        // etc.). In those WebViews window.open often returns a truthy-but-invisible
-        // Window object  the form would silently submit to a hidden frame and the
-        // user would see nothing happen. Going straight to a full-page redirect
-        // (target=_self) lets the bank's 3DS page own the screen and redirect back
-        // to the gateway's callback → /success on completion.
-        const skipPopup = shouldSkipPopup();
-        const popupName = useAlbaraka ? "albaraka3d" : "payfor3d";
-        const pw = 600, ph = 700;
-        const popup = skipPopup
-          ? null
-          : window.open(
-              "about:blank", popupName,
-              `width=${pw},height=${ph},left=${Math.round((screen.width  - pw) / 2)},top=${Math.round((screen.height - ph) / 2)},scrollbars=yes,resizable=yes`
-            );
-        form.target = popup ? popupName : "_self";
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-
-        if (!popup) return;
-
-        payforPopupRef.current = popup;
-        isRedirecting = true;
-        setRedirecting(true);
-
-        const handlePayforFailure = () => {
-          // Guard: only run once even if poll fires multiple times
-          if (hasFallenBackRef.current) return;
-          hasFallenBackRef.current = true;
-
-          if (payforPollRef.current) { clearInterval(payforPollRef.current); payforPollRef.current = null; }
-          if (payforPopupRef.current && !payforPopupRef.current.closed) payforPopupRef.current.close();
-          router.push(
-            appendCurrencyQuery(
-              `/donation-failed?donationId=${encodeURIComponent(donationId)}`,
-              getCurrencyCodeForLinks()
-            )
-          );
-        };
-
-        let polls = 0;
-        // 60 polls × 2s = 120s. Mobile users routinely need >50s for the SMS-OTP step
-        // of 3D Secure; the previous 25-poll ceiling was firing the failure redirect
-        // while the bank popup was still authenticating.
-        const FAILURE_AFTER = 60;
-        payforPollRef.current = setInterval(async () => {
-          polls++;
-          try {
-            const check = await fetch(withDonationToken(`/api/donations/${donationId}`, donationToken));
-            if (!check.ok) return;
-            const data = await check.json();
-
-            if (data.status === "PAID" && data.paidAt) {
-              clearInterval(payforPollRef.current!); payforPollRef.current = null;
-              if (payforPopupRef.current && !payforPopupRef.current.closed) payforPopupRef.current.close();
-              clearItems(); confetti.onOpen();
-              router.push(
-                appendCurrencyQuery(withDonationToken(`/success/${donationId}`, donationToken), getCurrencyCodeForLinks())
-              );
-              return;
-            }
-            if (data.status === "FAILED" || payforPopupRef.current?.closed || polls >= FAILURE_AFTER) {
-              handlePayforFailure();
-            }
-          } catch { /* ignore transient errors */ }
-        }, 2000);
-
+        clearItems(); isRedirecting = true; setRedirecting(true);
+        submitGatewayForm(init.data as GatewayForm, browserCardFields);
         return;
       }
 
@@ -757,6 +671,11 @@ const CartPaymentDialog = ({
         onClose();
       }
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.code === "PAYMENT_ROUTING_CHANGED") {
+        acceptServerRoute(error.response.data.gateway);
+        toast.error(t("paymentRoutingChanged"));
+        return;
+      }
       console.error("Cart payment failed: request did not complete");
       // Send to the explanatory failure page rather than relying on a transient toast.
       isRedirecting = true;
@@ -979,47 +898,14 @@ const CartPaymentDialog = ({
             Hidden when Albaraka's hosted page owns the card step: the donor
             enters the card at the bank, so a stored PAN has nowhere to go. */}
         {savedCards.length > 0 && !(useAlbaraka && albarakaUseOOS) && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-gray-700">{t("savedCards")}</p>
-            <div className="space-y-2">
-              {savedCards.map((card) => {
-                const selected = selectedCardId === card.id;
-                const brandBadge: Record<string, string> = { visa: "VISA", mastercard: "MC", amex: "AMEX", troy: "TROY" };
-                return (
-                  <button key={card.id} type="button" data-clarity-mask="True" data-hj-suppress="" data-private=""
-                    onClick={() => {
-                      if (selected) { setSelectedCardId(null); setCardDetails({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" }); }
-                      else { setSelectedCardId(card.id); setCardDetails({ cardNumber: `**** **** **** ${card.last4}`, expiryDate: card.expiryDate, cvv: "", cardholderName: card.cardholderName ?? "" }); }
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm transition-all duration-200 ${selected ? "border-burgundy bg-burgundy/5 shadow-sm" : "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"}`}
-                  >
-                    <span className={`w-10 h-7 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${card.cardType === "visa" ? "bg-blue-600" : card.cardType === "mastercard" ? "bg-orange-500" : card.cardType === "amex" ? "bg-green-600" : card.cardType === "troy" ? "bg-red-600" : "bg-gray-500"}`}>{brandBadge[card.cardType] ?? "💳"}</span>
-                    <div className="flex-1 text-start min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">{card.nickname || `${card.cardType.charAt(0).toUpperCase() + card.cardType.slice(1)} •••• ${card.last4}`}</p>
-                      <p className="text-xs text-gray-400">{t("expires")} {card.expiryDate}</p>
-                    </div>
-                    {selected
-                      ? <span className="w-5 h-5 rounded-full bg-burgundy flex items-center justify-center shrink-0"><svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
-                      : <span className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
-                    }
-                  </button>
-                );
-              })}
-              <button type="button"
-                onClick={() => { setSelectedCardId(null); setCardDetails({ cardNumber: "", expiryDate: "", cvv: "", cardholderName: "" }); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm transition-all duration-200 ${!selectedCardId ? "border-burgundy bg-burgundy/5 shadow-sm" : "border-dashed border-gray-300 hover:border-gray-400 bg-white hover:shadow-sm"}`}
-              >
-                <span className="w-10 h-7 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-                </span>
-                <span className="font-medium text-gray-700">{t("useNewCard")}</span>
-                {!selectedCardId && <span className="w-5 h-5 rounded-full bg-burgundy flex items-center justify-center shrink-0"><svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>}
-              </button>
-            </div>
-          </div>
-        )}
+              <SavedCardPicker cards={savedCards} value={selectedCardId} onChange={id => {
+                const card = savedCards.find(item => item.id === id);
+                setSelectedCardId(card?.id ?? null);
+                setCardDetails({ cardNumber: card ? `**** **** **** ${card.last4}` : "", expiryDate: card?.expiryDate ?? "", cvv: "", cardholderName: card?.cardholderName ?? "" });
+              }} />
+            )}
 
-        {/* CVC-only when a saved card is selected */}
+            {/* CVC-only when a saved card is selected */}
         {selectedCardId && (
           <div className="space-y-2" dir="ltr" data-clarity-mask="True" data-hj-suppress="" data-private="">
             <label className="block text-sm font-medium text-gray-700 text-start">{t("cvc")}</label>
@@ -1209,7 +1095,7 @@ const CartPaymentDialog = ({
                       </div>
                     </div>
                   ) : (
-                    getStepContent()
+                    <><PaymentCurrencyNotice gateway={gateway} currency={getCurrency()} amount={totalAmount} phone={phoneValue} />{getStepContent()}</>
                   )}
                 </motion.div>
               </AnimatePresence>

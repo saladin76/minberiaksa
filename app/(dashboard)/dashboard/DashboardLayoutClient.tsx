@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import { localeDirection } from "@/lib/locales";
 import SessionProvider from '@/components/providers/SessionProvider';
@@ -10,7 +10,6 @@ import { NextIntlClientProvider } from "next-intl";
 import { Toaster } from "react-hot-toast";
 import { ConfettiProvider } from "@/components/providers/confetti-provider";
 import { CurrencyProvider } from "@/context/CurrencyContext";
-import { CurrencyFromUrlSync } from "@/components/CurrencyFromUrlSync";
 import { ViewUserProfileProvider } from "@/context/ViewUserProfileContext";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -161,16 +160,18 @@ function DashboardContent({
     const setInbox = (n: number) =>
       setNavCounts((prev) => (prev.inboxUnread === n ? prev : { ...prev, inboxUnread: n }));
 
+    let running = false;
     const run = async () => {
+      if (running || document.hidden) return;
+      running = true;
       try {
-        const res = await fetch('/api/admin/messages/unread-count', { cache: 'no-store' });
-        if (!res.ok) { if (!cancelled) setInbox(0); return; }
+        const res = await fetch('/api/admin/messages/unread-count', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!res.ok) return;
         const data = await res.json();
-        // ok:false means the count failed server-side; show no badge rather than a false "0 left".
-        if (!cancelled) setInbox(data?.ok === false ? 0 : Number(data?.count ?? 0));
-      } catch {
-        if (!cancelled) setInbox(0);
-      }
+        // Failed reads must not replace the last confirmed badge with a false zero.
+        if (!cancelled && data?.ok !== false && Number.isFinite(Number(data?.count))) setInbox(Number(data.count));
+      } catch { /* Retain the last confirmed count while disconnected. */ }
+      finally { running = false; }
     };
 
     run();
@@ -261,13 +262,50 @@ function DashboardContent({
     };
   }, [wantsReceiptsBadge]);
 
+  const wantsRequestsBadge = badgeKeys.includes('subscriptionRequestsOpen');
+  useEffect(() => {
+    if (!wantsRequestsBadge) return;
+    const controller = new AbortController();
+    let running = false;
+    const run = async () => {
+      if (running || document.hidden) return;
+      running = true;
+      try {
+        const response = await fetch('/api/admin/subscription-requests/count', { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!controller.signal.aborted && Number.isSafeInteger(data.count) && data.count >= 0)
+          setNavCounts(previous => ({ ...previous, subscriptionRequestsOpen: data.count }));
+      } catch { /* Preserve the last confirmed count on a failed read. */ }
+      finally { running = false; }
+    };
+    void run();
+    const timer = setInterval(run, 60000);
+    window.addEventListener('subscription-requests-updated', run);
+    window.addEventListener('focus', run);
+    document.addEventListener('visibilitychange', run);
+    return () => {
+      controller.abort(); clearInterval(timer);
+      window.removeEventListener('subscription-requests-updated', run);
+      window.removeEventListener('focus', run);
+      document.removeEventListener('visibilitychange', run);
+    };
+  }, [wantsRequestsBadge]);
+
   const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
+  useEffect(() => { setIsSidebarOpen(false); }, [pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) setIsSidebarOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   const openSearch = useCallback(() => { setIsSidebarOpen(false); setIsSearchOpen(true); }, []);
 
   if (status === 'loading') return <LoadingSkeleton />;
 
   return (
-    <div className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
+    <div data-dashboard-shell="true" className="dash-vivid min-h-screen flex bg-slate-50" dir={dir}>
       {locale !== "ar" && <DashboardTextTranslator />}
       <DashboardAutoEnhancements />
       <ProjectEditorSectionsEnhancer />
@@ -301,10 +339,12 @@ function DashboardContent({
       />
 
       <main
+        inert={isSidebarOpen}
         className={`flex-1 min-w-0 ${dir === 'rtl' ? 'lg:mr-[268px]' : 'lg:ml-[268px]'}`}
       >
-        <DashboardTopbar
+        <DashboardTopbar showSiteNotifications={userHasDashboardPermission(session?.user, "logs")}
           crumbs={crumbs}
+          sidebarOpen={isSidebarOpen}
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onOpenSearch={openSearch}
           dir={dir}
@@ -317,7 +357,7 @@ function DashboardContent({
         {/* Content well. Pages own their own surfaces (Card, PageHeader, …)  the shell no
             longer wraps every route in a white rounded card, which produced a box-inside-a-box
             with doubled padding on every one of the 151 routes. */}
-        <div className="p-3 sm:p-4 lg:p-6 min-h-[calc(100vh-4rem)]">{children}</div>
+        <div data-dashboard-content="true" className="min-h-[calc(100dvh-4rem)] min-w-0 p-3 sm:p-4 lg:p-6">{children}</div>
       </main>
     </div>
   );
@@ -333,12 +373,13 @@ const LoadingSkeleton = () => (
 );
 
 export default function DashboardLayoutClient({
-  children, session, messages, locale = "ar",
+  children, session, messages, locale = "ar", enableVercelAnalytics = false,
 }: {
   children: React.ReactNode;
   session: Session | null;
   messages: Record<string, string | Record<string, string>>;
   locale?: string;
+  enableVercelAnalytics?: boolean;
 }) {
   /* Before anything below renders: `dt()` reads this during SSR and in the browser. */
   setDashLocale(parseDashLocale(locale));
@@ -353,7 +394,6 @@ export default function DashboardLayoutClient({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <CurrencyProvider>
-        <Suspense fallback={null}><CurrencyFromUrlSync /></Suspense>
         <SessionProvider session={session}>
           {/* DashboardThemeProvider was mounted here but `useDashboardTheme` had zero consumers
               anywhere in the app  it only wrote a `dashboard-theme-dark` key to localStorage. */}
@@ -367,8 +407,7 @@ export default function DashboardLayoutClient({
           }} />
         </SessionProvider>
       </CurrencyProvider>
-      <Analytics />
-      <SpeedInsights />
+      {enableVercelAnalytics ? <><Analytics /><SpeedInsights /></> : null}
     </NextIntlClientProvider>
   );
 }

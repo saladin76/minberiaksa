@@ -1,3 +1,4 @@
+import { inheritRecurringAttribution } from "@/lib/donations/recurring-attribution";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -138,6 +139,7 @@ export async function POST(req: NextRequest) {
           include: { items: true, categoryItems: true },
         });
         if (!dbSubscription) break;
+        const recurringAttribution = await inheritRecurringAttribution(prisma, dbSubscription.id, dbSubscription.donorId);
 
         // Idempotency: skip if we've already settled this invoice. The original
         // "checkout started" donation for the first invoice also carries this
@@ -252,6 +254,7 @@ export async function POST(req: NextRequest) {
             // Recurring invoice: create a new PAID donation record
             await tx.donation.create({
               data: {
+                ...(recurringAttribution ? { attribution: recurringAttribution } : {}),
                 accessToken: mintDonationAccessToken(),
                 amount: dbSubscription.amount,
                 // NEVER fall back to the raw local amount: that writes e.g. a ₺-denominated
@@ -358,6 +361,7 @@ export async function POST(req: NextRequest) {
           where: subscriptionByStripeId(stripeSubscriptionId),
         });
         if (!dbSubscription) break;
+        const recurringAttribution = await inheritRecurringAttribution(prisma, dbSubscription.id, dbSubscription.donorId);
 
         // Idempotency: skip if already recorded
         const existingFailed = await prisma.donation.findFirst({
@@ -377,6 +381,7 @@ export async function POST(req: NextRequest) {
 
         const failedRecurring = await prisma.donation.create({
           data: {
+            ...(recurringAttribution ? { attribution: recurringAttribution } : {}),
             accessToken: mintDonationAccessToken(),
             amount: dbSubscription.amount,
             // NEVER fall back to the raw local amount: that writes e.g. a ₺-denominated
@@ -569,7 +574,7 @@ export async function POST(req: NextRequest) {
             where: { id: dbSubscription.id },
             data: { status: "CANCELLED" },
           });
-          runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: dbSubscription.donorId }));
+          runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CANCELLED", { userId: dbSubscription.donorId,subscriptionId:dbSubscription.id }));
         }
         break;
       }

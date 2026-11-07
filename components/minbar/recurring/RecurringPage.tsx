@@ -14,6 +14,7 @@ import { verseBlock } from "@/lib/minbar/quran";
 import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { useDonationAmount } from "@/hooks/useDonationAmount";
 import type { MinbarProject } from "@/lib/minbar/projects";
+import { DEFAULT_RECURRING_PAGE_SETTINGS, recurringPageAmounts, type RecurringPageSettings } from "@/lib/minbar/recurring-page-settings";
 
 /**
  * Recurring giving  ported from `Minbar/التبرع الدوري.dc.html`.
@@ -39,8 +40,6 @@ import type { MinbarProject } from "@/lib/minbar/projects";
  * normalises that to the official `donationMode`/`frequency` pair and never
  * reuses `freqKey` in an external API.
  */
-
-const AMOUNTS = [25, 50, 100, 250, 500];
 
 const FREQUENCIES: ReadonlyArray<{ id: Exclude<CartFreqKey, "once">; labelKey: string; icon: ReactElement }> = [
   {
@@ -114,16 +113,17 @@ function scheduleOf(freq: Exclude<CartFreqKey, "once">, monthDay: number, localT
 
 export interface RecurringPageProps {
   projects: MinbarProject[];
+  settings?: RecurringPageSettings;
 }
 
-export default function RecurringPage({ projects }: RecurringPageProps) {
+export default function RecurringPage({ projects, settings = DEFAULT_RECURRING_PAGE_SETTINGS }: RecurringPageProps) {
   useQuietFloatingButtons();
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("recurring");
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
-  const { format, formatNumber } = useMinbarMoney();
+  const { format, formatNumber, formatLocal, code, rate } = useMinbarMoney();
   const { fromLocal, labelOf } = useDonationAmount();
   const messages = useMessages() as { quran?: Record<string, { ar?: string; label?: string; t?: string }> };
   const verse = verseBlock(messages.quran ?? {}, "baqarah_261", locale);
@@ -131,16 +131,19 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
   const dir = (LOCALES as Record<string, { direction?: "rtl" | "ltr" }>)[locale]?.direction ?? "rtl";
   // Every option is a real project; the first one is chosen until the donor picks another.
   const [projectSlug, setProjectSlug] = useState<string | null>(projects[0]?.slug ?? null);
-  const [amount, setAmount] = useState(100);
+  const [choice, setChoice] = useState({ currency: code, amount: 100 });
+  const presets = recurringPageAmounts(settings, code, rate);
+  const amount = choice.currency === code && presets.amounts.includes(choice.amount) ? choice.amount : presets.amounts.includes(100) ? 100 : presets.amounts[0];
   const [custom, setCustom] = useState("");
   const [freq, setFreq] = useState<Exclude<CartFreqKey, "once">>("monthly");
   const [localTime, setLocalTime] = useState("14:30");
   const [monthDay, setMonthDay] = useState(1);
   const [notes, setNotes] = useState("");
 
-  /* The chips are USD; a typed figure is in the donor's own currency and is
+  /* Presets use USD unless an exact local-currency override is configured.
+   * A typed figure is in the donor's own currency and is
      kept exactly (the basket enforces the $1 floor when it is on). */
-  const given = custom ? fromLocal(Number(custom)) : { usd: amount };
+  const given = custom ? fromLocal(Number(custom)) : presets.local ? fromLocal(amount) : { usd: amount };
   const value = given.usd;
   const selectedProject = projects.find((p) => p.slug === projectSlug) ?? null;
 
@@ -278,19 +281,19 @@ export default function RecurringPage({ projects }: RecurringPageProps) {
                   {t("setAmount")}
                 </span>
                 <div className="mia-recurring-amounts" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {AMOUNTS.map((v) => (
+                  {presets.amounts.map((v) => (
                     <button
                       key={v}
                       type="button"
                       onClick={() => {
-                        setAmount(v);
+                        setChoice({ currency: code, amount: v });
                         setCustom("");
                       }}
                       className="rc-amt"
                       style={pill(amount === v && !custom)}
                     >
                       <span dir="ltr" style={{ unicodeBidi: "isolate" }}>
-                        {format(v)}
+                        {presets.local ? formatLocal(v) : format(v)}
                       </span>
                     </button>
                   ))}

@@ -519,7 +519,7 @@
     "and": "and",
     "privacyPolicy": "Privacy Policy",
     "skipAndDonate": "Skip",
-    "donateAsGuest": "Donate as guest",
+    "donateAsGuest": "Continue donating as a guest",
     "withoutLoginBadge": "without login",
     "googleFastestWay": "Fastest way",
     "orContinueWith": "or",
@@ -563,7 +563,12 @@
     "genderMale": "Male",
     "genderFemale": "Female",
     "genderPreferNotToSay": "Prefer not to say",
-    "noPasswordYet": "You already have an account with this email, but no password yet. Sign up with the same email to set one, or continue with Google."
+    "noPasswordYet": "You already have an account with this email, but no password yet. Sign up with the same email to set one, or continue with Google.",
+    "authErrorTitle": "Sign-in could not complete",
+    "authAccessDenied": "Sign-in permission was not completed. Try again or donate as a guest.",
+    "authAccountConflict": "This email uses another sign-in method. Use your previous method or donate as a guest.",
+    "authUnavailable": "Sign-in is currently unavailable. You can continue donating as a guest.",
+    "authUnknown": "Sign-in did not complete. Try again or continue as a guest."
   },
   "SharePopup": {
     "shareCampaign": "Share this project with others",
@@ -676,7 +681,12 @@
     "stripeMinDonation": "Minimum donation: {amount} {currency}",
     "certificateNoteTitle": "Get your donation certificate ✨",
     "certificateNoteBody": "Add your real email address so we can send you the official donation certificate and receipt.",
-    "free": "Free"
+    "free": "Free",
+    "rememberCard": "Save my card for future donations",
+    "rememberCardFailed": "Your card could not be saved. You can untick this option and continue.",
+    "bankChargeEstimate": "Your donation is {original}. The estimated bank charge is {amount} in Turkish lira; the final rate is fixed when payment starts.",
+    "bankChargeCurrency": "The bank collects this donation in Turkish lira. The converted amount is shown before payment confirmation.",
+    "paymentRoutingChanged": "The payment gateway has changed for this attempt. Review the method, re-enter your security code and confirm payment."
   },
   "DonationSuccess": {
     "thankYou": "Thank you very much",
@@ -865,7 +875,16 @@
       "paymentMethodCard": "Card",
       "paymentMethodPaypal": "PayPal",
       "coverFeesYes": "You covered transaction fees",
-      "emptyHistoryFiltered": "No donations match your filters. Try another payment status or time period."
+      "emptyHistoryFiltered": "No donations match your filters. Try another payment status or time period.",
+      "financial": {
+        "REFUNDED": "Fully refunded",
+        "PARTIALLY_REFUNDED": "Partially refunded",
+        "VOIDED": "Voided by the bank",
+        "REVIEW_REQUIRED": "Financial review required",
+        "balance": "Returned: {returned} · Remaining: {remaining}"
+      },
+      "recurringGivingMonths": "Months of recurring giving",
+      "recurringGivingMonthsHint": "Months with confirmed recurring payments in this period"
     },
     "subscriptions": {
       "settingsTableTitle": "Subscriptions & Settings",
@@ -1612,7 +1631,7 @@
     "remove": "Remove",
     "editAmount": "Edit Amount",
     "continueShopping": "Continue Choosing Projects",
-    "expandImpact": "Widen the impact of your giving",
+    "expandImpact": "Carry your giving further",
     "suggestedAmount": "Suggested Amount",
     "dedicate": "Dedicate This Donation",
     "payerInfo": "Donor Details",
@@ -1629,7 +1648,7 @@
     "stepCart": "Basket",
     "stepDetails": "Payment",
     "stepConfirm": "Confirmation",
-    "upsellHeading": "Widen the reach of your giving",
+    "upsellHeading": "Carry your giving further",
     "emptyTitle": "Your Basket is Empty",
     "emptyText": "You haven't added a donation yet. Browse the projects and choose what fits your intention.",
     "checkout": "Continue to Payment",
@@ -1741,7 +1760,9 @@
     "verificationDirectHelp": "No verification code",
     "verificationSecure": "Bank verification",
     "verificationSecureHelp": "A code may be required",
-    "verificationRequired": "Choose one payment option to continue."
+    "verificationRequired": "Choose one payment option to continue.",
+    "verificationSecureOptIn": "Use bank verification (3D Secure)",
+    "verificationOptionalHelp": "Direct payment is the default. Select this option to verify through your bank."
   },
   "certificates": {
     "certNoLabel": "Certificate no.",
@@ -2600,6 +2621,16 @@
     "sentText": "Our Partnerships team will contact you by email shortly."
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "Gaza",
+      "aqsa": "Al-Aqsa Mosque",
+      "jerusalem": "Jerusalem",
+      "waqf": "Endow in Jerusalem",
+      "zakat": "Give Zakat to Palestine",
+      "restoration": "Restore Jerusalem Homes",
+      "ibadan": "Ibadan Lana",
+      "recurring": "Recurring Donation"
+    },
     "allProjects": "All Projects",
     "filterByRegion": "By Region",
     "filterByType": "By Donation Type",
@@ -2881,7 +2912,8 @@
     "invalidCardNumber": "The card number is not valid. Please check it.",
     "invalidCardExpiry": "The expiry date is invalid or has passed.",
     "invalidCardCvc": "The security code (CVC) is not valid.",
-    "tooManyPaymentAttempts": "Too many payment attempts. Please try again later."
+    "tooManyPaymentAttempts": "Too many payment attempts. Please try again later.",
+    "mixedDonationCadences": "Complete different donation frequencies in separate payments. Review your basket."
   },
   "waqf": {
     "chooseUnit": "Choose your contribution type and quantity",
@@ -3283,6 +3315,7 @@
     "chooseFirst": "Choose a team-support amount or “No thanks” to continue"
   },
   "Gift": {
+    "validationError": "Enter the recipient’s name and valid delivery details. Include the country code in the WhatsApp number.",
     "emailSubject": "A gift in your name: a donation to {project}",
     "emailTitle": "{recipientName}, you have a gift",
     "emailBody": "{donorName} donated in your name to “{project}” through Minbar Al-Aqsa.",
@@ -3531,6 +3564,7 @@
     "orContinue": "continue with",
     "noAccount": "Don't have an account?",
     "createOne": "Create one",
-    "logoAlt": "Logo"
+    "logoAlt": "Logo",
+    "signInWithGoogle": "Sign in with Google"
   }
 }

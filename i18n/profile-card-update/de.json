@@ -1,0 +1,22 @@
+{
+  "title": "Karte für regelmäßige Spenden ändern",
+  "description": "Autorisieren Sie die Karte für künftige Zahlungen dieses Abonnements. Bankprüfung ohne sofortige Abbuchung; Betrag und Termine bleiben gleich.",
+  "submit": "Prüfen und künftige Zahlungen autorisieren",
+  "success": "Karte geprüft und für künftige Zahlungen hinterlegt. Jetzt wurde nichts abgebucht.",
+  "error": "Die Änderung konnte nicht bestätigt werden. Prüfen Sie das Abonnement oder kontaktieren Sie den Verein vor einem neuen Versuch.",
+  "cardsTitle": "Zahlungskarten",
+  "cardsDescription": "Die Standardkarte gilt nur für neue Spenden. Zum Kartentausch bei einem bestehenden Abo öffnen Sie regelmäßige Spenden und bestätigen die Karte bei der Bank.",
+  "manageSubscriptions": "Karte für regelmäßige Spenden verwalten",
+  "emptyCards": "Keine gespeicherten Karten.",
+  "nickname": "Kartenname",
+  "save": "Speichern",
+  "makeDefault": "Als Hauptkarte festlegen",
+  "defaultCard": "Hauptkarte",
+  "cardInUse": "Diese Karte ist mit einem Abo oder einer laufenden Prüfung verknüpft. Ändern Sie zuerst die Karte des Abos.",
+  "removeWarning": "Die gespeicherte Karte wird entfernt. Mit einem Abo verknüpfte Karten können nicht entfernt werden.",
+  "confirmRemove": "Entfernen bestätigen",
+  "refresh": "Aktualisieren",
+  "addCard": "Karte hinzufügen",
+  "saved": "Änderung gespeichert.",
+  "cardsNavDescription": "Zahlungskarten"
+}

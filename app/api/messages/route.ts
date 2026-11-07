@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { isValidLocale } from "@/lib/locales";
-import { writeAuditLog, auditActorFromSiteSession, auditStreamForRole } from "@/lib/audit-log";
+import { writeAuditLog, auditActorFromSiteSession } from "@/lib/audit-log";
 import {
   isMessageSubject,
   type MessageSubject,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         messageAr: `${actor.actorName ?? "مستخدم"} أرسل رسالة تواصل (${locale}) - ${subject}`,
         entityType: "Message",
         entityId: message.id,
-        stream: auditStreamForRole(actor.actorRole),
+        stream: "SITE",
       });
     }
 

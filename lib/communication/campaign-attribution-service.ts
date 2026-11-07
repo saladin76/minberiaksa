@@ -1,3 +1,5 @@
+import { loadEmailHistoryLinks } from "./campaign-email-history";
+import { readAttributionStage } from "./campaign-attribution-diagnostics";
 import { prisma } from "@/lib/prisma";
 import { communicationDonationScan, communicationDonationPageIds, COMMUNICATION_DONATION_PAGE_SIZE } from "./campaign-donation-scan";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -179,6 +181,10 @@ const COMM_SOURCES = new Set(["whatsapp", "email", "sms"]);
 /** Walk every page. A busy checkout must not push older campaign income out of a display cap.
  * Read failures reject the report instead of being represented as zero revenue. */
 export async function loadCommunicationDonations(): Promise<DonationRow[]> {
+  return readAttributionStage("DONATIONS", loadCommunicationDonationRows);
+}
+
+async function loadCommunicationDonationRows(): Promise<DonationRow[]> {
   if (!process.env.DATABASE_URL) throw new Error("COMMUNICATION_ATTRIBUTION_DATABASE_UNAVAILABLE");
   const donations: DonationRow[] = [];
   let cursor: string | undefined;
@@ -202,16 +208,17 @@ export async function loadCommunicationDonations(): Promise<DonationRow[]> {
  * be the source of a donation after its campaign was archived. */
 async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
   if (!process.env.DATABASE_URL) return [];
-  const [rows, campaigns] = await completeAttributionReads([
-    prisma.communicationCampaignTrackingLink.findMany({
+  const [rows, campaigns, emailLinks] = await completeAttributionReads([
+    readAttributionStage("TRACKING_LINKS", () => prisma.communicationCampaignTrackingLink.findMany({
       select: { campaignId: true, url: true, source: true, medium: true },
       take: 10_000,
-    }),
-    prisma.communicationCampaign.findMany({
+    })),
+    readAttributionStage("CAMPAIGNS", () => prisma.communicationCampaign.findMany({
       where: { channel: "WHATSAPP", templateGroupId: { not: null } },
       select: { id: true, channel: true, templateGroupId: true },
       take: 10_000,
-    }),
+    })),
+    readAttributionStage("EMAIL_HISTORY", () => loadEmailHistoryLinks(scan => prisma.communicationDelivery.aggregateRaw(scan))),
   ]);
   // Do not claim an alias is unique when a campaign/link scan reached its safety bound.
   if (rows.length >= 10_000 || campaigns.length >= 10_000) throw new Error("COMMUNICATION_ATTRIBUTION_LINK_SCAN_INCOMPLETE");
@@ -219,11 +226,11 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
   const templateIds = [...new Set(campaigns.map((campaign) => campaign.templateGroupId).filter((id): id is string => Boolean(id)))];
   let templateLinks: CampaignUtmLink[] = [];
   if (templateIds.length) {
-    const variants = await prisma.whatsappTemplateWabaVariant.findMany({
+    const variants = await readAttributionStage("TEMPLATE_VARIANTS", () => prisma.whatsappTemplateWabaVariant.findMany({
       where: { provider: "META_WHATSAPP", templateId: { in: templateIds } },
       select: { templateId: true, componentsSchema: true },
       take: 20_000,
-    });
+    }));
     // A truncated scan cannot establish alias uniqueness.
     if (variants.length >= 20_000) throw new Error("COMMUNICATION_ATTRIBUTION_TEMPLATE_SCAN_INCOMPLETE");
     {
@@ -233,7 +240,7 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
       );
     }
   }
-  return [...rows, ...templateLinks];
+  return [...rows, ...templateLinks, ...emailLinks];
 }
 
 export type AttributionConfidence = "دقيق" | "جزئي" | "غير متاح";

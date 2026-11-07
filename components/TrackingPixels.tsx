@@ -1,7 +1,9 @@
 "use client";
+import { googleAdsTargets, type GoogleAdsTarget } from "@/lib/tracking/google-ads-targets";
 
 import React, { useEffect, useRef, createContext, useContext, useCallback, useState } from "react";
 import { track as vercelTrack } from "@vercel/analytics";
+import { initializeGoogleTracking, loadConfiguredGoogleTagManager } from "@/lib/tracking/google-script-policy";
 import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
 import {
   generateEventId,
@@ -71,6 +73,9 @@ function toVercelProps(event: CanonicalEvent): Record<string, string | number | 
 
 // ─── Public config (pixel IDs only  no tokens) ───────────────────────────────
 export interface TrackingConfig {
+  googleTagManagerId?: string | null;
+  googleTagManagerEnabled?: boolean;
+  googleAdsTargets?: GoogleAdsTarget[];
   facebookPixelId: string | null;
   gaMeasurementId: string | null;
   tiktokPixelId: string | null;
@@ -222,19 +227,6 @@ declare global {
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof document === "undefined") return reject(new Error("no document"));
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const s = document.createElement("script");
-    s.src = src;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`Failed to load ${src}`));
-    document.head.appendChild(s);
-  });
-}
-
 function getCookieValue(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   return document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))?.[1];
@@ -248,11 +240,17 @@ function getUrlParam(key: string): string | undefined {
 /** Persist ttclid / gclid / fbclid in sessionStorage so they survive page navigations */
 function captureClickIds(): { ttclid?: string; gclid?: string; fbclid?: string } {
   if (typeof window === "undefined") return {};
-  const ttclid = getUrlParam("ttclid") || sessionStorage.getItem("_ttclid") || undefined;
-  const gclid  = getUrlParam("gclid")  || sessionStorage.getItem("_gclid")  || undefined;
+  let ttclid = getUrlParam("ttclid");
+  let gclid = getUrlParam("gclid");
   const fbclid = getUrlParam("fbclid") || undefined;
-  if (ttclid) sessionStorage.setItem("_ttclid", ttclid);
-  if (gclid)  sessionStorage.setItem("_gclid",  gclid);
+  try {
+    ttclid ||= sessionStorage.getItem("_ttclid") || undefined;
+    gclid ||= sessionStorage.getItem("_gclid") || undefined;
+  } catch { /* In-app/private browsers may deny storage. URL IDs still work. */ }
+  try {
+    if (ttclid) sessionStorage.setItem("_ttclid", ttclid);
+    if (gclid) sessionStorage.setItem("_gclid", gclid);
+  } catch { /* Cache failure must not abort a donation or its tracking event. */ }
   return { ttclid, gclid, fbclid };
 }
 
@@ -287,8 +285,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   // Ad/marketing pixels (FB ~226KiB, TikTok, X) used to
   // compete with the LCP image for bandwidth and ate ~700 ms of TBT during the first
   // second; the interaction-or-long-idle gate moves all of that off the critical path
-  // (Lighthouse never interacts so it never sees them) while still firing well before
-  // any real user can convert.
+  // while allowing real interactions and conversion pages to load them promptly.
   //
   // EXCEPTION: /success/[id] is a conversion page  we need fbq ready immediately so
   // `trackDonate` can fire the Meta "Donate" event without waiting for the marketing
@@ -306,6 +303,9 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         .then((r) => r.json())
         .then((data) => {
           const c: TrackingConfig = {
+            googleTagManagerId: data.googleTagManagerId || null,
+            googleTagManagerEnabled: data.googleTagManagerEnabled === true,
+            googleAdsTargets: googleAdsTargets(data),
             facebookPixelId: data.facebookPixelId || null,
             gaMeasurementId: data.gaMeasurementId || null,
             tiktokPixelId:   data.tiktokPixelId   || null,
@@ -319,7 +319,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
 
     // Fire-now path for conversion pages. The match is locale-agnostic  any
     // pathname segment "/success/<id>" qualifies.
-    const isConversionPage = /\/success\/[^/]+/.test(window.location.pathname);
+    const isConversionPage = /\/(success|donation-failed)(\/|$)/.test(window.location.pathname);
     if (isConversionPage) {
       load();
       return;
@@ -373,19 +373,16 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       window.fbq?.("track", "PageView");
     }
 
-    // Google Analytics 4
-    if (config.gaMeasurementId) {
-      const id = config.gaMeasurementId;
-      window.dataLayer = window.dataLayer || [];
-      const gtag: (...args: unknown[]) => void = function () {
-        // eslint-disable-next-line prefer-rest-params -- preserve the Arguments object expected by the data layer.
-        window.dataLayer?.push(arguments);
-      };
-      (window as unknown as { gtag: (...a: unknown[]) => void }).gtag = gtag;
-      gtag("js", new Date());
-      gtag("config", id, { send_page_view: true });
-      loadScript(`https://www.googletagmanager.com/gtag/js?id=${id}`).catch(() => {});
-    }
+    // The configured destinations share one library. Custom GTM is opt-in so
+    // old containers cannot silently install additional tags or recorders.
+    initializeGoogleTracking({
+      gaMeasurementId: config.gaMeasurementId,
+      adsIds: googleAdsTargets(config).map(target => target.conversionId),
+    }, window, document);
+    loadConfiguredGoogleTagManager({
+      googleTagManagerId: config.googleTagManagerId,
+      googleTagManagerEnabled: config.googleTagManagerEnabled,
+    }, window, document);
 
     // TikTok Pixel
     if (config.tiktokPixelId) {
@@ -934,3 +931,4 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     </TrackingContext.Provider>
   );
 }
+

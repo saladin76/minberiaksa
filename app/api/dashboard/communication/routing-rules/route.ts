@@ -80,8 +80,9 @@ export async function GET(request: NextRequest) {
     locale: parsed.data.locale,
     country: parsed.data.country,
     purpose: parsed.data.purpose as CommunicationPurposeId,
+    template: parsed.data.channel === "WHATSAPP",
   });
-  const trace = explainSenderRouting(parsed.data, snapshot.senders, snapshot.rules);
+  const trace = explainSenderRouting(parsed.data, parsed.data.channel === "WHATSAPP" ? snapshot.senders.filter(sender => sender.isDefault) : snapshot.senders, parsed.data.channel === "WHATSAPP" ? [] : snapshot.rules);
 
   if (!routed.ok) {
     /* A refusal is a legitimate answer and is shown as one: this recipient would not be messaged. */

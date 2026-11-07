@@ -1,3 +1,4 @@
+import { subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecycle";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -117,9 +118,7 @@ export async function GET(
     // ACTIVE subscription without any settled charge isn't really earning revenue 
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere: Prisma.SubscriptionWhereInput = {
-      ...subscriptionWhere,
-      status: "ACTIVE",
-      donations: { some: PAID_DONATION_FILTER },
+      AND: [subscriptionWhere, subscriptionLifecycleWhere("ACTIVE")],
     };
 
     const { monthStart, monthEnd } = getCurrentCalendarMonthIstanbulRange();

@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
  * What may be edited on a WhatsApp template, and what may be deleted.
  *
  * **Provider-owned fields are not ours to edit.** `approvalStatus`, `language`, `category`,
- * `externalTemplateId`, `templateType`, `header` and `buttons` describe what Meta (or Twilio)
+ * `externalTemplateId`, `templateType`, `header` and `buttons` describe what the messaging provider
  * registered/provider state. The authored header/buttons/footer are local studio content until
  * submission and are frozen with the body once submitted. Provider status/id fields remain read-only.
  * They were writable from the dashboard, which meant somebody could set a rejected template to "approved"

@@ -3,7 +3,8 @@
 import * as React from "react";
 import { RetryDialog } from "../../_shared/RetryDialog";
 import { toast } from "react-hot-toast";
-import { Archive, Ban, Loader2, MoreHorizontal, Send, ShieldCheck, Settings2, Pause, Play, RefreshCw } from "lucide-react";
+import { CalendarClock, Archive, Ban, Loader2, MoreHorizontal, Send, Settings2, Pause, Play, RefreshCw, Trash2 } from "lucide-react";
+import { canDeleteUnsentCampaign } from "@/lib/communication/campaign-lifecycle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +23,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { channelMeta, isPreSend, type CampaignRow } from "./campaign-ui";
 import { CampaignControlsDialog } from "./CampaignControlsDialog";
+import { CampaignScheduleDialog } from "./CampaignScheduleDialog";
+import { CampaignRecoveryDialog } from "./CampaignRecoveryDialog";
 import { dashDir, dt, dtx } from "@/lib/dashboard/i18n";
-import { isCampaignControlTerminalStatus } from "@/lib/communication/communication-runtime-types";
+import { isCampaignControlTerminalStatus, isResumableBlockedCampaign } from "@/lib/communication/communication-runtime-types";
 
 /**
  * Campaign lifecycle actions, in the list row.
@@ -72,14 +75,30 @@ export function CampaignRowActions({
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [controlsOpen, setControlsOpen] = React.useState(false);
   const [retryOpen, setRetryOpen] = React.useState(false);
+  const [recoveryOpen, setRecoveryOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+  const canSchedule = ["EMAIL", "WHATSAPP"].includes(campaign.channel) && ["DRAFT", "REVIEW", "APPROVED", "SCHEDULED"].includes(campaign.status);
 
   const canConfirm = campaign.status === "DRAFT" || campaign.status === "REVIEW";
-  const canSend = campaign.status === "APPROVED";
+  const canSend = ["DRAFT", "REVIEW", "APPROVED"].includes(campaign.status);
   const canCancel = isPreSend(campaign.status);
-  const canControl = campaign.channel === "WHATSAPP" && !isCampaignControlTerminalStatus(campaign.status);
+  const canControl = campaign.channel === "WHATSAPP" && (!isCampaignControlTerminalStatus(campaign.status) || isResumableBlockedCampaign(campaign));
   const canArchive = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED", "CANCELLED"].includes(campaign.status);
   const canReviewFailures = ["SENT", "SENT_WITH_ISSUES", "FAILED", "BLOCKED"].includes(campaign.status) && (campaign.failedCount > 0 || campaign.status === "SENT_WITH_ISSUES" || campaign.status === "FAILED");
-  if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive) return null;
+  const canDelete = canDeleteUnsentCampaign(campaign);
+  if (!canConfirm && !canSend && !canCancel && !canControl && !canArchive && !canDelete) return null;
+
+  const remove = async () => {
+    setDeleteOpen(false); setBusy(true);
+    try {
+      const res = await fetch(`/api/communication/campaigns/${campaign.id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok || !json.deleted) throw new Error(json?.error || dt("تعذّر حذف الحملة"));
+      toast.success(dt("تم حذف الحملة التي لم تُرسل")); onChanged();
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setBusy(false); }
+  };
 
   const togglePause = async () => {
     const currentlyPaused = campaign.metadata?.sendControls?.paused === true;
@@ -110,8 +129,9 @@ export function CampaignRowActions({
         body: JSON.stringify({ action }),
       });
       const json = await res.json();
+      if (json.code === "LANGUAGE_COVERAGE_INCOMPLETE") { setRecoveryOpen(true); return; }
       if (!res.ok || !json.ok) throw new Error(json?.error || dt("تعذّر تحديث الحالة"));
-      toast.success(action === "CONFIRM" ? dt("تم تأكيد الحملة  يمكنك إرسالها الآن") : dt("تم تحديث الحالة"));
+      toast.success(dt("تم تحديث الحالة"));
       onChanged();
     } catch (e) {
       toast.error((e as Error).message);
@@ -126,8 +146,10 @@ export function CampaignRowActions({
     try {
       const res = await fetch(`/api/communication/campaigns/${campaign.id}/send`, { cache: "no-store" });
       const json = await res.json().catch(() => null);
-      const resolved: SendPlan = json?.ok ? json.plan : { total: 0 };
+      if (!res.ok || !json?.ok || !json.plan || !Number.isSafeInteger(json.plan.audienceTotal)) throw new Error(json?.error || dt("تعذّر تحميل خطة الإرسال. أعد المحاولة."));
+      const resolved: SendPlan = json.plan;
       if (resolved.blocked) {
+        if (resolved.blocked === "LANGUAGE_COVERAGE_INCOMPLETE") { setRecoveryOpen(true); return; }
         toast.error(BLOCKED_LABELS[resolved.blocked] ?? dt("تعذّر الإرسال: {0}", [resolved.blocked]));
         return;
       }
@@ -164,6 +186,12 @@ export function CampaignRowActions({
     setConfirmOpen(false);
     setBusy(true);
     try {
+      if (canConfirm) {
+        const approval = await fetch(`/api/communication/campaigns/${campaign.id}/transition`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "CONFIRM" }) });
+        const result = await approval.json();
+        if (result.code === "LANGUAGE_COVERAGE_INCOMPLETE") { setRecoveryOpen(true); return; }
+        if (!approval.ok || !result.ok) throw new Error(result.error || dt("تعذّر تحديث الحالة"));
+      }
       const res = await fetch(`/api/communication/campaigns/${campaign.id}/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -191,19 +219,11 @@ export function CampaignRowActions({
   };
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
-      {canReviewFailures ? <button type="button" onClick={event => { event.stopPropagation(); setRetryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-amber-900"><RefreshCw className="h-3.5 w-3.5" />{dt("إعادة محاولة الفشل")}</button> : null}
-      {canControl && (
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); setControlsOpen(true); }}
-          aria-label={dt("إعدادات الإرسال")}
-          className="inline-flex h-8 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-          <span>{dt("إعدادات الإرسال")}</span>
-        </button>
-      )}
+    <div className="flex items-center justify-end gap-1.5" onClick={event => event.stopPropagation()}>
+      {canSend ? <button type="button" disabled={busy} onClick={event=>{event.stopPropagation();void openSend();}} className="inline-flex min-h-9 items-center gap-1 rounded-md bg-brand px-3 text-xs font-semibold text-white disabled:opacity-50"><Send className="h-3.5 w-3.5" />{dt("إرسال الآن")}</button> : null}
+      {scheduleOpen ? <CampaignScheduleDialog campaign={campaign} onChanged={onChanged} onClose={() => setScheduleOpen(false)} /> : null}
+      {campaign.status === "BLOCKED" ? <button type="button" onClick={event => { event.stopPropagation(); setRecoveryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 text-xs font-semibold text-sky-900">{dt("تشخيص واستكمال")}</button> : null}
+      {canReviewFailures && campaign.status !== "BLOCKED" ? <button type="button" onClick={event => { event.stopPropagation(); setRetryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-amber-900"><RefreshCw className="h-3.5 w-3.5" />{dt("إعادة محاولة الفشل")}</button> : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
@@ -218,16 +238,7 @@ export function CampaignRowActions({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[170px]" onClick={(e) => e.stopPropagation()}>
-          {canConfirm && (
-            <DropdownMenuItem onClick={() => transition("CONFIRM")}>
-              <ShieldCheck className="me-2 h-3.5 w-3.5" />
-              {dt("تأكيد الحملة")}</DropdownMenuItem>
-          )}
-          {canSend && (
-            <DropdownMenuItem onClick={openSend}>
-              <Send className="me-2 h-3.5 w-3.5" />
-              {dt("إرسال الآن")}</DropdownMenuItem>
-          )}
+          {canSchedule ? <DropdownMenuItem onClick={() => setScheduleOpen(true)}><CalendarClock className="me-2 h-3.5 w-3.5" />{campaign.status === "SCHEDULED" ? dt("تعديل موعد الإرسال") : dt("جدولة الإرسال")}</DropdownMenuItem> : null}
           {canControl && (
             <>
               <DropdownMenuItem onClick={togglePause}>
@@ -240,7 +251,7 @@ export function CampaignRowActions({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setControlsOpen(true)}>
                 <Settings2 className="me-2 h-3.5 w-3.5" />
-                {dt("مركز التحكم المتقدم")}</DropdownMenuItem>
+                {dt("إعدادات الإرسال")}</DropdownMenuItem>
             </>
           )}
           {canCancel && (
@@ -253,10 +264,19 @@ export function CampaignRowActions({
               <Archive className="me-2 h-3.5 w-3.5" />
               {dt("أرشفة الحملة")}</DropdownMenuItem>
           )}
+          {canDelete ? <DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-rose-600 focus:text-rose-700"><Trash2 className="me-2 h-3.5 w-3.5" />{dt("حذف الحملة التي لم تُرسل")}</DropdownMenuItem> : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent dir={dashDir()}>
+          <AlertDialogHeader><AlertDialogTitle>{dt("حذف حملة لم تُرسل")}</AlertDialogTitle><AlertDialogDescription>{dt("حذف الحملة «{0}» نهائيًا؟ سيُلغى موعدها، ويتحقق النظام من عدم وجود سجلات إرسال قبل الحذف. لن تُحذف رسائل أو تبرعات.", [campaign.name])}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={busy}>{dt("إلغاء")}</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={() => { void remove(); }} className="bg-rose-600 hover:bg-rose-700">{dt("حذف الحملة")}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {canReviewFailures && ["WHATSAPP", "EMAIL", "SMS"].includes(campaign.channel) ? <RetryDialog open={retryOpen} channel={campaign.channel as "WHATSAPP" | "EMAIL" | "SMS"} ids={null} days={30} campaignId={campaign.id} campaignName={campaign.name} purposeGroup="MARKETING" onOpenChange={setRetryOpen} onFinished={onChanged} /> : null}
+      <CampaignRecoveryDialog open={recoveryOpen} onOpenChange={setRecoveryOpen} campaignId={campaign.id} campaignName={campaign.name} onChanged={onChanged} canControl={canControl} onControls={() => { setRecoveryOpen(false); setControlsOpen(true); }} />
       <CampaignControlsDialog
         open={controlsOpen}
         onOpenChange={setControlsOpen}
@@ -282,7 +302,7 @@ export function CampaignRowActions({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
-            <AlertDialogAction onClick={send} className="bg-emerald-600 hover:bg-emerald-700">
+            <AlertDialogAction disabled={busy} onClick={send} className="bg-emerald-600 hover:bg-emerald-700">
               {dt("إرسال الآن")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -290,3 +310,4 @@ export function CampaignRowActions({
     </div>
   );
 }
+

@@ -21,7 +21,7 @@ async function routeFixture(path: string) {
     {id:"failed",subscriptionId:"daily",amount:500,amountUSD:500,status:"FAILED",paidAt},
   ].map(row => ({currency:"USD",createdAt:paidAt,donor:null,items:[],categoryItems:[],referral:null,subscription:plans[0],...row}));
   let reads = 0;
-  const cadenceMatches = (row: FixtureRow, where: FixtureRow) => !where.frequency || row.frequency === where.frequency;
+  const cadenceMatches = (row: FixtureRow, where: FixtureRow) => where.OR ? row.frequency == null || row.frequency === "MONTHLY" : !where.frequency || row.frequency === where.frequency;
   const database = {
     subscription: { findMany: async ({where}: FixtureRow) => {
       reads++;

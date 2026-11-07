@@ -31,7 +31,7 @@ export const PLATFORM_EXPECTATIONS: Record<AdPlatform, PlatformExpectations> = {
     labelAr: "Meta",
   },
   google: {
-    clickIds: ["gclid", "gbraid", "wbraid"],
+    clickIds: ["gclid", "gbraid", "wbraid", "dclid"],
     cookies: [],
     serverEvent: "Google Ads Conversion",
     browserEvent: "GA4 purchase",
@@ -79,6 +79,7 @@ export const PLATFORM_EXPECTATIONS: Record<AdPlatform, PlatformExpectations> = {
     browserEvent: null,
     labelAr: "إعلان مدفوع",
   },
+  unknown: { clickIds: [], cookies: [], serverEvent: null, browserEvent: null, labelAr: "مصدر غير معروف" },
   organic: {
     clickIds: [],
     cookies: [],

@@ -7,8 +7,8 @@ import { dt } from "@/lib/dashboard/i18n";
 
 /** The logo each card / wallet gateway is shown with, from /public. */
 export const GATEWAY_LOGOS: Record<string, { src: string; alt: string }> = {
-  ALBARAKA: { src: "/albaraka.jpg", alt: "Albaraka Türk" },
-  PAYFOR: { src: "/ziraat-katilim.jpg", alt: "Ziraat Katılım" },
+  ALBARAKA: { src: "/banks/albaraka.png", alt: "Albaraka Türk" },
+  PAYFOR: { src: "/banks/ziraat-katilim.png", alt: "Ziraat Katılım" },
   PAYPAL: { src: "/paypal.webp", alt: "PayPal" },
   CHARITY_GIVING: { src: "/charity-giving.png", alt: "Charity Giving" },
 };
@@ -43,7 +43,7 @@ export function DonationGatewayBadge({ donation, onOpen }: Props) {
   if (logo) {
     return (
       <button type="button" onClick={onOpen} className={BUTTON} title={dt("عرض تفاصيل بوابة الدفع")}>
-        <Image src={logo.src} alt={logo.alt} width={76} height={32} className="h-8 w-auto max-w-[76px] object-contain rounded border border-slate-100 bg-white" />
+        <Image src={logo.src} alt={logo.alt} width={76} height={24} className={provider === "ALBARAKA" || provider === "PAYFOR" ? "h-6 w-[76px] object-cover rounded bg-white" : "h-6 w-auto max-w-[76px] object-contain"} />
       </button>
     );
   }

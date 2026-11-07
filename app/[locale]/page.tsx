@@ -1,10 +1,12 @@
+import { preload } from "react-dom";
+import { heroPosterSources } from "@/lib/minbar/hero-poster";
 import { buildManagedPageMetadata } from "@/lib/content-editor/page-seo";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
-import { getServerSession } from "next-auth";
-import { LOCALE_SEO, SITE_URL } from "@/lib/seo";
+import { getPublicServerSession } from "@/lib/auth/public-session";
+import { LOCALE_SEO } from "@/lib/seo";
+import { siteIdentitySchemas, withInstitutionalHomeIdentity } from "@/lib/site-identity";
 import type { Locale } from "@/lib/seo";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { listProjects } from "@/lib/minbar/projects";
 import { readQuickDonation } from "@/lib/minbar/quick-donation-read";
 import { selectQuickDonationProjectOptions } from "@/lib/minbar/quick-donation-display";
@@ -52,12 +54,12 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const seo = LOCALE_SEO[locale as Locale] ?? LOCALE_SEO.en;
-  return buildManagedPageMetadata("home", locale, {
+  return withInstitutionalHomeIdentity(await buildManagedPageMetadata("home", locale, {
     title: seo.title,
     description: seo.description,
     path: "/",
     keywords: seo.keywords,
-  });
+  }), locale);
 }
 
 /**
@@ -71,6 +73,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  */
 export default async function Home({ params }: Props) {
   const { locale } = await params;
+  const poster = heroPosterSources(locale);
+  preload(poster.src, { as: "image", imageSrcSet: poster.srcSet, imageSizes: poster.sizes, fetchPriority: "high" });
 
   // Every section's content is read here, in parallel, so the whole homepage is
   // in the first HTML response rather than filled in by client fetches. Which
@@ -80,17 +84,10 @@ export default async function Home({ params }: Props) {
   // settings allow, which may be every project.
   const [{ quick, quickProjects, layout, lists }, session] = await Promise.all([
     cachedHomeData(locale),
-    getServerSession(authOptions),
+    getPublicServerSession(),
   ]);
 
-  const organisationSchema = {
-    "@context": "https://schema.org",
-    "@type": ["Organization", "NGO"],
-    "@id": `${SITE_URL}/#organization`,
-    url: `${SITE_URL}/${locale}`,
-    name: LOCALE_SEO[locale as Locale]?.siteName ?? LOCALE_SEO.en.siteName,
-    description: LOCALE_SEO[locale as Locale]?.description ?? LOCALE_SEO.en.description,
-  };
+  const organisationSchema = siteIdentitySchemas(locale);
 
   return (
     <>

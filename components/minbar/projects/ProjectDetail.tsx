@@ -1,5 +1,7 @@
 "use client";
 
+import { PublicRichText } from "@/components/content/PublicRichText";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -11,6 +13,7 @@ import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import DonationPanel from "./DonationPanel";
 import ProjectHeroMedia from "./ProjectHeroMedia";
+import ProjectImage from "./ProjectImage";
 import ProjectVideo from "./ProjectVideo";
 import ProjectComments from "./ProjectComments";
 import ProjectUpdatePost from "./ProjectUpdatePost";
@@ -129,7 +132,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
 
         <div id="pd-top" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "minmax(0,1.32fr) minmax(330px,.68fr)", gap: 34, alignItems: "start" }}>
           <div className="pd-project-main" style={{ display: "grid", gap: 18, minWidth: 0 }}>
-            <ProjectHeroMedia images={project.images.length ? project.images : project.image ? [project.image] : []} title={project.title} imageAlt={project.imageAlt}>
+            <ProjectHeroMedia images={project.images.length ? project.images : project.image ? [project.image] : []} coverFallbacks={project.coverFallbacks} title={project.title} imageAlt={project.imageAlt}>
               {project.regionLabel ? (
                 <span style={{ position: "absolute", insetInlineStart: 16, top: 16, display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, background: "rgba(16,33,43,.78)", color: "#fff", fontSize: 12, fontWeight: 900 }}>
                   <span aria-hidden="true" style={{ width: 5, height: 5, background: "var(--gold)", transform: "rotate(45deg)" }} />
@@ -195,7 +198,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
               <div style={{ display: "grid", gap: 20 }}>
                 {/* The description as written in the dashboard's editor 
                     headings, paragraphs and list items. */}
-                {project.body.map((block, index) =>
+                {project.richBody?.length ? <PublicRichText nodes={project.richBody} /> : project.body.map((block, index) =>
                   block.kind === "h2" ? (
                     <h2 key={index} style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.5, fontWeight: 900 }}>{block.text}</h2>
                   ) : block.kind === "li" ? (
@@ -228,11 +231,12 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
             {tab === "gallery" ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px,1fr))", gap: 12 }}>
                 {gallery.map((src, i) => (
-                  <span
+                  <ProjectImage
                     key={src}
-                    role="img"
-                    aria-label={`${project.title}  ${i + 1}`}
-                    style={{ display: "block", aspectRatio: "4/3", borderRadius: 10, backgroundImage: `url('${src}')`, backgroundSize: "cover", backgroundPosition: "center", border: "1px solid var(--border)" }}
+                    sources={[src]}
+                    alt={`${project.title}  ${i + 1}`}
+                    width={320}
+                    style={{ display: "block", width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }}
                   />
                 ))}
               </div>
@@ -243,7 +247,8 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
             <div style={{ display: "grid", gap: 12, padding: 22, background: "#fff", border: "1px solid var(--border)", borderRadius: 12 }}>
               <b style={{ fontSize: 15.5 }}>{t("projectFaq")}</b>
               {[
-                { q: t("faqZakatQ"), a: t("faqZakatYes") },
+                // Eligibility must come from reviewed project content. The
+                // generic page cannot assert that every project accepts Zakat.
                 { q: t("faqTrackQ"), a: t("faqTrackA") },
                 { q: t("faqRecurringQ"), a: t("faqRecurringA") },
               ].map((faq) => (
@@ -299,9 +304,12 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
                   className="mia-lift"
                   style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 260, borderRadius: 14, overflow: "hidden", background: "var(--deep)", border: "1px solid var(--border)" }}
                 >
-                  {item.image ? (
-                    <span role="img" aria-label={item.title} style={{ position: "absolute", inset: 0, display: "block", backgroundImage: `url('${item.image}')`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                  ) : null}
+                  <ProjectImage
+                    sources={[item.image, ...(item.coverFallbacks ?? [])]}
+                    alt={item.title}
+                    width={360}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                  />
                   <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(16,33,43,.95) 28%, rgba(16,33,43,.2) 74%)" }} />
                   <span style={{ position: "relative", marginTop: "auto", display: "grid", gap: 7, padding: 18 }}>
                     {item.regionLabel ? <span style={{ fontSize: 11.5, fontWeight: 900, color: "#F2D9A4" }}>{item.regionLabel}</span> : null}

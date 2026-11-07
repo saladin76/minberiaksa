@@ -1,0 +1,22 @@
+{
+  "title": "Atualizar cartão da doação recorrente",
+  "description": "Autorize o cartão para os próximos pagamentos desta assinatura. Verificação bancária sem cobrança agora; valor e datas permanecem iguais.",
+  "submit": "Verificar e autorizar pagamentos futuros",
+  "success": "Cartão verificado e associado aos próximos pagamentos. Nenhuma cobrança agora.",
+  "error": "Não foi possível confirmar a alteração. Verifique a assinatura ou contacte a associação antes de tentar novamente.",
+  "cardsTitle": "Cartões de pagamento",
+  "cardsDescription": "O cartão padrão aplica-se apenas a novas doações. Para alterar o cartão de uma assinatura, abra as doações recorrentes e conclua a verificação bancária.",
+  "manageSubscriptions": "Gerir cartão da doação recorrente",
+  "emptyCards": "Não há cartões guardados.",
+  "nickname": "Nome do cartão",
+  "save": "Guardar",
+  "makeDefault": "Definir como principal",
+  "defaultCard": "Principal",
+  "cardInUse": "O cartão está associado a uma assinatura ou verificação pendente. Altere primeiro o cartão da assinatura.",
+  "removeWarning": "O cartão guardado será removido. Cartões associados a uma assinatura não podem ser removidos.",
+  "confirmRemove": "Confirmar remoção",
+  "refresh": "Atualizar",
+  "addCard": "Adicionar cartão",
+  "saved": "Alteração guardada.",
+  "cardsNavDescription": "Cartões de pagamento"
+}

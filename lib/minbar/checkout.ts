@@ -1,3 +1,4 @@
+import { paymentResultTarget } from "./payment-handoff";
 import type { MinbarCartItem } from "./cart";
 import { rememberGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
@@ -54,6 +55,8 @@ export interface CreateDonationInput {
   /** Slugs in every language → campaign id, for rows added on another language's pages. */
   projectAliases?: Readonly<Record<string, string>>;
   currency: string;
+  routingPhone?: string;
+  expectedGateway?: string;
   locale: string;
   method: CheckoutMethod;
   /**
@@ -62,6 +65,8 @@ export interface CreateDonationInput {
    * instalment, otherwise once.
    */
   teamSupport: number;
+  teamSupportLocal?: LocalAmount;
+  expectedTotal?: number;
   /**
    * Recurring basket only: true charges the team support with every
    * instalment (the default), false charges it once with the first payment.
@@ -99,6 +104,7 @@ export interface CreatedDonation {
 /** Everything a bank's 3-D Secure page needs, as the initiate route returns it. */
 export interface GatewayForm {
   actionUrl: string;
+  method?: "GET" | "POST";
   fields: Record<string, string>;
 }
 
@@ -145,14 +151,16 @@ export function toOrderItems(
    * not have; without this the row was dropped.
    */
   aliases: Readonly<Record<string, string>> = {}
-): OrderLines & { unmatched: MinbarCartItem[] } {
+): OrderLines & { unmatched: MinbarCartItem[]; lineFrequencies: MinbarCartItem["freqKey"][] } {
   const bySlug = new Map(projects.flatMap((project) => [[project.slug, project.id], [project.id, project.id]]));
-  const lines: OrderLines & { unmatched: MinbarCartItem[] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [] };
+  const lines: OrderLines & { unmatched: MinbarCartItem[]; lineFrequencies: MinbarCartItem["freqKey"][] } = { items: [], categoryItems: [], waqfItems: [], unmatched: [], lineFrequencies: [] };
+  const campaignFrequencies: MinbarCartItem["freqKey"][] = [], categoryFrequencies: MinbarCartItem["freqKey"][] = [], waqfFrequencies: MinbarCartItem["freqKey"][] = [];
 
   for (const item of items) {
     const local = lineLocal(item);
     const campaignId = item.projectId ? bySlug.get(item.projectId) ?? aliases[item.projectId] : undefined;
     if (campaignId) {
+      campaignFrequencies.push(item.freqKey);
       lines.items.push({
         campaignId,
         amount: item.amount,
@@ -173,9 +181,11 @@ export function toOrderItems(
       });
     }
     else if (item.categoryId) {
+      categoryFrequencies.push(item.freqKey);
       lines.categoryItems.push({ categoryId: item.categoryId, amount: item.amount, ...(local ? { local } : {}) });
     }
     else if (item.waqf) {
+      waqfFrequencies.push(item.freqKey);
       lines.waqfItems.push({
         unit: item.waqf.unit,
         count: item.waqf.count,
@@ -190,6 +200,7 @@ export function toOrderItems(
     }
   }
 
+  lines.lineFrequencies = [...campaignFrequencies, ...categoryFrequencies, ...waqfFrequencies];
   return lines;
 }
 
@@ -207,7 +218,7 @@ export class UnpayableItemsError extends Error {
 /** The order API refused the order; `message` is its reason. */
 export class OrderRejectedError extends Error {
   /** `code` is the server's machine-readable reason, when it sends one. */
-  constructor(message: string, readonly status: number, readonly code?: string) {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly gateway?: string) {
     super(message);
   }
 }
@@ -216,8 +227,8 @@ export class OrderRejectedError extends Error {
  * The one type the order carries: `ONE_TIME`, or the cadence of the plan.
  *
  * The order API takes one type for the whole order, so a cart holding any
- * recurring row is a plan at that row's cadence; the cart page does not let
- * cadences mix. This used to return `MONTHLY` for every recurring row, so a
+ * recurring row is a plan at that row's cadence. One-time rows join the
+ * first charge only; each recurring cadence receives an independent plan. This used to return `MONTHLY` for every recurring row, so a
  * donor who chose "daily" or "every Friday" was billed monthly  the contract
  * mismatch in `DEPLOYED_VS_DESIGN_AUDIT.md` § P0.2. The mapping now lives in
  * `lib/donations/recurring-schedule.ts` and is pinned by its tests.
@@ -260,7 +271,7 @@ function conciergeMarker(): { sessionId: string; intent: string | null; campaign
 }
 
 export async function createDonation(input: CreateDonationInput): Promise<CreatedDonation> {
-  const { items, categoryItems, waqfItems, unmatched } = toOrderItems(input.items, input.projects, input.projectAliases);
+  const { items, categoryItems, waqfItems, unmatched, lineFrequencies } = toOrderItems(input.items, input.projects, input.projectAliases);
   if (unmatched.length) throw new UnpayableItemsError(unmatched);
   if (items.length === 0 && categoryItems.length === 0 && waqfItems.length === 0) throw new Error("cart-empty");
 
@@ -272,15 +283,20 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
       ...(categoryItems.length ? { categoryItems } : {}),
       ...(waqfItems.length ? { waqfItems } : {}),
       currency: input.currency,
+      routingPhone: input.routingPhone, expectedGateway: input.expectedGateway,
       /* The basket stores USD (plus each line's exact local figure); the
          server charges a line given in `currency` as given and converts the
          rest and the team support at its rate. Sent raw, a $1 row shown as
          ≈49 TL was charged 1 TL. */
       amountsIn: "USD",
+      ...(input.expectedTotal !== undefined ? { expectedTotal: input.expectedTotal } : {}),
       type: orderType(input.items),
+      lineFrequencies,
+      schedules: Object.fromEntries(["daily", "friday", "monthly"].map(cadence => [cadence, input.items.find(row => row.freqKey === cadence)?.schedule ?? null])),
       timezone: browserTimezone(),
       ...(orderType(input.items) !== "ONE_TIME" && orderSchedule(input.items) ? { schedule: orderSchedule(input.items) } : {}),
       teamSupport: input.teamSupport > 0 ? input.teamSupport : 0,
+      ...(input.teamSupport > 0 && input.teamSupportLocal ? { teamSupportLocal: input.teamSupportLocal } : {}),
       teamSupportRecurring: input.teamSupportRecurring,
       /* Analytics only: marks an order whose basket went through the concierge. */
       ...(conciergeMarker() ? { concierge: conciergeMarker() } : {}),
@@ -312,18 +328,23 @@ export async function createDonation(input: CreateDonationInput): Promise<Create
     | {
         donation?: { id: string; accessToken?: string | null };
         subscription?: { id: string };
+        donations?: Array<{ id: string; accessToken?: string | null }>;
+        oneTimeDonation?: { id: string; accessToken?: string | null } | null;
         bankTransfer?: { accessToken: string };
         error?: string;
         code?: string;
+        gateway?: string;
       }
     | null;
 
   if (!response.ok || !payload?.donation?.id) {
-    throw new OrderRejectedError(payload?.error || "order-failed", response.status, payload?.code);
+    throw new OrderRejectedError(payload?.error || "order-failed", response.status, payload?.code, payload?.gateway);
   }
 
   // Preserve the server-issued read credential before a payment redirect.
   rememberGuestDonationAccess(payload.donation.id, payload.donation.accessToken);
+  for (const row of payload.donations ?? []) rememberGuestDonationAccess(row.id, row.accessToken);
+  if (payload.oneTimeDonation) rememberGuestDonationAccess(payload.oneTimeDonation.id, payload.oneTimeDonation.accessToken);
 
   return {
     id: payload.donation.id,
@@ -362,16 +383,22 @@ export async function initiateBankPayment(
   locale: string,
   gateway: "PAYFOR" | "ALBARAKA",
   card?: { number: string; expiry: string; cvv: string; holder: string },
-  securityMode?: "2D" | "3D"
+  securityMode?: "2D" | "3D",
+  savedCardId?: string,
+  cardLast4?: string,
 ): Promise<GatewayForm> {
   const endpoint = gateway === "ALBARAKA" ? "/api/albaraka/3d/initiate" : "/api/payfor/3dpay/initiate";
 
   const response = await fetch(endpoint, {
     method: "POST",
+    // A lost reply is resolved against this order, never by sending a second sale.
+    signal: AbortSignal.timeout(90_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       donationId,
       locale,
+      ...(savedCardId ? { savedCardId } : {}),
+      ...(/^\d{4}$/.test(cardLast4 ?? "") ? { cardLast4 } : {}),
       ...(gateway === "ALBARAKA" && card ? { card } : {}),
       ...(gateway === "ALBARAKA" && securityMode ? { securityMode } : {}),
     }),
@@ -383,7 +410,7 @@ export async function initiateBankPayment(
     throw new OrderRejectedError(payload?.error || "gateway-failed", response.status, payload?.code);
   }
 
-  return { actionUrl: payload.actionUrl, fields: payload.fields ?? {} };
+  return { actionUrl: payload.actionUrl, method: payload.method === "GET" ? "GET" : "POST", fields: payload.fields ?? {} };
 }
 
 /**
@@ -394,6 +421,10 @@ export async function initiateBankPayment(
  * nothing there.
  */
 export function submitGatewayForm(form: GatewayForm, browserFields: Record<string, string> = {}): void {
+  if (form.method === "GET") {
+    window.location.assign(paymentResultTarget(form.actionUrl, window.location.origin));
+    return;
+  }
   const element = document.createElement("form");
   element.setAttribute("data-clarity-mask", "True");
   element.setAttribute("data-hj-suppress", "");
@@ -457,3 +488,4 @@ export async function chargeWithStripe(donationId: string, locale: string): Prom
   if (!response.ok || !payload?.clientSecret) throw new Error(payload?.error || "stripe-failed");
   return { clientSecret: payload.clientSecret };
 }
+

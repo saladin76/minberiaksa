@@ -8,11 +8,9 @@
  *   - STRIPE    the original main gateway.
  *   - ALBARAKA  Albaraka Türk EPOS 3D Secure, an alternative main gateway.
  *
- * Monthly subscriptions follow the configured main gateway. Daily and Friday
- * plans use Albaraka's scheduled billing. PayFor handles one-time TRY only.
+ * New recurring baskets use Albaraka 2D only. PayFor handles one-time TRY only.
  */
 
-import { railForFrequency } from "@/lib/donations/recurring-schedule";
 
 /** Gateway an admin can nominate as the main one in the dashboard. */
 export type MainGateway = "STRIPE" | "ALBARAKA";
@@ -37,7 +35,7 @@ export type GatewayResolutionInput = {
   /** ISO currency the donor is giving in, e.g. "TRY". */
   currency: string;
   /**
-   * Recurring donations create a plan and follow `railForFrequency`.
+   * New recurring donations create an Albaraka plan.
    * `ONE_TIME` is the only cadence eligible for PayFor.
    */
   donationType?: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY" | null;
@@ -55,14 +53,8 @@ export function resolveGateway({
   donationType = "ONE_TIME",
   forceStripe = false,
 }: GatewayResolutionInput): ResolvedGateway {
+  if (donationType && donationType !== "ONE_TIME") return "ALBARAKA";
   if (forceStripe) return "STRIPE";
-  // A plan's rail follows its cadence (`railForFrequency`): Stripe keeps its
-  // one-time + monthly scope, so a monthly plan runs on the main gateway as a
-  // Stripe Subscription or an Albaraka scheduled plan; daily and Friday plans
-  // are Albaraka's, since Stripe is not used for those cadences here.
-  if (donationType && donationType !== "ONE_TIME") {
-    return railForFrequency(donationType, mainGateway);
-  }
   // PayFor's case is unchanged from before Albaraka existed: an explicitly
   // one-time TRY donation, with the admin switch on.
   if (

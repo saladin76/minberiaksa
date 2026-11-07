@@ -101,13 +101,16 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/ads", key: "ads" },
   { prefix: "/dashboard/archive", key: "archive" },
   { prefix: "/dashboard/monthly", key: "monthly" },
+  { prefix: "/dashboard/subscription-requests", key: "monthly" },
   { prefix: "/dashboard/link-generator", key: "referrals" },
   { prefix: "/dashboard/referrals", key: "referrals" },
   { prefix: "/dashboard/bank-transfers", key: "bankTransfers" },
   { prefix: "/dashboard/transfer-receipts", key: "bankTransfers" },
   { prefix: "/dashboard/users/donors", key: "donors" },
   { prefix: "/dashboard/users/team", key: "team" },
+  { prefix: "/dashboard/security", key: "logs" },
   { prefix: "/dashboard/logs", key: "logs" },
+  { prefix: "/dashboard/notifications", key: "logs" },
   { prefix: "/dashboard/badges", key: "badges" },
   { prefix: "/dashboard/communication", key: "messages" },
   // Without its own rule /dashboard/inbox fell through to the "/dashboard → revenue" catch-all,
@@ -171,8 +174,10 @@ export function userCanEnterDashboard(user: UserLike | undefined): boolean {
   return user?.role === "ADMIN" || (user?.role === "STAFF" && hasAnyDashboardRoutePermission(user));
 }
 
-/** The shared content workspace contains separately protected SEO/blog tools. */
+/** Shared entry point; every tool and content section checks its own permission. */
 export function userCanOpenDashboardPath(user: UserLike | undefined, pathname: string): boolean {
+  if (pathname.replace(/\/$/, "") === "/dashboard/seo-pages")
+    return (["siteContent", "blog", "campaigns", "categories"] as const).some(key => userHasDashboardPermission(user, key));
   if (["/dashboard/seo-pages", "/dashboard/editorial-planner"].includes(pathname.replace(/\/$/, "")))
     return userHasDashboardPermission(user, "siteContent") || userHasDashboardPermission(user, "blog");
   const key = pathToDashboardPermission(pathname);

@@ -1,3 +1,6 @@
+import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
+import { loadReportSubscriptions } from "@/lib/dashboard/report-subscriptions";
+import { dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
 /**
  * GET /api/admin/monthly/export
  *
@@ -24,7 +27,6 @@ import {
   buildDonationExport,
   buildContentDisposition,
   type DonationExportRow,
-  type SubscriptionExportRow,
   type ExportFilterDescriptor,
   type ExportFormat,
 } from "@/lib/dashboard/donation-export";
@@ -32,17 +34,15 @@ import { istanbulDateKeysToUtcRange } from "@/lib/admin/istanbul-calendar";
 import {
   donationFrequencyWhere,
   loadSubscriptionFrequencies,
-  monthlyEquivalent,
   parseFrequencyParam,
   subscriptionFrequencyWhere,
 } from "@/lib/dashboard/recurring-frequency-filter";
-import { DASH_LOCALE_COOKIE, dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
+import { DASH_LOCALE_COOKIE, parseDashLocale } from "@/lib/dashboard/i18n";
 
-const FREQUENCY_LABEL_AR = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("أسبوعياً"); }, get MONTHLY() { return dt("شهري"); } } as const;
+const FREQUENCY_LABEL_AR = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("تبرع كل جمعة"); }, get MONTHLY() { return dt("شهري"); } } as const;
 
-export async function GET(request: NextRequest) {
+async function localizedGET(request: NextRequest) {
   // Sheet names, headers and labels in the dashboard's interface language.
-  setDashLocale(parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value));
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "monthly");
@@ -59,9 +59,10 @@ export async function GET(request: NextRequest) {
     const endParam = sp.get("end");
     const sortBy = (sp.get("sortBy") || "date") as "date" | "amount";
     const sortOrder = (sp.get("sortOrder") || "desc") as "asc" | "desc";
-    const status = sp.get("status");                  // donation status
+    const status = "PAID";                  // donation status
     const subStatusRaw = (sp.get("subStatus") || "all").toUpperCase();
     const locale = sp.get("locale")?.trim() ?? null;
+    const provider = sp.get("provider");
     const country = sp.get("country")?.trim() ?? null;
     const frequency = parseFrequencyParam(sp.get("frequency"));
     const limit = Math.min(parseInt(sp.get("limit") || "20000", 10) || 20000, 50000);
@@ -93,6 +94,11 @@ export async function GET(request: NextRequest) {
     }
 
     const donationFilters: Prisma.DonationWhereInput[] = [donationWhere];
+    const providerWhere = donationProviderWhere(provider);
+    if (providerWhere) donationFilters.push(providerWhere);
+    if (["ACTIVE", "PAUSED", "CANCELLED", "PAYMENT_FAILED"].includes(subStatusRaw)) {
+      donationFilters.push({ subscription: { is: { status: subStatusRaw as "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED" } } });
+    }
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
     const statusWhere = donationStatusWhere(status);
     if (statusWhere) donationFilters.push(statusWhere);
@@ -129,9 +135,19 @@ export async function GET(request: NextRequest) {
     ) {
       subWhere.status = subStatusRaw;
     }
+    if (country && country !== "all") {
+      subWhere.donor = country === "__unset" ? { OR: [{ countryCode: null }, { countryCode: "" }] } : { countryCode: country.toUpperCase() };
+    }
+    if (locale && locale !== "all") {
+      subWhere.donations = { some: locale === "__unset" ? { OR: [{ locale: null }, { locale: "" }] } : { locale } };
+    }
+    if (provider && provider !== "all") {
+      subWhere.AND = [...(Array.isArray(subWhere.AND) ? subWhere.AND : subWhere.AND ? [subWhere.AND] : []),
+        provider === "__unset" ? { OR: [{ provider: null }, { provider: "" }, { provider: { isSet: false } }] } : { provider: provider.toUpperCase() }];
+    }
     if (frequency) {
       // AND  the category branch below owns `subWhere.OR`.
-      subWhere.AND = [subscriptionFrequencyWhere(frequency)];
+      subWhere.AND = [...(Array.isArray(subWhere.AND) ? subWhere.AND : subWhere.AND ? [subWhere.AND] : []), subscriptionFrequencyWhere(frequency)];
     }
     if (categoryId && categoryId !== "all") {
       subWhere.OR = [
@@ -154,37 +170,13 @@ export async function GET(request: NextRequest) {
       }),
       prisma.subscription.findMany({
         where: subWhere,
-        include: {
-          donor: { select: { id: true, name: true, email: true, phone: true, countryCode: true } },
-          items: { select: { campaign: { select: { id: true, title: true } } } },
-          categoryItems: { select: { category: { select: { id: true, name: true } } } },
-          referral: { select: { id: true, code: true, name: true } },
-        },
+        select: { id: true },
         orderBy: { createdAt: "desc" },
         take: Math.min(limit, 20000),
       }),
     ]);
 
-    // Charge totals per subscription (paid only)
-    const subIds = subRows.map((s) => s.id);
-    const chargeAggregates = subIds.length
-      ? await prisma.donation.groupBy({
-          by: ["subscriptionId"],
-          where: { subscriptionId: { in: subIds }, status: "PAID" },
-          _count: { _all: true },
-          _sum: { amount: true, amountUSD: true },
-        })
-      : [];
-    const chargesBySub = new Map<string, { count: number; amount: number; amountUSD: number }>();
-    for (const c of chargeAggregates) {
-      if (!c.subscriptionId) continue;
-      chargesBySub.set(c.subscriptionId, {
-        count: c._count._all,
-        amount: Number(c._sum.amount ?? 0),
-        amountUSD: Number(c._sum.amountUSD ?? 0),
-      });
-    }
-
+    const subIds = subRows.map(s => s.id);
     const frequencyOf = await loadSubscriptionFrequencies(prisma, [
       ...subIds,
       ...donationRows.map((d) => d.subscriptionId).filter((id): id is string => Boolean(id)),
@@ -194,38 +186,7 @@ export async function GET(request: NextRequest) {
       ...toDonationRow(d),
       frequency: d.subscriptionId ? frequencyOf(d.subscriptionId) : null,
     }));
-    const exportSubscriptions: SubscriptionExportRow[] = subRows.map((s) => {
-      const charges = chargesBySub.get(s.id);
-      const planFrequency = frequencyOf(s.id);
-      return {
-        id: s.id,
-        status: s.status,
-        frequency: planFrequency,
-        monthlyEquivalentUSD:
-          s.amountUSD != null ? Number(monthlyEquivalent(s.amountUSD, planFrequency).toFixed(2)) : null,
-        donor: {
-          id: s.donor?.id ?? null,
-          name: s.donor?.name ?? null,
-          email: s.donor?.email ?? null,
-          phone: null,
-          countryCode: s.donor?.countryCode ?? null,
-        },
-        amount: Number(s.amount ?? 0),
-        amountUSD: s.amountUSD ?? null,
-        currency: s.currency,
-        teamSupport: Number(s.teamSupport ?? 0),
-        paymentMethod: s.paymentMethod ?? null,
-        createdAt: s.createdAt,
-        lastBillingDate: s.lastBillingDate ?? null,
-        nextBillingDate: s.nextBillingDate ?? null,
-        campaigns: s.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
-        categories: s.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
-        referral: s.referral ? { id: s.referral.id, code: s.referral.code, name: s.referral.name } : null,
-        totalChargesCount: charges?.count ?? 0,
-        totalChargesAmount: charges?.amount ?? 0,
-        totalChargesAmountUSD: charges?.amountUSD ?? 0,
-      };
-    });
+    const exportSubscriptions = await loadReportSubscriptions(subIds);
 
     const filters: ExportFilterDescriptor[] = [];
     filters.push({
@@ -235,7 +196,7 @@ export async function GET(request: NextRequest) {
     if (categoryId && categoryId !== "all") filters.push({ label: dt("القسم"), value: categoryId });
     if (campaignId && campaignId !== "all") filters.push({ label: dt("الحملة"), value: campaignId });
     if (userId && userId !== "all") filters.push({ label: dt("المتبرع"), value: userId });
-    if (status && status !== "all") filters.push({ label: dt("حالة التبرع"), value: status });
+    if (status) filters.push({ label: dt("حالة التبرع"), value: status });
     if (subStatusRaw && subStatusRaw !== "ALL") filters.push({ label: dt("حالة الاشتراك"), value: subStatusRaw });
     filters.push({ label: dt("الدورية"), value: frequency ? FREQUENCY_LABEL_AR[frequency] : dt("كل الدوريات") });
     if (locale && locale !== "all") filters.push({ label: dt("اللغة"), value: locale });
@@ -243,8 +204,13 @@ export async function GET(request: NextRequest) {
     filters.push({ label: dt("عدد التبرعات"), value: String(donationRows.length) });
     filters.push({ label: dt("عدد الاشتراكات"), value: String(subRows.length) });
 
+    if (provider && provider !== "all") filters.push({ label: dt("بوابة الدفع"), value: provider });
+    filters.push({ label: dt("نطاق الاشتراكات"), value: dt("لقطة حالية للاشتراكات المطابقة؛ الفترة تخص التبرعات، وإجماليات الاشتراكات طوال المدة") });
+    filters.push({ label: dt("أساس الفترة"), value: dt("تاريخ إنشاء التبرع؛ المبالغ المحصّلة تخص الدفعات المؤكدة ضمن النتائج المصدّرة") });
+    filters.push({ label: dt("حد صفوف التبرعات"), value: String(limit) });
     const out = await buildDonationExport({
       format,
+      period: { start: dateFilter.gte, end: dateFilter.lte },
       title: dt("تقرير التبرعات المتكررة"),
       subtitle: startParam || endParam
         ? dt("الفترة: {0} → {1}", [startParam ?? "—", endParam ?? "—"])
@@ -304,6 +270,10 @@ function toDonationRow(
     fees,
     totalAmount: total,
     coverFees: !!d.coverFees,
+    projectAllocations: [
+      ...d.items.map(i => ({ id: `campaign:${i.campaign.id}`, title: i.campaign.title, amount: Number(i.amount) })),
+      ...d.categoryItems.map(i => ({ id: `category:${i.category.id}`, title: i.category.name, amount: Number(i.amount) })),
+    ],
     campaigns: d.items.map((i) => ({ id: i.campaign.id, title: i.campaign.title })),
     categories: d.categoryItems.map((c) => ({ id: c.category.id, name: c.category.name })),
     referral: d.referral ? { id: d.referral.id, code: d.referral.code, name: d.referral.name } : null,
@@ -315,4 +285,10 @@ function toDonationRow(
     comment: d.comment ?? null,
     attribution: (d.attribution as Record<string, unknown> | null) ?? null,
   };
+}
+
+
+export async function GET(request: NextRequest) {
+  const language = request.nextUrl.searchParams.get("reportLanguage") ?? parseDashLocale(request.cookies.get(DASH_LOCALE_COOKIE)?.value);
+  return withReportLanguage(language, () => localizedGET(request));
 }

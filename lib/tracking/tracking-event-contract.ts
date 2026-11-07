@@ -25,9 +25,11 @@ export type AttributionStatus =
   | "utm_only"
   | "organic"
   | "direct"
-  | "tracking_issue";
+  | "tracking_issue"
+  | "unknown";
 
 export const ATTRIBUTION_STATUS_LABEL_AR: Record<AttributionStatus, string> = {
+  unknown: "مصدر غير معروف",
   verified: "إعلان مؤكد",
   strong: "تتبع قوي",
   likely_paid: "إعلان مرجّح",
@@ -39,6 +41,7 @@ export const ATTRIBUTION_STATUS_LABEL_AR: Record<AttributionStatus, string> = {
 };
 
 export const ATTRIBUTION_STATUS_COLOR: Record<AttributionStatus, string> = {
+  unknown: "slate",
   verified: "emerald",
   strong: "teal",
   likely_paid: "lime",

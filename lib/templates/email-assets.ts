@@ -7,10 +7,11 @@ export function normalizeEmailAssets(html: string, siteUrl = "https://minberiaks
   try { const site = new URL(siteUrl); if (site.protocol === "https:") origin = site.origin; } catch {}
   return html.replace(/<(?:img|a)\b[^>]*>/gi, tag => {
     const isImage = /^<img\b/i.test(tag);
+    const institutionalClass = /\bclass\s*=\s*(["'])(?:[^"']*\s)?logo(?:\s[^"']*)?\1/i.test(tag) && html.includes("mia-auto-mail");
     const alt = /\balt\s*=\s*(["'])(.*?)\1/i.exec(tag)?.[2] ?? "";
     return tag.replace(/\b(src|href)\s*=\s*(["'])(.*?)\2/gi, (attribute, key: string, quote: string, value: string) => {
       let next = value;
-      if (isImage && key.toLowerCase() === "src" && /^data:image\//i.test(value) && /منبر|minber|minbar/i.test(alt)) {
+      if (isImage && key.toLowerCase() === "src" && /^data:image\//i.test(value) && (/منبر|minber|minbar/i.test(alt) || institutionalClass)) {
         next = new URL(INSTITUTION_EMAIL_LOGO_PATH, origin).href;
       } else if (/^\/(?!\/)/.test(value)) next = new URL(value, origin).href;
       return next === value ? attribute : `${key}=${quote}${next}${quote}`;

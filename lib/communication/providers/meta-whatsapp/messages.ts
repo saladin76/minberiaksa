@@ -1,3 +1,4 @@
+import { normalizeCampaignContact } from "../../campaign-contact-validation";
 import { getActiveMetaWhatsappRuntimeConfig } from "../../runtime-config";
 import { graphFetch, metaRuntimeFailure, type MetaRuntimeConfig } from "./client";
 import { META_REASONS } from "./errors";
@@ -13,6 +14,8 @@ import type { SendDirectTextInput, SendTemplateInput, SendTextInput, SendResult 
  * not after sending.
  */
 export async function sendTextMessage(input: SendTextInput, runtime?: MetaRuntimeConfig): Promise<SendResult> {
+  const recipient = normalizeCampaignContact("WHATSAPP", input.to);
+  if (!recipient) return { ok: false, reason: "INVALID_CONTACT" };
   const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
   if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
   const phoneNumberId = input.phoneNumberId || resolved.values.defaultPhoneNumberId;
@@ -22,7 +25,7 @@ export async function sendTextMessage(input: SendTextInput, runtime?: MetaRuntim
 
   const body = {
     messaging_product: "whatsapp",
-    to: input.to,
+    to: recipient,
     type: "text",
     /* Links are left unpreviewed: a preview card is generated from whatever the URL resolves to,
        which is not something an operator should publish to a donor without seeing it. */
@@ -45,6 +48,8 @@ export async function sendTextMessage(input: SendTextInput, runtime?: MetaRuntim
  * never accepted here by type or at runtime.
  */
 export async function sendDirectTextMessage(input: SendDirectTextInput, runtime?: MetaRuntimeConfig): Promise<SendResult> {
+  const recipient = normalizeCampaignContact("WHATSAPP", input.to);
+  if (!recipient) return { ok: false, reason: "INVALID_CONTACT" };
   const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
   if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
   if (process.env.META_WHATSAPP_DIRECT_SEND_ENABLED !== "true") {
@@ -61,7 +66,7 @@ export async function sendDirectTextMessage(input: SendDirectTextInput, runtime?
   const body = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: input.to,
+    to: recipient,
     type: "text",
     text: { preview_url: false, body: text.slice(0, 4096) },
     category: input.category,
@@ -75,6 +80,8 @@ export async function sendDirectTextMessage(input: SendDirectTextInput, runtime?
 }
 
 export async function sendTemplateMessage(input: SendTemplateInput, runtime?: MetaRuntimeConfig): Promise<SendResult> {
+  const recipient = normalizeCampaignContact("WHATSAPP", input.to);
+  if (!recipient) return { ok: false, reason: "INVALID_CONTACT" };
   const resolved = runtime ?? await getActiveMetaWhatsappRuntimeConfig();
   if (!resolved.configured) return { ok: false, reason: metaRuntimeFailure(resolved) };
   const phoneNumberId = input.phoneNumberId || resolved.values.defaultPhoneNumberId;
@@ -82,7 +89,7 @@ export async function sendTemplateMessage(input: SendTemplateInput, runtime?: Me
 
   const body = {
     messaging_product: "whatsapp",
-    to: input.to,
+    to: recipient,
     type: "template",
     template: {
       name: input.templateName,

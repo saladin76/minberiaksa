@@ -701,7 +701,9 @@
     "verificationDirectHelp": "सत्यापन कोड के बिना",
     "verificationSecure": "बैंक सत्यापन",
     "verificationSecureHelp": "कोड माँगा जा सकता है",
-    "verificationRequired": "आगे बढ़ने के लिए भुगतान का एक विकल्प चुनें।"
+    "verificationRequired": "आगे बढ़ने के लिए भुगतान का एक विकल्प चुनें।",
+    "verificationSecureOptIn": "मैं बैंक सत्यापन (3D Secure) चाहता हूँ",
+    "verificationOptionalHelp": "सीधा भुगतान डिफ़ॉल्ट है। बैंक के माध्यम से सत्यापन के लिए यह विकल्प चुनें।"
   },
   "certificates": {
     "certNoLabel": "प्रमाणपत्र संख्या",
@@ -1560,6 +1562,16 @@
     "sentText": "हमारी साझेदारी टीम शीघ्र ही आपसे ईमेल द्वारा संपर्क करेगी।"
   },
   "projects": {
+    "catalogueNavigation": {
+      "gaza": "ग़ज़ा",
+      "aqsa": "मस्जिद अल-अक़्सा",
+      "jerusalem": "अल-क़ुद्स",
+      "waqf": "अल-क़ुद्स में वक़्फ़ करें",
+      "zakat": "फ़िलिस्तीन के लिए ज़कात दें",
+      "restoration": "अल-क़ुद्स के घरों की मरम्मत",
+      "ibadan": "इबादन लना",
+      "recurring": "नियमित दान"
+    },
     "allProjects": "सभी परियोजनाएँ",
     "filterByRegion": "क्षेत्र",
     "filterByType": "दान का प्रकार",
@@ -1841,7 +1853,8 @@
     "invalidCardNumber": "कार्ड नंबर मान्य नहीं है। कृपया जाँच करें।",
     "invalidCardExpiry": "समाप्ति तिथि अमान्य है या बीत चुकी है।",
     "invalidCardCvc": "सुरक्षा कोड (CVC) मान्य नहीं है।",
-    "tooManyPaymentAttempts": "भुगतान के बहुत अधिक प्रयास। कृपया बाद में पुनः प्रयास करें।"
+    "tooManyPaymentAttempts": "भुगतान के बहुत अधिक प्रयास। कृपया बाद में पुनः प्रयास करें।",
+    "mixedDonationCadences": "अलग-अलग दान आवृत्तियों के लिए अलग भुगतान करें। अपनी टोकरी की समीक्षा करें।"
   },
   "waqf": {
     "chooseUnit": "इकाई चुनें",
@@ -2174,6 +2187,7 @@
     "chooseFirst": "जारी रखने के लिए टीम समर्थन राशि या “नहीं, धन्यवाद” चुनें"
   },
   "Gift": {
+    "validationError": "प्राप्तकर्ता का नाम और सही संपर्क विवरण दर्ज करें। WhatsApp नंबर में देश का कोड शामिल करें।",
     "emailSubject": "आपके नाम पर एक उपहार: {project} के लिए दान",
     "emailTitle": "{recipientName}, आपके लिए एक उपहार है",
     "emailBody": "{donorName} ने मिंबर अल-अक़्सा के माध्यम से “{project}” परियोजना में आपके नाम पर दान किया।",
@@ -2478,7 +2492,8 @@
     "orContinue": "के साथ जारी रखें",
     "noAccount": "खाता नहीं है?",
     "createOne": "खाता बनाएँ",
-    "logoAlt": "लोगो"
+    "logoAlt": "लोगो",
+    "signInWithGoogle": "Google से साइन इन करें"
   },
   "DonationFailed": {
     "alternate": {
@@ -2493,5 +2508,36 @@
     "donated": "ने दान किया",
     "for": "के लिए",
     "communitySupporter": "हमारे सहयोगी समुदाय से"
+  },
+  "DonationDialog": {
+    "rememberCard": "अगले दान के लिए मेरा कार्ड सहेजें",
+    "rememberCardFailed": "कार्ड सहेजा नहीं जा सका। आगे बढ़ने के लिए इस विकल्प को हटाएँ।",
+    "savedCards": "आपके सहेजे गए कार्ड",
+    "useNewCard": "नया कार्ड इस्तेमाल करें",
+    "bankChargeEstimate": "आपका दान {original} है। तुर्की लीरा में अनुमानित बैंक शुल्क {amount} है; भुगतान शुरू होने पर अंतिम दर तय होती है।",
+    "bankChargeCurrency": "बैंक यह दान तुर्की लीरा में लेता है। पुष्टि से पहले परिवर्तित राशि दिखाई जाती है।",
+    "paymentRoutingChanged": "इस प्रयास का भुगतान गेटवे बदल गया है। तरीका जाँचें, सुरक्षा कोड फिर भरें और पुष्टि करें।"
+  },
+  "SignInDialog": {
+    "authErrorTitle": "साइन इन पूरा नहीं हुआ",
+    "authAccessDenied": "साइन इन की अनुमति पूरी नहीं हुई। फिर कोशिश करें या अतिथि के रूप में दान दें।",
+    "authAccountConflict": "यह ईमेल किसी दूसरे साइन इन तरीके से जुड़ा है। पुराना तरीका इस्तेमाल करें या अतिथि के रूप में दान दें।",
+    "authUnavailable": "अभी साइन इन उपलब्ध नहीं है। आप अतिथि के रूप में दान दे सकते हैं।",
+    "authUnknown": "साइन इन पूरा नहीं हुआ। फिर कोशिश करें या अतिथि के रूप में जारी रखें।",
+    "donateAsGuest": "अतिथि के रूप में दान जारी रखें",
+    "signInWithGoogle": "Google से साइन इन करें"
+  },
+  "Profile": {
+    "donations": {
+      "financial": {
+        "REFUNDED": "पूरी राशि वापस की गई",
+        "PARTIALLY_REFUNDED": "आंशिक राशि वापस की गई",
+        "VOIDED": "बैंक द्वारा रद्द",
+        "REVIEW_REQUIRED": "वित्तीय समीक्षा आवश्यक",
+        "balance": "वापस की गई: {returned} · शेष: {remaining}"
+      },
+      "recurringGivingMonths": "नियमित दान वाले महीने",
+      "recurringGivingMonthsHint": "चुनी गई अवधि में नियमित दान का भुगतान पुष्ट होने वाले महीने"
+    }
   }
 }

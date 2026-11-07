@@ -1,5 +1,17 @@
 "use client";
 
+import { SUBSCRIPTION_LIFECYCLE_LABELS, type SubscriptionLifecycle } from "@/lib/donations/subscription-lifecycle";
+
+
+import { useLiveDonationRefresh } from "@/hooks/useLiveDonationRefresh";
+
+import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancialStatus";
+import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
+
+import { focusSubscriptionTarget, subscriptionManagementHref, type SubscriptionRequestRow } from "@/lib/donations/subscription-navigation";
+import { isReductionRequestForPlan } from "@/lib/donations/subscription-request-policy";
+import type { ReductionEligibility } from "@/lib/donations/subscription-reduction-policy";
+import { reductionBlockMessage, reductionErrorMessage } from "@/lib/dashboard/subscription-reduction-feedback";
 import { RecurringHealthPanel } from "@/components/dashboard/RecurringHealthPanel";
 import { BILLING_READINESS_LABELS, type BillingReadiness } from "@/lib/donations/recurring-readiness";
 import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
@@ -7,9 +19,10 @@ import { recurringCalendarMonth } from "@/lib/dashboard/recurring-calendar";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   DollarSign,
   Heart,
@@ -143,6 +156,9 @@ interface DonationRow {
   isRecurringCharge?: boolean;
   /** 1-based position within its subscription (1 = signup charge) */
   subscriptionCycle?: number | null;
+  renewalNumber?: number | null;
+  testCycle?: number | null;
+  financialSummary?: DonationFinancialSummary | null;
   status: string;
   paidAt?: string | null;
   provider?: string | null;
@@ -161,6 +177,8 @@ interface DonationRow {
 }
 
 interface SubscriptionRow {
+  lifecycle?: SubscriptionLifecycle;
+  reductionEligibility?: ReductionEligibility;
   provider?: string; billingReadiness?: BillingReadiness; lastChargeError?: string | null; chargeAttempts?: number;
   id: string;
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
@@ -184,7 +202,7 @@ type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
 type FrequencyFilter = "all" | RecurringFrequency;
 
 const FREQUENCIES: RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
-const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("أسبوعياً"); }, get MONTHLY() { return dt("شهري"); } };
+const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("تبرع كل جمعة"); }, get MONTHLY() { return dt("شهري"); } };
 /** One hue per cadence, reused by the cards, the stacked chart and the table badges. */
 const FREQUENCY_COLOR: Record<RecurringFrequency, string> = {
   DAILY: "#2c8b5d",
@@ -223,7 +241,7 @@ type FrequencyBreakdownRow = {
   paidAmountUSD: number;
 };
 
-type SubscriptionStatusFilter = "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED" | "all";
+type SubscriptionStatusFilter = SubscriptionLifecycle | "all";
 
 interface DashboardStats {
   totalCampaigns: number;
@@ -312,8 +330,21 @@ function getDonationsDateRange(
 }
 
 export default function MonthlySubscriptionsDashboardPage() {
+  const params = useSearchParams();
+  const scope = [params.get("userId") || "", params.get("subscriptionId") || "", params.get("requestId") || ""].join(":");
+  // A different donor/request is a fresh workspace. In-flight responses and
+  // open editing dialogs from the previous scope cannot appear in this one.
+  return <MonthlySubscriptionsDashboard key={scope} />;
+}
+
+function MonthlySubscriptionsDashboard() {
   const locale = useLocale() as string;
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const linkedDonorId = searchParams.get("userId") || "";
+  const linkedSubscriptionId = searchParams.get("subscriptionId") || "";
+  const linkedRequestId = searchParams.get("requestId") || "";
+  const subscriptionNavigationKey = `${linkedDonorId}:${linkedSubscriptionId}:${linkedRequestId}`;
   const { convertToCurrency, getSelectedCurrency } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -327,28 +358,9 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
-  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>(() => linkedDonorId || "all");
   /** Plan cadence  narrows every card, chart and table on the page. */
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>("all");
-
-  // Sync user filter from URL (e.g. from users page "تحليل تبرعات")
-  useEffect(() => {
-    const uid = searchParams.get("userId");
-    if (uid && uid !== "all") {
-      setSelectedUserId(uid);
-      fetch(`/api/users/${uid}`)
-        .then((r) => r.json())
-        .then((data) => {
-          const u = data?.user;
-          if (u)
-            setUsers((prev) => {
-              if (prev.some((x) => x.id === u.id)) return prev;
-              return [{ id: u.id, name: u.name ?? null, email: u.email ?? "" }, ...prev];
-            });
-        })
-        .catch(() => {});
-    }
-  }, [searchParams]);
 
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [dayOfMonth, setDayOfMonth] = useState<{
@@ -374,6 +386,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [dateTo, setDateTo] = useState("");
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
+  const donationsRequestId = useRef(0);
   const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "PENDING" | "FAILED">("all");
   /** Applied donor search (name or email) for أحدث الدفعات المتكررة  server-side. */
   const [donationsSearch, setDonationsSearch] = useState("");
@@ -422,7 +435,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   // export reflects what the user is currently looking at.
   const [exportOpen, setExportOpen] = useState(false);
 
-  const [subStatusFilter, setSubStatusFilter] = useState<SubscriptionStatusFilter>("ACTIVE");
+  const [subStatusFilter, setSubStatusFilter] = useState<SubscriptionStatusFilter>(() => linkedDonorId ? "all" : "ACTIVE");
   const [subsRows, setSubsRows] = useState<SubscriptionRow[]>([]);
   const [subsPage, setSubsPage] = useState(1);
   const [subsTotal, setSubsTotal] = useState(0);
@@ -431,11 +444,110 @@ export default function MonthlySubscriptionsDashboardPage() {
   const [subsSortBy, setSubsSortBy] = useState<"date" | "amount">("date");
   const [subsSortOrder, setSubsSortOrder] = useState<"asc" | "desc">("desc");
   const [subsStatusUpdatingId, setSubsStatusUpdatingId] = useState<string | null>(null);
+  const subscriptionsGeneration = useRef(0);
+  const subscriptionsAbort = useRef<AbortController | null>(null);
+  const lastSubscriptionNavigation = useRef("");
+  const [subsLoadedFor, setSubsLoadedFor] = useState("");
+  const [linkedRequest, setLinkedRequest] = useState<SubscriptionRequestRow | null>(null);
+  const activeLinkedRequest = linkedRequest?.id === linkedRequestId && linkedRequest.donorId === linkedDonorId && linkedRequest.subscriptionId === linkedSubscriptionId ? linkedRequest : null;
+  const [linkedRequestLoading, setLinkedRequestLoading] = useState(false);
+  const [linkedRequestError, setLinkedRequestError] = useState(false);
+  const [requestRevision, setRequestRevision] = useState(0);
+  const [reduceRequest, setReduceRequest] = useState<SubscriptionRequestRow | null>(null);
+  const [reduceRequestOptions, setReduceRequestOptions] = useState<SubscriptionRequestRow[]>([]);
+  const [reduceRequestsLoading, setReduceRequestsLoading] = useState(false);
+  const [reduceRequestsError, setReduceRequestsError] = useState(false);
+  const [reduceRequestsReload, setReduceRequestsReload] = useState(0);
   const [reducePlan, setReducePlan] = useState<SubscriptionRow | null>(null);
   const [reduceAmount, setReduceAmount] = useState("");
-  const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED">("PHONE");
+  const [reduceMethod, setReduceMethod] = useState<"PHONE" | "EMAIL" | "WHATSAPP" | "SIGNED" | "DONOR_REQUEST">("PHONE");
   const [reduceEvidence, setReduceEvidence] = useState("");
   const [reduceBusy, setReduceBusy] = useState(false);
+  const [reduceEligibility, setReduceEligibility] = useState<ReductionEligibility | null>(null);
+  const [reduceEligibilityLoading, setReduceEligibilityLoading] = useState(false);
+  const [reduceEligibilityError, setReduceEligibilityError] = useState(false);
+  const [reduceEligibilityReload, setReduceEligibilityReload] = useState(0);
+  const [reduceSubmitError, setReduceSubmitError] = useState<string | null>(null);
+  const reducePlanId = reducePlan?.id;
+  const reduceDonorId = reducePlan?.donor?.id;
+  // A fresh server read, not the browser clock or an old table row, controls
+  // availability. The PATCH still rechecks and atomically claims the plan.
+  useEffect(() => {
+    setReduceEligibility(null); setReduceEligibilityError(false);
+    setReduceEligibilityLoading(Boolean(reducePlanId));
+    if (!reducePlanId || !reduceDonorId) { setReduceEligibilityLoading(false); return; }
+    const controller = new AbortController();
+    const params = new URLSearchParams({ subscriptionId: reducePlanId, userId: reduceDonorId, status: "ALL", limit: "1" });
+    void fetch(`/api/admin/subscriptions?${params}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) })
+      .then(async response => {
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        const row: SubscriptionRow | undefined = data.subscriptions?.find((value: SubscriptionRow) => value.id === reducePlanId && value.donor?.id === reduceDonorId);
+        if (!row?.reductionEligibility || typeof row.reductionEligibility.allowed !== "boolean") throw new Error();
+        if (controller.signal.aborted) return;
+        setReduceEligibility(row.reductionEligibility);
+        setReducePlan(current => current?.id === reducePlanId ? row : current);
+      })
+      .catch(() => { if (!controller.signal.aborted) setReduceEligibilityError(true); })
+      .finally(() => { if (!controller.signal.aborted) setReduceEligibilityLoading(false); });
+    return () => controller.abort();
+  }, [reducePlanId, reduceDonorId, reduceEligibilityReload]);
+  const applyReductionRequest = useCallback((row: SubscriptionRequestRow) => {
+    setReduceRequest(row);
+    setReduceAmount(String(row.requestedAmount));
+    setReduceEvidence(`${dt("طلب تغيير المبلغ")} #${row.id} · ${new Date(row.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}`);
+  }, []);
+  useEffect(() => {
+    setReduceRequestOptions([]); setReduceRequestsError(false); setReduceRequestsLoading(false);
+    if (!reducePlan || reduceMethod !== "DONOR_REQUEST") return;
+    const controller = new AbortController();
+    const scope = { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency };
+    setReduceRequest(null); setReduceAmount(""); setReduceEvidence("");
+    if (!scope.donorId) return;
+    setReduceRequestsLoading(true);
+    const params = new URLSearchParams({ userId: scope.donorId, subscriptionId: scope.id, status: "OPEN", kind: "AMOUNT_CHANGE" });
+    void fetch(`/api/admin/subscription-requests?${params}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]) })
+      .then(async response => {
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (!Array.isArray(data.requests)) throw new Error();
+        const rows = data.requests.filter((row: SubscriptionRequestRow) => isReductionRequestForPlan(row, scope));
+        if (controller.signal.aborted) return;
+        setReduceRequestOptions(rows);
+        const selected = rows.find((row: SubscriptionRequestRow) => row.id === linkedRequestId) || rows[0];
+        if (selected) applyReductionRequest(selected);
+      })
+      .catch(() => { if (!controller.signal.aborted) setReduceRequestsError(true); })
+      .finally(() => { if (!controller.signal.aborted) setReduceRequestsLoading(false); });
+    return () => controller.abort();
+  }, [reducePlan, reduceMethod, linkedRequestId, reduceRequestsReload, applyReductionRequest]);
+  useEffect(() => {
+    setLinkedRequestError(false);
+    if (!linkedDonorId || !linkedSubscriptionId || !linkedRequestId) { setLinkedRequestLoading(false); return; }
+    const controller = new AbortController();
+    setLinkedRequestLoading(true);
+    const params = new URLSearchParams({ userId: linkedDonorId, subscriptionId: linkedSubscriptionId, requestId: linkedRequestId });
+    void fetch(`/api/admin/subscription-requests?${params}`, { signal: controller.signal, cache: "no-store" }).then(async response => {
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      const row = data.requests?.find((r: SubscriptionRequestRow) => r.id === linkedRequestId && r.donorId === linkedDonorId && r.subscriptionId === linkedSubscriptionId);
+      if (!row) throw new Error();
+      if (!controller.signal.aborted) setLinkedRequest(row);
+    }).catch(() => { if (!controller.signal.aborted) setLinkedRequestError(true); })
+      .finally(() => { if (!controller.signal.aborted) setLinkedRequestLoading(false); });
+    return () => controller.abort();
+  }, [linkedDonorId, linkedSubscriptionId, linkedRequestId, requestRevision]);
+
+  const openSubscriptionReduction = (plan: SubscriptionRow) => {
+    setReduceEligibility(null); setReduceEligibilityLoading(true); setReduceEligibilityError(false); setReduceSubmitError(null);
+    const row = isReductionRequestForPlan(activeLinkedRequest, { id: plan.id, donorId: plan.donor?.id || "", amount: plan.amount, currency: plan.currency }) ? activeLinkedRequest : null;
+    setReduceRequest(row);
+    setReduceAmount(row ? String(row.requestedAmount) : "");
+    setReduceMethod(row ? "DONOR_REQUEST" : "PHONE");
+    setReduceEvidence(row ? `${dt("طلب تغيير المبلغ")} #${row.id} · ${new Date(row.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}` : "");
+    setReducePlan(plan);
+  };
+
   const [providerChecks, setProviderChecks] = useState<
     Record<string, { loading: boolean; result?: { rail: string; providerStatus: string | null; providerPaused: boolean | null; inSync: boolean; error?: string } }>
   >({});
@@ -666,8 +778,9 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   // Donations list  uses تصفية النتائج + chart time span (period + from/to) + sort
   const fetchDonations = useCallback(
-    async (page: number, append: boolean) => {
-      setDonationsLoading(true);
+    async (page: number, append: boolean, quiet = false) => {
+      const requestId = ++donationsRequestId.current;
+      if (!quiet) setDonationsLoading(true);
       try {
         const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
         const params = new URLSearchParams();
@@ -687,19 +800,20 @@ export default function MonthlySubscriptionsDashboardPage() {
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
+        if (requestId !== donationsRequestId.current) return;
         if (!res.ok) {
-          toast.error(data?.error || dt("فشل في تحميل الدفعات المتكررة"));
+          if (!quiet) toast.error(data?.error || dt("فشل في تحميل الدفعات المتكررة"));
           return;
         }
         const list = Array.isArray(data.donations) ? data.donations : [];
         setDonations((prev) => (append ? [...prev, ...list] : list));
         setDonationsTotal(data.pagination?.total ?? 0);
       } catch (error) {
+        if (requestId !== donationsRequestId.current) return;
         console.error("Error fetching donations:", error);
-        toast.error(dt("فشل في تحميل الدفعات المتكررة"));
+        if (!quiet) toast.error(dt("فشل في تحميل الدفعات المتكررة"));
       } finally {
-        setDonationsLoading(false);
-        setDonationsFetchedOnce(true);
+        if (requestId === donationsRequestId.current) { setDonationsLoading(false); setDonationsFetchedOnce(true); }
       }
     },
     [
@@ -711,12 +825,14 @@ export default function MonthlySubscriptionsDashboardPage() {
       dateTo,
       donationsSortBy,
       donationsSortOrder,
-      donationsStatusFilter,
       donationCountryFilter,
       donationsSearch,
+      donationsStatusFilter,
       frequencyFilter,
     ]
   );
+
+  useLiveDonationRefresh(() => fetchDonations(1, false, true), !loading && donationsPage === 1);
 
   // Fetch donations when filters or time span or sort change
   useEffect(() => {
@@ -727,7 +843,12 @@ export default function MonthlySubscriptionsDashboardPage() {
 
   const fetchSubscriptions = useCallback(
     async (page: number, append: boolean) => {
+      subscriptionsAbort.current?.abort();
+      const controller = new AbortController();
+      subscriptionsAbort.current = controller;
+      const generation = ++subscriptionsGeneration.current;
       setSubsLoading(true);
+      if (!append) setSubsRows([]);
       try {
         const userIdFromUrl = searchParams.get("userId");
         const effectiveUserId =
@@ -739,6 +860,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         const params = new URLSearchParams();
         params.set("page", String(page));
         params.set("limit", String(PAGE_SIZE));
+        if (linkedSubscriptionId) params.set("subscriptionId", linkedSubscriptionId);
         params.set("sortBy", subsSortBy);
         params.set("sortOrder", subsSortOrder);
         params.set("status", subStatusFilter === "all" ? "ALL" : subStatusFilter);
@@ -747,8 +869,9 @@ export default function MonthlySubscriptionsDashboardPage() {
         if (effectiveUserId !== "all") params.set("userId", effectiveUserId);
         if (subsSearch) params.set("search", subsSearch);
         if (frequencyFilter !== "all") params.set("frequency", frequencyFilter);
-        const res = await fetch(`/api/admin/subscriptions?${params}`);
+        const res = await fetch(`/api/admin/subscriptions?${params}`, { signal: controller.signal });
         const data = await res.json();
+        if (generation !== subscriptionsGeneration.current) return;
         if (!res.ok) {
           toast.error(data?.error || dt("فشل في تحميل الاشتراكات"));
           return;
@@ -756,15 +879,17 @@ export default function MonthlySubscriptionsDashboardPage() {
         const list = Array.isArray(data.subscriptions) ? data.subscriptions : [];
         setSubsRows((prev) => (append ? [...prev, ...list] : list));
         setSubsTotal(data.pagination?.total ?? 0);
+        setSubsLoadedFor(`${effectiveUserId === "all" ? "" : effectiveUserId}:${linkedSubscriptionId}:${linkedRequestId}`);
       } catch {
-        toast.error(dt("فشل في تحميل الاشتراكات"));
+        if (generation === subscriptionsGeneration.current && !controller.signal.aborted) toast.error(dt("فشل في تحميل الاشتراكات"));
       } finally {
-        setSubsLoading(false);
-        setSubsFetchedOnce(true);
+        if (generation === subscriptionsGeneration.current) { setSubsLoading(false); setSubsFetchedOnce(true); }
       }
     },
     [
       searchParams,
+      linkedSubscriptionId,
+      linkedRequestId,
       selectedUserId,
       selectedCategory,
       selectedCampaign,
@@ -777,8 +902,13 @@ export default function MonthlySubscriptionsDashboardPage() {
   );
 
   const submitSubscriptionReduction = useCallback(async () => {
-    if (!reducePlan || reduceBusy) return;
+    if (!reducePlan || reduceBusy || reduceEligibilityLoading || reduceEligibilityError || !reduceEligibility?.allowed) return;
+    setReduceSubmitError(null);
     const amount = Number(reduceAmount);
+    if (reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !isReductionRequestForPlan(reduceRequest, { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency }) || reduceRequest?.requestedAmount !== amount)) {
+      toast.error(dt("اختر طلبًا موثقًا وصالحًا من حساب المتبرع أولًا."));
+      return;
+    }
     if (!Number.isFinite(amount) || amount < 1 || amount >= reducePlan.amount || reduceEvidence.trim().length < 12) {
       toast.error(dt("أدخل مبلغًا أقل، مع إثبات موافقة المتبرع (12 حرفًا على الأقل)"));
       return;
@@ -787,6 +917,7 @@ export default function MonthlySubscriptionsDashboardPage() {
     try {
       const res = await axios.patch(`/api/admin/subscriptions/${reducePlan.id}`, {
         amount, consentMethod: reduceMethod, consentEvidence: reduceEvidence.trim(),
+        ...(reduceMethod === "DONOR_REQUEST" && reduceRequest ? { consentRequestId: reduceRequest.id } : {}),
       });
       if (!res.data?.ok) throw new Error("Reduction not confirmed");
       toast.success(dt("تم تخفيض المبلغ ابتداءً من الدورة القادمة وتوثيق موافقة المتبرع"));
@@ -794,14 +925,21 @@ export default function MonthlySubscriptionsDashboardPage() {
       setReduceEvidence("");
       setReduceAmount("");
       setSubsPage(1);
+      setRequestRevision(value => value + 1);
       await fetchSubscriptions(1, false);
       void fetchStats();
     } catch (error) {
-      toast.error(axios.isAxiosError(error) ? (error.response?.data?.error ?? dt("تعذّر التخفيض")) : dt("تعذّر التخفيض"));
+      const data = axios.isAxiosError(error) ? error.response?.data : null;
+      const message = reductionErrorMessage(data?.code, data?.reductionEligibility?.reason);
+      setReduceSubmitError(message);
+      // A billing transition after the read must disable another submission.
+      // Only the explicit refresh can authorize a new review of the plan.
+      setReduceEligibility(null);
+      toast.error(message);
     } finally {
       setReduceBusy(false);
     }
-  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, fetchSubscriptions, fetchStats]);
+  }, [reducePlan, reduceBusy, reduceAmount, reduceMethod, reduceEvidence, reduceRequest, reduceRequestsLoading, reduceRequestsError, reduceEligibility, reduceEligibilityLoading, reduceEligibilityError, fetchSubscriptions, fetchStats]);
 
   const handleSubscriptionStatusChange = useCallback(
     async (
@@ -825,6 +963,7 @@ export default function MonthlySubscriptionsDashboardPage() {
             : dt("تم تحديث حالة الاشتراك")
         );
         setSubsPage(1);
+        setRequestRevision(value => value + 1);
         await fetchSubscriptions(1, false);
       } catch (e: unknown) {
         const msg = axios.isAxiosError(e)
@@ -841,7 +980,9 @@ export default function MonthlySubscriptionsDashboardPage() {
   useEffect(() => {
     if (loading) return;
     setSubsPage(1);
-    fetchSubscriptions(1, false);
+    void fetchSubscriptions(1, false);
+    const controller = subscriptionsAbort.current;
+    return () => controller?.abort();
   }, [
     loading,
     selectedCategory,
@@ -855,6 +996,16 @@ export default function MonthlySubscriptionsDashboardPage() {
     frequencyFilter,
     fetchSubscriptions,
   ]);
+
+  useEffect(() => {
+    if (loading || subsLoading || linkedRequestLoading || !subsFetchedOnce || subsLoadedFor !== subscriptionNavigationKey ||
+        (!linkedDonorId && !linkedSubscriptionId) || lastSubscriptionNavigation.current === subscriptionNavigationKey) return;
+    const frame = requestAnimationFrame(() => {
+      focusSubscriptionTarget(linkedSubscriptionId);
+      lastSubscriptionNavigation.current = subscriptionNavigationKey;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [loading, subsLoading, linkedRequestLoading, subsFetchedOnce, subsLoadedFor, subscriptionNavigationKey, linkedDonorId, linkedSubscriptionId]);
 
   const loadMoreSubs = () => {
     const next = subsPage + 1;
@@ -961,7 +1112,7 @@ export default function MonthlySubscriptionsDashboardPage() {
   const frequencyLabelSuffix = frequencyFilter === "all" ? "" : `  ${FREQUENCY_LABEL_AR[frequencyFilter]}`;
 
   return (
-    <div className="min-h-0" dir={dashDir()}>
+    <div className="min-h-0 min-w-0 w-full" dir={dashDir()}>
       <div className="space-y-6 sm:space-y-8 p-0 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
         <PageHeader
           title={dt("التبرعات المتكررة والاشتراكات")}
@@ -977,12 +1128,14 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </span>
               </>
             ) : (
-              dt("كل التبرعات المتكررة  اليومية، وأسبوعياً، والشهرية: الإيرادات، دفعات التجديد، والحالة")
+              dt("كل التبرعات المتكررة اليومية، وكل جمعة، والشهرية: الإيرادات، دفعات التجديد، والحالة")
             )
           }
         />
 
+        <div className="flex justify-end"><Link href="/dashboard/monthly/settings" className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold text-brand">{dt("إعدادات صفحة التبرع الدوري")}</Link></div>
         <RecurringHealthPanel />
+        <Link href="/dashboard/subscription-requests" className="inline-flex min-h-11 items-center rounded-lg border bg-white px-4 text-sm font-semibold text-brand">{dt("طلبات إدارة التبرع")} ←</Link>
 
         {/* Cadence switch  narrows every figure, chart and table below to one kind of plan. */}
         <div className="flex flex-wrap items-center gap-2" dir={dashDir()}>
@@ -1023,7 +1176,7 @@ export default function MonthlySubscriptionsDashboardPage() {
               eyebrow={dt("الإيراد الشهري المتكرر (MRR){0}", [frequencyLabelSuffix])}
               badge={dt("شهريًا")}
               value={formatMoney(Math.round(stats?.monthlyRecurringRevenue ?? 0))}
-              note={dt("المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وأسبوعياً × ٤٫٣٥، والشهري كما هو.")}
+              note={dt("المكافئ الشهري للاشتراكات النشطة: اليومي × ٣٠٫٤، وكل جمعة × ٤٫٣٥، والشهري كما هو.")}
             />
             {/* ARR is MRR×12  a projection of the current book, not money collected. The note
                 says so, because a figure this size sitting beside real revenue invites being
@@ -1064,7 +1217,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FREQUENCY_COLOR[f] }} aria-hidden="true" />
-                      {f === "DAILY" ? dt("التبرعات اليومية") : f === "FRIDAY" ? dt("تبرعات أسبوعياً") : dt("التبرعات الشهرية")}
+                      {f === "DAILY" ? dt("التبرعات اليومية") : f === "FRIDAY" ? dt("تبرعات كل جمعة") : dt("التبرعات الشهرية")}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-600">
                       {dtx("{0} نشط", [row?.activeCount ?? 0])}</span>
@@ -1124,20 +1277,20 @@ export default function MonthlySubscriptionsDashboardPage() {
               onValueChange={(v) => setStatCardSet(v as StatCardSet)}
               className="w-auto"
             >
-              <TabsList className="bg-muted p-1 rounded-lg h-9" dir={dashDir()}>
+              <TabsList className="bg-muted p-1 rounded-lg h-auto w-full grid grid-cols-3 sm:w-auto sm:inline-flex" dir={dashDir()}>
                 <TabsTrigger
                   value="revenue"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="min-h-9 min-w-0 whitespace-normal text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
                   {dt("الإيرادات")}</TabsTrigger>
                 <TabsTrigger
                   value="overview"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="min-h-9 min-w-0 whitespace-normal text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
                   {dt("نظرة عامة")}</TabsTrigger>
                 <TabsTrigger
                   value="breakdown"
-                  className="text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+                  className="min-h-9 min-w-0 whitespace-normal text-xs px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm"
                 >
                   {dt("تفصيل الاشتراكات")}</TabsTrigger>
               </TabsList>
@@ -1644,20 +1797,20 @@ export default function MonthlySubscriptionsDashboardPage() {
 
                 <TabsContent value="split" className="mt-0" dir={dashDir()}>
                   <Tabs defaultValue="frequency" className="w-full" dir={dashDir()}>
-                    <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 inline-flex flex-row-reverse">
+                    <TabsList className="bg-slate-100 p-1 rounded-lg mb-4 h-auto w-full grid grid-cols-3 sm:w-auto sm:inline-flex sm:flex-row-reverse">
                       <TabsTrigger
                         value="frequency"
-                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                        className="min-h-9 min-w-0 whitespace-normal data-[state=active]:bg-card data-[state=active]:shadow-sm text-xs sm:text-sm"
                       >
                         {dt("حسب الدورية")}</TabsTrigger>
                       <TabsTrigger
                         value="campaign-category"
-                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                        className="min-h-9 min-w-0 whitespace-normal data-[state=active]:bg-card data-[state=active]:shadow-sm text-xs sm:text-sm"
                       >
                         {dt("مشاريع vs فئات")}</TabsTrigger>
                       <TabsTrigger
                         value="subscription-status"
-                        className="data-[state=active]:bg-card data-[state=active]:shadow-sm text-sm"
+                        className="min-h-9 min-w-0 whitespace-normal data-[state=active]:bg-card data-[state=active]:shadow-sm text-xs sm:text-sm"
                       >
                         {dt("حالة الاشتراك")}</TabsTrigger>
                     </TabsList>
@@ -1774,16 +1927,16 @@ export default function MonthlySubscriptionsDashboardPage() {
                     </TabsContent>
                   </Tabs>
                 </TabsContent>
-                <TabsList className="bg-slate-100 p-1 rounded-lg mt-6 flex-row-reverse w-full justify-end max-w-max">
+                <TabsList className="bg-slate-100 p-1 rounded-lg mt-6 h-auto w-full grid grid-cols-2 sm:inline-flex sm:flex-row-reverse sm:w-auto">
                   <TabsTrigger
                     value="split"
-                    className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
+                    className="min-h-11 min-w-0 whitespace-normal text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2 [&>svg]:shrink-0"
                   >
                     <PieChartIcon className="w-4 h-4" />
                     {dt("توزيع الإيرادات")}</TabsTrigger>
                   <TabsTrigger
                     value="time-series"
-                    className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2"
+                    className="min-h-11 min-w-0 whitespace-normal text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2 [&>svg]:shrink-0"
                   >
                     <BarChart3 className="w-4 h-4" />
                     {dt("الدفعات المتكررة عبر الزمن")}</TabsTrigger>
@@ -2045,15 +2198,15 @@ export default function MonthlySubscriptionsDashboardPage() {
   <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
       {dt("حالة الدفعة")}</label>
-    <Select value={donationsStatusFilter} onValueChange={(v) => setDonationsStatusFilter(v as typeof donationsStatusFilter)}>
+    <Select value={donationsStatusFilter} onValueChange={value => setDonationsStatusFilter(value as typeof donationsStatusFilter)}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
         <SelectValue placeholder={dt("الحالة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
-        <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
-        <SelectItem value="PENDING" className="text-xs">{dt("قيد التأكيد")}</SelectItem>
-        <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
+        <SelectItem value="all">{dt("الكل")}</SelectItem>
+        <SelectItem value="PAID">{dt("ناجح")}</SelectItem>
+        <SelectItem value="PENDING">{dt("قيد التأكيد")}</SelectItem>
+        <SelectItem value="FAILED">{dt("فاشل")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
@@ -2195,7 +2348,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                                   title={dt("خصم تلقائي متكرر  تم دون أي إجراء من المتبرع")}
                                 >
                                   <RefreshCw className="w-3 h-3" />
-                                  {dtx("تجديد تلقائي{0}", [d.subscriptionCycle ? ` #${d.subscriptionCycle}` : ""])}
+                                  {d.testCycle ? dtx("دورة اختبار #{0}", [d.testCycle]) : dtx("تجديد تلقائي{0}", [d.renewalNumber ? ` #${d.renewalNumber}` : ""])}
                                 </span>
                               ) : (
                                 <span
@@ -2210,22 +2363,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                             )}
                           </td>
                           <td className="py-2.5 px-3">
-                            {d.status === "FAILED" ? (
-                              <button
-                                type="button"
-                                onClick={() => openDonationDetails("error", d)}
-                                className="inline-block px-1.5 py-px rounded-full text-[11px] font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors cursor-pointer"
-                                title={dt("عرض رسالة الخطأ من بوابة الدفع")}
-                              >
-                                {dt("فاشل")}</button>
-                            ) : (
-                              <span
-                                className={cn("inline-block px-1.5 py-px rounded-full text-[11px] font-medium", d.status === "PAID" && d.paidAt ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}
-                                title={d.status === "PAID" && !d.paidAt ? dt("تم بدء الدفع ولم يؤكده مزود الدفع بعد  لا يُحتسب في الإيرادات") : undefined}
-                              >
-                                {d.status === "PAID" ? (d.paidAt ? dt("ناجح") : dt("قيد التأكيد")) : dt("معلق")}
-                              </span>
-                            )}
+                            <DonationFinancialStatus donation={d} onFailure={() => openDonationDetails("error", d)} />
                           </td>
                           <td className="py-2.5 px-3">
                             <DonationGatewayBadge donation={d} onOpen={() => openDonationDetails("payment", d)} />
@@ -2384,15 +2522,29 @@ export default function MonthlySubscriptionsDashboardPage() {
         />
 
       {reducePlan && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="presentation">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6 space-y-4 text-start" dir={dashDir()} role="dialog" aria-modal="true" aria-labelledby="reduce-sub-title">
-            <h3 id="reduce-sub-title" className="text-lg font-bold">{dt("تخفيض مبلغ التبرع الدوري")}</h3>
-            <p className="text-sm text-slate-600">{dtx("المبلغ الحالي: {0} {1}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.", [reducePlan.amount, reducePlan.currency])}</p>
-            <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} dir="ltr" />
+        <Dialog open onOpenChange={open => { if (!open && !reduceBusy) setReducePlan(null); }}>
+          <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl text-start rtl:[&>button]:left-4 rtl:[&>button]:right-auto" dir={dashDir()}>
+            <DialogHeader className="text-start sm:text-start pe-6">
+              <DialogTitle>{dt("تخفيض مبلغ التبرع الدوري")}</DialogTitle>
+              <DialogDescription>{dtx("المبلغ الحالي: {0} {1}. يبدأ المبلغ الجديد من دورة التجديد التالية، ولا يتم خصم مبلغ الآن.", [reducePlan.amount, reducePlan.currency])}</DialogDescription>
+            </DialogHeader>
+            <div aria-live="polite" className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm leading-6">
+              {reduceEligibilityLoading ? <p role="status">{dt("جارٍ فحص حالة التحصيل قبل التخفيض…")}</p> : reduceEligibilityError ? <p role="alert" className="text-red-700">{dt("تعذّر فحص حالة التحصيل. حدّث الحالة قبل تأكيد التخفيض.")}</p> : reduceSubmitError ? <p role="alert" className="text-red-700">{reduceSubmitError}</p> : reduceEligibility && !reduceEligibility.allowed ? <p role="alert" className="text-amber-800">{reductionBlockMessage(reduceEligibility.reason)}</p> : null}
+              {reduceEligibility?.nextBillingDate && <p className="text-xs text-slate-600">{dtx("موعد التحصيل المسجل: {0} (بتوقيت إسطنبول)", [new Date(reduceEligibility.nextBillingDate).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })])}</p>}
+              {reduceEligibility?.reason === "RETRY_PENDING" && <p className="text-xs text-slate-600">{dtx("محاولات غير ناجحة لهذه الدورة: {0}", [reduceEligibility.chargeAttempts])}{reducePlan.lastChargeError ? <span dir="auto" className="ms-2 break-words">{reducePlan.lastChargeError}</span> : null}</p>}
+              <button type="button" className="min-h-10 justify-self-start rounded-lg border bg-white px-3 text-xs disabled:opacity-50" disabled={reduceBusy || reduceEligibilityLoading} onClick={() => { setReduceSubmitError(null); setReduceEligibility(null); setReduceEligibilityLoading(true); setReduceEligibilityReload(value => value + 1); }}>{dt("تحديث حالة الاشتراك")}</button>
+            </div>
+            <label className="block text-sm font-medium">{dtx("المبلغ الجديد ({0})", [reducePlan.currency])}<Input type="number" step="0.01" min="1" max={Math.max(1, reducePlan.amount - 0.01)} value={reduceAmount} onChange={e => setReduceAmount(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} dir="ltr" />
             </label>
-            <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} onValueChange={v => setReduceMethod(v as typeof reduceMethod)}>
+            <label className="block text-sm font-medium">{dt("طريقة توثيق موافقة المتبرع")}<Select value={reduceMethod} disabled={reduceBusy} onValueChange={v => {
+              if (v === reduceMethod) return;
+              if (v === "DONOR_REQUEST" || reduceMethod === "DONOR_REQUEST") { setReduceRequest(null); setReduceEvidence(""); }
+              if (v === "DONOR_REQUEST") setReduceAmount("");
+              setReduceMethod(v as typeof reduceMethod);
+            }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent dir={dashDir()}>
+                  <SelectItem value="DONOR_REQUEST">{dt("طلب مباشر من حسابه الشخصي")}</SelectItem>
                   <SelectItem value="PHONE">{dt("مكالمة هاتفية")}</SelectItem>
                   <SelectItem value="EMAIL">{dt("بريد إلكتروني")}</SelectItem>
                   <SelectItem value="WHATSAPP">{dt("واتساب")}</SelectItem>
@@ -2400,21 +2552,38 @@ export default function MonthlySubscriptionsDashboardPage() {
                 </SelectContent>
               </Select>
             </label>
-            <label className="block text-sm font-medium">{dt("مرجع الموافقة وتاريخها")}<textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} placeholder={dt("التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند")} />
+            {reduceMethod === "DONOR_REQUEST" && <div className="grid min-w-0 gap-2">
+              <p className="text-xs leading-6 text-slate-500">{dt("اختر طلب تغيير مبلغ مسجّل من حساب المتبرع؛ المرجع والتاريخ يُستخرجان تلقائيًا.")}</p>
+              {reduceRequestsLoading ? <p role="status" className="text-sm">{dt("جارٍ تحميل طلبات المتبرع…")}</p> : reduceRequestsError ? <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات المتبرع. أعد المحاولة.")}</p> : reduceRequestOptions.length === 0 ? <p role="status" className="text-sm text-amber-800">{dt("لا يوجد طلب تغيير مبلغ مفتوح وصالح لهذا الاشتراك من حساب المتبرع.")}</p> : <label className="grid gap-1 text-sm font-medium">{dt("طلب المتبرع الموثّق")}<select aria-label={dt("طلب المتبرع الموثّق")} className="min-h-11 min-w-0 w-full rounded-lg border p-2 text-sm" value={reduceRequest?.id || ""} disabled={reduceBusy} onChange={event => {
+                const row = reduceRequestOptions.find(option => option.id === event.target.value);
+                if (row && isReductionRequestForPlan(row, { id: reducePlan.id, donorId: reducePlan.donor?.id || "", amount: reducePlan.amount, currency: reducePlan.currency })) applyReductionRequest(row);
+              }}>{reduceRequestOptions.map(row => <option key={row.id} value={row.id}>{row.requestedAmount} {row.currency} · #{row.id}</option>)}</select></label>}
+              <button type="button" className="min-h-10 justify-self-start rounded-lg border px-3 text-xs disabled:opacity-50" disabled={reduceBusy || reduceRequestsLoading} onClick={() => setReduceRequestsReload(value => value + 1)}>{dt("تحديث طلبات المتبرع")}</button>
+            </div>}
+            <label className="block text-sm font-medium">{dt("مرجع الموافقة وتاريخها")}<textarea className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-24" maxLength={2000} value={reduceEvidence} onChange={e => setReduceEvidence(e.target.value)} readOnly={reduceMethod === "DONOR_REQUEST"} placeholder={dt("التاريخ، وصف الموافقة، ورقم المحادثة أو مرجع المستند")} />
             </label>
             <p className="text-xs text-slate-500">{dt("لا يمكن تغيير مبلغ اشتراك يقترب موعد خصمه خلال 24 ساعة أو يخضع لمحاولة تحصيل جارية. الإلغاء يظل متاحًا عبر إدارة المؤسسة.")}</p>
             <div className="flex gap-2">
-              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
+              <button type="button" className="bg-brand text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50" disabled={reduceBusy || reduceEligibilityLoading || reduceEligibilityError || !reduceEligibility?.allowed || reduceMethod === "DONOR_REQUEST" && (reduceRequestsLoading || reduceRequestsError || !reduceRequest)} onClick={() => void submitSubscriptionReduction()}>{reduceBusy ? dt("جارٍ الحفظ…") : dt("تأكيد التخفيض")}</button>
               <button type="button" className="bg-gray-100 rounded-lg px-4 py-2 text-sm" disabled={reduceBusy} onClick={() => setReducePlan(null)}>{dt("إغلاق")}</button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
         {/* الاشتراكات  الجدول السفلي */}
-        <section className="space-y-4">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
+        <section id="subscriptions" tabIndex={-1} aria-labelledby="subscriptions-title" className="scroll-mt-28 space-y-4">
+          <h2 id="subscriptions-title" className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-start">
             {dt("الاشتراكات")}</h2>
+          {linkedSubscriptionId && <Link href={subscriptionManagementHref(linkedDonorId)} className="inline-block text-sm text-brand underline">{dt("عرض جميع اشتراكات المتبرع")}</Link>}
+          {activeLinkedRequest && <Link href={`/dashboard/subscription-requests?${new URLSearchParams({ userId: activeLinkedRequest.donorId, subscriptionId: activeLinkedRequest.subscriptionId, requestId: activeLinkedRequest.id })}`} className="ms-4 inline-block text-sm text-brand underline">{dt("فتح طلب المتبرع")}</Link>}
+          {linkedRequestLoading && <p role="status" className="text-sm text-slate-500">{dt("جارٍ التحميل…")}</p>}
+          {linkedRequestError && <p role="alert" className="text-sm text-red-700">{dt("تعذّر تحميل طلبات إدارة التبرع.")}</p>}
+          {activeLinkedRequest && <div id={`linked-request-${activeLinkedRequest.id}`} className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-start text-sm leading-7">
+            <p className="font-semibold">{dt(activeLinkedRequest.kind === "AMOUNT_CHANGE" ? "طلب تغيير المبلغ" : activeLinkedRequest.kind === "PAUSE" ? "طلب الإيقاف مؤقتاً" : "طلب الإلغاء")} {activeLinkedRequest.requestedAmount !== null && <bdi>{activeLinkedRequest.requestedAmount} {activeLinkedRequest.currency}</bdi>} · {dt(activeLinkedRequest.status === "COMPLETED" ? "منفّذ" : activeLinkedRequest.status === "REJECTED" ? "تعذّر تنفيذ الطلب" : activeLinkedRequest.status === "WITHDRAWN" ? "مسحوب من المتبرع" : activeLinkedRequest.status === "IN_PROGRESS" ? "قيد التنفيذ" : "جديد")}</p>
+            <p className="whitespace-pre-wrap break-words">{activeLinkedRequest.note}</p>
+            <p className="text-xs text-slate-500"><bdi>#{activeLinkedRequest.id}</bdi> · {new Date(activeLinkedRequest.createdAt).toLocaleString(dashIntl("ar-EG"), { timeZone: "Europe/Istanbul" })}</p>
+          </div>}
           <Card className="border border-gray-200/60 shadow-md shadow-violet-500/5 overflow-hidden bg-card">
             <CardHeader className="border-b border-brand/20 py-4 bg-brand/4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between flex-row-reverse">
@@ -2443,6 +2612,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                       value={selectedUserId}
                       onValueChange={(v) => {
                         setSelectedUserId(v);
+                        router.push(v === "all" ? "/dashboard/monthly#subscriptions" : subscriptionManagementHref(v));
                         if (v === "all") {
                           setUsersSearchInput("");
                           setUsersSearchCommitted("");
@@ -2512,9 +2682,10 @@ export default function MonthlySubscriptionsDashboardPage() {
                         <SelectItem value="CANCELLED" className="text-xs">
                           {dt("ملغاة")}</SelectItem>
                         <SelectItem value="PAYMENT_FAILED" className="text-xs">
-                          {dt("تعذّر الخصم")}</SelectItem>
+                          {dt("معلق — تعثر التجديد")}</SelectItem>
+                        <SelectItem value="AWAITING_FIRST_PAYMENT" className="text-xs">{dt("محاولات لم تتفعّل")}</SelectItem>
                         <SelectItem value="all" className="text-xs">
-                          {dt("الكل")}</SelectItem>
+                          {dt("الاشتراكات المفعلة سابقًا")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2576,7 +2747,9 @@ export default function MonthlySubscriptionsDashboardPage() {
                       subsRows.map((s) => (
                         <tr
                           key={s.id}
-                          className="border-b border-slate-100 /80 hover:bg-gray-50/50 transition-colors"
+                          id={`subscription-${s.id}`}
+                          tabIndex={-1}
+                          className={cn("scroll-mt-28 border-b border-slate-100 /80 hover:bg-gray-50/50 transition-colors", s.id === linkedSubscriptionId && "bg-brand/5 ring-2 ring-inset ring-brand/30")}
                         >
                           <td className="py-2.5 px-3 align-top">
                             <button
@@ -2595,7 +2768,7 @@ export default function MonthlySubscriptionsDashboardPage() {
                               {formatMoney(s.amount, s.currency, s.amountUSD ?? undefined)}
                             </span>
                             {(s.status === "ACTIVE" || s.status === "PAUSED") && (
-                              <button type="button" className="block mt-1 text-[11px] text-brand underline hover:text-brand/80" onClick={() => { setReducePlan(s); setReduceAmount(""); setReduceEvidence(""); }}>
+                              <button type="button" className="block mt-1 text-[11px] text-brand underline hover:text-brand/80" disabled={linkedRequestLoading} onClick={() => openSubscriptionReduction(s)}>
                                 {dt("تخفيض مبلغ الاشتراك")}</button>
                             )}
                             {/* Daily / Friday plans also show what they add up to in a month. */}
@@ -2620,19 +2793,19 @@ export default function MonthlySubscriptionsDashboardPage() {
                                 <SelectTrigger
                                   className={cn(
                                     "h-7 text-[11px] w-full border-gray-200 bg-white/90 py-0",
-                                    s.status === "ACTIVE" && "text-brand border-brand/20",
+                                    (s.lifecycle || s.status) === "ACTIVE" && "text-brand border-brand/20",
                                     s.status === "PAUSED" && "text-brand-orange border-brand-orange/20",
                                     s.status === "CANCELLED" && "text-slate-700 border-slate-200",
-                                    s.status === "PAYMENT_FAILED" && "text-red-700 border-red-200"
+                                    s.lifecycle === "PAYMENT_FAILED" && "text-red-700 border-red-200"
                                   )}
                                 >
-                                  <SelectValue />
+                                  <span>{dt(SUBSCRIPTION_LIFECYCLE_LABELS[s.lifecycle || s.status])}</span>
                                 </SelectTrigger>
                                 <SelectContent dir={dashDir()}>
                                   {/* Set by the scheduler when the retry ladder is exhausted;
                                       an admin moves it back to نشطة once the card is fixed. */}
                                   <SelectItem value="PAYMENT_FAILED" className="text-xs" disabled>
-                                    {dt("تعذّر الخصم")}</SelectItem>
+                                    {dt("معلق — تعثر التجديد")}</SelectItem>
                                   <SelectItem value="ACTIVE" className="text-xs">
                                     {dt("نشطة")}</SelectItem>
                                   <SelectItem value="PAUSED" className="text-xs">
@@ -2760,7 +2933,7 @@ export default function MonthlySubscriptionsDashboardPage() {
         onOpenChange={setExportOpen}
         endpoint="/api/admin/monthly/export"
         title={dt("تصدير تقرير التبرعات المتكررة")}
-        description={dt("يشمل التقرير الاشتراكات المتكررة (يومي، أسبوعياً، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى.")}
+        description={dt("يشمل التقرير الاشتراكات المتكررة (يومي، كل جمعة، شهري) ودفعاتها مع ملخص كامل وتفصيل لكل حملة من الأعلى إلى الأدنى.")}
         defaults={(() => {
           const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
           return {

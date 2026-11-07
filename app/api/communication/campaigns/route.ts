@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -6,6 +6,10 @@ import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession } from "@/lib/audit-log";
 import { listCampaigns, createCampaign } from "@/lib/communication/campaign-service";
 import { getCampaignOutcomeSummary } from "@/lib/communication/campaign-attribution-service";
+import { getCampaignOutcomeSnapshot } from "@/lib/communication/campaign-outcome-snapshot";
+import { campaignAttributionDiagnostic } from "@/lib/communication/campaign-attribution-diagnostics";
+import { readCampaignDeliveryCounters } from "@/lib/communication/campaign-counter-service";
+import { getCampaignDeliverySnapshot } from "@/lib/communication/campaign-delivery-snapshot";
 import { COMMUNICATION_CHANNELS, COMMUNICATION_PURPOSES } from "@/lib/communication/communication-runtime-types";
 
 export const runtime = "nodejs";
@@ -25,7 +29,8 @@ const sendControlsSchema = z.object({
   speedMode: z.enum(["SAFE", "BALANCED", "FAST", "MAX"]).optional(),
   autoSpeed: z.boolean().optional(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
-  dailyCap: z.number().int().min(1).max(1_000_000).optional(),
+  dailyCap: z.number().int().min(0).max(1_000_000).optional(),
+  dailyCapEnabled: z.boolean().optional(),
   scheduledStopAt: z.string().datetime().nullable().optional(),
   resumeAt: z.string().datetime().nullable().optional(),
   quietHours: z.object({
@@ -68,13 +73,41 @@ export async function GET(request: NextRequest) {
   let campaigns: Awaited<ReturnType<typeof listCampaigns>>;
   try { campaigns = await listCampaigns({ includeArchived }); }
   catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل الحملات" }, { status: 503 }); }
+  if(request.nextUrl.searchParams.get("countersMode")==="poll"){
+    try{
+      const revision=campaigns.map(row=>`${row.id}:${row.updatedAt.toISOString()}`).sort().join(",");
+      const snapshot=getCampaignDeliverySnapshot(campaigns.map(row=>row.id),work=>after(()=>work),revision);
+      if(!snapshot.ready)return NextResponse.json({ok:true,deliveryCountersReady:false});
+      return NextResponse.json({ok:true,deliveryCountersReady:true,computedAt:snapshot.computedAt,counters:Object.fromEntries(snapshot.summary)});
+    }catch{return NextResponse.json({ok:false,error:"تعذّر قراءة سجل الإرسال؛ أعد المحاولة."},{status:503});}
+  }
+  let deliveryCountersReady = request.nextUrl.searchParams.get("includeCounters") !== "false";
+  // Outcome polling only returns financial attribution. The initial/refresh read
+  // gets current delivery evidence once; it must not repeat on every revenue poll.
+  if (request.nextUrl.searchParams.get("outcomesMode") !== "poll" && request.nextUrl.searchParams.get("includeCounters")!=="false") {
+    try {
+      const counters = await readCampaignDeliveryCounters(campaigns.map(campaign => campaign.id));
+      campaigns = campaigns.map(campaign => {
+        const live = counters.get(campaign.id)!;
+        return { ...campaign, sentCount: live.sent, deliveredCount: live.delivered, readCount: live.read, clickedCount: live.clicked, repliedCount: live.replied, failedCount: live.failed };
+      });
+    } catch { deliveryCountersReady = false; }
+  }
   // Show the campaign workflow immediately; lifetime income is an independent read.
   if (request.nextUrl.searchParams.get("includeOutcomes") === "false") {
-    return NextResponse.json({ ok: true, campaigns: campaigns.map(campaign => ({ ...campaign, donationCount: null, revenue: null, unpricedPaidCount: null })), outcomesReady: false });
+    return NextResponse.json({ ok: true, campaigns: campaigns.map(campaign => ({ ...campaign, donationCount: null, revenue: null, unpricedPaidCount: null })), deliveryCountersReady, outcomesReady: false });
   }
   let outcomes: Awaited<ReturnType<typeof getCampaignOutcomeSummary>>;
-  try { outcomes = await getCampaignOutcomeSummary(campaigns.map((campaign) => campaign.id)); }
-  catch { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة." }, { status: 503 }); }
+  let outcomesComputedAt: string | undefined;
+  try {
+    const ids = campaigns.map(campaign => campaign.id);
+    if (request.nextUrl.searchParams.get("outcomesMode") === "poll") {
+      const snapshot = getCampaignOutcomeSnapshot(ids, work => after(() => work));
+      if (!snapshot.ready) return NextResponse.json({ ok: true, outcomesReady: false });
+      outcomes = snapshot.summary; outcomesComputedAt = snapshot.computedAt;
+    } else outcomes = await getCampaignOutcomeSummary(ids);
+  }
+  catch (error) { return NextResponse.json({ ok: false, error: "تعذّر تحميل إسناد الإيرادات؛ أعد المحاولة.", diagnostic: campaignAttributionDiagnostic(error) }, { status: 503 }); }
   const outcomeMetrics = outcomes.metrics;
   const enriched = campaigns.map((campaign) => {
     const outcome = outcomeMetrics.get(campaign.id);
@@ -87,7 +120,7 @@ export async function GET(request: NextRequest) {
       failedDonationCount: outcome?.failedDonationCount ?? 0,
     };
   });
-  return NextResponse.json({ ok: true, campaigns: enriched, unattributed: outcomes.unattributed });
+  return NextResponse.json({ ok: true, outcomesReady: true, outcomesComputedAt, deliveryCountersReady, campaigns: enriched, unattributed: outcomes.unattributed });
 }
 
 export async function POST(request: NextRequest) {
