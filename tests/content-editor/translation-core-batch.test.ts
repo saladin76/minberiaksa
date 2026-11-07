@@ -109,3 +109,22 @@ test("empty rich documents and image-only documents are retained without an AI r
     assert.equal(output.translations.fr.richFields.body, doc);
   });
 });
+
+test("aborted batches report every requested language and never call AI", async () => {
+  const signal = AbortSignal.abort();
+  await withProvider(() => { throw new Error("Provider must not run"); }, async () => {
+    const out = await translateToLocales({ fields: { title: "المشروع" }, signal }, ["en", "tr", "fr"]);
+    assert.deepEqual(Object.keys(out.translations), []);
+    assert.deepEqual(Object.keys(out.errors).sort(), ["en", "fr", "tr"]);
+    assert.match(out.errors.en, /إلغاء/);
+  });
+});
+
+test("untrusted provider exception messages never leak through batch results", async () => {
+  await withProvider(() => new Error("Authorization: secret-token donor@example.org"), async () => {
+    const out = await translateToLocales({ fields: { title: "مشروع" } }, ["en"]);
+    assert.equal(out.translations.en, undefined);
+    assert.ok(out.errors.en);
+    assert.doesNotMatch(JSON.stringify(out), /secret-token|donor@example|Authorization/);
+  });
+});
