@@ -143,12 +143,43 @@ test("project route provides the Gift namespace used by its donation validation"
 type RenderNode = { type?: string; props?: { children?: unknown; src?: string; srcSet?: string; sizes?: string; loading?: string; fetchPriority?: string; alt?: string } };
 test("actual project media delivers responsive resized images, prioritizes the cover and reserves its frame", () => {
   const loaded = { exports: {} as { default: (props: { images: string[]; title: string; imageAlt?: string }) => RenderNode } };
-  const jsx = (type: string, props: RenderNode["props"]) => ({ type, props });
+  // Render the real nested image component, not a hand-written image mock:
+  // otherwise changes to responsive URLs and image priorities would be missed.
+  const jsx = (type: string | ((props: RenderNode["props"]) => RenderNode), props: RenderNode["props"]): RenderNode =>
+    typeof type === "function" ? type(props) : { type, props };
   const imports: Record<string, unknown> = {
-    react: { useRef: () => ({ current: null }), useState: () => [0, () => {}], useEffect: () => {}, useCallback: (fn: unknown) => fn },
-    "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "fragment" }, "next-intl": { useTranslations: () => (key: string) => key },
-    "@/components/minbar/home/TopSections": { ArrowGlyph: "arrow" }, "@/lib/minbar/image-url": { imageUrl, imageSrcSet },
+    react: {
+      useRef: () => ({ current: null }),
+      useState: (initial: unknown) => [initial, () => {}],
+      useEffect: () => {},
+      useCallback: (fn: unknown) => fn,
+      useMemo: (factory: () => unknown) => factory(),
+    },
+    "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "fragment" },
+    "next-intl": { useTranslations: () => (key: string) => key },
+    "@/components/minbar/home/TopSections": { ArrowGlyph: "arrow" },
+    "@/lib/minbar/project-image-fallback": {
+      projectImageAttempts: (sources: readonly (string | null | undefined)[], width: number) => {
+        const attempts: Array<{ src: string; srcSet?: string }> = [];
+        for (const src of sources) {
+          if (!src) continue;
+          const optimized = imageUrl(src, width);
+          if (optimized && optimized !== src) attempts.push({ src: optimized, srcSet: imageSrcSet(src) });
+          attempts.push({ src });
+        }
+        return attempts;
+      },
+    },
   };
+  const imageModule = { exports: {} as { default: (props: RenderNode["props"]) => RenderNode } };
+  const imageSource = ts.transpileModule(fs.readFileSync("components/minbar/projects/ProjectImage.tsx", "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  vm.runInNewContext(imageSource, {
+    module: imageModule, exports: imageModule.exports,
+    require: (name: string) => { assert.ok(name in imports, name); return imports[name]; },
+  });
+  imports["./ProjectImage"] = imageModule.exports;
   const source = ts.transpileModule(fs.readFileSync("components/minbar/projects/ProjectHeroMedia.tsx", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   vm.runInNewContext(source, { module: loaded, exports: loaded.exports, require: (name: string) => { assert.ok(name in imports, name); return imports[name]; } });
   const collect = (value: unknown): RenderNode[] => {
