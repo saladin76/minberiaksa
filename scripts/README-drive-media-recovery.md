@@ -43,3 +43,26 @@ The tool intentionally does not automatically upload `GAZA_WATER`, `QUDS_CITY` o
 5. Apply a dedicated, independently reviewed database migration with idempotency and rollback. **This PR has no such migration and must not be treated as site image repair.**
 
 No payment, recurring charge, donor, messaging, SEO, app deployment, or CMS data is changed by this PR.
+## Four-project recovery migration (review required)
+
+The independent `scripts/apply-reviewed-drive-media.cjs` provides three modes:
+
+- `plan`: compare the 16 verified Cloudinary upload receipts against exact project slugs; verify all media URLs and original dataset fields; write `four-project-recovery-plan.json` with a content hash, **no database writes**.
+- `apply <PLAN_HASH>`: **only after reviewing the full plan and checking photos belong to each project**. Rechecks the current data, validates the exact plan hash, writes a private 0600 backup, then transactionally updates ONLY `Campaign.images`, `Campaign.ogImage`, `CampaignTranslation.image`, `CampaignTranslation.ogImage` for the four exact matches. Keeps existing nonlegacy gallery photos and replaces old Cloudinary links.
+- `rollback <BACKUP_FILE_BASENAME> <BACKUP_HASH>`: restores the previous media fields in a transaction, but refuses any intervening manual changes.
+
+The plan is **not blanket approval**. Since historical photos can be miscategorized, inspect `GAZA_MEALS`, `GAZA_PARCELS`, `GAZA_BREAD`, and `TRAVEL` carefully. No payment, donor, marketing or recurrence fields are changed. The migration has an isolated mock-DB test of plan -> apply -> rollback; **production apply has not been executed**.
+
+### Commands from /root/minberiaksa
+
+```bash
+git fetch --no-tags origin ops/drive-media-recovery-20261107
+git show FETCH_HEAD:scripts/apply-reviewed-drive-media.cjs > /root/minber-media-recovery/apply-reviewed-drive-media.cjs
+node --check /root/minber-media-recovery/apply-reviewed-drive-media.cjs
+node --env-file-if-exists=.env --env-file-if-exists=.env.production --env-file-if-exists=.env.production.local /root/minber-media-recovery/apply-reviewed-drive-media.cjs plan
+```
+
+Only plan is the next safe step. The terminal prints project names, old image counts, new image counts and localized cover/OG image replacement counts. Review this output before considering the apply operation.
+
+Caveat: Existing `updatedAt` values are guarded during apply. Backup is made before the transaction. The rollback checks media fields but not unrelated changes; only use it after verifying no image edits have happened in the interim. The optional `ogImage` changes are constrained to old Cloudinary URLs.
+
