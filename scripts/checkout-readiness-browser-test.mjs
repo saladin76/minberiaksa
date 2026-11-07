@@ -37,7 +37,7 @@ const mocks = {
   "next/navigation": 'export function useParams(){return {locale:new URLSearchParams(location.search).get("lang")||"en"}} export function useRouter(){return {push(url){document.getElementById("navigation").textContent=url}}}',
   "next-auth/react": 'export function useSession(){return {data:new URLSearchParams(location.search).has("signed")?{user:{id:"fixture-user"}}:null}} export function signIn(){}',
   "@/hooks/useQuietFloatingButtons": 'export function useQuietFloatingButtons(){}',
-  "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){return {currency:new URLSearchParams(location.search).get("currency")||"USD"}}',
+  "@/hooks/useMinbarMoney": 'export function useMinbarMoney(){const currency=new URLSearchParams(location.search).get("currency")||"USD";const fmt=value=>currency+" "+Number(value).toFixed(2);return {currency,code:currency,rate:1,symbol:currency==="USD"?"$":currency,format:fmt,formatLocal:fmt,formatNumber:value=>String(value)}}',
   "@/hooks/useDonationAmount": 'export function useDonationAmount(){return {lineTooSmall:()=>false,minLabel:"$1",lineValue:row=>row.amount,inLocal:false}} export function useHealLegacyRows(){}',
   "@/hooks/useReferralCode": 'export function useReferralCode(){return ()=>null}',
   "@/lib/global-settings-client": 'export async function fetchGlobalSettings(){return {mainGateway:"ALBARAKA",payforSaudiRoutingEnabled:new URLSearchParams(location.search).has("saudi"),payforEnabled:new URLSearchParams(location.search).has("payfor"),albarakaUseOOS:new URLSearchParams(location.search).has("oos"),albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}} export function getCachedGlobalSettings(){return {mainGateway:"ALBARAKA",payforSaudiRoutingEnabled:new URLSearchParams(location.search).has("saudi"),payforEnabled:new URLSearchParams(location.search).has("payfor"),albarakaUseOOS:new URLSearchParams(location.search).has("oos"),albarakaConfigured:true,albarakaRecurringReady:true,teamSupportEnabled:false}}',
@@ -79,6 +79,7 @@ try {
      requests.push({path:url.pathname,body:req.postDataJSON()});
      if(url.pathname==="/api/cart/payment") return route.fulfill({json:{donation:{id:"600000000000000000000002",accessToken:"a".repeat(48)}}});
      if(url.pathname==="/api/albaraka/3d/initiate") return route.fulfill({json:{actionUrl:"https://bank.invalid/authorize",fields:{fixture:"signed-fields"}}});
+      if(url.pathname==="/api/albaraka/2d/result") return route.fulfill({contentType:"text/html",body:"Fixture result"});
      throw new Error("Unexpected API: "+url.pathname);
     }
     return route.continue();
@@ -192,6 +193,7 @@ try {
    if(url.pathname==="/api/users/me/phone")return route.fulfill({json:{ok:true}});
    if(url.pathname==="/api/cart/payment")return route.fulfill({json:{donation:{id:"600000000000000000000002",accessToken:"a".repeat(48)}}});
    if(url.pathname==="/api/albaraka/3d/initiate")return route.fulfill({json:{actionUrl:"https://bank.invalid/authorize",fields:{fixture:"signed-fields"}}});
+   if(url.pathname==="/api/albaraka/2d/result")return route.fulfill({contentType:"text/html",body:"Fixture result"});
    throw new Error("Unexpected API "+url.pathname);
   });
   await page.addInitScript(()=>{window.fixtureSubmissions=[];HTMLFormElement.prototype.submit=function(){window.fixtureSubmissions.push({action:this.action,fields:Object.fromEntries(new FormData(this))})}});

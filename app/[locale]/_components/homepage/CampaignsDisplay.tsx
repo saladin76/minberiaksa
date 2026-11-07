@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { publicCampaignImage } from "@/lib/minbar/project-image-fallback";
 import { useCurrency } from "@/context/CurrencyContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -160,7 +161,7 @@ const CampaignCard = ({ campaign, isMain = false, index = 0 }) => {
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 to-transparent z-[1]" />
               
               <img
-                src={campaign.images[0]}
+                src={publicCampaignImage(campaign.images)}
                 alt={campaign.title}
                 className={`w-full h-full object-cover transition-all duration-700 ${
                   isMain 
