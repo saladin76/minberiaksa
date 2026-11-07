@@ -93,8 +93,13 @@ export function redirectLegacyPath(pathname: string): string | null {
   // path, issuing a single permanent redirect rather than a soft 404.
   // Do not treat arbitrary two-letter content slugs as locales.
   if ((SUPPORTED_LOCALES as readonly string[]).includes(decoded[0]) && decoded.length > 1) {
-    const destination = `/${[locale, ...segments.slice(1)].join("/")}`;
-    return destination === pathname ? null : destination;
+    // Strip all redundant language prefixes in one hop. Then resolve a
+    // legacy page head in the same response, so /ar/en/المشاريع/x does not
+    // take two 301s (and keep redirect chains out of search results).
+    let start = 0;
+    while (start < segments.length - 1 && (SUPPORTED_LOCALES as readonly string[]).includes(decoded[start])) start++;
+    const destination = `/${[locale, ...segments.slice(start)].join("/")}`;
+    return redirectLegacyPath(destination) || destination;
   }
 
   if (locale === "ar") {
