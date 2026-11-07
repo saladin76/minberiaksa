@@ -25,6 +25,9 @@ test("Tiptap shape and image/link metadata remain intact", () => {
   heading.content[0].text = "Heading";
   paragraph.content[0].text = "Help 15 families";
   assert.deepEqual(localizationQualityIssues("body", JSON.stringify(document), JSON.stringify(translated), "en"), []);
+  // Images can have translated alt text without being treated as structural changes.
+  (translated.content[2] as { attrs: { alt: string } }).attrs.alt = "A family receiving support";
+  assert.deepEqual(localizationQualityIssues("body", JSON.stringify(document), JSON.stringify(translated), "en"), []);
   paragraph.content[0].marks[0].attrs.href = "https://other.example";
   assert.ok(localizationQualityIssues("body", JSON.stringify(document), JSON.stringify(translated), "en").some(issue => issue.code === "STRUCTURE_CHANGED"));
 });
