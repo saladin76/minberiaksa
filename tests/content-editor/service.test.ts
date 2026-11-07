@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import { changeEditorialSlugs } from "../../lib/content-editor/bulk-slugs";
 import assert from "node:assert/strict";
+import { SUPPORTED_LOCALES } from "../../lib/locales";
 import {
   CONFIG,
   fieldsFor,
@@ -879,4 +880,59 @@ test('bulk final readback loss rolls back every language and a stale version wri
   const stale = memory('blog', initial);
   await assert.rejects(saveWorkspace(stale.store, { kind: 'blog', id, locale: 'ar', revision: 'stale', changes: { title: 'Changed' } }), { status: 409 });
   assert.equal(stale.counts().parentWrites, 0); assert.equal(stale.counts().translationWrites, 0);
+});
+
+test("all 19 languages through one workspace transaction round-trip without overwriting saved SEO", async () => {
+  assert.equal(SUPPORTED_LOCALES.length, 19);
+  const initial = article();
+  const db = memory("blog", initial);
+  const languageChanges = Object.fromEntries(SUPPORTED_LOCALES.map(locale => [
+    locale,
+    {
+      title: locale === "ar" ? "مقال مراجعة عربي" : `Reviewed article ${locale}`,
+      description: locale === "ar" ? "وصف عربي مراجع" : `Reviewed summary ${locale}`,
+      content: rich(`Reviewed article body ${locale}`),
+      metaTitle: locale === "ar" ? "عنوان البحث العربي" : `SEO title ${locale}`,
+      metaDescription: locale === "ar" ? "وصف البحث العربي" : `SEO description for article ${locale}`,
+    },
+  ]));
+  const saved = await saveWorkspace(db.store, {
+    kind: "blog", id, revision: fingerprint(initial), locale: "ar",
+    changes: languageChanges.ar,
+    localeChanges: Object.fromEntries(Object.entries(languageChanges).filter(([locale]) => locale !== "ar")),
+  });
+  assert.deepEqual(db.counts(), { parentReads: 2, parentWrites: 1, translationWrites: 18 });
+  const reread = documentFor("blog", db.read());
+  for (const locale of SUPPORTED_LOCALES) {
+    const expected = languageChanges[locale];
+    for (const [field, value] of Object.entries(expected)) {
+      assert.equal(saved.values[locale][field], value, `Save All ${locale}.${field}`);
+      assert.equal(reread.values[locale][field], value, `Readback ${locale}.${field}`);
+    }
+    assert.equal(reread.statuses[locale].complete, true, `Missing published body in ${locale}`);
+  }
+  assert.equal(db.read().slug, initial.slug, "Arabic URL remains stable");
+  assert.equal((db.read().translations as ContentRecord[]).length, 18);
+  const snapshot = db.read();
+  await assert.rejects(
+    saveWorkspace(db.store, {
+      kind: "blog", id, revision: fingerprint(initial), locale: "ar",
+      changes: { title: "Stale change" },
+    }),
+    { status: 409 },
+  );
+  assert.deepEqual(db.read(), snapshot, "Stale save must leave all 19 language values intact");
+});
+
+test("invalid nineteenth-locale metadata rolls back all preceding Save All changes", async () => {
+  const initial = article(), db = memory("blog", initial);
+  const proposed = Object.fromEntries(SUPPORTED_LOCALES.filter(code => code !== "ar").map(code => [
+    code, { title: `Valid title ${code}`, metaTitle: `Valid SEO title ${code}` },
+  ]));
+  proposed.hi.metaTitle = "x".repeat(90);
+  await assert.rejects(saveWorkspace(db.store, {
+    kind: "blog", id, revision: fingerprint(initial), locale: "ar",
+    changes: { title: "عنوان عربي معدل" }, localeChanges: proposed,
+  }));
+  assert.deepEqual(db.read(), initial, "Late validation failure must roll back every locale");
 });
