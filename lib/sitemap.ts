@@ -230,7 +230,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
        page is already in the static shard. */
     const rows = await prisma.category.findMany({
       where: CATEGORY_SITEMAP_WHERE,
-      select: { id: true, slug: true, name: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, name: true, seoNoIndex: true } } },
+      select: { id: true, slug: true, name: true, description: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, name: true, description: true, seoNoIndex: true } } },
       orderBy: { id: "asc" },
       skip,
       take: SHARD_SIZE,
@@ -240,7 +240,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
       const availableLocales = Array.from(new Set([
         ...(c.seoNoIndex === "true" || (c.name !== undefined && !hasText(c.name)) ? [] : ["ar"]),
         ...c.translations
-          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.name))
+          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.name) && (!hasText(c.description) || hasText(translation.description)))
           .map((translation) => translation.locale),
       ]));
       const alternates = entityAlternates("/category", c.slug, c.translations, c.id, availableLocales);
