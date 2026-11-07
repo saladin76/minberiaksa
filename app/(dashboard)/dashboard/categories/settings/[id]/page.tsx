@@ -211,13 +211,20 @@ export default function EditCategoryPage() {
       // Verify the server saved every submitted language field before reporting
       // success. This catches silently dropped page copy in legacy editors.
       const readback = await axios.get(`/api/categories/${params.id}?allTranslations=true`, { params: { _: Date.now() } });
-      const storedRows = Array.isArray(readback.data?.translations) ? readback.data.translations : [];
+      if (!Array.isArray(readback.data?.translations)) throw new Error(dt("تعذر قراءة الترجمات المحفوظة للتحقق من عملية الحفظ."));
+      const storedRows = readback.data.translations;
       for (const [code, row] of Object.entries(localeData)) {
-        if (!row.name?.trim()) continue;
         const stored = storedRows.find((item: { locale?: string }) => item.locale === code) as Record<string, unknown> | undefined;
+        // The legacy category API ignores fully empty translation rows.
+        // A stale translation must not be reported as deleted.
+        if (!row.name?.trim()) {
+          if (stored) throw new Error(dt("اللغة {0} ما زالت محفوظة على الخادم. لا يُسمح باعتبار تفريغها حذفًا ناجحًا.", [code.toUpperCase()]));
+          continue;
+        }
+        if (!stored) throw new Error(dt("اللغة {0} غير موجودة بعد الحفظ.", [code.toUpperCase()]));
         for (const field of LOCALE_FIELDS) {
           const expected = (row[field.name] ?? '').trim();
-          if (expected && String(stored?.[field.name] ?? '').trim() !== expected)
+          if (String(stored[field.name] ?? '').trim() !== expected)
             throw new Error(dt("تعذر تأكيد حفظ {0} للغة {1}. احتفظ بتعديلاتك وراجع البيانات.", [field.label, code.toUpperCase()]));
         }
       }
