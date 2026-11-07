@@ -19,6 +19,8 @@ import * as z from 'zod';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
 import { dt } from "@/lib/dashboard/i18n";
+import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
+import { reviewSlideTranslations, slidePersistenceIssues } from "../../_components/translation-review";
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
   { name: 'title', get label() { return dt("العنوان"); } },
@@ -49,6 +51,7 @@ export default function EditSlidePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -82,10 +85,28 @@ export default function EditSlidePage() {
       .finally(() => setLoading(false));
   }, [params.id, router, form]);
 
+  const review = reviewSlideTranslations(form.watch(), TRANSLATION_LOCALES);
+  useDashboardUnsavedChanges(form.formState.isDirty);
+
   const onSubmit = async (values: FormValues) => {
+    const audit = reviewSlideTranslations(values, TRANSLATION_LOCALES);
+    if (audit.incomplete.length) {
+      const first = audit.incomplete[0];
+      form.setError(localeKey('title', first), { type: 'manual', message: dt('العنوان مطلوب عند كتابة أي حقل في هذه اللغة') });
+      toast.error(dt('توجد لغات فيها وصف أو زر بلا عنوان: {0}', [audit.incomplete.join(', ')]));
+      return;
+    }
+    if (values.isActive && !reviewed) {
+      toast.error(dt('راجع الترجمات والمحتوى قبل تفعيل الشريحة'));
+      return;
+    }
+    if (uploadingImage) {
+      toast.error(dt('انتظر اكتمال رفع الصورة قبل الحفظ'));
+      return;
+    }
     setSaving(true);
     try {
-      await axios.put(`/api/slides/${params.id}`, {
+      await axios.put('/api/slides/' + params.id, {
         title: values.title,
         description: values.description,
         image: values.image,
@@ -95,10 +116,17 @@ export default function EditSlidePage() {
         isActive: values.isActive,
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
-      toast.success(dt("تم التحديث"));
+      const persisted = await axios.get('/api/slides/' + params.id + '?allTranslations=true');
+      const issues = slidePersistenceIssues(values, persisted.data, TRANSLATION_LOCALES);
+      if (issues.length) {
+        toast.error(dt('تم إرسال الحفظ لكن بعض الحقول لم تطابق النسخة المحفوظة: {0}', [issues.join(', ')]));
+        return;
+      }
+      form.reset(values);
+      toast.success(dt('تم حفظ الشريحة والتحقق من الترجمات المحفوظة'));
       router.push('/dashboard/slides');
     } catch (e) {
-      toast.error(errorMessage(e, dt("فشل التحديث")));
+      toast.error(errorMessage(e, dt('تعذّر حفظ التعديل أو التحقق من النسخة المحفوظة')));
     } finally {
       setSaving(false);
     }
@@ -138,6 +166,16 @@ export default function EditSlidePage() {
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card className="p-4 space-y-2" dir="rtl" role="status">
+            <p className="font-semibold">{dt('مراجعة ترجمة الشريحة قبل الحفظ')}</p>
+            <p className="text-sm text-muted-foreground">{dt('لغات لها عنوان: {0} من {1}، لغات بدون ترجمة: {2}', [review.complete.length, TRANSLATION_LOCALES.length, review.missing.length])}</p>
+            {review.incomplete.length > 0 && <p className="text-sm text-red-700">{dt('عنوان مفقود في: {0}', [review.incomplete.join(', ')])}</p>}
+            <p className="text-xs text-muted-foreground">{dt('اللغات الفارغة تستعمل النص الافتراضي؛ لا يمكن الاحتفاظ بوصف أو زر بلا عنوان. الصورة مشتركة لكل اللغات وفق نموذج البيانات الحالي.')}</p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />
+              {dt('راجعت النصوص والروابط والصورة قبل تفعيل الشريحة')}
+            </label>
+          </Card>
           <LocaleFormTabs
             form={form}
             fields={LOCALE_FIELDS}
@@ -154,7 +192,7 @@ export default function EditSlidePage() {
           <Card className="p-6 space-y-4">
             <FormField control={form.control} name="image" render={({ field }) => (
               <FormItem>
-                <FormLabel>{dt("الصورة")}</FormLabel>
+                <FormLabel>{dt("الصورة المشتركة لجميع اللغات")}</FormLabel>
                 <FormControl>
                   <div className="space-y-2">
                     {field.value ? (
@@ -175,7 +213,7 @@ export default function EditSlidePage() {
           </Card>
           <div className="flex gap-4">
             <Button type="button" variant="outline" onClick={() => router.push('/dashboard/slides')}>{dt("إلغاء")}</Button>
-            <Button type="submit" disabled={saving}>{saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />} {dt(" حفظ")}</Button>
+            <Button type="submit" disabled={saving || uploadingImage}>{saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />} {dt(" حفظ")}</Button>
           </div>
         </form>
       </Form>
