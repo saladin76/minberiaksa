@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { selectProjectImages, projectImageAttempts } from "../../lib/minbar/project-image-fallback";
+import { selectProjectImages, projectImageAttempts, publicCampaignImage, publicCampaignImages, PUBLIC_CAMPAIGN_IMAGE_PLACEHOLDER } from "../../lib/minbar/project-image-fallback";
 
 test("localized cover keeps the campaign's original cover as a fallback", () => {
   const media = selectProjectImages("https://example.com/tr-cover.jpg", [
@@ -62,4 +62,21 @@ test("all retired photos render an empty-media state without mutating CMS URLs",
     cover: null, images: [], coverFallbacks: [],
   });
   assert.deepEqual(originals, [old]);
+});
+
+
+test("legacy campaign cards, cart thumbnails and share previews choose the first usable same-campaign image", () => {
+  const old = "https://res.cloudinary.com/z9drzccl/image/upload/v1/lost.jpg";
+  const saved = "https://res.cloudinary.com/replacement/image/upload/v2/actual.jpg";
+  const urls = [old, saved, saved];
+  assert.deepEqual(publicCampaignImages(urls), [saved]);
+  assert.equal(publicCampaignImage(urls), saved);
+  assert.deepEqual(urls, [old, saved, saved]);
+});
+
+test("legacy campaigns with no recoverable image use only the neutral local institution mark", () => {
+  const old = "https://res.cloudinary.com/z9drzccl/image/upload/v1/lost.jpg";
+  assert.deepEqual(publicCampaignImages([old]), []);
+  assert.equal(publicCampaignImage([old]), PUBLIC_CAMPAIGN_IMAGE_PLACEHOLDER);
+  assert.equal(publicCampaignImage([]), "/minbar/assets/logo-mark.png");
 });
