@@ -466,7 +466,15 @@ export async function translateToLocales(
       } catch (error) {
         const code = error instanceof OpenAiResponseError ? error.code : null;
         const aborted = input.signal?.aborted || (error instanceof Error && error.name === "AbortError");
-        errors[locale] = code ?? (aborted ? "تم إلغاء طلب الترجمة." : error instanceof Error ? error.message : "تعذّرت الترجمة.");
+        // Provider/network exception text may contain credentials, URLs or
+        // source content. Return only stable codes or safe local messages.
+        const safeLocalError =
+          error instanceof Error && /RELIGIOUS_LOCKED/.test(error.message)
+            ? "النص الديني المحمي يتطلب مراجعة بشرية ولا يُترجم آليًا."
+            : error instanceof Error && /النص العربي الأصلي/.test(error.message)
+              ? "استخدم النص العربي الأصلي مصدرًا للترجمة."
+              : "تعذّرت ترجمة هذه اللغة. راجع إعدادات المزود أو أعد المحاولة.";
+        errors[locale] = code ?? (aborted ? "تم إلغاء طلب الترجمة." : safeLocalError);
         if (code && SHARED_PROVIDER_ERRORS.has(code)) sharedFailure = code;
       }
     }
