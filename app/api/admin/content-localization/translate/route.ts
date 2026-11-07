@@ -36,8 +36,8 @@ const CONTENT_PERMISSIONS: DashboardPermissionKey[] = [
 ];
 
 const bodySchema = z.object({
-  fields: z.record(z.string(), z.string().max(20000)).default({}),
-  richFields: z.record(z.string(), z.string().max(200000)).default({}),
+  fields: z.record(z.string(), z.string().max(12000)).refine((fields) => Object.keys(fields).length <= 50, "Too many plain fields").default({}),
+  richFields: z.record(z.string(), z.string().max(200000)).refine((fields) => Object.keys(fields).length <= 20, "Too many rich fields").default({}),
   locales: z.array(z.string()).max(SUPPORTED_LOCALES.length).optional(),
   itemLabel: z.string().max(80).optional(),
   sourceLocale: z.literal("ar").optional(),
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
   }
   const { fields, richFields, locales, itemLabel, sourceLocale, policy } = parsed.data;
 
+  if (locales?.length === 0) return NextResponse.json({ error: "اختر لغة واحدة على الأقل للترجمة" }, { status: 400 });
   const hasContent =
     Object.values(fields).some((v) => v.trim()) || Object.values(richFields).some((v) => v.trim());
   if (!hasContent) {
@@ -64,9 +65,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // A batch spanning 18 locales must not continue consuming provider quota
+    // after the user has navigated away or the request deadline has passed.
+    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(110000)]);
     const result = await translateToLocales(
-      { fields, richFields, itemLabel, sourceLocale, policy },
-      locales?.length ? locales : TRANSLATION_TARGET_LOCALES
+      { fields, richFields, itemLabel, sourceLocale, policy, signal },
+      locales === undefined ? TRANSLATION_TARGET_LOCALES : locales
     );
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
