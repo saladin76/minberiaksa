@@ -84,7 +84,10 @@ export function TranslationOverview({
     (row) => row.statuses[language]?.complete,
   ).length;
   const reviewed = visible.filter(
-    (row) => row.statuses[language]?.reviewed,
+    (row) => row.statuses[language]?.complete && row.statuses[language]?.reviewed,
+  ).length;
+  const needsReview = visible.filter(
+    (row) => row.statuses[language]?.complete && !row.statuses[language]?.reviewed,
   ).length;
   const seo = visible.filter(
     (row) => row.statuses[language]?.seoComplete,
@@ -143,11 +146,12 @@ export function TranslationOverview({
         <p role="status">{dt("تحميل الإحصاءات…")}</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {[
               [dt("مكتمل"), complete],
               [dt("يحتاج ترجمة"), visible.length - complete],
-              [dt("راجعه الفريق"), reviewed],
+              [dt("بحاجة للمراجعة"), needsReview],
+              [dt("راجعها الفريق"), reviewed],
               [
                 kind === "urgent-banners" ? dt("وصف الصورة مكتمل") : dt("SEO مكتمل"),
                 seo,
@@ -200,9 +204,11 @@ export function TranslationOverview({
                           : dt("ناقص ({0})", [row.statuses[language]?.missing.length || 0])}
                       </td>
                       <td>
-                        {row.statuses[language]?.reviewed
-                          ? dt("مراجع")
-                          : dt("بحاجة للمراجعة")}
+                        {!row.statuses[language]?.complete
+                          ? dt("الترجمة غير مكتملة")
+                          : row.statuses[language]?.reviewed
+                            ? dt("مراجع")
+                            : dt("بحاجة للمراجعة")}
                       </td>
                     </tr>
                   ))}

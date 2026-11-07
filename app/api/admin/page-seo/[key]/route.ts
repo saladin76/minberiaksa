@@ -66,7 +66,8 @@ async function suggestWithSession(request: NextRequest, ctx: Context, authorized
       analyticsEvidence = ga4SeoEvidence(data.report, period, `/${body.locale}${managedPagePath(key, body.locale)}`);
     }
 
-    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: values.metaDescription + "\n" + seoSourceText(source.context), market: typeof body.market === "string" ? body.market : undefined }, request.signal);
+    const sourceText = values.metaDescription + "\n" + seoSourceText(source.context);
+    const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: sourceText, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
     return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
 }

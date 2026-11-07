@@ -1,5 +1,6 @@
 "use client";
 import { clipSeoDescription } from "@/lib/seo-description";
+import { reviewSeoDraft } from "@/app/api/admin/seo/seo-dashboard-quality";
 import { dt } from "@/lib/dashboard/i18n";
 import { useState, useEffect, type ReactNode } from "react";
 import { contentFieldLimit, type ContentField, type TextValues } from "@/lib/content-editor/contracts";
@@ -35,10 +36,16 @@ export function SeoWorkspace({
     return () => cancelAnimationFrame(frame);
   }, [focusField, locale, tab]);
   let faq: Faq[] = [];
+  let faqInvalid = false;
   try {
-    faq = JSON.parse(values.faqContent || "[]");
+    const parsed: unknown = JSON.parse(values.faqContent || "[]");
+    if (!Array.isArray(parsed) || parsed.some((item) => !item || typeof item !== "object" || typeof item.q !== "string" || typeof item.a !== "string")) {
+      faqInvalid = true;
+    } else {
+      faq = parsed as Faq[];
+    }
   } catch {
-    /* show a recoverable empty draft */
+    faqInvalid = true;
   }
   const title =
       values.seoTitle || values.metaTitle || values.title || values.name || "",
@@ -47,6 +54,7 @@ export function SeoWorkspace({
   const descriptionLimit = locale === "ja" || locale === "zh" ? 90 : 160;
   const writeFaq = (next: Faq[]) =>
     onChange("faqContent", JSON.stringify(next));
+  const issues = reviewSeoDraft({ locale, contentTitle: values.title || values.name, seoTitle: title, metaDescription: description, seoKeyword: values.seoKeyword, ogTitle: values.ogTitle, ogDescription: values.ogDescription, ogImage: values.ogImage, imageAlt: values.imageAlt, seoNoIndex: values.seoNoIndex, faqContent: values.faqContent });
   const checks = [
     [dt("عنوان البحث"), Boolean(values.seoTitle || values.metaTitle)],
     [dt("وصف البحث"), Boolean(description)],
@@ -65,6 +73,7 @@ export function SeoWorkspace({
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><strong>{dt("جاهزية بيانات البحث")}</strong><span>{checks.filter(([, passed]) => passed).length} / {checks.length}</span></div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" role="progressbar" aria-valuemin={0} aria-valuemax={checks.length} aria-valuenow={checks.filter(([, passed]) => passed).length} aria-label={dt("جاهزية بيانات البحث")}><div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${checks.filter(([, passed]) => passed).length / checks.length * 100}%` }} /></div>
         <p className="mt-2 text-xs leading-6 text-slate-600">{dt("أكمل العنوان والوصف ثم راجع المعاينة لكل لغة. هذه فحوص تحريرية وليست ضمانًا للترتيب في Google.")}</p>
+        {issues.length ? <ul role="list" className="mt-3 space-y-1 text-sm">{issues.map((issue) => <li key={`${issue.code}-${issue.field}`} className={issue.severity === "error" ? "text-red-800" : "text-amber-800"}>• {issue.message}</li>)}</ul> : <p role="status" className="mt-2 text-sm text-emerald-800">{dt("لا توجد ملاحظات تحريرية آلية لهذه اللغة.")}</p>}
       </section>
       <nav
         aria-label={dt("أقسام SEO")}
@@ -134,6 +143,7 @@ export function SeoWorkspace({
               <button
                 type="button"
                 className="rounded border px-3 py-2 text-sm"
+                disabled={faqInvalid}
                 onClick={() => writeFaq([...faq, { q: "", a: "" }])}
               >
                 {dt("إضافة سؤال")}
@@ -142,6 +152,7 @@ export function SeoWorkspace({
             <p className="text-xs leading-6 text-slate-500">
               {dt("تُعرض الأسئلة المحفوظة في الصفحة، وتطابقها البيانات المنظمة. راجع الحقائق قبل الحفظ.")}
             </p>
+            {faqInvalid ? <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3"><p role="alert" className="text-sm text-red-800">{dt("تنسيق الأسئلة الشائعة المحفوظ غير صالح. لن نحذف النص أو نستبدله تلقائيًا؛ أصلحه هنا قبل المتابعة.")}</p><textarea className="min-h-32 w-full rounded border p-3 font-mono text-sm" aria-label={dt("إصلاح بيانات FAQ الأصلية")} value={values.faqContent || ""} onChange={(event) => onChange("faqContent", event.target.value)} /></div> : null}
             {faq.map((item, i) => (
               <fieldset key={i} className="space-y-2 rounded-lg border p-3">
                 <label className="block text-sm">
@@ -237,6 +248,7 @@ export function SeoWorkspace({
           <p className="text-sm text-slate-500">
             {dt("اكتمال الحقول لا يضمن ترتيبًا في محركات البحث. راجع النص والمصادر.")}
           </p>
+          {issues.map((issue) => <p key={`${issue.code}-${issue.field}`} role={issue.severity === "error" ? "alert" : "status"} className={issue.severity === "error" ? "text-sm text-red-800" : "text-sm text-amber-800"}>{issue.message}</p>)}
           {checks.map(([label, ok]) => (
             <div key={label} className="flex justify-between border-b py-3">
               <span>{label}</span>
