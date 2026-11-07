@@ -682,7 +682,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               ? dt("جار رفع الصور…")
               : busy === "save"
                 ? dt("جار الحفظ…")
-                : !dirty && savedAt ? dt("تم الحفظ") : dt("حفظ جميع اللغات")}
+                : !dirty && savedAt ? dt("تم الحفظ") : dt("حفظ التغييرات")}
           </button>
         </div>
       </header>
