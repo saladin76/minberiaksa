@@ -43,3 +43,35 @@ test("Arabic, Thai, Myanmar and fullwidth digit blocks are normalized for immuta
 test("French narrow no-break grouping retains the integer value", () => {
   assert.deepEqual(missingProtectedTokens("تبرع 1,000 USD", "Donation 1\u202f000 USD"), []);
 });
+
+
+test("numeric QA distinguishes decimal changes, signs and percentages", () => {
+  for (const [source, invalid] of [
+    ["15 USD", "1.5 USD"],
+    ["0.125 USD", "125 USD"],
+    ["50%", "50"],
+    ["%50", "60%"],
+    ["-10 USD", "+10 USD"],
+    ["15.75 USD", "15.57 USD"],
+  ]) {
+    assert.notDeepEqual(missingProtectedTokens(source, invalid), [], source + " -> " + invalid);
+  }
+});
+
+test("locale numeric forms preserve true values and percentage order", () => {
+  for (const [source, equivalent] of [
+    ["50%", "%٥٠"],
+    ["1,234.50 USD", "1.234,50 USD"],
+    ["1.000 USD", "1 000 USD"],
+    ["0.125 USD", "0,125 USD"],
+    ["15.50 USD", "15,5 USD"],
+    ["20,00 USD", "20 USD"],
+  ]) {
+    assert.deepEqual(missingProtectedTokens(source, equivalent), [], source + " -> " + equivalent);
+  }
+});
+
+test("non-bracketed fixed religious symbols are protected", () => {
+  assert.deepEqual(missingProtectedTokens("﷽ مشروع", "﷽ Project"), []);
+  assert.notDeepEqual(missingProtectedTokens("﷽ مشروع", "Project"), []);
+});
