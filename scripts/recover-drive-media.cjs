@@ -12,6 +12,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const {createRequire} = require('node:module');
+// The script is extracted to /root/minber-media-recovery, outside the app.
+// Resolve installed dependencies from the repository, never from the script location.
+const projectRoot = process.cwd();
+if (!fs.existsSync(path.join(projectRoot, 'lib/minbar/content/media.ts')) ||
+    !fs.existsSync(path.join(projectRoot, 'package.json'))) {
+  throw Error('RUN_FROM_PROJECT_ROOT: cd /root/minberiaksa');
+}
+const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
 const root = process.env.MINBER_RECOVERY_DIR || '/root/minber-media-recovery/from-drive';
 const allowedGroups = new Set(['GAZA_MEALS','GAZA_PARCELS','GAZA_BREAD','TRAVEL']);
 const groupNames = ['GAZA_MEALS','GAZA_WATER','GAZA_PARCELS','GAZA_BREAD','QUDS_IFTAR','QUDS_CITY','TRAVEL'];
@@ -71,7 +80,7 @@ async function checkPublicImage(url,cloudName) {
   if(!response.ok||!type.startsWith('image/'))throw Error('DELIVERY_HTTP_'+response.status);
 }
 async function audit(assets) {
-  const {PrismaClient}=require('@prisma/client');
+  const {PrismaClient}=projectRequire('@prisma/client');
   const prisma=new PrismaClient();
   let rows;
   try { rows=await prisma.campaign.findMany({where:{isActive:true},select:{id:true,title:true,slug:true,images:true,translations:{select:{slug:true,image:true,locale:true}}}}); }
@@ -108,7 +117,7 @@ async function audit(assets) {
 async function upload(assets, groups) {
   const name=process.env.CLOUDINARY_CLOUD_NAME;
   if(!name||name==='z9drzccl'||!process.env.CLOUDINARY_API_KEY||!process.env.CLOUDINARY_API_SECRET)throw Error('NEW_CLOUDINARY_NOT_CONFIGURED');
-  const cloud=require('cloudinary').v2;
+  const cloud=projectRequire('cloudinary').v2;
   cloud.config({cloud_name:name,api_key:process.env.CLOUDINARY_API_KEY,api_secret:process.env.CLOUDINARY_API_SECRET,secure:true});
   await cloud.api.ping();
   const directory=path.join(root,'cloudinary-receipts');
