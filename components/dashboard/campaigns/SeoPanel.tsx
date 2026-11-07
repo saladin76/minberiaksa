@@ -5,6 +5,7 @@ import { Loader2, Save, Search, Share2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { LOCALES, SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/locales";
 import { reviewSeoDraft } from "@/app/api/admin/seo/seo-dashboard-quality";
+import { publicCampaignImage } from "@/lib/minbar/project-image-fallback";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,7 +75,7 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
     locale, contentTitle: document?.contentTitle, seoTitle: fields.seoTitle,
     metaDescription: fields.seoDescription, seoKeyword: fields.seoKeyword,
     ogTitle: fields.ogTitle, ogDescription: fields.ogDescription,
-    ogImage: fields.ogImage || document?.defaultImage || "",
+    ogImage: publicCampaignImage([fields.ogImage, document?.defaultImage]),
     imageAlt: fields.imageAlt, seoNoIndex: fields.seoNoIndex, faqContent: fields.faqContent,
   });
   const blocking = issues.some((issue) => issue.severity === "error");
@@ -148,7 +149,8 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
   const description = fields.seoDescription || document?.contentDescription || document?.defaultSeo.seoDescription || "";
   const ogTitle = fields.ogTitle || title;
   const ogDescription = fields.ogDescription || description;
-  const ogImage = fields.ogImage || document?.defaultImage || "";
+  // Preview only: never overwrite the stored OG source with a substitute image.
+  const ogImage = publicCampaignImage([fields.ogImage, document?.defaultImage]);
   return <Card className="space-y-5 p-5" dir={dashDir()}>
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div>
