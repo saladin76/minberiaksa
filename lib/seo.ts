@@ -72,7 +72,7 @@ export const LOCALE_SEO: Record<Locale, LocaleSEO> = MINBAR_LOCALE_SEO;
 
 /**
  * Canonical paths never include a language prefix or tracking parameters.
- * Guard even if a caller accidentally supplies /en/blog or /ar?utm_*. 
+ * Guard even if a caller accidentally supplies /en/blog or /ar?utm_*.
  */
 function normalizePublicSeoPath(path: string): string {
   const clean = `/${path.replace(/^\/+/, "")}`.split(/[?#]/, 1)[0].replace(/\/+$/, "");
