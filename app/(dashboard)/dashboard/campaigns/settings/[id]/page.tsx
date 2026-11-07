@@ -282,8 +282,13 @@ export default function EditCampaignPage() {
   const [descriptionAr, setDescriptionAr] = useState<string | null>(null);
   /* Tiptap JSON per translation locale; Arabic stays in its own state above. */
   const [descriptions, setDescriptions] = useState<Record<string, string | null>>({});
-  const setDescription = (locale: TranslationLocale, json: string | null) =>
-    setDescriptions((prev) => ({ ...prev, [locale]: json }));
+  // Translation requests may finish after editors changed; always check live rich drafts.
+  const descriptionsRef = useRef(descriptions);
+  descriptionsRef.current = descriptions;
+  const setDescription = (locale: TranslationLocale, json: string | null) => {
+    descriptionsRef.current = { ...descriptionsRef.current, [locale]: json };
+    setDescriptions(descriptionsRef.current);
+  };
   /* Bumped after a bulk machine translation so the uncontrolled editors remount. */
   const [editorVersion, setEditorVersion] = useState(0);
 
@@ -916,12 +921,15 @@ export default function EditCampaignPage() {
       if (t.fields.title && (overwrite || !String(form.getValues(key) ?? '').trim())) {
         form.setValue(key, t.fields.title, { shouldDirty: true });
       }
-      if (t.richFields.description && (overwrite || isDescEmpty(descriptions[locale] ?? null))) {
-        setDescriptions((prev) => ({ ...prev, [locale]: t.richFields.description }));
+      if (t.richFields.description && (overwrite || isDescEmpty(descriptionsRef.current[locale] ?? null))) {
+        descriptionsRef.current = { ...descriptionsRef.current, [locale]: t.richFields.description };
         touchedEditors = true;
       }
     }
-    if (touchedEditors) setEditorVersion((v) => v + 1);
+    if (touchedEditors) {
+      setDescriptions(descriptionsRef.current);
+      setEditorVersion((v) => v + 1);
+    }
   };
 
   /* Same for the update dialog, whose fields are all plain strings on its form. */
