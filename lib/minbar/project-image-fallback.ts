@@ -7,7 +7,7 @@ export function selectProjectImages(
   campaignImages: readonly (string | null | undefined)[] | null | undefined,
 ): { cover: string | null; images: string[]; coverFallbacks: string[] } {
   const base = uniqueImageUrls(campaignImages ?? []);
-  const localized = typeof localizedCover === "string" ? localizedCover.trim() : "";
+  const localized = uniqueImageUrls([localizedCover])[0] ?? "";
   const cover = localized || base[0] || null;
   // Preserve the existing gallery order without duplicating the original
   // cover as a visible slide when the editor supplied a localized cover.
