@@ -63,6 +63,8 @@ test("OpenGraph alternateLocale is limited to actual translated editions", () =>
 
 test("duplicate locale path redirects once and preserves locale selection", () => {
   for (const locale of SUPPORTED_LOCALES) {
+    const nested = `/${locale}/en/fr/المشاريع/x`;
+    assert.equal(redirectLegacyPath(nested), `/${locale}/bagislar/x`);
     const url = `/${locale}/en/blog/article`;
     const destination = redirectLegacyPath(url);
     assert.equal(destination, `/${locale}/blog/article`);
@@ -127,6 +129,11 @@ test("published campaign sitemap is reciprocal, localized, and excludes absent/n
     assert.ok(Object.values(entry.alternates).includes(entry.loc));
     assert.ok(!entry.alternates.tr && !entry.alternates.de);
   }
+});
+
+test("static sitemap does not list reserved CMS details when their rows are unpublished", async () => {
+  const source = readFileSync("lib/sitemap.ts", "utf8");
+  assert.match(source, /route !== "restorationProject" && route !== "ibadanProject"/);
 });
 
 test("unpublished Arabic/category copies and noindex articles are not listed", async () => {
