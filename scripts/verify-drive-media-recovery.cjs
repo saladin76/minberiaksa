@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable @typescript-eslint/no-var-requires -- Standalone Node.js CommonJS recovery CLI intentionally uses require. */
 /* Read-only audit after reviewed media recovery: no uploads or database writes. */
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {createRequire}=require('node:module');
