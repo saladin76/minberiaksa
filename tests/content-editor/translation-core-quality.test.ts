@@ -20,10 +20,12 @@ test("Tiptap shape and image/link metadata remain intact", () => {
     { type: "image", attrs: { src: "/image.jpg", alt: "صورة ثابتة" } },
   ] };
   const translated = structuredClone(document);
-  translated.content[0].content![0].text = "Heading";
-  translated.content[1].content![0].text = "Help 15 families";
+  const heading = translated.content[0] as { content: Array<{ text: string }> };
+  const paragraph = translated.content[1] as { content: Array<{ text: string; marks: Array<{ attrs: { href: string } }> }> };
+  heading.content[0].text = "Heading";
+  paragraph.content[0].text = "Help 15 families";
   assert.deepEqual(localizationQualityIssues("body", JSON.stringify(document), JSON.stringify(translated), "en"), []);
-  translated.content[1].content![0].marks![0].attrs!.href = "https://other.example";
+  paragraph.content[0].marks[0].attrs.href = "https://other.example";
   assert.ok(localizationQualityIssues("body", JSON.stringify(document), JSON.stringify(translated), "en").some(issue => issue.code === "STRUCTURE_CHANGED"));
 });
 
