@@ -14,6 +14,7 @@ import { contentToBlocks, type ArticleBlock } from "@/lib/blog/rich-text";
 import { PAID_DONATION_FILTER } from "@/lib/dashboard/donation-usd-revenue";
 import { normalizeSeoFields, type ProjectSeoFields } from "@/lib/campaign/project-seo";
 import { parseRecommendedFrequency } from "@/lib/minbar/recommended-frequency";
+import { selectProjectImages } from "@/lib/minbar/project-image-fallback";
 import { mergeProjectPriorityGroups } from "@/lib/minbar/project-order";
 import { parseCategoryPriorities } from "@/lib/campaign/categories";
 import { orderProjectsInCategory } from "@/lib/content-editor/project-order";
@@ -79,6 +80,8 @@ export interface MinbarProject {
   goal: number | null;
   /** Every photo of the campaign, the cover (per-locale when set) first. */
   images: string[];
+  /** Alternate same-campaign images used only when a cover URL fails. */
+  coverFallbacks: string[];
   /** Per-locale video when set, else the campaign's own. */
   videoUrl: string | null;
   /** Every category the campaign is filed under. `region` is the first. */
@@ -327,8 +330,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
 
   const donationConfig = parseSuggestedDonations(row.suggestedDonations);
   const byCurrency = row.suggestedDonations ? donationConfig.byCurrency : {};
-  const cover = t?.image || row.images?.[0] || null;
-  const images = [...new Set([...(cover ? [cover] : []), ...(row.images ?? []).slice(t?.image ? 1 : 0)].filter(Boolean))];
+  const { cover, images, coverFallbacks } = selectProjectImages(t?.image, row.images);
 
   return {
     id: row.id,
@@ -340,6 +342,7 @@ function toProject(row: CampaignRow, locale: string, detail = false): MinbarProj
     ...(detail ? { richBody: publicRichText(rawDescription) } : {}),
     body: detail ? (body.length ? body : [{ kind: "p", text }]) : [],
     image: cover,
+    coverFallbacks,
     imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,
     images,
     videoUrl: t?.videoUrl || row.videoUrl || null,
