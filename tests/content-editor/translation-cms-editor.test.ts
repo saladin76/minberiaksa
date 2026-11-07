@@ -80,3 +80,10 @@ test("super-category editor protects public links and warns about unsaved drafts
   assert.match(form, /slug: mode === 'edit' \? initial\.slug : values\.slug\.trim\(\)/);
   assert.match(form, /window\.confirm\(dt\("توجد تعديلات غير محفوظة/);
 });
+
+test("super-category save does not silently discard fields without a translated title", () => {
+  const form = readFileSync("app/(dashboard)/dashboard/super-categories/_components/SuperCategoryForm.tsx", "utf8");
+  assert.match(form, /const orphan = Object\.entries\(values\.translations\)/);
+  assert.match(form, /const stored = actual\.find/);
+  assert.match(form, /if \(mode === 'edit' && Array\.isArray\(actual\)\)/);
+});
