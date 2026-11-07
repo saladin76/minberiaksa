@@ -213,6 +213,9 @@ export function UrgentBannerForm({
     e.preventDefault();
     if (!values.title.trim()) return toast.error(dt("العنوان بالعربية مطلوب"));
     if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
+    if (mode === 'edit' && values.slug.trim() !== initial.slug.trim()) return toast.error(dt("تغيير رابط بانر منشور يتطلب تحويلًا دائمًا ومراجعة مستقلة."));
+    const partial = Object.entries(values.translations).find(([, row]) => !row.title?.trim() && Object.entries(row).some(([key, val]) => key !== 'title' && val.trim()));
+    if (partial) return toast.error(dt("اللغة {0}: اكتب العنوان قبل حفظ بقية حقول الترجمة.", [partial[0].toUpperCase()]));
     if (!values.campaignId && !values.ctaUrl.trim()) return toast.error(dt("اربط البانر بحملة أو أدخل رابطًا للزر"));
     if (!values.placements.length) return toast.error(dt("اختر مكانًا واحدًا على الأقل يظهر فيه البانر"));
 
@@ -241,13 +244,29 @@ export function UrgentBannerForm({
         translations: values.translations,
       };
 
-      if (mode === 'create') {
-        await axios.post('/api/urgent-banners', payload);
-        toast.success(dt("تم إنشاء البانر"));
-      } else {
-        await axios.put(`/api/urgent-banners/${bannerId}`, payload);
-        toast.success(dt("تم حفظ البانر"));
+      const response = mode === 'create'
+        ? await axios.post('/api/urgent-banners', payload)
+        : await axios.put(`/api/urgent-banners/${bannerId}`, payload);
+      const persisted = response.data?.translations;
+      if (!Array.isArray(persisted)) throw new Error(dt("تعذر تأكيد حفظ الترجمات؛ احتفظ بالتعديلات وأعد التحميل قبل إعادة المحاولة."));
+      for (const [locale, row] of Object.entries(values.translations)) {
+        const saved = persisted.find((item: { locale?: string }) => item.locale === locale) as Record<string, unknown> | undefined;
+        if (!row.title?.trim()) {
+          if (saved) throw new Error(dt("بقيت ترجمة قديمة للغة {0} بعد التفريغ؛ لم يتم تأكيد الحذف.", [locale.toUpperCase()]));
+          continue;
+        }
+        if (!saved) throw new Error(dt("لم تُحفظ ترجمة اللغة {0}.", [locale.toUpperCase()]));
+        for (const [key, value] of Object.entries(row)) {
+          const expected = key === 'amountLabels'
+            ? value.split(/[,،\n]+/).map(text => text.trim()).filter(Boolean).join(',')
+            : value.trim();
+          const actual = key === 'amountLabels' && Array.isArray(saved[key])
+            ? saved[key].map(value => String(value).trim()).join(',')
+            : String(saved[key] ?? '').trim();
+          if (actual !== expected) throw new Error(dt("لم يُؤكد حفظ الحقل {0} للغة {1}. احتفظ بالتعديلات.", [key, locale.toUpperCase()]));
+        }
       }
+      toast.success(mode === 'create' ? dt("تم إنشاء البانر والتحقق من الترجمات") : dt("تم حفظ البانر والتحقق من الترجمات"));
       router.push('/dashboard/urgent-banners');
       router.refresh();
     } catch (err) {
@@ -278,7 +297,7 @@ export function UrgentBannerForm({
           </label>
           <label className="space-y-1.5">
             <span className="text-xs font-semibold text-slate-600">{dt("المعرّف (slug) *")}</span>
-            <Input dir="ltr" value={values.slug} onChange={(e) => set('slug', e.target.value)} />
+            <Input dir="ltr" value={values.slug} readOnly={mode === 'edit'} aria-readonly={mode === 'edit'} onChange={(e) => set('slug', e.target.value)} />
           </label>
           <label className="space-y-1.5 md:col-span-2">
             <span className="text-xs font-semibold text-slate-600">{dt("الشريط العلوي")}</span>
