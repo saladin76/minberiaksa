@@ -72,3 +72,11 @@ test("campaign rich descriptions use the latest editor state when translations r
   assert.match(campaign, /setDescriptions\(descriptionsRef\.current\)/);
   assert.match(campaign, /setEditorVersion\(\(v\) => v \+ 1\)/);
 });
+
+test("super-category editor protects public links and warns about unsaved drafts", () => {
+  const form = readFileSync("app/(dashboard)/dashboard/super-categories/_components/SuperCategoryForm.tsx", "utf8");
+  assert.match(form, /useDashboardUnsavedChanges\(dirty && !saving\)/);
+  assert.match(form, /readOnly=\{mode === 'edit'\}/);
+  assert.match(form, /slug: mode === 'edit' \? initial\.slug : values\.slug\.trim\(\)/);
+  assert.match(form, /window\.confirm\(dt\("توجد تعديلات غير محفوظة/);
+});
