@@ -90,9 +90,13 @@ function evaluateItem(input: {
   translations: Array<Record<string, unknown> & { locale?: string }>;
   fields: string[];
 }): AuditItem {
-  const translationMap = new Map(
-    (input.translations || []).filter((row) => row.locale).map((row) => [row.locale as string, row]),
-  );
+  const translationMap = new Map<string, Record<string, unknown>>();
+  const duplicateLocales = new Set<string>();
+  for (const row of input.translations || []) {
+    if (!row.locale) continue;
+    if (translationMap.has(row.locale)) duplicateLocales.add(row.locale);
+    else translationMap.set(row.locale, row);
+  }
   const localeStatus = {} as Record<Locale, TranslationStatus>;
 
   for (const locale of TARGET_LOCALES) {
@@ -101,13 +105,17 @@ function evaluateItem(input: {
     const emptyFields: string[] = [];
     const identicalToArabicFields: string[] = [];
     const qualityIssues: LocalizationQualityIssue[] = [];
+    if (duplicateLocales.has(locale))
+      qualityIssues.push({ field: "locale", code: "DUPLICATE_LOCALE", message: "توجد ترجمات مكررة لهذه اللغة؛ يلزم مراجعة السجلات." });
     for (const field of input.fields) {
+      const arabic = normalizeText(input.arabicFields[field]);
+      // Empty optional Arabic source fields do not require invented translations.
+      if (!arabic) continue;
       if (!row || !(field in row)) {
         missingFields.push(field);
         continue;
       }
       const translated = normalizeText(row[field]);
-      const arabic = normalizeText(input.arabicFields[field]);
       if (!translated) emptyFields.push(field);
       if (arabic && translated && arabic === translated) identicalToArabicFields.push(field);
       // Compare original structured payloads; normalized text is used only for
