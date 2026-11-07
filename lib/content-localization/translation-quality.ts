@@ -3,7 +3,7 @@ import { hasSameTextStructure } from "./translation-structure";
 import { missingProtectedTokens } from "./protected-tokens";
 
 /** Pure, read-only QA for already stored locale variants. */
-export type LocalizationQualityCode = "SOURCE_LEAK" | "PROTECTED_VALUE_CHANGED" | "STRUCTURE_CHANGED";
+export type LocalizationQualityCode = "SOURCE_LEAK" | "PROTECTED_VALUE_CHANGED" | "STRUCTURE_CHANGED" | "DUPLICATE_LOCALE";
 export type LocalizationQualityIssue = { code: LocalizationQualityCode; field: string; message: string };
 
 type TextNode = { type?: unknown; text?: unknown; content?: unknown; [key: string]: unknown };
