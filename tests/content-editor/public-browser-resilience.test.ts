@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { imageUrl, imageSrcSet } from "../../lib/minbar/image-url";
+import { projectImageAttempts } from "../../lib/minbar/project-image-fallback";
 
 function expression(path: string, name: string): string {
   const ast = ts.createSourceFile(path, fs.readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -158,18 +159,7 @@ test("actual project media delivers responsive resized images, prioritizes the c
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "fragment" },
     "next-intl": { useTranslations: () => (key: string) => key },
     "@/components/minbar/home/TopSections": { ArrowGlyph: "arrow" },
-    "@/lib/minbar/project-image-fallback": {
-      projectImageAttempts: (sources: readonly (string | null | undefined)[], width: number) => {
-        const attempts: Array<{ src: string; srcSet?: string }> = [];
-        for (const src of sources) {
-          if (!src) continue;
-          const optimized = imageUrl(src, width);
-          if (optimized && optimized !== src) attempts.push({ src: optimized, srcSet: imageSrcSet(src) });
-          attempts.push({ src });
-        }
-        return attempts;
-      },
-    },
+    "@/lib/minbar/project-image-fallback": { projectImageAttempts },
   };
   const imageModule = { exports: {} as { default: (props: RenderNode["props"]) => RenderNode } };
   const imageSource = ts.transpileModule(fs.readFileSync("components/minbar/projects/ProjectImage.tsx", "utf8"), {
