@@ -37,7 +37,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   const dirty = Boolean(document && JSON.stringify(draft) !== JSON.stringify(document.overrides));
   const currentValues = document ? { ...document.defaults[locale], ...draft[locale] } : null;
   const currentIssues = currentValues ? reviewSeoDraft({ locale, ...currentValues }) : [];
-  const blockingIssues = SUPPORTED_LOCALES.flatMap((code) => reviewSeoDraft({ locale: code, ...document?.defaults[code], ...draft[code] }).filter((issue) => issue.severity === "error").map((issue) => `${LOCALES[code].nativeLabel}: ${issue.message}`));
+  const blockingIssues = document ? SUPPORTED_LOCALES.filter((code) => JSON.stringify(draft[code] || {}) !== JSON.stringify(document.overrides[code] || {})).flatMap((code) => reviewSeoDraft({ locale: code, ...document.defaults[code], ...draft[code] }).filter((issue) => issue.severity === "error").map((issue) => `${LOCALES[code].nativeLabel}: ${issue.message}`)) : [];
   useDashboardUnsavedChanges(dirty);
   useEffect(() => {
     const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setMessageTone("info"); setProposals({}); setErrors({}); setSkipped([]); setFailureReasons({});
