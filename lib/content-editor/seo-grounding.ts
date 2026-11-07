@@ -21,7 +21,12 @@ export function groundedSeo(copy: SeoSuggestion, source: string, verdict: { chec
     if (matches.length !== 1 || matches[0].supported !== true) continue;
     const quotes = matches[0].evidenceQuotes;
     if (!Array.isArray(quotes) || !quotes.length || !quotes.every(quote => typeof quote === "string" && normalized(quote).length >= 3 && sourceText.includes(normalized(quote)))) continue;
-    if (protectedTokens(field.text).some(token => /^(?:num|cur|url|email):/.test(token) && !tokens.has(token))) continue;
+    // A positive reviewer verdict must not bypass numeric facts. Percentages are
+    // emitted as "percent:<value>" by protectedTokens (including Arabic-Indic
+    // digits and reversed %100 notation), distinct from ordinary numbers.
+    // Missing percentages, payment destinations and other protected facts are
+    // not independently supported merely by citing an Arabic source quote.
+    if (protectedTokens(field.text).some(token => /^(?:num|percent|cur|url|email):/.test(token) && !tokens.has(token))) continue;
     supported.add(field.key);
   }
   const unsafeRequired = ["seoTitle", "metaDescription"].filter(key => !supported.has(key));
