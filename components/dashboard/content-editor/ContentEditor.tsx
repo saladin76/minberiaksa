@@ -443,8 +443,21 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
   const current = values[locale] || {},
     source = values.ar || {},
     status = localeStatus(document.fields, source, current, locale);
+  // Calculate readiness from the live drafts, not stale persisted statuses.
+  const liveStatuses = Object.fromEntries(
+    SUPPORTED_LOCALES.map(code => [
+      code,
+      localeStatus(document.fields, source, values[code] || {}, code),
+    ]),
+  );
   const done = SUPPORTED_LOCALES.filter(
-    (l) => l !== "ar" && document.statuses[l].complete,
+    code => code !== "ar" && liveStatuses[code].complete,
+  ).length;
+  const needsReview = SUPPORTED_LOCALES.filter(
+    code => code !== "ar" && liveStatuses[code].complete &&
+      (!document.statuses[code]?.reviewed ||
+        JSON.stringify(values[code] || {}) !== JSON.stringify(document.values[code] || {}) ||
+        JSON.stringify(source) !== JSON.stringify(document.values.ar || {})),
   ).length;
   const isBanner = kind === "urgent-banners";
   const liveSettings: ContentRecord = {
@@ -493,7 +506,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
         <h2 className="flex items-center gap-2 text-sm font-semibold"><Globe2 size={18} aria-hidden="true" />{dt("لغة المحتوى")}<span className="font-normal text-slate-500">· {LOCALES[locale as keyof typeof LOCALES].nativeLabel}</span></h2>
         <span className="text-xs text-slate-500">{status.complete ? dt("المحتوى مكتمل") : dt("حقول ناقصة: {0}", [status.missing.length])} · {status.seoComplete ? dt("إعدادات البحث مكتملة") : dt("إعدادات البحث تحتاج استكمالًا")}</span>
       </div>
-      <ContentLanguagePicker value={locale as SupportedLocale} disabled={Boolean(busy)} onChange={code => { setLocale(code); setReviewed(false); }} completion={Object.fromEntries(SUPPORTED_LOCALES.map(code => [code, localeStatus(document.fields, source, values[code] || {}, code).complete]))} />
+      <ContentLanguagePicker value={locale as SupportedLocale} disabled={Boolean(busy)} onChange={code => { setLocale(code); setReviewed(false); }} completion={Object.fromEntries(SUPPORTED_LOCALES.map(code => [code, liveStatuses[code].complete]))} />
     </section>
   );
   const renderField = (field: ContentField) => (
@@ -619,6 +632,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               <bdi>{done} / {SUPPORTED_LOCALES.length - 1}</bdi> {dt("ترجمات مكتملة")}
             </span>
             <span>{SUPPORTED_LOCALES.length - 1 - done} {dt("تحتاج ترجمة")}</span>
+            <span>{needsReview} {dt("تحتاج مراجعة")}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -668,7 +682,7 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               ? dt("جار رفع الصور…")
               : busy === "save"
                 ? dt("جار الحفظ…")
-                : !dirty && savedAt ? dt("تم الحفظ") : dt("حفظ التغييرات")}
+                : !dirty && savedAt ? dt("تم الحفظ") : dt("حفظ جميع اللغات")}
           </button>
         </div>
       </header>
@@ -697,9 +711,9 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               </button>
             );
           })}
-          <button type="button" className="mt-2 hidden items-center justify-center gap-2 rounded-lg bg-brand px-3 py-3 text-sm text-white disabled:opacity-50 md:flex" disabled={Boolean(busy) || uploads > 0 || (!dirty && id !== "new")} onClick={save}><Save size={16} />{busy === "save" ? dt("جار الحفظ…") : dt("حفظ جميع التغييرات")}</button>
+          <button type="button" className="mt-2 hidden items-center justify-center gap-2 rounded-lg bg-brand px-3 py-3 text-sm text-white disabled:opacity-50 md:flex" disabled={Boolean(busy) || uploads > 0 || (!dirty && id !== "new")} onClick={save}><Save size={16} />{busy === "save" ? dt("جار الحفظ…") : dt("حفظ جميع اللغات والتغييرات")}</button>
           <p className="hidden px-3 py-3 text-xs leading-6 text-slate-400 md:block">
-            {dt("كل الأقسام تخص العنصر نفسه. راجع التغييرات ثم احفظها من الشريط العلوي.")}
+            {dt("كل اللغات والأقسام تخص مسودة واحدة. راجع التغييرات ثم احفظ جميع اللغات دفعة واحدة.")}
           </p>
         </nav>
         <div className="min-w-0 space-y-5">
@@ -1134,18 +1148,21 @@ export function ContentEditor({ kind, id, initialSection = "content", initialLoc
               </thead>
               <tbody>
                 {SUPPORTED_LOCALES.map((code) => {
-                  const s = document.statuses[code];
+                  const s = liveStatuses[code];
+                  const isDraft = JSON.stringify(values[code] || {}) !== JSON.stringify(document.values[code] || {});
+                  const isReviewed = document.statuses[code]?.reviewed && !isDraft &&
+                    JSON.stringify(source) === JSON.stringify(document.values.ar || {});
                   return (
                     <tr key={code} className="border-b">
                       <td className="p-3">{LOCALES[code].nativeLabel}</td>
                       <td className="text-center">
-                        {s.complete ? dt("مكتمل") : dt("ناقص")}
+                        {s.complete ? dt("مكتمل") : dt("ناقص: {0}", [s.missing.length])}
                       </td>
                       <td className="text-center">
                         {s.seoComplete ? dt("متاح") : dt("غير مكتمل")}
                       </td>
                       <td className="text-center">
-                        {s.reviewed ? dt("مراجع") : dt("مسودة")}
+                        {isReviewed ? dt("مراجع") : dt("بحاجة للمراجعة")}{isDraft ? " · " + dt("مسودة غير محفوظة") : ""}
                       </td>
                       <td className="text-center">
                         <button
