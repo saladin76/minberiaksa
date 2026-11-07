@@ -43,6 +43,15 @@ function parseFaq(raw: string): { q: string; a: string }[] | null {
     return value.map((item) => ({ q: item.q, a: item.a }));
   } catch { return null; }
 }
+function canonical(raw: Partial<SeoFields>): SeoFields {
+  const values = normalize(raw);
+  const next = Object.fromEntries(keys.map((key) => [key, values[key].trim()])) as SeoFields;
+  const faq = parseFaq(next.faqContent);
+  if (faq) next.faqContent = faq.length
+    ? JSON.stringify(faq.map((item) => ({ q: item.q.trim(), a: item.a.trim() })).filter((item) => item.q && item.a))
+    : "";
+  return next;
+}
 function size(value: string) { return Array.from(value).length; }
 function validImage(url: string) {
   const value = url.trim();
@@ -110,14 +119,15 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
     if (isBusy || !document?.hasTranslation || !document.revision || !dirty || blocking) return;
     setSaving(true);
     try {
+      const submitted = canonical(fields);
       const response = await fetch(endpoint, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale, revision: document.revision, fields }),
+        body: JSON.stringify({ locale, revision: document.revision, fields: submitted }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || dt("تعذر حفظ SEO."));
       const verified = normalize(body.localeSeo || {});
-      if (JSON.stringify(verified) !== JSON.stringify(normalize(fields)))
+      if (JSON.stringify(verified) !== JSON.stringify(submitted))
         throw new Error(dt("لم تتطابق البيانات المقروءة مع المسودة؛ أعد تحميل الصفحة."));
       setSaved(verified); setFields(verified); setDocument(body as SeoResponse);
       toast.success(dt("تم الحفظ والتحقق من بيانات هذه اللغة."));
