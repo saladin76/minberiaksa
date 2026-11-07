@@ -34,7 +34,22 @@ if [ ! -d "$work/node_modules" ]; then
   cp -a --reflink=auto -- "$ROOT/node_modules" "$work/node_modules" || die "Cannot isolate dependencies"
 fi
 test ! -L "$work/node_modules" || die "Dependencies linked to production"
-printf 'BROWSER_QA_SHA=%s\nWORKTREE=%s\nREPORTS=%s\n' "$sha" "$work" "$reports"
+# Keep Playwright browser binaries outside both the production checkout and
+# /root/.cache. Browser revision is pinned by the isolated worktree's package.
+browsers="$QA_ROOT/browsers"
+mkdir -p "$browsers"
+printf 'BROWSER_QA_SHA=%s\nWORKTREE=%s\nREPORTS=%s\nPLAYWRIGHT_BROWSERS_PATH=%s\n' "$sha" "$work" "$reports" "$browsers"
+printf '\nPREPARE isolated Chromium headless shell\n'
+if (cd "$work" && env -i HOME=/root PATH="$PATH" \
+  PLAYWRIGHT_BROWSERS_PATH="$browsers" PLAYWRIGHT_SKIP_BROWSER_GC=1 \
+  ./node_modules/.bin/playwright install --only-shell chromium > "$reports/browser-install.log" 2>&1); then
+  printf 'PASS chromium-headless-shell\n'
+else
+  printf 'FAIL chromium-headless-shell - %s\n' "$reports/browser-install.log"
+  tail -n 40 "$reports/browser-install.log" || true
+  printf 'NO_SYSTEM_PACKAGES_INSTALLED=YES\nBROWSER_QA_RESULT=BLOCKED_BROWSER_INSTALL_NO_MERGE_NO_DEPLOY\n'
+  exit 1
+fi
 failures=0
 run() {
   name="$1"
@@ -47,6 +62,7 @@ run() {
     NEXTAUTH_SECRET=fixture-auth-test-secret NEXTAUTH_URL=http://127.0.0.1:3106 \
     GOOGLE_CLIENT_ID=fixture-client GOOGLE_CLIENT_SECRET=fixture-secret \
     STRIPE_SECRET_KEY=sk_test_fixture_no_network \
+    PLAYWRIGHT_BROWSERS_PATH="$browsers" PLAYWRIGHT_SKIP_BROWSER_GC=1 \
     CONTENT_EDITOR_ARTIFACTS="$reports/artifacts/$name" \
     node --import tsx "$file" > "$reports/$name.log" 2>&1); then
     printf 'PASS %s\n' "$name"
