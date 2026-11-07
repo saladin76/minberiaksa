@@ -205,6 +205,7 @@ async function askModel(userContent: string, options: { signal?: AbortSignal; re
 export async function translateItem(input: TranslateInput, targetLocale: string): Promise<TranslateOutput> {
   if (input.mode !== "proofread" && input.sourceLocale && input.sourceLocale !== "ar")
     throw new Error("استخدم النص العربي الأصلي مرجعًا للترجمة، وليس ترجمة وسيطة.");
+  if (!isValidLocale(targetLocale)) throw new Error(`Unsupported translation locale: ${targetLocale}`);
   const target = LOCALE_ENGLISH_NAMES[targetLocale] ?? targetLocale;
   const source = LOCALE_ENGLISH_NAMES[input.sourceLocale ?? "ar"] ?? "Arabic";
 
@@ -353,8 +354,8 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
   for (const [k, lifted] of Object.entries(rich)) {
     const arr = gotRich[k];
     if (!Array.isArray(arr) || arr.length !== lifted.texts.length || !arr.every((t) => typeof t === "string")) {
-      /* A misaligned list would put the wrong sentence under the wrong
-         heading; better to leave this field untranslated and say so. */
+      /* Never place mismatched text underneath a different heading or link. */
+      out.warnings.push(`لم تكتمل ترجمة الحقل ${k}؛ عدد عناصر التنسيق غير مطابق. تُرك دون تغيير للمراجعة.`);
       continue;
     }
     const translatedTexts = arr as string[];
@@ -376,33 +377,102 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
     }
     out.richFields[k] = injectTexts(structuredClone(lifted.doc), translatedTexts);
   }
+  // Missing provider keys used to disappear silently. Every requested field must
+  // either have a reviewed proposal or an explicit field-level warning.
+  for (const key of Object.keys(plain)) {
+    if (!(key in out.fields) && !out.warnings.some(warning => warning.includes(key)))
+      out.warnings.push(`لم يُعِد مزود الترجمة الحقل ${key}؛ لم يُدرج في المقترح.`);
+  }
+  for (const key of [...Object.keys(richAsPlain), ...Object.keys(rich)]) {
+    if (!(key in out.richFields) && !out.warnings.some(warning => warning.includes(key)))
+      out.warnings.push(`لم يُعِد مزود الترجمة الحقل ${key}؛ لم يُدرج في المقترح.`);
+  }
+  if (policy === "LEGAL_REVIEW_REQUIRED")
+    out.warnings.push("هذه مسودة قانونية تتطلب مراجعة واعتمادًا بشريًا قبل النشر.");
   return out;
 }
 
 /**
- * Translate one item into many locales, a few at a time. Each locale is
- * independent: one failure is reported in `errors` and the rest still return.
+ * The public contract is additive: existing editor clients still consume
+ * `translations[locale].fields/richFields/warnings`. New clients can display
+ * `errors[locale]` and `warnings[locale]` without guessing whether an
+ * incomplete language was safe to merge into an existing record.
+ *
+ * A locale is all-or-nothing in the batch endpoint. translateItem intentionally
+ * remains field-granular for the reviewed single-locale editor workflows.
  */
+export interface TranslationBatchResult {
+  translations: Record<string, TranslateOutput>;
+  errors: Record<string, string>;
+  warnings: Record<string, string[]>;
+}
+
+const SHARED_PROVIDER_ERRORS = new Set([
+  "AI_NOT_CONFIGURED", "AI_SETTINGS_UNAVAILABLE", "AI_ACCESS_DENIED",
+  "AI_MODEL_UNAVAILABLE", "AI_QUOTA_EXCEEDED", "AI_RATE_LIMITED",
+  "AI_INVALID_REQUEST", "AI_PROVIDER_UNAVAILABLE", "AI_TIMEOUT",
+]);
+
+function requestedKeys(record: Record<string, string> | undefined): string[] {
+  return Object.entries(record ?? {}).filter(([, value]) => typeof value === "string" && value.trim().length > 0)
+    .map(([key]) => key);
+}
+
 export async function translateToLocales(
   input: TranslateInput,
   locales: readonly string[],
-  concurrency = 4
-): Promise<{ translations: Record<string, TranslateOutput>; errors: Record<string, string> }> {
-  const targets = locales.filter((l) => isValidLocale(l) && l !== (input.sourceLocale ?? "ar"));
-  const translations: Record<string, TranslateOutput> = {};
-  const errors: Record<string, string> = {};
+  concurrency = 4,
+): Promise<TranslationBatchResult> {
+  const translations: TranslationBatchResult["translations"] = Object.create(null);
+  const errors: TranslationBatchResult["errors"] = Object.create(null);
+  const warnings: TranslationBatchResult["warnings"] = Object.create(null);
+  const targets: string[] = [];
+  const sourceLocale = input.sourceLocale ?? "ar";
+  const seen = new Set<string>();
 
+  for (const locale of locales) {
+    if (!isValidLocale(locale) || locale === sourceLocale) {
+      errors[locale] = "لغة غير مدعومة أو مطابقة للغة المصدر.";
+    } else if (seen.has(locale)) {
+      warnings[locale] = [...(warnings[locale] ?? []), "تم تجاهل طلب اللغة المكرر."];
+    } else {
+      seen.add(locale);
+      targets.push(locale);
+    }
+  }
+
+  const expectedPlain = requestedKeys(input.fields);
+  const expectedRich = requestedKeys(input.richFields);
+  const count = Number.isFinite(concurrency) ? Math.max(1, Math.min(4, Math.floor(concurrency))) : 4;
   let cursor = 0;
+  let sharedFailure: string | null = null;
   const worker = async () => {
-    while (cursor < targets.length && !input.signal?.aborted) {
+    while (cursor < targets.length && !input.signal?.aborted && !sharedFailure) {
       const locale = targets[cursor++];
       try {
-        translations[locale] = await translateItem(input, locale);
+        const translation = await translateItem(input, locale);
+        const missingPlain = expectedPlain.filter(key => !(key in translation.fields));
+        const missingRich = expectedRich.filter(key => !(key in translation.richFields));
+        if (translation.warnings.length) warnings[locale] = [...(warnings[locale] ?? []), ...translation.warnings];
+        if (missingPlain.length || missingRich.length) {
+          errors[locale] = `الترجمة غير مكتملة: ${[...missingPlain, ...missingRich].join(", ")}. لم تُرجع أي حقول لهذه اللغة.`;
+        } else {
+          translations[locale] = translation;
+        }
       } catch (error) {
-        errors[locale] = error instanceof Error ? error.message : String(error);
+        const code = error instanceof OpenAiResponseError ? error.code : null;
+        const aborted = input.signal?.aborted || (error instanceof Error && error.name === "AbortError");
+        errors[locale] = code ?? (aborted ? "تم إلغاء طلب الترجمة." : error instanceof Error ? error.message : "تعذّرت الترجمة.");
+        if (code && SHARED_PROVIDER_ERRORS.has(code)) sharedFailure = code;
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
-  return { translations, errors };
+  await Promise.all(Array.from({ length: Math.min(count, targets.length) }, () => worker()));
+  for (const locale of targets) {
+    if (!(locale in errors) && !(locale in translations)) {
+      errors[locale] = input.signal?.aborted ? "تم إلغاء طلب الترجمة." :
+        sharedFailure ? `توقفت الدفعة بسبب خطأ مشترك في المزود (${sharedFailure}).` : "لم تكتمل الترجمة.";
+    }
+  }
+  return { translations, errors, warnings };
 }
