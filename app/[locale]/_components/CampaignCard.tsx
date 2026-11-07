@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { publicCampaignImage } from "@/lib/minbar/project-image-fallback";
 import Image from "next/image";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { appendCurrencyQuery, currencyCodeForUrl, getCurrencyCodeForLinks } from "@/lib/currency-link";
@@ -25,7 +26,6 @@ import type { ShareLabelsConfig } from "@/lib/campaign/share-labels";
 import { useLocale } from "next-intl";
 
 const RESUME_KEY = "campaignDonateResume";
-const FALLBACK_IMG = "https://i.ibb.co/N2zVsqfg/calisma-alanlarimiz-egitim-sektoru.jpg";
 
 // 4:3 crop  matches the aspect-[4/3] container used everywhere.
 // q_auto:eco is ~30% smaller than q_auto:good with no perceptible quality loss for thumbnails;
@@ -223,7 +223,7 @@ export function CampaignCard({ campaign, className, onClick, isFeatured = false,
     );
   };
 
-  const rawImgSrc = campaign.images[0] || FALLBACK_IMG;
+  const rawImgSrc = publicCampaignImage(campaign.images);
   const imgSrc = buildImgSrc(rawImgSrc);
 
   const detailHref = `/campaign/${campaign.slug || campaign.id}`;
