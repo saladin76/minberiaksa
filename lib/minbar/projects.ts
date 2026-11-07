@@ -81,7 +81,7 @@ export interface MinbarProject {
   /** Every photo of the campaign, the cover (per-locale when set) first. */
   images: string[];
   /** Alternate same-campaign images used only when a cover URL fails. */
-  coverFallbacks: string[];
+  coverFallbacks?: string[];
   /** Per-locale video when set, else the campaign's own. */
   videoUrl: string | null;
   /** Every category the campaign is filed under. `region` is the first. */
