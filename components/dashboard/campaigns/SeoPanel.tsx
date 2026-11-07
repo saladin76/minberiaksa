@@ -131,7 +131,7 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
     setLocale(value as SupportedLocale);
   };
   const faq = parseFaq(fields.faqContent);
-  const writeFaq = (items: { q: string; a: string }[]) => edit("faqContent", JSON.stringify(items));
+  const writeFaq = (items: { q: string; a: string }[]) => edit("faqContent", items.length ? JSON.stringify(items) : "");
   const titleLimit = locale === "ja" || locale === "zh" ? 42 : 70;
   const descriptionLimit = locale === "ja" || locale === "zh" ? 90 : 160;
   const title = fields.seoTitle || document?.contentTitle || document?.defaultSeo.seoTitle || "";
