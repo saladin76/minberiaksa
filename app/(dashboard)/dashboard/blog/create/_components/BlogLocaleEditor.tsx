@@ -172,14 +172,14 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
       const result = await axios.patch(`/api/posts/${post.id}`, {
         translations: {
           [locale]: {
-            title: data.title || undefined,
-            description: data.description || undefined,
+            title: data.title ?? "",
+            description: data.description ?? "",
             content: content ?? "",
             image: data.image ?? "",
-            metaTitle: data.metaTitle || data.title || undefined,
-            metaDescription: data.metaDescription || data.description || undefined,
+            metaTitle: data.metaTitle ?? data.title ?? "",
+            metaDescription: data.metaDescription ?? data.description ?? "",
             seoKeywords: (data.seoKeywords || "").split(",").map((v) => v.trim()).filter(Boolean),
-            imageAlt: data.imageAlt || data.title || undefined,
+            imageAlt: data.imageAlt ?? data.title ?? "",
           },
         },
       });
