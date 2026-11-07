@@ -92,7 +92,7 @@ export default function EditSlidePage() {
     const audit = reviewSlideTranslations(values, TRANSLATION_LOCALES);
     if (audit.incomplete.length) {
       const first = audit.incomplete[0];
-      form.setError(localeKey('title', first), { type: 'manual', message: dt('العنوان مطلوب عند كتابة أي حقل في هذه اللغة') });
+      form.setError(localeKey('title', first) as keyof FormValues, { type: 'manual', message: dt('العنوان مطلوب عند كتابة أي حقل في هذه اللغة') });
       toast.error(dt('توجد لغات فيها وصف أو زر بلا عنوان: {0}', [audit.incomplete.join(', ')]));
       return;
     }
