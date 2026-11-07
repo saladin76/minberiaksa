@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import DonationDialog from "@/components/DonationDialog";
+import { publicCampaignImage } from "@/lib/minbar/project-image-fallback";
 import SharePopup from "@/components/SharePopup";
 import { LocalizedSharePrice } from "@/components/LocalizedSharePrice";
 import { Button } from "@/components/ui/button";
@@ -132,13 +133,13 @@ const DonationSidebar = ({ campaign, isMobileSticky = false }: DonationSidebarPr
         url={shareUrl}
         title={getLocalizedProperty(campaign, "title")}
         description={getLocalizedProperty(campaign, "description")}
-        image={campaign.images[0]}
+        image={publicCampaignImage(campaign.images)}
       />
       <DonationDialog
         isOpen={isDonationOpen}
         onClose={() => setIsDonationOpen(false)}
         campaignTitle={getLocalizedProperty(campaign, "title")}
-        campaignImage={campaign.images[0]}
+        campaignImage={publicCampaignImage(campaign.images)}
         targetAmount={campaign.targetAmount}
         amountRaised={campaign.amountRaised}
         campaignId={campaign.id}
