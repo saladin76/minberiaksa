@@ -218,11 +218,15 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
      JSON is treated as plain text under the same key. */
   const rich: Record<string, { doc: TiptapNode; texts: string[] }> = {};
   const richAsPlain: Record<string, string> = {};
+  // Image-only/empty Tiptap documents have nothing to translate; preserve
+  // them byte-for-byte instead of classifying the language as incomplete.
+  const richUntouched: Record<string, string> = {};
   for (const [k, v] of Object.entries(input.richFields ?? {})) {
     if (typeof v !== "string" || !v.trim()) continue;
     const lifted = liftTexts(v);
     if (lifted && lifted.texts.length) rich[k] = lifted;
-    else if (!lifted) richAsPlain[k] = compact(v);
+    else if (lifted) richUntouched[k] = v;
+    else richAsPlain[k] = compact(v);
   }
 
   const policy = input.policy ?? "STANDARD";
@@ -230,7 +234,7 @@ export async function translateItem(input: TranslateInput, targetLocale: string)
     throw new Error("RELIGIOUS_LOCKED content must not be machine translated");
   }
 
-  const out: TranslateOutput = { fields: {}, richFields: {}, warnings: [] };
+  const out: TranslateOutput = { fields: {}, richFields: { ...richUntouched }, warnings: [] };
   if (!Object.keys(plain).length && !Object.keys(rich).length && !Object.keys(richAsPlain).length) return out;
 
   const currencies = literalCurrencies([...Object.values(plain), ...Object.values(richAsPlain), ...Object.values(rich).flatMap(value => value.texts)]);
