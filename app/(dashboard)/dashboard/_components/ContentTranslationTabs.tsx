@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -88,9 +89,18 @@ export function ContentTranslationTabs({
   /** What the item is, for the translator  "FAQ", "story", "course"… */
   itemLabel?: string;
 }) {
+  const currentDraft = useRef(value);
+  currentDraft.current = value;
   const set = (locale: string, field: string, next: string) => {
-    onChange({ ...value, [locale]: { ...(value[locale] ?? {}), [field]: next } });
+    const updated = { ...currentDraft.current, [locale]: { ...(currentDraft.current[locale] ?? {}), [field]: next } };
+    currentDraft.current = updated;
+    onChange(updated);
   };
+  const complete = OTHER_LOCALES.filter(code =>
+    fields.every(field => (value[code]?.[field.name] ?? '').trim())
+  ).length;
+  const missing = OTHER_LOCALES.filter(code => !(value[code]?.[requiredField] ?? '').trim()).length;
+  const needsReview = OTHER_LOCALES.length - complete - missing;
 
   return (
     <>
@@ -99,16 +109,24 @@ export function ContentTranslationTabs({
         <AutoTranslateButton
           source={source}
           itemLabel={itemLabel}
-          onResult={(translations, overwrite) =>
-            onChange(mergeTranslations(value, translations, overwrite, fields.map((f) => f.name)))
-          }
+          onResult={(translations, overwrite) => {
+            const updated = mergeTranslations(currentDraft.current, translations, overwrite, fields.map(field => field.name));
+            currentDraft.current = updated;
+            onChange(updated);
+          }}
         />
       </div>
     ) : null}
+    <div role="status" aria-live="polite" className="flex flex-wrap gap-3 text-xs text-slate-600">
+      <span>{dt("مكتمل")}: {complete}/{OTHER_LOCALES.length}</span>
+      <span>{dt("يحتاج ترجمة")}: {missing}</span>
+      <span>{dt("يحتاج استكمالًا أو مراجعة")}: {needsReview}</span>
+    </div>
     <Tabs defaultValue={OTHER_LOCALES[0]} dir={dashDir()}>
       <TabsList className="flex flex-wrap h-auto gap-1">
         {OTHER_LOCALES.map((locale) => {
           const filled = (value[locale]?.[requiredField] ?? '').trim().length > 0;
+          const completed = fields.every(field => (value[locale]?.[field.name] ?? '').trim());
           return (
             <TabsTrigger key={locale} value={locale} className="gap-1.5">
               {/* The endonym, not a flag: a language is not a country, and the
@@ -117,7 +135,8 @@ export function ContentTranslationTabs({
               {/* A quiet dot rather than a count: the point is only "has content". */}
               <span
                 aria-hidden="true"
-                className={`h-1.5 w-1.5 rounded-full ${filled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                title={completed ? dt("مكتمل") : filled ? dt("يحتاج استكمالًا") : dt("يحتاج ترجمة")}
+                className={`h-1.5 w-1.5 rounded-full ${completed ? 'bg-emerald-500' : filled ? 'bg-amber-500' : 'bg-slate-300'}`}
               />
             </TabsTrigger>
           );
