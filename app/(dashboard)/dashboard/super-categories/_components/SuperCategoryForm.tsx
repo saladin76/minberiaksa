@@ -153,6 +153,12 @@ export function SuperCategoryForm({
     if (!values.slug.trim()) return toast.error(dt("المعرّف (slug) مطلوب"));
     if (mode === 'edit' && values.slug !== initial.slug)
       return toast.error(dt("تغيير رابط منشور يتطلب تأكيدًا وتحويلًا دائمًا. لا يمكن تغييره من نموذج الترجمة."));
+    // The server deletes a locale row when its title is blank. Prevent a
+    // partially translated row from being silently discarded on Save All.
+    const orphan = Object.entries(values.translations).find(([, row]) =>
+      !row.title?.trim() && Object.entries(row).some(([key, text]) => key !== 'title' && text.trim())
+    );
+    if (orphan) return toast.error(dt("لغة {0}: اكتب العنوان أولًا حتى لا تُفقد حقول الترجمة عند الحفظ.", [orphan[0].toUpperCase()]));
 
     setSaving(true);
     setSaveMessage('');
@@ -169,13 +175,23 @@ export function SuperCategoryForm({
         })),
       };
 
-      if (mode === 'create') {
-        await axios.post('/api/super-categories', payload);
-        toast.success(dt("تم إنشاء المشروع الكبير"));
-      } else {
-        await axios.put(`/api/super-categories/${superCategoryId}`, payload);
-        toast.success(dt("تم حفظ المشروع الكبير"));
+      const response = mode === 'create'
+        ? await axios.post('/api/super-categories', payload)
+        : await axios.put(`/api/super-categories/${superCategoryId}`, payload);
+      const actual = response.data?.translations;
+      // A successful HTTP response is not sufficient if any submitted locale
+      // was ignored. Keep the draft in place and identify the discrepancy.
+      if (mode === 'edit' && Array.isArray(actual)) {
+        for (const [code, fields] of Object.entries(values.translations)) {
+          if (!fields.title?.trim()) continue;
+          const stored = actual.find((row: { locale?: string }) => row.locale === code) as Record<string, unknown> | undefined;
+          for (const [key, text] of Object.entries(fields)) {
+            if (text.trim() && String(stored?.[key] ?? '').trim() !== text.trim())
+              throw new Error(dt("لم يتم تأكيد حفظ حقل {0} في اللغة {1}. احتفظ بالمسودة وراجع الحفظ.", [key, code.toUpperCase()]));
+          }
+        }
       }
+      toast.success(mode === 'create' ? dt("تم إنشاء المشروع الكبير") : dt("تم حفظ جميع لغات المشروع الكبير"));
       setSavedSnapshot(values);
       setSaveMessage(dt("حُفظت جميع اللغات مع محتوى الصفحة بنجاح."));
       router.push('/dashboard/super-categories');
