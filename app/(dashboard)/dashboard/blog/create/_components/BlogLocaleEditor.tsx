@@ -141,7 +141,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
       const formData = new FormData();
       formData.append("file", file);
       const response = await axios.post("/api/upload", formData);
-      form.setValue("image", response.data?.url ?? "");
+      form.setValue("image", response.data?.url ?? "", { shouldDirty: true });
       toast.success(dt("تم رفع الصورة بنجاح"));
     } catch (err) {
       console.error("Image upload error:", err);
@@ -152,11 +152,8 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
   };
 
   const removeImage = () => {
-    const current = form.getValues("image");
-    if (current) {
-      axios.delete(`/api/upload?publicId=${current.split("/").slice(-1)[0].split(".")[0]}`).catch(() => {});
-    }
-    form.setValue("image", "");
+    // Never delete an asset from the media provider when clearing one locale.
+    form.setValue("image", "", { shouldDirty: true });
   };
 
   const isContentEmpty = (value: string | null) => !hasMeaningfulContent(value);
@@ -172,13 +169,13 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
     setIsSaving(true);
     setSaveStatus({ type: "saving", message: dt("جاري حفظ الترجمة..."), detail: dt("سيتم تحديث هذه اللغة فقط") });
     try {
-      await axios.patch(`/api/posts/${post.id}`, {
+      const result = await axios.patch(`/api/posts/${post.id}`, {
         translations: {
           [locale]: {
             title: data.title || undefined,
             description: data.description || undefined,
-            content: content || undefined,
-            image: data.image || undefined,
+            content: content ?? "",
+            image: data.image ?? "",
             metaTitle: data.metaTitle || data.title || undefined,
             metaDescription: data.metaDescription || data.description || undefined,
             seoKeywords: (data.seoKeywords || "").split(",").map((v) => v.trim()).filter(Boolean),
@@ -186,7 +183,15 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
           },
         },
       });
-      setSaveStatus({ type: "success", message: dt("تم تحديث الترجمة بنجاح"), detail: dt("أنت ما زلت داخل صفحة التعديل") });
+      const persisted = result.data?.translations?.find?.((t: { locale: string }) => t.locale === locale);
+      if (!persisted ||
+        (persisted.title ?? "") !== (data.title ?? "") ||
+        (persisted.description ?? "") !== (data.description ?? "") ||
+        (persisted.content ?? "") !== (content ?? "") ||
+        (persisted.image ?? "") !== (data.image ?? "")) {
+        throw new Error(dt("الخادم لم يؤكد حفظ جميع حقول هذه اللغة. راجع النسخة قبل المغادرة."));
+      }
+      setSaveStatus({ type: "success", message: dt("تم تحديث الترجمة بنجاح"), detail: dt("تمت مطابقة الترجمة مع رد الخادم") });
       toast.success(config.success);
       router.refresh();
     } catch (err: any) {
@@ -386,7 +391,7 @@ export default function BlogLocaleEditor({ post, locale }: BlogLocaleEditorProps
                   if (!content) return defaultEditorContent;
                   return contentToTiptapDocument(content);
                 })()}
-                onDebouncedUpdate={(editor) => {
+                onUpdate={(editor) => {
                   setContent(JSON.stringify(editor?.getJSON()));
                 }}
               />
