@@ -40,16 +40,18 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
      state from it and remount the body editor, which is uncontrolled. */
   const [editorKey, setEditorKey] = useState(0);
   const seenVersion = useRef(ctx?.version ?? 0);
+  const version = ctx?.version ?? 0;
+  const buffered = ctx?.translations;
   useEffect(() => {
-    if (!ctx || ctx.version === seenVersion.current) return;
-    seenVersion.current = ctx.version;
-    const next = ctx.translations[locale];
+    if (version === seenVersion.current) return;
+    seenVersion.current = version;
+    const next = buffered?.[locale];
     if (!next) return;
     setTitle(next.title);
     setDescription(next.description);
     setContent(next.content);
     setEditorKey((k) => k + 1);
-  }, [ctx?.version, ctx?.translations, locale]);
+  }, [version, buffered, locale]);
 
   // Depend on the stable updater, not the whole context object. Translation
   // state changes must not cause local drafts to write back in a loop.
