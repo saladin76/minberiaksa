@@ -99,3 +99,13 @@ test("unsupported locales are rejected before contacting AI", async () => {
     await assert.rejects(translateItem({ fields: { title: "دعم" } }, "xx"), /Unsupported translation locale/);
   });
 });
+
+test("empty rich documents and image-only documents are retained without an AI request", async () => {
+  const doc = JSON.stringify({ type: "doc", content: [{ type: "image", attrs: { src: "/campaign.jpg" } }] });
+  await withProvider(() => { throw new Error("No translatable text; do not call the model"); }, async () => {
+    const output = await translateToLocales({ fields: {}, richFields: { body: doc } }, ["en", "fr"]);
+    assert.deepEqual(Object.keys(output.errors), []);
+    assert.equal(output.translations.en.richFields.body, doc);
+    assert.equal(output.translations.fr.richFields.body, doc);
+  });
+});
