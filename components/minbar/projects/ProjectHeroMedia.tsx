@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowGlyph } from "@/components/minbar/home/TopSections";
-import { imageUrl, imageSrcSet } from "@/lib/minbar/image-url";
+import ProjectImage from "./ProjectImage";
 
 interface ProjectHeroMediaProps {
   /** The campaign's photos, cover first. */
   images: string[];
+  coverFallbacks?: string[];
   title: string;
   imageAlt?: string;
   /** Overlays drawn on top of the picture (the region chip). */
@@ -21,7 +22,7 @@ interface ProjectHeroMediaProps {
  * It is a native scroll-snap track, so touch swipe, trackpads and RTL work
  * without any gesture code; the buttons and dots only scroll it.
  */
-export default function ProjectHeroMedia({ images, title, imageAlt, children }: ProjectHeroMediaProps) {
+export default function ProjectHeroMedia({ images, coverFallbacks = [], title, imageAlt, children }: ProjectHeroMediaProps) {
   const t = useTranslations("common");
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -88,15 +89,13 @@ export default function ProjectHeroMedia({ images, title, imageAlt, children }: 
               aria-hidden={index !== active}
               style={{ position: "relative", flex: "0 0 100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imageUrl(src, 760)}
-                srcSet={imageSrcSet(src)}
+              <ProjectImage
+                sources={index === 0 ? [src, ...coverFallbacks] : [src]}
+                width={760}
                 sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1240px) 62vw, 770px"
                 alt={index === 0 ? imageAlt || title : ""}
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "auto"}
-                decoding="async"
                 draggable={false}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", userSelect: "none" }}
               />
@@ -104,9 +103,10 @@ export default function ProjectHeroMedia({ images, title, imageAlt, children }: 
           ))}
         </div>
       ) : images[0] ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl(images[0], 760)} srcSet={imageSrcSet(images[0])} sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1240px) 62vw, 770px" alt={imageAlt || title} loading="eager" fetchPriority="high" decoding="async" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-      ) : null}
+        <ProjectImage sources={[images[0], ...coverFallbacks]} width={760} sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1240px) 62vw, 770px" alt={imageAlt || title} loading="eager" fetchPriority="high" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+      ) : (
+        <ProjectImage sources={coverFallbacks} width={760} alt={imageAlt || title} loading="eager" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      )}
 
       <span aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(0deg, rgba(16,33,43,.6), rgba(16,33,43,0) 52%)" }} />
       {children}
