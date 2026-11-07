@@ -136,6 +136,19 @@ test("static sitemap does not list reserved CMS details when their rows are unpu
   assert.match(source, /route !== "restorationProject" && route !== "ibadanProject"/);
 });
 
+test("category translations without required localized body are not exposed to crawlers", async () => {
+  const entries = await sitemapFixture("categories", {
+    id: "cat", slug: "arabic-category", name: "التصنيف", description: "الوصف",
+    translations: [
+      { locale: "en", slug: "translated-category", name: "Category", description: "Description" },
+      { locale: "fr", slug: "categorie", name: "Catégorie", description: "" },
+    ],
+  });
+  assert.equal(entries.length, 2);
+  assert.ok(!entries.some((entry) => entry.loc.includes("/fr/")));
+  assert.ok(entries.every((entry) => !entry.alternates.fr));
+});
+
 test("unpublished Arabic/category copies and noindex articles are not listed", async () => {
   const categories = await sitemapFixture("categories", {
     id: "cat", slug: "arabic", name: "", seoNoIndex: "false",
