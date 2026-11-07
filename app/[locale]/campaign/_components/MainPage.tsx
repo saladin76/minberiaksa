@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-hot-toast";
 import Modal from "@/app/[locale]/components/Modal";
 import DonationSidebar from "../_components/DonationSidebar";
+import { publicCampaignImage, publicCampaignImages } from "@/lib/minbar/project-image-fallback";
 
 // Types
 interface Category {
@@ -380,6 +381,9 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
 
 
 
+  const displayImages = publicCampaignImages(campaign.images);
+  const displayCover = publicCampaignImage(campaign.images);
+
   return (
     <>
     <main className="min-h-screen bg-[#fefefe] relative">
@@ -391,7 +395,7 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
         className="overflow-hidden shadow-lg sm:hidden"
       >
         <img
-          src={campaign.images[0] || "https://i.ibb.co/N2zVsqfg/calisma-alanlarimiz-egitim-sektoru.jpg"}
+          src={displayCover}
           alt={`${campaign.title} - Campaign Image`}
           className="w-full h-[500px] max-sm:h-[300px] object-cover transform"
         />
@@ -423,7 +427,7 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
               className="max-sm:hidden rounded-2xl overflow-hidden mb-6 max-sm:mb-4 shadow-lg"
             >
               <img
-                src={campaign.images[0] || "https://i.ibb.co/N2zVsqfg/calisma-alanlarimiz-egitim-sektoru.jpg"}
+                src={displayCover}
                 alt={`${campaign.title} - Campaign Image`}
                 className="w-full h-[500px] max-sm:h-[300px] object-cover transform"
               />
@@ -474,10 +478,10 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
             </div>
 
             {/* Image Gallery */}
-            {campaign.images.length > 1 && (
+            {displayImages.length > 1 && (
               <>
                 <div className="flex gap-3 overflow-x-auto pb-2">
-                  {campaign.images.map((image, index) => (
+                  {displayImages.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => {
