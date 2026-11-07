@@ -66,3 +66,19 @@ Only plan is the next safe step. The terminal prints project names, old image co
 
 Caveat: Existing `updatedAt` values are guarded during apply. Backup is made before the transaction. The rollback checks media fields but not unrelated changes; only use it after verifying no image edits have happened in the interim. The optional `ogImage` changes are constrained to old Cloudinary URLs.
 
+
+## Investigating 21 remaining campaigns using server-side backup/cached originals
+
+The Cloudinary new tenant contained 61 assets beyond the 16 recovered: 60 Cloudinary demo/sample files, and one WhatsApp media image; none establishes a project photo. There are still 87 failed legacy references across 21 campaigns, of which 20 have no working photo.
+
+Use the read-only local source discovery without a deploy:
+
+```bash
+cd /root/minberiaksa
+git fetch --no-tags origin ops/drive-media-recovery-20261107
+git show FETCH_HEAD:scripts/audit-server-media-sources.cjs > /root/minber-media-recovery/audit-server-media-sources.cjs
+node --check /root/minber-media-recovery/audit-server-media-sources.cjs
+node --env-file-if-exists=.env --env-file-if-exists=.env.production --env-file-if-exists=.env.production.local /root/minber-media-recovery/audit-server-media-sources.cjs
+```
+
+It inventories images and archive names only from narrowly scoped public/media/build-cache/release-backup directories, with a time/file cap, without following symlinks, opening archives, copying media, accessing financial data or changing database records. It compares candidate basenames to legacy Cloudinary URL basenames and writes the report privately under `/root/minber-media-recovery/from-drive/server-source-discovery/server-media-inventory.json`. Neither a found image nor a matching filename is proof that a photo belongs to a project. Independently review all candidates before staging.
