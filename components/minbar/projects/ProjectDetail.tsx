@@ -305,7 +305,7 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
                   style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 260, borderRadius: 14, overflow: "hidden", background: "var(--deep)", border: "1px solid var(--border)" }}
                 >
                   <ProjectImage
-                    sources={[item.image, ...item.coverFallbacks]}
+                    sources={[item.image, ...(item.coverFallbacks ?? [])]}
                     alt={item.title}
                     width={360}
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
