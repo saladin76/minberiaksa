@@ -27,8 +27,13 @@ function textNodes(node: unknown): string[] {
 function shapeWithoutText(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(shapeWithoutText);
   if (!node || typeof node !== "object") return node;
-  return Object.fromEntries(Object.entries(node).map(([key, value]) =>
-    [key, key === "text" && typeof value === "string" ? "" : shapeWithoutText(value)]));
+  // Attribute ordering is irrelevant in JSON. Image alternative text and
+  // accessible labels are localized prose; links and media sources are not.
+  return Object.fromEntries(
+    Object.entries(node).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) =>
+      [key, typeof value === "string" && ["text", "alt", "title", "aria-label"].includes(key)
+        ? "" : shapeWithoutText(value)]),
+  );
 }
 
 /**
