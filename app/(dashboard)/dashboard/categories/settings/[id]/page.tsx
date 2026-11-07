@@ -197,6 +197,19 @@ export default function EditCategoryPage() {
         infoCards: page.infoCards.filter((c) => c.title.trim()),
         translations: collectLocaleTranslations(values, LOCALE_FIELDS),
       });
+      // Verify the server saved every submitted language field before reporting
+      // success. This catches silently dropped page copy in legacy editors.
+      const readback = await axios.get(`/api/categories/${params.id}?allTranslations=true`, { params: { _: Date.now() } });
+      const storedRows = Array.isArray(readback.data?.translations) ? readback.data.translations : [];
+      for (const [code, row] of Object.entries(collectLocaleTranslations(values, LOCALE_FIELDS))) {
+        if (!row.name?.trim()) continue;
+        const stored = storedRows.find((item: { locale?: string }) => item.locale === code) as Record<string, unknown> | undefined;
+        for (const field of LOCALE_FIELDS) {
+          const expected = (row[field.name] ?? '').trim();
+          if (expected && String(stored?.[field.name] ?? '').trim() !== expected)
+            throw new Error(dt("تعذر تأكيد حفظ {0} للغة {1}. احتفظ بتعديلاتك وراجع البيانات.", [field.label, code.toUpperCase()]));
+        }
+      }
       setSaveStatus({ type: 'success', message: dt("تم تحديث الحملة بنجاح"), detail: dt("أنت ما زلت داخل صفحة التعديل") });
       toast.success(dt("تم تحديث الحملة بنجاح"));
       router.refresh();
