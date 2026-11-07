@@ -61,6 +61,15 @@ test("OpenGraph alternateLocale is limited to actual translated editions", () =>
   assert.equal((meta.alternates as { canonical: string }).canonical, alternates.canonical);
 });
 
+test("duplicate locale path redirects once and preserves locale selection", () => {
+  for (const locale of SUPPORTED_LOCALES) {
+    const url = `/${locale}/en/blog/article`;
+    const destination = redirectLegacyPath(url);
+    assert.equal(destination, `/${locale}/blog/article`);
+    assert.equal(redirectLegacyPath(destination!), null);
+  }
+});
+
 test("legacy public 301 destinations do not loop and ad tracking survives", () => {
   const old = "/ar/المشاريع/القدس";
   const redirected = redirectLegacyPath(old);
