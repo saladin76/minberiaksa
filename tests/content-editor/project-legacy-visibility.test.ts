@@ -8,6 +8,7 @@ import ts from "typescript";
 import { RANKED_CAMPAIGNS, UNRANKED_CAMPAIGNS } from "../../lib/campaign/priority-filter";
 import { CATEGORY_ACTIVE_OR_UNSET, NOT_SOFT_DELETED } from "../../lib/campaign/soft-delete-filter";
 import { mergeProjectPriorityGroups } from "../../lib/minbar/project-order";
+import { selectProjectImages } from "../../lib/minbar/project-image-fallback";
 import { selectProgrammeRelatedProjects } from "../../lib/minbar/project-filter-options";
 
 type Row = Record<string, unknown>;
@@ -59,6 +60,7 @@ function fixture(restoration = false) {
     "@/lib/i18n/translation-fallback": { translationLocaleWhere: () => ({}), pickTranslation: () => null }, "@/lib/campaign/categories": { parseCategoryPriorities: () => ({}) },
     "@/lib/content-editor/public-preview": {}, "@/lib/content/video-platform": {}, "@/lib/slug": {}, "@/lib/dashboard/donation-usd-revenue": {}, "@/lib/campaign/project-seo": {},
     "@/lib/blog/rich-text": { contentToBlocks: (text: string) => [{ kind: "p", text }] }, "@/lib/minbar/recommended-frequency": { parseRecommendedFrequency: () => null }, "@/lib/minbar/project-order": { mergeProjectPriorityGroups }, "@/lib/content-editor/project-order": projectOrder,
+    "@/lib/minbar/project-image-fallback": { selectProjectImages },
     "./project-filter-options": { selectProgrammeRelatedProjects },
     "./restoration-programme": { getRestorationProgrammeProjectIds: async () => [rows[3].id, rows[2].id, rows[0].id, rows[1].id, rows[2].id] },
   };
