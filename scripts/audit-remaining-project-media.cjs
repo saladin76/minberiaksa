@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable @typescript-eslint/no-var-requires -- Standalone Node.js CommonJS recovery CLI intentionally uses require. */
 /**
  * READ-ONLY remaining Campaign image inventory.
  * Reads only media fields and checks existing non-legacy URLs.
