@@ -18,10 +18,17 @@ export function selectProjectImages(
   return { cover, images, coverFallbacks };
 }
 
+/** The previous Cloudinary tenant is permanently unavailable (all 87 remaining
+ * legacy media requests fail). Keep the CMS values and rollback history intact,
+ * but never request them from public cards, hero galleries, or locale covers.
+ * No unrelated CDN or current Cloudinary account is affected. */
+const RETIRED_CLOUDINARY_IMAGE = /^https:\/\/res\.cloudinary\.com\/z9drzccl\//i;
+
 function uniqueImageUrls(sources: readonly (string | null | undefined)[]): string[] {
   return [...new Set(sources
     .filter((url): url is string => typeof url === "string" && !!url.trim())
-    .map((url) => url.trim()))];
+    .map((url) => url.trim())
+    .filter((url) => !RETIRED_CLOUDINARY_IMAGE.test(url)))];
 }
 
 export interface ProjectImageAttempt {
