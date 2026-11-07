@@ -1,4 +1,5 @@
 import { LEGACY_SLUGS, SLUGS, type MinbarRoute } from "./routes";
+import { SUPPORTED_LOCALES } from "../locales";
 
 /**
  * Redirects for the slugs the Minbar pages used to have.
@@ -86,6 +87,15 @@ export function redirectLegacyPath(pathname: string): string | null {
   if (!split) return null;
   const { locale, segments } = split;
   const decoded = segments.map(decode);
+
+  // Some legacy language switchers added a second locale to the path
+  // (e.g. /ar/en/blog). Keep the requested outer locale and the content
+  // path, issuing a single permanent redirect rather than a soft 404.
+  // Do not treat arbitrary two-letter content slugs as locales.
+  if ((SUPPORTED_LOCALES as readonly string[]).includes(decoded[0]) && decoded.length > 1) {
+    const destination = `/${[locale, ...segments.slice(1)].join("/")}`;
+    return destination === pathname ? null : destination;
+  }
 
   if (locale === "ar") {
     const exactPath = decoded.filter(Boolean).join("/");
