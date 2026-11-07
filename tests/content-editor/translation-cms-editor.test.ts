@@ -85,7 +85,9 @@ test("super-category save does not silently discard fields without a translated 
   const form = readFileSync("app/(dashboard)/dashboard/super-categories/_components/SuperCategoryForm.tsx", "utf8");
   assert.match(form, /const orphan = Object\.entries\(values\.translations\)/);
   assert.match(form, /const stored = actual\.find/);
-  assert.match(form, /if \(mode === 'edit' && Array\.isArray\(actual\)\)/);
+  // Create and edit must both verify that the API returned saved locale rows.
+  assert.match(form, /if \(!Array\.isArray\(actual\)\) throw new Error/);
+  assert.match(form, /for \(const \[code, fields\] of Object\.entries\(values\.translations\)\)/);
 });
 
 test("category Save All verifies readback and refuses untranslated orphan page fields", () => {
