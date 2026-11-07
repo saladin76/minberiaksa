@@ -36,10 +36,16 @@ export function SeoWorkspace({
     return () => cancelAnimationFrame(frame);
   }, [focusField, locale, tab]);
   let faq: Faq[] = [];
+  let faqInvalid = false;
   try {
-    faq = JSON.parse(values.faqContent || "[]");
+    const parsed: unknown = JSON.parse(values.faqContent || "[]");
+    if (!Array.isArray(parsed) || parsed.some((item) => !item || typeof item !== "object" || typeof item.q !== "string" || typeof item.a !== "string")) {
+      faqInvalid = true;
+    } else {
+      faq = parsed as Faq[];
+    }
   } catch {
-    /* show a recoverable empty draft */
+    faqInvalid = true;
   }
   const title =
       values.seoTitle || values.metaTitle || values.title || values.name || "",
@@ -137,6 +143,7 @@ export function SeoWorkspace({
               <button
                 type="button"
                 className="rounded border px-3 py-2 text-sm"
+                disabled={faqInvalid}
                 onClick={() => writeFaq([...faq, { q: "", a: "" }])}
               >
                 {dt("إضافة سؤال")}
@@ -145,6 +152,7 @@ export function SeoWorkspace({
             <p className="text-xs leading-6 text-slate-500">
               {dt("تُعرض الأسئلة المحفوظة في الصفحة، وتطابقها البيانات المنظمة. راجع الحقائق قبل الحفظ.")}
             </p>
+            {faqInvalid ? <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3"><p role="alert" className="text-sm text-red-800">{dt("تنسيق الأسئلة الشائعة المحفوظ غير صالح. لن نحذف النص أو نستبدله تلقائيًا؛ أصلحه هنا قبل المتابعة.")}</p><textarea className="min-h-32 w-full rounded border p-3 font-mono text-sm" aria-label={dt("إصلاح بيانات FAQ الأصلية")} value={values.faqContent || ""} onChange={(event) => onChange("faqContent", event.target.value)} /></div> : null}
             {faq.map((item, i) => (
               <fieldset key={i} className="space-y-2 rounded-lg border p-3">
                 <label className="block text-sm">
