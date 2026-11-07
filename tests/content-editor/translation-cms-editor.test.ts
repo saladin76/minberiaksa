@@ -64,3 +64,11 @@ test("category editor validates and rehydrates all ten translated landing-page f
   assert.match(page, /LOCALE_FIELD_NAMES\.map\(field => \[localeKey\(field, l\)/);
   assert.match(page, /collectLocaleTranslations\(values, LOCALE_FIELDS\)/);
 });
+
+test("campaign rich descriptions use the latest editor state when translations return", () => {
+  const campaign = readFileSync("app/(dashboard)/dashboard/campaigns/settings/[id]/page.tsx", "utf8");
+  assert.match(campaign, /const descriptionsRef = useRef\(descriptions\)/);
+  assert.match(campaign, /isDescEmpty\(descriptionsRef\.current\[locale\]/);
+  assert.match(campaign, /setDescriptions\(descriptionsRef\.current\)/);
+  assert.match(campaign, /setEditorVersion\(\(v\) => v \+ 1\)/);
+});
