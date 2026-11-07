@@ -87,3 +87,11 @@ test("super-category save does not silently discard fields without a translated 
   assert.match(form, /const stored = actual\.find/);
   assert.match(form, /if \(mode === 'edit' && Array\.isArray\(actual\)\)/);
 });
+
+test("category Save All verifies readback and refuses untranslated orphan page fields", () => {
+  const page = readFileSync("app/(dashboard)/dashboard/categories/settings/[id]/page.tsx", "utf8");
+  assert.match(page, /const orphan = Object\.entries\(localeData\)/);
+  assert.match(page, /writeCompleted = true/);
+  assert.match(page, /allTranslations=true/);
+  assert.match(page, /for \(const field of LOCALE_FIELDS\)/);
+});
