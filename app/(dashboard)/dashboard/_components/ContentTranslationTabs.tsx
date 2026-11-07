@@ -96,11 +96,12 @@ export function ContentTranslationTabs({
     currentDraft.current = updated;
     onChange(updated);
   };
-  const complete = OTHER_LOCALES.filter(code =>
-    fields.every(field => (value[code]?.[field.name] ?? '').trim())
+  const hasRequired = (code: string) => Boolean((value[code]?.[requiredField] ?? '').trim());
+  const available = OTHER_LOCALES.filter(hasRequired).length;
+  const missing = OTHER_LOCALES.length - available;
+  const optionalBlanks = OTHER_LOCALES.filter(code => hasRequired(code) &&
+    fields.some(field => field.name !== requiredField && !(value[code]?.[field.name] ?? '').trim())
   ).length;
-  const missing = OTHER_LOCALES.filter(code => !(value[code]?.[requiredField] ?? '').trim()).length;
-  const needsReview = OTHER_LOCALES.length - complete - missing;
 
   return (
     <>
@@ -118,15 +119,15 @@ export function ContentTranslationTabs({
       </div>
     ) : null}
     <div role="status" aria-live="polite" className="flex flex-wrap gap-3 text-xs text-slate-600">
-      <span>{dt("مكتمل")}: {complete}/{OTHER_LOCALES.length}</span>
-      <span>{dt("يحتاج ترجمة")}: {missing}</span>
-      <span>{dt("يحتاج استكمالًا أو مراجعة")}: {needsReview}</span>
+      <span>{dt("الحقل الرئيسي مترجم")}: {available}/{OTHER_LOCALES.length}</span>
+      <span>{dt("الحقل الرئيسي ناقص")}: {missing}</span>
+      <span>{dt("لغات بها حقول اختيارية فارغة")}: {optionalBlanks}</span>
     </div>
     <Tabs defaultValue={OTHER_LOCALES[0]} dir={dashDir()}>
       <TabsList className="flex flex-wrap h-auto gap-1">
         {OTHER_LOCALES.map((locale) => {
-          const filled = (value[locale]?.[requiredField] ?? '').trim().length > 0;
-          const completed = fields.every(field => (value[locale]?.[field.name] ?? '').trim());
+          const filled = hasRequired(locale);
+          const hasAny = fields.some(field => (value[locale]?.[field.name] ?? '').trim());
           return (
             <TabsTrigger key={locale} value={locale} className="gap-1.5">
               {/* The endonym, not a flag: a language is not a country, and the
@@ -135,8 +136,8 @@ export function ContentTranslationTabs({
               {/* A quiet dot rather than a count: the point is only "has content". */}
               <span
                 aria-hidden="true"
-                title={completed ? dt("مكتمل") : filled ? dt("يحتاج استكمالًا") : dt("يحتاج ترجمة")}
-                className={`h-1.5 w-1.5 rounded-full ${completed ? 'bg-emerald-500' : filled ? 'bg-amber-500' : 'bg-slate-300'}`}
+                title={filled ? dt("الحقل الرئيسي مترجم؛ راجع النصوص") : hasAny ? dt("الحقل الرئيسي ناقص") : dt("يحتاج ترجمة")}
+                className={`h-1.5 w-1.5 rounded-full ${filled ? 'bg-emerald-500' : hasAny ? 'bg-amber-500' : 'bg-slate-300'}`}
               />
             </TabsTrigger>
           );
