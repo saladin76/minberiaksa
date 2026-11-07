@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { whereByIdOrAnyLocaleSlug } from "@/lib/slug";
 import { NOT_SOFT_DELETED } from "@/lib/campaign/soft-delete-filter";
 import { parseCampaignFaqContent } from "@/lib/campaign/seo-fields";
+import { publicCampaignImage } from "@/lib/minbar/project-image-fallback";
 import { reviewSeoDraft } from "../../seo-dashboard-quality";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ async function loadSeo(db: SeoDb, idOrSlug: string, locale: string) {
   return {
     campaignId: camp.id, locale, defaultSeo: fieldValues(camp as unknown as Record<string, unknown>),
     localeSeo: values, hasTranslation, contentTitle: title, contentDescription: description,
-    slug: trans?.slug || camp.slug || "", defaultImage: trans?.image || camp.images[0] || "",
+    slug: trans?.slug || camp.slug || "", defaultImage: publicCampaignImage([trans?.image, ...camp.images]),
     revision: hasTranslation ? snapshot({ id: camp.id, locale, title, description, fields: values }) : null,
     translationId: trans?.id || null,
   };
