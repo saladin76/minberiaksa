@@ -61,11 +61,13 @@ const LOCALE_FIELDS: readonly LocaleFormField[] = [
 ];
 const LOCALE_FIELD_NAMES = ['name', 'description', 'heroLead', 'ctaLabel', 'statDoneLabel', 'statGoalLabel', 'projectsTitle', 'donateTitle', 'donateNote', 'achievementsTitle'] as const;
 type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
+// zodResolver strips unknown fields: declare every translated page-copy field,
+// otherwise the form displays translations which silently vanish on Save All.
 const LOCALE_SHAPE = Object.fromEntries(
-  TRANSLATION_LOCALES.flatMap((locale) => [
-    [localeKey('name', locale), z.string().max(50).optional()],
-    [localeKey('description', locale), z.string().max(500).optional()],
-  ])
+  TRANSLATION_LOCALES.flatMap(locale => LOCALE_FIELDS.map(field => [
+    localeKey(field.name, locale),
+    (field.maxLength ? z.string().max(field.maxLength) : z.string()).optional(),
+  ]))
 ) as LocaleShape;
 
 const formSchema = z.object({
@@ -142,7 +144,7 @@ export default function EditCategoryPage() {
           ...Object.fromEntries(
             TRANSLATION_LOCALES.flatMap((l) => {
               const t = getTr(l);
-              return [[localeKey('name', l), t?.name || ''], [localeKey('description', l), t?.description || '']];
+              return LOCALE_FIELD_NAMES.map(field => [localeKey(field, l), typeof t?.[field] === 'string' ? t[field] : ''] as const);
             })
           ),
         });
