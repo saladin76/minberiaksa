@@ -50,6 +50,20 @@ else
   printf 'NO_SYSTEM_PACKAGES_INSTALLED=YES\nBROWSER_QA_RESULT=BLOCKED_BROWSER_INSTALL_NO_MERGE_NO_DEPLOY\n'
   exit 1
 fi
+# Resolve the browser's OS-library dependencies inside the QA root only.
+# No apt install, no dpkg install, no system-library replacements.
+browser="$browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell"
+test -x "$browser" || die "Expected Playwright headless shell binary missing"
+printf '\nPREPARE isolated browser runtime libraries\n'
+if (cd "$work" && bash scripts/qa-playwright-isolated-libs.sh "$browser" "$QA_ROOT/runtime-libs" "$QA_ROOT/downloads" > "$reports/browser-libs.log" 2>&1); then
+  printf 'PASS chromium-runtime-libraries\n'
+else
+  printf 'BLOCKED chromium-runtime-libraries - %s\n' "$reports/browser-libs.log"
+  tail -n 45 "$reports/browser-libs.log" || true
+  echo 'BROWSER_QA_RESULT=BLOCKED_MISSING_RUNTIME_LIBRARIES_NO_MERGE_NO_DEPLOY'
+  exit 1
+fi
+browser_libs="$QA_ROOT/runtime-libs/usr/lib/x86_64-linux-gnu:$QA_ROOT/runtime-libs/lib/x86_64-linux-gnu:$QA_ROOT/runtime-libs/usr/lib"
 failures=0
 run() {
   name="$1"
@@ -63,6 +77,7 @@ run() {
     GOOGLE_CLIENT_ID=fixture-client GOOGLE_CLIENT_SECRET=fixture-secret \
     STRIPE_SECRET_KEY=sk_test_fixture_no_network \
     PLAYWRIGHT_BROWSERS_PATH="$browsers" PLAYWRIGHT_SKIP_BROWSER_GC=1 \
+    LD_LIBRARY_PATH="$browser_libs" \
     CONTENT_EDITOR_ARTIFACTS="$reports/artifacts/$name" \
     node --import tsx "$file" > "$reports/$name.log" 2>&1); then
     printf 'PASS %s\n' "$name"
