@@ -79,6 +79,7 @@ try {
      requests.push({path:url.pathname,body:req.postDataJSON()});
      if(url.pathname==="/api/cart/payment") return route.fulfill({json:{donation:{id:"600000000000000000000002",accessToken:"a".repeat(48)}}});
      if(url.pathname==="/api/albaraka/3d/initiate") return route.fulfill({json:{actionUrl:"https://bank.invalid/authorize",fields:{fixture:"signed-fields"}}});
+      if(url.pathname==="/api/albaraka/2d/result") return route.fulfill({contentType:"text/html",body:"Fixture result"});
      throw new Error("Unexpected API: "+url.pathname);
     }
     return route.continue();
