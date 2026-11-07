@@ -175,6 +175,16 @@ export default function EditCategoryPage() {
   }, [params.id]);
 
   const onSubmit = async (values: FormValues) => {
+    const localeData = collectLocaleTranslations(values, LOCALE_FIELDS);
+    const orphan = Object.entries(localeData).find(([, row]) => !row.name?.trim() &&
+      Object.entries(row).some(([field, text]) => field !== 'name' && text.trim())
+    );
+    if (orphan) {
+      setActiveLocale(orphan[0] as SeoLocale);
+      toast.error(dt("لغة {0}: اسم التصنيف مطلوب لحفظ بقية حقول الترجمة.", [orphan[0].toUpperCase()]));
+      return;
+    }
+    let writeCompleted = false;
     setSaving(true);
     setSaveStatus({ type: 'saving', message: dt("جاري حفظ تحديثات الحملة..."), detail: dt("لا تغادر الصفحة حتى يكتمل الحفظ") });
     try {
@@ -195,13 +205,14 @@ export default function EditCategoryPage() {
         achievementVideoIds: page.achievementVideoIds,
         values: page.values.filter((v) => v.label.trim()),
         infoCards: page.infoCards.filter((c) => c.title.trim()),
-        translations: collectLocaleTranslations(values, LOCALE_FIELDS),
+        translations: localeData,
       });
+      writeCompleted = true;
       // Verify the server saved every submitted language field before reporting
       // success. This catches silently dropped page copy in legacy editors.
       const readback = await axios.get(`/api/categories/${params.id}?allTranslations=true`, { params: { _: Date.now() } });
       const storedRows = Array.isArray(readback.data?.translations) ? readback.data.translations : [];
-      for (const [code, row] of Object.entries(collectLocaleTranslations(values, LOCALE_FIELDS))) {
+      for (const [code, row] of Object.entries(localeData)) {
         if (!row.name?.trim()) continue;
         const stored = storedRows.find((item: { locale?: string }) => item.locale === code) as Record<string, unknown> | undefined;
         for (const field of LOCALE_FIELDS) {
@@ -215,7 +226,9 @@ export default function EditCategoryPage() {
       router.refresh();
     } catch (error: any) {
       console.error('Error updating category:', error);
-      const message = error?.response?.data?.error || dt("فشل في تحديث الحملة");
+      const message = writeCompleted
+        ? dt("وصلت البيانات إلى الخادم لكن تعذر تأكيد جميع الترجمات. احتفظ بالمسودة وأعد تحميل الصفحة بعد المراجعة.")
+        : error?.response?.data?.error || dt("فشل في تحديث الحملة");
       setSaveStatus({ type: 'error', message, detail: dt("راجع البيانات ثم حاول مرة أخرى") });
       toast.error(message);
     } finally {
