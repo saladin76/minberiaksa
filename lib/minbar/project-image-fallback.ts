@@ -24,6 +24,24 @@ export function selectProjectImages(
  * No unrelated CDN or current Cloudinary account is affected. */
 const RETIRED_CLOUDINARY_IMAGE = /^https:\/\/res\.cloudinary\.com\/z9drzccl\//i;
 
+/** A neutral, locally hosted brand placeholder, never unrelated photography. */
+export const PUBLIC_CAMPAIGN_IMAGE_PLACEHOLDER = "/minbar/assets/logo-mark.png";
+
+/** Public-facing images only. Database CMS values remain untouched so the
+ * lost originals can be restored later. This is shared by legacy and modern
+ * campaign cards, galleries, checkout thumbnails and share previews. */
+export function publicCampaignImages(
+  sources: readonly (string | null | undefined)[] | null | undefined,
+): string[] {
+  return uniqueImageUrls(sources ?? []);
+}
+
+export function publicCampaignImage(
+  sources: readonly (string | null | undefined)[] | null | undefined,
+): string {
+  return publicCampaignImages(sources)[0] ?? PUBLIC_CAMPAIGN_IMAGE_PLACEHOLDER;
+}
+
 function uniqueImageUrls(sources: readonly (string | null | undefined)[]): string[] {
   return [...new Set(sources
     .filter((url): url is string => typeof url === "string" && !!url.trim())
