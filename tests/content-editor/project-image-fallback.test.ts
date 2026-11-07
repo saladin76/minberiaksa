@@ -42,3 +42,24 @@ test("missing images do not produce broken requests", () => {
   assert.deepEqual(projectImageAttempts([null, "", "   "], 360), []);
   assert.deepEqual(selectProjectImages(null, []), { cover: null, images: [], coverFallbacks: [] });
 });
+
+
+test("retired Cloudinary photos are not exposed as gallery slides or image attempts", () => {
+  const old = "https://res.cloudinary.com/z9drzccl/image/upload/v1234/dead.jpg";
+  const current = "https://res.cloudinary.com/idhqsozi/image/upload/v9999/recovered.jpg";
+  const media = selectProjectImages(old, [old, current]);
+  assert.equal(media.cover, current);
+  assert.deepEqual(media.images, [current]);
+  assert.deepEqual(media.coverFallbacks, []);
+  assert.deepEqual(projectImageAttempts([old], 360), []);
+  assert.equal(projectImageAttempts([current], 360).length, 2);
+});
+
+test("all retired photos render an empty-media state without mutating CMS URLs", () => {
+  const old = "https://res.cloudinary.com/z9drzccl/image/upload/v1/old.jpg";
+  const originals = [old];
+  assert.deepEqual(selectProjectImages(old, originals), {
+    cover: null, images: [], coverFallbacks: [],
+  });
+  assert.deepEqual(originals, [old]);
+});
