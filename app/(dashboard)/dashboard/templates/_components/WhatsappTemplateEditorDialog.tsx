@@ -490,36 +490,15 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
       const inspected = await inspectMediaFile(file, type).catch(() => ({ size: file.size } as MediaInfo));
       setMediaInfo(inspected);
 
-      const signature = await axios.post("/api/templates/whatsapp/media-signature", { kind: type });
-      const signed = signature.data as {
-        uploadUrl: string;
-        apiKey: string;
-        timestamp: number;
-        folder: string;
-        signature: string;
-        publicId?: string;
-      };
-
-      const direct = new FormData();
-      direct.set("file", file);
-      direct.set("api_key", signed.apiKey);
-      direct.set("timestamp", String(signed.timestamp));
-      direct.set("folder", signed.folder);
-      direct.set("signature", signed.signature);
-      if (signed.publicId) direct.set("public_id", signed.publicId);
-
-      const cloud = await axios.post(signed.uploadUrl, direct);
-      const publicUrl = cloud.data?.secure_url as string | undefined;
-      const publicId = cloud.data?.public_id as string | undefined;
-      if (!publicUrl || !publicId) throw new Error("Cloudinary upload did not return media identifiers");
-
-      const response = await axios.post("/api/templates/whatsapp/media-sample", {
-        url: publicUrl,
-        publicId,
-        name: file.name,
-        type: mediaMime,
-        size: file.size,
-      });
+      // Upload once to the site's durable media storage, then send its sample
+      // directly to Meta. Cloudinary can be disabled and cannot be the single
+      // prerequisite for WhatsApp template creation.
+      const payload = new FormData();
+      payload.set("file", file, file.name);
+      const response = await axios.post("/api/templates/whatsapp/media-sample", payload);
+      const publicUrl = response.data?.url as string | undefined;
+      const publicId = response.data?.publicId as string | undefined;
+      if (!publicUrl || !publicId) throw new Error("Persistent media storage did not return a public URL");
 
       const handle = response.data?.handle as string | undefined;
       if (!handle) throw new Error("missing Meta media handle");
@@ -1063,7 +1042,7 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
                             />
                           </label>
                           <p className="mt-1 text-center text-[10px] text-slate-400">
-                            {dt("الرفع يتم مباشرة إلى التخزين ثم تُرسل العينة إلى Meta بدون المرور بحجم طلب Vercel.")}</p>
+                            {dt("يُحفظ الملف في تخزين دائم على الخادم ثم تُرسل العينة إلى Meta. راجع حد رفع الملفات على الخادم.")}</p>
                           {mediaInfo && (
                             <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px]">
                               <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{formatMegabytes(mediaInfo.size)}</span>
