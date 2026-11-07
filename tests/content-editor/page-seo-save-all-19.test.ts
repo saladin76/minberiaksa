@@ -16,7 +16,7 @@ class ContentError extends Error {
 type Stored = { key: string; version: string; overrides: Record<string, Record<string, string>> };
 type Api = {
   readPageSeoDocument: (key: string) => Promise<{ key: string; revision: string | null; overrides: Record<string, Record<string, string>>; defaults: Record<string, unknown> }>;
-  savePageSeoDocument: (key: string, revision: string | null, input: unknown) => Promise<{ key: string; revision: string | null; overrides: Record<string, Record<string, string>> }>;
+  savePageSeoDocument: (key: string, revision: string | null, input: unknown) => Promise<{ key: string; revision: string | null; overrides: Record<string, Record<string, string>>; defaults: Record<string, unknown> }>;
 };
 function fixture() {
   let current: Stored | null = null, writes = 0, counter = 0;
