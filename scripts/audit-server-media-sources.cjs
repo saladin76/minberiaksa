@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable @typescript-eslint/no-var-requires -- Standalone Node.js CommonJS recovery CLI intentionally uses require. */
 /**
  * Read-only survey of project photo sources on the Minber production host.
  * Scans explicit public/media/cached/release directories, never decompresses,
