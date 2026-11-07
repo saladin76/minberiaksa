@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { isSecurityExemptPath } from "../../lib/site-security/policy";
 import {
   openLocalWhatsappTemplateMedia,
   removeWhatsappTemplateMedia,
@@ -23,6 +24,8 @@ test("VPS uses persistent disk, serverless requires configured Blob store", () =
 test("published URLs are HTTPS and opaque random filenames", () => {
   const id = "1ddac7a9-210e-4c46-9251-111111111111.pdf";
   assert.equal(validWhatsappTemplateMediaId(id), true);
+  assert.equal(isSecurityExemptPath(`/api/public/whatsapp-template-media/${id}`), true);
+  assert.equal(isSecurityExemptPath("/api/public/whatsapp-template-media/not-opaque.pdf"), false);
   assert.equal(validWhatsappTemplateMediaId("../test.pdf"), false);
   assert.equal(templateMediaPublicUrl(id, {
     NEXT_PUBLIC_SITE_URL: "https://minberiaksa.org",
