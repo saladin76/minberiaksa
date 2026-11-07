@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { reviewSeoDraft, reviewSeoSuggestion } from "@/app/api/admin/seo/seo-dashboard-quality";
 import { runSuggestionBatch, readSuggestionJson, SuggestionRequestError, requestSuggestion } from "@/lib/content-editor/suggestion-batch";
 import { Ga4SeoEvidenceControl } from "./Ga4SeoEvidenceControl";
 import { ContentLanguagePicker } from "./ContentLanguagePicker";
@@ -34,6 +35,9 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     if (params.get("ga4") === "1") try { setAnalyticsPeriod(parseGa4Period({range: params.get("range"), startDate: params.get("startDate"), endDate: params.get("endDate")})); } catch { setMessage(dt("فترة التحليلات غير صالحة. اختر فترة جديدة.")); }
   }, []);
   const dirty = Boolean(document && JSON.stringify(draft) !== JSON.stringify(document.overrides));
+  const currentValues = document ? { ...document.defaults[locale], ...draft[locale] } : null;
+  const currentIssues = currentValues ? reviewSeoDraft({ locale, ...currentValues }) : [];
+  const blockingIssues = SUPPORTED_LOCALES.flatMap((code) => reviewSeoDraft({ locale: code, ...document?.defaults[code], ...draft[code] }).filter((issue) => issue.severity === "error").map((issue) => `${LOCALES[code].nativeLabel}: ${issue.message}`));
   useDashboardUnsavedChanges(dirty);
   useEffect(() => {
     const controller = new AbortController(); generation.current?.abort(); setDocument(null); setMessage(""); setMessageTone("info"); setProposals({}); setErrors({}); setSkipped([]); setFailureReasons({});
@@ -49,7 +53,9 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     setDraft((previous) => ({ ...previous, [locale]: { ...previous[locale], [field]: value } }));
   };
   const save = async () => {
-    if (!document) return; setBusy("save"); setMessage(""); setMessageTone("info");
+    if (!document) return;
+    if (blockingIssues.length) { setMessageTone("error"); setMessage(dt("راجع أخطاء SEO قبل الحفظ: ") + blockingIssues.join(" · ")); return; }
+    setBusy("save"); setMessage(""); setMessageTone("info");
     try {
       const saved = await api<Document>("/api/admin/page-seo/" + key, { method: "PUT", body: JSON.stringify({ revision: document.revision, overrides: draft }) });
       const read = await api<Document>("/api/admin/page-seo/" + key);
@@ -87,6 +93,8 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     const accepted: Record<string, PageSeoValues> = {}; let conflicts = 0;
     for (const code of codes) {
       const proposal = proposals[code]; if (!proposal || proposal.revision !== document.revision || proposal.key !== key) continue;
+      const review = reviewSeoSuggestion({ title: document.defaults.ar?.metaTitle || "", description: [document.defaults.ar?.metaDescription || "", draftRef.current.ar?.metaDescription || ""].join(" ") }, { seoTitle: proposal.values.metaTitle, metaDescription: proposal.values.metaDescription, altText: proposal.values.imageAlt }, code);
+      if (review.some((item) => item.severity === "error")) { conflicts++; continue; }
       for (const [field, value] of Object.entries(proposal.values)) {
         if ((selectedField && selectedField !== field) || !PAGE_SEO_FIELDS.some(([key]) => key === field)) continue;
         if ((draftRef.current[code]?.[field] || "") !== (proposal.base?.[field] || "")) { conflicts++; continue; }
@@ -102,11 +110,12 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
   return <div dir={dashDir()} className="mx-auto max-w-6xl space-y-5 pb-12">
     <header className="sticky top-20 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur">
       <div>{embedded ? <h2 className="text-lg font-semibold">{dt("SEO الصفحات العامة")}</h2> : <h1 className="text-2xl font-bold">{dt("SEO الصفحات العامة")}</h1>}<p className="mt-2 hidden text-sm text-slate-500 sm:block">{dt("راجع إعدادات البحث والمشاركة لكل صفحة ولغة، ثم احفظ كل التعديلات معًا.")}</p></div>
-      <button type="button" onClick={save} disabled={!document || !dirty || Boolean(busy)} className="rounded bg-brand px-4 py-3 text-white disabled:opacity-50">{dt("حفظ جميع اللغات")}</button>
+      <button type="button" onClick={save} disabled={!document || !dirty || Boolean(busy) || blockingIssues.length > 0} className="rounded bg-brand px-4 py-3 text-white disabled:opacity-50">{dt("حفظ جميع اللغات")}</button>
     </header>
     <label className="block space-y-2"><span>{dt("الصفحة")}</span><select value={key} disabled={Boolean(busy)} className="w-full rounded border bg-white p-3" onChange={(event) => { if (!dirty || window.confirm(dt("توجد تعديلات غير محفوظة. مغادرة المحرر؟"))) setKey(event.target.value); }}>{MANAGED_SEO_PAGES.map((page) => <option key={page.key} value={page.key}>{dt(page.label)}</option>)}</select></label>
     {message ? <p role={messageTone === "error" ? "alert" : "status"} className={`rounded-xl border p-3 text-sm ${messageTone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : messageTone === "error" ? "border-red-200 bg-red-50 text-red-800" : "bg-sky-50"}`}>{message}</p> : null}
     <ContentLanguagePicker value={locale} onChange={setLocale} disabled={busy === "save"} />
+    {document ? <p role="status" className="text-xs text-slate-600">{dt("اللغة الحالية:")} {LOCALES[locale].nativeLabel} · {dirty ? dt("توجد مسودة لم تحفظ بعد؛ لن تُنشر حتى تحفظ جميع اللغات.") : dt("لا توجد تغييرات محلية غير محفوظة.")}</p> : null}
     <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer text-sm font-semibold">{dt("الاستفادة من تقارير الزيارات في الاقتراحات")}</summary><div className="mt-4"><Ga4SeoEvidenceControl value={analyticsPeriod} onChange={setAnalyticsPeriod} /></div></details>
     <div className="grid items-end gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_auto_auto]">
       <label className="min-w-0 text-sm sm:col-span-2 lg:col-span-1">{dt("السوق المستهدف (اختياري)")}<input value={market} onChange={(event) => setMarket(event.target.value)} className="mt-2 w-full rounded border p-2" maxLength={120} /></label>
@@ -119,17 +128,24 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
     {document ? <section className="space-y-4 rounded-xl border bg-white p-5" dir={LOCALES[locale].direction}>
       <a href={"/" + locale + managedPagePath(key, locale)} target="_blank" rel="noopener noreferrer" className="text-sm text-brand">{dt("فتح الصفحة")}</a>
       <p className="text-xs leading-6 text-slate-500">{dt("ابدأ بعنوان البحث ووصفه. الحقول الفارغة تستخدم النص الافتراضي الظاهر داخلها؛ إعدادات المشاركة اختيارية.")}</p>
+      <aside aria-label={dt("تدقيق SEO للغة الحالية")} className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+        <p className="font-semibold">{dt("تدقيق SEO ·")} {LOCALES[locale].nativeLabel} · {currentIssues.length ? dt("{0} ملاحظات", [currentIssues.length]) : dt("لا توجد ملاحظات آلية")}</p>
+        {currentIssues.length ? <ul className="mt-2 list-disc space-y-1 ps-5">{currentIssues.map((issue) => <li key={`${issue.code}-${issue.field}`} className={issue.severity === "error" ? "text-red-800" : "text-amber-900"}>{issue.message}</li>)}</ul> : null}
+        <p className="mt-2 text-xs">{dt("هذه فحوص تحريرية ولا تغني عن مراجعة صحة الوقائع أو معاينة Google الفعلية.")}</p>
+      </aside>
       <div className="rounded-xl border bg-slate-50 p-4"><p className="text-xs text-slate-500" dir="ltr">minberiaksa.org/{locale}{managedPagePath(key, locale)}</p><p className="mt-2 text-xl text-blue-800">{draft[locale]?.metaTitle || document.defaults[locale]?.metaTitle}</p><p className="mt-2 line-clamp-3 text-sm leading-7 text-slate-600">{draft[locale]?.metaDescription || document.defaults[locale]?.metaDescription}</p></div>
       <div role="tablist" aria-label={dt("أقسام SEO")} className="flex flex-wrap gap-2">{[["search", "محركات البحث"], ["share", "المشاركة الاجتماعية"], ["advanced", "إعدادات متقدمة"]].map(([value, label]) => <button type="button" role="tab" key={value} aria-selected={seoTab === value} onClick={() => setSeoTab(value)} className={`rounded-lg border px-3 py-2 text-sm ${seoTab === value ? "bg-brand text-white" : "bg-white"}`}>{dt(label)}</button>)}</div>
       {PAGE_SEO_FIELDS.filter(([field]) => seoTab === "search" ? ["metaTitle", "metaDescription", "seoKeyword"].includes(field) : seoTab === "share" ? ["ogTitle", "ogDescription", "ogImage", "imageAlt"].includes(field) : false).map(([field, label]) => <label key={field} className="block space-y-2 text-sm"><span className="font-semibold">{dt(label)}</span>
-        <textarea aria-label={dt(label)} disabled={busy === "save"} value={draft[locale]?.[field] || ""} placeholder={document.defaults[locale]?.[field] || ""} onChange={(event) => edit(field, event.target.value)} className="min-h-20 w-full rounded border p-3" maxLength={field === "metaTitle" || field === "ogTitle" ? 70 : field === "metaDescription" || field === "ogDescription" ? 170 : field === "ogImage" ? 2048 : field === "imageAlt" || field === "seoKeyword" ? 200 : 500} />
+        <textarea aria-label={dt(label)} disabled={busy === "save"} value={draft[locale]?.[field] || ""} placeholder={document.defaults[locale]?.[field] || ""} onChange={(event) => edit(field, event.target.value)} className="min-h-20 w-full rounded border p-3" maxLength={field === "metaTitle" || field === "ogTitle" ? (locale === "ja" || locale === "zh" ? 42 : 70) : field === "metaDescription" || field === "ogDescription" ? (locale === "ja" || locale === "zh" ? 90 : 170) : field === "ogImage" ? 2048 : field === "imageAlt" || field === "seoKeyword" ? 200 : 500} />
       </label>)}
       {seoTab === "advanced" ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy === "save"} checked={draft[locale]?.seoNoIndex === "true"} onChange={(event) => edit("seoNoIndex", String(event.target.checked))} />{dt("منع فهرسة هذه اللغة مع إبقاء الصفحة ظاهرة")}</label> : null}
     </section> : null}
     {Object.keys(proposals).length ? <section className="space-y-4 rounded-xl border bg-white p-5">
+      <p className="text-xs text-slate-600">{dt("الاقتراحات للمعاينة فقط؛ لا تُحفظ أو تُنشر إلا عند التطبيق يدويًا ثم الحفظ.")}</p>
       <div className="flex items-center justify-between"><h2 className="font-bold">{dt("مراجعة الاقتراح")}</h2><button type="button" disabled={Boolean(busy)} onClick={() => apply(Object.keys(proposals))} className="rounded border px-3 py-2">{dt("تطبيق الجميع في المسودة")}</button></div>
       {Object.entries(proposals).map(([code, proposal]) => <article key={code} dir={LOCALES[code as SupportedLocale].direction} className="space-y-3 rounded border p-4">
         <h3 className="font-bold">{LOCALES[code as SupportedLocale].nativeLabel}</h3>
+        {reviewSeoSuggestion({ title: document.defaults.ar?.metaTitle || "", description: [document.defaults.ar?.metaDescription || "", draft.ar?.metaDescription || ""].join(" ") }, { seoTitle: proposal.values.metaTitle, metaDescription: proposal.values.metaDescription, altText: proposal.values.imageAlt }, code).map((issue) => <p key={issue.code} role="alert" className={issue.severity === "error" ? "text-sm text-red-800" : "text-sm text-amber-800"}>{issue.message}</p>)}
         {PAGE_SEO_FIELDS.filter(([field]) => field in proposal.values).map(([field, label]) => <article key={field} className="space-y-3 rounded-lg border bg-slate-50 p-3">
           <h4 className="text-sm font-semibold">{dt(label)}</h4><div className="grid gap-3 md:grid-cols-2">
             <div className="rounded border bg-white p-3 text-sm"><p className="mb-2 text-xs font-semibold text-slate-500">{dt("المسودة قبل الاقتراح")}</p><p className="whitespace-pre-wrap break-words">{proposal.base?.[field] || document?.defaults[code]?.[field] || dt("فارغ")}</p></div>
