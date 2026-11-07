@@ -168,27 +168,27 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
       </aside> : <p role="status" className="text-sm text-emerald-800">{dt("لا توجد ملاحظات آلية على هذه المسودة.")}</p>}
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-4">
-          <label className="block space-y-2"><Label>{dt("عنوان البحث")} · {size(fields.seoTitle)}/{titleLimit}</Label>
+          <div className="block space-y-2"><Label>{dt("عنوان البحث")} · {size(fields.seoTitle)}/{titleLimit}</Label>
             <Input value={fields.seoTitle} maxLength={160} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("seoTitle", event.target.value)} placeholder={document.contentTitle} />
-          </label>
-          <label className="block space-y-2"><Label>{dt("وصف البحث")} · {size(fields.seoDescription)}/{descriptionLimit}</Label>
+          </div>
+          <div className="block space-y-2"><Label>{dt("وصف البحث")} · {size(fields.seoDescription)}/{descriptionLimit}</Label>
             <Textarea rows={3} maxLength={220} value={fields.seoDescription} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("seoDescription", event.target.value)} placeholder={document.contentDescription} />
-          </label>
-          <label className="block space-y-2"><Label>{dt("العبارة الرئيسية المستهدفة")}</Label>
+          </div>
+          <div className="block space-y-2"><Label>{dt("العبارة الرئيسية المستهدفة")}</Label>
             <Input maxLength={500} value={fields.seoKeyword} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("seoKeyword", event.target.value)} />
-          </label>
-          <label className="block space-y-2"><Label>{dt("عنوان المشاركة")}</Label>
+          </div>
+          <div className="block space-y-2"><Label>{dt("عنوان المشاركة")}</Label>
             <Input maxLength={180} value={fields.ogTitle} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("ogTitle", event.target.value)} />
-          </label>
-          <label className="block space-y-2"><Label>{dt("وصف المشاركة")}</Label>
+          </div>
+          <div className="block space-y-2"><Label>{dt("وصف المشاركة")}</Label>
             <Textarea maxLength={300} value={fields.ogDescription} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("ogDescription", event.target.value)} />
-          </label>
-          <label className="block space-y-2"><Label>{dt("رابط صورة المشاركة")}</Label>
+          </div>
+          <div className="block space-y-2"><Label>{dt("رابط صورة المشاركة")}</Label>
             <Input dir="ltr" className="text-left" maxLength={2048} value={fields.ogImage} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("ogImage", event.target.value)} />
-          </label>
-          <label className="block space-y-2"><Label>{dt("الوصف البديل للصورة")}</Label>
+          </div>
+          <div className="block space-y-2"><Label>{dt("الوصف البديل للصورة")}</Label>
             <Input maxLength={200} value={fields.imageAlt} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("imageAlt", event.target.value)} />
-          </label>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={fields.seoNoIndex !== "true"} disabled={isBusy || !document.hasTranslation} onChange={(event) => edit("seoNoIndex", event.target.checked ? "false" : "true")} />
             {dt("السماح بفهرسة هذه اللغة")}
@@ -222,8 +222,8 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
         </div>
         {faq === null ? <p role="alert" className="text-sm text-red-800">{dt("بيانات FAQ غير صالحة. أصلحها يدويًا دون فقدان النص الأصلي.")}</p> : faq.map((item, index) =>
           <div key={index} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">
-            <label className="block space-y-1"><Label>{dt("السؤال")} {index + 1}</Label><Input value={item.q} maxLength={240} disabled={isBusy} onChange={(event) => writeFaq(faq.map((v, i) => i === index ? { ...v, q: event.target.value } : v))} /></label>
-            <label className="block space-y-1"><Label>{dt("الإجابة")}</Label><Textarea value={item.a} maxLength={2000} disabled={isBusy} onChange={(event) => writeFaq(faq.map((v, i) => i === index ? { ...v, a: event.target.value } : v))} /></label>
+            <div className="block space-y-1"><Label>{dt("السؤال")} {index + 1}</Label><Input value={item.q} maxLength={240} disabled={isBusy} onChange={(event) => writeFaq(faq.map((v, i) => i === index ? { ...v, q: event.target.value } : v))} /></div>
+            <div className="block space-y-1"><Label>{dt("الإجابة")}</Label><Textarea value={item.a} maxLength={2000} disabled={isBusy} onChange={(event) => writeFaq(faq.map((v, i) => i === index ? { ...v, a: event.target.value } : v))} /></div>
             <button type="button" className="text-sm text-red-700 underline" disabled={isBusy} onClick={() => writeFaq(faq.filter((_, i) => i !== index))}>{dt("حذف السؤال")}</button>
           </div>)}
         {faq === null ? <Textarea aria-label={dt("البيانات الأصلية للأسئلة الشائعة")} value={fields.faqContent} onChange={(event) => edit("faqContent", event.target.value)} rows={5} /> : null}
