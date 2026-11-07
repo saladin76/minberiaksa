@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
-import { imageUrl, imageSrcSet } from "../../lib/minbar/image-url";
 import { projectImageAttempts } from "../../lib/minbar/project-image-fallback";
 
 function expression(path: string, name: string): string {
