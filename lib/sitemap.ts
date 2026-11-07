@@ -68,7 +68,12 @@ const DETAIL_HEADS: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>(["projectDet
 
 const STATIC_PATHS: Array<{ path: string; changeFrequency: string; priority: number }> = [
   ...(Object.keys(SLUGS) as MinbarRoute[])
-    .filter((route) => !NOINDEX_ROUTES.has(route) && !DETAIL_HEADS.has(route))
+    // Campaign and super-category detail routes are CMS-owned, not permanently
+    // published static pages. Listing them here can leak inactive/404 or noindex
+    // editions when a row is unpublished. Their real eligible records are
+    // emitted by the campaign or super-category shards instead.
+    .filter((route) => !NOINDEX_ROUTES.has(route) && !DETAIL_HEADS.has(route)
+      && route !== "restorationProject" && route !== "ibadanProject")
     .map((route) => ({ path: SLUGS[route] ? `/${SLUGS[route]}` : "", ...(ROUTE_WEIGHTS[route] ?? DEFAULT_WEIGHT) })),
   /* Pages from before the Minbar design that still serve and still rank. */
   { path: "/campaigns", changeFrequency: "daily", priority: 0.9 },
