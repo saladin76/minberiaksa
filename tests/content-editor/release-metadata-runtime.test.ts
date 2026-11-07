@@ -83,12 +83,16 @@ test("a misspelled or empty metadata selector never falls back to running every 
   }
 });
 
-test("a Node 22 login shell can select the installed project-engine Node from NVM", () => {
+test("a login shell with a different Node major selects the project engine from NVM", () => {
   const root = mkdtempSync(join(tmpdir(), "minberi-node-selector-"));
   try {
     const major = process.versions.node.split(".")[0], bin = join(root, "nvm/versions/node", `v${major}.0.0/bin`);
+    // The shell must be simulated with a DIFFERENT major from the project
+    // engine. If CI itself runs Node 22, pretending the login also runs 22
+    // exercises the already-correct fast path, not the NVM selection path.
+    const loginMajor = major === "22" ? "20" : "22";
     mkdirSync(bin, { recursive: true }); writeFileSync(join(bin, "node"), '#!/bin/sh\nexec node "$@"\n', { mode: 0o755 }); writeFileSync(join(root, "package.json"), JSON.stringify({ engines: { node: `${major}.x` } }));
-    const code = `import{metadataNodeExecutable}from${JSON.stringify(pathToFileURL(resolve("scripts/release-metadata-runtime.mjs")).href)};Object.defineProperty(process.versions,"node",{value:"22.23.3"});console.log(metadataNodeExecutable(${JSON.stringify(root)}));`;
+    const code = `import{metadataNodeExecutable}from${JSON.stringify(pathToFileURL(resolve("scripts/release-metadata-runtime.mjs")).href)};Object.defineProperty(process.versions,"node",{value:${JSON.stringify(`${loginMajor}.23.3`)}});console.log(metadataNodeExecutable(${JSON.stringify(root)}));`;
     const result = spawnSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", env: { ...process.env, NVM_DIR: join(root, "nvm") } });
     assert.equal(result.status, 0, result.stderr); assert.equal(result.stdout.trim(), join(bin, "node"));
   } finally { rmSync(root, { recursive: true, force: true }); }
