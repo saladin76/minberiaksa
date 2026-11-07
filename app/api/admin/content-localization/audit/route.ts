@@ -110,7 +110,12 @@ function evaluateItem(input: {
       const arabic = normalizeText(input.arabicFields[field]);
       if (!translated) emptyFields.push(field);
       if (arabic && translated && arabic === translated) identicalToArabicFields.push(field);
-      if (arabic && translated) qualityIssues.push(...localizationQualityIssues(field, arabic, translated, locale));
+      // Compare original structured payloads; normalized text is used only for
+      // empty/identical checks and would hide Tiptap marks, links and layout.
+      const rawSource = input.arabicFields[field];
+      const rawTarget = row[field];
+      if (typeof rawSource === "string" && typeof rawTarget === "string" && arabic && translated)
+        qualityIssues.push(...localizationQualityIssues(field, rawSource, rawTarget, locale));
     }
     localeStatus[locale] = {
       exists: Boolean(row),
