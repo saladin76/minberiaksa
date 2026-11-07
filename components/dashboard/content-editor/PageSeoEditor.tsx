@@ -140,7 +140,7 @@ export function PageSeoEditor({ embedded = false }: { embedded?: boolean } = {})
       </label>)}
       {seoTab === "advanced" ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy === "save"} checked={draft[locale]?.seoNoIndex === "true"} onChange={(event) => edit("seoNoIndex", String(event.target.checked))} />{dt("منع فهرسة هذه اللغة مع إبقاء الصفحة ظاهرة")}</label> : null}
     </section> : null}
-    {Object.keys(proposals).length ? <section className="space-y-4 rounded-xl border bg-white p-5">
+    {document && Object.keys(proposals).length ? <section className="space-y-4 rounded-xl border bg-white p-5">
       <p className="text-xs text-slate-600">{dt("الاقتراحات للمعاينة فقط؛ لا تُحفظ أو تُنشر إلا عند التطبيق يدويًا ثم الحفظ.")}</p>
       <div className="flex items-center justify-between"><h2 className="font-bold">{dt("مراجعة الاقتراح")}</h2><button type="button" disabled={Boolean(busy)} onClick={() => apply(Object.keys(proposals))} className="rounded border px-3 py-2">{dt("تطبيق الجميع في المسودة")}</button></div>
       {Object.entries(proposals).map(([code, proposal]) => <article key={code} dir={LOCALES[code as SupportedLocale].direction} className="space-y-3 rounded border p-4">
