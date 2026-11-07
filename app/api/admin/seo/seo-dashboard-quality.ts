@@ -84,7 +84,7 @@ export function reviewSeoDraft(input: SeoReviewInput): SeoReviewIssue[] {
       if (!Array.isArray(faq)) throw new Error("FAQ must be an array");
       if (faq.some((item) => !item || typeof item !== "object" || !("q" in item) || !("a" in item) ||
         typeof item.q !== "string" || typeof item.a !== "string" || !item.q.trim() || !item.a.trim()))
-        add("incomplete-faq", "faqContent", "توجد أسئلة شائعة غير مكتملة؛ لن تكون صالحة للمراجعة أو البيانات المنظمة.");
+        add("incomplete-faq", "faqContent", "توجد أسئلة شائعة غير مكتملة؛ أكمل السؤال والإجابة أو احذف السطر قبل الحفظ.", "error");
     } catch {
       add("invalid-faq", "faqContent", "تنسيق الأسئلة الشائعة غير صالح؛ لا تمسح النص قبل إصلاحه.", "error");
     }
