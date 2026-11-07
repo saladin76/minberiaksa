@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable @typescript-eslint/no-var-requires -- Standalone Node.js CommonJS recovery CLI intentionally uses require. */
 /**
  * Project-specific recovery of previously broken Cloudinary image references.
  * Stage 2: carefully guarded media-only edits. Independent of deployment.
