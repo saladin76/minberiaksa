@@ -1,5 +1,4 @@
 import { queueSuggestion } from "@/lib/content-editor/suggestion-tasks";
-import { reviewSeoSuggestion } from "@/app/api/admin/seo/seo-dashboard-quality";
 import { suggestionFailure } from "@/lib/ai/core/suggestion-failure";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -69,10 +68,7 @@ async function suggestWithSession(request: NextRequest, ctx: Context, authorized
 
     const sourceText = values.metaDescription + "\n" + seoSourceText(source.context);
     const result = await generateResearchedSeo({ type: "page", locale: body.locale, title: values.metaTitle, analyticsEvidence, description: sourceText, market: typeof body.market === "string" ? body.market : undefined }, request.signal);
-    const review = reviewSeoSuggestion({ title: values.metaTitle, description: sourceText }, result.suggestion, body.locale);
-    if (review.some((issue) => issue.severity === "error"))
-      return NextResponse.json({ error: "اقتراح SEO يحتاج مراجعة لأن به معلومات أو أرقامًا غير مسندة إلى المصدر.", reason: "SEO_SUGGESTION_REVIEW", review }, { status: 422 });
-    return NextResponse.json({ key, locale: body.locale, revision: document.revision, review, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
+    return NextResponse.json({ key, locale: body.locale, revision: document.revision, values: { metaTitle: result.suggestion.seoTitle, metaDescription: result.suggestion.metaDescription, seoKeyword: result.suggestion.primaryKeyword, imageAlt: result.suggestion.altText, ogTitle: result.suggestion.seoTitle, ogDescription: result.suggestion.metaDescription }, research: { ...result.research, analyticsEvidence } });
   } catch (error) { return failure(error); }
 }
 
