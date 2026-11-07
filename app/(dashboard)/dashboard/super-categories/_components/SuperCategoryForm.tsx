@@ -179,16 +179,19 @@ export function SuperCategoryForm({
         ? await axios.post('/api/super-categories', payload)
         : await axios.put(`/api/super-categories/${superCategoryId}`, payload);
       const actual = response.data?.translations;
-      // A successful HTTP response is not sufficient if any submitted locale
-      // was ignored. Keep the draft in place and identify the discrepancy.
-      if (mode === 'edit' && Array.isArray(actual)) {
-        for (const [code, fields] of Object.entries(values.translations)) {
-          if (!fields.title?.trim()) continue;
-          const stored = actual.find((row: { locale?: string }) => row.locale === code) as Record<string, unknown> | undefined;
-          for (const [key, text] of Object.entries(fields)) {
-            if (text.trim() && String(stored?.[key] ?? '').trim() !== text.trim())
-              throw new Error(dt("لم يتم تأكيد حفظ حقل {0} في اللغة {1}. احتفظ بالمسودة وراجع الحفظ.", [key, code.toUpperCase()]));
-          }
+      // Require complete server confirmation for both created and edited records.
+      // Check cleared fields and deleted locale rows as well as non-empty values.
+      if (!Array.isArray(actual)) throw new Error(dt("لم يعُد الخادم بقائمة الترجمات للتحقق من الحفظ. احتفظ بالمسودة وأعد التحميل."));
+      for (const [code, fields] of Object.entries(values.translations)) {
+        const stored = actual.find((row: { locale?: string }) => row.locale === code) as Record<string, unknown> | undefined;
+        if (!fields.title?.trim()) {
+          if (stored) throw new Error(dt("لغة {0} لم تُحذف من النسخة المحفوظة.", [code.toUpperCase()]));
+          continue;
+        }
+        if (!stored) throw new Error(dt("لم تُحفظ ترجمة اللغة {0}.", [code.toUpperCase()]));
+        for (const [key, text] of Object.entries(fields)) {
+          if (String(stored[key] ?? '').trim() !== text.trim())
+            throw new Error(dt("لم يتم تأكيد حفظ حقل {0} في اللغة {1}. احتفظ بالمسودة وراجع الحفظ.", [key, code.toUpperCase()]));
         }
       }
       toast.success(mode === 'create' ? dt("تم إنشاء المشروع الكبير") : dt("تم حفظ جميع لغات المشروع الكبير"));
