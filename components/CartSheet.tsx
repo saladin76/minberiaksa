@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingCart, Heart, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { publicCampaignImage } from "@/lib/minbar/project-image-fallback";
 import Spinner from "../components/ui/spinner";
 import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -157,7 +158,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                         {/* Image */}
                         <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           <Image
-                            src={item.campaign.images[0]}
+                            src={publicCampaignImage(item.campaign.images)}
                             alt={campaignTitle}
                             fill
                             className="object-cover"
