@@ -66,6 +66,7 @@ export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords
   const missingArabicSource = locale !== "ar" && !(arabicSource?.title?.trim() || arabicSource?.text?.trim());
   useEffect(() => {
     requestId.current++;
+    setLoading(false);
     setResult(emptyResult);
     setError(null);
     setApplied(false);
