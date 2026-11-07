@@ -25,10 +25,6 @@ type SeoResearchEvidence = { summary: string; queries: string[]; sources: { titl
 type Props = { type: SeoContentType; locale?: LocaleCode; title?: string | null; description?: string | null; slug?: string | null; imageCount?: number; arabicSource?: { title: string; description: string } };
 type SeoAssistantPayload = Partial<SeoDraft> & { source?: string; type?: SeoContentType; locale?: LocaleCode; suggestedSlug?: string; improvedText?: string; sentAt?: string };
 
-/** Display names for the locales this card has authored copy for. Partial by
- * design  `fallbackDraft` falls back to Arabic for anything absent, which is
- * better than shipping placeholder SEO copy in a language nobody wrote. */
-const LOCALE_NAMES: Partial<Record<LocaleCode, string>> = { ar: "العربية", en: "English", fr: "Français", tr: "Türkçe", id: "Bahasa", pt: "Português", es: "Español", de: "Deutsch" };
 const STOP = new Set(["في","من","على","إلى","الى","عن","مع","هذا","هذه","ذلك","تلك","الذي","التي","كل","كما","أو","او","ثم","أن","ان","إن","هو","هي","هم","كان","كانت","يكون","تكون","لها","له","لهم","بين","بعد","قبل","خلال","ضمن","وقد","لقد","حيث","غير","أكثر","اكثر","the","and","for","with","this","that","from","about","your","you","are","our","can","will","let","them","their","by","into","type","text","content","paragraph","doc","hardbreak","attrs","marks","https","http","www"]);
 
 type LocalizedSeoCopy = { blogSuffix: string; categorySuffix: string; campaignSuffix: string; emptyMeta: (title: string) => string; alt: (title: string) => string; longTailBlog: (primary: string) => string[]; longTailFundraising: (primary: string) => string[]; faqBlog: (primary: string) => FaqItem[]; faqFundraising: (primary: string) => FaqItem[] };
