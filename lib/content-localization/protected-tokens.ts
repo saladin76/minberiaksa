@@ -15,7 +15,7 @@
  */
 
 /** Every non-ASCII digit system the source or a target locale may use, mapped to ASCII. */
-const DIGIT_BLOCKS = [0x0660, 0x06f0, 0x0966, 0x09e6, 0xff10];
+const DIGIT_BLOCKS = [0x0660, 0x06f0, 0x0966, 0x09e6, 0x0e50, 0x1040, 0xff10];
 
 export function normalizeDigits(value: string): string {
   let out = "";
