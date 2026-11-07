@@ -57,3 +57,10 @@ test("Save All API contract supports atomic multi-language revisions without cha
   assert.match(service, /return db\.transaction\(async \(tx\)/);
   assert.match(service, /const locales = \{ \.\.\.input\.localeChanges, \[input\.locale\]: input\.changes \}/);
 });
+
+test("category editor validates and rehydrates all ten translated landing-page fields", () => {
+  const page = readFileSync("app/(dashboard)/dashboard/categories/settings/[id]/page.tsx", "utf8");
+  assert.match(page, /TRANSLATION_LOCALES\.flatMap\(locale => LOCALE_FIELDS\.map\(field =>/);
+  assert.match(page, /LOCALE_FIELD_NAMES\.map\(field => \[localeKey\(field, l\)/);
+  assert.match(page, /collectLocaleTranslations\(values, LOCALE_FIELDS\)/);
+});
