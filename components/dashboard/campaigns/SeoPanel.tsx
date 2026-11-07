@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { reviewSeoDraft } from '@/app/api/admin/seo/seo-dashboard-quality';
 import axios from 'axios';
 import ReactCountryFlag from 'react-country-flag';
 import { Loader2, Save, Search, Share2 } from 'lucide-react';
@@ -40,6 +41,11 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
   const [saving, setSaving] = useState(false);
   const [hasTranslation, setHasTranslation] = useState(true);
   const [fields, setFields] = useState<ProjectSeoFields>(emptySeo);
+  const [savedFields, setSavedFields] = useState<ProjectSeoFields>(emptySeo);
+  const requestId = useRef(0);
+  const dirty = JSON.stringify(fields) !== JSON.stringify(savedFields);
+  const issues = reviewSeoDraft({ locale: activeLocale, seoTitle: fields.seoTitle, metaDescription: fields.seoDescription, ogTitle: fields.ogTitle, ogDescription: fields.ogDescription, ogImage: fields.ogImage, checkImageAlt: false });
+  const blocked = issues.some((issue) => issue.severity === 'error');
 
   const language = useMemo(
     () => PROJECT_LANGUAGES.find((item) => item.locale === activeLocale) || PROJECT_LANGUAGES[0],
@@ -47,47 +53,64 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
   );
 
   const fetchSeo = async (locale: ProjectLocale) => {
+    const token = ++requestId.current;
     setLoading(true);
     try {
       const response = await axios.get<SeoApiResponse>(`/api/campaigns/${campaignId}/seo`, {
         params: { locale },
       });
-      setFields({
+      if (token !== requestId.current) return;
+      const fresh = {
         seoTitle: safeValue(response.data.localeSeo.seoTitle),
         seoDescription: safeValue(response.data.localeSeo.seoDescription),
         ogTitle: safeValue(response.data.localeSeo.ogTitle),
         ogDescription: safeValue(response.data.localeSeo.ogDescription),
         ogImage: safeValue(response.data.localeSeo.ogImage),
-      });
+      };
+      setFields(fresh);
+      setSavedFields(fresh);
       setHasTranslation(response.data.hasTranslation);
     } catch (error) {
       console.error('SEO fetch error:', error);
-      toast.error(dt("فشل تحميل SEO لهذه اللغة"));
+      if (token === requestId.current) toast.error(dt("فشل تحميل SEO لهذه اللغة"));
     } finally {
-      setLoading(false);
+      if (token === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSeo(activeLocale);
+    void fetchSeo(activeLocale);
+    return () => { requestId.current++; };
   }, [activeLocale, campaignId]);
+  useEffect(() => {
+    if (!dirty) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [dirty]);
 
   const updateField = (key: keyof ProjectSeoFields, value: string) => {
     setFields((current) => ({ ...current, [key]: value }));
   };
 
   const saveSeo = async () => {
+    if (blocked || !dirty || !hasTranslation) return;
     setSaving(true);
     try {
       await axios.put(`/api/campaigns/${campaignId}/seo`, {
         locale: activeLocale,
         fields,
       });
-      toast.success(dt("تم حفظ SEO بنجاح"));
-      await fetchSeo(activeLocale);
+      // Confirm the server's persisted locale values before clearing the dirty indicator.
+      const verified = await axios.get<SeoApiResponse>(`/api/campaigns/${campaignId}/seo`, { params: { locale: activeLocale } });
+      const normalized = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, safeValue(value)]));
+      const persisted = Object.fromEntries(Object.keys(fields).map((key) => [key, safeValue(verified.data.localeSeo[key as keyof ProjectSeoFields])]));
+      if (JSON.stringify(normalized) !== JSON.stringify(persisted)) throw new Error(dt("لم تتطابق نسخة SEO المحفوظة مع المسودة. راجعها قبل المتابعة."));
+      setSavedFields({ ...fields });
+      toast.success(dt("تم حفظ SEO والتحقق من النسخة المحفوظة"));
     } catch (error: any) {
       console.error('SEO save error:', error);
-      const message = error?.response?.data?.error || dt("فشل حفظ SEO");
+      const message = error?.response?.data?.error || error?.message || dt("فشل حفظ SEO");
       toast.error(message === 'Create the language translation before saving SEO for this locale'
         ? dt("يجب إنشاء محتوى هذه اللغة أولًا قبل حفظ SEO لها")
         : message);
@@ -113,12 +136,13 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
           <p className="mt-1 text-sm text-gray-500">
             {dt("إعدادات SEO مستقلة لكل لغة، مع معاينة Google ومعاينة المشاركة الاجتماعية.")}</p>
         </div>
-        <Button type="button" onClick={saveSeo} disabled={saving || loading || !hasTranslation} className="gap-2">
+        <Button type="button" onClick={saveSeo} disabled={saving || loading || !hasTranslation || !dirty || blocked} className="gap-2">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {dt("حفظ SEO")}</Button>
       </div>
 
-      <Tabs value={activeLocale} onValueChange={(value) => setActiveLocale(value as ProjectLocale)}>
+      <p role="status" className="text-xs text-slate-600">{dirty ? dt("توجد تعديلات غير محفوظة في هذه اللغة.") : dt("لا توجد تعديلات غير محفوظة في هذه اللغة.")}</p>
+      <Tabs value={activeLocale} onValueChange={(value) => { if (loading || saving) return; if (dirty && !window.confirm(dt("توجد تعديلات غير محفوظة في هذه اللغة. هل تريد تجاهلها والانتقال؟"))) return; setActiveLocale(value as ProjectLocale); }}>
         <TabsList className="flex flex-wrap gap-1" dir={dashDir()}>
           {PROJECT_LANGUAGES.map((item) => (
             <TabsTrigger key={item.locale} value={item.locale} className="gap-2">
@@ -134,6 +158,7 @@ export function SeoPanel({ campaignId }: { campaignId: string }) {
               {dt("هذه اللغة ليس لها محتوى محفوظ بعد. أضف عنوان ووصف هذه اللغة في صفحة تعديل المشروع، ثم احفظ SEO لها.")}</div>
           )}
 
+          {issues.length ? <aside aria-label={dt("مراجعة SEO")} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><strong>{dt("مراجعة إعدادات SEO")}</strong><ul className="mt-2 list-disc space-y-1 ps-5">{issues.map((issue) => <li key={issue.code} className={issue.severity === "error" ? "text-red-800" : "text-amber-900"}>{issue.message}</li>)}</ul></aside> : null}
           {loading ? (
             <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
               <Loader2 className="h-4 w-4 animate-spin" />
