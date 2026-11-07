@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable @typescript-eslint/no-var-requires -- Standalone Node.js CommonJS recovery CLI intentionally uses require. */
 /**
  * Recovered Google Drive media staging.
  * Read-only audit and optional Cloudinary upload ONLY.
