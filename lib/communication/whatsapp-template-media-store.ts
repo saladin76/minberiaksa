@@ -49,9 +49,10 @@ export function validWhatsappTemplateMediaId(id: string): boolean {
 }
 
 export function whatsappTemplateMediaStorageMode(env: NodeJS.ProcessEnv = process.env): TemplateMediaStorageMode {
-  if (env.BLOB_READ_WRITE_TOKEN) return "BLOB";
-  if (env.VERCEL) return "UNAVAILABLE"; // Serverless disk is not persistent.
-  return "LOCAL";
+  // RADORE is a persistent VPS: prefer its local volume even when an
+  // unrelated archive feature happens to configure a Blob token.
+  if (!env.VERCEL) return "LOCAL";
+  return env.BLOB_READ_WRITE_TOKEN ? "BLOB" : "UNAVAILABLE"; // Serverless disk is ephemeral.
 }
 
 function mediaDirectory(env: NodeJS.ProcessEnv = process.env): string {
