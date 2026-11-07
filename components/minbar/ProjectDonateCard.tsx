@@ -218,7 +218,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
       }}
     >
       <ProjectImage
-        sources={[project.image, ...project.coverFallbacks]}
+        sources={[project.image, ...(project.coverFallbacks ?? [])]}
         alt={project.title}
         width={360}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
