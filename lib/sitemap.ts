@@ -1,5 +1,4 @@
 import { hasText } from "@/lib/content-editor/contracts";
-import { pickLocaleSlug } from "@/lib/slug";
 import { filterManagedPageSitemap } from "@/lib/content-editor/page-seo-sitemap";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL, LOCALES } from "@/lib/seo";
@@ -79,7 +78,12 @@ const STATIC_PATHS: Array<{ path: string; changeFrequency: string; priority: num
 type Translation = { locale: string; slug: string | null };
 
 function pickSlugFor(locale: string, baseSlug: string | null | undefined, translations: Translation[], fallback: string): string {
-  return pickLocaleSlug(baseSlug, translations, locale) || fallback;
+  // Identical to the public reader's pickLocaleSlug() order, kept inline
+  // because the static sitemap fixture tests isolate this module.
+  const exact = translations.find((t) => t.locale === locale && t.slug)?.slug;
+  if (locale === "ar") return baseSlug || exact || fallback;
+  const english = locale === "en" ? null : translations.find((t) => t.locale === "en" && t.slug)?.slug;
+  return exact || english || baseSlug || fallback;
 }
 
 function staticAlternates(path: string): Record<string, string> {
