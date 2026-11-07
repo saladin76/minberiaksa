@@ -81,6 +81,9 @@ export function isSecurityExemptPath(path: string) {
   return (
     /^\/(?:[a-z]{2}\/)?(?:dashboard|auth)(?:\/|$)/.test(path) ||
     /^\/api\/(?:admin|auth|webhooks|cron)(?:\/|$)/.test(path) ||
+    // Public WhatsApp header links use unguessable UUID names; Meta's media
+    // fetchers must be able to download these even from restricted geographies.
+    /^\/api\/public\/whatsapp-template-media\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|png|mp4|pdf)$/i.test(path) ||
     /^\/api\/(?:albaraka\/3d\/callback|payfor\/3dpay\/(?:ok|fail)|paypal\/return|stripe\/webhook|telegram\/webhook)(?:\/|$)/.test(
       path,
     ) ||
