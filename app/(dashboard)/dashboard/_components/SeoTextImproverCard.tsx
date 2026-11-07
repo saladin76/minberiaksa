@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Check, Clipboard, FileQuestion, FileText, Hash, Heading2, Loader2, Link, ListChecks, Send, Sparkles, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ type Props = {
   text?: string | null;
   keywords?: string[];
   onApply?: (text: string) => void;
+  arabicSource?: { title: string; text: string };
 };
 
 const emptyResult: SeoTextResult = {
@@ -54,13 +55,22 @@ const emptyResult: SeoTextResult = {
   keywords: [],
 };
 
-export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords = [], onApply }: Props) {
+export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords = [], onApply, arabicSource }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SeoTextResult>(emptyResult);
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [applied, setApplied] = useState(false);
   const [sentToSeo, setSentToSeo] = useState(false);
+  const requestId = useRef(0);
+  const missingArabicSource = locale !== "ar" && !(arabicSource?.title?.trim() || arabicSource?.text?.trim());
+  useEffect(() => {
+    requestId.current++;
+    setResult(emptyResult);
+    setError(null);
+    setApplied(false);
+    setSentToSeo(false);
+  }, [locale, type, title, text]);
 
   const hasText = Boolean((text || title || "").trim());
   const hasResult = Boolean(result.improvedText || result.improvedTitle || result.primaryKeyword || result.faq.length);
@@ -86,7 +96,8 @@ export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords
   }, [result, allKeywords, faqText]);
 
   const improve = async () => {
-    if (!hasText) return;
+    if (!hasText || missingArabicSource) { setError(dt("يجب توفير المصدر العربي المعتمد قبل تحسين لغة أخرى. لم يتغير المحتوى.")); return; }
+    const token = ++requestId.current;
     setLoading(true);
     setError(null);
     setApplied(false);
@@ -98,7 +109,9 @@ export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords
         title: title || "",
         text: text || "",
         keywords,
+        ...(locale !== "ar" ? { sourceDraft: arabicSource } : {}),
       });
+      if (token !== requestId.current) return;
       setResult({
         improvedTitle: response.data?.improvedTitle || title || "",
         improvedText: response.data?.improvedText || "",
@@ -112,9 +125,9 @@ export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords
         keywords: response.data?.keywords || [],
       });
     } catch (err: any) {
-      setError(err?.response?.data?.error || dt("تعذر تحسين النص الآن"));
+      if (token === requestId.current) setError(err?.response?.data?.error || dt("تعذر تحسين النص الآن"));
     } finally {
-      setLoading(false);
+      if (token === requestId.current) setLoading(false);
     }
   };
 
@@ -176,12 +189,13 @@ export function SeoTextImproverCard({ type, locale = "ar", title, text, keywords
               <p className="mt-1 text-sm text-muted-foreground">{dt("يرتب النص كمسودة SEO احترافية: عنوان، جسم النص، كلمة رئيسية، وصف Meta، عناوين وأسئلة شائعة.")}</p>
             </div>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={improve} disabled={loading || !hasText} className="gap-2 border-purple-300 text-purple-700 hover:bg-purple-50">
+          <Button type="button" variant="outline" size="sm" onClick={improve} disabled={loading || !hasText || missingArabicSource} className="gap-2 border-purple-300 text-purple-700 hover:bg-purple-50">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {dt("تحسين وترتيب النص")}</Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {missingArabicSource && <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{dt("هذه اللغة تحتاج مصدرًا عربيًا معتمدًا قبل إرسال النص إلى الذكاء الاصطناعي. لا تستخدم الترجمة الافتراضية كمصدر.")}</div>}
         {!hasText && <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{dt("اكتب العنوان أو الوصف أولًا حتى يتم تجهيز اقتراح مناسب.")}</div>}
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         {hasResult && (
