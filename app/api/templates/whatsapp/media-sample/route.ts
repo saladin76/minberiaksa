@@ -3,9 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { uploadMetaTemplateSample } from "@/lib/communication/providers/meta-whatsapp/templates";
-import cloudinary from "@/lib/cloudinary";
-import type { UploadApiResponse } from "cloudinary";
-import { randomUUID } from "node:crypto";
+import { storeWhatsappTemplateMedia, removeWhatsappTemplateMedia, type TemplateMediaMime } from "@/lib/communication/whatsapp-template-media-store";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -64,25 +62,6 @@ function isAllowedCloudinaryUrl(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-function uploadPublicCopy(buffer: Buffer, file: File): Promise<UploadApiResponse> {
-  return new Promise((resolve, reject) => {
-    const isPdf = normalizeMime(file.type, file.name) === "application/pdf";
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "whatsapp-template-media",
-        resource_type: isPdf ? "raw" : "auto",
-        ...(isPdf ? { public_id: `${randomUUID()}.pdf` } : {}),
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        if (!result) return reject(new Error("Cloudinary returned no result"));
-        resolve(result);
-      },
-    );
-    stream.end(buffer);
-  });
 }
 
 export async function POST(request: Request) {
@@ -151,7 +130,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, handle: result.handle, url, publicId });
   }
 
-  // Legacy small-file path kept for compatibility. Large uploads use browser -> Cloudinary directly.
+  // First-party multipart path: persistent VPS/Blob storage, independent of Cloudinary.
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "اختر ملفًا صالحًا." }, { status: 400 });
@@ -164,34 +143,42 @@ export async function POST(request: Request) {
   if (normalizedType === "application/pdf" && !buffer.subarray(0, 1024).includes(Buffer.from("%PDF-"))) {
     return NextResponse.json({ error: "محتوى الملف ليس مستند PDF صالحًا." }, { status: 400 });
   }
-  const result = await uploadMetaTemplateSample({
-    bytes: new Uint8Array(buffer),
-    name: file.name,
-    type: normalizedType,
-  });
-  if (!result.ok) {
-    return NextResponse.json(
-      { error: "تعذر رفع عينة الوسائط إلى Meta.", reason: result.reason, detail: result.detail },
-      { status: 502 },
-    );
-  }
-
-  let publicCopy: UploadApiResponse;
+  // The public link must exist before Meta receives a handle. Otherwise a
+  // template can be approved but later fail when Meta downloads its header.
+  let stored: Awaited<ReturnType<typeof storeWhatsappTemplateMedia>>;
   try {
-    publicCopy = await uploadPublicCopy(buffer, file);
+    stored = await storeWhatsappTemplateMedia(buffer, normalizedType as TemplateMediaMime);
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: "تم رفع العينة إلى Meta لكن تعذر حفظ نسخة عامة للإرسال الفعلي.", reason: "MEDIA_STORAGE_FAILED", detail },
-      { status: 502 },
-    );
+    console.error("WhatsApp template durable media storage unavailable:", error);
+    return NextResponse.json({
+      error: "تعذر حفظ الوسائط في التخزين الدائم. لم تُرسل العينة إلى Meta.",
+      reason: "MEDIA_STORAGE_UNAVAILABLE",
+    }, { status: 503 });
   }
 
-  return NextResponse.json({
-    ok: true,
-    handle: result.handle,
-    url: publicCopy.secure_url,
-    publicId: publicCopy.public_id,
-  });
+  try {
+    const result = await uploadMetaTemplateSample({
+      bytes: new Uint8Array(buffer),
+      name: file.name,
+      type: normalizedType,
+    });
+    if (!result.ok) {
+      await removeWhatsappTemplateMedia(stored);
+      return NextResponse.json(
+        { error: "تعذر رفع عينة الوسائط إلى Meta.", reason: result.reason, detail: result.detail },
+        { status: 502 },
+      );
+    }
+    return NextResponse.json({
+      ok: true, handle: result.handle, url: stored.url,
+      publicId: stored.id, storageMode: stored.mode,
+    });
+  } catch (error) {
+    await removeWhatsappTemplateMedia(stored);
+    console.error("WhatsApp template sample Meta submission failed:", error);
+    return NextResponse.json({
+      error: "تعذر إرسال عينة الوسائط إلى Meta.",
+      reason: "META_TEMPLATE_UPLOAD_FAILED",
+    }, { status: 502 });
+  }
 }
-
