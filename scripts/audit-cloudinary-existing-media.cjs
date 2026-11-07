@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+/* eslint-disable @typescript-eslint/no-var-requires -- Standalone Node.js CommonJS recovery CLI intentionally uses require. */
 /**
  * Discover already-uploaded campaign images in the current Cloudinary account.
  * READ-ONLY. Lists metadata from Cloudinary Admin API, no download, delete, upload or DB writes.
