@@ -20,7 +20,9 @@ sha=$(git rev-parse FETCH_HEAD)
 short=$(printf "%s" "$sha" | cut -c1-12)
 work="$QA_ROOT/worktrees/$short"
 reports="$QA_ROOT/reports/$short"
-mkdir -p "$QA_ROOT/worktrees" "$QA_ROOT/reports" "$QA_ROOT/tools" "$QA_ROOT/binaries" "$QA_ROOT/npm-cache"
+mkdir -p "$QA_ROOT/worktrees" "$reports" "$QA_ROOT/tools" "$QA_ROOT/binaries" "$QA_ROOT/npm-cache"
+# Ensure redirection targets exist before npm logs or acceptance logs are opened.
+test -d "$reports" || die "Could not create this revision\x27s report directory"
 if [ ! -d "$work" ]; then
   git worktree add --detach "$work" "$sha" || die "Cannot create isolated worktree"
 fi
