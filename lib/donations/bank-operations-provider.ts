@@ -13,11 +13,25 @@ export function operationAlbarakaConfig(donation: BankDonation): AlbarakaConfig 
   if ((sale.terminalNo && sale.terminalNo !== cfg.terminalNo) || (sale.merchantNo && sale.merchantNo !== cfg.merchantNo)) throw new Error("TERMINAL_MISMATCH");
   return cfg;
 }
+/**
+ * These public Ziraat Katılım URLs are checkout/reporting pages, NOT a
+ * confirmed merchant financial-operations API. Never POST refund credentials
+ * to them even if they are accidentally configured as PAYFOR_API_URL.
+ */
+const PAYFOR_NON_OPERATION_PATHS = new Set([
+  "/mpi/default.aspx",
+  "/mpi/3dhost.aspx",
+  "/login",
+]);
 export function payForOperationsConfig() {
   const url = process.env.PAYFOR_API_URL || "", format = process.env.PAYFOR_API_FORMAT;
   let parsed: URL | null = null;
   try { parsed = url ? new URL(url) : null; } catch { throw new Error("BANK_NOT_CONFIGURED"); }
   if (!parsed || parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash || !["FORM", "XML_PRMSTR"].includes(format || "") || !process.env.PAYFOR_MBR_ID || !process.env.PAYFOR_MERCHANT_ID || !process.env.PAYFOR_USER_CODE || !process.env.PAYFOR_USER_PASS) throw new Error("BANK_NOT_CONFIGURED");
+  if (parsed.hostname.toLowerCase() === "vpos.ziraatkatilim.com.tr"
+    && PAYFOR_NON_OPERATION_PATHS.has(parsed.pathname.replace(/\\/+$/, "").toLowerCase())) {
+    throw new Error("BANK_NOT_CONFIGURED");
+  }
   return { url, format };
 }
 export function bankOperationsReady(donation: BankDonation): { ready: boolean; reason?: string } {
