@@ -58,6 +58,11 @@ jobs:
           env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
             DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
             npm ci --ignore-scripts --no-audit --no-fund
+          # Next.js dev loads Critters when experimental.optimizeCss is enabled.
+          # Install into the disposable CI checkout only, never into the repo lockfile.
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund critters@0.0.25
+          node -e 'require.resolve("critters")'
           env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
             DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
             ./node_modules/.bin/prisma generate --schema prisma/schema.prisma
