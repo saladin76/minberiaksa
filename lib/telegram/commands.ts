@@ -47,17 +47,17 @@ async function loadStatsSnapshot(periodLabel: string, range: { start: Date | nul
   // and derive one-time by subtraction.
   const [paidCount, paidSum, failedCount, pendingCount, monthlyCount, topItems] =
     await Promise.all([
-      prisma.donation.count({ where: { ...settledDateFilter, ...PAID } }),
+      prisma.donation.count({ where: { ...PAID, ...settledDateFilter } }),
       prisma.donation.aggregate({
         _sum: { amountUSD: true },
-        where: { ...settledDateFilter, ...PAID },
+        where: { ...PAID, ...settledDateFilter },
       }),
       prisma.donation.count({ where: { ...attemptDateFilter, ...FAILED } }),
       prisma.donation.count({ where: { ...attemptDateFilter, ...PENDING_PAID } }),
-      prisma.donation.count({ where: { ...settledDateFilter, ...PAID, subscriptionId: { not: null } } }),
+      prisma.donation.count({ where: { ...PAID, ...settledDateFilter, subscriptionId: { not: null } } }),
       prisma.donationItem.groupBy({
         by: ["campaignId"],
-        where: { donation: { ...settledDateFilter, ...PAID } },
+        where: { donation: { ...PAID, ...settledDateFilter } },
         _sum: { amountUSD: true },
         _count: { id: true },
         orderBy: { _sum: { amountUSD: "desc" } },
