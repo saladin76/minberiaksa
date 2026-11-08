@@ -28,6 +28,19 @@ test("a positive reviewer verdict cannot smuggle a new donation URL or numeric g
     assert.deepEqual(groundedSeo(draft, source, review(draft), sources).unsafeRequired, ["metaDescription"]);
   }
 });
+test("percentage claims require the same percentage in the Arabic master, regardless of locale notation", () => {
+  for (const claim of ["100% of donations are delivered", "%100 of donations are delivered", "١٠٠٪ من التبرعات تصل", "100％ of donations are delivered"]) {
+    const draft = { ...copy, metaDescription: claim };
+    assert.deepEqual(groundedSeo(draft, source, review(draft), sources).unsafeRequired, ["metaDescription"], claim);
+  }
+  // A recorded percentage in Arabic does not become a different percentage
+  // merely because the requested language formats its digits differently.
+  const documentedSource = source + " ١٠٠٪ من المستلزمات تصل إلى المستفيدين.";
+  const documented = { ...copy, metaDescription: "100% of supplies reach recipients." };
+  const evidence = { checks: seoGroundingFields(documented).map(field => ({ key: field.key, supported: true, evidenceQuotes: [documentedSource] })), relevantSourceUrls: [sources[0].url] };
+  assert.deepEqual(groundedSeo(documented, documentedSource, evidence, sources).unsafeRequired, []);
+});
+
 test("review cannot invent source links or retain irrelevant evidence", () => {
   const result = groundedSeo(copy, source, { ...review(), relevantSourceUrls: ["https://unknown.example/food"] }, sources);
   assert.deepEqual(result.sources, []);

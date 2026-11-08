@@ -1,0 +1,91 @@
+name: Translation SEO isolated public runtime acceptance
+
+on:
+  pull_request:
+    branches:
+      - integration/translation-seo-20261107
+    paths:
+      - 'scripts/qa-translation-seo-public-runtime.mjs'
+      - '.github/workflows/translation-seo-public-runtime-acceptance.yml'
+      - 'app/**'
+      - 'lib/seo.ts'
+      - 'lib/sitemap.ts'
+      - 'lib/minbar/slug-routing.ts'
+      - 'lib/content-editor/**'
+      - 'next.config.ts'
+      - 'proxy.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-runtime-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-public-runtime:
+    name: Next.js + MongoDB / 19-language public SEO / CI only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: 'true'
+      MONGOMS_VERSION: '8.0.28'
+      MONGOMS_DISABLE_POSTINSTALL: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Require AVX-capable runner
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          grep -qm1 -w avx /proc/cpuinfo
+          echo 'PASS github-avx-capability'
+      - name: Prepare disposable checkout and MongoDB test tooling
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ROOT=/tmp/minber-translation-seo-mongo-qa
+          mkdir -p "$ROOT/worktrees/source" "$ROOT/tools" "$ROOT/binaries" "$ROOT/npm-cache"
+          tar -c --exclude=.git --exclude=node_modules -f - . | tar -x -C "$ROOT/worktrees/source"
+          cd "$ROOT/worktrees/source"
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
+            npm ci --ignore-scripts --no-audit --no-fund
+          # Next.js dev loads Critters when experimental.optimizeCss is enabled.
+          # Install into the disposable CI checkout only, never into the repo lockfile.
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund critters@0.0.25
+          node -e 'require.resolve("critters")'
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
+            ./node_modules/.bin/prisma generate --schema prisma/schema.prisma
+          # Public auth/runtime paths import a separate generated integration client.
+          # Generate code only; no DB schema push or migrations.
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
+            ./node_modules/.bin/prisma generate --schema prisma/integration-settings.schema.prisma
+          test -f generated/integration-settings-client/index.js
+          cd "$ROOT/tools"
+          printf '{"private":true,"type":"commonjs"}\n' > package.json
+          env -i HOME="$HOME" PATH="$PATH" npm_config_cache="$ROOT/npm-cache" \
+            npm install --ignore-scripts --no-save --no-audit --no-fund mongodb-memory-server-core@10.4.1
+      - name: Exercise real Next.js HTTP SEO with disposable database
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ROOT=/tmp/minber-translation-seo-mongo-qa
+          cd "$ROOT/worktrees/source"
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test NODE_OPTIONS=--max-old-space-size=4096 \
+            QA_MONGO_ROOT="$ROOT" MONGOMS_VERSION=8.0.28 \
+            MONGOMS_DOWNLOAD_DIR="$ROOT/binaries" MONGOMS_DISABLE_POSTINSTALL=1 \
+            DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
+            NEXTAUTH_SECRET=qa-only NEXTAUTH_URL=http://127.0.0.1:3106 \
+            NEXT_TELEMETRY_DISABLED=1 \
+            ./node_modules/.bin/tsx scripts/qa-translation-seo-public-runtime.mjs

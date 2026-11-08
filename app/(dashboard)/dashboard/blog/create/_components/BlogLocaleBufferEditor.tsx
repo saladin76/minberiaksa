@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import WysiwygEditor from "@/app/[locale]/blog/_components/wysiwyg/wysiwyg-editor";
-import { defaultEditorContent } from "@/app/[locale]/blog/_components/wysiwyg/default-content";
+import { contentToTiptapDocument } from "@/lib/blog/rich-text";
 import { useCreateTranslations, type BufferedLocale } from "./CreateTranslationsContext";
 import { localeDir, localeNativeLabel } from "../../../_components/locale-form";
 import { AutoTranslateButton } from "../../../_components/AutoTranslateButton";
@@ -40,24 +40,34 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
      state from it and remount the body editor, which is uncontrolled. */
   const [editorKey, setEditorKey] = useState(0);
   const seenVersion = useRef(ctx?.version ?? 0);
+  const version = ctx?.version ?? 0;
+  const buffered = ctx?.translations;
   useEffect(() => {
-    if (!ctx || ctx.version === seenVersion.current) return;
-    seenVersion.current = ctx.version;
-    const next = ctx.translations[locale];
+    if (version === seenVersion.current) return;
+    seenVersion.current = version;
+    const next = buffered?.[locale];
     if (!next) return;
     setTitle(next.title);
     setDescription(next.description);
     setContent(next.content);
     setEditorKey((k) => k + 1);
-  }, [ctx, locale]);
+  }, [version, buffered, locale]);
 
+  // Depend on the stable updater, not the whole context object. Translation
+  // state changes must not cause local drafts to write back in a loop.
+  const updateLocale = ctx?.updateLocale;
   useEffect(() => {
-    ctx?.updateLocale(locale, { title, description, content, image });
-  }, [ctx, locale, title, description, content, image]);
+    updateLocale?.(locale, { title, description, content, image });
+  }, [updateLocale, locale, title, description, content, image]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) {
+      toast.error(dt("اختر صورة صالحة بحجم لا يزيد عن 2MB"));
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -70,18 +80,12 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
       toast.error(dt("فشل رفع الصورة"));
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
-  const removeImage = () => {
-    if (image) {
-      const publicId = image.split("/").slice(-1)[0].split(".")[0];
-      if (publicId) {
-        axios.delete(`/api/upload?publicId=${publicId}`).catch(() => {});
-      }
-    }
-    setImage("");
-  };
+  // Clearing a reference must never delete potentially shared cloud media.
+  const removeImage = () => setImage("");
 
   return (
     <div className="space-y-6" dir={meta.dir}>
@@ -208,14 +212,10 @@ export default function BlogLocaleBufferEditor({ locale }: { locale: BufferedLoc
           <WysiwygEditor
             key={`buffer-body-${locale}-${editorKey}`}
             defaultValue={(() => {
-              if (!content) return defaultEditorContent;
-              try {
-                return JSON.parse(content);
-              } catch {
-                return defaultEditorContent;
-              }
+              return contentToTiptapDocument(content);
             })()}
-            onDebouncedUpdate={(editor) => {
+            onUpdate={(editor) => {
+              // A debounce can lose the last keystrokes when switching tabs.
               setContent(JSON.stringify(editor?.getJSON()));
             }}
           />

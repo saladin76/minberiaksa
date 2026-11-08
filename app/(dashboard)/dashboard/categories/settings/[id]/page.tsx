@@ -61,11 +61,13 @@ const LOCALE_FIELDS: readonly LocaleFormField[] = [
 ];
 const LOCALE_FIELD_NAMES = ['name', 'description', 'heroLead', 'ctaLabel', 'statDoneLabel', 'statGoalLabel', 'projectsTitle', 'donateTitle', 'donateNote', 'achievementsTitle'] as const;
 type LocaleShape = { [K in `${(typeof LOCALE_FIELD_NAMES)[number]}_${TranslationLocale}`]: z.ZodOptional<z.ZodString> };
+// zodResolver strips unknown fields: declare every translated page-copy field,
+// otherwise the form displays translations which silently vanish on Save All.
 const LOCALE_SHAPE = Object.fromEntries(
-  TRANSLATION_LOCALES.flatMap((locale) => [
-    [localeKey('name', locale), z.string().max(50).optional()],
-    [localeKey('description', locale), z.string().max(500).optional()],
-  ])
+  TRANSLATION_LOCALES.flatMap(locale => LOCALE_FIELDS.map(field => [
+    localeKey(field.name, locale),
+    (field.maxLength ? z.string().max(field.maxLength) : z.string()).optional(),
+  ]))
 ) as LocaleShape;
 
 const formSchema = z.object({
@@ -142,7 +144,7 @@ export default function EditCategoryPage() {
           ...Object.fromEntries(
             TRANSLATION_LOCALES.flatMap((l) => {
               const t = getTr(l);
-              return [[localeKey('name', l), t?.name || ''], [localeKey('description', l), t?.description || '']];
+              return LOCALE_FIELD_NAMES.map(field => [localeKey(field, l), typeof t?.[field] === 'string' ? t[field] : ''] as const);
             })
           ),
         });
@@ -173,6 +175,16 @@ export default function EditCategoryPage() {
   }, [params.id]);
 
   const onSubmit = async (values: FormValues) => {
+    const localeData = collectLocaleTranslations(values, LOCALE_FIELDS);
+    const orphan = Object.entries(localeData).find(([, row]) => !row.name?.trim() &&
+      Object.entries(row).some(([field, text]) => field !== 'name' && text.trim())
+    );
+    if (orphan) {
+      setActiveLocale(orphan[0] as SeoLocale);
+      toast.error(dt("لغة {0}: اسم التصنيف مطلوب لحفظ بقية حقول الترجمة.", [orphan[0].toUpperCase()]));
+      return;
+    }
+    let writeCompleted = false;
     setSaving(true);
     setSaveStatus({ type: 'saving', message: dt("جاري حفظ تحديثات الحملة..."), detail: dt("لا تغادر الصفحة حتى يكتمل الحفظ") });
     try {
@@ -193,14 +205,37 @@ export default function EditCategoryPage() {
         achievementVideoIds: page.achievementVideoIds,
         values: page.values.filter((v) => v.label.trim()),
         infoCards: page.infoCards.filter((c) => c.title.trim()),
-        translations: collectLocaleTranslations(values, LOCALE_FIELDS),
+        translations: localeData,
       });
+      writeCompleted = true;
+      // Verify the server saved every submitted language field before reporting
+      // success. This catches silently dropped page copy in legacy editors.
+      const readback = await axios.get(`/api/categories/${params.id}?allTranslations=true`, { params: { _: Date.now() } });
+      if (!Array.isArray(readback.data?.translations)) throw new Error(dt("تعذر قراءة الترجمات المحفوظة للتحقق من عملية الحفظ."));
+      const storedRows = readback.data.translations;
+      for (const [code, row] of Object.entries(localeData)) {
+        const stored = storedRows.find((item: { locale?: string }) => item.locale === code) as Record<string, unknown> | undefined;
+        // The legacy category API ignores fully empty translation rows.
+        // A stale translation must not be reported as deleted.
+        if (!row.name?.trim()) {
+          if (stored) throw new Error(dt("اللغة {0} ما زالت محفوظة على الخادم. لا يُسمح باعتبار تفريغها حذفًا ناجحًا.", [code.toUpperCase()]));
+          continue;
+        }
+        if (!stored) throw new Error(dt("اللغة {0} غير موجودة بعد الحفظ.", [code.toUpperCase()]));
+        for (const field of LOCALE_FIELDS) {
+          const expected = (row[field.name] ?? '').trim();
+          if (String(stored[field.name] ?? '').trim() !== expected)
+            throw new Error(dt("تعذر تأكيد حفظ {0} للغة {1}. احتفظ بتعديلاتك وراجع البيانات.", [field.label, code.toUpperCase()]));
+        }
+      }
       setSaveStatus({ type: 'success', message: dt("تم تحديث الحملة بنجاح"), detail: dt("أنت ما زلت داخل صفحة التعديل") });
       toast.success(dt("تم تحديث الحملة بنجاح"));
       router.refresh();
     } catch (error: any) {
       console.error('Error updating category:', error);
-      const message = error?.response?.data?.error || dt("فشل في تحديث الحملة");
+      const message = writeCompleted
+        ? dt("وصلت البيانات إلى الخادم لكن تعذر تأكيد جميع الترجمات. احتفظ بالمسودة وأعد تحميل الصفحة بعد المراجعة.")
+        : error?.response?.data?.error || dt("فشل في تحديث الحملة");
       setSaveStatus({ type: 'error', message, detail: dt("راجع البيانات ثم حاول مرة أخرى") });
       toast.error(message);
     } finally {

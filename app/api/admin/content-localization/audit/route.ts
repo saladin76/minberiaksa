@@ -9,6 +9,7 @@ import {
 } from "@/lib/content-localization/access";
 import { prisma } from "@/lib/prisma";
 import { SUPPORTED_LOCALES } from "@/lib/locales";
+import { localizationQualityIssues, type LocalizationQualityIssue } from "@/lib/content-localization/translation-quality";
 
 const TARGET_LOCALES = SUPPORTED_LOCALES.filter((l) => l !== "ar");
 type Locale = (typeof TARGET_LOCALES)[number];
@@ -19,6 +20,7 @@ type TranslationStatus = {
   missingFields: string[];
   emptyFields: string[];
   identicalToArabicFields: string[];
+  qualityIssues: LocalizationQualityIssue[];
 };
 
 type AuditItem = {
@@ -88,9 +90,13 @@ function evaluateItem(input: {
   translations: Array<Record<string, unknown> & { locale?: string }>;
   fields: string[];
 }): AuditItem {
-  const translationMap = new Map(
-    (input.translations || []).filter((row) => row.locale).map((row) => [row.locale as string, row]),
-  );
+  const translationMap = new Map<string, Record<string, unknown>>();
+  const duplicateLocales = new Set<string>();
+  for (const row of input.translations || []) {
+    if (!row.locale) continue;
+    if (translationMap.has(row.locale)) duplicateLocales.add(row.locale);
+    else translationMap.set(row.locale, row);
+  }
   const localeStatus = {} as Record<Locale, TranslationStatus>;
 
   for (const locale of TARGET_LOCALES) {
@@ -98,22 +104,34 @@ function evaluateItem(input: {
     const missingFields: string[] = [];
     const emptyFields: string[] = [];
     const identicalToArabicFields: string[] = [];
+    const qualityIssues: LocalizationQualityIssue[] = [];
+    if (duplicateLocales.has(locale))
+      qualityIssues.push({ field: "locale", code: "DUPLICATE_LOCALE", message: "توجد ترجمات مكررة لهذه اللغة؛ يلزم مراجعة السجلات." });
     for (const field of input.fields) {
+      const arabic = normalizeText(input.arabicFields[field]);
+      // Empty optional Arabic source fields do not require invented translations.
+      if (!arabic) continue;
       if (!row || !(field in row)) {
         missingFields.push(field);
         continue;
       }
       const translated = normalizeText(row[field]);
-      const arabic = normalizeText(input.arabicFields[field]);
       if (!translated) emptyFields.push(field);
       if (arabic && translated && arabic === translated) identicalToArabicFields.push(field);
+      // Compare original structured payloads; normalized text is used only for
+      // empty/identical checks and would hide Tiptap marks, links and layout.
+      const rawSource = input.arabicFields[field];
+      const rawTarget = row[field];
+      if (typeof rawSource === "string" && typeof rawTarget === "string" && arabic && translated)
+        qualityIssues.push(...localizationQualityIssues(field, rawSource, rawTarget, locale));
     }
     localeStatus[locale] = {
       exists: Boolean(row),
-      complete: missingFields.length === 0 && emptyFields.length === 0 && identicalToArabicFields.length === 0,
+      complete: missingFields.length === 0 && emptyFields.length === 0 && identicalToArabicFields.length === 0 && qualityIssues.length === 0,
       missingFields,
       emptyFields,
       identicalToArabicFields,
+      qualityIssues,
     };
   }
 
@@ -131,9 +149,9 @@ function summarize(items: AuditItem[]) {
   const byLocale = Object.fromEntries(
     TARGET_LOCALES.map((locale) => [
       locale,
-      { incompleteItems: 0, missingRecords: 0, emptyFields: 0, identicalToArabicFields: 0 },
+      { incompleteItems: 0, missingRecords: 0, emptyFields: 0, identicalToArabicFields: 0, qualityIssues: 0 },
     ]),
-  ) as Record<Locale, { incompleteItems: number; missingRecords: number; emptyFields: number; identicalToArabicFields: number }>;
+  ) as Record<Locale, { incompleteItems: number; missingRecords: number; emptyFields: number; identicalToArabicFields: number; qualityIssues: number }>;
   let arabicIssues = 0;
   for (const item of items) {
     arabicIssues += item.arabicQualityIssues.length;
@@ -143,6 +161,7 @@ function summarize(items: AuditItem[]) {
       if (!status.exists) byLocale[locale].missingRecords += 1;
       byLocale[locale].emptyFields += status.emptyFields.length;
       byLocale[locale].identicalToArabicFields += status.identicalToArabicFields.length;
+      byLocale[locale].qualityIssues += status.qualityIssues.length;
     }
   }
   return { totalItems: items.length, arabicQualityIssues: arabicIssues, byLocale };

@@ -68,7 +68,12 @@ const DETAIL_HEADS: ReadonlySet<MinbarRoute> = new Set<MinbarRoute>(["projectDet
 
 const STATIC_PATHS: Array<{ path: string; changeFrequency: string; priority: number }> = [
   ...(Object.keys(SLUGS) as MinbarRoute[])
-    .filter((route) => !NOINDEX_ROUTES.has(route) && !DETAIL_HEADS.has(route))
+    // Campaign and super-category detail routes are CMS-owned, not permanently
+    // published static pages. Listing them here can leak inactive/404 or noindex
+    // editions when a row is unpublished. Their real eligible records are
+    // emitted by the campaign or super-category shards instead.
+    .filter((route) => !NOINDEX_ROUTES.has(route) && !DETAIL_HEADS.has(route)
+      && route !== "restorationProject" && route !== "ibadanProject")
     .map((route) => ({ path: SLUGS[route] ? `/${SLUGS[route]}` : "", ...(ROUTE_WEIGHTS[route] ?? DEFAULT_WEIGHT) })),
   /* Pages from before the Minbar design that still serve and still rank. */
   { path: "/campaigns", changeFrequency: "daily", priority: 0.9 },
@@ -78,8 +83,12 @@ const STATIC_PATHS: Array<{ path: string; changeFrequency: string; priority: num
 type Translation = { locale: string; slug: string | null };
 
 function pickSlugFor(locale: string, baseSlug: string | null | undefined, translations: Translation[], fallback: string): string {
-  const t = translations.find((tt) => tt.locale === locale && tt.slug);
-  return t?.slug || baseSlug || fallback;
+  // Identical to the public reader's pickLocaleSlug() order, kept inline
+  // because the static sitemap fixture tests isolate this module.
+  const exact = translations.find((t) => t.locale === locale && t.slug)?.slug;
+  if (locale === "ar") return baseSlug || exact || fallback;
+  const english = locale === "en" ? null : translations.find((t) => t.locale === "en" && t.slug)?.slug;
+  return exact || english || baseSlug || fallback;
 }
 
 function staticAlternates(path: string): Record<string, string> {
@@ -104,7 +113,8 @@ function entityAlternates(
   for (const locale of LOCALES) {
     if (availableLocales.includes(locale)) languages[locale] = url(locale);
   }
-  languages["x-default"] = languages.ar || Object.values(languages)[0] || "";
+  const fallbackUrl = languages.ar || languages.en || Object.values(languages)[0];
+  if (fallbackUrl) languages["x-default"] = fallbackUrl;
   return languages;
 }
 
@@ -170,11 +180,11 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
     try {
       const rows = await prisma.superCategory.findMany({
         where: { isActive: true },
-        select: { slug: true, updatedAt: true, intro: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, title: true, intro: true, seoNoIndex: true } } },
+        select: { slug: true, title: true, updatedAt: true, intro: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, title: true, intro: true, seoNoIndex: true } } },
         orderBy: { order: "asc" },
       });
       supers = rows.flatMap((row) => {
-        const available = [...(row.seoNoIndex === "true" ? [] : ["ar"]), ...row.translations.filter((entry) => entry.seoNoIndex !== "true" && entry.title.trim() && (!row.intro?.trim() || entry.intro?.trim())).map((entry) => entry.locale)];
+        const available = [...(row.seoNoIndex === "true" || !hasText(row.title) ? [] : ["ar"]), ...row.translations.filter((entry) => entry.seoNoIndex !== "true" && hasText(entry.title) && (!hasText(row.intro) || hasText(entry.intro))).map((entry) => entry.locale)];
         return expand(superCategoryAlternates(row.slug, row.translations, available), row.updatedAt, "weekly", 0.85, available);
       });
     } catch {
@@ -198,14 +208,14 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
   if (group === "campaigns") {
     const rows = await prisma.campaign.findMany({
       where: CAMPAIGN_SITEMAP_WHERE,
-      select: { id: true, slug: true, updatedAt: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, title: true, description: true, seoNoIndex: true } } },
+      select: { id: true, slug: true, title: true, description: true, updatedAt: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, title: true, description: true, seoNoIndex: true } } },
       orderBy: { updatedAt: "desc" },
       skip,
       take: SHARD_SIZE,
     });
     return rows.flatMap((c) => {
       const availableLocales = Array.from(new Set([
-        ...(c.seoNoIndex === "true" ? [] : ["ar"]),
+        ...(c.seoNoIndex === "true" || !hasText(c.title) || !hasText(c.description) ? [] : ["ar"]),
         ...c.translations
           .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.title) && hasText(translation.description))
           .map((translation) => translation.locale),
@@ -220,7 +230,7 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
        page is already in the static shard. */
     const rows = await prisma.category.findMany({
       where: CATEGORY_SITEMAP_WHERE,
-      select: { id: true, slug: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, name: true, seoNoIndex: true } } },
+      select: { id: true, slug: true, name: true, description: true, seoNoIndex: true, translations: { select: { locale: true, slug: true, name: true, description: true, seoNoIndex: true } } },
       orderBy: { id: "asc" },
       skip,
       take: SHARD_SIZE,
@@ -228,9 +238,9 @@ export async function buildShard(id: string): Promise<SitemapEntry[] | null> {
     const now = new Date();
     return rows.flatMap((c) => {
       const availableLocales = Array.from(new Set([
-        ...(c.seoNoIndex === "true" ? [] : ["ar"]),
+        ...(c.seoNoIndex === "true" || (c.name !== undefined && !hasText(c.name)) ? [] : ["ar"]),
         ...c.translations
-          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.name))
+          .filter((translation) => translation.seoNoIndex !== "true" && hasText(translation.name) && (!hasText(c.description) || hasText(translation.description)))
           .map((translation) => translation.locale),
       ]));
       const alternates = entityAlternates("/category", c.slug, c.translations, c.id, availableLocales);

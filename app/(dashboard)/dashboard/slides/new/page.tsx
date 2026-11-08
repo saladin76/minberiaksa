@@ -19,6 +19,8 @@ import * as z from 'zod';
 import { errorMessage } from '@/lib/dashboard/client-error-message';
 import { validateImageFile } from '@/lib/uploads/image-file-rules';
 import { dt } from "@/lib/dashboard/i18n";
+import { useDashboardUnsavedChanges } from '@/hooks/useDashboardUnsavedChanges';
+import { reviewSlideTranslations, slidePersistenceIssues } from '../_components/translation-review';
 
 const LOCALE_FIELDS: readonly LocaleFormField[] = [
   { name: 'title', get label() { return dt("العنوان"); } },
@@ -47,31 +49,70 @@ export default function NewSlidePage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const [reviewed, setReviewed] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: '', description: '', image: '', showButton: true, buttonText: '', buttonLink: '#quick_donate', isActive: true,
+      title: '', description: '', image: '', showButton: true, buttonText: '', buttonLink: '#quick_donate', isActive: false,
       ...localeDefaults(LOCALE_FIELD_NAMES),
     },
   });
 
+  const review = reviewSlideTranslations(form.watch(), TRANSLATION_LOCALES);
+  useDashboardUnsavedChanges(form.formState.isDirty);
+
   const onSubmit = async (values: FormValues) => {
+    const audit = reviewSlideTranslations(values, TRANSLATION_LOCALES);
+    if (audit.incomplete.length) {
+      const first = audit.incomplete[0];
+      form.setError(localeKey('title', first) as keyof FormValues, { type: 'manual', message: dt('العنوان مطلوب عند كتابة أي حقل في هذه اللغة') });
+      toast.error(dt('توجد لغات فيها وصف أو زر بلا عنوان: {0}', [audit.incomplete.join(', ')]));
+      return;
+    }
+    if (values.isActive && !reviewed) {
+      toast.error(dt('راجع الترجمات والمحتوى قبل تفعيل الشريحة'));
+      return;
+    }
+    if (uploadingImage) {
+      toast.error(dt('انتظر اكتمال رفع الصورة قبل الحفظ'));
+      return;
+    }
+    const payload = {
+      title: values.title,
+      description: values.description,
+      image: values.image,
+      showButton: values.showButton,
+      buttonText: values.buttonText,
+      buttonLink: values.buttonLink,
+      isActive: values.isActive,
+      translations: collectLocaleTranslations(values, LOCALE_FIELDS),
+    };
     setSaving(true);
+    let savedId = createdId;
     try {
-      await axios.post('/api/slides', {
-        title: values.title,
-        description: values.description,
-        image: values.image,
-        showButton: values.showButton,
-        buttonText: values.buttonText,
-        buttonLink: values.buttonLink,
-        isActive: values.isActive,
-        translations: collectLocaleTranslations(values, LOCALE_FIELDS),
-      });
-      toast.success(dt("تم إنشاء الشريحة"));
+      // If a create succeeded but verification failed, retry updates the same
+      // slide instead of silently creating a duplicate.
+      if (savedId) await axios.put('/api/slides/' + savedId, payload);
+      else {
+        const written = await axios.post('/api/slides', payload);
+        savedId = String(written.data?.id || '');
+        if (!savedId) throw new Error(dt('لم يُرجع الخادم معرّف الشريحة للتحقق'));
+        setCreatedId(savedId);
+      }
+      const persisted = await axios.get('/api/slides/' + savedId + '?allTranslations=true');
+      const issues = slidePersistenceIssues(values, persisted.data, TRANSLATION_LOCALES);
+      if (issues.length) {
+        toast.error(dt('تم إرسال الحفظ لكن بعض الحقول لم تطابق النسخة المحفوظة: {0}', [issues.join(', ')]));
+        return;
+      }
+      form.reset(values);
+      toast.success(dt('تم إنشاء الشريحة والتحقق من كل الترجمات المحفوظة'));
       router.push('/dashboard/slides');
     } catch (e) {
-      toast.error(errorMessage(e, dt("فشل في الإنشاء")));
+      toast.error(savedId
+        ? dt('قد تكون الشريحة حُفظت، لكن تعذّر التحقق. أعد المحاولة دون إنشاء نسخة جديدة.')
+        : errorMessage(e, dt('فشل في الإنشاء')));
     } finally {
       setSaving(false);
     }
@@ -111,6 +152,16 @@ export default function NewSlidePage() {
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card className="p-4 space-y-2" dir="rtl" role="status">
+            <p className="font-semibold">{dt('مراجعة ترجمة الشريحة قبل الحفظ')}</p>
+            <p className="text-sm text-muted-foreground">{dt('لغات لها عنوان: {0} من {1}، لغات بدون ترجمة: {2}', [review.complete.length, TRANSLATION_LOCALES.length, review.missing.length])}</p>
+            {review.incomplete.length > 0 && <p className="text-sm text-red-700">{dt('عنوان مفقود في: {0}', [review.incomplete.join(', ')])}</p>}
+            <p className="text-xs text-muted-foreground">{dt('يمكن ترك اللغة فارغة لتستخدم النص الافتراضي، لكن لا يمكن حفظ وصف أو زر بلا عنوان. الصورة واحدة مشتركة لكل اللغات وفق نموذج البيانات الحالي.')}</p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />
+              {dt('راجعت النصوص والروابط والصورة قبل تفعيل الشريحة')}
+            </label>
+          </Card>
           <LocaleFormTabs
             form={form}
             fields={LOCALE_FIELDS}
@@ -133,7 +184,7 @@ export default function NewSlidePage() {
           <Card className="p-6 space-y-4">
             <FormField control={form.control} name="image" render={({ field }) => (
               <FormItem>
-                <FormLabel>{dt("الصورة")}</FormLabel>
+                <FormLabel>{dt("الصورة المشتركة لجميع اللغات")}</FormLabel>
                 <FormControl>
                   <div className="space-y-2">
                     {field.value ? (
@@ -160,7 +211,7 @@ export default function NewSlidePage() {
           </Card>
           <div className="flex gap-4">
             <Button type="button" variant="outline" onClick={() => router.push('/dashboard/slides')}>{dt("إلغاء")}</Button>
-            <Button type="submit" disabled={saving}>{saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />} {dt(" إنشاء")}</Button>
+            <Button type="submit" disabled={saving || uploadingImage}>{saving && <Loader2 className="w-4 h-4 me-2 animate-spin" />} {dt(" إنشاء")}</Button>
           </div>
         </form>
       </Form>

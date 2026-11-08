@@ -1,4 +1,5 @@
 import { institutionalTitle } from "./institutional-title";
+import { pickLocaleSlug } from "./slug";
 import { clipSeoDescription } from "@/lib/seo-description";
 import type { Metadata } from "next";
 import { SUPPORTED_LOCALES, isValidLocale, type SupportedLocale } from "@/lib/locales";
@@ -69,9 +70,19 @@ type LocaleSEO = {
  */
 export const LOCALE_SEO: Record<Locale, LocaleSEO> = MINBAR_LOCALE_SEO;
 
+/**
+ * Canonical paths never include a language prefix or tracking parameters.
+ * Guard even if a caller accidentally supplies /en/blog or /ar?utm_*.
+ */
+function normalizePublicSeoPath(path: string): string {
+  const clean = `/${path.replace(/^\/+/, "")}`.split(/[?#]/, 1)[0].replace(/\/+$/, "");
+  const localePrefix = new RegExp(`^/(?:${LOCALES.join("|")})(?=/|$)`);
+  return clean.replace(localePrefix, "") || "";
+}
+
 /** Build hreflang alternates for a given path (e.g. "/campaigns") */
 export function buildHreflang(path: string, currentLocale: string) {
-  const normalizedPath = path === "/" ? "" : path;
+  const normalizedPath = normalizePublicSeoPath(path);
   const canonicalLocale: Locale = isValidLocale(currentLocale) ? currentLocale : "ar";
   const languages: Record<string, string> = {};
   for (const locale of LOCALES) {
@@ -114,12 +125,10 @@ export function buildLocalizedAlternates(args: {
   availableLocales?: string[];
 }): { canonical: string; languages: Record<string, string> } {
   const { basePath, baseSlug, translations, fallback, currentLocale, availableLocales } = args;
-  const slugFor = (loc: string): string => {
-    const t = translations?.find((tt) => tt.locale === loc && tt.slug);
-    return t?.slug || baseSlug || fallback;
-  };
+  // Keep canonical and hreflang on the very same slug as the public page.
+  // Missing locale slugs follow the existing English-then-Arabic fallback.
   const url = (loc: string): string =>
-    `${SITE_URL}/${loc}${basePath}/${encodeURIComponent(slugFor(loc))}`;
+    `${SITE_URL}/${loc}${normalizePublicSeoPath(basePath)}/${encodeURIComponent(pickLocaleSlug(baseSlug, translations, loc) || fallback)}`;
 
   const allowed = availableLocales
     ? LOCALES.filter((locale) => availableLocales.includes(locale))
@@ -170,7 +179,7 @@ export function buildPageMetadata(
       url: alternates.canonical,
       siteName: seo.siteName,
       locale: OG_LOCALE_MAP[locale as Locale] ?? "en_US",
-      alternateLocale: LOCALES.filter((candidate) => candidate !== locale).map(
+      alternateLocale: LOCALES.filter((candidate) => candidate !== locale && Boolean(alternates.languages?.[candidate])).map(
         (candidate) => OG_LOCALE_MAP[candidate],
       ),
       type: overrides.type ?? "website",
