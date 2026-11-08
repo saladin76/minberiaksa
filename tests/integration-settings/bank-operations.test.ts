@@ -217,3 +217,37 @@ test("Ziraat public checkout, 3D Host and reporting URLs are never treated as a 
     process.env = saved;
   }
 });
+
+test("PayFor uses raw PayforRequest XML only when XML_BODY is explicitly configured", async () => {
+  const saved = { ...process.env }, originalFetch = global.fetch;
+  Object.assign(process.env, {
+    PAYFOR_API_URL: "https://bank.invalid/xmlgate",
+    PAYFOR_API_FORMAT: "XML_BODY",
+    PAYFOR_MBR_ID: "1",
+    PAYFOR_MERCHANT_ID: "2",
+    PAYFOR_USER_CODE: "3",
+    PAYFOR_USER_PASS: "synthetic-only",
+  });
+  try {
+    let requested = false;
+    global.fetch = async (_url, init) => {
+      requested = true;
+      const headers = new Headers(init?.headers);
+      assert.equal(headers.get("Content-Type"), "text/xml; charset=utf-8");
+      const body = String(init?.body);
+      assert.match(body, /^<PayforRequest>/);
+      assert.match(body, /<TxnType>OrderInquiry<\/TxnType>/);
+      assert.match(body, /<SecureType>Inquiry<\/SecureType>/);
+      assert.match(body, /<OrderId>A{24}<\/OrderId>/);
+      assert.ok(!body.includes("prmstr="));
+      assert.ok(!body.includes("MerchantPass"));
+      return new Response("<PayforResponse><ProcReturnCode>00</ProcReturnCode><OrderId>" + "A".repeat(24) + "</OrderId></PayforResponse>");
+    };
+    const response = await callBankOperation(donation("PAYFOR"), "INQUIRE", "LOCAL-QUERY");
+    assert.equal(requested, true);
+    assert.equal(response.code, "00");
+  } finally {
+    global.fetch = originalFetch;
+    process.env = saved;
+  }
+});
