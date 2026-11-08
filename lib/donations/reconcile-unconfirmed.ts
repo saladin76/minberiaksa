@@ -166,11 +166,11 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
         continue;
       }
       try {
-        const { outcome } = await reconcilePayPalDonation(donation.id, { now });
+        const { outcome } = await reconcilePayPalDonation(donation.id, { now, recoverFailed: donation.status === "FAILED" });
         if (outcome === "paid") {
           summary.credited.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, paidAt: now.toISOString() });
           summary.creditedTotalUSD += donation.amountUSD ?? 0;
-        } else if (outcome === "failed") {
+        } else if (outcome === "failed" && donation.status !== "FAILED") {
           summary.markedFailed.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, ageDays: Math.round(ageHours / 24) });
         } else {
           summary.leftAlone++;
