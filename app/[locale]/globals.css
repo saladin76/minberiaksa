@@ -393,6 +393,11 @@ input[type="checkbox"]:checked::before {
   overflow: hidden;
   direction: ltr;
 }
+[dir="rtl"] .phone-input-wrapper .searchable-phone-dropdown {
+  left: auto;
+  right: 0;
+}
+
 .phone-input-wrapper .searchable-phone-search {
   padding: 10px;
   border-bottom: 1px solid #e5e7eb;
