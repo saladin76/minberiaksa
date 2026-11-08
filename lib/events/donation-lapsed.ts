@@ -141,9 +141,9 @@ export async function runDonationLapsedReminders(
   summary.donorsScanned = lastByDonor.size;
   if (!lastByDonor.size) return summary;
 
-  // Donors with a live recurring subscription are already giving  never nag them.
+  // Fail closed if active-plan membership cannot be read: do not remind an active donor.
   const activeSubscribers = new Set(
-    (await prisma.subscription.findMany({ where: { status: "ACTIVE" }, select: { donorId: true } }).catch(() => [])).map((s) => s.donorId)
+    (await prisma.subscription.findMany({ where: { status: "ACTIVE" }, select: { donorId: true } })).map((s) => s.donorId)
   );
 
   const config = await resolveTriggerSendConfig();
@@ -221,9 +221,9 @@ export async function runDonationLapsedReminders(
     });
     const donorById = new Map(donors.map((d) => [d.id, d]));
 
+    // Fail closed if stop-communication preferences cannot be read.
     const profiles = await prisma.donorCommunicationProfile
-      .findMany({ where: { userId: { in: batchIds } }, select: { userId: true, emailOptIn: true, smsOptIn: true, doNotContact: true, consentSource: true } })
-      .catch(() => []);
+      .findMany({ where: { userId: { in: batchIds } }, select: { userId: true, emailOptIn: true, smsOptIn: true, doNotContact: true, consentSource: true } });
     const profileById = new Map(profiles.map((p) => [p.userId, p]));
 
     await attachLastDonationIds(batchIds, lastByDonor);
