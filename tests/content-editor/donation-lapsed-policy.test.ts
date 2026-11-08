@@ -23,10 +23,12 @@ test("successful messages respect full cooldown while failures back off for seve
   assert.equal(windows.length, 2);
   assert.deepEqual(windows[0].createdAt, { gte: cooldown });
   assert.deepEqual(windows[1].createdAt, { gte: failed });
-  assert.ok(windows[0].status.in.includes("SENT"));
-  assert.ok(windows[0].status.in.includes("DELIVERED"));
-  assert.ok(windows[1].status.in.includes("FAILED"));
-  assert.ok(windows[1].status.in.includes("SKIPPED"));
-  assert.equal(windows[0].status.in.includes("FAILED"), false);
-  assert.equal(windows[1].status.in.includes("SENT"), false);
+  const successful = new Set<string>(windows[0].status.in);
+  const failed = new Set<string>(windows[1].status.in);
+  assert.ok(successful.has("SENT"));
+  assert.ok(successful.has("DELIVERED"));
+  assert.ok(failed.has("FAILED"));
+  assert.ok(failed.has("SKIPPED"));
+  assert.equal(successful.has("FAILED"), false);
+  assert.equal(failed.has("SENT"), false);
 });
