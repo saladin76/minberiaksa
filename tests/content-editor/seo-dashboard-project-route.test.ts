@@ -64,8 +64,14 @@ function fixture({ denied = false, missingTranslation = false } = {}) {
       return JSON.stringify(decoded.filter((x: { q: string; a: string }) => x.q && x.a));
     } },
     "../../seo-dashboard-quality": quality,
+    "@/lib/minbar/project-image-fallback": { publicCampaignImage: (images: Array<string | null | undefined>) => images.find((url) => typeof url === "string" && url.trim()) || "/og-image.jpg" },
   };
-  const loaded = { exports: {} as Record<string, (...args: unknown[]) => Promise<{ body: any; status: number }>> };
+  const loaded = { exports: {} as Record<string, (...args: unknown[]) => Promise<{ body: {
+    localeSeo: { seoTitle: string };
+    defaultSeo: { seoTitle: string };
+    hasTranslation: boolean;
+    revision: string;
+  }; status: number }>> };
   const js = ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(js).runInNewContext({
     exports: loaded.exports, module: loaded, URL, console: { error() {} },

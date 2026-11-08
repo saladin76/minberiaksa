@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { suggestionFailure } from "../../lib/ai/core/suggestion-failure";
+import { reviewSeoSuggestion } from "../../app/api/admin/seo/seo-dashboard-quality";
 
 function fixture(file: string, mode = "ok") {
   const research: Record<string, unknown>[] = [], translations: Record<string, unknown>[] = [];
@@ -14,6 +15,8 @@ function fixture(file: string, mode = "ok") {
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => mode === "denied" ? {status:403} : null },
     "@/lib/locales": { isValidLocale: (locale: string) => ["ar", "en", "fr"].includes(locale) },
     "@/lib/ai/core/suggestion-failure": { suggestionFailure },
+    // Test the real, read-only SEO review rather than bypassing its evidence gate.
+    "../seo-dashboard-quality": { reviewSeoSuggestion },
     "@/lib/content-editor/seo-research": { SeoResearchError, generateResearchedSeo: async (input: Record<string, unknown>) => {
       research.push(input); return {suggestion: { seoTitle: "Support", metaDescription: "Support families", primaryKeyword: "Support", keywords: [], longTailKeywords: [], faq: [], notes: [] }, research: { sources: [] }};
     } },

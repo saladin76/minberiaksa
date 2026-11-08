@@ -7,6 +7,11 @@ import { donorLoginEmail } from "../../lib/auth/donor-login-email";
 
 type Reply = { status: number; body: Record<string, unknown> };
 const json = (body: Record<string, unknown>, options?: { status?: number }): Reply => ({ status: options?.status ?? 200, body });
+// Read the origin of the isolated test runtime, not a hardcoded production
+// host. The real requireLoginOrigin security guard still checks exact origin.
+const fixtureOrigin = process.env.NEXTAUTH_URL
+  ? new URL(process.env.NEXTAUTH_URL).origin
+  : "https://minberiaksa.org";
 function load<T>(path: string, imports: Record<string, unknown>): T {
   const fixtureModule = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
@@ -42,7 +47,7 @@ test("WhatsApp authentication uses an approved authentication template; archived
 test("public linking and administrator invitation routes reject unauthorized requests before sends", async () => {
   const responses = { "next/server": { NextResponse: { json } } };
   const boundary = load<typeof import("../../lib/auth/donor-login-request")>("lib/auth/donor-login-request.ts", responses);
-  const request = { headers: new Headers({ origin: "https://minberiaksa.org", "content-type": "application/json" }), nextUrl: { origin: "https://minberiaksa.org" }, json: async () => ({ channel: "EMAIL", contact: "a@example.invalid", link: true }) };
+  const request = { headers: new Headers({ origin: fixtureOrigin, "content-type": "application/json" }), nextUrl: { origin: fixtureOrigin }, json: async () => ({ channel: "EMAIL", contact: "a@example.invalid", link: true }) };
   let calls = 0;
   const common = { ...responses, "next-auth": { getServerSession: async () => null }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} }, "@/lib/auth/donor-login-request": boundary, "@/lib/auth/donor-login-service": { requestDonorLogin: async () => { calls++; }, verifyDonorLogin: async () => { calls++; } }, "@/lib/locales": { isValidLocale: () => true } };
   const publicApi = load<Record<string, (r: unknown) => Promise<Reply>>>("app/api/auth/donor-code/route.ts", common);
@@ -81,7 +86,13 @@ test("changing the verified primary email updates notification routing for the s
     ...next, "next-auth": { getServerSession: async () => ({ user: { id: "target", role: "DONOR" } }) }, "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/auth/donor-login-request": boundary, "@/lib/prisma": { prisma: { $transaction: async (fn: (client: typeof tx) => Promise<void>) => fn(tx) } },
   });
-  const reply = await route.PATCH({ headers: new Headers({ origin: "https://minberiaksa.org", "content-type": "application/json" }), nextUrl: { origin: "https://minberiaksa.org" }, json: async () => ({ identityId: "new-address", userId: "attacker-supplied-id" }) });
+  // Origin enforcement must remain active even if the authenticated session
+  // is valid: a cross-site request may never update verified donor email.
+  const payload = { identityId: "new-address", userId: "attacker-supplied-id" };
+  const crossSite = await route.PATCH({ headers: new Headers({ origin: "https://foreign.invalid", "content-type": "application/json" }), nextUrl: { origin: fixtureOrigin }, json: async () => payload });
+  assert.equal(crossSite.status, 403);
+  assert.equal(updates.length, 0);
+  const reply = await route.PATCH({ headers: new Headers({ origin: fixtureOrigin, "content-type": "application/json" }), nextUrl: { origin: fixtureOrigin }, json: async () => payload });
   assert.equal(reply.status, 200);
   assert.equal(updates.length, 2);
   assert.deepEqual(JSON.parse(JSON.stringify(updates[1])), { where: { userId: "target" }, data: { email: "new@hotmail.com" } });

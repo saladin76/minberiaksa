@@ -3,7 +3,7 @@
 # payments, database write, or inherited production secrets.
 set -Eeuo pipefail
 ROOT=/root/minberiaksa
-BRANCH=integration/translation-seo-20261107
+BRANCH=${QA_BRANCH:-integration/translation-seo-20261107}
 QA_ROOT=/root/minber-media-recovery/translation-seo-qa
 die(){ printf 'STOP: %s\n' "$*" >&2; exit 1; }
 test -d "$ROOT/.git" || test -f "$ROOT/.git" || die "Missing production Git checkout."
@@ -27,7 +27,15 @@ if [ ! -d "$work" ]; then
 fi
 test "$(git -C "$work" rev-parse HEAD)" = "$sha" || die "Wrong worktree SHA."
 test ! -e "$work/.env" && test ! -e "$work/.env.local" && test ! -e "$work/.env.production" || die "QA worktree unexpectedly has environment files."
-if [ ! -e "$work/node_modules" ]; then ln -s "$ROOT/node_modules" "$work/node_modules"; fi
+if [ -L "$work/node_modules" ]; then rm -- "$work/node_modules"; fi
+# A symlink to the production dependency tree makes Next.js 16 resolve its
+# workspace root outside the QA worktree. Use an independent copy instead:
+# copy-on-write when the filesystem supports it; never hardlink modules.
+if [ ! -d "$work/node_modules" ]; then
+  test -d "$ROOT/node_modules" && test ! -L "$ROOT/node_modules" || die "Live dependencies must be a regular directory."
+  cp -a --reflink=auto -- "$ROOT/node_modules" "$work/node_modules" || die "Could not copy isolated dependencies."
+fi
+test ! -L "$work/node_modules" || die "QA dependencies must not link to production."
 printf 'QA_SHA=%s\nWORKTREE=%s\nREPORTS=%s\n' "$sha" "$work" "$logs"
 failures=0
 run(){
@@ -49,6 +57,7 @@ run(){
     failures=$((failures+1))
   fi
 }
+run qa-prisma-generate ./node_modules/.bin/prisma generate --schema prisma/integration-settings.schema.prisma
 run diff-check git diff --check origin/main..."$sha"
 run content-editors npm run test:content-editors
 run integration-settings npm run test:integration-settings

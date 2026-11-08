@@ -91,8 +91,10 @@ async function access() {
   return { session, denied: requireAdminOrDashboardPermission(session, "campaigns") };
 }
 function response(row: NonNullable<Awaited<ReturnType<typeof loadSeo>>>) {
-  const { translationId: _translationId, ...rest } = row;
-  return NextResponse.json(rest, { headers: { "Cache-Control": "no-store" } });
+  // Never return internal translation identifiers to the dashboard client.
+  const publicRow = { ...row };
+  delete (publicRow as Partial<typeof row>).translationId;
+  return NextResponse.json(publicRow, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function GET(request: NextRequest, context: Params) {

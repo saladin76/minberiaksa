@@ -1,0 +1,82 @@
+name: Translation SEO isolated MongoDB acceptance
+
+on:
+  pull_request:
+    branches:
+      - integration/translation-seo-20261107
+    paths:
+      - 'scripts/qa-translation-seo-mongo-rehearsal.mjs'
+      - 'scripts/qa-translation-seo-mongo-isolated.sh'
+      - '.github/workflows/translation-seo-mongo-acceptance.yml'
+      - 'lib/content-editor/**'
+      - 'prisma/schema.prisma'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: translation-seo-mongo-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-real-mongodb:
+    name: Real MongoDB / 19 locales / disposable replica set
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      MONGOMS_VERSION: '8.0.28'
+      MONGOMS_DOWNLOAD_DIR: /tmp/minber-translation-seo-mongo-qa/binaries
+      MONGOMS_DISABLE_POSTINSTALL: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Require AVX-capable GitHub runner
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if ! grep -qm1 -w avx /proc/cpuinfo; then
+            echo 'BLOCKED: GitHub runner CPU does not expose AVX'
+            exit 1
+          fi
+          echo 'PASS github-avx-capability'
+      - name: Prepare isolated dependency tree and fixture environment
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ROOT=/tmp/minber-translation-seo-mongo-qa
+          mkdir -p "$ROOT/worktrees" "$ROOT/tools" "$ROOT/binaries" "$ROOT/npm-cache"
+          mkdir "$ROOT/worktrees/source"
+          # Copy source, omitting Git internals. Do not use secrets from repo.
+          tar -c --exclude=.git --exclude=node_modules -f - . | tar -x -C "$ROOT/worktrees/source"
+          cd "$ROOT/worktrees/source"
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            DATABASE_URL='mongodb://127.0.0.1:27018/minber_qa_unreachable?serverSelectionTimeoutMS=500' \
+            npm ci --ignore-scripts --no-audit --no-fund
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            DATABASE_URL='mongodb://127.0.0.1:27018/minber_qa_unreachable?serverSelectionTimeoutMS=500' \
+            ./node_modules/.bin/prisma generate --schema prisma/schema.prisma
+          cd "$ROOT/tools"
+          printf '{"private":true,"type":"commonjs"}\n' > package.json
+          env -i HOME="$HOME" PATH="$PATH" npm_config_cache="$ROOT/npm-cache" \
+            npm install --ignore-scripts --no-save --no-audit --no-fund mongodb-memory-server-core@10.4.1
+      - name: Run isolated real MongoDB acceptance (no production credentials)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ROOT=/tmp/minber-translation-seo-mongo-qa
+          cd "$ROOT/worktrees/source"
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test NODE_OPTIONS=--max-old-space-size=4096 \
+            QA_MONGO_ROOT="$ROOT" MONGOMS_VERSION=8.0.28 \
+            MONGOMS_DOWNLOAD_DIR="$ROOT/binaries" MONGOMS_DISABLE_POSTINSTALL=1 \
+            DATABASE_URL='mongodb://127.0.0.1:27018/minber_qa_unreachable?serverSelectionTimeoutMS=500' \
+            GOOGLE_CLIENT_ID=fixture-client GOOGLE_CLIENT_SECRET=fixture-secret \
+            NEXTAUTH_SECRET=fixture-auth-secret NEXTAUTH_URL=http://127.0.0.1:3106 \
+            ./node_modules/.bin/tsx scripts/qa-translation-seo-mongo-rehearsal.mjs
