@@ -18,9 +18,9 @@ function searchHelpers(): SearchModule {
   const javascript = ts.transpileModule(source.slice(start, end), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  const module = { exports: {} as SearchModule };
-  new vm.Script(javascript).runInNewContext({ module, exports: module.exports });
-  return module.exports;
+  const sandboxModule = { exports: {} as SearchModule };
+  new vm.Script(javascript).runInNewContext({ module: sandboxModule, exports: sandboxModule.exports });
+  return sandboxModule.exports;
 }
 
 test("search finds countries using dial code with plus, localized digits and country ISO", () => {
@@ -60,7 +60,7 @@ test("all five checkout and onboarding phone inputs use one searchable picker", 
     assert.doesNotMatch(source, /<PhoneInput\b/);
   }
   const component = readFileSync("components/SearchablePhoneInput.tsx", "utf8");
-  assert.match(component, /phoneRef\.current\?\.setCountry\(/);
+  assert.match(component, /setCountry\(iso2,/);
   assert.match(component, /onChange=\{/); // search changes local query, not the donor's phone number
   assert.match(component, /role="listbox"/);
   assert.match(component, /role="combobox"/);
