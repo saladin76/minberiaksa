@@ -22,7 +22,7 @@ Albaraka uses the matching original 2D, 3D or recurring terminal configuration. 
 PayFor operations require two additional, bank-confirmed server variables:
 
 - PAYFOR_API_URL: the HTTPS transaction API endpoint for this Ziraat Katılım merchant, with no credentials/query/hash.
-- PAYFOR_API_FORMAT: FORM or XML_PRMSTR, matching the bank-confirmed request encoding.
+- PAYFOR_API_FORMAT: FORM, XML_PRMSTR or XML_BODY, matching the bank-confirmed request encoding. XML_BODY sends raw PayforRequest XML with text/xml; XML_PRMSTR sends an XML document as form-encoded prmstr. Never automatically retry an uncertain financial request under a different encoding.
 
 Existing PAYFOR_MBR_ID, PAYFOR_MERCHANT_ID, PAYFOR_USER_CODE and PAYFOR_USER_PASS are used. MerchantPass (the 3D secret) is never sent to the transaction API. The endpoint is not guessed from the 3D endpoint or from another bank. Missing operation configuration disables these new actions without altering checkout or Saudi routing. Never import credentials belonging to a different organization from an example document.
 
@@ -60,3 +60,11 @@ Reviewed merchant-supplied integration guide v1.9, the PayFor error-code guide, 
 - The merchant console guide documents a manual fallback for void/full/partial refunds and reporting, including matching by original `OrderID`. Use this only through the bank's authorized console and reconcile the resulting bank evidence with the immutable original donation; never fabricate an API success.
 
 Checkout, the Saudi routing rules, Albaraka operations, the live gateway configuration, and all financial write permissions remain unchanged by this documentation/adapter hardening. No production bank request, void, refund, payment or new donor message was initiated.
+
+## Transport probe result (2026-11-08, VPS)
+
+- HEAD requests to the merchant's checkout `/MPI/Default.aspx` and candidate `/MPI/XMLGate.aspx` both returned HTTP 200; this only demonstrates reachability/TLS.
+- An unauthenticated malformed raw-XML POST to XMLGate returned **302 /MPI/GatewayError.aspx**.
+- An unauthenticated empty `prmstr` form POST returned **302 /error/500?aspxerrorpath=/MPI/XMLGate.aspx**.
+- These probes do **not** establish that XMLGate is the approved transaction endpoint or that any encoding works with merchant credentials. They contain no financial action but can be logged by the bank. Do not repeat or broaden live probes without bank confirmation.
+- Third-party PayFor SDKs implement raw PayforRequest XML; adapter now supports **explicit XML_BODY** for a confirmed integration. The active production configuration is unchanged and remains NOT_CONFIGURED until the bank validates endpoint/transport/permissions and a read-only authenticated OrderInquiry is tested with an approved original sale.
