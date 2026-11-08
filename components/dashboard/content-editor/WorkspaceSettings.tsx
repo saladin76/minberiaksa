@@ -1,4 +1,5 @@
 "use client";
+import { categoryPublicationDisplayValue } from "@/lib/dashboard/category-publication-default";
 import { VideoSourceField } from "./VideoSourceField";
 import { ProjectImageGallery } from "./ProjectImageGallery";
 import { CategoryIconPicker } from "@/app/(dashboard)/dashboard/categories/_components/CategoryIconPicker";
@@ -103,7 +104,7 @@ export function WorkspaceSettings({
             ),
         )
         .map((f) => {
-          const value = settings[f.key];
+          const value = categoryPublicationDisplayValue(kind, f.key, settings[f.key]);
           let options: { id: string; title: string }[] = [];
           if (f.key === "categoryIds") options = catalog.categories;
           if (["campaignId", "campaignIds"].includes(f.key))
