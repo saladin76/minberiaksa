@@ -18,10 +18,10 @@ function matches(row: Row, where: Row): boolean {
     return value === condition;
   });
 }
-function fixture(options: { age?: number; state?: "approved" | "absent" | "unknown" | "throw"; dryRun?: boolean; provider?: string; legacy?: boolean; paidRace?: boolean; changedTerminal?: boolean; wrongAmount?: boolean; nextAt?: Date; lockUntil?: Date; missingPaidAt?: boolean } = {}) {
+function fixture(options: { age?: number; state?: "approved" | "absent" | "unknown" | "throw"; dryRun?: boolean; provider?: string; legacy?: boolean; paidRace?: boolean; changedTerminal?: boolean; wrongAmount?: boolean; nextAt?: Date; lockUntil?: Date; missingPaidAt?: boolean; failed?: boolean } = {}) {
   const request: Row = { orderId: "order", amount: 10000, currencyCode: "TL", mode: "2D", merchantNo: "merchant", terminalNo: options.changedTerminal ? "old-terminal" : "terminal" };
   if (options.legacy) { delete request.terminalNo; delete request.merchantNo; }
-  const row: Row = { id: "111111111111111111111111", provider: options.provider ?? "ALBARAKA", providerOrderId: "order", paymentMethod: "CARD", status: "PAID", paidAt: null, createdAt: new Date(now.getTime() - (options.age ?? 25) * 3_600_000), amountUSD: 10, providerRaw: { albarakaRequest: request }, items: [], categoryItems: [] };
+  const row: Row = { id: "111111111111111111111111", provider: options.provider ?? "ALBARAKA", providerOrderId: "order", paymentMethod: "CARD", status: options.failed ? "FAILED" : "PAID", paidAt: null, createdAt: new Date(now.getTime() - (options.age ?? 25) * 3_600_000), amountUSD: 10, providerRaw: { albarakaRequest: request }, items: [], categoryItems: [] };
   if (options.nextAt) row.reconciliationNextAt = options.nextAt;
   if (options.lockUntil) row.reconciliationLeaseUntil = options.lockUntil;
   if (options.missingPaidAt) delete row.paidAt;
@@ -54,6 +54,34 @@ test("half-hour polling recovers a confirmed bank sale through the existing sett
     await f.run(); assert.equal(f.stats().inquiries, 1);
   }
 });
+test("verified late Albaraka sale repairs previously FAILED payment through one idempotent settlement", async () => {
+  const f = fixture({ age: 26, state: "approved", failed: true });
+  const result = await f.run();
+  assert.equal(result.credited.length, 1);
+  assert.equal(f.stats().inquiries, 1);
+  assert.equal(f.stats().settlements, 1);
+  assert.ok(f.row.paidAt instanceof Date);
+  await f.run();
+  assert.equal(f.stats().settlements, 1, "already-paid payment must not settle twice");
+});
+
+test("bank no-sale, unknown or invalid evidence NEVER turns an already FAILED payment into PAID", async () => {
+  for (const option of [
+    { state: "absent" as const },
+    { state: "unknown" as const },
+    { state: "approved" as const, wrongAmount: true },
+    { state: "approved" as const, changedTerminal: true },
+  ]) {
+    const f = fixture({ age: 48, failed: true, ...option });
+    const r = await f.run();
+    assert.equal(f.row.status, "FAILED");
+    assert.equal(f.row.paidAt, null);
+    assert.equal(f.stats().settlements, 0);
+    assert.equal(r.credited.length, 0);
+    assert.equal(r.markedFailed.length, 0);
+  }
+});
+
 test("an authoritative no-sale at the same terminal becomes failed at 24 hours, not before", async () => {
   const young = fixture({ age: 23.99 }); assert.equal((await young.run()).markedFailed.length, 0); assert.equal(young.row.status, "PAID");
   const old = fixture({ age: 24 }); assert.equal((await old.run()).markedFailed.length, 1); assert.equal(old.row.status, "FAILED");
