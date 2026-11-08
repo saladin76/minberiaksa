@@ -62,13 +62,13 @@ function alternates(html) {
     lang: attr(tag, "hreflang"),
   })).filter(x => x.rel === "alternate" && x.lang).map(x => [x.lang, x.href]));
 }
-async function request(url, timeoutMs = 120000, redirect = "manual") {
+async function request(url, timeoutMs = 120000, redirect = "manual", userAgent = "Minber-QA-Preview/1") {
   const parsed = new URL(url, baseUrl);
   assert.equal(parsed.origin, baseUrl, "Cannot request external hosts in CI QA");
   return fetch(parsed, {
     redirect,
     signal: AbortSignal.timeout(timeoutMs),
-    headers: { accept: "text/html,application/xml,text/plain", "user-agent": "Minber-QA-Preview/1" },
+    headers: { accept: "text/html,application/xml,text/plain", "user-agent": userAgent },
   });
 }
 async function get(pathname, timeoutMs = 120000, redirect = "manual") {
@@ -207,6 +207,32 @@ async function main() {
       assert.equal(map["x-default"], canonicalSite + "/ar", "Default alternate: " + locale);
       assert.ok(!Object.hasOwn(map, "fr"), "Noindex French edition leaked into alternate: " + locale);
       assert.equal(Object.keys(map).length, 19, "Expect 18 indexable languages plus default: " + locale);
+    }
+  });
+  await check("preview-googlebot-and-social-metadata-in-head", async () => {
+    // Check real HTTP response, not a unit test of the regex. The 19-locale
+    // normal visitor path is checked above; this adds explicit crawler UA.
+    const scenarios = [
+      ["Googlebot", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"],
+      ["AdsBot-Google", "AdsBot-Google (+http://www.google.com/adsbot.html)"],
+      ["Twitterbot", "Twitterbot/1.0"],
+      ["Bingbot", "Mozilla/5.0 (compatible; bingbot/2.0)"],
+      ["Facebook", "facebookexternalhit/1.1"],
+    ];
+    for (const locale of ["ar", "en", "hi"]) {
+      for (const [name, userAgent] of scenarios) {
+        const response = await request("/" + locale, 120000, "manual", userAgent);
+        const html = await response.text();
+        assert.equal(response.status, 200, locale + "/" + name + " HTTP");
+        assert.ok(hasNoindexHeader(response), locale + "/" + name + " preview noindex");
+        const head = html.split("</head>", 1)[0];
+        assert.ok(/<title[\s>]/i.test(head), locale + "/" + name + " title missing from head");
+        assert.equal(canon(head), canonicalSite + "/" + locale, locale + "/" + name + " head canonical");
+        const map = alternates(head);
+        assert.equal(map.ar, canonicalSite + "/ar", locale + "/" + name + " Arabic alternate");
+        assert.equal(map["x-default"], canonicalSite + "/ar", locale + "/" + name + " default alternate");
+        assert.equal(Object.keys(map).length, 19, locale + "/" + name + " hreflang count");
+      }
     }
   });
   await check("preview-sitemap-index-shards", async () => {

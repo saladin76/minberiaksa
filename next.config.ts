@@ -126,7 +126,16 @@ function buildSourceSha() {
   catch { return ""; }
 }
 
+// Next 16 streams dynamic metadata into <body> for JS-capable bots, including
+// Googlebot. Google Search's canonical-link guidance requires <head> placement.
+// Preserve Next's HTML-limited bot list when overriding it: a Googlebot-only
+// regex would silently break Twitter/Meta/Bing/WhatsApp previews. Keep ordinary
+// browser UAs streamed for fast first paint. Review when upgrading Next.js.
+// Default pattern: next/dist/shared/lib/router/utils/html-bots.js (Next 16).
+const HEAD_METADATA_BOTS = /Googlebot|[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight/i;
+
 const nextConfig: NextConfig = {
+  htmlLimitedBots: HEAD_METADATA_BOTS,
   env: { MINBER_BUILD_SHA: buildSourceSha() },
   /* `scripts/deploy-vps.sh` builds into a separate folder (NEXT_DIST_DIR) while
      the live server keeps reading `.next`, then swaps the two. Building over the
