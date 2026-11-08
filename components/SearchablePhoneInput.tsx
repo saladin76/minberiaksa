@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ComponentProps, KeyboardEvent } from "react";
 import {
   defaultCountries,
@@ -20,7 +20,7 @@ const labels: Record<string, { search: string; empty: string; select: string }> 
   en: { search: "Search country or calling code", empty: "No matching country", select: "Select calling code" },
 };
 
-const countries = defaultCountries.map(parseCountry);
+const countries = defaultCountries.map((country) => parseCountry(country));
 
 export function normalizeCountrySearch(value: string): string {
   return value
@@ -60,6 +60,8 @@ export default function SearchablePhoneInput({
 }: PhoneProps) {
   const phoneRef = useRef<PhoneInputRefType>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const activeOptionRef = useRef<HTMLButtonElement>(null);
+  const listboxId = useId();
   const selectorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -93,6 +95,10 @@ export default function SearchablePhoneInput({
     document.addEventListener("pointerdown", onOutside);
     return () => document.removeEventListener("pointerdown", onOutside);
   }, [open]);
+
+  useEffect(() => {
+    if (open && query) activeOptionRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, open, query]);
 
   const toggle = () => {
     if (props.disabled) return;
@@ -163,17 +169,22 @@ export default function SearchablePhoneInput({
                     onKeyDown={onSearchKeyDown}
                     placeholder={copy.search}
                     aria-label={copy.search}
-                    aria-controls="searchable-phone-countries"
+                    aria-controls={listboxId}
+                    role="combobox"
+                    aria-expanded={open}
+                    aria-activedescendant={matches[activeIndex] ? `${listboxId}-${matches[activeIndex].iso2}` : undefined}
                     autoComplete="off"
                   />
                 </div>
-                <div id="searchable-phone-countries" role="listbox" aria-label={copy.select} className="searchable-phone-options">
+                <div id={listboxId} role="listbox" aria-label={copy.select} className="searchable-phone-options">
                   {matches.length ? matches.map((country, index) => (
                     <button
                       type="button"
                       role="option"
                       aria-selected={activeIndex === index}
                       key={country.iso2}
+                      id={`${listboxId}-${country.iso2}`}
+                      ref={activeIndex === index ? activeOptionRef : undefined}
                       className={`searchable-phone-option ${activeIndex === index ? "is-active" : ""}`}
                       onMouseEnter={() => setActiveIndex(index)}
                       onClick={() => selectCountry(country.iso2)}
