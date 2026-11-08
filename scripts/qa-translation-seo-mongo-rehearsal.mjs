@@ -12,7 +12,12 @@ import { randomUUID } from "node:crypto";
 import ts from "typescript";
 
 const root = process.env.QA_MONGO_ROOT || "";
-assert.match(root, /^\/root\/minber-media-recovery\/translation-seo-mongo-qa$/);
+// Only these disposable QA roots are permitted. The runner never reads
+// production environment files or accepts a production MongoDB URI.
+assert.ok([
+  "/root/minber-media-recovery/translation-seo-mongo-qa",
+  "/tmp/minber-translation-seo-mongo-qa",
+].includes(root), "Unapproved MongoDB QA root");
 assert.ok(process.cwd().startsWith(root + "/worktrees/"), "Must run in a detached QA worktree");
 assert.equal(process.env.NODE_ENV, "test");
 assert.equal(process.version.split(".")[0], "v24");
