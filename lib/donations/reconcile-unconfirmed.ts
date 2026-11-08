@@ -44,6 +44,8 @@ export type ReconcileOptions = {
   /** An authoritatively unpaid attempt can expire after this many hours. */
   staleAfterHours?: number;
   now?: Date;
+  /** Verify one payment attempt on demand without scanning other donors. */
+  donationId?: string;
 };
 
 export type ReconcileSummary = {
@@ -88,7 +90,10 @@ async function askStripe(providerOrderId: string | null): Promise<{ verdict: Str
 }
 
 export async function reconcileUnconfirmedDonations(options: ReconcileOptions = {}): Promise<ReconcileSummary> {
-  const { dryRun = false, minAgeHours = 0.5, staleAfterHours = 24, now = new Date() } = options;
+  const { dryRun = false, minAgeHours = 0.5, staleAfterHours = 24, now = new Date(), donationId } = options;
+  // Only re-check recent failed card/PayPal attempts. A FAILED status must never
+  // be promoted without verified bank Sale or completed PayPal capture evidence.
+  const failedRecoverySince = new Date(now.getTime() - 72 * 3_600_000);
   const started = Date.now();
 
   // Prisma+MongoDB: `field: null` matches only EXPLICIT nulls, never unset fields. These rows are
@@ -96,7 +101,14 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
   // `null` alone silently hides most of the population.
   const rows = await prisma.donation.findMany({
     where: {
-      status: "PAID",
+      ...(donationId ? { id: donationId } : {}),
+      // A previously failed 3D return may have a later bank-confirmed Sale.
+      // Verify provider evidence before ever changing an existing FAILED row.
+      OR: [
+        { status: "PAID" },
+        { status: "FAILED", provider: "ALBARAKA", createdAt: { gte: failedRecoverySince } },
+        { status: "FAILED", paymentMethod: "PAYPAL", createdAt: { gte: failedRecoverySince } },
+      ],
       // A bank transfer waits on a finance officer, not on Stripe, and has no
       // clock: it stays "قيد التأكيد" until someone confirms or rejects it from
       // the dashboard. Ageing it out here would mark real, slow money abandoned.
@@ -107,8 +119,8 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
       ],
     },
     include: { items: true, categoryItems: true },
-    orderBy: { createdAt: "asc" },
-    take: 200,
+    orderBy: { createdAt: donationId ? "asc" : "desc" },
+    take: donationId ? 1 : 200,
   });
 
   const summary: ReconcileSummary = {
@@ -135,7 +147,7 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
     if (dryRun) { summary.leftAlone++; continue; }
     const lease = randomUUID();
     const claimed = await prisma.donation.updateMany({
-      where: donationWhereAll({ id: donation.id, status: "PAID" }, donationFieldEmpty("paidAt"), {
+      where: donationWhereAll({ id: donation.id, status: donation.status }, donationFieldEmpty("paidAt"), {
         OR: [{ reconciliationLeaseUntil: null }, { reconciliationLeaseUntil: { isSet: false } }, { reconciliationLeaseUntil: { lt: now } }],
       }, {
         OR: [{ reconciliationNextAt: null }, { reconciliationNextAt: { isSet: false } }, { reconciliationNextAt: { lte: now } }],
@@ -154,11 +166,11 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
         continue;
       }
       try {
-        const { outcome } = await reconcilePayPalDonation(donation.id, { now });
+        const { outcome } = await reconcilePayPalDonation(donation.id, { now, recoverFailed: donation.status === "FAILED" });
         if (outcome === "paid") {
           summary.credited.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, paidAt: now.toISOString() });
           summary.creditedTotalUSD += donation.amountUSD ?? 0;
-        } else if (outcome === "failed") {
+        } else if (outcome === "failed" && donation.status !== "FAILED") {
           summary.markedFailed.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, ageDays: Math.round(ageHours / 24) });
         } else {
           summary.leftAlone++;
@@ -184,9 +196,11 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
         if (!sale || (sale.Amount !== undefined && Number(sale.Amount) !== Number(request.amount)) || (sale.Currency && sale.Currency !== request.currencyCode)) {
           summary.errors.push({ donationId: donation.id, error: "BANK_INQUIRY_IDENTITY_REQUIRES_REVIEW" }); continue;
         }
-        await settleAlbarakaDonation(donation.id, { ...answer.raw, AuthCode: answer.authCode, ReferenceCode: String(sale.ReferenceCode ?? "") }, { reconciliation: { checkedAt: now.toISOString(), source: "bank-inquiry" } });
+        const settled = await settleAlbarakaDonation(donation.id, { ...answer.raw, AuthCode: answer.authCode, ReferenceCode: String(sale.ReferenceCode ?? "") }, { reconciliation: { checkedAt: now.toISOString(), source: "bank-inquiry" } });
+        // An unsuccessful transaction/late competing callback is NOT a credit.
+        if (!settled) { summary.errors.push({ donationId: donation.id, error: "BANK_APPROVAL_SETTLEMENT_NOT_COMMITTED" }); continue; }
         summary.credited.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, paidAt: now.toISOString() }); summary.creditedTotalUSD += donation.amountUSD ?? 0;
-      } else if (answer.state === "absent" && ageHours >= staleAfterHours && request.terminalNo === cfg.terminalNo && request.merchantNo === cfg.merchantNo) {
+      } else if (donation.status === "PAID" && answer.state === "absent" && ageHours >= staleAfterHours && request.terminalNo === cfg.terminalNo && request.merchantNo === cfg.merchantNo) {
         const failed = await prisma.donation.updateMany({ where: donationWhereAll({ id: donation.id, status: "PAID" }, donationFieldEmpty("paidAt")), data: { status: "FAILED", providerTxnResult: "ConfirmationExpired", providerErrorMessage: "PAYMENT_CONFIRMATION_TIMED_OUT — Bank confirmed no sale after 24 hours" } });
         if (failed.count) summary.markedFailed.push({ donationId: donation.id, amountUSD: donation.amountUSD ?? 0, ageDays: Math.round(ageHours / 24) });
       } else summary.leftAlone++;
@@ -194,7 +208,7 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
     }
     // An unsupported provider is not an abandoned Stripe payment. Preserve
     // unverified bank approvals and unknown rails for finance review.
-    if (donation.provider !== "STRIPE" && !/^(?:pi_|cs_)/.test(donation.providerOrderId ?? "")) { summary.leftAlone++; continue; }
+    if (donation.status === "FAILED" || (donation.provider !== "STRIPE" && !/^(?:pi_|cs_)/.test(donation.providerOrderId ?? ""))) { summary.leftAlone++; continue; }
 
     let verdict: StripeVerdict = "unknown";
     let paidAt: Date | undefined;

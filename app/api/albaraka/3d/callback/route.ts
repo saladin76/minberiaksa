@@ -123,7 +123,10 @@ export async function POST(req: NextRequest) {
       where: donationWhereAll({ id: donationId, providerOrderId: orderId, providerTxnResult: "Capturing3D" }, donationFieldEmpty("paidAt")),
       data: { providerErrorMessage: "3D payment outcome requires confirmation; no automatic recapture will be attempted." },
     }).catch(() => {});
-    return redirect(successUrl());
+    // The bank has not confirmed a sale. Never redirect to a success page
+    // (which would imply a charge and may issue a certificate). The processing
+    // watcher will track the existing order while Cron verifies it; no recapture.
+    return redirect(new URL(withDonationToken(`/${locale}/payment-processing?donationId=${encodeURIComponent(donationId)}`, accessToken), origin));
   }
 
   /** Marks the donation failed (unless already paid) and sends the donor to the failure page. */

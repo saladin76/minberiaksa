@@ -50,6 +50,7 @@ export const PAID_CONTRIBUTING_FILTER: Prisma.DonationWhereInput = {
  * carries its own `OR` (Prisma+MongoDB `null` misses an unset field).
  */
 export function donationStatusWhere(status: string | null | undefined): Prisma.DonationWhereInput | null {
+  if (status === "RESOLVED") return { OR: [PAID_DONATION_FILTER, { status: "FAILED" }] };
   if (status === "PAID") return PAID_DONATION_FILTER;
   if (status === "PENDING") return { status: "PAID", OR: [{ paidAt: null }, { paidAt: { isSet: false } }] };
   if (status === "FAILED") return { status: "FAILED" };

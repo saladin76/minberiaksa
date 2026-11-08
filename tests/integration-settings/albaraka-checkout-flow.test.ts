@@ -205,7 +205,7 @@ test("failed authentication never captures or silently downgrades and replays do
 for (const outcome of ["throw", "transport"] as const) test(`uncertain 3D capture holds for confirmation instead of failing or recapturing (${outcome})`, async () => {
   const f = fixture({ outcome }); const response = await f.callback();
   assert.equal(f.calls.sales, 1); assert.equal(f.calls.failures, 0); assert.equal(f.state.paidAt, null);
-  assert.equal(f.state.providerTxnResult, "Capturing3D"); assert.match(response.headers.get("location") || "", /\/success\//);
+  assert.equal(f.state.providerTxnResult, "Capturing3D"); assert.match(response.headers.get("location") || "", /\/payment-processing\?donationId=/);
   await f.callback(); assert.equal(f.calls.sales, 1);
 });
 

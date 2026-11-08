@@ -94,7 +94,7 @@ export interface ExportFormState {
   end: string;
   categoryId: string;
   campaignId: string;
-  status: "all" | "PAID" | "PENDING" | "FAILED";
+  status: "all" | "RESOLVED" | "PAID" | "PENDING" | "FAILED";
   type: "all" | "ONE_TIME" | "MONTHLY";
   subStatus: "all" | "ACTIVE" | "PAUSED" | "CANCELLED" | "PAYMENT_FAILED";
   /** Recurring plan cadence. */
@@ -383,10 +383,11 @@ export function ExportReportDialog(props: ExportReportDialogProps) {
               >
                 <SelectTrigger className="text-start"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{dt("الكل")}</SelectItem>
+                  <SelectItem value="RESOLVED">{dt("ناجح وفاشل فقط")}</SelectItem>
                   <SelectItem value="PAID">{dt("ناجح")}</SelectItem>
-                  <SelectItem value="PENDING">{dt("قيد التأكيد")}</SelectItem>
                   <SelectItem value="FAILED">{dt("فاشل")}</SelectItem>
+                  <SelectItem value="PENDING">{dt("محاولات بحاجة لتحقق")}</SelectItem>
+                  <SelectItem value="all">{dt("كل الحالات (مع غير المحسومة)")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -352,7 +352,7 @@ export default function DashboardPage() {
   const [donationsSortBy, setDonationsSortBy] = useState<"date" | "amount">("date");
   const [donationsSortOrder, setDonationsSortOrder] = useState<"asc" | "desc">("desc");
   const [showFailed, setShowFailed] = useState(false);
-  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "PAID" | "PENDING" | "FAILED">("all");
+  const [donationsStatusFilter, setDonationsStatusFilter] = useState<"all" | "RESOLVED" | "PAID" | "PENDING" | "FAILED">("RESOLVED");
   /** Applied donor search (name or email) for the أحدث التبرعات table  server-side, not a page filter. */
   const [donationsSearch, setDonationsSearch] = useState("");
   const [donationsTypeFilter, setDonationsTypeFilter] = useState<"all" | "ONE_TIME" | "MONTHLY">("all");
@@ -1735,10 +1735,11 @@ export default function DashboardPage() {
         <SelectValue placeholder={dt("الحالة")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all" className="text-xs">{dt("كل الحالات")}</SelectItem>
+        <SelectItem value="RESOLVED" className="text-xs">{dt("ناجح وفاشل فقط")}</SelectItem>
         <SelectItem value="PAID" className="text-xs">{dt("ناجح")}</SelectItem>
-        <SelectItem value="PENDING" className="text-xs">{dt("قيد التأكيد")}</SelectItem>
         <SelectItem value="FAILED" className="text-xs">{dt("فاشل")}</SelectItem>
+        <SelectItem value="PENDING" className="text-xs">{dt("محاولات بحاجة لتحقق")}</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل الحالات (مع غير المحسومة)")}</SelectItem>
       </SelectContent>
     </Select>
   </div>

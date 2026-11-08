@@ -5,10 +5,11 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as nulls from "../../lib/donations/mongo-null";
 
-function fixture(options: { pending?: boolean; changed?: string; failed?: boolean; racePaid?: boolean } = {}) {
+function fixture(options: { pending?: boolean; changed?: string; failed?: boolean; racePaid?: boolean; orderStatus?: string } = {}) {
   const row = { id: "donation", paypalOrderId: "ORDER1234567", providerOrderId: "ORDER1234567", paymentMethod: "PAYPAL", paidAt: null as Date | null, status: options.failed ? "FAILED" : "PAID", providerErrorMessage: null as string | null, accessToken: "fixture-private-token", createdAt: new Date("2020-01-01"), providerRaw: { paypalRequest: { orderId: "ORDER1234567", value: "25.00", currency: "USD" } }, items: [{ campaignId: "project", amountUSD: 25 }], categoryItems: [], subscriptionId: null };
   const capture = { id: "CAPTURE123", status: options.pending ? "PENDING" : "COMPLETED", amount: { value: "25.00", currency_code: "USD" }, status_details: { reason: "PENDING_REVIEW" } };
   const order = { id: row.paypalOrderId, status: "COMPLETED", purchase_units: [{ custom_id: row.id, payments: { captures: [capture] } }] };
+  if (options.orderStatus) order.status = options.orderStatus;
   if (options.changed === "amount") capture.amount.value = "26.00";
   if (options.changed === "currency") capture.amount.currency_code = "EUR";
   if (options.changed === "owner") order.purchase_units[0].custom_id = "other-donation";
@@ -34,11 +35,37 @@ function fixture(options: { pending?: boolean; changed?: string; failed?: boolea
       paypalCaptureOf: (value: typeof order) => value.purchase_units[0].payments.captures[0], paypalAuditView: (value: typeof order) => ({ id: value.id }), paypalAmountsMatch: (a: string, b: string) => Number(a) === Number(b), paypalVaultOf: () => null,
     },
   };
-  const mod = { exports: {} as { reconcilePayPalWebhookOrder: (orderId: string) => Promise<string> } };
+  const mod = { exports: {} as { reconcilePayPalWebhookOrder: (orderId: string) => Promise<string>; reconcilePayPalDonation: (id: string, options?: { recoverFailed?: boolean }) => Promise<{ outcome: string }> } };
   const source = ts.transpileModule(readFileSync("lib/donations/paypal-donation.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new vm.Script(source).runInNewContext({ module: mod, exports: mod.exports, Date, console: { error() {} }, require: (id: string) => { assert.ok(id in deps, id); return deps[id]; } });
-  return { row, run: () => mod.exports.reconcilePayPalWebhookOrder("ORDER1234567"), stats: () => ({ credited, paidEvents, captures, writes }) };
+  return { row, run: () => mod.exports.reconcilePayPalWebhookOrder("ORDER1234567"), recover: () => mod.exports.reconcilePayPalDonation("donation", { recoverFailed: true }), stats: () => ({ credited, paidEvents, captures, writes }) };
 }
+test("half-hour PayPal reconciliation recovers FAILED only from an already completed verified capture", async () => {
+  const confirmed = fixture({ failed: true });
+  assert.equal((await confirmed.recover()).outcome, "paid");
+  assert.equal(confirmed.row.status, "PAID");
+  assert.ok(confirmed.row.paidAt);
+  assert.deepEqual(confirmed.stats(), { credited: 25, paidEvents: 1, captures: 0, writes: 1 });
+  assert.equal((await confirmed.recover()).outcome, "skipped");
+  assert.equal(confirmed.stats().credited, 25);
+});
+
+test("recovery never recaptures APPROVED or pending PayPal orders previously marked FAILED", async () => {
+  for (const options of [
+    { failed: true, orderStatus: "APPROVED" },
+    { failed: true, pending: true },
+    { failed: true, orderStatus: "VOIDED" },
+  ]) {
+    const f = fixture(options);
+    const result = await f.recover();
+    assert.notEqual(result.outcome, "paid");
+    assert.equal(f.row.status, "FAILED");
+    assert.equal(f.row.paidAt, null);
+    assert.equal(f.stats().captures, 0);
+    assert.equal(f.stats().credited, 0);
+  }
+});
+
 test("a late completed PayPal webhook recovers an old local failure and concurrent deliveries credit once", async () => {
   const f = fixture({ failed: true }); const outcomes = await Promise.all([f.run(), f.run()]);
   assert.ok(outcomes.every(value => value === "paid")); assert.equal(f.row.status, "PAID"); assert.ok(f.row.paidAt);
