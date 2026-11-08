@@ -92,18 +92,19 @@ type DonorRow = {
 };
 
 /**
- * Most recent CONFIRMED payment per donor. Ignore PAID rows without paidAt,
- * including unconfirmed card/PayPal checkouts and awaiting bank-transfer review.
+ * Most recent CONFIRMED payment per donor, measured by paidAt rather than
+ * createdAt. A bank transfer may be confirmed days after the donation record
+ * was created; the lapse clock must start at confirmation, not checkout.
  */
 async function loadLastPaidDonationByDonor(): Promise<Map<string, { at: Date; donationId: string }>> {
   const grouped = await prisma.donation.groupBy({
     by: ["donorId"],
     where: SETTLED_DONATION_WHERE,
-    _max: { createdAt: true },
+    _max: { paidAt: true },
   });
   const out = new Map<string, { at: Date; donationId: string }>();
   for (const row of grouped) {
-    if (row._max.createdAt) out.set(row.donorId, { at: row._max.createdAt, donationId: "" });
+    if (row._max.paidAt) out.set(row.donorId, { at: row._max.paidAt, donationId: "" });
   }
   return out;
 }
@@ -113,8 +114,8 @@ async function attachLastDonationIds(donorIds: string[], lastByDonor: Map<string
   if (!donorIds.length) return;
   const rows = await prisma.donation.findMany({
     where: { donorId: { in: donorIds }, ...SETTLED_DONATION_WHERE },
-    select: { id: true, donorId: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
+    select: { id: true, donorId: true, paidAt: true },
+    orderBy: [{ paidAt: "desc" }, { id: "desc" }],
   });
   for (const row of rows) {
     const entry = lastByDonor.get(row.donorId);
