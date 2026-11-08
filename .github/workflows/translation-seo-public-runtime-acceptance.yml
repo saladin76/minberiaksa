@@ -66,6 +66,12 @@ jobs:
           env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
             DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
             ./node_modules/.bin/prisma generate --schema prisma/schema.prisma
+          # Public auth/runtime paths import a separate generated integration client.
+          # Generate code only; no DB schema push or migrations.
+          env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test \
+            DATABASE_URL='mongodb://127.0.0.1:27018/qa_unreachable?serverSelectionTimeoutMS=500' \
+            ./node_modules/.bin/prisma generate --schema prisma/integration-settings.schema.prisma
+          test -f generated/integration-settings-client/index.js
           cd "$ROOT/tools"
           printf '{"private":true,"type":"commonjs"}\n' > package.json
           env -i HOME="$HOME" PATH="$PATH" npm_config_cache="$ROOT/npm-cache" \
