@@ -122,6 +122,9 @@ jobs:
           - name: Inbox media
             artifact: inbox-media
             script: scripts/inbox-media-browser-test.mjs
+          - name: WhatsApp language and purpose
+            artifact: whatsapp-language
+            script: scripts/whatsapp-language-browser-test.mjs
           - name: Inbox microphone
             artifact: inbox-microphone
             script: scripts/inbox-permissions-browser-test.mjs
