@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getDonationSummary } from "@/lib/minbar/donation";
+import { donationPageOutcome } from "@/lib/minbar/donation-outcome";
+import { isObjectId } from "@/lib/slug";
+import { prisma } from "@/lib/prisma";
+import { withDonationToken } from "@/lib/donations/access-token-link";
 import { messagesFor } from "@/i18n/locale-messages";
 import { verseBlock } from "@/lib/minbar/quran";
 import { ensureDonationDocuments } from "@/lib/certificates/issue";
@@ -50,16 +54,39 @@ export const dynamic = "force-dynamic";
 export default async function Success({ params, searchParams }: Props) {
   const { locale, id } = await params;
   const { t: token } = await searchParams;
-  await reconcileStripeDonation(id).catch(() => undefined);
-  const donation = await getDonationSummary(id, locale);
-  if (!donation) notFound();
-
-  /* The id is not the key to this page: a signed-in owner or revenue user is
-     let in by their session, everyone else by the `?t=` token the checkout or
-     the gateway redirect appended (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2). A
-     404, not a 403  the page must not confirm that the id exists. */
+  // The donation ID is not a credential. Check access before reaching a provider
+  // or revealing any payment outcome; malformed legacy links stay a 404.
+  if (!isObjectId(id)) notFound();
   const access = await donationAccess(id, token);
   if (!access.allowed) notFound();
+
+  // Existing Stripe inquiry can settle a succeeded PaymentIntent idempotently.
+  // Never initiate a fresh charge or infer settlement from a browser redirect.
+  await reconcileStripeDonation(id).catch(() => undefined);
+  const row = await prisma.donation.findUnique({
+    where: { id },
+    select: { status: true, paidAt: true, provider: true },
+  });
+  const outcome = donationPageOutcome(row);
+  if (outcome === "NOT_FOUND") notFound();
+  if (outcome === "PENDING_PAYMENT" || outcome === "INCONSISTENT") {
+    redirect(withDonationToken(
+      `/${locale}/payment-processing?donationId=${encodeURIComponent(id)}`,
+      token,
+    ));
+  }
+  if (outcome === "PENDING_TRANSFER") {
+    redirect(`/${locale}/payment-pending`);
+  }
+  if (outcome === "FAILED") {
+    redirect(withDonationToken(
+      `/${locale}/donation-failed?donationId=${encodeURIComponent(id)}`,
+      token,
+    ));
+  }
+
+  const donation = await getDonationSummary(id, locale);
+  if (!donation) notFound();
 
   const issued = await ensureDonationDocuments(id).catch((error) => {
     console.error("[success] issuing documents failed:", error);

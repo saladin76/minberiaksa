@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { donationFieldEmpty } from "@/lib/donations/mongo-null";
 import { tgSendMessage } from "./client";
 import { getTelegramConfig } from "./config";
 import {
@@ -27,13 +28,17 @@ function daysAgoRange(days: number): { start: Date; end: Date } {
 }
 
 async function loadStatsSnapshot(periodLabel: string, range: { start: Date | null; end: Date | null }): Promise<StatsSnapshot> {
-  const dateFilter =
+  // Income belongs to the day funds were actually confirmed; failed and
+  // pending attempts belong to their creation day, since neither has a paidAt.
+  const attemptDateFilter =
     range.start && range.end ? { createdAt: { gte: range.start, lt: range.end } } : {};
+  const settledDateFilter =
+    range.start && range.end ? { paidAt: { gte: range.start, lt: range.end } } : {};
 
   const PAID = { status: "PAID", paidAt: { not: null } } as const;
   const FAILED = { status: "FAILED" } as const;
   // status=PAID + paidAt null = checkout started but gateway never confirmed (abandoned/in-flight).
-  const PENDING_PAID = { status: "PAID", paidAt: null } as const;
+  const PENDING_PAID = { status: "PAID", ...donationFieldEmpty("paidAt") } as const;
 
   // One-time donations are stored with subscriptionId completely absent (Prisma's
   // MongoDB connector doesn't always match {subscriptionId: null} against rows
@@ -42,17 +47,17 @@ async function loadStatsSnapshot(periodLabel: string, range: { start: Date | nul
   // and derive one-time by subtraction.
   const [paidCount, paidSum, failedCount, pendingCount, monthlyCount, topItems] =
     await Promise.all([
-      prisma.donation.count({ where: { ...dateFilter, ...PAID } }),
+      prisma.donation.count({ where: { ...PAID, ...settledDateFilter } }),
       prisma.donation.aggregate({
         _sum: { amountUSD: true },
-        where: { ...dateFilter, ...PAID },
+        where: { ...PAID, ...settledDateFilter },
       }),
-      prisma.donation.count({ where: { ...dateFilter, ...FAILED } }),
-      prisma.donation.count({ where: { ...dateFilter, ...PENDING_PAID } }),
-      prisma.donation.count({ where: { ...dateFilter, ...PAID, subscriptionId: { not: null } } }),
+      prisma.donation.count({ where: { ...attemptDateFilter, ...FAILED } }),
+      prisma.donation.count({ where: { ...attemptDateFilter, ...PENDING_PAID } }),
+      prisma.donation.count({ where: { ...PAID, ...settledDateFilter, subscriptionId: { not: null } } }),
       prisma.donationItem.groupBy({
         by: ["campaignId"],
-        where: { donation: { ...dateFilter, ...PAID } },
+        where: { donation: { ...PAID, ...settledDateFilter } },
         _sum: { amountUSD: true },
         _count: { id: true },
         orderBy: { _sum: { amountUSD: "desc" } },
@@ -359,7 +364,7 @@ export async function dispatchTelegramCommand(input: {
         await reply(
           ctx,
           await recentDonationsList(
-            { status: "PAID", paidAt: null },
+            { status: "PAID", ...donationFieldEmpty("paidAt") },
             "⏳ تبرعات قيد التأكيد"
           )
         );
