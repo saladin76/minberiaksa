@@ -28,7 +28,7 @@ export function payForOperationsConfig() {
   const url = process.env.PAYFOR_API_URL || "", format = process.env.PAYFOR_API_FORMAT;
   let parsed: URL | null = null;
   try { parsed = url ? new URL(url) : null; } catch { throw new Error("BANK_NOT_CONFIGURED"); }
-  if (!parsed || parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash || !["FORM", "XML_PRMSTR"].includes(format || "") || !process.env.PAYFOR_MBR_ID || !process.env.PAYFOR_MERCHANT_ID || !process.env.PAYFOR_USER_CODE || !process.env.PAYFOR_USER_PASS) throw new Error("BANK_NOT_CONFIGURED");
+  if (!parsed || parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash || !["FORM", "XML_PRMSTR", "XML_BODY"].includes(format || "") || !process.env.PAYFOR_MBR_ID || !process.env.PAYFOR_MERCHANT_ID || !process.env.PAYFOR_USER_CODE || !process.env.PAYFOR_USER_PASS) throw new Error("BANK_NOT_CONFIGURED");
   if (parsed.hostname.toLowerCase() === "vpos.ziraatkatilim.com.tr"
     && PAYFOR_NON_OPERATION_PATHS.has(parsed.pathname.toLowerCase().replace(/\/+$/, ""))) {
     throw new Error("BANK_NOT_CONFIGURED");
@@ -132,8 +132,14 @@ export async function callBankOperation(donation: BankDonation, action: BankActi
     return { state: mismatch || !code || isAlbarakaTransportFailure(response) ? "UNKNOWN" : isAlbarakaApproved(response) ? "SUCCEEDED" : "DECLINED", code: mismatch ? "IDENTITY_MISMATCH" : code, ...(response.ReferenceCode ? { reference: String(response.ReferenceCode) } : {}), ...(action === "INQUIRE" ? { data: { transactions: rows } } : {}) };
   }
   const cfg = payForOperationsConfig(), fields = payForBankFields(donation, action, operationId, amountMinor);
-  const body = cfg.format === "FORM" ? new URLSearchParams(fields) : new URLSearchParams({ prmstr: `<PayforRequest>${Object.entries(fields).map(([key, value]) => `<${key}>${xml(value)}</${key}>`).join("")}</PayforRequest>` });
-  const response = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" }, body, redirect: "error", signal: AbortSignal.timeout(25000), cache: "no-store" });
+  const document = `<PayforRequest>${Object.entries(fields).map(([key, value]) => `<${key}>${xml(value)}</${key}>`).join("")}</PayforRequest>`;
+  // Merchant samples may send PayforRequest as raw XML rather than in prmstr.
+  // Explicit configuration only: never infer a request encoding from HTTP 200/302.
+  const body = cfg.format === "FORM"
+    ? new URLSearchParams(fields)
+    : cfg.format === "XML_PRMSTR" ? new URLSearchParams({ prmstr: document }) : document;
+  const contentType = cfg.format === "XML_BODY" ? "text/xml; charset=utf-8" : "application/x-www-form-urlencoded; charset=utf-8";
+  const response = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": contentType }, body, redirect: "error", signal: AbortSignal.timeout(25000), cache: "no-store" });
   const safe = parsePayForBankReply(await response.text());
   const code = safe.ProcReturnCode || safe.ResponseCode || "";
   const matching = payForResponseBelongsToSale(safe, sale.orderId, action);
