@@ -226,7 +226,7 @@ async function main() {
         assert.equal(response.status, 200, locale + "/" + name + " HTTP");
         assert.ok(hasNoindexHeader(response), locale + "/" + name + " preview noindex");
         const head = html.split("</head>", 1)[0];
-        assert.ok(/<title[\\s>]/i.test(head), locale + "/" + name + " title missing from head");
+        assert.ok(/<title[\s>]/i.test(head), locale + "/" + name + " title missing from head");
         assert.equal(canon(head), canonicalSite + "/" + locale, locale + "/" + name + " head canonical");
         const map = alternates(head);
         assert.equal(map.ar, canonicalSite + "/ar", locale + "/" + name + " Arabic alternate");
