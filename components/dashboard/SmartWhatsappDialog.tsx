@@ -251,7 +251,7 @@ export function SmartWhatsappDialog({
                       key={tab.id}
                       type="button"
                       disabled={tab.disabled}
-                      onClick={() => setMode(tab.id)}
+                      onClick={() => { setMode(tab.id); setTemplateId(""); }}
                       className={cn(
                         "rounded-xl border p-3 text-start transition",
                         active ? "border-brand bg-brand/5 ring-1 ring-brand/20" : "border-slate-200 hover:bg-slate-50",

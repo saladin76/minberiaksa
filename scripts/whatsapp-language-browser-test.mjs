@@ -63,6 +63,34 @@ try {
     results.push({ locale, width, mode, available, passed: true });
     await page.close();
   }
+  // A previously selected Marketing template must not be reused for Utility,
+  // or vice versa. Both purposes can have approved templates simultaneously.
+  fixture = {
+    userId: "fixture", name: "Fixture donor", phone: "+905550000000",
+    locale: "ar", country: "TR", doNotContact: false, whatsappUnsubscribed: false,
+    consentCheckUnavailable: false, directSendEnabled: false, conversationId: null,
+    replyWindow: { open: false, lastInboundAt: null, remainingMs: 0, lastInboundMessageId: null },
+    sender: null,
+    marketingTemplates: [{ id: "marketing-template", name: "Marketing test", category: "MARKETING" }],
+    utilityTemplates: [{ id: "utility-template", name: "Utility test", category: "UTILITY" }],
+  };
+  const switchingPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await switchingPage.route("**/*", route => route.request().url().startsWith(base) ? route.continue() : route.abort());
+  await switchingPage.goto(`${base}/?locale=ar&mode=MARKETING`);
+  const switchingDialog = switchingPage.getByRole("dialog");
+  const switchingSend = switchingDialog.getByRole("button", { name: "إرسال", exact: true });
+  await switchingDialog.locator("select").selectOption("marketing-template");
+  await expect(switchingSend).toBeEnabled();
+  await switchingDialog.getByRole("button", { name: /رسالة خدمة/ }).click();
+  await expect(switchingDialog.locator("select")).toHaveValue("");
+  await expect(switchingSend).toBeDisabled();
+  await switchingDialog.locator("select").selectOption("utility-template");
+  await expect(switchingSend).toBeEnabled();
+  await switchingDialog.getByRole("button", { name: /رسالة تسويقية/ }).click();
+  await expect(switchingDialog.locator("select")).toHaveValue("");
+  await expect(switchingSend).toBeDisabled();
+  results.push({ mode: "PURPOSE_SWITCH", passed: true });
+  await switchingPage.close();
   if (sends !== 0) throw new Error("Browser language checks attempted a message send");
   await writeFile(path.join(artifacts, "results.json"), JSON.stringify({ cases: results.length, sends, results }, null, 2));
   console.log(`WhatsApp language dialog: ${results.length} cases passed; no message sent.`);
