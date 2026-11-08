@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { bankBalance, moneyMinor, type BankDonation } from "../../lib/donations/bank-operations-core";
 import { inspectBankReply } from "../../lib/donations/bank-operations-inspection";
-import { albarakaBankBody, parsePayForBankReply, payForBankFields, callBankOperation, type BankReply } from "../../lib/donations/bank-operations-provider";
+import { albarakaBankBody, parsePayForBankReply, payForBankFields, payForOperationsConfig, callBankOperation, type BankReply } from "../../lib/donations/bank-operations-provider";
 import { executeBankAdjustment, inquireBankDonation, resolveBankAdjustment } from "../../lib/donations/bank-operations-service";
 import type { AlbarakaConfig } from "../../lib/albaraka";
 const id = "1".repeat(24), actor = { id: "2".repeat(24), name: "Finance Admin" };
@@ -140,4 +140,32 @@ test("an HTTP error or malformed JSON can never count as Albaraka approval", asy
     global.fetch = async () => new Response("null");
     assert.equal(isAlbarakaApproved(await albarakaService("Agreement", {}, { correlationId: "TEST", config: cfg })), false);
   } finally { global.fetch = originalFetch; }
+});
+
+test("Ziraat public checkout, 3D Host and reporting URLs are never treated as a refund API", async () => {
+  const saved = { ...process.env };
+  const originalFetch = global.fetch;
+  let calls = 0;
+  Object.assign(process.env, {
+    PAYFOR_API_FORMAT: "FORM",
+    PAYFOR_MBR_ID: "1", PAYFOR_MERCHANT_ID: "2",
+    PAYFOR_USER_CODE: "3", PAYFOR_USER_PASS: "test-not-real",
+  });
+  try {
+    global.fetch = async () => { calls++; throw new Error("unexpected bank request"); };
+    for (const url of [
+      "https://vpos.ziraatkatilim.com.tr/MPI/Default.aspx",
+      "https://vpos.ziraatkatilim.com.tr/MPI/3DHost.aspx",
+      "https://vpos.ziraatkatilim.com.tr/login",
+      "https://vpos.ziraatkatilim.com.tr/login/",
+    ]) {
+      process.env.PAYFOR_API_URL = url;
+      assert.throws(() => payForOperationsConfig(), /BANK_NOT_CONFIGURED/);
+      await assert.rejects(callBankOperation(donation("PAYFOR"), "INQUIRE", "TEST"), /BANK_NOT_CONFIGURED/);
+    }
+    assert.equal(calls, 0, "no bank API calls may be made to checkout/reporting pages");
+  } finally {
+    global.fetch = originalFetch;
+    process.env = saved;
+  }
 });
