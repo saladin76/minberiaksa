@@ -188,7 +188,7 @@ try {
     assert.equal(Object.keys(saved.overrides).length, 19);
     const actual = await prisma.managedPageSeo.findUnique({ where: { key } });
     assert.equal(Object.keys(actual.overrides).length, 19);
-    assert.equal(json(actual.overrides.ar), json(overrides.ar) && actual.overrides.ar);
+    assert.deepEqual(json(actual.overrides.ar), overrides.ar);
   });
   let revision;
   await check("mongo-page-seo-readback-and-revision", async () => {
