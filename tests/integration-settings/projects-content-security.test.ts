@@ -328,11 +328,18 @@ test("read-only localization audit retains actionable item details", () => {
 // left to assert on  the permission key is gone too.
 
 test("targeted CMS security TypeScript check passes", () => {
-  execFileSync(process.execPath, [
+  try {
+    execFileSync(process.execPath, [
     "node_modules/typescript/bin/tsc",
     "-p",
     "tsconfig.cms-security.json",
-  ], { stdio: "pipe" });
+    ], { encoding: "utf8", stdio: "pipe" });
+  } catch (error) {
+    // The default child-process exception hides compiler diagnostics behind
+    // Buffer previews. Surface stderr/stdout so a failed gate is actionable.
+    const output = error as { stdout?: string; stderr?: string; message?: string };
+    assert.fail(`CMS TypeScript check failed:\n${output.stdout ?? ""}\n${output.stderr ?? ""}\n${output.message ?? ""}`);
+  }
 });
 
 test("primary Prisma schema validates without modification", () => {
