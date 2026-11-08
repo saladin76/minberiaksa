@@ -55,7 +55,7 @@ printf '\nRUN real Prisma MongoDB acceptance rehearsal\n'
 if (cd "$work" && env -i \
   HOME=/root PATH="$PATH" NODE_ENV=test NODE_OPTIONS=--max-old-space-size=4096 \
   QA_MONGO_ROOT="$QA_ROOT" MONGOMS_DOWNLOAD_DIR="$QA_ROOT/binaries" \
-  MONGOMS_VERSION=8.0.24 MONGOMS_DISABLE_POSTINSTALL=1 \
+  MONGOMS_VERSION=8.0.28 MONGOMS_DISABLE_POSTINSTALL=1 \
   DATABASE_URL='mongodb://127.0.0.1:27018/minber_qa_unreachable?serverSelectionTimeoutMS=500&connectTimeoutMS=500' \
   GOOGLE_CLIENT_ID=fixture-client GOOGLE_CLIENT_SECRET=fixture-secret \
   NEXTAUTH_SECRET=fixture-auth-secret NEXTAUTH_URL=http://127.0.0.1:3106 \
