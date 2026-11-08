@@ -6,7 +6,8 @@ import { CONFIRMED_MINBAR_DONATION_WHERE, donationPageOutcome } from "../../lib/
 test("success summary requires both PAID and paidAt", () => {
   assert.deepEqual(CONFIRMED_MINBAR_DONATION_WHERE, { status: "PAID", paidAt: { not: null } });
   const summary = readFileSync("lib/minbar/donation.ts", "utf8");
-  // Allow explanatory line comments between id and the confirmed-settlement constraint.\n  assert.match(summary, /where:\s*\{\s*id,\s*(?:\/\/[^\n]*\n\s*)*\.\.\.CONFIRMED_MINBAR_DONATION_WHERE,?\s*\}/);
+  // Allow explanatory line comments between id and the confirmed-settlement constraint.
+  assert.match(summary, /where:\s*\{\s*id,\s*(?:\/\/[^\n]*\n\s*)*\.\.\.CONFIRMED_MINBAR_DONATION_WHERE,?\s*\}/);
   assert.doesNotMatch(summary, /NOT:\s*\{\s*AND:\s*\[\{\s*provider:\s*"BANK_TRANSFER"/);
 });
 
