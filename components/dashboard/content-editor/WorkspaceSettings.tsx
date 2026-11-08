@@ -1,4 +1,5 @@
 "use client";
+import { categoryPublicationDisplayValue } from "@/lib/dashboard/category-publication-default";
 import { VideoSourceField } from "./VideoSourceField";
 import { ProjectImageGallery } from "./ProjectImageGallery";
 import { CategoryIconPicker } from "@/app/(dashboard)/dashboard/categories/_components/CategoryIconPicker";
@@ -103,14 +104,7 @@ export function WorkspaceSettings({
             ),
         )
         .map((f) => {
-          // Legacy categories without explicit publishing flags remain active and
-          // visible, matching their persisted/public defaults. Explicit false stays false.
-          const value =
-            settings[f.key] ??
-            (kind === "categories" &&
-            ["isActive", "navigationVisible"].includes(f.key)
-              ? true
-              : undefined);
+          const value = categoryPublicationDisplayValue(kind, f.key, settings[f.key]);
           let options: { id: string; title: string }[] = [];
           if (f.key === "categoryIds") options = catalog.categories;
           if (["campaignId", "campaignIds"].includes(f.key))
