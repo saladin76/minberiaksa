@@ -14,7 +14,7 @@ test("Telegram revenue uses confirmation date, attempts use creation date", () =
   const src = readFileSync("lib/telegram/commands.ts", "utf8");
   assert.match(src, /const settledDateFilter =[\s\S]*?paidAt: \{ gte: range.start, lt: range.end \}/);
   assert.match(src, /const attemptDateFilter =[\s\S]*?createdAt: \{ gte: range.start, lt: range.end \}/);
-  assert.match(src, /donation\.count\(\{ where: \{ \.\.\.settledDateFilter, \.\.\.PAID \} \}\)/);
+  assert.match(src, /donation\.count\(\{ where: \{ \.\.\.PAID, \.\.\.settledDateFilter \} \}\)/);
   assert.match(src, /donation\.count\(\{ where: \{ \.\.\.attemptDateFilter, \.\.\.PENDING_PAID \} \}\)/);
-  assert.match(src, /where: \{ donation: \{ \.\.\.settledDateFilter, \.\.\.PAID \} \}/);
+  assert.match(src, /where: \{ donation: \{ \.\.\.PAID, \.\.\.settledDateFilter \} \}/);
 });
