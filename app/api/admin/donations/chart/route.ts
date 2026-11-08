@@ -6,6 +6,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { requireAdminOrDashboardPermission } from '@/lib/dashboard/api-auth';
 import { donationRowUsdApprox } from '@/lib/dashboard/donation-usd-revenue';
 import { donationWhereForIds } from '@/lib/dashboard/donation-search';
+import { donationChartStatusWhere, donationChartTypeWhere } from '@/lib/dashboard/donation-chart-filter-scope';
 import { resolveDonationRelationFilterIds } from '@/lib/dashboard/donation-relation-filters';
 import {
   eachIstanbulDateKey,
@@ -50,25 +51,13 @@ export async function GET(request: NextRequest) {
 
     const { startDate, endDate, startDateKey, endDateKey, isAllTime } = getIstanbulDateRange(period, startParam, endParam);
 
-    // Bucket PAID donations by `paidAt` (the moment money actually landed) and
-    // FAILED donations by `createdAt` (they never have a paidAt). This way a
-    // donation paid at 00:30 Istanbul May 20 lands in May 20's bar even if its
-    // checkout row was inserted at 23:55 May 19. Window is the Istanbul day
-    // boundary expressed in UTC.
-    // Unsettled subscription rows (status=PAID, no `paidAt`) are NOT counted. They used to
-    // be admitted here and bucketed by `createdAt`, which is why this chart reported $17.19
-    // on 2026-08-02 while /dashboard/monthly reported $1.05 for the same day  the extra
-    // $16.14 was an abandoned checkout that never reached Stripe. Both pages now recognise
-    // revenue on settlement only, so their monthly series agree.
-    const dateWindowOr = [
-      { status: 'PAID', paidAt: { gte: startDate, lte: endDate } },
-      { status: 'FAILED', createdAt: { gte: startDate, lte: endDate } },
-    ];
-
-    const innerWhere: Record<string, unknown> = {
-      OR: dateWindowOr,
-    };
-
+    // The status and donation type selectors are effective for the graph AND
+    // its period summary. PAID counts only settlement, FAILED/PENDING count
+    // attempts without ever adding them to confirmed income.
+    const innerWhere: Record<string, unknown> = donationChartStatusWhere(
+      searchParams.get('status') || 'RESOLVED', startDate, endDate,
+    );
+    const typeWhere = donationChartTypeWhere(searchParams.get('donationType'));
     if (userId && userId !== 'all') {
       innerWhere.donorId = userId;
     }
@@ -86,13 +75,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const queryWhere =
-      relationFilters.length > 0
-        ? { AND: [innerWhere, ...relationFilters] }
-        : innerWhere;
+    const allScopeFilters = [innerWhere, ...relationFilters, ...(typeWhere ? [typeWhere] : [])];
+    const queryWhere = allScopeFilters.length > 1 ? { AND: allScopeFilters } : innerWhere;
     const baseWhere = mergeDonationProviderFilter(mergeCountryFilter(mergeLocaleFilter(queryWhere, locale), country), searchParams.get('provider'));
 
-    // Always fetch both paid and failed donations
+    // Query only the requested status/type, without mistaking pending for revenue.
     const donations = await prisma.donation.findMany({
       where: baseWhere,
       select: {
@@ -120,6 +107,7 @@ export async function GET(request: NextRequest) {
       countMonthly: number;
       amountFailed: number;
       countFailed: number;
+      countPending: number;
       teamSupport: number;
       fees: number;
     };
@@ -131,8 +119,9 @@ export async function GET(request: NextRequest) {
       // rows used to be exempt from this; see the dateWindowOr comment above for why
       // that exemption was wrong and what it cost.
       const isPaid = d.status === 'PAID' && d.paidAt != null;
-      const isFailed = d.status === 'FAILED';
-      if (!isPaid && !isFailed) continue;
+      const isFailed = d.status === 'FAILED' && d.paidAt == null;
+      const isPending = d.status === 'PAID' && d.paidAt == null;
+      if (!isPaid && !isFailed && !isPending) continue;
 
       const bucketDate = isPaid ? ((d.paidAt as Date | null) ?? d.createdAt) : d.createdAt;
       const dateStr = formatIstanbulDateKey(bucketDate);
@@ -143,6 +132,7 @@ export async function GET(request: NextRequest) {
         countMonthly: 0,
         amountFailed: 0,
         countFailed: 0,
+        countPending: 0,
         teamSupport: 0,
         fees: 0,
       };
@@ -172,6 +162,8 @@ export async function GET(request: NextRequest) {
       } else if (isFailed) {
         bucket.amountFailed += amount;
         bucket.countFailed += 1;
+      } else if (isPending) {
+        bucket.countPending += 1;
       }
 
       byDate.set(dateStr, bucket);
@@ -187,6 +179,7 @@ export async function GET(request: NextRequest) {
       countMonthly: number;
       amountFailed: number;
       countFailed: number;
+      countPending: number;
       teamSupport: number;
       fees: number;
     }[] = [];
@@ -203,6 +196,7 @@ export async function GET(request: NextRequest) {
       const countOneTime = b?.countOneTime ?? 0;
       const countMonthly = b?.countMonthly ?? 0;
       const countFailed = b?.countFailed ?? 0;
+      const countPending = b?.countPending ?? 0;
       const teamSupport = b ? Number(Number(b.teamSupport).toFixed(2)) : 0;
       const fees = b ? Number(Number(b.fees).toFixed(2)) : 0;
 
@@ -216,6 +210,7 @@ export async function GET(request: NextRequest) {
         countMonthly,
         amountFailed,
         countFailed,
+        countPending,
         teamSupport,
         fees,
       });
