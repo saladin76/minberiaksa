@@ -79,8 +79,7 @@ import { submitGatewayForm, type GatewayForm } from "@/lib/minbar/checkout";
 import { gatewayAnalyticsName, resolveGateway } from "@/lib/payment-gateway";
 import { useTranslations, useLocale } from "next-intl";
 import { useSession } from "next-auth/react";
-import { PhoneInput } from "react-international-phone";
-import "react-international-phone/style.css";
+import SearchablePhoneInput from "@/components/SearchablePhoneInput";
 import { useIpCountry } from "@/hooks/useIpCountry";
 
 type DonationType = "ONE_TIME" | "MONTHLY";
@@ -1732,7 +1731,7 @@ const DonationDialog = ({
                   {t("contactPhone")}
                 </label>
                 <div className="overflow-visible phone-input-wrapper">
-                  <PhoneInput
+                  <SearchablePhoneInput locale={locale}
                     defaultCountry={ipCountry}
                     inputProps={{ ...{ "data-donation-field": "phone" }, "aria-label": t("contactPhone"), "aria-invalid": paymentIssue?.field === "phone" || undefined, "aria-describedby": paymentIssue?.field === "phone" ? paymentErrorId : undefined }}
                     value={phoneValue}

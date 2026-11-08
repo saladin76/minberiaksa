@@ -60,8 +60,7 @@ import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
 import type { MinbarProject } from "@/lib/minbar/projects";
 import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 import { CardPreview } from "./CardPreview";
-import { PhoneInput } from "react-international-phone";
-import "react-international-phone/style.css";
+import SearchablePhoneInput from "@/components/SearchablePhoneInput";
 
 /**
  * Donor details and payment  ported from `Minbar/بيانات الدفع.dc.html`.
@@ -741,7 +740,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
                       account's country, else where the visit came from. The
                       value is E.164, so it is usable as stored. */}
                   <div className="phone-input-wrapper pay-phone" dir="ltr">
-                    <PhoneInput
+                    <SearchablePhoneInput locale={locale}
                       defaultCountry={defaultCountry}
                       value={phone}
                       onChange={(value) => setPhone(value)}

@@ -51,8 +51,7 @@ import { resolveGateway } from "@/lib/payment-gateway";
 import { withDonationToken } from "@/lib/donations/access-token-link";
 import { useTranslations, useLocale } from "next-intl";
 import { useSession } from "next-auth/react";
-import { PhoneInput } from "react-international-phone";
-import "react-international-phone/style.css";
+import SearchablePhoneInput from "@/components/SearchablePhoneInput";
 import { useIpCountry } from "@/hooks/useIpCountry";
 import { getDonationAttributionPayload } from "@/lib/attribution/client-payload";
 
@@ -994,7 +993,7 @@ const CartPaymentDialog = ({
           <div className="space-y-2 overflow-visible pt-2 border-t border-border" dir={locale === "ar" ? "rtl" : "ltr"}>
             <label className={`block text-sm font-medium text-gray-700 ${locale === "ar" ? "text-right" : "text-left"}`}>{t("contactPhone")}</label>
             <div className="overflow-visible phone-input-wrapper">
-              <PhoneInput defaultCountry={ipCountry} value={phoneValue}
+              <SearchablePhoneInput locale={locale} defaultCountry={ipCountry} value={phoneValue}
                 onChange={(phone) => setPhoneValue(phone)}
                 className="w-full overflow-visible"
                 inputClassName="w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent" required />

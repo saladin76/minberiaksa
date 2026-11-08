@@ -369,6 +369,104 @@ input[type="checkbox"]:checked::before {
   }
 }
 
+/* Shared searchable phone dial-code picker. Keep the dropdown inside dialogs,
+   with a sticky search field and independently scrollable results. */
+.phone-input-wrapper .searchable-phone-selector {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex: 0 0 auto;
+}
+.phone-input-wrapper .searchable-phone-dropdown {
+  position: absolute;
+  z-index: 120;
+  inset-inline-start: 0;
+  bottom: calc(100% + 6px);
+  width: min(350px, calc(100vw - 32px));
+  max-height: min(60vh, 350px);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid #d8dee5;
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(17, 24, 39, .18);
+  overflow: hidden;
+  direction: ltr;
+}
+[dir="rtl"] .phone-input-wrapper .searchable-phone-dropdown {
+  left: auto;
+  right: 0;
+}
+
+.phone-input-wrapper .searchable-phone-search {
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  flex: 0 0 auto;
+}
+.phone-input-wrapper .searchable-phone-search input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  font-size: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #17212e;
+  background: #fff;
+  outline-offset: 2px;
+}
+.phone-input-wrapper .searchable-phone-search input:focus {
+  outline: 2px solid #2563eb;
+}
+.phone-input-wrapper .searchable-phone-options {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+}
+.phone-input-wrapper .searchable-phone-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  min-height: 46px;
+  text-align: start;
+  font-size: 14px;
+  color: #17212e;
+  background: #fff;
+  border: 0;
+  cursor: pointer;
+}
+.phone-input-wrapper .searchable-phone-option:hover,
+.phone-input-wrapper .searchable-phone-option.is-active {
+  background: #f1f5f9;
+}
+.phone-input-wrapper .searchable-phone-option .react-international-phone-flag-emoji {
+  flex: 0 0 auto;
+}
+.phone-input-wrapper .searchable-phone-country-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+.phone-input-wrapper .searchable-phone-dial {
+  flex: 0 0 auto;
+  color: #475569;
+}
+.phone-input-wrapper .searchable-phone-empty {
+  padding: 16px;
+  margin: 0;
+  text-align: center;
+  color: #64748b;
+}
+@media (max-width: 640px) {
+  .phone-input-wrapper .searchable-phone-dropdown {
+    max-height: min(55vh, 300px);
+  }
+}
+
 /* Floating CartReminder entrance */
 @keyframes cart-reminder-in {
   0%   { transform: translateY(16px) scale(0.9); opacity: 0; }

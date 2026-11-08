@@ -28,8 +28,7 @@ import {
   UserCheck2,
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { PhoneInput } from "react-international-phone";
-import "react-international-phone/style.css";
+import SearchablePhoneInput from "@/components/SearchablePhoneInput";
 import { useIpCountry } from "@/hooks/useIpCountry";
 import { track } from "@vercel/analytics";
 
@@ -522,7 +521,7 @@ export function SignInPanel({
 
               {authMode === "signup" && (
                 <div className="phone-input-wrapper overflow-visible">
-                  <PhoneInput
+                  <SearchablePhoneInput locale={locale}
                     defaultCountry={ipCountry}
                     value={form.phone}
                     onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
