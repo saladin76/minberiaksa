@@ -60,7 +60,7 @@ function realPageSeoModule(client) {
     title: "Default SEO " + locale, description: "Default page summary " + locale,
     keywords: ["reviewed"],
   }]));
-  const module = { exports: {} };
+  const fixtureModule = { exports: {} };
   const deps = {
     "./page-seo-sitemap": { filterPageSeoLanguages: value => value },
     "server-only": {},
@@ -80,14 +80,14 @@ function realPageSeoModule(client) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   new vm.Script(js, { filename: "page-seo-service-under-test.js" }).runInNewContext({
-    module, exports: module.exports,
+    module: fixtureModule, exports: fixtureModule.exports,
     require(name) {
       assert.ok(Object.hasOwn(deps, name), "Unexpected page SEO import " + name);
       return deps[name];
     },
     console: { error() {} },
   });
-  return module.exports;
+  return fixtureModule.exports;
 }
 try {
   // Official MongoDB 8 binary for Ubuntu 24.04; separate, temporary replica
