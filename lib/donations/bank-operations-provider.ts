@@ -4,6 +4,7 @@ import {
   ALBARAKA_INQUIRY_MAC_PARAMS, ALBARAKA_REVERSE_MAC_PARAMS, type AlbarakaConfig,
 } from "../albaraka";
 import { bankSale, object, type BankAction, type BankDonation } from "./bank-operations-core";
+import { inquiryMinor } from "./bank-operations-inspection";
 import { SaxesParser } from "saxes";
 
 export type BankReply = { state: "SUCCEEDED" | "DECLINED" | "UNKNOWN"; code: string; reference?: string; data?: Record<string, unknown> };
@@ -49,15 +50,55 @@ export function albarakaBankBody(donation: BankDonation, cfg: AlbarakaConfig, ac
     ...(action === "REFUND" ? { Amount: String(amountMinor), CurrencyCode: sale.currencyCode } : {}),
   };
 }
-export function payForBankFields(donation: BankDonation, action: BankAction | "INQUIRE", operationId: string, amountMinor?: number): Record<string, string> {
+/**
+ * PayFor integration guide v1.9, sections 6.6/6.7/6.9:
+ * - OrderInquiry identifies the ORIGINAL sale with OrderId.
+ * - Void and Refund identify the ORIGINAL sale with OrgOrderId.
+ * - Adjustment OrderId is deliberately omitted: it is not part of the
+ *   bank's documented minimum request and must not be invented.
+ *
+ * operationId remains the local idempotency/audit reference; the adapter does
+ * not transmit it unless the bank explicitly documents an additional field.
+ */
+export function payForBankFields(donation: BankDonation, action: BankAction | "INQUIRE", _operationId: string, amountMinor?: number): Record<string, string> {
   const sale = bankSale(donation);
   if (sale.merchantNo && sale.merchantNo !== process.env.PAYFOR_MERCHANT_ID || sale.mbrId && sale.mbrId !== process.env.PAYFOR_MBR_ID) throw new Error("TERMINAL_MISMATCH");
-  return { MbrId: process.env.PAYFOR_MBR_ID!, MerchantID: process.env.PAYFOR_MERCHANT_ID!, UserCode: process.env.PAYFOR_USER_CODE!, UserPass: process.env.PAYFOR_USER_PASS!,
-    ...(action === "INQUIRE" ? { OrderId: sale.orderId } : { OrgOrderId: sale.orderId, OrderId: operationId }),
-    SecureType: action === "INQUIRE" ? "Inquiry" : "NonSecure", TxnType: action === "INQUIRE" ? "OrderInquiry" : action === "VOID" ? "Void" : "Refund",
-    Currency: sale.currencyCode, Lang: "TR", ...(action === "REFUND" ? { PurchAmount: (amountMinor! / 100).toFixed(2) } : {}),
+  if (action === "REFUND" && (!Number.isSafeInteger(amountMinor) || (amountMinor ?? 0) <= 0 || (amountMinor ?? 0) > sale.amountMinor)) throw new Error("INVALID_AMOUNT");
+  return {
+    MbrId: process.env.PAYFOR_MBR_ID!,
+    MerchantID: process.env.PAYFOR_MERCHANT_ID!,
+    UserCode: process.env.PAYFOR_USER_CODE!,
+    UserPass: process.env.PAYFOR_USER_PASS!,
+    ...(action === "INQUIRE" ? { OrderId: sale.orderId } : { OrgOrderId: sale.orderId }),
+    SecureType: action === "INQUIRE" ? "Inquiry" : "NonSecure",
+    TxnType: action === "INQUIRE" ? "OrderInquiry" : action === "VOID" ? "Void" : "Refund",
+    Currency: sale.currencyCode,
+    Lang: "TR",
+    ...(action === "REFUND" ? { PurchAmount: (amountMinor! / 100).toFixed(2) } : {}),
   };
 }
+
+/** According to PayFor error-code guide, these are inconclusive bank outcomes. */
+export const PAYFOR_UNRESOLVED_CODES = new Set([
+  "V000", // Processing ongoing, no final authorization result.
+  "V020", // Original transaction not yet complete.
+  "V036", // VPOS system error.
+  "V9196", "V9199", // VPOS/bank connection errors.
+  "91", "96", // Issuer inoperative / system malfunction.
+  "M61", // Session timeout, final outcome unverified.
+]);
+
+/**
+ * Reconcile the bank's outcome with the ORIGINAL transaction identity.
+ * An operation-specific OrderId alone is not evidence of the original sale.
+ */
+export function payForResponseBelongsToSale(safe: Record<string, string>, saleOrderId: string, action: BankAction | "INQUIRE"): boolean {
+  if (action === "INQUIRE") return safe.OrderId === saleOrderId && (!safe.OrgOrderId || safe.OrgOrderId === saleOrderId);
+  if (safe.OrgOrderId) return safe.OrgOrderId === saleOrderId;
+  return safe.OrderId === saleOrderId;
+}
+
+
 const SAFE_FIELDS = ["OrderId", "OrgOrderId", "TxnType", "OrgTxnType", "TxnStatus", "TxnResult", "ProcReturnCode", "AuthCode", "HostRefNum", "RefundedAmount", "PurchAmount", "Currency", "ResponseCode", "ReferenceCode", "VoidDate"];
 export function parsePayForBankReply(text: string): Record<string, string> {
   if (text.length > 524288 || /<!DOCTYPE|<!ENTITY/i.test(text)) return {};
@@ -95,8 +136,19 @@ export async function callBankOperation(donation: BankDonation, action: BankActi
   const response = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" }, body, redirect: "error", signal: AbortSignal.timeout(25000), cache: "no-store" });
   const safe = parsePayForBankReply(await response.text());
   const code = safe.ProcReturnCode || safe.ResponseCode || "";
-  const matching = (safe.OrderId === (action === "INQUIRE" ? sale.orderId : operationId) || (action !== "INQUIRE" && safe.OrgOrderId === sale.orderId)) && (!safe.OrgOrderId || action === "INQUIRE" || safe.OrgOrderId === sale.orderId);
+  const matching = payForResponseBelongsToSale(safe, sale.orderId, action);
   const expectedType = action === "VOID" ? "Void" : "Refund";
-  const integrity = action === "INQUIRE" || (!safe.TxnType || safe.TxnType === expectedType) && (!safe.Currency || safe.Currency === sale.currencyCode) && (action !== "REFUND" || !safe.PurchAmount || Number(safe.PurchAmount) === amountMinor! / 100);
-  return { state: !response.ok || !code || !matching || !integrity ? "UNKNOWN" : code === "00" && (!safe.TxnResult || safe.TxnResult === "Success") ? "SUCCEEDED" : code === "00" ? "UNKNOWN" : "DECLINED", code: !matching || !integrity ? "IDENTITY_MISMATCH" : code, reference: safe.HostRefNum || safe.OrderId, data: safe };
+  const integrity = action === "INQUIRE"
+    ? (!safe.Currency || safe.Currency === sale.currencyCode)
+    : (!safe.TxnType || safe.TxnType === expectedType)
+      && (!safe.Currency || safe.Currency === sale.currencyCode)
+      && (action !== "REFUND" || !safe.PurchAmount || inquiryMinor(safe.PurchAmount) === amountMinor);
+  const unresolved = PAYFOR_UNRESOLVED_CODES.has(code.toUpperCase())
+    || (safe.TxnResult != null && !["Success", "Failed"].includes(safe.TxnResult));
+  const state: BankReply["state"] = !response.ok || !code || !matching || !integrity || unresolved
+    ? "UNKNOWN"
+    : code === "00" && (!safe.TxnResult || safe.TxnResult === "Success")
+      ? "SUCCEEDED"
+      : code === "00" || safe.TxnResult === "Success" ? "UNKNOWN" : "DECLINED";
+  return { state, code: !matching || !integrity ? "IDENTITY_MISMATCH" : code, reference: safe.HostRefNum || safe.OrderId, data: safe };
 }
