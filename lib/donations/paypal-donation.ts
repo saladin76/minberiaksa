@@ -429,16 +429,16 @@ export async function reconcilePayPalWebhookOrder(orderId: string): Promise<stri
  */
 export async function reconcilePayPalDonation(
   donationId: string,
-  options: { staleAfterHours?: number; now?: Date } = {}
+  options: { staleAfterHours?: number; now?: Date; recoverFailed?: boolean } = {}
 ): Promise<{ outcome: PayPalReconcileOutcome; orderStatus: string | null }> {
-  const { staleAfterHours = UNAPPROVED_STALE_HOURS, now = new Date() } = options;
+  const { staleAfterHours = UNAPPROVED_STALE_HOURS, now = new Date(), recoverFailed = false } = options;
   if (!isPayPalConfigured()) return { outcome: "skipped", orderStatus: null };
 
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
     select: { id: true, paidAt: true, status: true, paymentMethod: true, paypalOrderId: true, providerRaw: true, createdAt: true },
   });
-  if (!donation || donation.paidAt || donation.status === "FAILED" || donation.paymentMethod !== "PAYPAL") {
+  if (!donation || donation.paidAt || (donation.status === "FAILED" && !recoverFailed) || donation.paymentMethod !== "PAYPAL") {
     return { outcome: "skipped", orderStatus: null };
   }
   /* A later cycle of a plan is charged by `paypal-recurring.ts`, which keeps
@@ -449,6 +449,8 @@ export async function reconcilePayPalDonation(
   const stale = (now.getTime() - donation.createdAt.getTime()) / 3_600_000 >= staleAfterHours;
   const snapshot = snapshotOf(donation.providerRaw);
   const orderId = donation.paypalOrderId ?? snapshot.orderId ?? "";
+
+  if (donation.status === "FAILED" && !orderId) return { outcome: "skipped", orderStatus: null };
 
   if (!orderId) {
     // The donor never reached PayPal: no order was ever created for this row.
@@ -471,6 +473,11 @@ export async function reconcilePayPalDonation(
     const result = await verifyAndSettle(donation.id, order, snapshot);
     return { outcome: result.kind, orderStatus: order.status };
   }
+  // Recovery of a previously failed payment is inquiry-only: NEVER initiate a
+  // fresh capture of an APPROVED order or reclassify a historical decline. Only
+  // an already COMPLETED, ID/amount/currency-verified capture can reverse FAILED.
+  if (donation.status === "FAILED") return { outcome: "skipped", orderStatus: order.status };
+
   if (order.status === "APPROVED") {
     // Approved on PayPal, but the donor never made it back to the return route.
     const result = await completePayPalReturn({ donationId: donation.id, orderId });
