@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - integration/translation-seo-20261107
+      - main
     paths:
       - 'scripts/qa-translation-seo-public-runtime.mjs'
       - '.github/workflows/translation-seo-public-runtime-acceptance.yml'
