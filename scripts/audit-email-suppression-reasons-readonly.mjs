@@ -104,7 +104,6 @@ try{
     where:{action:"DONATION_LAPSED_REMINDERS_RUN",createdAt:{gte:new Date("2026-11-08T00:00:00Z"),lt:end}},
     orderBy:{createdAt:"asc"},take:20,select:{createdAt:true,metadata:true}
   });
-  const finishedAt=audit.map(x=>x.createdAt.toISOString());
   const cutoffs=audit.map(x=>x.createdAt);
   const beforeAfter=cutoffs.length===1?{
     beforeOrAtLoggedCompletion:matching.filter(r=>r.createdAt.toISOString().startsWith("2026-11-08")&&r.createdAt<=cutoffs[0]).length,
