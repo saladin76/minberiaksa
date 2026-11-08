@@ -89,7 +89,7 @@ try {
   // set required for real Prisma MongoDB interactive transaction behavior.
   console.log("RUN ephemeral-mongodb-replica-set");
   replset = await MongoMemoryReplSet.create({
-    binary: { version: "8.0.24", downloadDir: binaryDir },
+    binary: { version: "8.0.28", downloadDir: binaryDir },
     replSet: { count: 1, name: "qaonly", ip: "127.0.0.1", storageEngine: "wiredTiger" },
   });
   const uri = replset.getUri(dbName);
