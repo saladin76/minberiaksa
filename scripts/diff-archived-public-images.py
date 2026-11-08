@@ -37,18 +37,23 @@ def sha256_stream(handle):
 
 
 def valid_project_path(name):
-    name = name.replace("\\", "/").lstrip("./")
-    parts = name.split("/")
+    # Keep archive names literal: lstrip("./") could turn ../private paths into
+    # misleading public paths. Nothing here is ever extracted to disk.
+    normalized = name.replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    if normalized.startswith("/"):
+        return None
+    parts = normalized.split("/")
     if parts and parts[0] == "minberiaksa":
         parts.pop(0)
     if not parts or any(p in ("", ".", "..") for p in parts):
         return None
-    if len(parts) < 3:
-        return None
-    if not (
-        parts[0] == "public"
-        or parts[:2] == ["handoff-certificates", "assets"]
-    ):
+    # Also include root-level public images (e.g. public/hero.jpg). The
+    # initial audit required 3 path components, silently skipping these.
+    public_image = parts[0] == "public" and len(parts) >= 2
+    handoff_image = parts[:2] == ["handoff-certificates", "assets"] and len(parts) >= 3
+    if not (public_image or handoff_image):
         return None
     normalized = "/".join(parts)
     if not IMAGE.search(normalized):
@@ -106,8 +111,13 @@ def run():
                 break
             if not entry.isfile() or entry.issym() or entry.islnk():
                 continue
+            image_named = bool(IMAGE.search(entry.name))
+            if image_named:
+                counts["ARCHIVE_IMAGE_ENTRIES_SEEN"] += 1
             rel = valid_project_path(entry.name)
             if not rel:
+                if image_named:
+                    counts["IMAGE_ENTRIES_OUTSIDE_SUPPORTED_PUBLIC_PATHS"] += 1
                 continue
             if entry.size < 1 or entry.size > MAX_MEMBER_BYTES:
                 counts["SKIPPED_SIZE"] += 1
