@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report e2e/.artifacts/report",
-    "test:integration-settings": "rm -rf .integration-test-build && tsc -p tsconfig.integration-tests.json && node --test .integration-test-build/tests/integration-settings/*.test.js",
+    "test:integration-settings": "node scripts/ensure-integration-test-client.mjs && rm -rf .integration-test-build && tsc -p tsconfig.integration-tests.json && node --test .integration-test-build/tests/integration-settings/*.test.js",
     "typecheck:communication-runtime": "tsc -p tsconfig.communication-runtime.json",
     "typecheck:integration-release": "tsc -p tsconfig.integration-release.json",
     "typecheck:baseline": "node scripts/typecheck-baseline.mjs",
