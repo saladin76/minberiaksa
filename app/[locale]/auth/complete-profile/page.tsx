@@ -7,8 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Loader2, Phone, Calendar, Users, ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { PhoneInput } from "react-international-phone";
-import "react-international-phone/style.css";
+import SearchablePhoneInput from "@/components/SearchablePhoneInput";
 import { useIpCountry } from "@/hooks/useIpCountry";
 
 const MONTH_LABELS: Record<string, string[]> = {
@@ -228,7 +227,7 @@ export default function CompleteProfilePage() {
                   {t("phoneLabel")}
                 </label>
                 <div className="overflow-visible phone-input-wrapper">
-                  <PhoneInput
+                  <SearchablePhoneInput locale={locale}
                     defaultCountry={ipCountry}
                     value={phone}
                     onChange={setPhone}
