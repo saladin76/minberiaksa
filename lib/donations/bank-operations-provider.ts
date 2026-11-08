@@ -29,7 +29,7 @@ export function payForOperationsConfig() {
   try { parsed = url ? new URL(url) : null; } catch { throw new Error("BANK_NOT_CONFIGURED"); }
   if (!parsed || parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash || !["FORM", "XML_PRMSTR"].includes(format || "") || !process.env.PAYFOR_MBR_ID || !process.env.PAYFOR_MERCHANT_ID || !process.env.PAYFOR_USER_CODE || !process.env.PAYFOR_USER_PASS) throw new Error("BANK_NOT_CONFIGURED");
   if (parsed.hostname.toLowerCase() === "vpos.ziraatkatilim.com.tr"
-    && PAYFOR_NON_OPERATION_PATHS.has(parsed.pathname.replace(/\\/+$/, "").toLowerCase())) {
+    && PAYFOR_NON_OPERATION_PATHS.has(parsed.pathname.toLowerCase().replace(/\/+$/, ""))) {
     throw new Error("BANK_NOT_CONFIGURED");
   }
   return { url, format };
