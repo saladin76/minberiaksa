@@ -6,8 +6,8 @@ import {
   defaultCountries,
   FlagImage,
   parseCountry,
-  PhoneInput,
-  type PhoneInputRefType,
+  usePhoneInput,
+  type PhoneInput,
 } from "react-international-phone";
 import "react-international-phone/style.css";
 
@@ -56,9 +56,16 @@ export function matchesDialCodeCountry(
 export default function SearchablePhoneInput({
   locale = "en",
   countrySelectorStyleProps,
-  ...props
+  defaultCountry = "us",
+  value,
+  onChange,
+  forceDialCode,
+  inputProps,
+  inputClassName,
+  className,
+  required,
+  disabled,
 }: PhoneProps) {
-  const phoneRef = useRef<PhoneInputRefType>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const activeOptionRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
@@ -66,6 +73,15 @@ export default function SearchablePhoneInput({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const { inputValue, country, setCountry, handlePhoneValueChange, inputRef } = usePhoneInput({
+    defaultCountry,
+    value,
+    forceDialCode,
+    onChange: ({ phone, inputValue: formatted, country: selectedCountry }) => {
+      onChange?.(phone, { inputValue: formatted, country: selectedCountry });
+    },
+  });
 
   const language = locale.split("-")[0].toLowerCase();
   const copy = labels[language] || labels.en;
@@ -101,14 +117,14 @@ export default function SearchablePhoneInput({
   }, [activeIndex, open, query]);
 
   const toggle = () => {
-    if (props.disabled) return;
+    if (disabled) return;
     setQuery("");
     setActiveIndex(0);
     setOpen((current) => !current);
   };
 
   const selectCountry = (iso2: string) => {
-    phoneRef.current?.setCountry(iso2, { focusOnInput: true });
+    setCountry(iso2, { focusOnInput: true });
     setOpen(false);
     setQuery("");
     setActiveIndex(0);
@@ -133,75 +149,85 @@ export default function SearchablePhoneInput({
   };
 
   return (
-    <PhoneInput
-      {...props}
-      ref={phoneRef}
-      countrySelectorStyleProps={{
-        ...countrySelectorStyleProps,
-        renderButtonWrapper: ({ children, rootProps }) => (
-          <div className="searchable-phone-selector" ref={selectorRef}>
-            <button
-              {...rootProps}
-              type="button"
-              className={`react-international-phone-country-selector-button ${countrySelectorStyleProps?.buttonClassName || ""}`}
-              aria-label={copy.select}
-              aria-expanded={open}
-              onClick={toggle}
-              onKeyDown={(event) => {
-                if (event.key === "Escape" && open) setOpen(false);
-                if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  if (!open) toggle();
-                  else searchRef.current?.focus();
-                }
-              }}
-            >
-              {children}
-            </button>
-            {open && (
-              <div className="searchable-phone-dropdown" dir="ltr">
-                <div className="searchable-phone-search">
-                  <input
-                    ref={searchRef}
-                    type="search"
-                    value={query}
-                    onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
-                    onKeyDown={onSearchKeyDown}
-                    placeholder={copy.search}
-                    aria-label={copy.search}
-                    aria-controls={listboxId}
-                    role="combobox"
-                    aria-expanded={open}
-                    aria-activedescendant={matches[activeIndex] ? `${listboxId}-${matches[activeIndex].iso2}` : undefined}
-                    autoComplete="off"
-                  />
-                </div>
-                <div id={listboxId} role="listbox" aria-label={copy.select} className="searchable-phone-options">
-                  {matches.length ? matches.map((country, index) => (
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={activeIndex === index}
-                      key={country.iso2}
-                      id={`${listboxId}-${country.iso2}`}
-                      ref={activeIndex === index ? activeOptionRef : undefined}
-                      className={`searchable-phone-option ${activeIndex === index ? "is-active" : ""}`}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => selectCountry(country.iso2)}
-                    >
-                      <FlagImage iso2={country.iso2} />
-                      <span className="searchable-phone-country-name">
-                        {countryNames.of(country.iso2.toUpperCase()) || country.name}
-                      </span>
-                      <span className="searchable-phone-dial" dir="ltr">+{country.dialCode}</span>
-                    </button>
-                  )) : <p className="searchable-phone-empty">{copy.empty}</p>}
-                </div>
-              </div>
-            )}
+    <div className={`react-international-phone-input-container ${className || ""}`} dir="ltr">
+      <div className="react-international-phone-country-selector searchable-phone-selector" ref={selectorRef}>
+        <button
+          type="button"
+          className={`react-international-phone-country-selector-button ${countrySelectorStyleProps?.buttonClassName || ""}`}
+          title={country.name}
+          disabled={disabled}
+          aria-label={copy.select}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          data-country={country.iso2}
+          onClick={toggle}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && open) setOpen(false);
+            if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              if (!open) toggle();
+              else searchRef.current?.focus();
+            }
+          }}
+        >
+          <span className="react-international-phone-country-selector-button__button-content">
+            <FlagImage iso2={country.iso2} />
+            <span className="react-international-phone-country-selector-button__dropdown-arrow" />
+          </span>
+        </button>
+        {open && (
+          <div className="searchable-phone-dropdown">
+            <div className="searchable-phone-search">
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
+                onKeyDown={onSearchKeyDown}
+                placeholder={copy.search}
+                aria-label={copy.search}
+                aria-controls={listboxId}
+                role="combobox"
+                aria-expanded={open}
+                aria-activedescendant={matches[activeIndex] ? `${listboxId}-${matches[activeIndex].iso2}` : undefined}
+                autoComplete="off"
+              />
+            </div>
+            <div id={listboxId} role="listbox" aria-label={copy.select} className="searchable-phone-options">
+              {matches.length ? matches.map((option, index) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={activeIndex === index}
+                  key={option.iso2}
+                  id={`${listboxId}-${option.iso2}`}
+                  ref={activeIndex === index ? activeOptionRef : undefined}
+                  className={`searchable-phone-option ${activeIndex === index ? "is-active" : ""}`}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectCountry(option.iso2)}
+                >
+                  <FlagImage iso2={option.iso2} />
+                  <span className="searchable-phone-country-name">
+                    {countryNames.of(option.iso2.toUpperCase()) || option.name}
+                  </span>
+                  <span className="searchable-phone-dial" dir="ltr">+{option.dialCode}</span>
+                </button>
+              )) : <p className="searchable-phone-empty">{copy.empty}</p>}
+            </div>
           </div>
-        ),
-      }}
-    />
+        )}
+      </div>
+      <input
+        {...inputProps}
+        ref={inputRef}
+        type="tel"
+        inputMode="tel"
+        disabled={disabled}
+        required={required}
+        className={`react-international-phone-input ${inputClassName || ""}`}
+        value={inputValue}
+        onChange={handlePhoneValueChange}
+      />
+    </div>
   );
 }
