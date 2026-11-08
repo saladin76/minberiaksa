@@ -914,8 +914,8 @@ export default function DashboardPage() {
                 { label: dt("تبرعات ناجحة"), value: chartLoading ? "…" : scoped.paidCount.toLocaleString("en-US"), icon: HandCoins },
                 { label: dt("لمرة واحدة"), value: chartLoading ? "…" : formatInSelectedCurrency(scoped.oneTimeAmountUSD), icon: Wallet },
                 { label: dt("دورية"), value: chartLoading ? "…" : formatInSelectedCurrency(scoped.recurringAmountUSD), icon: Repeat },
-                { label: dt("تبرعات فاشلة"), value: chartLoading ? "…" : scoped.failedCount.toLocaleString("en-US"), icon: RefreshCw },
-                { label: dt("قيد التأكيد"), value: chartLoading ? "…" : scoped.pendingCount.toLocaleString("en-US"), icon: Calculator },
+                { label: dt("تبرعات فاشلة"), value: chartLoading ? "…" : donationsStatusFilter === "PAID" || donationsStatusFilter === "PENDING" ? "—" : scoped.failedCount.toLocaleString("en-US"), icon: RefreshCw },
+                { label: dt("قيد التأكيد"), value: chartLoading ? "…" : donationsStatusFilter === "all" || donationsStatusFilter === "PENDING" ? scoped.pendingCount.toLocaleString("en-US") : "—", icon: Calculator },
               ]}
             />
           )}
