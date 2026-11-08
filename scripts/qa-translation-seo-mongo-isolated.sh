@@ -13,6 +13,13 @@ if test -r /root/.nvm/nvm.sh; then
   nvm use 24 >/dev/null || die "Node 24 unavailable"
 fi
 node -e 'if(Number(process.versions.node.split(".")[0])!==24)process.exit(1)' || die "Node 24 required"
+# MongoDB 5.0+ requires AVX on x86_64; do not download/start a binary
+# which this production host cannot execute (SIGILL).
+if [ "$(uname -m)" = "x86_64" ] && ! grep -qm1 -w avx /proc/cpuinfo; then
+  echo "BLOCKED_MONGODB_CPU_AVX_UNAVAILABLE=YES"
+  echo "QA_RESULT=BLOCKED_CPU_USE_GITHUB_RUNNER_NO_MERGE_NO_DEPLOY"
+  exit 2
+fi
 cd "$ROOT"
 original=$(git rev-parse HEAD)
 git fetch --no-tags origin "$BRANCH" || die "Cannot fetch QA branch"
