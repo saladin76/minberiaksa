@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isObjectId } from "@/lib/slug";
 import { pickTranslation, translationLocaleWhere } from "@/lib/i18n/translation-fallback";
 import { messagesFor } from "@/i18n/locale-messages";
+import { CONFIRMED_MINBAR_DONATION_WHERE } from "./donation-outcome";
 
 /**
  * The single donation behind the success page.
@@ -57,7 +58,7 @@ export interface MinbarDonationSummary {
  * One donation by id.
  *
  * Returns `null` for an unknown id, a malformed id, or a donation that is not
- * `PAID`  the success page must never congratulate a donor on a payment that
+ * confirmed as `PAID` with a settlement timestamp  the success page must never congratulate a donor on a payment that
  * has not settled. A pending bank transfer has its own screen.
  */
 export async function getDonationSummary(
@@ -70,16 +71,11 @@ export async function getDonationSummary(
 
   try {
     const row = await prisma.donation.findFirst({
-      /* A card order is shown here the moment the gateway returns, before the
-         webhook stamps `paidAt`; a bank transfer has no gateway and is only a
-         donation once a finance officer stamps it. Until then its own status
-         page is the right screen, not this one. */
+      // PAID alone is an optimistic checkout placeholder. Only a provider- or
+      // finance-confirmed paidAt may ever render a success page or issue documents.
       where: {
         id,
-        status: "PAID",
-        /* Prisma+MongoDB: `null` matches only explicit nulls; a row written
-           without the field needs the `isSet` arm too. */
-        NOT: { AND: [{ provider: "BANK_TRANSFER" }, { OR: [{ paidAt: null }, { paidAt: { isSet: false } }] }] },
+        ...CONFIRMED_MINBAR_DONATION_WHERE,
       },
       select: {
         id: true,
