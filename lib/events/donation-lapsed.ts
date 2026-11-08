@@ -4,6 +4,7 @@ import { loadContextForDonation } from "@/lib/templates/variables";
 import { pickLocale } from "@/lib/templates/locale-resolver";
 import { donorChannelEligibility } from "@/lib/communication/audience-service";
 import { resolveTriggerSendConfig, sendTriggerMessage } from "./dispatch";
+import { SETTLED_DONATION_WHERE, reminderPreviousAttemptWindows, reminderFailureBackoffDays } from "./donation-lapsed-policy";
 import {
   DEFAULT_COOLDOWN_DAYS,
   DEFAULT_LAPSE_DAYS,
@@ -39,7 +40,7 @@ export const DEFAULT_MAX_PER_RUN = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Delivery statuses that mean "this donor was already reminded"  everything except dead ends. */
-const REMINDER_COUNTED_STATUSES = ["DRAFT", "QUEUED", "RENDERED", "SENT_TO_PROVIDER", "SENT", "DELIVERED", "READ", "OPENED", "CLICKED", "REPLIED", "UNSUBSCRIBED"];
+// Reminder cooldown and bounded failure retry windows are defined in donation-lapsed-policy.ts.
 
 export type LapsedTriggerSummary = {
   triggerId: string;
@@ -91,18 +92,19 @@ type DonorRow = {
 };
 
 /**
- * Most recent PAID donation per donor. Uses `createdAt` (not `paidAt`) because legacy PAID rows
- * can have a null `paidAt`  the same rule `loadContext` uses for `{{totals.lastAt}}`.
+ * Most recent CONFIRMED payment per donor, measured by paidAt rather than
+ * createdAt. A bank transfer may be confirmed days after the donation record
+ * was created; the lapse clock must start at confirmation, not checkout.
  */
 async function loadLastPaidDonationByDonor(): Promise<Map<string, { at: Date; donationId: string }>> {
   const grouped = await prisma.donation.groupBy({
     by: ["donorId"],
-    where: { status: "PAID" },
-    _max: { createdAt: true },
+    where: SETTLED_DONATION_WHERE,
+    _max: { paidAt: true },
   });
   const out = new Map<string, { at: Date; donationId: string }>();
   for (const row of grouped) {
-    if (row._max.createdAt) out.set(row.donorId, { at: row._max.createdAt, donationId: "" });
+    if (row._max.paidAt) out.set(row.donorId, { at: row._max.paidAt, donationId: "" });
   }
   return out;
 }
@@ -111,9 +113,9 @@ async function loadLastPaidDonationByDonor(): Promise<Map<string, { at: Date; do
 async function attachLastDonationIds(donorIds: string[], lastByDonor: Map<string, { at: Date; donationId: string }>): Promise<void> {
   if (!donorIds.length) return;
   const rows = await prisma.donation.findMany({
-    where: { donorId: { in: donorIds }, status: "PAID" },
-    select: { id: true, donorId: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
+    where: { donorId: { in: donorIds }, ...SETTLED_DONATION_WHERE },
+    select: { id: true, donorId: true, paidAt: true },
+    orderBy: [{ paidAt: "desc" }, { id: "desc" }],
   });
   for (const row of rows) {
     const entry = lastByDonor.get(row.donorId);
@@ -161,6 +163,7 @@ export async function runDonationLapsedReminders(
 
     const lapseCutoff = new Date(now.getTime() - lapseDays * DAY_MS);
     const cooldownCutoff = new Date(now.getTime() - cooldownDays * DAY_MS);
+    const failureRetryCutoff = new Date(now.getTime() - reminderFailureBackoffDays(cooldownDays) * DAY_MS);
 
     // Most-recently-lapsed first: donors who just crossed the threshold convert best, and this keeps
     // the bounded run from getting permanently stuck on the oldest tail of the list.
@@ -176,7 +179,8 @@ export async function runDonationLapsedReminders(
     // the head has already been reminded.
     const checkIds = candidateIds.slice(0, budget * 10 + 100);
 
-    // Idempotency: anyone already reminded with this template since the cooldown cutoff is out.
+    // Idempotency: successful/reserved messages use the regular cooldown; FAILED/SKIPPED
+    // attempts use a bounded retry backoff to prevent daily repeat failures.
     // CommunicationDelivery is the archive source of truth (SentMessage is only a best-effort mirror),
     // and the record is written BEFORE the provider call, so a crash mid-send can't cause a re-send.
     const priorDeliveries = await prisma.communicationDelivery.findMany({
@@ -184,14 +188,13 @@ export async function runDonationLapsedReminders(
         templateId: trigger.templateId,
         origin: "TRIGGER",
         recipientUserId: { in: checkIds },
-        status: { in: REMINDER_COUNTED_STATUSES },
-        createdAt: { gte: cooldownCutoff },
+        OR: reminderPreviousAttemptWindows(cooldownCutoff, failureRetryCutoff),
       },
       select: { recipientUserId: true },
-    }).catch(() => []);
+    });
 
-    // The query is already bounded by cooldownCutoff, so anything it returns is a reminder inside the
-    // cooldown window  that donor is out. Once the cooldown lapses they become a candidate again
+    // The query is bounded by status-specific windows. Successful attempts respect the
+    // full cooldown, failed/skipped attempts the shorter retry backoff.
     // (and if they donated in the meantime they simply stop being lapsed).
     const remindedRecently = new Set(priorDeliveries.map((d) => d.recipientUserId).filter(Boolean) as string[]);
 
@@ -200,7 +203,7 @@ export async function runDonationLapsedReminders(
       if (remindedRecently.has(donorId)) {
         row.skipped += 1;
         summary.skipped += 1;
-        bump(row.reasons, "ALREADY_REMINDED");
+        bump(row.reasons, "ALREADY_ATTEMPTED_IN_COOLDOWN_OR_RETRY_BACKOFF");
         continue;
       }
       eligibleIds.push(donorId);
