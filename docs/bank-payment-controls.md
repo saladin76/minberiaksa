@@ -45,3 +45,18 @@ It has no create/update, charge, refund, void, retry or message path. Review its
 ## Validation
 
 Real service tests cover exact amounts, terminal identity, repeat partial refunds, refunds outside the dashboard, concurrency, lost bank responses and persistence failures. Browser fixtures exercise actual components against synthetic database and bank adapters in Arabic, English and Turkish on desktop and mobile. CI also checks the default 2D/optional 3D flow, unchanged Saudi routing, compact saved-card dimensions, subscription lifecycle, access controls, production build, lint and type checks.
+
+## Ziraat Katılım / PayFor document review (2026-11-08)
+
+Reviewed merchant-supplied integration guide v1.9, the PayFor error-code guide, 3DPay/3DModel docs, response-field dictionary and merchant console guide. This is the **same PayFor merchant integration**, not the unrelated ZiraatPay v2 payment product.
+
+- **Order inquiry** (integration guide section 6.9/page 16): `TxnType=OrderInquiry`, `SecureType=Inquiry`, `OrderId=<original sale order>`, bank merchant/user credentials, original currency and `Lang=TR`.
+- **Void** (section 6.6/page 13): `TxnType=Void`, `SecureType=NonSecure`, `OrgOrderId=<original sale order>`, original currency. Intended for the same open batch; no `PurchAmount` on the minimum request.
+- **Refund** (section 6.7/page 14): `TxnType=Refund`, `SecureType=NonSecure`, `OrgOrderId=<original sale order>`, original currency, and `PurchAmount` in major decimal units. Partial refund is permitted after the sale batch has closed.
+- The guide does **not** require or specify a newly generated `OrderId` for Void/Refund. A unique local adjustment ID is still maintained in the database for audit/idempotency but is not transmitted as an undocumented field.
+- `ProcReturnCode=00` is a success indicator; `V000` means processing is still ongoing, `V020` the transaction has not completed, and system/transport error codes such as `V9196` and `V9199` cannot prove non-execution. Such responses stay **UNKNOWN** and never trigger an automatic resend. Bank-specific `V014` indicates attempting a refund before batch close; the operator should use Void where authorized, **never** an automatic fallback.
+- The response-field dictionary defines `RefundedAmount`, `VoidDate`, `AuthCode`, `OrgOrderId`, `OrderId`, `Currency`, `PurchAmount`, and `ProcReturnCode`. It does **not** provide a complete, bank-certified OrderInquiry response envelope. As a result, automatic financial adjustments stay blocked unless a full inquiry with original sale identity, amount, currency and cumulative returned amount verifies successfully.
+- The guide says the actual production transaction `HostUrl` and sample connector scripts are provided **by the bank** (page 9; integration guide page 5). None of the supplied documents establishes a live `HostUrl` or confirms whether this merchant accepts `FORM` or `XML_PRMSTR`. Ask the bank for both the endpoint **and** serialization, representative sanitized inquiry/adjustment responses and explicit inquiry/void/full/partial refund permissions. Do **not** infer either from the 3DPay/3DHost/reporting URLs.
+- The merchant console guide documents a manual fallback for void/full/partial refunds and reporting, including matching by original `OrderID`. Use this only through the bank's authorized console and reconcile the resulting bank evidence with the immutable original donation; never fabricate an API success.
+
+Checkout, the Saudi routing rules, Albaraka operations, the live gateway configuration, and all financial write permissions remain unchanged by this documentation/adapter hardening. No production bank request, void, refund, payment or new donor message was initiated.
