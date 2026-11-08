@@ -34,6 +34,33 @@ function countGroup(rows, keys) {
 function classify(text, channel) {
   const value = String(text ?? "").toLowerCase();
   if (!value.trim()) return "NO_ERROR_DETAILS_RECORDED";
+  // Sender adapters persist stable, non-sensitive reason codes followed by a
+  // scrubbed provider detail. Classify codes before free-text heuristics.
+  // Never emit raw provider errors, URLs, tokens or recipient details.
+  const knownReasons = [
+    ["elastic_email_request_failed", "ELASTIC_EMAIL_REQUEST_FAILED"],
+    ["elastic_email_unauthorized", "ELASTIC_EMAIL_AUTH_OR_ACCESS"],
+    ["elastic_email_rejected", "ELASTIC_EMAIL_REJECTED"],
+    ["elastic_email_invalid_response", "ELASTIC_EMAIL_INVALID_RESPONSE"],
+    ["elastic_email_rate_limited", "ELASTIC_EMAIL_RATE_LIMITED"],
+    ["elastic_email_not_configured", "ELASTIC_EMAIL_NOT_CONFIGURED"],
+    ["elastic_email_sender_not_configured", "ELASTIC_EMAIL_SENDER_NOT_CONFIGURED"],
+    ["integration_decryption_failed", "INTEGRATION_DECRYPTION_FAILED"],
+    ["integration_database_unavailable", "INTEGRATION_DATABASE_UNAVAILABLE"],
+    ["email_marketing_opt_in_required", "EMAIL_MARKETING_OPT_IN_REQUIRED"],
+    ["email_suppressed", "EMAIL_SUPPRESSED"],
+    ["consent_check_unavailable", "CONSENT_CHECK_UNAVAILABLE"],
+    ["meta_whatsapp_unauthorized", "META_PROVIDER_AUTH_OR_ACCESS"],
+    ["meta_whatsapp_not_configured", "META_PROVIDER_NOT_CONFIGURED"],
+    ["meta_whatsapp_request_failed", "META_PROVIDER_REQUEST_FAILED"],
+    ["delivery_outcome_uncertain", "DELIVERY_OUTCOME_UNCERTAIN"],
+    ["archive_failed", "DELIVERY_ARCHIVE_FAILED"],
+  ];
+  // Numeric provider error codes take precedence over generic adapter wrappers.
+  if (/131026|undeliverable|not a whatsapp user/.test(value)) return "META_UNDELIVERABLE";
+  if (/131049|healthy ecosystem|engagement|frequency.cap/.test(value)) return "META_ECOSYSTEM_LIMIT";
+  const known = knownReasons.find(([marker]) => value.includes(marker));
+  if (known) return known[1];
   if (/131049|healthy ecosystem|engagement|frequency.cap/.test(value)) return "META_ECOSYSTEM_LIMIT";
   if (/131026|undeliverable|not a whatsapp user/.test(value)) return "META_UNDELIVERABLE";
   if (/131048|rate.limit|too many requests|throttl|quota|429/.test(value)) return "RATE_LIMIT_OR_QUOTA";
@@ -91,29 +118,61 @@ try {
   for (const hours of windowHours) {
     const since = new Date(now - hours * 3600000);
     await section("paymentDiscrepancies" + hours + "h", async () => {
-      const [paidWithoutTimestamp, timestampButNotPaid, recentFailures] = await Promise.all([
-        prisma.donation.groupBy({
-          by: ["provider"], where: { createdAt: { gte: since }, status: "PAID", paidAt: null },
-          _count: { _all: true },
-        }),
-        prisma.donation.groupBy({
-          by: ["provider", "status"], where: {
-            createdAt: { gte: since }, status: { not: "PAID" }, paidAt: { not: null },
-          }, _count: { _all: true },
-        }),
-        prisma.donation.groupBy({
-          by: ["provider", "providerProcReturnCode"],
-          where: { createdAt: { gte: since }, status: "FAILED", paidAt: null },
-          _count: { _all: true },
-        }),
-      ]);
+      // MongoDB distinguishes a missing field from explicit null. Prisma's
+      // `paidAt: null` filter may omit historically unset fields even though
+      // Prisma returns those fields as null when selecting a document.
+      // Read a bounded, non-sensitive projection and compare in JavaScript so
+      // explicit null and absent fields are both counted. Never print IDs.
+      const scanLimit = 10000;
+      const rows = [];
+      let cursor;
+      while (rows.length <= scanLimit) {
+        const batch = await prisma.donation.findMany({
+          where: { createdAt: { gte: since } },
+          orderBy: { id: "asc" },
+          take: Math.min(500, scanLimit + 1 - rows.length),
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          select: { id: true, status: true, provider: true, paymentMethod: true,
+            paidAt: true, providerProcReturnCode: true },
+        });
+        rows.push(...batch);
+        if (batch.length < 500 || rows.length > scanLimit) break;
+        cursor = batch.at(-1).id;
+      }
+      const truncated = rows.length > scanLimit;
+      if (truncated) summary.incomplete = true;
+      const visible = rows.slice(0, scanLimit);
+      const missing = visible.filter(r => r.status === "PAID" && r.paidAt == null);
+      const mismatch = visible.filter(r => r.status !== "PAID" && r.paidAt != null);
+      const failures = visible.filter(r => r.status === "FAILED" && r.paidAt == null);
+      const aggregate = (list, getKey) => {
+        const tally = new Map();
+        for (const row of list) {
+          const key = getKey(row);
+          const prev = tally.get(key) || 0;
+          tally.set(key, prev + 1);
+        }
+        return [...tally].map(([key, count]) => ({ key, count }))
+          .sort((a, b) => b.count - a.count);
+      };
+      const code = row => /^[A-Z0-9]{1,5}$/.test(clean(row.providerProcReturnCode))
+        ? clean(row.providerProcReturnCode) : "UNCLASSIFIED";
       return {
-        paidWithoutTimestamp: countGroup(paidWithoutTimestamp, ["provider"]),
-        timestampPresentButStatusNotPaid: countGroup(timestampButNotPaid, ["provider", "status"]),
-        failedProviderResponseCodes: countGroup(recentFailures, ["provider", "providerProcReturnCode"]).map(row => ({
-          ...row, providerProcReturnCode: /^[A-Z0-9]{1,5}$/.test(row.providerProcReturnCode) ? row.providerProcReturnCode : "UNCLASSIFIED",
-        })),
-        note: "PAID without paidAt is not proof money failed to arrive. Bank transfers/manual records may have different semantics; reconcile before editing.",
+        windowRows: visible.length, scanLimit, truncated,
+        statusPaid: visible.filter(row => row.status === "PAID").length,
+        confirmedByPaidAt: visible.filter(row => row.paidAt != null).length,
+        paidWithoutTimestampCount: missing.length,
+        paidWithoutTimestampByProviderAndMethod: aggregate(
+          missing, row => clean(row.provider) + "/" + clean(row.paymentMethod)),
+        bankTransferAwaitingConfirmationConvention: missing.filter(
+          row => row.paymentMethod === "BANK_TRANSFER").length,
+        otherPaidWithoutTimestamp: missing.filter(
+          row => row.paymentMethod !== "BANK_TRANSFER").length,
+        timestampPresentButStatusNotPaidCount: mismatch.length,
+        timestampPresentButStatusNotPaid: aggregate(mismatch, row => clean(row.provider) + "/" + clean(row.status)),
+        failedWithoutTimestamp: failures.length,
+        failedProviderResponseCodes: aggregate(failures, row => clean(row.provider) + "/" + code(row)),
+        note: "PAID with unset paidAt can legitimately mean pending bank-transfer confirmation. Do not count as settled revenue or automatically alter it. Exact null filters omit missing MongoDB fields.",
       };
     });
     await section("deliveryIncidents" + hours + "h", async () => {
