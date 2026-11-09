@@ -149,7 +149,7 @@ export async function releaseDonationAbuseActor(input: {
     findAndModify: DONATION_ABUSE_COLLECTION,
     query: { _id: input.actorId, revision: input.expectedRevision },
     update: { $set: {
-      state: releaseProtection(now),
+      // Preserve processed provider event IDs: replaying an old signed webhook after an\n      // administrator unblocks an actor must not count as a fresh decline.\n      state: { ...releaseProtection(now), processedEventIds: prior.state.processedEventIds },
       releasedBy: input.operatorId,
       releasedReason: input.reason.trim(),
       updatedAt: { $date: new Date(now).toISOString() },
