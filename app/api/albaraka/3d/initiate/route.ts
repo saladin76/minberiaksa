@@ -1,3 +1,4 @@
+import { enforcePaymentInitiationBudget } from "@/lib/site-security/payment-initiation-budget";
 import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutGroup, mixedCheckoutIds } from "@/lib/donations/mixed-cart";
 import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
 import { NextRequest, NextResponse } from "next/server";
@@ -154,6 +155,7 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as Partial<InitiateBody>;
     const donationId = String(body.donationId || "").trim();
+    const limited = await enforcePaymentInitiationBudget(req, donationId); if (limited) return limited;
     if (!donationId) {
       return NextResponse.json({ error: "donationId is required" }, { status: 400 });
     }
