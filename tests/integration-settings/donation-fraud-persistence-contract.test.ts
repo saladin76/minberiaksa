@@ -11,6 +11,7 @@ test("fraud state uses an HMAC identity and revision-based atomic updates", () =
   assert.match(file, /providerEventId/);
   assert.match(file, /advanceProtection\(/);
   assert.match(file, /releaseProtection\(/);
+  assert.match(file, /processedEventIds: prior\.state\.processedEventIds/);
 });
 test("blocked payment attempts are checked before provider initiation", () => {
   const file = source("lib/site-security/payment-initiation-budget.ts");
