@@ -58,7 +58,7 @@ function allocationSignature(row: RecoveryDonation): string | null {
       JSON.stringify(["campaign", item.campaignId, toMinor(item.amount), item.shareCount ?? null,
         item.giftRecipientName ?? "", item.giftRecipientEmail ?? "",
         item.giftRecipientPhone ?? "", item.giftMessage ?? "",
-        [...item.giftChannels].sort(), item.giftShowAmount])),
+        [...(item.giftChannels ?? [])].sort(), item.giftShowAmount !== false])),
     ...row.categoryItems.map((item) =>
       JSON.stringify(["category", item.categoryId, toMinor(item.amount)])),
     ...row.waqfItems.map((item) =>
