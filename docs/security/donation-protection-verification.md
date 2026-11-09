@@ -11,6 +11,12 @@ Status: DRAFT / UNVERIFIED — not deployed. The presence of code or test files 
 - Qurat Al-Uyun: verify Vercel controlled `x-vercel-forwarded-for` is available and maps to the actual requester; client-controlled `x-real-ip` must not take precedence.
 - Never add the feature flag to production until the verified-failure connectors and first-payment/renewal/rollback checks are approved.
 - Keep `DONATION_ABUSE_GUARD_ENABLED` absent/false until staged checks pass.
+- Verified returning donor exemption: **only** authenticated donor session plus a site-local donation with both `status=PAID` and non-null `paidAt`. For existing donation retry, verify ownership of that donation; never trust donor email/name/IP/anonymous donation id as account proof.
+- Existing trusted donors bypass ONLY the staged confirmed-decline cooldown/manual review. IP velocity, per-donation quotas, access rules, and site emergency maintenance continue to apply.
+- [ ] Test same-IP trusted vs anonymous donor: one can bypass progressive block but neither can bypass abnormal request velocity.
+- [ ] Test impersonation (guest uses old donor email) and another donor's donationId: no trusted exemption.
+- [ ] Test earlier `PENDING`, `FAILED`, and `PAID` without `paidAt`: no exemption.
+
 - New site-maintenance state defaults to OFF; do not enable on production during tests.
 
 ## Automated checks required
