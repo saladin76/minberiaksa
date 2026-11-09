@@ -4,7 +4,7 @@ import { loadDonationFinancialSummaries } from "@/lib/dashboard/donation-financi
 import type { Prisma } from "@prisma/client";
 import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { donorAccountStatus } from "@/lib/dashboard/donor-account";
-import { getTrackingClientIp } from "@/lib/tracking/client-ip";
+import { securityClientIp } from "@/lib/site-security/policy";
 import { donationPaymentEvidence } from "@/lib/donations/payment-evidence";
 import { POST as createCartDonation } from "@/app/api/cart/payment/route";
 import { isOrderType, isRecurringFrequency } from "@/lib/donations/recurring-schedule";
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
       }));
     }
     const session = await getServerSession(authOptions);
-    const clientIp = getTrackingClientIp(request.headers);
+    const clientIp = securityClientIp(request.headers) ?? undefined;
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || undefined;
     const attribution = sanitizeDonationAttribution({
       ...((body.attribution && typeof body.attribution === "object" && !Array.isArray(body.attribution)
