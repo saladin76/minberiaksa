@@ -1,3 +1,4 @@
+import { recordSignedPayForDecline } from "@/lib/site-security/payfor-verified-decline";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
@@ -48,6 +49,8 @@ export async function POST(req: NextRequest) {
           providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
         },
       });
+      // Signed and order-matched issuer declines only; unverified redirects are ignored.
+      runAfterResponse(() => recordSignedPayForDecline(raw, donation));
       runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
       // Seed Meta with the failed attempt so lookalike audiences can include
       // donors-who-tried. Browser pixel fires the matching DonateFailed hit
