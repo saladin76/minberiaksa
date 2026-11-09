@@ -29,7 +29,7 @@ const files = {
   "/ar.woff2": { type: "font/woff2", data: await readFile("public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2") },
   "/latin.woff2": { type: "font/woff2", data: await readFile("public/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2") },
 };
-let campaign = null, writes = [], deleteFails = false;
+let campaign = null, writes = [], deleteFails = false, campaignScenario = "success";
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, "http://fixture"), json = (body, status = 200) => { response.writeHead(status, { "Content-Type": "application/json" }); response.end(JSON.stringify(body)); };
   if (url.pathname === "/bundle.js") { response.setHeader("Content-Type", "application/javascript"); return response.end(bundle.outputFiles[0].contents); }
@@ -37,17 +37,26 @@ const server = createServer(async (request, response) => {
   if (files[url.pathname]) { response.setHeader("Content-Type", files[url.pathname].type); return response.end(files[url.pathname].data); }
   if (url.pathname.startsWith("/api")) {
     if (url.pathname === "/api/auth/google-config") return json({ clientId: null });
-    if (request.method === "GET") return url.pathname.endsWith("/send") ? json({ok:true,plan:{audienceTotal:100,total:100}}) : json({ ok: true, campaign });
+    if (request.method === "GET") {
+      if (url.pathname.endsWith("/send") && campaignScenario === "plan-error") return json({ ok: false, error: "PLAN_UNAVAILABLE" }, 503);
+      if (url.pathname.endsWith("/send")) return json({ok:true,plan:{audienceTotal:100,total:100}});
+      return json({ ok: true, campaign });
+    }
     let raw = ""; for await (const chunk of request) raw += chunk; writes.push({ method: request.method, body: raw ? JSON.parse(raw) : null });
     if (request.method === "DELETE") { if (deleteFails) return json({ ok: false, error: "DB_UNAVAILABLE" }, 503); campaign = null; return json({ ok: true, deleted: true, archived: false }); }
-    if (url.pathname.endsWith("/send")) return json({ok:true,summary:{sent:100,skipped:0,failed:0}});
-    if (url.pathname.endsWith("/transition")) { campaign.status = "APPROVED"; return json({ ok: true, campaign }); }
+    if (url.pathname.endsWith("/send")) return campaignScenario === "send-error" ? json({ ok: false, error: "SEND_UNAVAILABLE" }, 503) : json({ok:true,summary:{sent:100,skipped:0,failed:0}});
+    if (url.pathname.endsWith("/transition")) {
+      if (campaignScenario === "pending") await new Promise(resolve => setTimeout(resolve, 500));
+      if (campaignScenario === "approval-error") return json({ ok: false, error: "APPROVAL_UNAVAILABLE" }, 503);
+      campaign.status = "APPROVED"; return json({ ok: true, campaign });
+    }
     return json({ error: "UNEXPECTED_FIXTURE_REQUEST" }, 404);
   }
+  campaignScenario = url.searchParams.get("scenario") || "success";
   response.setHeader("Content-Type", "text/html"); response.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><link rel="icon" href="/icon.png"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>');
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve)); const origin = `http://127.0.0.1:${server.address().port}`;
-let browser, checks = 0; const errors = [];
+let browser, checks = 0; const errors = [], campaignSendScenarios = [];
 try {
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   for (const locale of (process.env.CAMPAIGNS_ONLY ? [] : locales)) for (const width of [390, 1440]) {
@@ -101,16 +110,51 @@ try {
     deleteFails = false;
     writes=[];
     await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
-    await expect(page.getByRole("alertdialog")).toContainText("100"); assert.equal(writes.length,0);
-    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click(); assert.equal(writes.length,0); checks++;
+    const confirmation = page.getByRole("alertdialog");
+    await expect(confirmation).toContainText("100"); assert.equal(writes.length,0);
+    await page.screenshot({ path: path.join(artifacts, `campaign-confirmation-${locale}-${width}-${channel}.png`), fullPage: true });
+    await confirmation.getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click(); assert.equal(writes.length,0); checks++;
     await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
     await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
     await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
     assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
+    campaignSendScenarios.push(`confirm-cancel-and-approve:${locale}:${width}:${channel}`);
+
+    for (const [scenario, error] of [["plan-error", "PLAN_UNAVAILABLE"], ["approval-error", "APPROVAL_UNAVAILABLE"], ["send-error", "SEND_UNAVAILABLE"]]) {
+      writes = []; campaign = { id, name: "Fixture campaign", channel, status: "DRAFT", sentCount: 0, deliveredCount: 0, readCount: 0, failedCount: 0, repliedCount: 0, clickedCount: 0 };
+      await page.goto(`${origin}/?lang=${locale}&channel=${channel}&status=DRAFT&scenario=${scenario}`);
+      const sendNow = page.getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true });
+      await sendNow.click();
+      if (scenario !== "plan-error") await page.getByRole("alertdialog").getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true }).click();
+      await expect(page.getByText(error, { exact: true })).toBeVisible();
+      await expect(page.getByRole("alertdialog")).toHaveCount(0);
+      assert.equal(writes.length, scenario === "plan-error" ? 0 : scenario === "approval-error" ? 1 : 2);
+      if (scenario === "approval-error") assert.equal(writes[0].body.action, "CONFIRM");
+      if (scenario === "send-error") { assert.equal(writes[0].body.action, "CONFIRM"); assert.equal(writes[1].body.confirm, true); }
+      checks++; campaignSendScenarios.push(`${scenario}:${locale}:${width}:${channel}`);
+    }
+
+    writes = []; campaign = { id, name: "Fixture campaign", channel, status: "DRAFT", sentCount: 0, deliveredCount: 0, readCount: 0, failedCount: 0, repliedCount: 0, clickedCount: 0 };
+    await page.goto(`${origin}/?lang=${locale}&channel=${channel}&status=DRAFT&scenario=pending`);
+    await page.getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true }).click();
+    const pendingDialog = page.getByRole("alertdialog"), approve = pendingDialog.getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true });
+    await expect(pendingDialog).toContainText("100");
+    await approve.click();
+    await expect.poll(() => writes.length).toBe(1);
+    await expect(pendingDialog).toBeVisible(); await expect(approve).toBeDisabled();
+    await expect(pendingDialog.getByRole("button", { name: ui(locale, "إلغاء"), exact: true })).toBeDisabled();
+    await page.screenshot({ path: path.join(artifacts, `campaign-pending-${locale}-${width}-${channel}.png`), fullPage: true });
+    const box = await approve.boundingBox(); assert.ok(box);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect.poll(() => writes.length).toBe(2);
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
+    assert.equal(writes[0].body.action, "CONFIRM"); assert.equal(writes[1].body.confirm, true);
+    checks++; campaignSendScenarios.push(`pending-duplicate-click:${locale}:${width}:${channel}`);
 
     await page.close();
   }
   assert.deepEqual(errors, []);
-  await writeFile(path.join(artifacts, "summary.json"), JSON.stringify({ fixtureOnly: true, checks, authLocales: process.env.CAMPAIGNS_ONLY ? 0 : locales.length, campaignChannels: 3, widths: [390, 1440], providerCalls: 0, errors }, null, 2));
-  console.log(JSON.stringify({ fixtureOnly: true, checks, authLocales: process.env.CAMPAIGNS_ONLY ? 0 : locales.length, providerCalls: 0, errors }));
+  await writeFile(path.join(artifacts, "summary.json"), JSON.stringify({ fixtureOnly: true, checks, authLocales: process.env.CAMPAIGNS_ONLY ? 0 : locales.length, campaignChannels: 3, widths: [390, 1440], campaignSendScenarios, providerCalls: 0, errors }, null, 2));
+  console.log(JSON.stringify({ fixtureOnly: true, checks, authLocales: process.env.CAMPAIGNS_ONLY ? 0 : locales.length, campaignSendScenarios, providerCalls: 0, errors }));
 } finally { await browser?.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
