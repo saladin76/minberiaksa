@@ -72,6 +72,8 @@ test("dashboard uses filter-scoped primary KPI cards with no duplicate period su
   assert.match(cards, /scoped\.recurringAmountUSD/);
   assert.match(cards, /scoped\.failedCount/);
   assert.match(cards, /scoped\.pendingCount/);
+  assert.match(cards, /amount: scoped\.teamSupportUSD, count: null/);
+  assert.match(cards, /card\.count === null \? "—" : number\(card\.count\)/);
   assert.match(chart, /donationChartStatusWhere\(/);
   assert.match(chart, /donationChartTypeWhere\(/);
   assert.match(chart, /countPending/);
