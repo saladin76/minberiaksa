@@ -1,3 +1,4 @@
+import { enforceDonationIntakeBudget } from "@/lib/site-security/payment-initiation-budget";
 import { checkoutLineFrequencies, recurringCheckoutLines } from "@/lib/donations/mixed-cart";
 import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { getTrackingClientIp } from "@/lib/tracking/client-ip";
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     const body = await request.json();
+    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
     let lineFrequencies: ReturnType<typeof checkoutLineFrequencies>;
     try {
       const count = [body.items, body.categoryItems, body.waqfItems].reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
