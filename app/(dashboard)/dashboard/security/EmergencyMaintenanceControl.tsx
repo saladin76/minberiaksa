@@ -15,7 +15,7 @@ export default function EmergencyMaintenanceControl() {
   }
   useEffect(() => { void refresh().catch((e: Error) => setError(e.message)); }, []);
   async function change(enabled: boolean) {
-    if (!status || busy) return;
+    if (!status || busy || status.revision < 0) return;
     if (reason.trim().length < 10) { setError("اكتب سبب الإجراء (10 أحرف على الأقل)."); return; }
     const confirmation = enabled ? "ENABLE_MAINTENANCE" : "DISABLE_MAINTENANCE";
     if (!window.confirm(enabled
@@ -47,14 +47,15 @@ export default function EmergencyMaintenanceControl() {
           {status ? (status.enabled ? "الصيانة مفعلة" : "الموقع مفتوح") : "جارٍ فحص الحالة"}
         </strong>
       </div>
+      {status?.revision === -1 && <p role="alert" className="mt-3 text-sm font-semibold text-rose-800">الصيانة إجبارية من إعدادات الخادم. لا يمكن تعطيلها من لوحة التحكم؛ يجب إلغاء EMERGENCY_MAINTENANCE_FORCE من بيئة التشغيل بواسطة المسؤول التقني.</p>}
       {status?.updatedAt && <p className="mt-2 text-xs">آخر تغيير: {new Date(status.updatedAt).toLocaleString("ar")} · مراجعة {status.revision}</p>}
       <label htmlFor="emergency-maintenance-reason" className="mt-4 block text-sm font-medium">سبب الإجراء (يسجل في سجل التدقيق)</label>
       <textarea id="emergency-maintenance-reason" rows={2} maxLength={300} value={reason} onChange={e => setReason(e.target.value)}
         placeholder="مثال: إيقاف مؤقت بعد اكتشاف حملة محاولات دفع مشبوهة" className="mt-1 w-full rounded-lg border bg-white p-2 text-sm" />
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={!status || busy || status.enabled} onClick={() => void change(true)}
+        <button type="button" disabled={!status || busy || status.enabled || status.revision < 0} onClick={() => void change(true)}
           className="rounded-lg bg-rose-700 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">تفعيل الصيانة الطارئة</button>
-        <button type="button" disabled={!status || busy || !status.enabled} onClick={() => void change(false)}
+        <button type="button" disabled={!status || busy || !status.enabled || status.revision < 0} onClick={() => void change(false)}
           className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">إعادة فتح الموقع</button>
         <button type="button" disabled={busy} onClick={() => void refresh().catch((e: Error) => setError(e.message))}
           className="rounded-lg border bg-white px-4 py-2 text-sm">تحديث الحالة</button>
