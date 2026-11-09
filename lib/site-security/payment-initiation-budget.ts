@@ -52,6 +52,7 @@ export async function enforcePaymentInitiationBudget(
   request: NextRequest,
   donationId?: string | null,
 ): Promise<NextResponse | null> {
+  if (process.env.DONATION_ABUSE_GUARD_ENABLED !== "true") return null;
   const now = Date.now();
   try {
     const ip = securityClientIp(request.headers);
@@ -86,6 +87,7 @@ function rateLimit(seconds: number) {
  * scope from provider initiation, so a normal checkout is not double-counted.
  */
 export async function enforceDonationIntakeBudget(request: NextRequest): Promise<NextResponse | null> {
+  if (process.env.DONATION_ABUSE_GUARD_ENABLED !== "true") return null;
   const ip = securityClientIp(request.headers);
   if (!ip) return null; // Never infer identity from a spoofable request header.
   try {
