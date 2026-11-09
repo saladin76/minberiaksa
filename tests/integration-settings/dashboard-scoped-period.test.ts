@@ -57,6 +57,12 @@ test("dashboard uses filter-scoped primary KPI cards with no duplicate period su
   const cards = readFileSync("components/dashboard/HomeDonationSummary.tsx", "utf8");
   assert.match(page, /params\.set\("status", donationsStatusFilter\)/);
   assert.match(page, /params\.set\("donationType", donationsTypeFilter\)/);
+  for (const filter of ["categoryId", "campaignId", "locale", "country", "provider"]) {
+    assert.ok(page.includes(`params.set("${filter}",`), `Missing chart scope: ${filter}`);
+  }
+  assert.match(page, /params\.set\("userId",/);
+  assert.match(page, /\[selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod,/);
+
   assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
   assert.match(page, /<HomeDonationSummary[\s\S]*?scoped=\{scoped\}/);
   assert.doesNotMatch(page, /نتائج الفترة المحددة|<MetricSummaryBand/);
