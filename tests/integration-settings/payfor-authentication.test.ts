@@ -29,6 +29,8 @@ test("unsigned PayFor fail redirect is not allowed to mutate payment or count fr
   const writeAt = code.indexOf("prisma.donation.update(");
   assert.ok(signedAt >= 0 && writeAt > signedAt);
   assert.match(code, /recordSignedPayForDecline\(raw, donation\)/);
+  assert.match(code, /procReturnCode !== "00"/);
+  assert.match(code, /bankConfirmedFailure/);
 });
 
 test("verified decline adapter requires exact bank order linkage", () => {
