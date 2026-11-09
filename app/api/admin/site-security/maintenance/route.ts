@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const denied = requireAdminSession(session);
   if (denied) return denied;
+  if (process.env.EMERGENCY_MAINTENANCE_FORCE === "true")
+    return response({ error: "INFRASTRUCTURE_MAINTENANCE_LOCKED" }, 423);
   const origin = request.headers.get("origin");
   const configuredOrigin = process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
   let expectedOrigin: string;
