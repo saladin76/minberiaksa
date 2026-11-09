@@ -16,6 +16,9 @@ test("emergency control uses administrator API, explicit confirmation and revisi
   assert.match(api, /requireAdminSession\(session\)/);
   assert.match(api, /INVALID_REQUEST_ORIGIN/);
   assert.match(api, /MAINTENANCE_STALE_REVISION/);
+  assert.match(api, /INFRASTRUCTURE_MAINTENANCE_LOCKED/);
+  assert.match(ui, /status\.revision < 0/);
+  assert.match(ui, /الصيانة إجبارية من إعدادات الخادم/);
 });
 test("maintenance gates public requests and exempts signed payment callbacks", () => {
   const content = yedi ? file("proxy.ts") : file("lib/site-security/request.ts");
