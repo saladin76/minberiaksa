@@ -29,6 +29,6 @@ test("fraud cases are admin-only and unblocking requires a reviewed revision", (
 test("public operator view includes release action but not payment credentials", () => {
   const ui = source("app/(dashboard)/dashboard/security/DonationFraudReview.tsx");
   assert.match(ui, /رفع التقييد/);
-  assert.match(ui, /revision: row\.revision/);
+  assert.match(ui, /expectedRevision: row\.revision/);
   assert.doesNotMatch(ui, /cardNumber|cvc|clientSecret|accessToken/);
 });
