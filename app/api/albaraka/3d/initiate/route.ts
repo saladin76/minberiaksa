@@ -1,3 +1,4 @@
+import { recordConfirmedAlbarakaSaleDecline } from "@/lib/site-security/albaraka-verified-decline";
 import { enforcePaymentInitiationBudget } from "@/lib/site-security/payment-initiation-budget";
 import { mixedCheckoutPayment, mixedCheckoutParent, validMixedCheckoutGroup, mixedCheckoutIds } from "@/lib/donations/mixed-cart";
 import { frozenPaymentRoute } from "@/lib/donations/payment-routing";
@@ -516,6 +517,11 @@ export async function POST(req: NextRequest) {
     if (approved && sale) {
       await settleAlbarakaDonation(donation.id, sale);
     } else {
+      // Only an unequivocal issuer code returned from our own Sale request.
+      // Transport/authentication ambiguity was handled above and cannot count.
+      await recordConfirmedAlbarakaSaleDecline({
+        responseCode, orderId, donation,
+      });
       const merchantSide = ALBARAKA_MERCHANT_SIDE_CODES[responseCode];
       if (merchantSide) console.error(`[Albaraka 2D SALE] ${responseCode}: ${merchantSide}`);
       await failAlbarakaDonation(
