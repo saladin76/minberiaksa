@@ -1,5 +1,5 @@
-import EmergencyMaintenanceControl from "./EmergencyMaintenanceControl";
 "use client";
+import EmergencyMaintenanceControl from "./EmergencyMaintenanceControl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCountries } from "libphonenumber-js";
 import { dt, dashDir, dashIntl } from "@/lib/dashboard/i18n";
