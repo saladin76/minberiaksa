@@ -82,7 +82,9 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
-        timeout-minutes: 5
+        # Apt mirrors can take several minutes to deliver FFmpeg and its codecs. Keep the
+        # prerequisite bounded, but leave enough time for the integration suite to start.
+        timeout-minutes: 12
         run: |
           if ! command -v ffmpeg >/dev/null 2>&1; then
             sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
@@ -202,28 +204,54 @@ jobs:
   e2e:
     name: Playwright (critical journeys)
     runs-on: ubuntu-latest
-    # The end-to-end suite needs a database and provider credentials to be meaningful. It runs when
-    # those secrets exist and is skipped, loudly, when they do not - a suite that silently passes
-    # against an empty environment is worse than no suite.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npx prisma generate
-      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      # Keep live credentials away from PR code, but make the reason for not running visible in the
+      # job summary instead of letting the job-level `if` hide the check entirely.
+      - name: Check whether critical journeys are allowed
+        id: policy
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || "$GITHUB_REF" == "refs/heads/main" || "$GITHUB_REF" == "refs/heads/master" ]]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Playwright critical journeys did NOT run: live-environment tests are restricted to main/master or workflow_dispatch."
+            {
+              echo "### Playwright critical journeys: NOT RUN"
+              echo
+              echo "Live-environment tests are restricted to main/master or manual dispatch so PR code does not receive E2E credentials."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Check for an end-to-end environment
         id: env
+        if: steps.policy.outputs.allowed == 'true'
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [ -z "${{ secrets.E2E_BASE_URL }}" ] && [ -z "${{ secrets.DATABASE_URL }}" ]; then
+          if [[ -z "$E2E_BASE_URL" || -z "$DATABASE_URL" ]]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No E2E_BASE_URL or DATABASE_URL secret. The end-to-end suite did NOT run."
+            echo "::warning::Playwright critical journeys did NOT run: E2E_BASE_URL and DATABASE_URL secrets are both required."
+            {
+              echo "### Playwright critical journeys: NOT RUN"
+              echo
+              echo "Both E2E_BASE_URL and DATABASE_URL secrets must be configured."
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
+      - uses: actions/checkout@v4
+        if: steps.env.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.env.outputs.ready == 'true'
+        with:
+          node-version: 24
+          cache: npm
+      - if: steps.env.outputs.ready == 'true'
+        run: npm ci --ignore-scripts
+      - if: steps.env.outputs.ready == 'true'
+        run: npx prisma generate
+      - if: steps.env.outputs.ready == 'true'
+        run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - if: steps.env.outputs.ready == 'true'
         run: npx playwright install --with-deps chromium
       - if: steps.env.outputs.ready == 'true'
