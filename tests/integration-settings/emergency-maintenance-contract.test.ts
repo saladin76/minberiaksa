@@ -27,6 +27,8 @@ test("maintenance gates public requests and exempts signed payment callbacks", (
     assert.match(content, /admin\|auth\|cron\|webhooks/);
   } else {
     assert.match(content, /isSecurityExemptPath/);
+    const policy = file("lib/site-security/policy.ts");
+    assert.match(policy, /2d\\\/result/);
   }
 });
 test("maintenance database uses atomic revision updates and no automatic activation", () => {
