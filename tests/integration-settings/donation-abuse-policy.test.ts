@@ -38,3 +38,15 @@ test("failures outside the initial window reset the first-stage counter", () => 
   assert.equal(s.phase, "NORMAL");
   assert.equal(s.failedAttempts, 1);
 });
+
+test("probation expires after its observation window instead of escalating old failures", () => {
+  let state = initialProtectionState(start);
+  for (let i = 1; i <= 4; i++) state = advanceProtection(state, event(i), start + i * 1000);
+  const probationStarted = state.until! + 1000;
+  state = advanceProtection(state, event(5), probationStarted);
+  assert.equal(state.phase, "PROBATION");
+  state = advanceProtection(state, event(6), probationStarted + DEFAULT_DONATION_PROTECTION.windowMs + 1000);
+  assert.equal(state.phase, "NORMAL");
+  assert.equal(state.failedAttempts, 1);
+  assert.equal(paymentRestriction(state, probationStarted + DEFAULT_DONATION_PROTECTION.windowMs + 2000).blocked, false);
+});
