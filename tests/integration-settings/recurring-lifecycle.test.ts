@@ -476,6 +476,7 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
   }
   assert.equal(plan.items.length, 1); assert.equal(plan.items[0].amount, principal);
   const bankDependencies = { ...f.dependencies, crypto,
+    "@/lib/site-security/albaraka-verified-decline": { recordConfirmedAlbarakaSaleDecline: async () => {} },
     "@/lib/donations/access-token": { withDonationToken: (url: string) => url },
     "next/server": { NextResponse: { ...next.NextResponse, redirect: (url: URL, status: number) => ({ status, location: String(url) }) } },
     "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode, isMixedRecurringCheckout },
