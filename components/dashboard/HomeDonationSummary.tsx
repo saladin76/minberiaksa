@@ -3,7 +3,6 @@
 import { useCurrency } from "@/context/CurrencyContext";
 import { createFormatDashboardMoney } from "@/lib/dashboard/format-dashboard-money";
 import { dt } from "@/lib/dashboard/i18n";
-import type { ScopedDonationChartRow } from "@/lib/dashboard/donation-chart-filter-scope";
 import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import { cn } from "@/lib/utils";
 import { CircleDollarSign, HeartHandshake, Repeat, RefreshCw, TrendingUp, TriangleAlert, Wallet } from "lucide-react";
