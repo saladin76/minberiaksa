@@ -29,3 +29,12 @@ test("Albaraka adapter counts only explicit issuer card declines after verified 
   assert.match(adapter, /recordVerifiedDonationFailure\(/);
   assert.doesNotMatch(adapter, /"00"|"96"|"91"/);
 });
+
+test("Albaraka 2D Sale declines are wired after uncertain/authentication responses are excluded", () => {
+  const source = src("app/api/albaraka/3d/initiate/route.ts");
+  const transport = source.indexOf("if (transportError || isAlbarakaTransportFailure(sale))");
+  const auth = source.indexOf("if (!approved && bankRequestsAuthentication(responseCode, responseDescription))");
+  const verifiedDecline = source.indexOf("recordConfirmedAlbarakaSaleDecline({");
+  assert.ok(transport >= 0 && auth > transport && verifiedDecline > auth);
+  assert.match(source, /responseCode, orderId, donation/);
+});
