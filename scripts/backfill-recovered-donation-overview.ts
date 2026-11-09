@@ -27,7 +27,8 @@ async function main() {
     where: {
       status: "PAID",
       paidAt: { not: null },
-      subscriptionId: null,
+      // MongoDB historical one-time donations may omit subscriptionId entirely.
+      OR: [{ subscriptionId: null }, { subscriptionId: { isSet: false } }],
       paymentMethod: "CARD",
       provider: { in: ["ALBARAKA", "PAYFOR"] },
       createdAt: { gte: since },
