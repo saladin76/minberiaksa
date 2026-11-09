@@ -58,9 +58,9 @@ test("dashboard uses filter-scoped primary KPI cards with no duplicate period su
   assert.match(page, /params\.set\("status", donationsStatusFilter\)/);
   assert.match(page, /params\.set\("donationType", donationsTypeFilter\)/);
   for (const filter of ["categoryId", "campaignId", "locale", "country", "provider"]) {
-    assert.ok(page.includes(`params.set("${filter}",`), `Missing chart scope: ${filter}`);
+    assert.ok(page.includes(`params.set("${filter}",`) || page.includes(`params.append("${filter}",`), `Missing chart scope: ${filter}`);
   }
-  assert.match(page, /params\.set\("userId",/);
+  assert.match(page, /params\.append\("userId",/);
   assert.match(page, /\[selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod,/);
 
   assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
