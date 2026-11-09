@@ -1,9 +1,9 @@
 import "server-only";
 import { createHmac } from "node:crypto";
+import { isIP } from "node:net";
 import { prisma } from "@/lib/prisma";
 import {
   advanceProtection,
-  DEFAULT_DONATION_PROTECTION,
   initialProtectionState,
   paymentRestriction,
   releaseProtection,
@@ -37,6 +37,7 @@ const rowsOf = (raw: unknown): Record<string, unknown>[] => {
   return data.cursor.firstBatch.filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object"));
 };
 export function donationAbuseActorId(ip: string): string {
+  if (!isIP(ip)) throw new Error("UNTRUSTED_FRAUD_ACTOR_IP");
   const key = process.env.DONATION_ABUSE_HASH_SECRET || process.env.NEXTAUTH_SECRET;
   if (!key || key.length < 20) throw new Error("FRAUD_HASH_SECRET_UNAVAILABLE");
   return createHmac("sha256", key).update("payment-fraud-ip:v1:" + ip).digest("hex");
