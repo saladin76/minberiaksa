@@ -1,3 +1,4 @@
+import { enforceDonationIntakeBudget } from "@/lib/site-security/payment-initiation-budget";
 import { subscriptionPaymentSequence } from "@/lib/dashboard/subscription-payment-sequence";
 import { loadDonationFinancialSummaries } from "@/lib/dashboard/donation-financial-summary";
 import type { Prisma } from "@prisma/client";
@@ -315,6 +316,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
     if (!body || typeof body !== "object" || Array.isArray(body) || !isOrderType(body.type ?? "ONE_TIME")) {
       return NextResponse.json({ error: "Unsupported donation type" }, { status: 400 });
     }
