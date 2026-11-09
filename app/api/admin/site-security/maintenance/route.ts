@@ -20,8 +20,15 @@ export async function POST(request: NextRequest) {
   const denied = requireAdminSession(session);
   if (denied) return denied;
   const origin = request.headers.get("origin");
-  if (!origin || new URL(request.url).origin !== origin)
+  const configuredOrigin = process.env.APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
+  let expectedOrigin: string;
+  try {
+    expectedOrigin = new URL(configuredOrigin || request.url).origin;
+    if (!origin || new URL(origin).origin !== expectedOrigin)
+      return response({ error: "INVALID_REQUEST_ORIGIN" }, 403);
+  } catch {
     return response({ error: "INVALID_REQUEST_ORIGIN" }, 403);
+  }
   const raw = await request.json().catch(() => null);
   if (!raw || typeof raw.enabled !== "boolean" ||
       !Number.isSafeInteger(raw.expectedRevision) || raw.expectedRevision < 0 ||
