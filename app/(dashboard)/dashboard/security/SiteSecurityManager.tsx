@@ -1,4 +1,6 @@
 "use client";
+import DonationFraudReview from "./DonationFraudReview";
+
 import EmergencyMaintenanceControl from "./EmergencyMaintenanceControl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCountries } from "libphonenumber-js";
@@ -95,6 +97,7 @@ export default function SiteSecurityManager() {
     <main dir={dashDir()} className="space-y-5 p-4 sm:p-6">
       <h1 className="text-2xl font-bold">{dt("الأمان وسجل الوصول")}</h1>
       <EmergencyMaintenanceControl />
+      <DonationFraudReview />
       <p className="text-sm leading-7 text-slate-600">
         {dt(
           "سجل خاص بالإدارة يربط زيارات الأعضاء بعناوين IP. يبدأ التسجيل بعد نشر الميزة، وتُحفظ السجلات 90 يومًا. عدد الزيارات تقريبي لأن التسجيل يُجمع مرة كل دقيقة للعنوان والعضو.",
