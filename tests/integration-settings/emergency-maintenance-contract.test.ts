@@ -36,4 +36,6 @@ test("maintenance database uses atomic revision updates and no automatic activat
   assert.match(content, /findAndModify/);
   assert.match(content, /revision: prior\.revision/);
   assert.match(content, /enabled: false, revision: 0/);
+  assert.match(content, /EMERGENCY_MAINTENANCE_FORCE/);
+  assert.match(content, /INFRASTRUCTURE_EMERGENCY_LOCK/);
 });
