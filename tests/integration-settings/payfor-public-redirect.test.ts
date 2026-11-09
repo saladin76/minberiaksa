@@ -67,6 +67,9 @@ function fixture(options: { env?: Env; paid?: boolean; verified?: boolean; throw
     "@/lib/donations/mongo-null": { donationFieldEmpty, donationWhereAll },
     "@/lib/donations/access-token-link": { withDonationToken },
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
+    "@/lib/site-security/payment-initiation-budget": { enforcePaymentInitiationBudget: async () => null },
+    "@/lib/site-security/payfor-verified-decline": { recordSignedPayForDecline: async () => {} },
+
     crypto,
     "next/server": { after() {}, NextResponse: { json: (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), init), redirect: (url: URL, status = 307) => new Response(null, { status, headers: { location: url.href } }) } },
     "@prisma/client": { Prisma: {} }, "@/lib/prisma": { prisma: { ...db, $transaction: async (fn: (tx: typeof db) => unknown) => fn(db) } },
