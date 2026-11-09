@@ -32,6 +32,12 @@ export function parseMaintenanceSnapshot(raw: unknown): MaintenanceSnapshot {
 let cached: { until: number; value: MaintenanceSnapshot } | null = null;
 export function clearMaintenanceCache() { cached = null; }
 export async function readEmergencyMaintenance(fresh = false): Promise<MaintenanceSnapshot> {
+  // Independent infrastructure-level override for a database outage or
+  // compromised application state. Turning this OFF requires the operator
+  // to remove the server environment flag, not merely clicking the UI.
+  if (process.env.EMERGENCY_MAINTENANCE_FORCE === "true") {
+    return { enabled: true, revision: -1, reason: "INFRASTRUCTURE_EMERGENCY_LOCK", updatedAt: null };
+  }
   if (!fresh && cached && cached.until > Date.now()) return cached.value;
   const result = await prisma.$runCommandRaw({
     find: MAINTENANCE_COLLECTION,
