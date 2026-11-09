@@ -7,6 +7,9 @@ Status: DRAFT / UNVERIFIED — not deployed. The presence of code or test files 
 - Never fetch or write donor PII into another institution, share credentials, copy databases or test real cards.
 - Confirm Node.js 24, Prisma/Mongo production permissions, required indices and trusted proxy IP source.
 - Confirm exact site public origin used by same-origin administrative POST requests.
+- Prepare and validate the shared TTL index **before** enabling the fraud limit: `node --import tsx scripts/security/ensure-donation-protection-indexes.ts`. Verify the index exists and that only counter documents expire; do not run this on another institution's database.
+- Qurat Al-Uyun: verify Vercel controlled `x-vercel-forwarded-for` is available and maps to the actual requester; client-controlled `x-real-ip` must not take precedence.
+- Never add the feature flag to production until the verified-failure connectors and first-payment/renewal/rollback checks are approved.
 - Keep `DONATION_ABUSE_GUARD_ENABLED` absent/false until staged checks pass.
 - New site-maintenance state defaults to OFF; do not enable on production during tests.
 
