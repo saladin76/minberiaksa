@@ -431,6 +431,7 @@ test("request enforcement blocks public APIs, preserves recovery callbacks and d
       },
     },
     "./policy": policy,
+    "./emergency-maintenance": { readEmergencyMaintenance: async () => ({ enabled: false, revision: 0, reason: null, updatedAt: null }) },
     "@/lib/geo/ip-lookup": {
       lookupIpGeo: async () => {
         lookups++;
