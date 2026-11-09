@@ -304,6 +304,12 @@ test("Al-Aqsa and Jerusalem mobile heroes use separate media and flow-based copy
   assert.match(css, /mia-story-hero__image[\s\S]*object-fit: cover !important/);
 });
 
+test("Aqsa and Jerusalem project cards collapse below their 340px desktop minimum", () => {
+  const css = read("styles/minbar/minbar.css");
+  const narrowRules = css.match(/@media \(max-width: 620px\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(narrowRules, /\.qd-work \{[^}]*grid-template-columns: minmax\(0,1fr\) !important/);
+});
+
 test("impact cards occupy one wide and two equally narrow rows and mobile assistant stays compact", () => {
   const css = read("styles/minbar/minbar.css");
   assert.doesNotMatch(css, /#impact-metrics > \*:nth-child\(3\)\s*\{\s*grid-column: 1 \/ -1/);
