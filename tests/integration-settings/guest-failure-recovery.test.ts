@@ -117,6 +117,8 @@ async function runRetry(session: unknown, body: unknown, overrides: Record<strin
       create: async () => { writes++; return { id: OTHER, accessToken: CLONE_TOKEN }; },
     } } },
     "@/lib/donations/access-token": { mintDonationAccessToken: () => CLONE_TOKEN, donationTokenMatches },
+
+    "@/lib/site-security/payment-initiation-budget": { enforcePaymentInitiationBudget: async () => null },
     "@/lib/audit-log": {
       writeAuditLog: async () => {}, auditActorFromSiteSession: () => ({ actorRole: "USER" }),
       auditStreamForRole: () => "SITE",
