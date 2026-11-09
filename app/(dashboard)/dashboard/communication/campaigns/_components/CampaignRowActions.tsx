@@ -183,7 +183,8 @@ export function CampaignRowActions({
   };
 
   const send = async () => {
-    setConfirmOpen(false);
+    // Keep the confirmation mounted until the request settles. Closing it on
+    // click can detach the action while the browser is still dispatching it.
     setBusy(true);
     try {
       if (canConfirm) {
@@ -215,6 +216,7 @@ export function CampaignRowActions({
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -285,7 +287,7 @@ export function CampaignRowActions({
         onChanged={onChanged}
       />
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialog open={confirmOpen} onOpenChange={open => { if (!busy) setConfirmOpen(open); }}>
         <AlertDialogContent dir={dashDir()}>
           <AlertDialogHeader>
             <AlertDialogTitle>{dtx("إرسال «{0}»؟", [campaign.name])}</AlertDialogTitle>
@@ -301,7 +303,7 @@ export function CampaignRowActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{dt("إلغاء")}</AlertDialogCancel>
             <AlertDialogAction disabled={busy} onClick={send} className="bg-emerald-600 hover:bg-emerald-700">
               {dt("إرسال الآن")}</AlertDialogAction>
           </AlertDialogFooter>
