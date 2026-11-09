@@ -104,7 +104,10 @@ try {
     await expect(page.getByRole("alertdialog")).toContainText("100"); assert.equal(writes.length,0);
     await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click(); assert.equal(writes.length,0); checks++;
     await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
-    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
+    const confirmSend = page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true});
+    // Opening the dialog fetches a plan asynchronously; do not click while busy.
+    await expect(confirmSend).toBeEnabled({ timeout: 15000 });
+    await confirmSend.click();
     await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
     assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
 
