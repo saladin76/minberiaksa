@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
       donation && donation.providerOrderId && orderId &&
       donation.providerOrderId === orderId &&
       verifyPayForResponseHash(raw, process.env.PAYFOR_MERCHANT_PASS);
-    if (donation && donation.paidAt === null && authenticated) {
+    // A signed approval posted to the FAIL URL is still an approval, not a decline.
+    const bankConfirmedFailure =
+      procReturnCode !== "" && procReturnCode !== "00" &&
+      txnResult.toLowerCase() !== "success";
+    if (donation && donation.paidAt === null && authenticated && bankConfirmedFailure) {
       await prisma.donation.update({
         where: { id: donationId },
         data: {
