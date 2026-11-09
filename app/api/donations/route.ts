@@ -316,7 +316,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
     if (!body || typeof body !== "object" || Array.isArray(body) || !isOrderType(body.type ?? "ONE_TIME")) {
       return NextResponse.json({ error: "Unsupported donation type" }, { status: 400 });
     }
@@ -363,6 +362,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
     const paymentRoute = await resolveNewCardPaymentRoute(request.headers, { method: paymentMethod, type: "ONE_TIME", currency: normalizeDonationCurrencyCode(currency), phone: body.routingPhone ?? guest?.phone, userId: session?.user?.id });
     if (paymentRoute && body.expectedGateway && body.expectedGateway !== paymentRoute.gateway) return NextResponse.json({ error: "Payment route changed. Please confirm the updated payment method.", code: "PAYMENT_ROUTING_CHANGED", gateway: paymentRoute.gateway }, { status: 409 });
 
