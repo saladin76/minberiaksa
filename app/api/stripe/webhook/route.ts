@@ -1,3 +1,5 @@
+import { recordVerifiedDonationFailure } from "@/lib/site-security/donation-abuse-store";
+import { isIP as isValidActorIp } from "node:net";
 import { inheritRecurringAttribution } from "@/lib/donations/recurring-attribution";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { NextRequest, NextResponse } from "next/server";
@@ -478,7 +480,7 @@ export async function POST(req: NextRequest) {
 
         const donation = await prisma.donation.findUnique({
           where: { id: donationId },
-          select: { paidAt: true, status: true },
+          select: { paidAt: true, status: true, attribution: true },
         });
         if (!donation || donation.paidAt || donation.status === "FAILED") break;
 
@@ -497,6 +499,21 @@ export async function POST(req: NextRequest) {
             providerRaw: intent as never,
           },
         });
+        // Only a signed Stripe payment_failed event is eligible. Never count
+        // an optimistic PAID flag, a pending charge, or a connectivity error.
+        const failureIp = donation.attribution && typeof donation.attribution === "object" &&
+          !Array.isArray(donation.attribution) &&
+          "client_ip" in donation.attribution
+            ? (donation.attribution as { client_ip?: unknown }).client_ip : null;
+        if (typeof failureIp === "string" && isValidActorIp(failureIp) &&
+            process.env.DONATION_ABUSE_GUARD_ENABLED === "true") {
+          runAfterResponse(async () => {
+            await recordVerifiedDonationFailure({
+              ip: failureIp, provider: "STRIPE", paymentId: intent.id,
+              providerEventId: event.id, failure: "BANK_DECLINED",
+            }).catch(() => {});
+          });
+        }
         runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
         // Browser may have closed before /api/donations/:id/fail PATCH fired 
         // seed DonateFailed from here so the lookalike audience never misses a
