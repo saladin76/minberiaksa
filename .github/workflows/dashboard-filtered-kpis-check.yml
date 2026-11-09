@@ -26,5 +26,5 @@ jobs:
           npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Filtered KPI regression
         run: node --import tsx --test tests/integration-settings/dashboard-scoped-period.test.ts
-      - name: TypeScript regression baseline
-        run: npm run typecheck:baseline
+      - name: TypeScript integration release
+        run: npm run typecheck:integration-release
