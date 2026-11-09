@@ -68,6 +68,9 @@ function fixture(options: { cardVerification?: boolean; fresh?: boolean; recurri
   };
   const modules: Record<string, unknown> = {
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
+    "@/lib/site-security/payment-initiation-budget": { enforcePaymentInitiationBudget: async () => null },
+    "@/lib/site-security/albaraka-verified-decline": { recordConfirmedAlbarakaSaleDecline: async () => {} },
+
     "@/lib/donations/mixed-cart": mixedCart,
     "next/server": { NextResponse: { json: (body: unknown, init?: ResponseInit) => new Response(JSON.stringify(body), init), redirect: (url: URL, status: number) => new Response(null, { status, headers: { location: url.toString() } }) } },
     "next-auth": { getServerSession: async () => null },

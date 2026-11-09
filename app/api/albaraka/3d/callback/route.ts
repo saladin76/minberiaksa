@@ -1,3 +1,4 @@
+import { recordConfirmedAlbarakaSaleDecline } from "@/lib/site-security/albaraka-verified-decline";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { paymentPublicOrigin } from "@/lib/payment-public-origin";
@@ -253,6 +254,11 @@ export async function POST(req: NextRequest) {
     const responseDescription = sale.ServiceResponseData?.ResponseDescription ?? "";
 
     if (!isAlbarakaApproved(sale)) {
+      // Sale response is server-to-server, after MAC and order/amount verification.
+      // Never promote transport errors or unknown outcomes into fraud declines.
+      await recordConfirmedAlbarakaSaleDecline({
+        responseCode, orderId: orderId || expectedOrderId, donation,
+      });
       return await fail(responseDescription || `Sale declined (${responseCode})`, {
         albarakaSale: sale as unknown as Record<string, unknown>,
       }, responseCode);

@@ -86,6 +86,13 @@ function fixture(mainGateway = "ALBARAKA") {
     "@/lib/donations/payment-routing-server": { resolveNewCardPaymentRoute: async () => null },
     "@/lib/donations/payment-routing": { frozenPaymentRoute },
     "@/lib/tracking/client-ip": clientIp,
+    // The financial simulation has no network ingress and the fraud flag is
+    // disabled: guard helpers are intentionally inert in this isolated VM.
+    "@/lib/site-security/policy": { securityClientIp: () => null },
+    "@/lib/site-security/payment-initiation-budget": {
+      enforceDonationIntakeBudget: async () => null,
+      enforcePaymentInitiationBudget: async () => null,
+    },
     "./recurring-attribution":{inheritRecurringAttribution:async()=>undefined},"server-only": {}, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor", role: "DONOR", name: "Fixture" } }) },
     "@/lib/prisma": { prisma }, "@/lib/locales": { isValidLocale: () => true },
     "@/lib/referral-server": { resolveReferralId: async () => null },
@@ -269,7 +276,7 @@ test("an unsettled renewal with an unknown bank outcome remains paused without a
 for (const frequency of ["DAILY", "FRIDAY", "MONTHLY"]) {
   test(`legacy donation endpoint delegates ${frequency} to the same recurring checkout`, async () => {
     let forwarded: unknown;
-    const route = load("app/api/donations/route.ts", { "next/server": next, "@/lib/donations/recurring-schedule": schedule,
+    const route = load("app/api/donations/route.ts", { "next/server": next, "@/lib/site-security/payment-initiation-budget": { enforceDonationIntakeBudget: async () => null }, "@/lib/donations/recurring-schedule": schedule,
       "@/app/api/cart/payment/route": { POST: async (req: Request) => { forwarded = await req.json(); return { status: 200, data: { success: true } }; } } });
     const body = { type: frequency, items: [{ campaignId: "project", amount: 100 }], currency: "USD", paymentMethod: "CARD", timezone: "Europe/Istanbul", schedule: { hour: 9, minute: 30 } };
     const result = await route.POST(request(body)); assert.equal(result.status, 200); assert.deepEqual(forwarded, body);
@@ -287,7 +294,7 @@ function stripeFixture(withSecret = true) {
     products = { create: async () => ({ id: "prod_fixture" }) };
     subscriptions = { create: async (input: Row, config: Row) => { creates++; options.push([input, config]); return subscription; }, retrieve: async (_id: string, input: Row) => { retrieves++; assert.equal(input.expand[0], "latest_invoice.confirmation_secret"); return subscription; } };
   }
-  const route = load("app/api/stripe/charge/route.ts", {
+  const route = load("app/api/stripe/charge/route.ts", { "@/lib/site-security/payment-initiation-budget": { enforcePaymentInitiationBudget: async () => null },
     "@/lib/donations/payment-routing": { frozenPaymentRoute }, "next/server": next, "next-auth": { getServerSession: async () => ({ user: { id: "donor" } }) }, stripe: Stripe,
     "@/lib/stripe-amount": { toStripeMinorUnits }, "@/lib/donations/recurring-schedule": schedule,
     "@/lib/prisma": { prisma: { donation: { findUnique: async () => donation, update: async ({ data }: Row) => Object.assign(donation, data) }, subscription: { update: async ({ data }: Row) => Object.assign(plan, data) }, $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops) } } });
@@ -469,6 +476,7 @@ for (const [frequency, verificationPassed] of [["DAILY", true], ["FRIDAY", true]
   }
   assert.equal(plan.items.length, 1); assert.equal(plan.items[0].amount, principal);
   const bankDependencies = { ...f.dependencies, crypto,
+    "@/lib/site-security/albaraka-verified-decline": { recordConfirmedAlbarakaSaleDecline: async () => {} },
     "@/lib/donations/access-token": { withDonationToken: (url: string) => url },
     "next/server": { NextResponse: { ...next.NextResponse, redirect: (url: URL, status: number) => ({ status, location: String(url) }) } },
     "@/lib/donations/albaraka-checkout-mode": { albarakaCheckoutMode, isMixedRecurringCheckout },

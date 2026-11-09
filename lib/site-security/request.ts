@@ -1,3 +1,4 @@
+import { readEmergencyMaintenance } from "./emergency-maintenance";
 import {
   NextResponse,
   type NextRequest,
@@ -30,7 +31,33 @@ export async function checkSiteAccess(
   request: NextRequest,
   event?: NextFetchEvent,
 ) {
-  if (isSecurityExemptPath(request.nextUrl.pathname)) return null;
+  // Emergency maintenance is checked before ordinary access restrictions.
+  // Admin, auth, provider callbacks and cron remain reachable to recover and
+  // finish payments already in progress. Existing public payment initiation is
+  // blocked by the same gate as public pages.
+  const pathname = request.nextUrl.pathname;
+  const exempt = isSecurityExemptPath(pathname);
+  if (!exempt) {
+    try {
+      const maintenance = await readEmergencyMaintenance();
+      if (maintenance.enabled) {
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { error: "SITE_UNDER_MAINTENANCE" },
+            { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "300" } },
+          );
+        }
+        return new NextResponse(
+          '<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>صيانة مؤقتة</title><body style="font-family:system-ui;max-width:42rem;margin:16vh auto;padding:2rem;text-align:center"><h1>الموقع يخضع لصيانة أمنية مؤقتة</h1><p>نعمل على حماية عمليات التبرع. لن تُطلب منك إعادة الدفع خلال هذه الفترة.</p><p lang="en" dir="ltr">Temporary security maintenance. Please try again later.</p></body></html>',
+          { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "300" } },
+        );
+      }
+    } catch {
+      // Status must remain explicit to clients, not a false open/closed report.
+      // Emergency-read failure alone must not cause a total outage.
+    }
+  }
+  if (exempt) return null;
   const ip = securityClientIp(request.headers);
   if (!ip) return null;
   const rules = await accessRules().catch(() => null);

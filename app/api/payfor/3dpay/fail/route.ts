@@ -1,10 +1,11 @@
+import { recordSignedPayForDecline } from "@/lib/site-security/payfor-verified-decline";
 import { runAfterResponse } from "@/lib/events/after-response";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse } from "@/lib/payfor";
+import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse, verifyPayForResponseHash } from "@/lib/payfor";
 import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import { isValidLocale } from "@/lib/locales";
 
@@ -35,7 +36,17 @@ export async function POST(req: NextRequest) {
       where: { id: donationId },
     });
 
-    if (donation && donation.paidAt === null) {
+    // An unsigned, mismatched, or MPI-stage result does not prove a bank
+    // decline and must not be allowed to overwrite payment state.
+    const authenticated =
+      donation && donation.providerOrderId && orderId &&
+      donation.providerOrderId === orderId &&
+      verifyPayForResponseHash(raw, process.env.PAYFOR_MERCHANT_PASS);
+    // A signed approval posted to the FAIL URL is still an approval, not a decline.
+    const bankConfirmedFailure =
+      procReturnCode !== "" && procReturnCode !== "00" &&
+      txnResult.toLowerCase() !== "success";
+    if (donation && donation.paidAt === null && authenticated && bankConfirmedFailure) {
       await prisma.donation.update({
         where: { id: donationId },
         data: {
@@ -48,6 +59,8 @@ export async function POST(req: NextRequest) {
           providerRaw: mergePayForProviderRaw(donation.providerRaw, raw) as Prisma.InputJsonValue,
         },
       });
+      // Signed and order-matched issuer declines only; unverified redirects are ignored.
+      runAfterResponse(() => recordSignedPayForDecline(raw, donation));
       runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
       // Seed Meta with the failed attempt so lookalike audiences can include
       // donors-who-tried. Browser pixel fires the matching DonateFailed hit

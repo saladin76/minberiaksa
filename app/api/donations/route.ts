@@ -1,9 +1,10 @@
+import { enforceDonationIntakeBudget } from "@/lib/site-security/payment-initiation-budget";
 import { subscriptionPaymentSequence } from "@/lib/dashboard/subscription-payment-sequence";
 import { loadDonationFinancialSummaries } from "@/lib/dashboard/donation-financial-summary";
 import type { Prisma } from "@prisma/client";
 import { resolveNewCardPaymentRoute } from "@/lib/donations/payment-routing-server";
 import { donorAccountStatus } from "@/lib/dashboard/donor-account";
-import { getTrackingClientIp } from "@/lib/tracking/client-ip";
+import { securityClientIp } from "@/lib/site-security/policy";
 import { donationPaymentEvidence } from "@/lib/donations/payment-evidence";
 import { POST as createCartDonation } from "@/app/api/cart/payment/route";
 import { isOrderType, isRecurringFrequency } from "@/lib/donations/recurring-schedule";
@@ -326,7 +327,7 @@ export async function POST(request: NextRequest) {
       }));
     }
     const session = await getServerSession(authOptions);
-    const clientIp = getTrackingClientIp(request.headers);
+    const clientIp = securityClientIp(request.headers) ?? undefined;
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || undefined;
     const attribution = sanitizeDonationAttribution({
       ...((body.attribution && typeof body.attribution === "object" && !Array.isArray(body.attribution)
@@ -361,6 +362,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
     const paymentRoute = await resolveNewCardPaymentRoute(request.headers, { method: paymentMethod, type: "ONE_TIME", currency: normalizeDonationCurrencyCode(currency), phone: body.routingPhone ?? guest?.phone, userId: session?.user?.id });
     if (paymentRoute && body.expectedGateway && body.expectedGateway !== paymentRoute.gateway) return NextResponse.json({ error: "Payment route changed. Please confirm the updated payment method.", code: "PAYMENT_ROUTING_CHANGED", gateway: paymentRoute.gateway }, { status: 409 });
 

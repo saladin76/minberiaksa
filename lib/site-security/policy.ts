@@ -81,7 +81,7 @@ export function isSecurityExemptPath(path: string) {
   return (
     /^\/(?:[a-z]{2}\/)?(?:dashboard|auth)(?:\/|$)/.test(path) ||
     /^\/api\/(?:admin|auth|webhooks|cron)(?:\/|$)/.test(path) ||
-    /^\/api\/(?:albaraka\/3d\/callback|payfor\/3dpay\/(?:ok|fail)|paypal\/return|stripe\/webhook|telegram\/webhook)(?:\/|$)/.test(
+    /^\/api\/(?:albaraka\/(?:3d\/callback|2d\/result)|payfor\/3dpay\/(?:ok|fail)|paypal\/return|stripe\/webhook|telegram\/webhook)(?:\/|$)/.test(
       path,
     ) ||
     /^\/api\/donations\/(?:albaraka|payfor|paypal)\/(?:callback|webhook)(?:\/|$)/.test(
