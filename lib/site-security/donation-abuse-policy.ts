@@ -56,10 +56,15 @@ export function advanceProtection(
   if (state.phase === "REVIEW_BLOCK") return { ...state, processedEventIds: dedupe(state.processedEventIds, event.eventId) };
   if (state.phase === "COOLDOWN" && state.until !== null && now < state.until)
     return { ...state, processedEventIds: dedupe(state.processedEventIds, event.eventId) };
-  const phase: ProtectionPhase = state.phase === "COOLDOWN" ? "PROBATION" : state.phase;
-  const expired = phase === "NORMAL" && now - state.startedAt >= config.windowMs;
-  const failures = (expired || state.phase === "COOLDOWN" ? 0 : state.failedAttempts) + 1;
-  const startedAt = expired || state.phase === "COOLDOWN" ? now : state.startedAt;
+  // Do not keep a donor on probation forever: after a full clean
+  // observation window the counter returns to NORMAL.
+  const probationExpired = state.phase === "PROBATION" && now - state.startedAt >= config.windowMs;
+  const phase: ProtectionPhase = probationExpired ? "NORMAL"
+    : state.phase === "COOLDOWN" ? "PROBATION" : state.phase;
+  const expired = now - state.startedAt >= config.windowMs;
+  const reset = expired || state.phase === "COOLDOWN";
+  const failures = (reset ? 0 : state.failedAttempts) + 1;
+  const startedAt = reset ? now : state.startedAt;
   const threshold = phase === "PROBATION" ? config.probationFailures : config.initialFailures;
   if (failures >= threshold) {
     return phase === "PROBATION"
