@@ -1,3 +1,4 @@
+import { isVerifiedReturningDonor, bypassProgressiveFraudBlock } from "@/lib/site-security/trusted-donor";
 import { inspectDonationAbuseRestriction } from "@/lib/site-security/donation-abuse-store";
 import "server-only";
 import { createHmac } from "node:crypto";
@@ -62,8 +63,11 @@ export async function enforcePaymentInitiationBudget(
     // Limit the request's donation identity even when no trustworthy IP is available.
     // The IP limit applies site-wide across all guarded Stripe initiation routes.
     if (ip) {
-      const fraud = await inspectDonationAbuseRestriction(ip, now);
-      if (fraud.blocked) return fraudReply(fraud.reason, fraud.retryAt, now);
+      const trusted = await isVerifiedReturningDonor(donationId);
+      if (!bypassProgressiveFraudBlock(trusted)) {
+        const fraud = await inspectDonationAbuseRestriction(ip, now);
+        if (fraud.blocked) return fraudReply(fraud.reason, fraud.retryAt, now);
+      }
       const decision = await count("ip", ip, ipLimit, now);
       if (!decision.accepted) return rateLimit(decision.retryAfterSeconds);
     }
@@ -97,8 +101,11 @@ export async function enforceDonationIntakeBudget(request: NextRequest): Promise
   if (!ip) return null; // Never infer identity from a spoofable request header.
   try {
     const now = Date.now();
-    const fraud = await inspectDonationAbuseRestriction(ip, now);
-    if (fraud.blocked) return fraudReply(fraud.reason, fraud.retryAt, now);
+    const trusted = await isVerifiedReturningDonor();
+    if (!bypassProgressiveFraudBlock(trusted)) {
+      const fraud = await inspectDonationAbuseRestriction(ip, now);
+      if (fraud.blocked) return fraudReply(fraud.reason, fraud.retryAt, now);
+    }
     const decision = await count("intake", ip, 12, now);
     return decision.accepted ? null : rateLimit(decision.retryAfterSeconds);
   } catch {
