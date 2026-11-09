@@ -35,6 +35,8 @@ function orderFixture() {
     "@/lib/donations/mixed-cart": mixed,
     "@/lib/donations/payment-routing-server": { resolveNewCardPaymentRoute: async () => null },
     "@/lib/tracking/client-ip": { getTrackingClientIp: () => null },
+    "@/lib/site-security/policy": { securityClientIp: () => null },
+    "@/lib/site-security/payment-initiation-budget": { enforceDonationIntakeBudget: async () => null },
     "next/server": { NextResponse: { json: (body: Row, init?: Row) => ({ body, status: init?.status ?? 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: donorId, name: "Fixture", role: "DONOR" } }) },
     "../../auth/[...nextauth]/options": { authOptions: {} },
@@ -164,6 +166,7 @@ function stripeFixture(path: string, recurring = true) {
   }
   const route = load(path, {
     "@/lib/donations/payment-routing": { frozenPaymentRoute: () => null },
+    "@/lib/site-security/payment-initiation-budget": { enforcePaymentInitiationBudget: async () => null },
     "next/server": { NextResponse: { json: (body: Row, init?: Row) => ({ body, status: init?.status ?? 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: donorId } }) },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
