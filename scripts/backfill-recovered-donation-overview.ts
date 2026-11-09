@@ -47,7 +47,8 @@ async function main() {
     settledInspected: successful.length,
     eligibleFailedAttempts: linked,
     truncatedAt500Settled: successful.length === 500,
-    financialRecordsChanged: false,
+    presentationMarkersEligibleOrUpdated: linked,
+    paymentStatusesOrSettlementFieldsChanged: false,
   }));
 }
 
