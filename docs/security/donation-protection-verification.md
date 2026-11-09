@@ -51,6 +51,6 @@ Status: DRAFT / UNVERIFIED — not deployed. The presence of code or test files 
 6. Maintain explicit rollback SHA, and do not replay uncertain bank charges.
 
 ## Known remaining blockers
-- No provider-confirmed failure integration across all payment rails yet.
+- Verified Stripe one-time card declines are connected on all three; Minber Albaraka 2D/3D and YediCihan Albaraka 3D Sale issuer codes are connected. PayFor and other payment rails remain UNWIRED until provider authentication and explicit refusal confirmation are available.
 - No end-to-end browser test, CI pass, production deploy or real provider confirmation has been observed in this chat.
 - Site maintenance state is stored in database and fails open if the read layer is unavailable; infrastructure-level incident isolation requires separate hosting controls.
