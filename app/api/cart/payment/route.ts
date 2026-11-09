@@ -158,7 +158,6 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     const body = await request.json();
-    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
     let lineFrequencies: ReturnType<typeof checkoutLineFrequencies>;
     try {
       const count = [body.items, body.categoryItems, body.waqfItems].reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
@@ -314,6 +313,8 @@ export async function POST(request: NextRequest) {
     if (!items.every(lineOk) || !categoryItems.every(lineOk)) {
       return NextResponse.json({ error: "Every line needs a positive amount" }, { status: 400 });
     }
+
+    if (body.paymentMethod === "CARD") { const limited = await enforceDonationIntakeBudget(request); if (limited) return limited; }
 
     /* A campaign line may be a gift: the recipient is named and, per channel
        chosen, reachable. Refused as a whole rather than silently dropped 
