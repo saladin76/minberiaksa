@@ -82,7 +82,8 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
-        timeout-minutes: 5
+        # Ubuntu runner image cold apt downloads can exceed 5 minutes without an application failure.
+        timeout-minutes: 15
         run: |
           if ! command -v ffmpeg >/dev/null 2>&1; then
             sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
