@@ -505,7 +505,10 @@ export async function POST(req: NextRequest) {
           !Array.isArray(donation.attribution) &&
           "client_ip" in donation.attribution
             ? (donation.attribution as { client_ip?: unknown }).client_ip : null;
-        if (typeof failureIp === "string" && isValidActorIp(failureIp) &&
+        const cardError = intent.last_payment_error;
+        const confirmedCardFailure = cardError?.type === "card_error" &&
+          (Boolean(cardError.decline_code) || cardError.code === "card_declined");
+        if (confirmedCardFailure && typeof failureIp === "string" && isValidActorIp(failureIp) &&
             process.env.DONATION_ABUSE_GUARD_ENABLED === "true") {
           runAfterResponse(async () => {
             await recordVerifiedDonationFailure({
