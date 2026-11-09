@@ -231,7 +231,13 @@ export async function GET(request: NextRequest) {
     const statusWhere = donationStatusWhere(statusFilter);
 
     const providerWhere = isAdmin ? donationProviderWhere(searchParams.get("provider")) : null;
-    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere].filter(
+    // Hide resolved duplicate *attempts* only in explicitly requested operational
+    // lists. Raw history (donor profile, exports, failed-only filters) stays intact.
+    const hideRecoveredFailures = isAdmin && searchParams.get("hideRecoveredFailures") === "1" && statusFilter !== "FAILED";
+    const recoveredViewWhere = hideRecoveredFailures
+      ? { OR: [{ status: { not: "FAILED" } }, { overviewRecoveredByDonationId: null }, { overviewRecoveredByDonationId: { isSet: false } }] }
+      : null;
+    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere, recoveredViewWhere].filter(
       (w) => w != null
     );
     const where: Record<string, unknown> =
