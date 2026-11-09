@@ -51,14 +51,21 @@ test("filtered-period revenue does not mix failed or pending attempts with colle
   assert.equal(result.attemptedFailedAmountUSD, 620);
 });
 
-test("dashboard passes status/type into chart request and presents period metrics before the global band", () => {
+test("dashboard uses filter-scoped primary KPI cards with no duplicate period summary", () => {
   const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
   const chart = readFileSync("app/api/admin/donations/chart/route.ts", "utf8");
+  const cards = readFileSync("components/dashboard/HomeDonationSummary.tsx", "utf8");
   assert.match(page, /params\.set\("status", donationsStatusFilter\)/);
   assert.match(page, /params\.set\("donationType", donationsTypeFilter\)/);
   assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
-  assert.ok(page.indexOf('eyebrow={dt("الإيرادات المحصلة للفترة")}') <
-    page.indexOf('eyebrow={dt("إجمالي الإيرادات الناجحة")}'));
+  assert.match(page, /<HomeDonationSummary[\s\S]*?scoped=\{scoped\}/);
+  assert.doesNotMatch(page, /نتائج الفترة المحددة|<MetricSummaryBand/);
+  assert.doesNotMatch(cards, /\/api\/admin\/dashboard-summary|\/api\/admin\/bank-transfers\/summary/);
+  assert.match(cards, /scoped\.paidAmountUSD/);
+  assert.match(cards, /scoped\.oneTimeAmountUSD/);
+  assert.match(cards, /scoped\.recurringAmountUSD/);
+  assert.match(cards, /scoped\.failedCount/);
+  assert.match(cards, /scoped\.pendingCount/);
   assert.match(chart, /donationChartStatusWhere\(/);
   assert.match(chart, /donationChartTypeWhere\(/);
   assert.match(chart, /countPending/);
