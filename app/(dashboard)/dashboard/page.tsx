@@ -32,7 +32,6 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { CHART_THEME } from "@/lib/dashboard/chart-theme";
 import { HomeDonationSummary } from "@/components/dashboard/HomeDonationSummary";
-import { MetricSummaryBand } from "@/components/dashboard/MetricSummaryBand";
 import {
   DashboardFilterBar,
   type ActiveFilterChip,
@@ -880,20 +879,6 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                <MetricSummaryBand
-                  icon={Wallet}
-                  eyebrow={dt("إجمالي الإيرادات الناجحة")}
-                  badge={PERIOD_LABELS[chartPeriod]}
-                  value={chartLoading ? "…" : formatInSelectedCurrency(scoped.paidAmountUSD)}
-                  note={dt("الكروت تعرض نتائج الفلاتر المحددة فقط، ويُحتسب الإيراد من المدفوعات المؤكدة دون المعلّقة أو الفاشلة.")}
-                  stats={[
-                    { label: dt("تبرعات ناجحة"), value: chartLoading ? "…" : scoped.paidCount.toLocaleString("en-US"), icon: HandCoins },
-                    { label: dt("لمرة واحدة"), value: chartLoading ? "…" : formatInSelectedCurrency(scoped.oneTimeAmountUSD), icon: Wallet },
-                    { label: dt("دورية"), value: chartLoading ? "…" : formatInSelectedCurrency(scoped.recurringAmountUSD), icon: Repeat },
-                    { label: dt("تبرعات فاشلة"), value: chartLoading ? "…" : scoped.failedCount.toLocaleString("en-US"), icon: RefreshCw },
-                    { label: dt("قيد التأكيد"), value: chartLoading ? "…" : scoped.pendingCount.toLocaleString("en-US"), icon: Calculator },
-                  ]}
-                />
                 <HomeDonationSummary
                   scoped={scoped}
                   loading={chartLoading}
