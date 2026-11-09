@@ -162,7 +162,7 @@ export async function releaseDonationAbuseActor(input: {
 export async function listRestrictedDonationActors(): Promise<FraudActorRecord[]> {
   const result = await prisma.$runCommandRaw({
     find: DONATION_ABUSE_COLLECTION,
-    filter: { "state.phase": { $in: ["COOLDOWN", "REVIEW_BLOCK"] } },
+    filter: { $or: [{ "state.phase": "REVIEW_BLOCK" }, { "state.phase": "COOLDOWN", "state.until": { $gt: Date.now() } }] },
     sort: { lastEventAt: -1 }, limit: 100, maxTimeMS: 2000,
   });
   return rowsOf(result).map(parseRecord);
