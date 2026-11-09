@@ -1,6 +1,6 @@
 import { inspectDonationAbuseRestriction } from "@/lib/site-security/donation-abuse-store";
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -17,7 +17,9 @@ const ipLimit = 8;
 const donationLimit = 3;
 type CheckResult = { accepted: boolean; retryAfterSeconds: number };
 function identity(scope: "ip" | "donation" | "intake", value: string, bucket: number) {
-  return createHash("sha256").update(scope + ":" + value + ":" + bucket).digest("hex");
+  const secret = process.env.DONATION_ABUSE_HASH_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret || secret.length < 20) throw new Error("PAYMENT_BUDGET_KEY_UNAVAILABLE");
+  return createHmac("sha256", secret).update(scope + ":" + value + ":" + bucket).digest("hex");
 }
 async function count(scope: "ip" | "donation" | "intake", value: string, limit: number, now: number): Promise<CheckResult> {
   const bucket = Math.floor(now / WINDOW_MS);
