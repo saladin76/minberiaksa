@@ -37,6 +37,8 @@ const recoverySelect = {
       giftRecipientEmail: true,
       giftRecipientPhone: true,
       giftMessage: true,
+      giftChannels: true,
+      giftShowAmount: true,
     },
   },
   categoryItems: { select: { categoryId: true, amount: true } },
@@ -53,13 +55,14 @@ const toMinor = (amount: number) =>
 function allocationSignature(row: RecoveryDonation): string | null {
   const lines = [
     ...row.items.map((item) =>
-      ["campaign", item.campaignId, toMinor(item.amount), item.shareCount ?? null,
+      JSON.stringify(["campaign", item.campaignId, toMinor(item.amount), item.shareCount ?? null,
         item.giftRecipientName ?? "", item.giftRecipientEmail ?? "",
-        item.giftRecipientPhone ?? "", item.giftMessage ?? ""].join(":")),
+        item.giftRecipientPhone ?? "", item.giftMessage ?? "",
+        [...item.giftChannels].sort(), item.giftShowAmount])),
     ...row.categoryItems.map((item) =>
-      ["category", item.categoryId, toMinor(item.amount)].join(":")),
+      JSON.stringify(["category", item.categoryId, toMinor(item.amount)])),
     ...row.waqfItems.map((item) =>
-      ["waqf", item.unit, item.count, toMinor(item.amount), item.donorName, item.onBehalf].join(":")),
+      JSON.stringify(["waqf", item.unit, item.count, toMinor(item.amount), item.donorName, item.onBehalf])),
   ];
   if (lines.length === 0) return null;
   return JSON.stringify(lines.sort());
