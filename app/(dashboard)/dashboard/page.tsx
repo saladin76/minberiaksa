@@ -21,12 +21,6 @@ import {
   LayoutDashboard,
   RefreshCw,
   Eye,
-  Wallet,
-  Repeat,
-  HandCoins,
-  Landmark,
-  Users,
-  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/dashboard/PageHeader";
