@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse } from "@/lib/payfor";
+import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse, verifyPayForResponseHash } from "@/lib/payfor";
 import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import { isValidLocale } from "@/lib/locales";
 
@@ -36,7 +36,13 @@ export async function POST(req: NextRequest) {
       where: { id: donationId },
     });
 
-    if (donation && donation.paidAt === null) {
+    // An unsigned, mismatched, or MPI-stage result does not prove a bank
+    // decline and must not be allowed to overwrite payment state.
+    const authenticated =
+      donation && donation.providerOrderId && orderId &&
+      donation.providerOrderId === orderId &&
+      verifyPayForResponseHash(raw, process.env.PAYFOR_MERCHANT_PASS);
+    if (donation && donation.paidAt === null && authenticated) {
       await prisma.donation.update({
         where: { id: donationId },
         data: {
