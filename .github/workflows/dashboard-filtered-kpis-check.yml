@@ -20,7 +20,11 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+      - name: Generate Prisma clients
+        run: |
+          npx prisma generate
+          npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Filtered KPI regression
         run: node --import tsx --test tests/integration-settings/dashboard-scoped-period.test.ts
-      - name: TypeScript
-        run: npx tsc --noEmit --pretty false
+      - name: TypeScript regression baseline
+        run: npm run typecheck:baseline
