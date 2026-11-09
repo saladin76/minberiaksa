@@ -864,8 +864,7 @@ export default function DashboardPage() {
 
 
 
-        {!searchParams.get("userId") && (
-          <section className="space-y-3" aria-label={dt("المؤشرات الأساسية")}>
+        <section className="space-y-3" aria-label={dt("المؤشرات الأساسية")}>
             {chartError ? (
               <div role="alert" className="rounded-xl border border-rose-200 bg-white p-4 text-sm text-rose-700">
                 {dt("تعذر تحميل بيانات الفلتر الحالية. لن نعرض أرقامًا قديمة على أنها نتائج جديدة.")}
@@ -882,7 +881,6 @@ export default function DashboardPage() {
               </>
             )}
           </section>
-        )}
 
         {/* التحليلات */}
         <section className="space-y-4">
