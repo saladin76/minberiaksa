@@ -2,7 +2,7 @@
 import { build } from "esbuild";
 import { chromium, expect } from "@playwright/test";
 import { createServer } from "node:http";
-import { readFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import postcss from "postcss";
 import tailwindcss from "tailwindcss";
@@ -23,9 +23,10 @@ const compiledTailwind = await build({
   entryPoints: [path.resolve("tailwind.config.ts")],
   bundle: true, write: false, platform: "node", format: "cjs", packages: "external",
 });
-const tailwindModule = { exports: {} };
-new Function("module", "exports", "require", compiledTailwind.outputFiles[0].text)(tailwindModule, tailwindModule.exports, require);
-const tailwindConfig = tailwindModule.exports.default ?? tailwindModule.exports;
+const compiledTailwindPath = path.join(artifacts, "tailwind-fixture-config.cjs");
+await writeFile(compiledTailwindPath, compiledTailwind.outputFiles[0].text);
+const loadedTailwind = require(compiledTailwindPath);
+const tailwindConfig = loadedTailwind.default ?? loadedTailwind;
 const css = (await postcss([tailwindcss({ ...tailwindConfig, content: ["app/(dashboard)/dashboard/templates/**/*.tsx", "app/(dashboard)/dashboard/platform-connections/tracking/**/*.tsx", "components/ui/**/*.tsx"] })]).process(baseCss, { from: undefined })).css + "@font-face{font-family:Cairo;src:url(/fixture.woff2)}:root{--font-cairo:Cairo;--font-montserrat:Arial}";
 const id = "a".repeat(24);
 const source = { id, name: "fixture_original", body: "Hello {{1}}", category: "MARKETING", header: { type: "NONE" }, buttons: [{ type: "URL", text: "Donate", url: "https://minberiaksa.org/ar/bagislar?utm_campaign=shared" }, { type: "QUICK_REPLY", text: "إيقاف" }], submittedLocales: ["ar", "en", "tr"], translations: Object.fromEntries(["en", "tr"].map(locale => [locale, { body: "Hello {{1}}", buttons: [{ type: "URL", text: "Donate", url: `https://minberiaksa.org/${locale}/bagislar?language={{1}}` }, { type: "QUICK_REPLY", text: "STOP" }] }])) };
