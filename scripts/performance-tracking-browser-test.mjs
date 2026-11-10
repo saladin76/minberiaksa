@@ -58,6 +58,26 @@ try {
     await expect.poll(() => writes.length).toBe(1);
     assert.equal(writes[0].googleTagManagerId, "GTM-FIXTURE"); assert.equal(writes[0].googleTagManagerEnabled, true); checks++;
     await page.reload(); await expect(page.getByLabel(label(locale, "تفعيل حاوية Google Tag Manager"), { exact: true })).toBeChecked(); checks++;
+    // New Clarity card is an actual editable saved setting, not a decorative input.
+    await page.getByLabel("Project ID", { exact: true }).fill("U60R8ZHRZH");
+    await page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true }).check();
+    await page.getByRole("button", { name: label(locale, "حفظ الإعدادات"), exact: true }).first().click();
+    await expect.poll(() => writes.length).toBe(2);
+    assert.equal(writes[1].clarityEnabled, true);
+    assert.equal(writes[1].clarityProjectId, "U60R8ZHRZH"); checks++;
+    await page.reload();
+    await expect(page.getByLabel("Project ID", { exact: true })).toHaveValue("U60R8ZHRZH");
+    await expect(page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true })).toBeChecked(); checks++;
+    // Read-only inspection checks public settings, not provider recordings.
+    await page.getByRole("button", { name: label(locale, "مطابقة الإعداد العام المحفوظ"), exact: true }).click();
+    await expect.poll(() => configReads).toBeGreaterThan(0); checks++;
+    await page.screenshot({ path: path.join(artifacts, `connections-${locale}-${width}.png`), fullPage: true, animations: "disabled" });
+    await page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true }).uncheck();
+    await page.getByRole("button", { name: label(locale, "حفظ الإعدادات"), exact: true }).first().click();
+    await expect.poll(() => writes.length).toBe(3);
+    assert.equal(writes.at(-1).clarityEnabled, false); checks++;
+    await page.reload();
+    await expect(page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true })).not.toBeChecked(); checks++;
     await page.goto(`${base}/?editor=1&lang=${locale}`);
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: label(locale, "إعداد نسخة بتتبع إيرادات الحملات"), exact: true }).click();
@@ -85,6 +105,24 @@ try {
     assert.equal(requests.some(url => /gtm\.js|contentsquare/.test(url)), false); checks++;
     const commands = await page.evaluate(() => window.dataLayer.map(value => Array.from(value)));
     assert.equal(commands.filter(value => value[0] === "config").length, 3); checks++;
+    await page.close();
+  }
+  // With GTM active, the application must not also load a direct gtag.js.
+  {
+    settings = { googleTagManagerId: "GTM-FIXTURE", googleTagManagerEnabled: true };
+    const page = await browser.newPage();
+    const requests = [];
+    await page.route("**/*", route => {
+      if (!route.request().url().startsWith("https://")) return route.continue();
+      requests.push(route.request().url());
+      return route.fulfill({ contentType: "text/javascript", body: "/* synthetic tag */" });
+    });
+    await page.goto(`${base}/?pixels=1`);
+    await page.getByRole("button", { name: "Interact" }).click();
+    await expect.poll(() => requests.filter(url => url.includes("/gtm.js")).length).toBe(1);
+    assert.equal(requests.filter(url => url.includes("/gtag/js")).length, 0);
+    assert.equal(await page.evaluate(() => window.dataLayer.filter(item => item?.event === "gtm.js").length), 1);
+    checks++;
     await page.close();
   }
   assert.deepEqual(errors, []); assert.deepEqual(unexpected, []);
