@@ -13,6 +13,7 @@ const row = (overrides: Record<string, unknown> = {}): RecoveryDonation => ({
   subscriptionId: null,
   paymentMethod: "CARD",
   provider: "ALBARAKA",
+  providerOrderId: "provider-intent-unique-001",
   amount: 55,
   totalAmount: 55,
   currency: "USD",
@@ -28,10 +29,14 @@ const row = (overrides: Record<string, unknown> = {}): RecoveryDonation => ({
 const paid = (overrides: Record<string, unknown> = {}): RecoveryDonation =>
   row({ id: "b".repeat(24), status: "PAID", paidAt: new Date("2026-11-09T20:00:00Z"), createdAt: new Date("2026-11-09T19:59:00Z"), ...overrides });
 
-test("a confirmed matching later card payment supersedes only the overview failure", () => {
+test("only a provider-correlated later payment supersedes an overview failure", () => {
   assert.equal(isRecoveredFailedAttempt(row(), paid()), true);
   // Historical rows retain status FAILED; matching never mutates financial fields.
   assert.equal(row().status, "FAILED");
+  // Same donor, amount, gateway, campaign and time never establish identity.
+  assert.equal(isRecoveredFailedAttempt(row({ providerOrderId: null }), paid()), false);
+  assert.equal(isRecoveredFailedAttempt(row(), paid({ providerOrderId: null })), false);
+  assert.equal(isRecoveredFailedAttempt(row(), paid({ providerOrderId: "another-intent" })), false);
 });
 
 test("do not hide unmatched donors, projects, currencies, amounts, or card gateways", () => {
@@ -40,6 +45,7 @@ test("do not hide unmatched donors, projects, currencies, amounts, or card gatew
     paid({ currency: "EUR" }),
     paid({ amount: 75, totalAmount: 75 }),
     paid({ provider: "PAYFOR" }),
+    paid({ providerOrderId: "new-checkout-same-amount" }),
     paid({ items: [{ campaignId: "q".repeat(24), amount: 55, giftChannels: [], giftShowAmount: true }] }),
     paid({ items: [{ campaignId: "p".repeat(24), amount: 55, giftRecipientName: "Other", giftChannels: [], giftShowAmount: true }] }),
     paid({ items: [{ campaignId: "p".repeat(24), amount: 55, giftRecipientName: null, giftChannels: ["EMAIL"], giftShowAmount: true }] }),
