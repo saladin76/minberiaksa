@@ -28,7 +28,8 @@ journeys never proves a connected bank settlement.
 4. First runner step calls a password-protected, no-store, read-only
    `GET /api/internal/staging-attestation`. It requires the deployed
    `MINBER_BUILD_SHA` to equal the reviewed commit and confirms a dedicated
-   MongoDB host+database+user fingerprint and an authenticated
+   MongoDB host+port+database+user fingerprint distinct from the independently
+   reviewed `PRODUCTION_DB_IDENTITY_SHA256` and an authenticated
    **readWrite-on-staging-db-only** role. No credentials, URLs, usernames,
    donor records or connection strings are returned.
 5. Runtime Staging identity requires `MINBER_RUNTIME_ROLE=staging`,
@@ -70,6 +71,7 @@ On the external VPS, first verify the source checkout path without changing it:
 test -f /root/minberiaksa/scripts/qa-staging-capability-readonly.sh
 bash /root/minberiaksa/scripts/qa-staging-capability-readonly.sh
 test -f /root/minberiaksa/scripts/qa-vps-runtime-readonly.sh && bash /root/minberiaksa/scripts/qa-vps-runtime-readonly.sh
+test -f /root/minberiaksa/scripts/qa-vps-db-fingerprint-readonly.mjs && node /root/minberiaksa/scripts/qa-vps-db-fingerprint-readonly.mjs
 ```
 The new script is not on the VPS until explicitly checked out in an isolated
 worktree; **do not git pull production to obtain it**. Run it from a reviewed
@@ -82,7 +84,10 @@ To establish the source SHA **actually served by PM2**, an authorized
 dashboard operator must read `/api/admin/build-info` (requires siteContent
 permission), record `sourceSha` and compare with `git rev-parse HEAD`,
 the PM2 app cwd and the Nginx proxy target. Collect only a scrubbed summary.
-Never use `pm2 env`, `cat .env`, SSH output of secrets, live donor data,
+The configured fingerprint is non-secret and is compared with the approved
+Staging fingerprint; it does not itself prove which MongoDB connection a running
+PM2 process holds. Staging approval also requires checking the process and the
+database's authenticated scoped roles. Never use `pm2 env`, `cat .env`, SSH output of secrets, live donor data,
 `git pull`, `npm run build`, or `pm2 restart` for this audit.
 
 ## Staging provisioning checklist (still pending)
