@@ -1,6 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import { createMongoIndexClient } from "../lib/database/mongo-index-client";
 import { ensureOptionalUserEmailIndex } from "../lib/donations/optional-user-email-index";
+import { verifyStagingDatabase } from "../lib/staging/isolation";
 
 loadEnvConfig(process.cwd(), process.env.NODE_ENV === "development");
 
@@ -105,6 +106,20 @@ const indexes = [
 async function run() {
   const checkOnly = process.argv.includes("--check");
   const production = process.argv.includes("--production");
+
+  // The reviewed Staging pipeline MUST NOT run the historic production index
+  // mode. An explicit staging index migration is a separate approved action.
+  if (process.env.MINBER_RUNTIME_ROLE === "staging" && production) {
+    throw new Error("STAGING_PRODUCTION_INDEX_MODE_DENIED");
+  }
+  if (process.argv.includes("--apply")) {
+    if (process.env.STAGING_INDEX_CHANGE_APPROVED !== "1") {
+      throw new Error("STAGING_INDEX_CHANGE_NOT_APPROVED");
+    }
+    // Only a dedicated, reviewed MongoDB user with a staging-only role can
+    // apply indexes. The verification is read-only and runs before any writes.
+    await verifyStagingDatabase(process.env);
+  }
 
   // --production is also used by VPS releases, which have no Vercel variables.
   // Only a known non-production Vercel deployment should skip this step.
