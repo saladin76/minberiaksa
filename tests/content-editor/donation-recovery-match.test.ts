@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { isRecoveredFailedAttempt, DONATION_RECOVERY_WINDOW_MS, type RecoveryDonation } from "../../lib/dashboard/donation-overview-recovery";
+import { isRecoveredFailedAttempt, uniqueRecoveredFailedAttemptIds, DONATION_RECOVERY_WINDOW_MS, type RecoveryDonation } from "../../lib/dashboard/donation-overview-recovery";
 
 const at = new Date("2026-11-09T19:56:00.000Z");
 const row = (overrides: Record<string, unknown> = {}): RecoveryDonation => ({
@@ -69,6 +69,30 @@ test("automated recovery query requires a shared provider order reference", () =
   // No matching solely on donor, amount, project and time.
   assert.equal(isRecoveredFailedAttempt(row({ providerOrderId: null }), paid()), false);
   assert.equal(isRecoveredFailedAttempt(row(), paid({ providerOrderId: "another-order" })), false);
+});
+
+test("ambiguous bank reference must not hide multiple failed records", () => {
+  const single = row();
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([single], paid()), [single.id]);
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([], paid()), []);
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([
+    single,
+    row({ id: "c".repeat(24) }),
+  ], paid()), []);
+  // A separate attempt remains visible even when it has a different allocation.
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([
+    single,
+    row({ id: "c".repeat(24), amount: 25, totalAmount: 25 }),
+  ], paid()), []);
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([row()], paid({ providerOrderId: "other-bank-order" })), []);
+});
+
+test("database recovery query rejects reused orders and truncation", () => {
+  const implementation = readFileSync("lib/dashboard/donation-overview-recovery.ts", "utf8");
+  assert.match(implementation, /settledWithOrder\.length !== 1/);
+  assert.match(implementation, /uniqueRecoveredFailedAttemptIds\(failed, settled\)/);
+  assert.match(implementation, /update\.count === 1/);
+  assert.match(implementation, /take: 2/);
 });
 
 test("recovered view stays explicitly opt-in and raw donor profile and failed filter are preserved", () => {
