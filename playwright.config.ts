@@ -1,22 +1,27 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * End-to-end configuration.
- *
- * Two modes, and the difference matters:
- *
- *   Against a deployment. Set `E2E_BASE_URL` (a preview URL, or staging) and the suite points at it
- *   without starting anything. This is what CI does.
- *
- *   Against a local dev server. With no `E2E_BASE_URL`, Playwright starts `next dev` itself and waits
- *   for it. First compile of a cold route in this project can take a while, hence the long timeouts.
- *
- * There is no third mode where the suite invents its own server and database, because a green run
- * against an empty database would say nothing about whether donations work.
+ * The full suite may write to Staging. Local development, the production URL,
+ * and any CI execution without the authenticated remote attestation are denied.
+ * Synthetic fixtures use playwright.isolated.config.ts instead.
  */
-
-const baseURL = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
-const usingExternal = Boolean(process.env.E2E_BASE_URL);
+const rawBase = process.env.E2E_BASE_URL;
+if (process.env.E2E_PREFLIGHT_PASSED !== "1" || !rawBase ||
+    rawBase !== process.env.STAGING_APPROVED_BASE_URL ||
+    process.env.STAGING_APPROVED_SHA !== process.env.GITHUB_SHA) {
+  throw new Error("E2E_STAGING_PREFLIGHT_REQUIRED: use the reviewed GitHub Environment");
+}
+let parsed: URL;
+try { parsed = new URL(rawBase); }
+catch { throw new Error("E2E_STAGING_BASE_URL_INVALID"); }
+const host = parsed.hostname.toLowerCase().replace(/\\.$/, "");
+if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
+    parsed.search || parsed.hash || (parsed.pathname !== "/" && parsed.pathname !== "") ||
+    ["minberiaksa.org","www.minberiaksa.org","minberiaksa.vercel.app","localhost","127.0.0.1","::1"].includes(host) ||
+    !/(^|[.-])(stage|staging|qa)([.-]|$)/.test(host)) {
+  throw new Error("E2E_PRODUCTION_OR_UNREVIEWED_TARGET_DENIED");
+}
+const baseURL = parsed.origin;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -58,14 +63,5 @@ export default defineConfig({
       testMatch: /(donation-checkout|quick-donate)\.spec\.ts/,
     },
   ],
-  webServer: usingExternal
-    ? undefined
-    : {
-        command: "npm run dev",
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 180_000,
-        stdout: "pipe",
-        stderr: "pipe",
-      },
+  webServer: undefined, // Never start a dev server with inherited production credentials.
 });
