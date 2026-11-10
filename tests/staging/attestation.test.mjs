@@ -109,3 +109,18 @@ test("staging build excludes indexes while production build remains unchanged", 
   const cron = readFileSync("lib/communication/cron-auth.ts", "utf8");
   assert.match(cron, /MINBER_RUNTIME_ROLE === "staging"/);
 });
+
+test("production build guard rejects staging before running Prisma or index steps", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const blocked = spawnSync(process.execPath, ["scripts/reject-staging-production-build.mjs"], {
+    env: { ...process.env, MINBER_RUNTIME_ROLE: "staging", STAGING_BUILD_APPROVED: "1" },
+    encoding: "utf8",
+  });
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stderr, /PRODUCTION_BUILD_DENIED_IN_STAGING/);
+  const normal = spawnSync(process.execPath, ["scripts/reject-staging-production-build.mjs"], {
+    env: { PATH: process.env.PATH, MINBER_RUNTIME_ROLE: "production" },
+    encoding: "utf8",
+  });
+  assert.equal(normal.status, 0);
+});
