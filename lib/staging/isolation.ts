@@ -62,6 +62,16 @@ export function approvedStagingDatabase(env: NodeJS.ProcessEnv): StagingDatabase
   return { digest: identityDigest, database: parsed.database, user: parsed.user, hosts: parsed.hosts };
 }
 
+export function approvedStagingRoles(
+  users: Array<{user?: string; db?: string}> | undefined,
+  roles: Array<{role?: string; db?: string}> | undefined,
+  identity: Pick<StagingDatabaseIdentity, "database" | "user">,
+): boolean {
+  return Array.isArray(users) && users.some(u => u.user === identity.user) &&
+    Array.isArray(roles) && roles.some(r => r.db === identity.database && r.role === "readWrite") &&
+    roles.every(r => r.db === identity.database && r.role === "readWrite");
+}
+
 /** Read-only database role verification, no writes or schema changes. */
 export async function verifyStagingDatabase(env: NodeJS.ProcessEnv): Promise<StagingDatabaseIdentity> {
   const identity = approvedStagingDatabase(env);
@@ -71,9 +81,7 @@ export async function verifyStagingDatabase(env: NodeJS.ProcessEnv): Promise<Sta
     const status = await client.db(identity.database).command({ connectionStatus: 1, showPrivileges: false });
     const users = status?.authInfo?.authenticatedUsers as Array<{user?:string;db?:string}> | undefined;
     const roles = status?.authInfo?.authenticatedUserRoles as Array<{role?:string;db?:string}> | undefined;
-    if (!Array.isArray(users) || !users.some(u => u.user === identity.user) ||
-      !Array.isArray(roles) || !roles.some(r => r.db === identity.database && ["readWrite"].includes(r.role ?? "")) ||
-      roles.some(r => r.db !== identity.database || !["readWrite"].includes(r.role ?? ""))) return fail("MONGO_ROLE_SCOPE_MISMATCH");
+    if (!approvedStagingRoles(users, roles, identity)) return fail("MONGO_ROLE_SCOPE_MISMATCH");
     return identity;
   } catch { return fail("MONGO_ATTESTATION_UNVERIFIED"); }
   finally { await client.close().catch(() => {}); }
