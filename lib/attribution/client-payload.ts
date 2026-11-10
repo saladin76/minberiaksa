@@ -1,6 +1,6 @@
 "use client";
 
-import { DONATION_ATTRIBUTION_KEYS, type DonationAttributionKey } from "./sanitize";
+import { DONATION_ATTRIBUTION_KEYS, safeAttributionUrl, isPaymentReturnPage, type DonationAttributionKey } from "./sanitize";
 import { captureStoredClickIds, clearStoredClickIds } from "@/lib/tracking/click-id-storage";
 
 const PREFIX = "ala_attr_";
@@ -127,12 +127,18 @@ export function captureAttributionFromUrl(): void {
     if (fromUrl) setIfClean(key, fromUrl, true);
   }
 
-  const currentUrl = window.location.href.split("#")[0].slice(0, 2048);
-  setIfClean("first_landing_page", currentUrl, false);
-  setIfClean("landing_page", currentUrl, newTouch);
-  if (document.referrer) {
-    setIfClean("first_referrer", document.referrer.slice(0, 2048), false);
-    setIfClean("referrer", document.referrer.slice(0, 2048), newTouch);
+  const currentUrl = safeAttributionUrl(window.location.href);
+  const isReturn = isPaymentReturnPage(currentUrl);
+  // Gateway success/failure screens are conversion destinations, not original
+  // acquisition landings. Never write the guest receipt token to cookies.
+  if (currentUrl && !isReturn) {
+    setIfClean("first_landing_page", currentUrl, false);
+    setIfClean("landing_page", currentUrl, newTouch);
+  }
+  const safeReferrer = safeAttributionUrl(document.referrer);
+  if (safeReferrer && !isPaymentReturnPage(safeReferrer)) {
+    setIfClean("first_referrer", safeReferrer, false);
+    setIfClean("referrer", safeReferrer, newTouch);
   }
 
   const sessionId = getOrCreateSessionId();
@@ -163,11 +169,14 @@ export function getDonationAttributionPayload(): Record<string, string> {
     if (v) out[key] = v;
   }
 
-  const currentUrl = window.location.href.split("#")[0].slice(0, 2048);
-  out.conversion_page = currentUrl;
-  out.landing_page = out.landing_page || currentUrl;
+  const currentUrl = safeAttributionUrl(window.location.href);
+  if (currentUrl) out.conversion_page = currentUrl;
+  // If attribution was first captured on a bank return, do not fabricate a
+  // landing_page from /success, or store its private query token.
+  if (!out.landing_page && currentUrl && !isPaymentReturnPage(currentUrl)) out.landing_page = currentUrl;
   out.first_landing_page = out.first_landing_page || out.landing_page;
-  if (document.referrer) out.referrer = out.referrer || document.referrer.slice(0, 2048);
+  const safeReferrer = safeAttributionUrl(document.referrer);
+  if (!out.referrer && safeReferrer && !isPaymentReturnPage(safeReferrer)) out.referrer = safeReferrer;
 
   const sessionId = getOrCreateSessionId();
   if (sessionId) out.session_id = out.session_id || sessionId;
