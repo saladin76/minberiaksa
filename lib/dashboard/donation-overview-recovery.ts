@@ -24,6 +24,7 @@ const recoverySelect = {
   paymentMethod: true,
   provider: true,
   providerOrderId: true,
+  overviewRecoveredByDonationId: true,
   amount: true,
   totalAmount: true,
   currency: true,
@@ -78,6 +79,7 @@ export function isRecoveredFailedAttempt(
     failed.id === settled.id ||
     failed.status !== "FAILED" ||
     failed.paidAt !== null ||
+    failed.overviewRecoveredByDonationId != null ||
     settled.status !== "PAID" ||
     settled.paidAt === null ||
     failed.donorId !== settled.donorId ||
@@ -172,10 +174,8 @@ export async function linkRecoveredFailedAttempts(
       provider: settled.provider,
       currency: settled.currency,
       createdAt: { gte: from, lte: settled.createdAt },
-      OR: [
-        { overviewRecoveredByDonationId: null },
-        { overviewRecoveredByDonationId: { isSet: false } },
-      ],
+      // Count already-linked failures too. Ignoring them could make a reused
+      // gateway reference look unique and hide an unrelated failed attempt.
     },
     select: recoverySelect,
     // A second failed row sharing the bank reference makes any link ambiguous.
