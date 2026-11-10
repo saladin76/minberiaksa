@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
-import { clarityProjectId, clarityUserRecordingsUrl } from "../../lib/tracking/clarity-config";
+import { clarityProjectId, clarityUserRecordingsUrl, normalizeClarityProjectId, resolveClarityConnection } from "../../lib/tracking/clarity-config";
 import { isPublicAnalyticsPath } from "../../lib/tracking/private-path";
 import {
   createPointerBurstDetector, donationStageView, isMeasurementHost, landingAttribution,
@@ -250,33 +250,76 @@ test("blocked or throwing analytics providers never break user interaction", () 
   assert.doesNotThrow(() => (api.trackEngagement as (name: string) => void)("first_click"));
 });
 
-test("actual Clarity loader initializes once and excludes preview/development hosts", () => {
-  for (const [host, expected] of [["minberiaksa.org", 1], ["toplamvakfii.vercel.app", 0]] as const) {
-    const b = browser("https://" + host + "/ar");
-    const h = hooks(), ids: string[] = [];
-    const loaded = clientModule("components/MicrosoftClarity.tsx", {
-      react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
-      "@/lib/tracking/engagement-policy": policy,
-      "@/lib/tracking/clarity-config": { clarityProjectId: () => clarityProjectId("configured-test-project") },
-    }, { ...b.globals, process: { env: { NODE_ENV: "production", NEXT_PUBLIC_CLARITY_ID: "configured-test-project" } } });
-    h.render(loaded.default as () => unknown);
-    h.replayEffects();
-    assert.equal(ids.length, expected);
-    if (expected) assert.equal(ids[0], "configured-test-project");
-    h.unmount();
+test("resolved Clarity configuration keeps the legacy project until an operator saves or disables", () => {
+  assert.deepEqual(resolveClarityConnection(null, ""), {
+    clarityProjectId: "u60r8zhrzh", clarityEnabled: true, claritySource: "legacy",
+  });
+  assert.equal(resolveClarityConnection({ clarityProjectId: "  TESTPROJECT42 ", clarityEnabled: true }, "").clarityProjectId, "testproject42");
+  assert.equal(resolveClarityConnection({ clarityEnabled: false }, "").clarityEnabled, false);
+  for (const bad of ["<script>", "https://clarity.invalid", "", "a"]) {
+    assert.equal(normalizeClarityProjectId(bad), null);
   }
 });
 
-test("Clarity falls back to the verified Minber project only on an allowed host", () => {
-  const b = browser(), h = hooks(), ids: string[] = [];
-  const loaded = clientModule("components/MicrosoftClarity.tsx", {
-    react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
+async function mockClarityRuntime(options: {
+  url?: string;
+  enabled?: boolean;
+  project?: string;
+  optOut?: boolean;
+  failure?: boolean;
+} = {}) {
+  const b = browser(options.url ?? "https://minberiaksa.org/ar");
+  const h = hooks(), ids: string[] = [], requests: string[] = [];
+  const allow = options.enabled !== false;
+  const configured = options.project ?? "dynamic1234";
+  const client = clientModule("components/MicrosoftClarity.tsx", {
+    react: h.react,
+    "next/navigation": { usePathname: () => b.win.location.pathname },
+    "@microsoft/clarity": { init: (id: string) => ids.push(id) },
     "@/lib/tracking/engagement-policy": policy,
-    "@/lib/tracking/clarity-config": { clarityProjectId: () => clarityProjectId("") },
-  }, b.globals);
-  h.render(loaded.default as () => unknown);
-  assert.deepEqual(ids, ["u60r8zhrzh"]);
+    "@/lib/tracking/private-path": { isPublicAnalyticsPath },
+    "@/lib/tracking/clarity-config": { normalizeClarityProjectId },
+    "@/lib/tracking/marketing-gate": { whenMarketingAllowed: (cb: () => void) => { cb(); return () => {}; } },
+  }, {
+    ...b.globals,
+    navigator: { doNotTrack: options.optOut ? "1" : "0", globalPrivacyControl: options.optOut },
+    AbortController,
+    fetch: async (url: string) => {
+      requests.push(url);
+      if (options.failure) return { ok: false };
+      return { ok: true, json: async () => ({ clarityEnabled: allow, clarityProjectId: configured }) };
+    },
+  });
+  h.render(client.default as () => unknown);
+  // Flush two promise continuations: GET and JSON normalization.
+  await new Promise<void>(resolve => setImmediate(resolve));
+  h.replayEffects();
+  await new Promise<void>(resolve => setImmediate(resolve));
   h.unmount();
+  return { ids, requests };
+}
+
+test("actual Clarity loader fetches saved runtime config, initializes once and never duplicates on replay", async () => {
+  const result = await mockClarityRuntime();
+  assert.deepEqual(result.ids, ["dynamic1234"]);
+  assert.ok(result.requests.every(url => url === "/api/tracking/config"));
+  assert.ok(result.requests.length >= 1);
+});
+
+test("Clarity never loads on dashboard, donor private routes, preview or explicit privacy opt-out", async () => {
+  for (const options of [
+    { url: "https://minberiaksa.org/dashboard/platform-connections/tracking" },
+    { url: "https://minberiaksa.org/tr/profile" },
+    { url: "https://minberiaksa.org/ar/success/private-receipt" },
+    { url: "https://toplamvakfii.vercel.app/ar" },
+    { optOut: true },
+    { enabled: false },
+    { failure: true },
+    { project: "<img src=x>" },
+  ]) {
+    const result = await mockClarityRuntime(options);
+    assert.equal(result.ids.length, 0, JSON.stringify(options));
+  }
 });
 
 test("actual route tracker ignores currency cleanup but tracks filters/navigation once with safe URLs", () => {
