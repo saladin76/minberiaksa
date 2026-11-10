@@ -148,12 +148,12 @@ export async function linkRecoveredFailedAttempts(
     allocationSignature(settled) === null
   ) return { recoveredIds: [] };
 
-  const from = new Date(settled.createdAt.getTime() - DONATION_RECOVERY_WINDOW_MS);
-  // An order reused for another successful donation cannot safely identify
-  // which failed record it recovered. Query all dates/amounts and stop at two.
+  // A gateway reference must be globally unambiguous, even across donors,
+  // currencies and dates. Shared mixed-cart payments can have independent
+  // financial rows; a reference reused anywhere cannot prove a retry.
+  // Query at most two records to fail closed without scanning large histories.
   const settledWithOrder = await prisma.donation.findMany({
     where: {
-      donorId: settled.donorId,
       status: "PAID",
       provider: settled.provider,
       providerOrderId: settled.providerOrderId,
@@ -167,15 +167,11 @@ export async function linkRecoveredFailedAttempts(
 
   const failed = await prisma.donation.findMany({
     where: {
-      donorId: settled.donorId,
       status: "FAILED",
-      paymentMethod: "CARD",
       providerOrderId: settled.providerOrderId,
       provider: settled.provider,
-      currency: settled.currency,
-      createdAt: { gte: from, lte: settled.createdAt },
-      // Count already-linked failures too. Ignoring them could make a reused
-      // gateway reference look unique and hide an unrelated failed attempt.
+      // Do not filter by date, donor, currency or recovery marker here:
+      // every FAILED row sharing this provider reference is an ambiguity.
     },
     select: recoverySelect,
     // A second failed row sharing the bank reference makes any link ambiguous.
