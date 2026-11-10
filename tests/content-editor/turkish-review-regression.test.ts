@@ -49,7 +49,9 @@ test("reviewed Turkish Iftar story label and still-card navigation are wired", (
   const reels = readFileSync("components/minbar/home/MediaSections.tsx", "utf8");
   assert.match(stories, /story\.title\.trim\(\)\.toLocaleLowerCase\("tr"\) === "iftar"/);
   assert.match(stories, /title: "Bağış"/);
-  assert.match(reels, /href=\{video\.regionKey\.toLowerCase\(\)/);
+  assert.match(reels, /href=\{stillHref\}/);
+  assert.match(reels, /regionHint\.includes\("kudus"\)/);
+  assert.match(reels, /regionHint\.includes\("aksa"\)/);
   assert.match(reels, /miaPath\("jerusalem", locale\)/);
   assert.match(reels, /miaPath\("aqsa", locale\)/);
 });
