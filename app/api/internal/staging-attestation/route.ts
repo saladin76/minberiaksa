@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { realpathSync } from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
 import { verifyStagingDatabase } from "@/lib/staging/isolation";
 
@@ -24,6 +25,15 @@ export async function GET(request: NextRequest) {
   const expectedSha = env.STAGING_APPROVED_SHA;
   const buildSha = env.MINBER_BUILD_SHA;
   const instance = env.STAGING_APPROVED_INSTANCE_ID;
+  const approvedRoot = env.STAGING_APPROVED_ROOT;
+  const approvedPort = env.STAGING_APPROVED_PORT;
+  if (!approvedRoot || !/(stage|staging|[-_]qa)(\\/|$)/i.test(approvedRoot) ||
+      approvedRoot === "/root/minberiaksa" ||
+      !approvedPort || !/^[0-9]{4,5}$/.test(approvedPort) ||
+      approvedPort === "3000" || approvedPort !== env.PORT ||
+      instance !== env.PM2_APP) return reject();
+  try { if (realpathSync(approvedRoot) !== realpathSync(process.cwd())) return reject(); }
+  catch { return reject(); }
   if (!expectedSha || !/^[a-f0-9]{40}$/.test(expectedSha) ||
       buildSha !== expectedSha || !instance ||
       !/^minber-(stage|staging|qa)-[a-z0-9-]{5,64}$/.test(instance)) return reject();
