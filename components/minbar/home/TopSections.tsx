@@ -99,7 +99,7 @@ export function StoriesRail() {
     setSeen(readSeen());
     fetch(`/api/stories?locale=${encodeURIComponent(locale)}`)
       .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((d) => { if (live) setCms(Array.isArray(d?.items) ? d.items : []); })
+      .then((d) => { if (live) setCms(Array.isArray(d?.items) ? d.items.map((story: PublicStory) => locale === "tr" && story.title.trim().toLocaleLowerCase("tr") === "iftar" ? { ...story, title: "Bağış" } : story) : []); })
       .catch(() => { if (live) setCms([]); });
     return () => { live = false; };
   }, [locale]);
