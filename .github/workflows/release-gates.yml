@@ -221,7 +221,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
       - run: node --test tests/staging/*.test.mjs
+      - run: node --import tsx --test tests/staging/*.test.ts
 
   # Mutating E2E is NEVER scheduled on pushes or pull requests.
   # Only a manual, reviewed staging environment can authorize a test run.
