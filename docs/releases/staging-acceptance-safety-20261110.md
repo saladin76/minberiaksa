@@ -35,7 +35,11 @@ journeys never proves a connected bank settlement.
    `STAGING_DISABLE_CRON=1`, `STAGING_DISABLE_MESSAGES=1`,
    `STAGING_PAYMENT_MODE=mock`,
    `STAGING_PROVIDER_NETWORK_DISABLED=1`,
-   `STAGING_EGRESS_POLICY=deny-external`. These flags are necessary but
+   `STAGING_EGRESS_POLICY=deny-external`. Set `STAGING_APPROVED_ROOT`
+   to the real, isolated staging worktree, `STAGING_APPROVED_PORT` to
+   its non-production port, and `PM2_APP` to the approved staging instance.
+   The attestation rejects the live `/root/minberiaksa` directory, port 3000,
+   or a different running directory/PM2 instance. These flags are necessary but
    **NOT proof of network isolation**. The reviewer MUST inspect firewall,
    outbound policy, DNS, actual provider secrets stored in MongoDB, and
    proxy routing independently before approving the GitHub Environment.
