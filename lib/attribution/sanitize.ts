@@ -87,7 +87,10 @@ export type DonationAttributionKey = (typeof DONATION_ATTRIBUTION_KEYS)[number];
  * persist, link or send those credentials to an advertising provider.
  * Keep benign UTM/click parameters intact for exact campaign reconciliation.
  */
-const SENSITIVE_ATTRIBUTION_QUERY = /^(?:t|token|access_?token|auth(?:_token)?|secret|key|api_?key|session_?token|authorization|code|password|passcode|otp|jwt|ticket)$/i;
+// Attribution URLs are shared with dashboards and Meta CAPI. Only retain known
+// campaign/click parameters: a denylist alone misses aliases such as receiptToken.
+const SAFE_ATTRIBUTION_QUERY = /^(?:utm_[a-z0-9_]+|fbclid|fbc|fbp|gclid|dclid|gbraid|wbraid|ttclid|twclid|scclid|scid|sccid|msclkid|snap_click_id|li_fat_id|rdt_cid|campaign_id|adgroup_id|ad_group_id|adset_id|ad_id|creative_id|placement|publisher_platform|network|matchtype|keyword|ref|source|medium|campaign)$/i;
+const SENSITIVE_ATTRIBUTION_QUERY = /(?:token|secret|pass(?:word|code)|credential|authorization|auth(?:entication)?|api[_-]?key|receipt|session|nonce|signature|csrf|otp|jwt|ticket|(?:^|[_-])(?:t|code|key)(?:$|[_-]))/i;
 const ATTRIBUTION_URL_FIELDS = new Set(["landing_page", "first_landing_page", "conversion_page", "referrer", "first_referrer"]);
 export function safeAttributionUrl(raw: unknown): string | null {
   if (typeof raw !== "string" || !raw.trim()) return null;
@@ -98,7 +101,7 @@ export function safeAttributionUrl(raw: unknown): string | null {
     url.password = "";
     url.hash = "";
     for (const name of [...url.searchParams.keys()]) {
-      if (SENSITIVE_ATTRIBUTION_QUERY.test(name)) url.searchParams.delete(name);
+      if (!SAFE_ATTRIBUTION_QUERY.test(name) || SENSITIVE_ATTRIBUTION_QUERY.test(name)) url.searchParams.delete(name);
     }
     return url.toString().slice(0, 2048);
   } catch { return null; }
