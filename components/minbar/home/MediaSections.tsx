@@ -241,9 +241,17 @@ function ReelRail({
             {content}
           </a>
         ) : (
-          <div key={video.id} className="mia-reel" style={cardStyle}>
+          // A CMS entry with a still but no uploaded video remains useful as
+          // a regional project link. Never present it as a playable recording.
+          <Link key={video.id}
+            href={video.regionKey.toLowerCase().includes("aqsa") || video.regionKey.toLowerCase().includes("aksa")
+              ? miaPath("aqsa", locale)
+              : video.regionKey.toLowerCase().includes("quds") || video.regionKey.toLowerCase().includes("kudus")
+                ? miaPath("jerusalem", locale)
+                : miaPath("reports", locale)}
+            className="mia-reel" style={{ ...cardStyle, textDecoration: "none", cursor: "pointer" }}>
             {content}
-          </div>
+          </Link>
         );
       })}
     </Rail>
