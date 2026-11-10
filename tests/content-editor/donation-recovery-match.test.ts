@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { isRecoveredFailedAttempt, uniqueRecoveredFailedAttemptIds, DONATION_RECOVERY_WINDOW_MS, type RecoveryDonation } from "../../lib/dashboard/donation-overview-recovery";
 
 const at = new Date("2026-11-09T19:56:00.000Z");
-const row = (overrides: Record<string, unknown> = {}): RecoveryDonation => ({
+const row = (overrides: Partial<RecoveryDonation> = {}): RecoveryDonation => ({
   id: "a".repeat(24),
   donorId: "d".repeat(24),
   status: "FAILED",
@@ -14,6 +14,7 @@ const row = (overrides: Record<string, unknown> = {}): RecoveryDonation => ({
   paymentMethod: "CARD",
   provider: "ALBARAKA",
   providerOrderId: "provider-intent-unique-001",
+  overviewRecoveredByDonationId: null,
   amount: 55,
   totalAmount: 55,
   currency: "USD",
@@ -24,13 +25,17 @@ const row = (overrides: Record<string, unknown> = {}): RecoveryDonation => ({
   categoryItems: [],
   waqfItems: [],
   ...overrides,
-} as RecoveryDonation);
+});
 
-const paid = (overrides: Record<string, unknown> = {}): RecoveryDonation =>
+const paid = (overrides: Partial<RecoveryDonation> = {}): RecoveryDonation =>
   row({ id: "b".repeat(24), status: "PAID", paidAt: new Date("2026-11-09T20:00:00Z"), createdAt: new Date("2026-11-09T19:59:00Z"), ...overrides });
 
 test("only a provider-correlated later payment supersedes an overview failure", () => {
   assert.equal(isRecoveredFailedAttempt(row(), paid()), true);
+  assert.equal(isRecoveredFailedAttempt(row({ overviewRecoveredByDonationId: null }), paid()), true);
+  assert.equal(isRecoveredFailedAttempt(
+    row({ overviewRecoveredByDonationId: "c".repeat(24) }), paid(),
+  ), false);
   // Historical rows retain status FAILED; matching never mutates financial fields.
   assert.equal(row().status, "FAILED");
   // Same donor, amount, gateway, campaign and time never establish identity.
@@ -46,9 +51,9 @@ test("do not hide unmatched donors, projects, currencies, amounts, or card gatew
     paid({ amount: 75, totalAmount: 75 }),
     paid({ provider: "PAYFOR" }),
     paid({ providerOrderId: "new-checkout-same-amount" }),
-    paid({ items: [{ campaignId: "q".repeat(24), amount: 55, giftChannels: [], giftShowAmount: true }] }),
-    paid({ items: [{ campaignId: "p".repeat(24), amount: 55, giftRecipientName: "Other", giftChannels: [], giftShowAmount: true }] }),
-    paid({ items: [{ campaignId: "p".repeat(24), amount: 55, giftRecipientName: null, giftChannels: ["EMAIL"], giftShowAmount: true }] }),
+    paid({ items: [{ ...row().items[0], campaignId: "q".repeat(24) }] }),
+    paid({ items: [{ ...row().items[0], giftRecipientName: "Other" }] }),
+    paid({ items: [{ ...row().items[0], giftChannels: ["EMAIL"] }] }),
     paid({ teamSupport: 5 }),
     paid({ coverFees: true }),
     paid({ subscriptionId: "s".repeat(24) }),
@@ -90,6 +95,16 @@ test("ambiguous bank reference must not hide multiple failed records", () => {
   const alreadyLinked = row({ id: "c".repeat(24), overviewRecoveredByDonationId: "x".repeat(24) });
   assert.deepEqual(uniqueRecoveredFailedAttemptIds([single, alreadyLinked], paid()), []);
   assert.equal(isRecoveredFailedAttempt(alreadyLinked, paid()), false);
+  // These view-only matchers must not rewrite financial source records.
+  const failedRows = [single, alreadyLinked];
+  const settled = paid();
+  const original = structuredClone({ failedRows, settled });
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds(failedRows, settled), []);
+  assert.deepEqual({ failedRows, settled }, original);
+  assert.equal(single.status, "FAILED");
+  assert.equal(single.paidAt, null);
+  assert.equal(settled.status, "PAID");
+
 
 });
 
