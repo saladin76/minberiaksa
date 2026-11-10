@@ -12,6 +12,8 @@ declare global {
   interface Window {
     __clarityInitialized?: boolean;
     __clarityLoadedProjectId?: string;
+    __claritySuspended?: boolean;
+    clarity?: (...args: unknown[]) => void;
   }
 }
 
@@ -37,9 +39,29 @@ function privacyAllowsRecorder(): boolean {
 export default function MicrosoftClarity() {
   const pathname = usePathname();
   useEffect(() => {
-    if (typeof window === "undefined" || !isMeasurementHost(window.location.hostname) ||
-      !isPublicAnalyticsPath(pathname || window.location.pathname) ||
-      !privacyAllowsRecorder() || window.__clarityInitialized) return;
+    if (typeof window === "undefined") return;
+    const allowed = isMeasurementHost(window.location.hostname) &&
+      isPublicAnalyticsPath(pathname || window.location.pathname) &&
+      privacyAllowsRecorder();
+    // The recorder persists across client navigation: disabling only its
+    // initial load would expose private SPA routes visited later. Stop it at
+    // every sensitive route or privacy revocation without removing the script.
+    if (!allowed) {
+      if (window.__clarityInitialized && !window.__claritySuspended) {
+        try {
+          window.clarity?.("stop");
+          window.__claritySuspended = true;
+        } catch { /* never disrupt navigation */ }
+      }
+      return;
+    }
+    if (window.__clarityInitialized) {
+      if (window.__claritySuspended) {
+        try { window.clarity?.("start"); window.__claritySuspended = false; }
+        catch { /* leave stopped until a fresh safe load */ }
+      }
+      return;
+    }
 
     const controller = new AbortController();
     let active = true;
@@ -60,6 +82,7 @@ export default function MicrosoftClarity() {
         try {
           Clarity.init(id);
           window.__clarityInitialized = true;
+          window.__claritySuspended = false;
           window.__clarityLoadedProjectId = id;
         } catch {
           // Analytics failure must never affect checkout or donor navigation.
