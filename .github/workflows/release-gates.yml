@@ -67,7 +67,9 @@ jobs:
 
   unit:
     name: Integration-settings suite
-    runs-on: ubuntu-latest
+    # Pin Noble rather than rolling ubuntu-latest: the Resolute apt mirror on
+    # the rolling image stalled while fetching FFmpeg and timed out twice.
+    runs-on: ubuntu-24.04
     env:
       # Prisma validate only needs a syntactically valid datasource URL; source-contract
       # tests must not depend on a live production/staging database.
@@ -82,12 +84,15 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
-        timeout-minutes: 5
+        timeout-minutes: 12
         run: |
+          set -euo pipefail
           if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
           fi
+          command -v ffmpeg
+          ffmpeg -hide_banner -version | head -n 1
       - run: npm run test:integration-settings
       - name: Content editor and audit regressions
         run: npm run test:content-editors
