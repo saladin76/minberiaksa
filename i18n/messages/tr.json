@@ -3023,7 +3023,7 @@
     "calcTitle": "Zekât Hesaplama",
     "calcLead": "Nakit, altın, gümüş, yatırım ve ticaret mallarınızı girin, vadesi gelmiş borçlarınızı düşün; malınızın nisaba ulaşıp ulaşmadığını ve zekât miktarını görün.",
     "nisabValue": "Nisab Değeri",
-    "nisabNote": "Nisab 85 gram altın veya 595 gram gümüştür. Nisabın hesaplanması için gram fiyatını kendi para biriminizle girin.",
+    "nisabNote": "Nisap miktarı 80,18 gram altın veya 595 gram gümüştür. Hesaplama için gram fiyatını kendi para biriminizle girin.",
     "calcDisclaimer": "Bu hesaplayıcı tutarı belirlemenize yardımcı bir tahmin aracıdır, fetva değildir. Tereddüt hâlinde, özellikle hisse ve ticaret amaçlı gayrimenkul zekâtında güvenilir bir fıkıh merciine başvurun.",
     "calcSummary": "Zekât Özetiniz",
     "netZakatable": "Net Zekâta Tabi Mal",
