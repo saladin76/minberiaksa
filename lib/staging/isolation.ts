@@ -12,6 +12,20 @@ const isDigest = (value: string | undefined): value is string => /^[0-9a-f]{64}$
 
 export type StagingDatabaseIdentity = { digest: string; database: string; user: string; hosts: string[] };
 
+/** No bank, email, Meta or marketing provider credentials in generic staging E2E. */
+export function assertNoExternalProviderCredentials(env: NodeJS.ProcessEnv): void {
+  const forbidden = [
+    "ALBARAKA_ENC_KEY", "ALBARAKA_2D_ENC_KEY", "ALBARAKA_RECURRING_ENC_KEY",
+    "PAYFOR_USER_PASS", "PAYFOR_MERCHANT_PASS", "PAYPAL_CLIENT_SECRET",
+    "STRIPE_SECRET_KEY", "META_ACCESS_TOKEN", "META_WHATSAPP_ACCESS_TOKEN",
+    "SENDGRID_API_KEY", "BREVO_API_KEY", "ELASTIC_EMAIL_API_KEY",
+    "GA4_API_SECRET",
+  ];
+  if (forbidden.some(key => Boolean(env[key]))) return fail("EXTERNAL_CREDENTIALS_PRESENT");
+  if (env.STAGING_EGRESS_POLICY !== "deny-external") return fail("EGRESS_POLICY_UNREVIEWED");
+}
+
+
 function parseMongoUrl(raw: string): { database: string; user: string; hosts: string[] } {
   if (!/^mongodb(?:\+srv)?:\/\//i.test(raw)) return fail("MONGO_SCHEME");
   const rest = raw.slice(raw.indexOf("://") + 3);
@@ -30,6 +44,7 @@ function parseMongoUrl(raw: string): { database: string; user: string; hosts: st
 
 export function approvedStagingDatabase(env: NodeJS.ProcessEnv): StagingDatabaseIdentity {
   if (env.MINBER_RUNTIME_ROLE !== "staging") return fail("RUNTIME_ROLE");
+  assertNoExternalProviderCredentials(env);
   if (env.STAGING_DISABLE_CRON !== "1" || env.STAGING_DISABLE_MESSAGES !== "1" ||
     env.STAGING_PAYMENT_MODE !== "mock" || env.STAGING_PROVIDER_NETWORK_DISABLED !== "1") return fail("SIDE_EFFECTS_ENABLED");
   if (!isSha(env.STAGING_APPROVED_SHA) || !isDigest(env.STAGING_APPROVED_DB_IDENTITY_SHA256) ||
@@ -57,8 +72,8 @@ export async function verifyStagingDatabase(env: NodeJS.ProcessEnv): Promise<Sta
     const users = status?.authInfo?.authenticatedUsers as Array<{user?:string;db?:string}> | undefined;
     const roles = status?.authInfo?.authenticatedUserRoles as Array<{role?:string;db?:string}> | undefined;
     if (!Array.isArray(users) || !users.some(u => u.user === identity.user) ||
-      !Array.isArray(roles) || !roles.some(r => r.db === identity.database && ["readWrite","read","dbOwner"].includes(r.role ?? "")) ||
-      roles.some(r => r.db !== identity.database || !["readWrite","read","dbOwner"].includes(r.role ?? ""))) return fail("MONGO_ROLE_SCOPE_MISMATCH");
+      !Array.isArray(roles) || !roles.some(r => r.db === identity.database && ["readWrite"].includes(r.role ?? "")) ||
+      roles.some(r => r.db !== identity.database || !["readWrite"].includes(r.role ?? ""))) return fail("MONGO_ROLE_SCOPE_MISMATCH");
     return identity;
   } catch { return fail("MONGO_ATTESTATION_UNVERIFIED"); }
   finally { await client.close().catch(() => {}); }
