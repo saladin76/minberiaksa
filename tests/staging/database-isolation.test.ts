@@ -8,6 +8,7 @@ const name = "minber_staging";
 const user = "minber_staging_rw";
 const fingerprint = createHash("sha256").update(JSON.stringify([[host], name, user])).digest("hex");
 const approved = (): NodeJS.ProcessEnv => ({
+  NODE_ENV: "test",
   MINBER_RUNTIME_ROLE: "staging",
   STAGING_DISABLE_CRON: "1",
   STAGING_DISABLE_MESSAGES: "1",
