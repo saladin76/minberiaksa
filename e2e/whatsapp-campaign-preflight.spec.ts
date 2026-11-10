@@ -10,8 +10,8 @@ import { signInAsStaff, skipUnless, STAFF } from "./support/helpers";
  * template READY from a hand-typed local field while every send of it failed - so what these assert is
  * that the readiness the screen shows is the readiness the sender would use.
  *
- * Nothing is sent. No Meta API call is made by the test itself; the sync endpoint is exercised only for
- * its refusal path when the provider is not configured.
+ * The provider-sync refusal is a browser fixture. No request reaches the real
+ * synchronization endpoint, even if the staging provider becomes configured.
  */
 test.describe("WhatsApp campaign preflight", () => {
   test.beforeEach(async ({ page }, testInfo) => {
@@ -57,7 +57,15 @@ test.describe("WhatsApp campaign preflight", () => {
     }
   });
 
-  test("the template sync refuses cleanly when Meta is not configured", async ({ page }) => {
+  test("the template sync refusal is rendered from an isolated 502 fixture", async ({ page }) => {
+    // An actual POST can fetch and persist Meta templates. It is forbidden in
+    // the generic acceptance suite: validate refusal handling with a mock.
+    let attempted = 0;
+    await page.route("**/api/dashboard/communication/whatsapp/templates/sync", async route => {
+      if (route.request().method() !== "POST") return route.abort("blockedbyclient");
+      attempted++;
+      await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ ok: false, error: "META_NOT_CONFIGURED_FIXTURE" }) });
+    });
     const result = await page.evaluate(async () => {
       const res = await fetch("/api/dashboard/communication/whatsapp/templates/sync", {
         method: "POST",
@@ -66,10 +74,8 @@ test.describe("WhatsApp campaign preflight", () => {
       return { status: res.status, body: await res.json().catch(() => null) };
     });
 
-    /* 200 when the provider is configured and the sync ran, 502 with a named reason when it is not,
-       403 without the permission. What must not happen is a 500 with no explanation, or a 200 that
-       reports a successful sync of nothing. */
-    expect([200, 403, 502], `sync answered ${result.status}`).toContain(result.status);
+    expect(attempted).toBe(1);
+    expect(result.status, "mocked sync did not return refused status").toBe(502);
 
     const body = result.body as { ok?: boolean; error?: string; summary?: Record<string, unknown> } | null;
     if (result.status === 502) {
