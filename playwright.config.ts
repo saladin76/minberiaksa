@@ -14,7 +14,7 @@ if (process.env.E2E_PREFLIGHT_PASSED !== "1" || !rawBase ||
 let parsed: URL;
 try { parsed = new URL(rawBase); }
 catch { throw new Error("E2E_STAGING_BASE_URL_INVALID"); }
-const host = parsed.hostname.toLowerCase().replace(/\\.$/, "");
+const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
 if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
     parsed.search || parsed.hash || (parsed.pathname !== "/" && parsed.pathname !== "") ||
     ["minberiaksa.org","www.minberiaksa.org","minberiaksa.vercel.app","localhost","127.0.0.1","::1"].includes(host) ||
