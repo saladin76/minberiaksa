@@ -53,3 +53,16 @@ test("reviewed Turkish Iftar story label and still-card navigation are wired", (
   assert.match(reels, /miaPath\("jerusalem", locale\)/);
   assert.match(reels, /miaPath\("aqsa", locale\)/);
 });
+
+test("donor linked identities and login code panels have a Turkish path", () => {
+  for (const file of ["components/auth/DonorLinkedIdentities.tsx", "components/auth/DonorCodeLogin.tsx"]) {
+    const src = readFileSync(file, "utf8");
+    assert.match(src, /locale === "tr"/);
+  }
+  const identities = readFileSync("components/auth/DonorLinkedIdentities.tsx", "utf8");
+  assert.match(identities, /Giriş Yöntemleri ve Bağlı Hesaplar/);
+  assert.match(identities, /Birincil e-posta/);
+  const login = readFileSync("components/auth/DonorCodeLogin.tsx", "utf8");
+  assert.match(login, /Kodu Nasıl Almak İstersiniz/);
+  assert.match(login, /Giriş Kodu Gönder/);
+});
