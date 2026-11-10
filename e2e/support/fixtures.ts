@@ -9,13 +9,22 @@ export const test = base.extend({
   request: async ({ request }, use) => {
     // The APIRequestContext fixture bypasses page.route. Deny mutating API
     // calls here too, so future tests cannot silently bypass browser guards.
+    const stagingOrigin = new URL(process.env.E2E_BASE_URL ?? "").origin;
+    const sameOrigin = (url: string) => new URL(url, stagingOrigin).origin === stagingOrigin;
     const safe = new Proxy(request, {
       get(target, key) {
         if (["post", "put", "patch", "delete"].includes(String(key))) {
           return async () => { throw new Error("E2E_MUTATING_REQUEST_DENIED"); };
         }
+        if (key === "get" || key === "head") {
+          return async (url: string, options?: { headers?: Record<string, string> }) => {
+            if (!sameOrigin(url)) throw new Error("E2E_EXTERNAL_API_REQUEST_DENIED");
+            return key === "get" ? target.get(url, options) : target.head(url, options);
+          };
+        }
         if (key === "fetch") {
           return async (url: string, options?: { method?: string }) => {
+            if (!sameOrigin(url)) throw new Error("E2E_EXTERNAL_API_REQUEST_DENIED");
             if (!["GET", "HEAD", "OPTIONS"].includes((options?.method ?? "GET").toUpperCase())) {
               throw new Error("E2E_MUTATING_REQUEST_DENIED");
             }
