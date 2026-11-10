@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { approvedStagingDatabase, approvedStagingRoles } from "../../lib/staging/isolation";
 
-const host = "cluster-qa.example.invalid";
+const host = "cluster-qa.example.invalid:27017";
 const name = "minber_staging";
 const user = "minber_staging_rw";
 const fingerprint = createHash("sha256").update(JSON.stringify([[host], name, user])).digest("hex");
@@ -20,7 +20,7 @@ const approved = (): NodeJS.ProcessEnv => ({
   STAGING_APPROVED_DB_USER: user,
   STAGING_APPROVED_DB_HOSTS: host,
   PRODUCTION_DB_IDENTITY_SHA256: "b".repeat(64),
-  DATABASE_URL: `mongodb://${user}:fixture@${host}:27017/${name}?authSource=admin`,
+  DATABASE_URL: `mongodb://${user}:fixture@${host}/${name}?authSource=admin`,
 });
 const rejected = (env: NodeJS.ProcessEnv) => assert.throws(() => approvedStagingDatabase(env), /STAGING_ISOLATION_DENIED:/);
 
@@ -40,6 +40,7 @@ test("staging database guard rejects production roles, hosts, users and shared i
   rejected({ ...approved(), DATABASE_URL: "mongodb://minber_staging_rw:fixture@cluster-qa.example.invalid:27017/minber_production" });
   rejected({ ...approved(), STAGING_APPROVED_DB_USER: "minber_prod_user" });
   rejected({ ...approved(), STAGING_APPROVED_DB_HOSTS: "production.example.invalid" });
+  rejected({ ...approved(), DATABASE_URL: `mongodb://${user}:fixture@cluster-qa.example.invalid:27018/${name}` });
   rejected({ ...approved(), PRODUCTION_DB_IDENTITY_SHA256: fingerprint });
   rejected({ ...approved(), ALBARAKA_ENC_KEY: "synthetic-prod-key" });
   rejected({ ...approved(), META_WHATSAPP_ACCESS_TOKEN: "synthetic-token" });
