@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import ts from "typescript";
 import * as canonical from "../../lib/tracking/canonical";
 import * as clientIp from "../../lib/tracking/client-ip";
+import * as attributionSanitizer from "../../lib/attribution/sanitize";
 
 // VM module interfaces and the Mongo fixture contain intentionally dynamic documents.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +53,7 @@ function fixture(overrides: Row = {}) {
   };
   const deps: Row = {
     "@/lib/prisma": { prisma }, "@/lib/tracking/canonical": canonical,
+    "@/lib/attribution/sanitize": attributionSanitizer,
     "@/lib/prisma-raw-command": { rawCommand: (v: unknown) => v, firstBatch: (reply: Row) => reply.cursor.firstBatch },
     "@/lib/tracking/conversion-event-indexes": { ensureConversionEventIndexes: async () => true },
     "@/lib/tracking/conversion-audit": { writeConversionAudit: async () => {}, pickAttributionForAudit: () => ({}), toTurkeyIso: () => null },
@@ -68,6 +70,7 @@ test("confirmed payment emits Donate and Purchase with independent IDs and one c
   const f = fixture();
   assert.equal((await f.server.sendDonationServerConversions(f.row.id)).ok, true);
   assert.deepEqual(f.metaCalls.map(c => c.event_name), ["Donate", "Purchase"]);
+  assert.ok(f.metaCalls.every(c => c.event_source_url === "https://minberiaksa.org/"), "never leak private or fictitious receipt URLs to Meta");
   assert.deepEqual(f.metaCalls.map(c => c.event_id), [canonical.metaDonationEventId(f.row.id, "success"), canonical.metaPurchaseEventId(f.row.id)]);
   for (const event of f.metaCalls) {
     assert.equal(event.custom_data.value, 13); assert.equal(event.custom_data.currency, "TRY");
