@@ -9,6 +9,11 @@ export async function GET() {
   } catch (e) {
     console.error("Error fetching tracking config:", e);
     return NextResponse.json({
+      // Database read failure must not silently re-enable a previously disabled recorder.
+      clarityProjectId: null,
+      clarityEnabled: false,
+      googleTagManagerId: null,
+      googleTagManagerEnabled: false,
       facebookPixelId: null,
       gaMeasurementId: null,
       googleAdsConversionId: null,
