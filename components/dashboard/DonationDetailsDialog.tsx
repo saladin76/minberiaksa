@@ -278,7 +278,7 @@ function SourceSummary({
         <div className="flex items-center gap-2">
           <span className={cn("inline-block w-2 h-2 rounded-full", STATUS_DOT_BANNER[result.status])} aria-hidden />
           <span className="text-sm font-semibold">{result.sourceLabel || PLATFORM_LABEL_AR[result.platform]}</span>
-          <span className="text-[11px] opacity-70">— {STATUS_LABEL_AR[result.status]}</span>
+          <span className="text-[11px] opacity-70">— {result.sourceKind === "referral" && !result.sourceDetails.some(x => x.key === "utm_medium" && /^(cpc|paid|paid_social)$/i.test(x.value)) ? dt("إحالة مرصودة، ليست إعلانًا موثقًا") : STATUS_LABEL_AR[result.status]}</span>
         </div>
         <div className="text-[11px] font-medium opacity-80">{dtx("الثقة {0}%", [result.confidence])}</div>
       </div>
