@@ -43,6 +43,7 @@ test("staging database guard rejects production roles, hosts, users and shared i
   rejected({ ...approved(), STAGING_APPROVED_DB_HOSTS: "production.example.invalid" });
   rejected({ ...approved(), DATABASE_URL: `mongodb://${user}:fixture@cluster-qa.example.invalid:27018/${name}` });
   rejected({ ...approved(), PRODUCTION_DB_IDENTITY_SHA256: fingerprint });
+  rejected({ ...approved(), PRODUCTION_DB_IDENTITY_SHA256: "" });
   rejected({ ...approved(), ALBARAKA_ENC_KEY: "synthetic-prod-key" });
   rejected({ ...approved(), META_WHATSAPP_ACCESS_TOKEN: "synthetic-token" });
 });
