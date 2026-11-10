@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const instance = env.STAGING_APPROVED_INSTANCE_ID;
   const approvedRoot = env.STAGING_APPROVED_ROOT;
   const approvedPort = env.STAGING_APPROVED_PORT;
-  if (!approvedRoot || !/(stage|staging|[-_]qa)(\\/|$)/i.test(approvedRoot) ||
+  if (!approvedRoot || !/(staging|stage|[-_]qa)(\/|$)/i.test(approvedRoot) ||
       approvedRoot === "/root/minberiaksa" ||
       !approvedPort || !/^[0-9]{4,5}$/.test(approvedPort) ||
       approvedPort === "3000" || approvedPort !== env.PORT ||
