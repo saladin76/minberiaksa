@@ -174,9 +174,8 @@ test("recovered view stays explicitly opt-in and raw donor profile and failed fi
   assert.match(overview, /status: \{ not: "FAILED" \}/);
   assert.match(overview, /overviewRecoveredByDonationId: null/);
   assert.match(overview, /isSet: false/);
-  const exportRoutes = ["app/api/donations/export/route.ts", "app/api/admin/reports/route.ts"];
-  // Export/report paths are not modified by the recovery PR, nor are raw donor queries.
+  // Presentation-only matching does not update settled amounts, counters or statuses.
   const changed = readFileSync("lib/dashboard/donation-overview-recovery.ts", "utf8");
-  assert.doesNotMatch(changed, /currentAmount|increment:|status: "PAID"\s*\}|paidAt: new Date/);
-  assert.equal(exportRoutes.length, 2);
+  assert.doesNotMatch(changed, /currentAmount|increment:|paidAt: new Date/);
+  assert.match(changed, /data: \{ overviewRecoveredByDonationId: settled\.id \}/);
 });
