@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures";
 
 /**
  * Certificates carry a donor's name and a serial, and they are shared. Two things matter here, and only
