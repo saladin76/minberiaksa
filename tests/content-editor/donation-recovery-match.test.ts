@@ -85,6 +85,12 @@ test("ambiguous bank reference must not hide multiple failed records", () => {
     row({ id: "c".repeat(24), amount: 25, totalAmount: 25 }),
   ], paid()), []);
   assert.deepEqual(uniqueRecoveredFailedAttemptIds([row()], paid({ providerOrderId: "other-bank-order" })), []);
+
+  // An already linked failure remains part of the ambiguity check.
+  const alreadyLinked = row({ id: "c".repeat(24), overviewRecoveredByDonationId: "x".repeat(24) });
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([single, alreadyLinked], paid()), []);
+  assert.equal(isRecoveredFailedAttempt(alreadyLinked, paid()), false);
+
 });
 
 test("database recovery query rejects reused orders and truncation", () => {
@@ -93,6 +99,10 @@ test("database recovery query rejects reused orders and truncation", () => {
   assert.match(implementation, /uniqueRecoveredFailedAttemptIds\(failed, settled\)/);
   assert.match(implementation, /update\.count === 1/);
   assert.match(implementation, /take: 2/);
+  assert.match(implementation, /overviewRecoveredByDonationId != null/);
+  const failedQuery = implementation.split("const failed = await prisma.donation.findMany(")[1]?.split("const recoveredIds =")[0] ?? "";
+  assert.doesNotMatch(failedQuery, /overviewRecoveredByDonationId: \{ isSet: false \}/);
+
 });
 
 test("recovered view stays explicitly opt-in and raw donor profile and failed filter are preserved", () => {
