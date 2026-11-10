@@ -15,7 +15,9 @@ export default async function SearchPage({ params, searchParams }: {
   const results = q.length >= 2 ? await searchPublicContent(safeLocale, q, 48) : [];
   const labels = ar
     ? { title: "البحث في الموقع", placeholder: "ابحث عن مشروع أو مقال أو خبر", go: "بحث", empty: "لا توجد نتائج مطابقة. جرّب كلمات أخرى.", hint: "اكتب كلمتين أو أكثر للبحث", project: "مشروع", article: "مقال", news: "خبر" }
-    : { title: "Search the website", placeholder: "Search projects, articles and news", go: "Search", empty: "No matching results. Try different keywords.", hint: "Enter at least two characters", project: "Project", article: "Article", news: "News" };
+    : safeLocale === "tr"
+      ? { title: "Sitede Ara", placeholder: "Proje, makale veya haber ara", go: "Ara", empty: "Aramanızla eşleşen sonuç bulunamadı. Farklı anahtar kelimeler deneyin.", hint: "Aramak için en az iki karakter girin.", project: "Proje", article: "Makale", news: "Haber" }
+      : { title: "Search the website", placeholder: "Search projects, articles and news", go: "Search", empty: "No matching results. Try different keywords.", hint: "Enter at least two characters", project: "Project", article: "Article", news: "News" };
   return (
     <main className="mia-site-search-page" dir={localeDirection(safeLocale)}>
       <div className="mia-site-search-page__inner">
