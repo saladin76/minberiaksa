@@ -66,6 +66,47 @@ test("do not hide unmatched donors, projects, currencies, amounts, or card gatew
   for (const candidate of incompatible) assert.equal(isRecoveredFailedAttempt(row(), candidate), false);
 });
 
+test("multi-project allocations require exact items and remain immutable", () => {
+  const projectA = row().items[0];
+  const projectB = { ...projectA, campaignId: "q".repeat(24), amount: 20 };
+  const projectA35 = { ...projectA, amount: 35 };
+  const failed = row({
+    amount: 55, totalAmount: 55,
+    items: [projectA35, projectB],
+    overviewRecoveredByDonationId: null,
+  });
+  const successful = paid({
+    amount: 55, totalAmount: 55,
+    items: [projectB, projectA35],
+  });
+  const before = structuredClone({ failed, successful });
+  assert.equal(isRecoveredFailedAttempt(failed, successful), true);
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([failed], successful), [failed.id]);
+  assert.deepEqual({ failed, successful }, before);
+  assert.equal(isRecoveredFailedAttempt(failed, paid({
+    items: [{ ...projectA35, amount: 34 }, { ...projectB, amount: 21 }],
+  })), false, "same total with different project allocation is not a recovery");
+  assert.deepEqual(uniqueRecoveredFailedAttemptIds([
+    failed,
+    row({ id: "c".repeat(24), items: [projectA35, projectB], amount: 55, totalAmount: 55 }),
+  ], successful), [], "bank order shared by two failed multi-project records is ambiguous");
+});
+
+test("bank reference uniqueness query includes all donors/currencies/dates", () => {
+  const implementation = readFileSync("lib/dashboard/donation-overview-recovery.ts", "utf8");
+  const successfulQuery = implementation.split("const settledWithOrder = await prisma.donation.findMany(")[1]?.split("if (settledWithOrder.length")[0] ?? "";
+  const failuresQuery = implementation.split("const failed = await prisma.donation.findMany(")[1]?.split("const recoveredIds =")[0] ?? "";
+  assert.ok(successfulQuery);
+  assert.ok(failuresQuery);
+  for (const q of [successfulQuery, failuresQuery]) {
+    assert.doesNotMatch(q, /donorId: settled\.donorId/);
+    assert.doesNotMatch(q, /currency: settled\.currency/);
+    assert.doesNotMatch(q, /createdAt: \{/);
+    assert.match(q, /providerOrderId: settled\.providerOrderId/);
+    assert.match(q, /take: 2/);
+  }
+});
+
 test("automated recovery query requires a shared provider order reference", () => {
   const implementation = readFileSync("lib/dashboard/donation-overview-recovery.ts", "utf8");
   assert.match(implementation, /!failed\.providerOrderId/);
@@ -128,4 +169,14 @@ test("recovered view stays explicitly opt-in and raw donor profile and failed fi
   assert.match(api, /statusFilter !== "FAILED"/);
   assert.match(dashboard, /params\.set\("hideRecoveredFailures", "1"\)/);
   assert.doesNotMatch(donor, /overviewRecoveredByDonationId/);
+  assert.match(api, /const hideRecoveredFailures = isAdmin && searchParams\.get\("hideRecoveredFailures"\) === "1" && statusFilter !== "FAILED"/);
+  const overview = api.split("const recoveredViewWhere =")[1]?.split("const extraFilters =")[0] ?? "";
+  assert.match(overview, /status: \{ not: "FAILED" \}/);
+  assert.match(overview, /overviewRecoveredByDonationId: null/);
+  assert.match(overview, /isSet: false/);
+  const exportRoutes = ["app/api/donations/export/route.ts", "app/api/admin/reports/route.ts"];
+  // Export/report paths are not modified by the recovery PR, nor are raw donor queries.
+  const changed = readFileSync("lib/dashboard/donation-overview-recovery.ts", "utf8");
+  assert.doesNotMatch(changed, /currentAmount|increment:|status: "PAID"\s*\}|paidAt: new Date/);
+  assert.equal(exportRoutes.length, 2);
 });
