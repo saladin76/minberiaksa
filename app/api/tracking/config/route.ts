@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPublicTrackingConfig } from "@/lib/tracking/tracking-settings";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/tracking/config  public browser config only. No access tokens or API secrets.
 export async function GET() {
   try {
