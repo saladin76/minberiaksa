@@ -124,3 +124,15 @@ test("production build guard rejects staging before running Prisma or index step
   });
   assert.equal(normal.status, 0);
 });
+
+test("staging build rejects absent approval before any Prisma connection or index work", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const noApproval = spawnSync(process.execPath, ["--import", "tsx", "scripts/staging-build-preflight.ts"], {
+    env: { PATH: process.env.PATH, NODE_ENV: "test", MINBER_RUNTIME_ROLE: "staging", STAGING_BUILD_APPROVED: "0" },
+    encoding: "utf8",
+    timeout: 12000,
+  });
+  assert.equal(noApproval.status, 1);
+  assert.match(noApproval.stderr, /STAGING_BUILD_DENIED/);
+  assert.doesNotMatch(noApproval.stdout + noApproval.stderr, /mongodb:\/\/|@cluster|secret/i);
+});
