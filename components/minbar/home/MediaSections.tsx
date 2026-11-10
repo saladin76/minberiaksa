@@ -162,6 +162,7 @@ function ReelRail({
 }) {
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
 
   return (
     <Rail
