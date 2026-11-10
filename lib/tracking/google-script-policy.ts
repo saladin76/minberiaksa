@@ -67,7 +67,7 @@ export function loadConfiguredGoogleTagManager(settings: Record<string, unknown>
     scope.dataLayer ??= [];
     // The container owns Google tags in GTM mode. Queue existing browser
     // conversion commands but never install a second gtag.js/config tag.
-    if (!scope.gtag) scope.gtag = function () { scope.dataLayer?.push(arguments); };
+    if (!scope.gtag) scope.gtag = (...args: unknown[]) => { scope.dataLayer?.push(args); };
     scope.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
   }
   const src = `https://www.googletagmanager.com/gtm.js?id=${id}`;
