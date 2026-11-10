@@ -6,6 +6,28 @@ import { test as base, expect } from "@playwright/test";
  * Sandbox payment scenarios need separate, explicitly reviewed fixtures.
  */
 export const test = base.extend({
+  request: async ({ request }, use) => {
+    // The APIRequestContext fixture bypasses page.route. Deny mutating API
+    // calls here too, so future tests cannot silently bypass browser guards.
+    const safe = new Proxy(request, {
+      get(target, key) {
+        if (["post", "put", "patch", "delete"].includes(String(key))) {
+          return async () => { throw new Error("E2E_MUTATING_REQUEST_DENIED"); };
+        }
+        if (key === "fetch") {
+          return async (url: string, options?: { method?: string }) => {
+            if (!["GET", "HEAD", "OPTIONS"].includes((options?.method ?? "GET").toUpperCase())) {
+              throw new Error("E2E_MUTATING_REQUEST_DENIED");
+            }
+            return target.fetch(url, options);
+          };
+        }
+        const item = Reflect.get(target, key, target);
+        return typeof item === "function" ? item.bind(target) : item;
+      },
+    });
+    await use(safe);
+  },
   page: async ({ page, context }, use) => {
     const baseUrl = new URL(process.env.E2E_BASE_URL ?? "");
     await context.route("**/*", async route => {
