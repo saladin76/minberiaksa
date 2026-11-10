@@ -7,9 +7,10 @@ import { prisma } from "@/lib/prisma";
  * accounting/attribution records.
  *
  * A matching settled checkout must be a NEW, one-time card donation from the
- * same donor and gateway, with an identical allocation and amount, created
- * within 30 minutes after the failed attempt. This is deliberately strict:
- * two different projects or subscription instalments must never collapse.
+ * same donor and gateway, with the SAME non-empty provider order reference,
+ * plus identical allocation and amount, created within 30 minutes. Similar
+ * amount/time/project is NOT proof of the same checkout: separate donations
+ * must remain visible until a provider-confirmed identity links them.
  */
 export const DONATION_RECOVERY_WINDOW_MS = 30 * 60 * 1000;
 
@@ -22,6 +23,7 @@ const recoverySelect = {
   subscriptionId: true,
   paymentMethod: true,
   provider: true,
+  providerOrderId: true,
   amount: true,
   totalAmount: true,
   currency: true,
@@ -85,6 +87,9 @@ export function isRecoveredFailedAttempt(
     settled.paymentMethod !== "CARD" ||
     !failed.provider ||
     failed.provider !== settled.provider ||
+    !failed.providerOrderId ||
+    !settled.providerOrderId ||
+    failed.providerOrderId !== settled.providerOrderId ||
     failed.currency !== settled.currency ||
     failed.coverFees !== settled.coverFees
   ) return false;
@@ -124,6 +129,7 @@ export async function linkRecoveredFailedAttempts(
     settled.subscriptionId !== null ||
     settled.paymentMethod !== "CARD" ||
     !settled.provider ||
+    !settled.providerOrderId ||
     allocationSignature(settled) === null
   ) return { recoveredIds: [] };
 
@@ -135,6 +141,7 @@ export async function linkRecoveredFailedAttempts(
       paidAt: { not: null },
       paymentMethod: "CARD",
       provider: settled.provider,
+      providerOrderId: settled.providerOrderId,
       currency: settled.currency,
       createdAt: { gte: from, lte: settled.createdAt },
     },
@@ -153,6 +160,7 @@ export async function linkRecoveredFailedAttempts(
       row.donorId === settled.donorId &&
       row.currency === settled.currency &&
       row.provider === settled.provider &&
+      row.providerOrderId === settled.providerOrderId &&
       toMinor(row.totalAmount) === toMinor(settled.totalAmount) &&
       allocationSignature(row) === allocationSignature(settled))
   ) return { recoveredIds: [] };
@@ -162,6 +170,7 @@ export async function linkRecoveredFailedAttempts(
       donorId: settled.donorId,
       status: "FAILED",
       paymentMethod: "CARD",
+      providerOrderId: settled.providerOrderId,
       provider: settled.provider,
       currency: settled.currency,
       createdAt: { gte: from, lte: settled.createdAt },
@@ -181,6 +190,7 @@ export async function linkRecoveredFailedAttempts(
     where: {
       id: { in: recoveredIds },
       donorId: settled.donorId,
+      providerOrderId: settled.providerOrderId,
       status: "FAILED",
       OR: [
         { overviewRecoveredByDonationId: null },
