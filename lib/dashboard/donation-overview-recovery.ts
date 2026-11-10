@@ -110,9 +110,22 @@ export function isRecoveredFailedAttempt(
 }
 
 /**
+ * Never infer a recovery if the bank-order reference belongs to multiple
+ * failed rows, even when their contents differ. Split/mixed-cart records can
+ * legitimately share a payment reference without representing retries.
+ */
+export function uniqueRecoveredFailedAttemptIds(
+  candidates: RecoveryDonation[], settled: RecoveryDonation,
+): string[] {
+  return candidates.length === 1 && isRecoveredFailedAttempt(candidates[0], settled)
+    ? [candidates[0].id]
+    : [];
+}
+
+/**
  * Idempotent, display-only write AFTER a provider-verified settlement.
- * Fails closed if another same-intent settled donation makes the relationship
- * ambiguous. A dashboard operator can always inspect raw FAILED attempts.
+ * Fails closed if any other successful or failed row uses the same order
+ * reference. A dashboard operator can always inspect raw FAILED attempts.
  */
 export async function linkRecoveredFailedAttempts(
   paidDonationId: string,
@@ -134,36 +147,21 @@ export async function linkRecoveredFailedAttempts(
   ) return { recoveredIds: [] };
 
   const from = new Date(settled.createdAt.getTime() - DONATION_RECOVERY_WINDOW_MS);
-  const nearbySettled = await prisma.donation.findMany({
+  // An order reused for another successful donation cannot safely identify
+  // which failed record it recovered. Query all dates/amounts and stop at two.
+  const settledWithOrder = await prisma.donation.findMany({
     where: {
       donorId: settled.donorId,
       status: "PAID",
-      paidAt: { not: null },
-      paymentMethod: "CARD",
       provider: settled.provider,
       providerOrderId: settled.providerOrderId,
-      currency: settled.currency,
-      createdAt: { gte: from, lte: settled.createdAt },
     },
-    select: recoverySelect,
-    take: 41,
+    select: { id: true },
+    take: 2,
   });
-  // Do not guess which checkout superseded a failure when the donor made
-  // another genuinely settled matching donation or the result is truncated.
-  if (
-    nearbySettled.length > 40 ||
-    nearbySettled.some((row) =>
-      row.id !== settled.id &&
-      row.status === "PAID" &&
-      row.paidAt !== null &&
-      row.subscriptionId === null &&
-      row.donorId === settled.donorId &&
-      row.currency === settled.currency &&
-      row.provider === settled.provider &&
-      row.providerOrderId === settled.providerOrderId &&
-      toMinor(row.totalAmount) === toMinor(settled.totalAmount) &&
-      allocationSignature(row) === allocationSignature(settled))
-  ) return { recoveredIds: [] };
+  if (settledWithOrder.length !== 1 || settledWithOrder[0].id !== settled.id) {
+    return { recoveredIds: [] };
+  }
 
   const failed = await prisma.donation.findMany({
     where: {
@@ -180,13 +178,13 @@ export async function linkRecoveredFailedAttempts(
       ],
     },
     select: recoverySelect,
-    take: 41,
+    // A second failed row sharing the bank reference makes any link ambiguous.
+    take: 2,
   });
-  if (failed.length > 40) return { recoveredIds: [] };
-  const recoveredIds = failed.filter((row) => isRecoveredFailedAttempt(row, settled)).map((row) => row.id);
+  const recoveredIds = uniqueRecoveredFailedAttemptIds(failed, settled);
   if (!recoveredIds.length || options.dryRun) return { recoveredIds };
 
-  await prisma.donation.updateMany({
+  const update = await prisma.donation.updateMany({
     where: {
       id: { in: recoveredIds },
       donorId: settled.donorId,
@@ -199,5 +197,5 @@ export async function linkRecoveredFailedAttempts(
     },
     data: { overviewRecoveredByDonationId: settled.id },
   });
-  return { recoveredIds };
+  return { recoveredIds: update.count === 1 ? recoveredIds : [] };
 }
