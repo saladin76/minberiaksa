@@ -63,9 +63,9 @@ test("do not hide unmatched donors, projects, currencies, amounts, or card gatew
 
 test("automated recovery query requires a shared provider order reference", () => {
   const implementation = readFileSync("lib/dashboard/donation-overview-recovery.ts", "utf8");
-  assert.match(implementation, /!failed\\.providerOrderId/);
-  assert.match(implementation, /failed\\.providerOrderId !== settled\\.providerOrderId/);
-  assert.match(implementation, /providerOrderId: settled\\.providerOrderId/);
+  assert.match(implementation, /!failed\.providerOrderId/);
+  assert.match(implementation, /failed\.providerOrderId !== settled\.providerOrderId/);
+  assert.match(implementation, /providerOrderId: settled\.providerOrderId/);
   // No matching solely on donor, amount, project and time.
   assert.equal(isRecoveredFailedAttempt(row({ providerOrderId: null }), paid()), false);
   assert.equal(isRecoveredFailedAttempt(row(), paid({ providerOrderId: "another-order" })), false);
