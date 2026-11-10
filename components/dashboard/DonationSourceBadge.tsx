@@ -65,7 +65,7 @@ export function DonationSourceBadge({
   });
 
   const platformLabel = dt(PLATFORM_LABEL_AR[result.platform]);
-  const statusLabel = dt(STATUS_LABEL_AR[result.status]);
+  const statusLabel = result.sourceKind === "referral" && !result.paidEvidence ? dt("إحالة خارجية (غير مؤكدة كإعلان)") : dt(STATUS_LABEL_AR[result.status]);
   // utm_campaign is the name a marketer typed in Ads Manager; campaign_id is the
   // numeric fallback for links that carried the id but lost the utm params.
   const campaignLabel =
