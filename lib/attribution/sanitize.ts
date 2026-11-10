@@ -83,6 +83,53 @@ export const DONATION_ATTRIBUTION_KEYS = [
 
 export type DonationAttributionKey = (typeof DONATION_ATTRIBUTION_KEYS)[number];
 
+/** Raw attribution URLs can include a receipt access token (?t=...). NEVER
+ * persist, link or send those credentials to an advertising provider.
+ * Keep benign UTM/click parameters intact for exact campaign reconciliation.
+ */
+const SENSITIVE_ATTRIBUTION_QUERY = /^(?:t|token|access_?token|auth(?:_token)?|secret|key|api_?key|session_?token|authorization|code|password|passcode|otp|jwt|ticket)$/i;
+const ATTRIBUTION_URL_FIELDS = new Set(["landing_page", "first_landing_page", "conversion_page", "referrer", "first_referrer"]);
+export function safeAttributionUrl(raw: unknown): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const url = new URL(raw.trim());
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    url.username = "";
+    url.password = "";
+    url.hash = "";
+    for (const name of [...url.searchParams.keys()]) {
+      if (SENSITIVE_ATTRIBUTION_QUERY.test(name)) url.searchParams.delete(name);
+    }
+    return url.toString().slice(0, 2048);
+  } catch { return null; }
+}
+
+export function isPaymentReturnPage(raw: unknown): boolean {
+  const safe = safeAttributionUrl(raw);
+  if (!safe) return false;
+  try {
+    const segments = new URL(safe).pathname.toLowerCase().split("/").filter(Boolean);
+    return segments.some((part) => /^(?:success|thank-you|thankyou|payment-success|payment-failed|payment-failure|payment-processing|donation-success|donation-failed)$/.test(part));
+  } catch { return false; }
+}
+
+/** The current /success/{id}?t=... is NOT the campaign landing page.
+ * Use the last genuine campaign entry; if it is a bank return or another
+ * site, use the original first landing. Never invent a landing page.
+ */
+export function safeAcquisitionLandingPage(attribution: Record<string, unknown> | null | undefined): string | null {
+  const attr = attribution ?? {};
+  for (const candidate of [attr.landing_page, attr.first_landing_page]) {
+    const safe = safeAttributionUrl(candidate);
+    if (!safe || isPaymentReturnPage(safe)) continue;
+    const host = new URL(safe).hostname.toLowerCase();
+    if (host === "minberiaksa.org" || host.endsWith(".minberiaksa.org") || host === "minberiaksa.vercel.app") {
+      return safe;
+    }
+  }
+  return null;
+}
+
 const MACRO_PATTERNS = ["{{", "}}", "__CAMPAIGN_", "__ADGROUP_", "__AD_", "__PLACEMENT_", "__CREATIVE_"];
 
 function hasUnresolvedMacro(value: string): boolean {
@@ -167,8 +214,16 @@ export function sanitizeDonationAttribution(raw: unknown): Prisma.InputJsonValue
       out[`${key}_unresolved`] = "true";
       continue;
     }
-    out[key] = s.slice(0, 2048);
+    const safe = ATTRIBUTION_URL_FIELDS.has(key) ? safeAttributionUrl(s) : s;
+    if (!safe) continue;
+    out[key] = safe.slice(0, 2048);
   }
+
+  // A success/return URL is not an acquisition page; scrub it from the
+  // legacy field before any downstream attribution or Meta event is emitted.
+  const acquisition = safeAcquisitionLandingPage(out);
+  if (acquisition) out.landing_page = acquisition;
+  else delete out.landing_page;
 
   const lang = normalizeLanguage(out.language ?? out.locale);
   if (lang) {
