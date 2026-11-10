@@ -267,9 +267,11 @@ async function mockClarityRuntime(options: {
   project?: string;
   optOut?: boolean;
   failure?: boolean;
+  navigatePrivateThenPublic?: boolean;
 } = {}) {
   const b = browser(options.url ?? "https://minberiaksa.org/ar");
-  const h = hooks(), ids: string[] = [], requests: string[] = [];
+  const h = hooks(), ids: string[] = [], requests: string[] = [], clarityCommands: string[] = [];
+  (b.win as unknown as { clarity: (...args: string[]) => void }).clarity = (...args: string[]) => clarityCommands.push(args[0]);
   const allow = options.enabled !== false;
   const configured = options.project ?? "dynamic1234";
   const client = clientModule("components/MicrosoftClarity.tsx", {
@@ -295,8 +297,14 @@ async function mockClarityRuntime(options: {
   await new Promise<void>(resolve => setImmediate(resolve));
   h.replayEffects();
   await new Promise<void>(resolve => setImmediate(resolve));
+  if (options.navigatePrivateThenPublic) {
+    b.win.location = new URL("https://minberiaksa.org/ar/profile/private-record");
+    h.render(client.default as () => unknown);
+    b.win.location = new URL("https://minberiaksa.org/ar/projects");
+    h.render(client.default as () => unknown);
+  }
   h.unmount();
-  return { ids, requests };
+  return { ids, requests, clarityCommands };
 }
 
 test("actual Clarity loader fetches saved runtime config, initializes once and never duplicates on replay", async () => {
@@ -304,6 +312,12 @@ test("actual Clarity loader fetches saved runtime config, initializes once and n
   assert.deepEqual(result.ids, ["dynamic1234"]);
   assert.ok(result.requests.every(url => url === "/api/tracking/config"));
   assert.ok(result.requests.length >= 1);
+});
+
+test("Clarity stops on a private SPA route and resumes without a second init on a safe route", async () => {
+  const result = await mockClarityRuntime({ navigatePrivateThenPublic: true });
+  assert.deepEqual(result.ids, ["dynamic1234"]);
+  assert.deepEqual(result.clarityCommands, ["stop", "start"]);
 });
 
 test("Clarity never loads on dashboard, donor private routes, preview or explicit privacy opt-out", async () => {
