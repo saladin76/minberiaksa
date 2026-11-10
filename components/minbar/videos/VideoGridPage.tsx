@@ -33,7 +33,17 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
 
   /* The locale allow-list (the Turkish endorsements are recorded for a Turkish
      audience) is applied by the reader; what arrives is what this edition shows. */
-  const shown = videos;
+  // A CMS thumbnail without a playable source must not masquerade as an
+  // achievement video. Keep the recording inventory honest until editorial
+  // staff publish the missing media for the visitor's language.
+  const shown = videos.filter((video) => {
+    const source = describeVideoSource({
+      youtubeId: video.youtubeId,
+      url: video.url,
+      startSeconds: video.startSeconds,
+    });
+    return Boolean(source.embedUrl || source.watchUrl);
+  });
 
   return (
     <div className="vg-page">
@@ -48,6 +58,11 @@ export default function VideoGridPage({ videos, titleKey, leadKey }: VideoGridPa
 
       <section style={{ position: "relative", padding: "46px 0 60px" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px" }}>
+          {shown.length === 0 ? (
+            <p role="status" style={{ padding: "24px", background: "#fff", border: "1px solid var(--border)", borderRadius: 12, color: "var(--muted)", lineHeight: 1.8 }}>
+              {t.has("noPublishedVideos") ? t("noPublishedVideos") : t(leadKey)}
+            </p>
+          ) : null}
           <div className="vg-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 18 }}>
             {shown.map((video) => {
               const title = video.title;
