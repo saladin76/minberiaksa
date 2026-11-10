@@ -83,6 +83,32 @@ test("confirmed payment emits Donate and Purchase with independent IDs and one c
   assert.equal(f.ledger.length, 3);
   assert.ok(f.row.conversionEventsSentAt);
 });
+test("Meta CAPI excludes private receipt paths and preserves approved campaign landings", async () => {
+  const publicLanding = "https://minberiaksa.org/ar/projects/winter-2026?utm_source=google&utm_campaign=winter&gclid=synthetic-click";
+  const f = fixture({
+    attribution: {
+      landing_page: "https://minberiaksa.org/ar/receipt/guest-secret?utm_source=google",
+      first_landing_page: publicLanding,
+      conversion_page: "https://minberiaksa.org/ar/success/abc123?t=guest-secret",
+    },
+  });
+  const result = await f.server.sendDonationServerConversions(f.row.id);
+  assert.equal(result.ok, true);
+  assert.deepEqual(f.metaCalls.map(e => e.event_name), ["Donate", "Purchase"]);
+  assert.ok(f.metaCalls.every(e => e.event_source_url === publicLanding));
+  assert.doesNotMatch(JSON.stringify(f.metaCalls), /guest-secret/);
+  assert.equal(f.gaCalls.length, 1);
+  await f.server.sendDonationServerConversions(f.row.id);
+  assert.equal(f.metaCalls.length, 2, "same IDs must not be sent twice");
+
+  const onlyPrivate = fixture({
+    attribution: { landing_page: "https://minberiaksa.org/ar/receipt/guest-secret" },
+  });
+  await onlyPrivate.server.sendDonationServerConversions(onlyPrivate.row.id);
+  assert.ok(onlyPrivate.metaCalls.every(e => e.event_source_url === "https://minberiaksa.org/"));
+  assert.doesNotMatch(JSON.stringify(onlyPrivate.metaCalls), /guest-secret/);
+});
+
 for (const failed of ["Donate", "Purchase"]) test(`retry only ${failed} after partial failure; GA4 is not duplicated`, async () => {
   const f = fixture(); f.setFail(failed);
   assert.equal((await f.server.sendDonationServerConversions(f.row.id)).ok, false);
