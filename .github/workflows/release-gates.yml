@@ -67,7 +67,8 @@ jobs:
 
   unit:
     name: Integration-settings suite
-    # Pin Noble to avoid rolling Ubuntu apt-mirror stalls on FFmpeg.
+    # Pin Noble rather than rolling ubuntu-latest: the Resolute apt mirror on
+    # the rolling image stalled while fetching FFmpeg and timed out twice.
     runs-on: ubuntu-24.04
     env:
       # Prisma validate only needs a syntactically valid datasource URL; source-contract

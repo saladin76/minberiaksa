@@ -39,6 +39,7 @@ import {
   STATUS_LABEL_AR,
   type DonationSourceStatus,
 } from "@/lib/attribution/detect-source";
+import { safeAcquisitionLandingPage, safeAttributionUrl, isPaymentReturnPage } from "@/lib/attribution/sanitize";
 import { dashDir, dashIntl, dt, dtx } from "@/lib/dashboard/i18n";
 import { GATEWAY_LOGOS, GATEWAY_NAMES } from "./DonationGatewayBadge";
 import type { PayPalInspection, PayPalInspectionOutcome } from "@/lib/donations/gateway-diagnostics";
@@ -120,8 +121,11 @@ const ATTRIBUTION_FIELDS: FieldDef[] = [
   { key: "language", get label() { return dt("اللغة"); }, Icon: Languages },
   { key: "device", get label() { return dt("الجهاز"); }, Icon: Laptop },
   { key: "platform", get label() { return dt("المنصة"); }, Icon: MonitorSmartphone },
-  { key: "landing_page", get label() { return dt("صفحة الهبوط"); }, Icon: Link2, span: 2, ltr: true },
+  { key: "landing_page", get label() { return dt("صفحة الهبوط الإعلانية"); }, Icon: Link2, span: 2, ltr: true },
+  { key: "first_landing_page", get label() { return dt("صفحة الدخول الأولى"); }, Icon: Link2, span: 2, ltr: true },
+  { key: "conversion_page", get label() { return dt("صفحة إتمام التبرع"); }, Icon: Link2, span: 2, ltr: true },
   { key: "referrer", get label() { return dt("المُحيل"); }, Icon: CornerDownLeft, span: 2, ltr: true },
+  { key: "first_referrer", get label() { return dt("المُحيل الأول"); }, Icon: CornerDownLeft, span: 2, ltr: true },
   { key: "user_agent", get label() { return dt("متصفح الزائر"); }, Icon: Laptop, span: 2, ltr: true },
   { key: "client_ip", get label() { return dt("عنوان IP"); }, Icon: Network, ltr: true },
 ];
@@ -278,9 +282,9 @@ function SourceSummary({
         <div className="flex items-center gap-2">
           <span className={cn("inline-block w-2 h-2 rounded-full", STATUS_DOT_BANNER[result.status])} aria-hidden />
           <span className="text-sm font-semibold">{result.sourceLabel || PLATFORM_LABEL_AR[result.platform]}</span>
-          <span className="text-[11px] opacity-70">— {STATUS_LABEL_AR[result.status]}</span>
+          <span className="text-[11px] opacity-70">— {result.sourceKind === "referral" && !result.sourceDetails.some(x => x.key === "utm_medium" && /^(cpc|paid|paid_social)$/i.test(x.value)) ? dt("إحالة مرصودة، ليست إعلانًا موثقًا") : STATUS_LABEL_AR[result.status]}</span>
         </div>
-        <div className="text-[11px] font-medium opacity-80">{dtx("الثقة {0}%", [result.confidence])}</div>
+        <div className="text-[11px] font-medium opacity-80">{dtx("اكتمال بيانات الإسناد الإعلاني {0}% (ليست احتمالية أن الزيارة إعلان)", [result.confidence])}</div>
       </div>
       {result.reasons.length > 0 && (
         <ul className="text-[11px] leading-relaxed space-y-0.5 opacity-90">
@@ -326,13 +330,27 @@ function AttributionView({
     const entries: Array<{ def: FieldDef; value: string }> = [];
     const seen = new Set<string>();
 
+    const acquisitionPage = safeAcquisitionLandingPage(attr);
+    // A historical /success?t=... is NOT a landing page, and the access
+    // token must not be rendered as a clickable link or copied to clipboard.
+    const urlKeys = new Set(["landing_page", "first_landing_page", "conversion_page", "referrer", "first_referrer", "ga_landing_page", "ga_referrer"]);
     // Known fields first, in defined order
     for (const def of ATTRIBUTION_FIELDS) {
       const raw = attr[def.key];
       if (raw == null || raw === "") continue;
-      const value = String(raw);
+      const value = def.key === "landing_page"
+        ? acquisitionPage
+        : urlKeys.has(def.key) ? safeAttributionUrl(String(raw)) : String(raw);
+      if (!value) continue;
       entries.push({ def, value });
       seen.add(def.key);
+    }
+    if (!seen.has("conversion_page") && isPaymentReturnPage(attr.landing_page)) {
+      const safe = safeAttributionUrl(attr.landing_page);
+      if (safe) {
+        const def = ATTRIBUTION_FIELDS.find((row) => row.key === "conversion_page");
+        if (def) { entries.push({ def, value: safe }); seen.add(def.key); }
+      }
     }
 
     // Anything unknown (and not an ID)  surface with a generic icon so admins
@@ -340,9 +358,11 @@ function AttributionView({
     for (const [k, v] of Object.entries(attr)) {
       if (seen.has(k) || HIDDEN_ATTRIBUTION_KEYS.has(k)) continue;
       if (v == null || v === "") continue;
+      const display = urlKeys.has(k) ? safeAttributionUrl(String(v)) : String(v);
+      if (!display) continue;
       entries.push({
-        def: { key: k, label: prettifyKey(k), Icon: Filter, span: String(v).length > 60 ? 2 : 1, ltr: /[A-Za-z0-9_/.:?=&-]/.test(String(v)) && !/[؀-ۿ]/.test(String(v)) },
-        value: String(v),
+        def: { key: k, label: prettifyKey(k), Icon: Filter, span: display.length > 60 ? 2 : 1, ltr: /[A-Za-z0-9_/.:?=&-]/.test(display) && !/[؀-ۿ]/.test(display) },
+        value: display,
       });
     }
 
