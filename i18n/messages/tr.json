@@ -2353,7 +2353,8 @@
     "endVideosPageTitle": "Videolarla Tezkiyelerimiz",
     "endVideosPageLead": "Âlimlerden, şahsiyetlerden, destekçilerden ve saha ortaklarından derneğin çalışmalarına dair şahitlik ve tezkiyeler  burada yayımlanan her video otomatik olarak ana sayfada görünür.",
     "endViewAll": "Tüm Tezkiye Videoları",
-    "tagTezkiye": "Tezkiye"
+    "tagTezkiye": "Tezkiye",
+    "noPublishedVideos": "Bu dilde henüz oynatılabilir bir video yayımlanmadı. Videolar eklendiğinde burada görüntülenecek."
   },
   "jerusalem": {
     "pageTitle": "Kudüs ve Eski Şehir",
