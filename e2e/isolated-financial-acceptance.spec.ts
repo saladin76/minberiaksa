@@ -27,7 +27,7 @@ for (const { title, script, artifact, minimum } of jobs) {
         ...process.env,
         DATABASE_URL: "mongodb://127.0.0.1:1/no-database?serverSelectionTimeoutMS=100",
         NEXTAUTH_URL: "http://127.0.0.1:3106",
-        CONTENT_EDITOR_ARTIFACTS: artifactRoot,
+        CONTENT_EDITOR_ARTIFACTS: path.join(artifactRoot, artifact),
         CI: "true",
       },
       timeout: 540_000,
