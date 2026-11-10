@@ -43,3 +43,13 @@ test("Turkish gold nisab calculation and explanatory text agree", () => {
   assert.equal(other.due, 0);
   assert.equal(calculateZakat({ cash: "8200" }, "100", "1", "silver", 80.18).nisab, 595);
 });
+
+test("reviewed Turkish Iftar story label and still-card navigation are wired", () => {
+  const stories = readFileSync("components/minbar/home/TopSections.tsx", "utf8");
+  const reels = readFileSync("components/minbar/home/MediaSections.tsx", "utf8");
+  assert.match(stories, /story\.title\.trim\(\)\.toLocaleLowerCase\("tr"\) === "iftar"/);
+  assert.match(stories, /title: "Bağış"/);
+  assert.match(reels, /href=\{video\.regionKey\.toLowerCase\(\)/);
+  assert.match(reels, /miaPath\("jerusalem", locale\)/);
+  assert.match(reels, /miaPath\("aqsa", locale\)/);
+});
