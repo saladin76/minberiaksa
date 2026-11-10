@@ -31,7 +31,7 @@ export function resolveDonationSourceSignals(input:Record<string,unknown>|null|u
   if (inheritedKind && ["paid","campaign","social","referral","organic","direct"].includes(inheritedKind)) sourceKind=inheritedKind as SourceKind;
   if(!platform)platform=paidEvidence?"other-paid":source||campaign||referrer||sourceKind==="direct"||sourceKind==="organic"?"organic":"unknown";
   if(conflict)sourceKind="unknown";
-  const sourceLabel=source||(referrer ? /(?:^|\\.)instagram\\.com$/.test(referrer) ? "Instagram (إحالة)" : /(?:^|\\.)facebook\\.com$/.test(referrer) ? "Facebook (إحالة)" : `إحالة من ${referrer}` : null)||(platform!=="organic"&&platform!=="unknown"?platform:sourceKind==="direct"?"دخول دون مرجع":sourceKind==="organic"?"بحث طبيعي":"مصدر غير معروف");
+  const sourceLabel=source||(referrer ? (referrer === "instagram.com" || referrer.endsWith(".instagram.com")) ? "Instagram (إحالة)" : (referrer === "facebook.com" || referrer.endsWith(".facebook.com")) ? "Facebook (إحالة)" : `إحالة من ${referrer}` : null)||(platform!=="organic"&&platform!=="unknown"?platform:sourceKind==="direct"?"دخول دون مرجع":sourceKind==="organic"?"بحث طبيعي":"مصدر غير معروف");
   const detailKeys=["utm_source","utm_medium","utm_campaign","campaign_name","campaign_id","utm_id","adset_name","ad_group_name","adset_id","ad_group_id","ad_name","ad_id","utm_content","utm_term","placement","publisher_platform","first_landing_page","first_referrer","source_captured_at","attribution_origin"];
   const sourceDetails=detailKeys.flatMap(key=>{const value=attributionText(attr[key]);return value?[{key,value}]:[];});
   return {platform:platform as AdPlatform,sourceKind,sourceLabel,sourceDetails,paidEvidence,conflict,clickKeys,referrer};
