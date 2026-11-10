@@ -16,7 +16,17 @@ const label = (locale, key) => locale === "ar" ? key : dictionaries[locale][key]
 const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{setDashLocale}from'./lib/dashboard/i18n';import Settings from './app/(dashboard)/dashboard/platform-connections/tracking/_components/TrackingSettingsManager';import{WhatsappTemplateEditorDialog}from'./app/(dashboard)/dashboard/templates/_components/WhatsappTemplateEditorDialog';import TrackingPixels from './components/TrackingPixels';const p=new URLSearchParams(location.search);const locale=p.get('lang')||'ar';setDashLocale(locale);document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';createRoot(document.getElementById('root')).render(p.has('pixels')?<TrackingPixels><button>Interact</button></TrackingPixels>:p.has('editor')?<WhatsappTemplateEditorDialog id={'a'.repeat(24)} initialKind='CAMPAIGN' open onOpenChange={v=>{window.fixtureClosed=!v}}/>:<main style={{padding:16}}><Settings canManage canTest/></main>);`, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", tsconfig: path.resolve("tsconfig.json"), define: { "process.env.NODE_ENV": '"test"' } });
 const baseCss = (await readFile("app/[locale]/globals.css", "utf8")).replace(/^@config[^;]+;\s*/, "");
 const font = await readFile("public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2");
-const css = (await postcss([tailwindcss({ ...require("../tailwind.config.ts").default, content: ["app/(dashboard)/dashboard/templates/**/*.tsx", "app/(dashboard)/dashboard/platform-connections/tracking/**/*.tsx", "components/ui/**/*.tsx"] })]).process(baseCss, { from: undefined })).css + "@font-face{font-family:Cairo;src:url(/fixture.woff2)}:root{--font-cairo:Cairo;--font-montserrat:Arial}";
+// Node 24 native TS loading resolves tailwindcss/colors as ESM and fails
+// because that package exposes a .js path. Compile the Tailwind config to CJS
+// for this isolated browser fixture; preserve the real dashboard design tokens.
+const compiledTailwind = await build({
+  entryPoints: [path.resolve("tailwind.config.ts")],
+  bundle: true, write: false, platform: "node", format: "cjs", packages: "external",
+});
+const tailwindModule = { exports: {} };
+new Function("module", "exports", "require", compiledTailwind.outputFiles[0].text)(tailwindModule, tailwindModule.exports, require);
+const tailwindConfig = tailwindModule.exports.default ?? tailwindModule.exports;
+const css = (await postcss([tailwindcss({ ...tailwindConfig, content: ["app/(dashboard)/dashboard/templates/**/*.tsx", "app/(dashboard)/dashboard/platform-connections/tracking/**/*.tsx", "components/ui/**/*.tsx"] })]).process(baseCss, { from: undefined })).css + "@font-face{font-family:Cairo;src:url(/fixture.woff2)}:root{--font-cairo:Cairo;--font-montserrat:Arial}";
 const id = "a".repeat(24);
 const source = { id, name: "fixture_original", body: "Hello {{1}}", category: "MARKETING", header: { type: "NONE" }, buttons: [{ type: "URL", text: "Donate", url: "https://minberiaksa.org/ar/bagislar?utm_campaign=shared" }, { type: "QUICK_REPLY", text: "إيقاف" }], submittedLocales: ["ar", "en", "tr"], translations: Object.fromEntries(["en", "tr"].map(locale => [locale, { body: "Hello {{1}}", buttons: [{ type: "URL", text: "Donate", url: `https://minberiaksa.org/${locale}/bagislar?language={{1}}` }, { type: "QUICK_REPLY", text: "STOP" }] }])) };
 let settings = {}, writes = [], templateWrites = [], configReads = 0;
