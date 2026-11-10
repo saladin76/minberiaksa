@@ -11,12 +11,32 @@ const instagram = "https://l.instagram.com/";
 
 test("receipt tokens, credentials and hashes never survive attribution URL sanitization", () => {
   const value = safeAttributionUrl(success + "#raw-private-value");
-  assert.ok(value);
-  assert.doesNotMatch(value, /private-receipt-token|private-oauth-code|#raw-private-value/);
-  assert.ok(isPaymentReturnPage(value));
+  assert.equal(value, null, "private success/receipt URLs are not eligible for attribution or Meta CAPI");
+  assert.ok(isPaymentReturnPage(success), "return-page detection inspects original URL path");
   assert.equal(safeAttributionUrl("javascript:alert(1)"), null);
   assert.equal(safeAttributionUrl("/success?token=secret"), null);
   assert.equal(safeAttributionUrl("https://example.org/ar/?utm_id=97760_v0&token=private"), "https://example.org/ar/?utm_id=97760_v0");
+
+  // Route-embedded secrets cannot be stripped safely; the entire URL is rejected.
+  for (const path of [
+    "/ar/success/6ae6c4ba1deaf72888498661",
+    "/ar/receipt/guest-secret",
+    "/ar/receipts/guest-secret",
+    "/ar/certificate/guest-secret",
+    "/ar/auth/verify/guest-secret",
+    "/ar/download/opaque-secret",
+    "/ar/%72eceipt/guest-secret",
+    "/ar/%2572eceipt/guest-secret",
+    "/ar/projects/eyJhbGciOiJIUzI1NiJ9eyJzdWIiOiIxMjM0NTY3ODkwIn0abcdef12345",
+    "/ar/projects/abcdefghijklmnopqrstuvwxyz0123456789",
+  ]) {
+    assert.equal(safeAttributionUrl(`https://minberiaksa.org${path}?utm_campaign=winter&fbclid=known`), null, path);
+  }
+  assert.equal(safeAttributionUrl("https://minberiaksa.org/ar/projects/winter-2026?utm_source=google&utm_campaign=winter&gclid=click"),
+    "https://minberiaksa.org/ar/projects/winter-2026?utm_source=google&utm_campaign=winter&gclid=click");
+  assert.equal(safeAcquisitionLandingPage({ landing_page: "https://minberiaksa.org/ar/receipt/guest-secret", first_landing_page: first }), first);
+  assert.equal(safeAcquisitionLandingPage({ landing_page: "https://minberiaksa.org/ar/receipt/guest-secret" }), null);
+
 
   // Query names are untrusted: denylist-only sanitizers miss aliases and new tokens.
   for (const key of ["receiptToken", "guest_token", "id_token", "authKey", "sessionId", "privateCredential", "unknown_param", "utm_receipt_token"]) {
