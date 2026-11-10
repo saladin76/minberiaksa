@@ -92,6 +92,27 @@ export type DonationAttributionKey = (typeof DONATION_ATTRIBUTION_KEYS)[number];
 const SAFE_ATTRIBUTION_QUERY = /^(?:utm_[a-z0-9_]+|fbclid|fbc|fbp|gclid|dclid|gbraid|wbraid|ttclid|twclid|scclid|scid|sccid|msclkid|snap_click_id|li_fat_id|rdt_cid|campaign_id|adgroup_id|ad_group_id|adset_id|ad_id|creative_id|placement|publisher_platform|network|matchtype|keyword|ref|source|medium|campaign)$/i;
 const SENSITIVE_ATTRIBUTION_QUERY = /(?:token|secret|pass(?:word|code)|credential|authorization|auth(?:entication)?|api[_-]?key|receipt|session|nonce|signature|csrf|otp|jwt|ticket|(?:^|[_-])(?:t|code|key)(?:$|[_-]))/i;
 const ATTRIBUTION_URL_FIELDS = new Set(["landing_page", "first_landing_page", "conversion_page", "referrer", "first_referrer"]);
+
+/** An acquisition URL must never expose a private receipt/login/payment route
+ * or an opaque credential embedded in the pathname. Removing query tokens
+ * alone cannot protect /receipt/<guest-token> or encoded variants. */
+const PRIVATE_ATTRIBUTION_SEGMENT = /^(?:success|thank-?you|payment(?:-success|-failure|-failed|-processing)?|donation-success|donation-failed|receipts?|certificates?|invoices?|dashboard|admin|auth|signin|login|logout|account|profile|donor|verify|verification|reset(?:-password)?|callback|webhook|unsubscribe|guest|download|private|access(?:-token)?|tokens?)$/i;
+const OPAQUE_ATTRIBUTION_SEGMENT = /^(?=.{32,}$)(?=.*[a-z])(?=.*[0-9])[a-z0-9_-]+$/i;
+function attributionPathSegments(pathname: string): string[] | null {
+  try {
+    // Decode nested path encodings so /%2572eceipt/<token> is not missed.
+    let decoded = pathname;
+    for (let i = 0; i < 3; i++) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+    return decoded.split("/").filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
 export function safeAttributionUrl(raw: unknown): string | null {
   if (typeof raw !== "string" || !raw.trim()) return null;
   try {
@@ -100,6 +121,8 @@ export function safeAttributionUrl(raw: unknown): string | null {
     url.username = "";
     url.password = "";
     url.hash = "";
+    const pathSegments = attributionPathSegments(url.pathname);
+    if (!pathSegments || pathSegments.some((part) => PRIVATE_ATTRIBUTION_SEGMENT.test(part) || OPAQUE_ATTRIBUTION_SEGMENT.test(part))) return null;
     for (const name of [...url.searchParams.keys()]) {
       if (!SAFE_ATTRIBUTION_QUERY.test(name) || SENSITIVE_ATTRIBUTION_QUERY.test(name)) url.searchParams.delete(name);
     }
@@ -108,11 +131,15 @@ export function safeAttributionUrl(raw: unknown): string | null {
 }
 
 export function isPaymentReturnPage(raw: unknown): boolean {
-  const safe = safeAttributionUrl(raw);
-  if (!safe) return false;
+  if (typeof raw !== "string" || !raw.trim()) return false;
   try {
-    const segments = new URL(safe).pathname.toLowerCase().split("/").filter(Boolean);
-    return segments.some((part) => /^(?:success|thank-you|thankyou|payment-success|payment-failed|payment-failure|payment-processing|donation-success|donation-failed)$/.test(part));
+    const url = new URL(raw.trim());
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    // Inspect the original path: safeAttributionUrl intentionally rejects
+    // private success routes and must not make the return-page test disappear.
+    const segments = attributionPathSegments(url.pathname);
+    return Boolean(segments?.some((part) =>
+      /^(?:success|thank-?you|payment-success|payment-failed|payment-failure|payment-processing|donation-success|donation-failed)$/.test(part.toLowerCase())));
   } catch { return false; }
 }
 
