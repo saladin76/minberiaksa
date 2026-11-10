@@ -39,7 +39,13 @@ for (const { title, script, artifact, minimum } of jobs) {
       expect(match, "checkout fixture never reported a completed browser run").not.toBeNull();
       expect(Number(match?.[1])).toBeGreaterThanOrEqual(minimum);
     } else {
-      const report = JSON.parse(await readFile(path.join(artifactRoot, artifact, "verification.json"), "utf8"));
+      // Donation experience logs its JSON verdict to stdout; subscription-card
+      // persists verification.json. Check the actual producer contract rather
+      // than declaring a successful browser fixture failed due to report format.
+      const report = artifact === "donation-experience"
+        ? JSON.parse(stdout.split("\n").reverse().map(line => line.trim()).find(line => /^\{"checks":\d+,/.test(line)) ?? "null")
+        : JSON.parse(await readFile(path.join(artifactRoot, artifact, "verification.json"), "utf8"));
+      expect(report, "browser fixture did not produce a verification verdict").not.toBeNull();
       expect(report.checks).toBeGreaterThanOrEqual(minimum);
       expect(report.errors ?? report.pageErrors ?? []).toEqual([]);
       if (artifact === "subscription-card") {
