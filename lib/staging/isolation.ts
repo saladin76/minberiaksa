@@ -50,6 +50,7 @@ export function approvedStagingDatabase(env: NodeJS.ProcessEnv): StagingDatabase
   if (env.STAGING_DISABLE_CRON !== "1" || env.STAGING_DISABLE_MESSAGES !== "1" ||
     env.STAGING_PAYMENT_MODE !== "mock" || env.STAGING_PROVIDER_NETWORK_DISABLED !== "1") return fail("SIDE_EFFECTS_ENABLED");
   if (!isSha(env.STAGING_APPROVED_SHA) || !isDigest(env.STAGING_APPROVED_DB_IDENTITY_SHA256) ||
+      !isDigest(env.PRODUCTION_DB_IDENTITY_SHA256) ||
       !env.STAGING_APPROVED_DB_NAME || !env.STAGING_APPROVED_DB_USER || !env.STAGING_APPROVED_DB_HOSTS ||
       !env.DATABASE_URL) return fail("MISSING_REVIEWED_IDENTITY");
   const parsed = parseMongoUrl(env.DATABASE_URL);
