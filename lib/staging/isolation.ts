@@ -34,11 +34,13 @@ function parseMongoUrl(raw: string): { database: string; user: string; hosts: st
   if (lastAt <= 0) return fail("MONGO_AUTH_REQUIRED");
   let user = "";
   try { user = decodeURIComponent(authority.slice(0, lastAt).split(":")[0]); } catch { return fail("MONGO_USER_ENCODING"); }
-  const hosts = authority.slice(lastAt + 1).split(",").map(h => h.trim().toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "")).sort();
+  // Pin the exact endpoints including ports. Discarding ports could let an
+  // operator-approved QA identity accidentally target a production Mongo port.
+  const hosts = authority.slice(lastAt + 1).split(",").map(h => h.trim().toLowerCase()).sort();
   const rawDb = rest.slice(authority.length + 1).split(/[?#]/)[0];
   let database = "";
   try { database = decodeURIComponent(rawDb); } catch { return fail("MONGO_DB_ENCODING"); }
-  if (!user || !database || !hosts.length || hosts.some(h => !h || !/^[a-z0-9.-]+$/.test(h))) return fail("MONGO_IDENTITY_INCOMPLETE");
+  if (!user || !database || !hosts.length || hosts.some(h => !h || !/^[a-z0-9.-]+(?::[0-9]{2,5})?$/.test(h))) return fail("MONGO_IDENTITY_INCOMPLETE");
   return { database, user, hosts };
 }
 
@@ -55,7 +57,7 @@ export function approvedStagingDatabase(env: NodeJS.ProcessEnv): StagingDatabase
   if (hosts.length !== parsed.hosts.length || hosts.some((h,i) => h !== parsed.hosts[i])) return fail("MONGO_HOST_MISMATCH");
   if (parsed.database !== env.STAGING_APPROVED_DB_NAME || parsed.user !== env.STAGING_APPROVED_DB_USER) return fail("MONGO_USER_OR_DB_MISMATCH");
   if (!/(?:stage|staging|_qa|qa_)/i.test(parsed.database) || !/(?:stage|staging|_qa|qa_)/i.test(parsed.user)) return fail("MONGO_IDENTITY_NOT_STAGING");
-  if (parsed.hosts.some(h => ["localhost","127.0.0.1","::1","minberiaksa.org","www.minberiaksa.org"].includes(h))) return fail("MONGO_HOST_FORBIDDEN");
+  if (parsed.hosts.some(h => ["localhost","127.0.0.1","::1","minberiaksa.org","www.minberiaksa.org"].includes(h.split(":")[0]))) return fail("MONGO_HOST_FORBIDDEN");
   const identityDigest = digest(JSON.stringify([parsed.hosts, parsed.database, parsed.user]));
   if (identityDigest !== env.STAGING_APPROVED_DB_IDENTITY_SHA256 ||
       identityDigest === env.PRODUCTION_DB_IDENTITY_SHA256) return fail("MONGO_FINGERPRINT_MISMATCH");
