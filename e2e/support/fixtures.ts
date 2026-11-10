@@ -1,0 +1,33 @@
+import { test as base, expect } from "@playwright/test";
+
+/**
+ * Full staging E2E: fail closed on external browser traffic and unexpected
+ * mutations. Login uses a test-only account on the reviewed staging database.
+ * Sandbox payment scenarios need separate, explicitly reviewed fixtures.
+ */
+export const test = base.extend({
+  page: async ({ page, context }, use) => {
+    const baseUrl = new URL(process.env.E2E_BASE_URL ?? "");
+    await context.route("**/*", async route => {
+      const request = route.request();
+      let target: URL;
+      try { target = new URL(request.url()); } catch { await route.abort("blockedbyclient"); return; }
+      if (target.origin !== baseUrl.origin) {
+        await route.abort("blockedbyclient");
+        return;
+      }
+      if (!["GET", "HEAD", "OPTIONS"].includes(request.method())) {
+        // Credentials sign-in against staging synthetic staff is the only
+        // mutation permitted by the generic public/permissions suite.
+        const login = request.method() === "POST" && /^\/api\/auth\/callback\/credentials\/?$/.test(target.pathname);
+        if (!login) {
+          await route.abort("blockedbyclient");
+          return;
+        }
+      }
+      await route.continue();
+    });
+    await use(page);
+  },
+});
+export { expect };
