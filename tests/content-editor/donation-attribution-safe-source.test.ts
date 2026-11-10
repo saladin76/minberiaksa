@@ -17,6 +17,22 @@ test("receipt tokens, credentials and hashes never survive attribution URL sanit
   assert.equal(safeAttributionUrl("javascript:alert(1)"), null);
   assert.equal(safeAttributionUrl("/success?token=secret"), null);
   assert.equal(safeAttributionUrl("https://example.org/ar/?utm_id=97760_v0&token=private"), "https://example.org/ar/?utm_id=97760_v0");
+
+  // Query names are untrusted: denylist-only sanitizers miss aliases and new tokens.
+  for (const key of ["receiptToken", "guest_token", "id_token", "authKey", "sessionId", "privateCredential", "unknown_param", "utm_receipt_token"]) {
+    const input = new URL("https://minberiaksa.org/ar/?utm_source=instagram&fbclid=click123");
+    input.searchParams.set(key, "secret-synthetic-value");
+    const safe = safeAttributionUrl(input.toString());
+    assert.ok(safe);
+    assert.doesNotMatch(safe, /secret-synthetic-value/);
+    assert.equal(new URL(safe).searchParams.get("utm_source"), "instagram");
+    assert.equal(new URL(safe).searchParams.get("fbclid"), "click123");
+  }
+  const campaign = "https://minberiaksa.org/ar/?utm_source=google&utm_medium=cpc&utm_campaign=winter&utm_id=123&gclid=click&id_token=secret";
+  assert.equal(safeAttributionUrl(campaign), "https://minberiaksa.org/ar/?utm_source=google&utm_medium=cpc&utm_campaign=winter&utm_id=123&gclid=click");
+  assert.equal(safeAcquisitionLandingPage({ landing_page: campaign }),
+    "https://minberiaksa.org/ar/?utm_source=google&utm_medium=cpc&utm_campaign=winter&utm_id=123&gclid=click");
+
 });
 
 test("acquisition landing must be the original page, not success / bank return", () => {
