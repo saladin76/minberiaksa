@@ -64,7 +64,7 @@ test("KPI scope remains unchanged when donor, status or type changes", () => {
   const changedOnlyUnsupported = {
     ...base, userId: "other-donor", status: "FAILED", donationType: "ONE_TIME",
   };
-  const { userId: _userId, status: _status, donationType: _donationType, ...stillSupported } =
-    changedOnlyUnsupported;
-  assert.equal(dashboardStatsScopeParams(stillSupported, "month").toString(), original);
+  // A widened object may arrive through a variable or external call:
+  // runtime whitelist must ignore unsupported properties too.
+  assert.equal(dashboardStatsScopeParams(changedOnlyUnsupported, "month").toString(), original);
 });
