@@ -73,6 +73,7 @@ import {
 } from "@/lib/dashboard/format-dashboard-money";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
 import { dashboardDonationScopeParams, dashboardStatsScopeParams } from "@/lib/dashboard/home-donation-scope";
+import { homeFiltersAreModified } from "@/lib/dashboard/home-filter-defaults";
 import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import {
   istanbulTodayKey,
@@ -1542,11 +1543,29 @@ export default function DashboardPage() {
                 },
               ].filter(Boolean) as ActiveFilterChip[]}
               onClearAll={
-                selectedCategory !== "all" || selectedCampaign !== "all" || selectedUserId !== "all"
+                homeFiltersAreModified({
+                  categoryId: selectedCategory, campaignId: selectedCampaign,
+                  userId: selectedUserId, period: chartPeriod, dateFrom, dateTo,
+                  locale: donationLocaleFilter, country: donationCountryFilter,
+                  provider: donationProviderFilter, status: donationsStatusFilter,
+                  donationType: donationsTypeFilter, donationSearch: donationsSearch,
+                })
                   ? () => {
                       setSelectedCategory("all");
                       setSelectedCampaign("all");
                       setSelectedUserId("all");
+                      setChartPeriod("month");
+                      setDateFrom("");
+                      setDateTo("");
+                      setDonationLocaleFilter("all");
+                      setDonationCountryFilter("all");
+                      setDonationProviderFilter("all");
+                      setDonationsStatusFilter("RESOLVED");
+                      setDonationsTypeFilter("all");
+                      setDonationsSearch("");
+                      setUsersSearchInput("");
+                      setUsersSearchCommitted("");
+                      setDonationsPage(1);
                     }
                   : undefined
               }
