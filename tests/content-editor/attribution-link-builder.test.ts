@@ -68,6 +68,8 @@ test("link builder supports large sections and all primary public page routes", 
   const opts = { resourceId: "palestine-campaign", profileTab: "account", donationId: "" };
   assert.equal(buildPath("super_category", opts), "/bagislar/palestine-campaign");
   assert.equal(buildPath("category", opts), "/category/palestine-campaign");
+  assert.equal(buildPath("campaigns_legacy", opts), "/campaigns");
+  assert.equal(buildPath("bank_transfer", opts), "/bank-transfer");
   for (const [kind, route] of [
     ["zakat", "zakat"], ["zakat_calculator", "zakatCalculator"], ["waqf", "waqf"],
     ["recurring", "recurring"], ["aqsa", "aqsa"], ["jerusalem", "jerusalem"],
@@ -75,6 +77,8 @@ test("link builder supports large sections and all primary public page routes", 
     ["achievement_videos", "achievementVideos"], ["endorsement_videos", "endorsementVideos"],
     ["publications", "publications"], ["courses", "courses"], ["volunteer", "volunteer"],
     ["partner", "partner"], ["bank_accounts", "bankAccounts"], ["cart", "cart"],
+    ["terms", "terms"], ["privacy", "privacy"], ["donation_policy", "donationPolicy"],
+    ["cookies", "cookies"], ["accessibility", "accessibility"],
   ] as const) {
     assert.equal(buildPath(kind, opts), "/" + routes.SLUGS[route], kind);
   }
