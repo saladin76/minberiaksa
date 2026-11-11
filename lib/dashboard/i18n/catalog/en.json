@@ -9808,5 +9808,21 @@
   "الروابط بعد الفلاتر": "Filtered links",
   "روابط جلبت تبرعات": "Links with donations",
   "روابط تحتاج مراجعة التتبع": "Links needing a tracking review",
-  "الأرقام تخص كل رابط على حدة؛ قد تطابق العملية أكثر من رابط عند تشابه معرّفات التتبع.": "Figures are per link. A donation may match more than one link when tracking identifiers overlap."
+  "الأرقام تخص كل رابط على حدة؛ قد تطابق العملية أكثر من رابط عند تشابه معرّفات التتبع.": "Figures are per link. A donation may match more than one link when tracking identifiers overlap.",
+  "تصنيف مشاريع": "Project category",
+  "قسم كبير / صفحة برنامج رئيسية": "Major section / programme landing page",
+  "التبرع بالزكاة": "Pay zakat",
+  "مشاريع الوقف": "Endowment projects",
+  "التزكيات بالفيديو": "Video testimonials",
+  "إصدارات المؤسسة": "Publications",
+  "كن شريكًا": "Become a partner",
+  "سلة التبرعات": "Donation cart",
+  "ابحث عن المشروع أو القسم أو المحتوى": "Search projects, sections and content",
+  "اكتب الاسم لتصفية الخيارات": "Type a name to filter options",
+  "المشروع أو القسم أو المحتوى": "Project, section or content",
+  "عدد النتائج": "Results",
+  "قائمة الحملات القديمة": "Legacy campaigns catalogue",
+  "الشروط والأحكام": "Terms and conditions",
+  "سياسة الخصوصية": "Privacy policy",
+  "سياسة ملفات تعريف الارتباط": "Cookie policy"
 }
