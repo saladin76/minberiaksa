@@ -14,7 +14,7 @@ function matches(row: Row, where: Row): boolean {
     if (key === "OR") return (condition as Row[]).some(item => matches(row, item));
     if (key === "NOT") return !matches(row, condition as Row);
     const value = row[key];
-    if (condition && typeof condition === "object") return Object.entries(condition).every(([op, target]) => op === "isSet" ? (value !== undefined) === target : op === "lt" ? Number(value) < Number(target) : op === "lte" ? Number(value) <= Number(target) : op === "gte" ? Number(value) >= Number(target) : op === "not" ? value !== target : value === target);
+    if (condition && typeof condition === "object") return Object.entries(condition).every(([op, target]) => op === "isSet" ? (value !== undefined) === target : op === "lt" ? Number(value) < Number(target) : op === "lte" ? Number(value) <= Number(target) : op === "gte" ? Number(value) >= Number(target) : op === "in" ? Array.isArray(target) && target.includes(value) : op === "not" ? value !== target : value === target);
     return value === condition;
   });
 }
