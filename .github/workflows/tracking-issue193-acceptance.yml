@@ -1,0 +1,49 @@
+name: Tracking connections isolated browser acceptance
+
+# Runtime fixture: local HTTP, synthetic tracking settings, all third-party
+# script requests intercepted. This is not Staging or provider acceptance.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tracking-issue193-acceptance.yml'
+      - 'scripts/performance-tracking-browser-test.mjs'
+      - 'app/(dashboard)/dashboard/platform-connections/tracking/**'
+      - 'app/api/admin/tracking/**'
+      - 'app/api/tracking/config/**'
+      - 'components/MicrosoftClarity.tsx'
+      - 'components/TrackingPixels.tsx'
+      - 'lib/tracking/**'
+      - 'tests/content-editor/tracking-container-settings.test.ts'
+      - 'tests/integration-settings/google-script-policy.test.ts'
+      - 'tests/integration-settings/engagement-measurement.test.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tracking-browser:
+    name: Tracking dashboard Chromium (synthetic, no providers)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: 'true'
+      CONTENT_EDITOR_ARTIFACTS: .artifacts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise dashboard and pixels on real Chromium
+        run: node scripts/performance-tracking-browser-test.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue193-synthetic-tracking-mobile-desktop
+          path: .artifacts/performance-tracking/
+          if-no-files-found: warn
+          retention-days: 7

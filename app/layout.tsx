@@ -153,7 +153,9 @@ export default async function RootLayout({
       </head>
       <body className="font-arabic antialiased" style={SITE_FONT_VARIABLES}>
         <InboxPermissionsBoundary>{children}</InboxPermissionsBoundary>
-        <MicrosoftClarity />
+        <Suspense fallback={null}>
+          <MicrosoftClarity />
+        </Suspense>
         <Suspense fallback={null}>
           <EngagementInstrumentation />
         </Suspense>
