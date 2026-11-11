@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Clarity from "@microsoft/clarity";
 import { isMeasurementHost } from "@/lib/tracking/engagement-policy";
 import { isPublicAnalyticsPath } from "@/lib/tracking/private-path";
@@ -38,14 +38,16 @@ function privacyAllowsRecorder(): boolean {
  */
 export default function MicrosoftClarity() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKey = searchParams?.toString() ?? "";
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const allowed = isMeasurementHost(window.location.hostname) &&
       // Both router state and the live URL must be safe; they can briefly
       // disagree during a client transition. Fail closed instead of trusting
       // the still-public router state while the browser is on a private URL.
-      (!pathname || isPublicAnalyticsPath(pathname)) &&
-      isPublicAnalyticsPath(window.location.pathname) &&
+      (!pathname || isPublicAnalyticsPath(pathname + (searchKey ? `?${searchKey}` : ""))) &&
+      isPublicAnalyticsPath(window.location.pathname + window.location.search) &&
       privacyAllowsRecorder();
     // The recorder persists across client navigation: disabling only its
     // initial load would expose private SPA routes visited later. Stop it at
@@ -73,7 +75,7 @@ export default function MicrosoftClarity() {
         if (controller.signal.aborted) return;
         const currentId = normalizeClarityProjectId(config.clarityProjectId);
         const stillAllowed = privacyAllowsRecorder() &&
-          isPublicAnalyticsPath(window.location.pathname) &&
+          isPublicAnalyticsPath(window.location.pathname + window.location.search) &&
           config.clarityEnabled === true &&
           currentId !== null && currentId === window.__clarityLoadedProjectId;
         if (!stillAllowed) {
@@ -103,7 +105,7 @@ export default function MicrosoftClarity() {
         return response.json() as Promise<PublicClaritySettings>;
       }).then(config => {
         if (!active || !privacyAllowsRecorder() ||
-          !isPublicAnalyticsPath(window.location.pathname) ||
+          !isPublicAnalyticsPath(window.location.pathname + window.location.search) ||
           config.clarityEnabled !== true || window.__clarityInitialized) return;
         const id = normalizeClarityProjectId(config.clarityProjectId);
         if (!id) return;
@@ -121,6 +123,6 @@ export default function MicrosoftClarity() {
     });
 
     return () => { active = false; controller.abort(); cancelGate(); };
-  }, [pathname]);
+  }, [pathname, searchKey]);
   return null;
 }
