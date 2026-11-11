@@ -22,7 +22,7 @@ type AnyRecord = Record<string, unknown>;
 export function isEngagementEnabled(): boolean {
   try {
     if (typeof window === "undefined" || !isMeasurementHost(window.location.hostname) ||
-        !isPublicAnalyticsPath(window.location.pathname)) return false;
+        !isPublicAnalyticsPath(window.location.pathname + window.location.search)) return false;
     // The diagnostic dispatcher must obey the same privacy rejection as the
     // automatic recorder. It must not identify a donor or push GTM data after
     // explicit analytics opt-out, even if previously initialized scripts remain.
