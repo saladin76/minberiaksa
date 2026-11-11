@@ -1,5 +1,5 @@
 /** Private application routes, with or without the site's language prefix. */
-const PRIVATE_PATH = /^(\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?)(api|dashboard|auth|account|profile|success|donation-failed|donation-pending|payment-failed|payment-pending|payment-processing|payment-cancelled|receipt|certificates|reset-password|verify-email)(?:\/|$)/i;
+const PRIVATE_PATH = /^(\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?)(api|dashboard|auth|account|profile|cart|checkout|recurring-donation|subscription|subscriptions|login|register|success|donation-failed|donation-pending|payment-failed|payment-pending|payment-processing|payment-cancelled|receipt|certificates|reset-password|verify-email)(?:\/|$)/i;
 
 function decodedPath(value: string): string | null {
   if (!value.startsWith("/") || value.startsWith("//")) return null;
