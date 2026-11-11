@@ -60,7 +60,7 @@ test("accounting mode is honored for revenue STAFF and ADMIN with settled date s
     const response = await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=PAID");
     assert.equal(response.status, 200, role);
     const query = JSON.stringify(h.queries[0].where);
-    assert.match(query, /"paidAt":\\{"gte":/);
+    assert.match(query, /"paidAt":\{"gte":/);
     assert.equal(query.includes('"createdAt":{'), false);
     assert.equal(JSON.stringify(h.queries[1].orderBy), '{"paidAt":"desc"}');
   }
@@ -74,7 +74,7 @@ test("donor cannot request another donor or switch accounting date basis", async
   assert.match(where, /"donorId":"own-id"/);
   assert.equal(where.includes("someone-else"), false);
   assert.equal(where.includes('"paidAt":{'), false);
-  assert.match(where, /"createdAt":\\{"gte":/);
+  assert.match(where, /"createdAt":\{"gte":/);
   assert.equal(JSON.stringify(h.queries[1].orderBy), '{"createdAt":"desc"}');
 });
 
