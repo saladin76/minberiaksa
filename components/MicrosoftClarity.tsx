@@ -56,11 +56,35 @@ export default function MicrosoftClarity() {
       return;
     }
     if (window.__clarityInitialized) {
-      if (window.__claritySuspended) {
-        try { window.clarity?.("start"); window.__claritySuspended = false; }
-        catch { /* leave stopped until a fresh safe load */ }
-      }
-      return;
+      // A saved disable or project change must not resume an old recorder on
+      // client navigation. Clarity's SDK is not safely re-initializable with
+      // another project in the same document; a normal page reload uses the new ID.
+      const controller = new AbortController();
+      void fetch("/api/tracking/config", {
+        cache: "no-store", credentials: "same-origin", signal: controller.signal,
+      }).then(response => {
+        if (!response.ok) throw new Error("tracking config unavailable");
+        return response.json() as Promise<PublicClaritySettings>;
+      }).then(config => {
+        if (controller.signal.aborted) return;
+        const currentId = normalizeClarityProjectId(config.clarityProjectId);
+        const stillAllowed = privacyAllowsRecorder() &&
+          isPublicAnalyticsPath(window.location.pathname) &&
+          config.clarityEnabled === true &&
+          currentId !== null && currentId === window.__clarityLoadedProjectId;
+        if (!stillAllowed) {
+          try { window.clarity?.("stop"); } catch { /* fail closed */ }
+          window.__claritySuspended = true;
+        } else if (window.__claritySuspended) {
+          try { window.clarity?.("start"); window.__claritySuspended = false; }
+          catch { /* leave stopped */ }
+        }
+      }).catch(() => {
+        if (controller.signal.aborted) return;
+        try { window.clarity?.("stop"); } catch { /* fail closed */ }
+        window.__claritySuspended = true;
+      });
+      return () => controller.abort();
     }
 
     const controller = new AbortController();
