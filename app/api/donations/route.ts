@@ -48,6 +48,7 @@ import {
 } from "@/lib/dashboard/donation-search";
 import { resolveDonationRelationFilterIds } from "@/lib/dashboard/donation-relation-filters";
 import { accountingDateWhere } from "@/lib/dashboard/accounting-date-where";
+import { dashboardDonationDateSortField } from "@/lib/dashboard/donation-ledger-date";
 
 // GET /api/donations - Get all donations (admin) or user's donations
 export async function GET(request: NextRequest) {
@@ -253,10 +254,12 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> =
       extraFilters.length > 0 ? { AND: [baseWhere, ...extraFilters] } : baseWhere;
 
-    const orderBy =
-      sortBy === "amount"
-        ? { amountUSD: sortOrder }
-        : { createdAt: sortOrder };
+    const dateSortField = dashboardDonationDateSortField(
+      useAccountingDate ? "accounting" : null,
+      statusFilter,
+      sortBy
+    );
+    const orderBy = { [dateSortField]: sortOrder };
 
     const total = await prisma.donation.count({ where });
     const donations = await prisma.donation.findMany({
