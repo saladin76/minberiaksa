@@ -58,8 +58,8 @@ test("redirect audit reports canonical redirection and catches dropped ad attrib
 test("known old ad URLs are inventoried, not deleted or redirected to a guessed recipient", async () => {
   const audit = await loadAudit();
   assert.ok(audit.LEGACY_AD_PROBES.includes("/ar/donates"));
-  assert.ok(LEGACY_AD_PROBES.includes("/ar/monthly-donate"));
-  assert.ok(LEGACY_AD_PROBES.includes("/ar/ghr"));
+  assert.ok(audit.LEGACY_AD_PROBES.includes("/ar/monthly-donate"));
+  assert.ok(audit.LEGACY_AD_PROBES.includes("/ar/ghr"));
   const config = readFileSync("next.config.ts", "utf8");
   assert.match(config, /source: "\/ar\/ghr"/);
   assert.match(config, /source: "\/ar\/monthly-donate"/);
