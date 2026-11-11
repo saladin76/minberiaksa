@@ -108,6 +108,20 @@ database's authenticated scoped roles. Never use `pm2 env`, `cat .env`, SSH outp
 - Disposable DB snapshot/reseed procedure, synthetic receipt purge, and
   teardown command. Practice rollback in Staging only.
 
+## Read-only operational evidence request — 11 Nov 2026
+
+**Not executed from ChatGPT**: no SSH/VPS access or GitHub Environment administrator API was available. These are operator-run inspection steps, not authorization to change production. Only return sanitized status and SHA/identity hashes; never paste environment variables, secrets, MongoDB URIs, payment logs or donor details.
+
+1. **PM2 actual process**: from the authorized VPS run the existing `scripts/qa-vps-runtime-readonly.sh` (from reviewed read-only audit directory if not present), record process name/PID/PM2 cwd/script/interpreter/PORT/restart status. Resolve running process cwd via `/proc/<PID>/cwd` with operator-approved permissions; `git rev-parse HEAD` from unrelated directories is insufficient. Cross-check authenticated `/api/admin/build-info` source SHA and build identity with the running process; report mismatches only.
+2. **Nginx**: approved operator reviews `nginx -t` and sanitized server_name -> upstream port mapping, including staging vs production TLS hosts and any redirects. Never print private config directives or secrets. Compare `ss -ltn` listener ports with PM2 service ports; require separate service and firewall boundaries.
+3. **MongoDB**: independent staging project/cluster or formally isolated tenancy, DB and account; verify user scope through read-only authenticated role inspection, exact host+port, identity fingerprints and clear inequality from production. Do not copy donor data or make write probes. Inspect the effective database connection for the running staging process, not only a dotenv file on disk.
+4. **Redis / queues / sessions**: inspect sanitized host/port/database namespace, encryption/session-secret identities (fingerprint only), queue names, workers, dedupe key prefixes and scheduled jobs; compare to production for any shared cache, sessions, locks, subscriptions or payment jobs. Shared Redis or queues blocks approval even when MongoDB is separate.
+5. **Cron and messaging**: inspect `crontab -l`, system timers, PM2 workers and app schedulers without printing tokens; prove no staging renewal/receipt/email/WhatsApp events can reach live recipients. Confirm outgoing-deny **at network/firewall layer** rather than trusting `STAGING_EGRESS_POLICY` alone.
+6. **GitHub Environment**: repository administrator verifies `staging-acceptance` exists, Required Reviewers include an independent approver, self-approval/bypass are disabled, branch allowlist matches exact reviewed staging ref, environment secrets are isolated and the attested SHA matches deployed build. Screenshots of non-secret controls are sufficient.
+7. **Acceptance evidence**: record date, approved reviewer, redacted command outputs, process↔port↔proxy↔build-SHA correspondence, database and Redis fingerprint comparisons, negative network egress tests in an isolated service, and independent finance/security signatures.
+
+**Mandatory outcome:** any missing evidence yields `STAGING_NOT_VERIFIED`. This PR is QA ONLY and must never be merged as a production release.
+
 ## Acceptance matrix — separate evidence required
 | Domain | Required proof |
 | --- | --- |
