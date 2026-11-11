@@ -20,7 +20,7 @@ type PageKind = "home" | "campaigns" | "campaign" | "category" | "super_category
 type LinkMode = "standard" | "marketing";
 type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "email" | "whatsapp" | "sms" | "organic";
 
-interface EntityRow { id: string; slug?: string | null; title?: string; name?: string; published?: boolean; supportedLocales: string[]; slugByLocale?: Record<string, string | null>; }
+interface EntityRow { id: string; slug?: string | null; title?: string; name?: string; titleByLocale?: Record<string, string>; published?: boolean; supportedLocales: string[]; slugByLocale?: Record<string, string | null>; }
 interface Bundle { locales: string[]; currencies: string[]; campaigns: EntityRow[]; categories: EntityRow[]; superCategories: EntityRow[]; posts: EntityRow[]; postCategories: EntityRow[]; }
 interface ReferralRow { id: string; code: string; name: string | null; }
 interface MarketingForm {
@@ -145,8 +145,8 @@ function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: strin
   }
 }
 
-function entityLabel(row: EntityRow) {
-  const text = (row.title || row.name || row.id).slice(0, 96);
+function entityLabel(row: EntityRow, locale = "ar") {
+  const text = (row.titleByLocale?.[locale] || row.title || row.name || row.id).slice(0, 96);
   return row.published === false ? dt("{0} (مسودة)", [text]) : text;
 }
 
@@ -309,7 +309,8 @@ export default function TrackingLinkBuilder() {
   const filteredResources = useMemo(() => {
     const search = resourceSearch.trim().toLocaleLowerCase();
     return search ? resourceList.filter(row =>
-      (row.title || row.name || row.slug || row.id).toLocaleLowerCase().includes(search)
+      (row.title || row.name || row.slug || row.id).toLocaleLowerCase().includes(search) ||
+      Object.values(row.titleByLocale || {}).some(title => title.toLocaleLowerCase().includes(search))
     ) : resourceList;
   }, [resourceList, resourceSearch]);
   const selectedResource = useMemo(() => resourceList.find((row) => row.id === resourceId), [resourceList, resourceId]);
@@ -394,7 +395,7 @@ export default function TrackingLinkBuilder() {
       const isMarketingLink = linkMode === "marketing";
       const registryName = isMarketingLink
         ? identifierValue(marketingForm.campaignName) || identifierValue(effectiveMarketingForm.campaignId) || (dynamicTemplate ? dt("قالب إعلان {0}", [selectedPlatform.label]) : marketingParams.utm_campaign) || "Marketing link"
-        : `${pageOptionLabel(pageKind)}${selectedResource ? ` - ${entityLabel(selectedResource)}` : ""}`;
+        : `${pageOptionLabel(pageKind)}${selectedResource ? ` - ${entityLabel(selectedResource, locale)}` : ""}`;
       const standardPlatform = "ORGANIC";
       const standardChannel = "SITE_LINK";
       const adGroupId = isMarketingLink && effectiveMarketingForm.platform === "google_ads" ? identifierValue(effectiveMarketingForm.adsetId) : undefined;
@@ -510,7 +511,7 @@ export default function TrackingLinkBuilder() {
             {needsResourcePick(pageKind) ? (
               <div className="space-y-2">
                 <Field label={dt("ابحث عن المشروع أو القسم أو المحتوى")} value={resourceSearch} onChange={setResourceSearch} placeholder={dt("اكتب الاسم لتصفية الخيارات")} />
-                <SelectField label={dt("المشروع أو القسم أو المحتوى")} value={resourceId} onValueChange={setResourceId} options={filteredResources.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder={dt("اختر المحتوى")} />
+                <SelectField label={dt("المشروع أو القسم أو المحتوى")} value={resourceId} onValueChange={setResourceId} options={filteredResources.map((row) => ({ value: row.id, label: entityLabel(row, locale) }))} placeholder={dt("اختر المحتوى")} />
                 <p className="text-xs text-muted-foreground">{dt("عدد النتائج")}: {filteredResources.length}</p>
               </div>
             ) : null}
