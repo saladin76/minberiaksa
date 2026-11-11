@@ -614,6 +614,9 @@ export default function DashboardPage() {
         params.set("limit", String(PAGE_SIZE));
         params.set("sortBy", donationsSortBy);
         params.set("sortOrder", donationsSortOrder);
+        // Chart and table must use the same financial period: settled paid
+        // donations use paidAt; unresolved attempts use createdAt.
+        if (start && end) params.set("dateBasis", "accounting");
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
