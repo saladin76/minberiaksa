@@ -329,6 +329,7 @@ async function mockClarityRuntime(options: {
   failure?: boolean;
   navigatePrivateThenPublic?: boolean;
   hashAfterInit?: string;
+  consentAfterInit?: "denied" | "granted";
   navigationPaths?: string[];
   changesAfterInit?: { enabled?: boolean; project?: string; failure?: boolean };
 } = {}) {
@@ -364,6 +365,11 @@ async function mockClarityRuntime(options: {
   if (options.hashAfterInit) {
     b.win.location.hash = options.hashAfterInit;
     b.win.emit("hashchange");
+  }
+  if (options.consentAfterInit) {
+    Object.assign(b.doc, { cookie: `analytics_consent=${options.consentAfterInit}` });
+    b.win.emit("analytics-consent-changed");
+    b.doc.emit("visibilitychange");
   }
   if (options.changesAfterInit) {
     if (options.changesAfterInit.enabled !== undefined) allow = options.changesAfterInit.enabled;
@@ -415,6 +421,14 @@ test("Clarity refuses private URL fragments on entry and stops on hash-only chan
   const changed = await mockClarityRuntime({ hashAfterInit: "#access-token=private-fixture" });
   assert.deepEqual(changed.ids, ["dynamic1234"]);
   assert.deepEqual(changed.clarityCommands, ["stop"], "hashchange must stop without a React rerender");
+});
+
+test("Clarity stops after in-session consent withdrawal without route navigation", async () => {
+  const withdrawn = await mockClarityRuntime({ consentAfterInit: "denied" });
+  assert.deepEqual(withdrawn.ids, ["dynamic1234"]);
+  assert.deepEqual(withdrawn.clarityCommands, ["stop"]);
+  const consented = await mockClarityRuntime({ consentAfterInit: "granted" });
+  assert.deepEqual(consented.clarityCommands, [], "consent refresh does not duplicate init or force a new session");
 });
 
 test("Clarity stops on a private SPA route and resumes without a second init on a safe route", async () => {
