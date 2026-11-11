@@ -48,7 +48,11 @@ export function dashboardStatsScopeParams(
   period: string,
 ): URLSearchParams {
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(scope)) {
+  const supportedKeys: Array<keyof HomeStatsScope> = [
+    "categoryId", "campaignId", "start", "end", "locale", "country", "provider",
+  ];
+  for (const key of supportedKeys) {
+    const value = scope[key];
     if (value != null && value !== "" && value !== "all") {
       query.set(key, value);
     }
