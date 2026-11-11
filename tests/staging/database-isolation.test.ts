@@ -46,6 +46,10 @@ test("staging database guard rejects production roles, hosts, users and shared i
   rejected({ ...approved(), PRODUCTION_DB_IDENTITY_SHA256: "" });
   rejected({ ...approved(), ALBARAKA_ENC_KEY: "synthetic-prod-key" });
   rejected({ ...approved(), META_WHATSAPP_ACCESS_TOKEN: "synthetic-token" });
+  // Provider keys introduced after the original denylist must also fail closed.
+  for (const key of ["ALBARAKA_API_TOKEN", "PAYFOR_SECRET", "ZIRAAT_GATEWAY_PASSWORD", "WHATSAPP_CLOUD_API_TOKEN", "MAILGUN_API_KEY"]) {
+    rejected({ ...approved(), [key]: "synthetic-do-not-use" });
+  }
 });
 
 test("only a scoped readWrite staging user can attest; admin and broad roles denied", () => {
