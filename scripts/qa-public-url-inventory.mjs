@@ -33,8 +33,15 @@ export function safePublicUrl(value, origin = ORIGIN) {
 export function queryRetained(before, after) {
   const source = new URL(before);
   const destination = new URL(after);
+  const remaining = new Map();
+  for (const key of source.searchParams.keys()) {
+    if (!remaining.has(key)) remaining.set(key, [...destination.searchParams.getAll(key)]);
+  }
   for (const [key, value] of source.searchParams) {
-    if (!destination.searchParams.getAll(key).includes(value)) return false;
+    const available = remaining.get(key);
+    const index = available?.indexOf(value) ?? -1;
+    if (index < 0) return false;
+    available.splice(index, 1);
   }
   return true;
 }
