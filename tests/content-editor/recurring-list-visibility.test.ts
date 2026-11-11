@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { subscriptionPaymentSequence } from "../../lib/dashboard/subscription-payment-sequence";
+import { accountingDateWhere, canUseAccountingDate } from "../../lib/dashboard/accounting-date-where";
+import { dashboardDonationDateSortField } from "../../lib/dashboard/donation-ledger-date";
 type Row = Record<string, unknown>;
 function load(file: string, dependencies: Record<string, unknown>) {
   const loaded = { exports: {} as Record<string, (arg: unknown) => Promise<{ status: number; body: Row }>> };
@@ -24,6 +26,8 @@ function harness(role: "monthly" | "admin" | "donor") {
     "@/lib/dashboard/donation-provider-filter": { donationProviderWhere: () => null },
     "@/lib/dashboard/recurring-frequency-filter": { parseFrequencyParam: () => null, donationFrequencyWhere: () => null, loadSubscriptionFrequencies: async () => () => null },
     "@/lib/dashboard/donation-relation-filters": { resolveDonationRelationFilterIds: async () => ({}) },
+    "@/lib/dashboard/accounting-date-where": { accountingDateWhere, canUseAccountingDate },
+    "@/lib/dashboard/donation-ledger-date": { dashboardDonationDateSortField },
   });
   return { get: (query: string) => route.GET({ url: "https://example.invalid/api/donations?" + query }), queries };
 }
