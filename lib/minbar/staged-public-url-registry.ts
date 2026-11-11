@@ -6,7 +6,7 @@
  * content-ID mappings and tested legacy aliases are available.
  */
 import { SUPPORTED_LOCALES, type SupportedLocale } from "../locales";
-import type { MinbarRoute } from "./routes";
+import { NOINDEX_ROUTES, SLUGS, type MinbarRoute } from "./routes";
 
 /** Only public, non-transactional routes may be migrated with this registry. */
 export type MigratableRoute = Extract<MinbarRoute,
@@ -47,6 +47,12 @@ export const INITIAL_ROUTE_PROPOSALS: readonly RouteProposal[] = [
   { locale: "en", route: "recurring", slug: "recurring-donation", status: "candidate" },
   { locale: "fr", route: "recurring", slug: "don-regulier", status: "candidate" },
 ] as const;
+
+/** Existing checkout, donor and payment paths must never be claimed by public SEO routes. */
+const RESERVED_PREFIXES = new Set<string>([
+  "api", "dashboard", "auth", "campaign", "campaigns", "category",
+  ...[...NOINDEX_ROUTES].map(route => SLUGS[route].split("/")[0]).filter(Boolean),
+]);
 
 const FAMILY_ROUTE: Readonly<Record<ContentFamily, MigratableRoute>> = {
   project: "projects",
@@ -124,6 +130,7 @@ export class StagedPublicUrlRegistry {
         throw new Error("INVALID_LOCALIZED_ROUTE");
       }
       if (proposal.status !== "approved") continue;
+      if (RESERVED_PREFIXES.has(proposal.slug)) throw new Error("RESERVED_PUBLIC_ROUTE");
       const route = proposal.route === "projectDetail" ? "projects" :
         proposal.route === "article" ? "blog" : proposal.route;
       const key = `${proposal.locale}:${route}`;
