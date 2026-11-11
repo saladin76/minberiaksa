@@ -4,12 +4,13 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import * as policy from "../../lib/marketing/tracking-link-policy";
+import * as routes from "../../lib/minbar/routes";
 
 const builderPath = "app/(dashboard)/dashboard/marketing/attribution/_components/TrackingLinkBuilder.tsx";
 function builderModel() {
   const source = fs.readFileSync(builderPath, "utf8").split("export default function TrackingLinkBuilder")[0] + "\nmodule.exports={makeMarketingParams,buildPath,fieldValue,identifierValue,initialMarketingForm};";
   const loaded = { exports: {} as { makeMarketingParams: (form: Record<string, unknown>, locale: string) => Record<string, string>; buildPath: (kind: string, opts: Record<string, string>) => string; fieldValue: (value: string) => string | undefined; identifierValue: (value: string) => string | undefined; initialMarketingForm: Record<string, unknown> } };
-  const imports: Record<string, unknown> = { "@/lib/marketing/tracking-link-policy": policy, "@/lib/dashboard/i18n": { dt: (text: string) => text, dashDir: () => "rtl" } };
+  const imports: Record<string, unknown> = { "@/lib/marketing/tracking-link-policy": policy, "@/lib/minbar/routes": routes, "@/lib/dashboard/i18n": { dt: (text: string) => text, dashDir: () => "rtl" } };
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText,
     { module: loaded, exports: loaded.exports, require: (name: string) => imports[name] ?? {}, URLSearchParams });
   return loaded.exports;
@@ -58,6 +59,68 @@ test("actual builder generates canonical project paths and keeps automatic templ
   const staticParams = model.makeMarketingParams({ ...model.initialMarketingForm, campaignName: "Türkiye Bağış", autoPlatformData: false }, "tr");
   assert.equal(staticParams.utm_campaign, "türkiye-bağış");
   assert.equal(policy.hasTrackingMacros(policy.serializeAdParameters(staticParams)), false);
+});
+
+
+test("link builder supports large sections and all primary public page routes", () => {
+  const { buildPath } = builderModel();
+  const opts = { resourceId: "palestine-campaign", profileTab: "account", donationId: "" };
+  assert.equal(buildPath("super_category", opts), "/bagislar/palestine-campaign");
+  assert.equal(buildPath("category", opts), "/category/palestine-campaign");
+  for (const [kind, route] of [
+    ["zakat", "zakat"], ["zakat_calculator", "zakatCalculator"], ["waqf", "waqf"],
+    ["recurring", "recurring"], ["aqsa", "aqsa"], ["jerusalem", "jerusalem"],
+    ["reports", "reports"], ["news", "news"], ["programs", "programs"],
+    ["achievement_videos", "achievementVideos"], ["endorsement_videos", "endorsementVideos"],
+    ["publications", "publications"], ["courses", "courses"], ["volunteer", "volunteer"],
+    ["partner", "partner"], ["bank_accounts", "bankAccounts"], ["cart", "cart"],
+  ] as const) {
+    assert.equal(buildPath(kind, opts), "/" + routes.SLUGS[route], kind);
+  }
+});
+
+test("link-generator endpoint includes only active major sections with locale slugs", async () => {
+  const source = fs.readFileSync("app/api/admin/link-generator/data/route.ts", "utf8");
+  const mockRows = [{ id: "major123", slug: "alkuds", title: "القدس", translations: [
+    { locale: "tr", title: "Kudüs", slug: "kudus" },
+    { locale: "en", title: "Jerusalem", slug: "jerusalem" },
+  ] }];
+  let whereSeen: unknown = null;
+  const prisma = {
+    campaign: { findMany: async () => [] },
+    category: { findMany: async () => [] },
+    superCategory: { findMany: async (args: { where: unknown }) => { whereSeen = args.where; return mockRows; } },
+    post: { findMany: async () => [] },
+    postCategory: { findMany: async () => [] },
+  };
+  const load = (authorized: boolean) => {
+    const out = { exports: {} as { GET: () => Promise<{ status: number; body: Record<string, unknown> }> } };
+    const imports: Record<string, unknown> = {
+      "next/server": { NextResponse: { json: (body: unknown, init: ResponseInit = {}) => ({ status: init.status ?? 200, body }) } },
+      "next-auth": { getServerSession: async () => ({ user: { id: "qa" } }) },
+      "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
+      "@/lib/prisma": { prisma },
+      "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => authorized ? null : { status: 403, body: {} } },
+      "@/i18n/routing.config": { routing: { locales: ["ar", "tr", "en"] } },
+      "@/lib/currency-link": { URL_CURRENCY_CODES_ORDERED: ["DEFAULT", "USD"] },
+    };
+    vm.runInNewContext(ts.transpileModule(source, { compilerOptions: {
+      module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
+    } }).outputText, { module: out, exports: out.exports, require: (name: string) => {
+      assert.ok(name in imports, name); return imports[name];
+    }, console });
+    return out.exports.GET;
+  };
+  assert.equal((await load(false)()).status, 403);
+  const response = await load(true)();
+  assert.equal(response.status, 200);
+  assert.equal(JSON.stringify(whereSeen), JSON.stringify({ isActive: true }));
+  const superCategories = response.body.superCategories as Array<{id: string; slugByLocale: Record<string, string>; supportedLocales: string[]}>;
+  assert.equal(superCategories.length, 1);
+  assert.equal(superCategories[0].id, "major123");
+  assert.equal(superCategories[0].slugByLocale.tr, "kudus");
+  assert.equal(superCategories[0].slugByLocale.en, "jerusalem");
+  assert.ok(superCategories[0].supportedLocales.includes("ar"));
 });
 
 function routeFixture(authorized = true) {
