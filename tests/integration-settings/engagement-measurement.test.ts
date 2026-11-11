@@ -272,12 +272,15 @@ async function mockClarityRuntime(options: {
   optOut?: boolean;
   failure?: boolean;
   navigatePrivateThenPublic?: boolean;
+  navigationPaths?: string[];
+  changesAfterInit?: { enabled?: boolean; project?: string; failure?: boolean };
 } = {}) {
   const b = browser(options.url ?? "https://minberiaksa.org/ar");
   const h = hooks(), ids: string[] = [], requests: string[] = [], clarityCommands: string[] = [];
   (b.win as unknown as { clarity: (...args: string[]) => void }).clarity = (...args: string[]) => clarityCommands.push(args[0]);
-  const allow = options.enabled !== false;
-  const configured = options.project ?? "dynamic1234";
+  let allow = options.enabled !== false;
+  let configured = options.project ?? "dynamic1234";
+  let failure = Boolean(options.failure);
   const client = clientModule("components/MicrosoftClarity.tsx", {
     react: h.react,
     "next/navigation": { usePathname: () => b.win.location.pathname },
@@ -292,7 +295,7 @@ async function mockClarityRuntime(options: {
     AbortController,
     fetch: async (url: string) => {
       requests.push(url);
-      if (options.failure) return { ok: false };
+      if (failure) return { ok: false };
       return { ok: true, json: async () => ({ clarityEnabled: allow, clarityProjectId: configured }) };
     },
   });
@@ -301,14 +304,23 @@ async function mockClarityRuntime(options: {
   await new Promise<void>(resolve => setImmediate(resolve));
   h.replayEffects();
   await new Promise<void>(resolve => setImmediate(resolve));
-  if (options.navigatePrivateThenPublic) {
-    b.win.location = new URL("https://minberiaksa.org/ar/profile/private-record");
+  if (options.changesAfterInit) {
+    if (options.changesAfterInit.enabled !== undefined) allow = options.changesAfterInit.enabled;
+    if (options.changesAfterInit.project !== undefined) configured = options.changesAfterInit.project;
+    if (options.changesAfterInit.failure !== undefined) failure = options.changesAfterInit.failure;
+  }
+  const navigationPaths = options.navigationPaths ?? (options.navigatePrivateThenPublic
+    ? ["/ar/profile/private-record", "/ar/projects"] : []);
+  const snapshots: { path: string; commands: string[]; initializations: number }[] = [];
+  for (const path of navigationPaths) {
+    b.win.location = new URL("https://minberiaksa.org" + path);
     h.render(client.default as () => unknown);
-    b.win.location = new URL("https://minberiaksa.org/ar/projects");
-    h.render(client.default as () => unknown);
+    // A valid public route deliberately waits for a fresh runtime read before resuming.
+    await new Promise<void>(resolve => setImmediate(resolve));
+    snapshots.push({ path, commands: [...clarityCommands], initializations: ids.length });
   }
   h.unmount();
-  return { ids, requests, clarityCommands };
+  return { ids, requests, clarityCommands, snapshots };
 }
 
 test("actual Clarity loader fetches saved runtime config, initializes once and never duplicates on replay", async () => {
@@ -322,6 +334,26 @@ test("Clarity stops on a private SPA route and resumes without a second init on 
   const result = await mockClarityRuntime({ navigatePrivateThenPublic: true });
   assert.deepEqual(result.ids, ["dynamic1234"]);
   assert.deepEqual(result.clarityCommands, ["stop", "start"]);
+});
+
+test("Clarity navigation cycles across all locales stop on private routes and resume only after verified runtime config", async () => {
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    const result = await mockClarityRuntime({ navigationPaths: [
+      `/${locale}/checkout`, `/${locale}/profile/private`, `/${locale}/projects`,
+      `/${locale}/bagislar/gaza`, `/${locale}/cart`, `/${locale}/zakat`,
+    ] });
+    assert.deepEqual(result.clarityCommands, ["stop", "start", "stop", "start"], locale);
+    assert.equal(result.ids.length, 1, locale);
+    assert.ok(result.snapshots.filter(x => /checkout|profile|cart/.test(x.path)).every(x => x.commands.at(-1) === "stop"), locale);
+  }
+});
+
+test("Clarity refuses to restart after a saved disable, project switch or failed runtime refresh", async () => {
+  for (const changesAfterInit of [{ enabled: false }, { project: "otherproject99" }, { failure: true }]) {
+    const result = await mockClarityRuntime({ changesAfterInit, navigationPaths: ["/ar/checkout", "/ar/zakat", "/ar/projects"] });
+    assert.deepEqual(result.clarityCommands, ["stop", "stop", "stop"], JSON.stringify(changesAfterInit));
+    assert.equal(result.ids.length, 1);
+  }
 });
 
 test("Clarity never loads on dashboard, donor private routes, preview or explicit privacy opt-out", async () => {
