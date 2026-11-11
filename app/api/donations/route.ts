@@ -47,6 +47,7 @@ import {
   userWhereForDonorSearch,
 } from "@/lib/dashboard/donation-search";
 import { resolveDonationRelationFilterIds } from "@/lib/dashboard/donation-relation-filters";
+import { accountingDateWhere } from "@/lib/dashboard/accounting-date-where";
 
 // GET /api/donations - Get all donations (admin) or user's donations
 export async function GET(request: NextRequest) {
@@ -99,13 +100,28 @@ export async function GET(request: NextRequest) {
     // subscription-only, since a one-time gift has no plan.
     const frequencyFilter = dashboardReader ? parseFrequencyParam(searchParams.get("frequency")) : null;
 
+    // Explicit opt-in only: existing donor and admin listing clients still
+    // filter by creation date. The dashboard's settled-date view follows the
+    // chart's paidAt/createdAt financial calendar, and requires revenue access.
+    const useAccountingDate =
+      isAdmin &&
+      searchParams.get("dateBasis") === "accounting" &&
+      Boolean(startParam && endParam);
+    const accountingWhere = useAccountingDate
+      ? accountingDateWhere(
+          statusFilter,
+          dateFilter.gte as Date,
+          dateFilter.lte as Date
+        )
+      : null;
+
     const baseWhere: Record<string, unknown> = {
       ...(userId && { donorId: userId }),
       ...(referralId && isAdmin && { referralId }),
       ...(subscriptionOnly && { subscriptionId: { not: null } }),
       ...(donationTypeFilter === "MONTHLY" && { subscriptionId: { not: null } }),
       ...(!dashboardReader && { donorId: session.user.id }),
-      ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
+      ...(!useAccountingDate && Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }),
     };
 
     // Resolve project/category links using their scalar ObjectId columns first.
@@ -231,7 +247,7 @@ export async function GET(request: NextRequest) {
     const statusWhere = donationStatusWhere(statusFilter);
 
     const providerWhere = isAdmin ? donationProviderWhere(searchParams.get("provider")) : null;
-    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere].filter(
+    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere, accountingWhere].filter(
       (w) => w != null
     );
     const where: Record<string, unknown> =
