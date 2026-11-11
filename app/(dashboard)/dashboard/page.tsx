@@ -407,12 +407,15 @@ export default function DashboardPage() {
         const lc = locale || "ar";
         const [categoriesRes, campaignsRes] = await Promise.all([
           fetch(`/api/categories?locale=${lc}&counts=true&limit=200`),
-          fetch(`/api/campaigns/all?locale=${lc}&isActiveFalse=true`),
+          fetch(`/api/admin/dashboard-filter-options?locale=${encodeURIComponent(lc)}`),
         ]);
+        if (!categoriesRes.ok || !campaignsRes.ok) {
+          throw new Error("Dashboard filter options request failed");
+        }
         const categoriesJson = await categoriesRes.json();
         const campaignsJson = await campaignsRes.json();
-        setCategories(categoriesJson?.items ?? categoriesJson ?? []);
-        setCampaigns(normalizeDashboardCampaignFilterOptions(campaignsJson?.items ?? campaignsJson));
+        setCategories(Array.isArray(categoriesJson?.items) ? categoriesJson.items : []);
+        setCampaigns(normalizeDashboardCampaignFilterOptions(campaignsJson?.items));
       } catch (error) {
         console.error("Error fetching filters:", error);
       }
