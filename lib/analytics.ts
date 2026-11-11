@@ -31,7 +31,7 @@ export function isEngagementEnabled(): boolean {
       if (nav.globalPrivacyControl === true || nav.doNotTrack === "1") return false;
     }
     const cookie = typeof document === "undefined" ? "" : document.cookie || "";
-    return !/(?:^|;\\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookie);
+    return !/(?:^|;\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookie);
   } catch {
     return false;
   }
