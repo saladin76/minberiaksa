@@ -912,7 +912,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {!searchParams.get("userId") && <>
+        {selectedUserId === "all" && <>
           <MetricSummaryBand
             icon={Wallet}
             eyebrow={dt("إجمالي الإيرادات الناجحة")}
@@ -1641,8 +1641,8 @@ export default function DashboardPage() {
     </Select>
   </div>
 
-  {/* User  hidden when viewing a specific user via link (?userId=...) */}
-  {!searchParams.get("userId") && (
+  {/* Show donor selector again after the URL donor filter is cleared. */}
+  {selectedUserId === "all" && (
     <div className="space-y-1 text-start">
       <label className="text-[11px] font-semibold text-slate-600">
         {dt("المستخدم")}</label>
