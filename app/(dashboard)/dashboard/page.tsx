@@ -121,10 +121,9 @@ interface Category {
 interface CampaignOption {
   id: string;
   title: string;
-  // Many-to-many: a campaign can belong to multiple categories. `categoryId`
-  // is the legacy single-value alias (first category) for backwards-compat.
+  // Normalized by normalizeDashboardCampaignFilterOptions.
   categoryId?: string;
-  categoryIds?: string[];
+  categoryIds: string[];
 }
 
 interface UserOption {
