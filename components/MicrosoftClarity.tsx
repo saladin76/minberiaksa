@@ -41,17 +41,29 @@ export default function MicrosoftClarity() {
   const searchParams = useSearchParams();
   const searchKey = searchParams?.toString() ?? "";
   useLayoutEffect(() => {
-    // Hash changes do not update usePathname/useSearchParams, but the document
-    // URL may now contain a receipt token. Fail closed immediately.
-    const stopOnPrivateFragment = () => {
+    // Hash changes never update usePathname. Consent may also be withdrawn
+    // without route navigation: recheck on explicit CMP event, focus and
+    // visibility transitions. A denied state must never restart the recorder.
+    const stopIfUnsafe = () => {
       if (!window.__clarityInitialized || window.__claritySuspended) return;
       const href = window.location.pathname + window.location.search + window.location.hash;
-      if (isPublicAnalyticsPath(href)) return;
+      if (isMeasurementHost(window.location.hostname) &&
+          isPublicAnalyticsPath(href) && privacyAllowsRecorder()) return;
       try { window.clarity?.("stop"); } catch { /* never affect navigation */ }
       window.__claritySuspended = true;
     };
-    window.addEventListener("hashchange", stopOnPrivateFragment);
-    return () => window.removeEventListener("hashchange", stopOnPrivateFragment);
+    window.addEventListener("hashchange", stopIfUnsafe);
+    window.addEventListener("focus", stopIfUnsafe);
+    window.addEventListener("pageshow", stopIfUnsafe);
+    window.addEventListener("analytics-consent-changed", stopIfUnsafe);
+    document.addEventListener("visibilitychange", stopIfUnsafe);
+    return () => {
+      window.removeEventListener("hashchange", stopIfUnsafe);
+      window.removeEventListener("focus", stopIfUnsafe);
+      window.removeEventListener("pageshow", stopIfUnsafe);
+      window.removeEventListener("analytics-consent-changed", stopIfUnsafe);
+      document.removeEventListener("visibilitychange", stopIfUnsafe);
+    };
   }, []);
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
