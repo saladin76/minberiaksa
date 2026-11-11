@@ -30,3 +30,15 @@ Scope: a separate PR from #191. No changes to payment settlement, gateway, recur
 6. Measure Web Vitals against baseline, and obtain finance/security approval before release.
 
 Release decision: NO-GO before Staging and external acceptance. Do not merge or deploy.
+
+## Security review update — 2026-11-11
+
+**Microsoft Clarity provider limitation:** The official Clarity FAQ advises removing tracking code from URLs that must not be recorded (https://learn.microsoft.com/en-us/clarity/faq/). Clarity may collect DOM mutations and attributes (https://learn.microsoft.com/en-us/clarity/clarity-data); masking needs explicit review (https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-masking). Consent denial does not necessarily mean zero telemetry: Clarity's consent V2 documentation describes limited cookieless analytics (https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-consent-api-v2). Therefore SPA `stop/start`, even invoked before paint by React, is **not a verified network-isolation boundary**. No claim of zero private-route transmission is allowed until an authorized synthetic-browser Network/HAR review verifies the provider. Private modal content on unchanged public URLs is another unresolved boundary.
+
+**Additional in-application privacy hardening:** `lib/analytics.ts` now checks the private-route denylist before calling `clarity("identify")`, custom Clarity tags/events, GA4 diagnostic events or GTM dataLayer pushes. It also reads GPC/DNT and explicitly rejected consent cookies at invocation time; this excludes protected paths and blocked consent even when an old script remains mounted. This gate does **not** replace a CMP/Clarity consentV2 integration or stop SDK automatic DOM recording on public modals.
+
+**Safer design if zero private data transmission cannot be demonstrated:** physically separate public recorder-enabled pages from private layouts and force a full-document transition before entering protected routes. Ensure the destination document never includes Microsoft Clarity or a GTM container that injects it. Also exclude/mask private overlays that open without a URL transition; ideally move these to a recorder-free layout. Treat this as a staged architectural change requiring acceptance rather than silently assuming runtime `stop` is sufficient.
+
+**Staging evidence required:** synthetic private identifiers in text, attributes, links and overlay/modal; ar/tr/en/fr, desktop/mobile; preserve network log and inspect Clarity collector payloads before/after navigation, rapid forward/back, page reload, consent revocation, project ID change and API failure; confirm no sensitive payloads in requests or recordings. Review GTM Preview/Tag Assistant container triggers, direct GA/Ads loader exclusivity, stable conversion event ID and no `purchase` on success-page revisit. No production donors, cards or real Purchase events.
+
+**Release decision:** Clarity privacy acceptance remains **REQUEST CHANGES / NO-GO** until verified isolation; GTM needs external container/network verification. CI unit/browser fixtures alone do not meet this bar.
