@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as policy from "../../lib/marketing/tracking-link-policy";
 import * as routes from "../../lib/minbar/routes";
+import { pickLocaleSlug } from "../../lib/slug";
 
 const builderPath = "app/(dashboard)/dashboard/marketing/attribution/_components/TrackingLinkBuilder.tsx";
 function builderModel() {
@@ -103,6 +104,7 @@ test("link-generator endpoint includes only active major sections with locale sl
       "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => authorized ? null : { status: 403, body: {} } },
       "@/i18n/routing.config": { routing: { locales: ["ar", "tr", "en"] } },
       "@/lib/currency-link": { URL_CURRENCY_CODES_ORDERED: ["DEFAULT", "USD"] },
+      "@/lib/slug": { pickLocaleSlug },
     };
     vm.runInNewContext(ts.transpileModule(source, { compilerOptions: {
       module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
@@ -120,6 +122,7 @@ test("link-generator endpoint includes only active major sections with locale sl
   assert.equal(superCategories[0].id, "major123");
   assert.equal(superCategories[0].slugByLocale.tr, "kudus");
   assert.equal(superCategories[0].slugByLocale.en, "jerusalem");
+  assert.equal(superCategories[0].slugByLocale.ar, "alkuds");
   assert.equal(superCategories[0].titleByLocale.tr, "Kudüs");
   assert.equal(superCategories[0].titleByLocale.en, "Jerusalem");
   assert.ok(superCategories[0].supportedLocales.includes("ar"));
