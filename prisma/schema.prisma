@@ -3476,6 +3476,10 @@ model SuperCategory {
 
   // ── Customisation ──
   heroImage        String?
+  /// Optional localized hero images; keys are enabled locales (ar/tr/en/fr).
+  heroImageLocales Json?
+  /// Use localized images when available, otherwise the shared hero image.
+  heroImageMode    String @default("shared")
   /// The programme's wordmark. A locale may override it in its translation row
   /// when the lockup is script-specific.
   logoImage        String?
