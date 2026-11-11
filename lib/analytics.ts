@@ -64,19 +64,18 @@ export function clarityEvent(name: string): void {
   }
 }
 
-/** Identify a known user in Clarity (logged-in donors, admins). */
+/**
+ * Legacy compatibility shim. Never forward raw donor/user identifiers to a
+ * third-party session recorder. A reviewed anonymous identity flow would
+ * require explicit consent, minimization and security acceptance.
+ */
 export function clarityIdentify(
-  userId: string,
-  sessionId?: string,
-  pageId?: string,
-  friendlyName?: string
+  _userId: string,
+  _sessionId?: string,
+  _pageId?: string,
+  _friendlyName?: string
 ): void {
-  if (!isEngagementEnabled()) return;
-  try {
-    window.clarity?.("identify", userId, sessionId, pageId, friendlyName);
-  } catch {
-    /* noop */
-  }
+  // Intentionally no-op; there are no callers in this repository.
 }
 
 /**
