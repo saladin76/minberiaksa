@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 export const ORIGIN = "https://minberiaksa.org";
 const MAX_SHARDS = 200;
 const MAX_URLS = 20000;
-const PRIVATE_PATH_RE = /\/(?:api|dashboard|account|profile|cart|checkout|payment|receipt|success|certificates|auth|donation-failed)(?:\/|$)/i;
+const PRIVATE_PATH_RE = /\/(?:api|dashboard|account|profile|cart|checkout|payment(?:-(?:failed|cancelled|processing|pending))?|receipt|success|certificates|auth|donation-failed)(?:\/|$)/i;
 
 export function locs(xml) {
   return [...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)]
