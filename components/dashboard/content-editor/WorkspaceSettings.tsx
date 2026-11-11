@@ -92,7 +92,7 @@ export function WorkspaceSettings({
         .filter(
           (f) =>
             f.section === section &&
-            (f.type !== "custom" || (kind === "videos" && f.key === "url")) &&
+            (f.type !== "custom" || (kind === "videos" && f.key === "url") || (kind === "super-categories" && f.key === "heroImageLocales")) &&
             !(kind === "campaigns" && ["defaultDonationAmounts", "defaultShareCounts"].includes(f.key)) &&
             !(
               kind === "campaigns" &&
@@ -166,9 +166,6 @@ export function WorkspaceSettings({
                 </div>
               </section>
             );
-          }
-          if (kind === "super-categories" && f.key === "heroImage" && settings.heroImageMode === "localized") {
-            // The shared image remains an optional fallback for untranslated locales.
           }
           if (f.type === "image")
             return (
