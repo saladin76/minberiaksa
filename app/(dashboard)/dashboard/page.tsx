@@ -6,6 +6,7 @@ import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancia
 import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
 
 import { DashboardFilterPanel } from "@/components/dashboard/DashboardFilterPanel";
+import { normalizeDashboardCampaignFilterOptions, dashboardCampaignBelongsToCategory } from "@/lib/dashboard/home-campaign-filter";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useLocale } from "next-intl";
 import Link from "next/link";
@@ -411,7 +412,7 @@ export default function DashboardPage() {
         const categoriesJson = await categoriesRes.json();
         const campaignsJson = await campaignsRes.json();
         setCategories(categoriesJson?.items ?? categoriesJson ?? []);
-        setCampaigns(campaignsJson?.items ?? campaignsJson ?? []);
+        setCampaigns(normalizeDashboardCampaignFilterOptions(campaignsJson?.items ?? campaignsJson));
       } catch (error) {
         console.error("Error fetching filters:", error);
       }
@@ -1579,8 +1580,7 @@ export default function DashboardPage() {
         setSelectedCategory(categoryId);
         if (categoryId !== "all" && selectedCampaign !== "all") {
           const campaign = campaigns.find((item) => item.id === selectedCampaign);
-          const categoryIds = campaign?.categoryIds ?? (campaign?.categoryId ? [campaign.categoryId] : []);
-          if (campaign && !categoryIds.includes(categoryId)) {
+          if (campaign && !dashboardCampaignBelongsToCategory(campaign, categoryId)) {
             setSelectedCampaign("all");
           }
         }
@@ -1620,8 +1620,7 @@ export default function DashboardPage() {
         <SelectItem value="all" className="text-xs">{dt("جميع المشاريع")}</SelectItem>
         {campaigns
           .filter((c) => {
-            const ids = c.categoryIds ?? (c.categoryId ? [c.categoryId] : []);
-            const inCategory = selectedCategory === "all" || ids.includes(selectedCategory);
+            const inCategory = dashboardCampaignBelongsToCategory(c, selectedCategory);
             return inCategory && (!searchCampaign ||
               c.title.toLowerCase().includes(searchCampaign.toLowerCase()));
           })
