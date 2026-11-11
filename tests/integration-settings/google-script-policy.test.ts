@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { configuredGoogleTagManager, initializeGoogleTracking, loadConfiguredGoogleTagManager } from "../../lib/tracking/google-script-policy";
 
 function browser() {
@@ -63,13 +64,27 @@ test("existing Google queue/library is preserved; failed owned requests can retr
   assert.equal(clean.scripts.length, 1);
 });
 
-test("only the explicitly enabled GTM container loads, once, alongside direct tracking", () => {
+test("GTM installs one container and one dataLayer but no direct gtag.js/config tags", () => {
   const { scope, doc, scripts } = browser();
   const settings = { googleTagManagerEnabled: true, googleTagManagerId: " gtm-fixture " };
-  initializeGoogleTracking({ adsIds: ["AW-123"] }, scope, doc);
   loadConfiguredGoogleTagManager(settings, scope, doc);
   loadConfiguredGoogleTagManager(settings, scope, doc);
-  assert.equal(scripts.length, 2);
-  assert.equal(scripts[1].src, "https://www.googletagmanager.com/gtm.js?id=GTM-FIXTURE");
+  assert.equal(scripts.length, 1);
+  assert.equal(scripts[0].src, "https://www.googletagmanager.com/gtm.js?id=GTM-FIXTURE");
   assert.equal(scope.dataLayer!.filter(value => (value as { event?: string }).event === "gtm.js").length, 1);
+  assert.ok(scope.gtag, "browser conversions can use the existing dataLayer queue");
+  scope.gtag?.("event", "add_to_cart", { value: 2 });
+  assert.deepEqual(Array.from(scope.dataLayer!.at(-1) as ArrayLike<unknown>), ["event", "add_to_cart", { value: 2 }]);
+  assert.equal(scope.dataLayer!.filter(value => Array.isArray(value) && (value as string[])[0] === "config").length, 0);
+  // The canonical pixel owner explicitly selects GTM OR direct GA/Ads, not both.
+  const provider = readFileSync("components/TrackingPixels.tsx", "utf8");
+  assert.match(provider, /if \(config\.googleTagManagerEnabled && config\.googleTagManagerId\) \{/);
+  assert.match(provider, /\} else \{\s*initializeGoogleTracking\(/);
+  assert.match(provider, /trackDonate: \(options: TrackDonateSuccessOptions\)/);
+});
+
+test("malformed and overlong GTM identifiers cannot inject script URLs", () => {
+  for (const candidate of ["GTM-<script>", "GTM-FOO?x=1", "GTM-" + "X".repeat(25), "https://tagmanager.google.com", "GTM-AA"]) {
+    assert.equal(configuredGoogleTagManager({ googleTagManagerEnabled: true, googleTagManagerId: candidate }), null);
+  }
 });

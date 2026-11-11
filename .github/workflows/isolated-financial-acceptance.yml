@@ -1,0 +1,39 @@
+name: Isolated financial Playwright acceptance
+
+# Separate from the genuine staging E2E gate. This runs real Chromium and
+# real checkout/cart/account React components with synthetic HTTP/bank responses.
+# A successful run must NEVER be interpreted as production/bank acceptance.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-playwright:
+    name: Playwright isolated financial acceptance (synthetic)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: "true"
+      DATABASE_URL: mongodb://127.0.0.1:1/no-database?serverSelectionTimeoutMS=100
+      CONTENT_EDITOR_ARTIFACTS: .artifacts/isolated-financial-acceptance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx playwright install chromium
+      - name: Execute isolated browser acceptance (no payment / messaging)
+        run: npx playwright test --config playwright.isolated.config.ts
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-financial-playwright
+          path: .artifacts/isolated-financial-acceptance/
+          if-no-files-found: warn
+          retention-days: 7

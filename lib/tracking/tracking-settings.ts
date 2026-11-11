@@ -1,5 +1,6 @@
 import { googleAdsTargets, type GoogleAdsTarget } from "./google-ads-targets";
 import { configuredGoogleTagManager } from "./google-script-policy";
+import { resolveClarityConnection } from "./clarity-config";
 import { prisma } from "@/lib/prisma";
 
 export const TRACKING_SETTINGS_COLLECTION = "TrackingSettings";
@@ -7,6 +8,8 @@ export const TRACKING_SETTINGS_COLLECTION = "TrackingSettings";
 export type RawTrackingSettings = Record<string, unknown>;
 
 export type PublicTrackingConfig = {
+  clarityProjectId: string | null;
+  clarityEnabled: boolean;
   googleTagManagerId: string | null;
   googleTagManagerEnabled: boolean;
   googleAdsTargets?: GoogleAdsTarget[];
@@ -69,6 +72,7 @@ export async function getPublicTrackingConfig(): Promise<PublicTrackingConfig> {
   const targets = await getGoogleAdsTrackingTargets(row).catch(() => []);
   const containerId = configuredGoogleTagManager(row);
   return { googleAdsTargets: targets,
+    ...resolveClarityConnection(row),
     googleTagManagerId: containerId,
     googleTagManagerEnabled: containerId !== null,
     facebookPixelId: trackingString(row, "facebookPixelId"),

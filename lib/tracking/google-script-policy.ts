@@ -2,7 +2,7 @@
 export function googleTagManagerId(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const id = value.trim().toUpperCase();
-  return /^GTM-[A-Z0-9]+$/.test(id) ? id : null;
+  return /^GTM-[A-Z0-9]{3,24}$/.test(id) ? id : null;
 }
 
 export function configuredGoogleTagManager(settings: Record<string, unknown> | null): string | null {
@@ -65,6 +65,9 @@ export function loadConfiguredGoogleTagManager(settings: Record<string, unknown>
   if (!initialized.containers.has(id)) {
     initialized.containers.add(id);
     scope.dataLayer ??= [];
+    // The container owns Google tags in GTM mode. Queue existing browser
+    // conversion commands but never install a second gtag.js/config tag.
+    if (!scope.gtag) scope.gtag = (...args: unknown[]) => { scope.dataLayer?.push(args); };
     scope.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
   }
   const src = `https://www.googletagmanager.com/gtm.js?id=${id}`;
