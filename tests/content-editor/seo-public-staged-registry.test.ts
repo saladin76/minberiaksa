@@ -115,3 +115,11 @@ test("alias audit flags a canonical URL mistakenly registered as a legacy alias"
   });
   assert.equal(registry.resolveAlias("/en/donate/gaza-bread"), null);
 });
+
+test("public SEO route approval cannot claim sensitive or independently served paths", () => {
+  for (const slug of ["checkout", "success", "receipt", "cart", "campaigns", "category", "api", "dashboard"]) {
+    assert.throws(() => new StagedPublicUrlRegistry([
+      { locale: "en", route: "projects", slug, status: "approved" },
+    ]), /RESERVED_PUBLIC_ROUTE/);
+  }
+});
