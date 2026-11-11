@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+// @ts-ignore — read-only audit is shipped as an untyped Node.js .mjs CLI module.
 import { locs, safePublicUrl, queryRetained, resolveRedirect, LEGACY_AD_PROBES } from "../../scripts/qa-public-url-inventory.mjs";
 
 test("sitemap index / shard inventory extracts all loc entries without altering URLs", () => {
