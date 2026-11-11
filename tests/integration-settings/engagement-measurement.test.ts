@@ -270,6 +270,15 @@ test("private donor routes block Clarity identity, custom events, GA4 and GTM di
   assert.deepEqual(b.win.dataLayer, []);
 });
 
+test("legacy Clarity identify never forwards a donor identifier even on public pages", () => {
+  const b = browser();
+  const commands: unknown[][] = [];
+  Object.assign(b.win, { clarity: (...args: unknown[]) => commands.push(args) });
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
+  (api.clarityIdentify as (id: string) => void)("donor-email@example.invalid");
+  assert.equal(commands.length, 0);
+});
+
 test("explicit consent withdrawal immediately blocks Clarity tags, identification and GTM diagnostics", () => {
   const b = browser();
   const clarity: unknown[][] = [], google: unknown[][] = [];
