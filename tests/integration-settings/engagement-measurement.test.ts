@@ -234,7 +234,7 @@ test("actual dispatcher sanitizes every destination and retains conversion-page 
   const b = browser();
   const clarity: unknown[][] = [], ga: unknown[][] = [];
   Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => ga.push(args) });
-  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy }, b.globals);
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
   const send = api.trackEngagement as (name: string, data: Record<string, unknown>) => void;
   const data = { path: "/ar/zakat", href: "https://pay.example.org/?token=secret", email: "secret@example.org", event: "purchase" };
   send("first_click", data);
@@ -245,7 +245,7 @@ test("actual dispatcher sanitizes every destination and retains conversion-page 
     b.win.location = new URL("https://minberiaksa.org" + path);
     send("page_visible_again", data);
   }
-  assert.equal(ga.length, 3);
+  assert.equal(ga.length, 1, "private conversion pages never emit engagement diagnostics");
   assert.equal(b.win.dataLayer.length, 1);
   b.win.location = new URL("https://toplamvakfii.vercel.app/ar");
   send("first_click", data);
@@ -253,10 +253,27 @@ test("actual dispatcher sanitizes every destination and retains conversion-page 
   assert.equal(b.win.dataLayer.length, 1);
 });
 
+test("private donor routes block Clarity identity, custom events, GA4 and GTM diagnostic data", () => {
+  const b = browser();
+  const clarity: unknown[][] = [], google: unknown[][] = [];
+  Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => google.push(args) });
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    for (const path of ["account/private", "cart", "checkout", "success/private-token", "profile", "recurring-donation"]) {
+      b.win.location = new URL(`https://minberiaksa.org/${locale}/${path}`);
+      (api.trackEngagement as (name: string, data: Record<string, unknown>) => void)("synthetic_test", { email: "private@example.invalid" });
+      (api.clarityIdentify as (id: string) => void)("synthetic-private-user");
+    }
+  }
+  assert.deepEqual(clarity, []);
+  assert.deepEqual(google, []);
+  assert.deepEqual(b.win.dataLayer, []);
+});
+
 test("blocked or throwing analytics providers never break user interaction", () => {
   const b = browser();
   Object.assign(b.win, { clarity: () => { throw new Error("blocked"); }, gtag: () => { throw new Error("blocked"); } });
-  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy }, b.globals);
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
   assert.doesNotThrow(() => (api.trackEngagement as (name: string) => void)("first_click"));
 });
 
