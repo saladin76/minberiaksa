@@ -34,7 +34,7 @@ export async function GET() {
     const denied = requireAdminOrDashboardPermission(session, "referrals");
     if (denied) return denied;
 
-    const [campaigns, categories, posts, postCategories] = await Promise.all([
+    const [campaigns, categories, superCategories, posts, postCategories] = await Promise.all([
       prisma.campaign.findMany({
         select: {
           id: true,
@@ -53,6 +53,16 @@ export async function GET() {
           translations: { select: { locale: true, name: true, slug: true } },
         },
         orderBy: { name: "asc" },
+      }),
+      prisma.superCategory.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          translations: { select: { locale: true, title: true, slug: true } },
+        },
+        orderBy: { order: "asc" },
       }),
       prisma.post.findMany({
         select: {
@@ -108,6 +118,23 @@ export async function GET() {
       };
     });
 
+    const superCategoryRows = superCategories.map((row) => {
+      const supportedLocales = new Set<string>();
+      if (nonEmpty(row.title)) supportedLocales.add("ar");
+      for (const translation of row.translations) {
+        if (nonEmpty(translation.title)) supportedLocales.add(translation.locale);
+      }
+      const localesArr = [...supportedLocales];
+      return {
+        id: row.id,
+        slug: row.slug ?? null,
+        title: row.title,
+        published: true,
+        supportedLocales: localesArr,
+        slugByLocale: buildSlugByLocale(row.slug ?? null, row.translations, localesArr),
+      };
+    });
+
     const postRows = posts.map((p) => {
       const supportedLocales = new Set<string>();
       if (nonEmpty(p.title)) supportedLocales.add("ar");
@@ -146,6 +173,7 @@ export async function GET() {
       currencies: [...URL_CURRENCY_CODES_ORDERED],
       campaigns: campaignRows,
       categories: categoryRows,
+      superCategories: superCategoryRows,
       posts: postRows,
       postCategories: postCategoryRows,
     });
