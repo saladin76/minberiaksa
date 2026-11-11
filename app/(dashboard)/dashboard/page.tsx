@@ -309,9 +309,12 @@ export default function DashboardPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
-  // Sync user filter from URL (e.g. from users page "تحليل تبرعات")
+  // A deep-linked donor is the initial selection, not a permanent lock.
+  // Depend on the actual URL value, not the entire searchParams object, so
+  // clearing the donor is not undone by unrelated query-string changes.
+  const linkedDonorId = searchParams.get("userId");
   useEffect(() => {
-    const uid = searchParams.get("userId");
+    const uid = linkedDonorId;
     if (uid && uid !== "all") {
       setSelectedUserId(uid);
       fetch(`/api/users/${uid}`)
@@ -326,7 +329,7 @@ export default function DashboardPage() {
         })
         .catch(() => {});
     }
-  }, [searchParams]);
+  }, [linkedDonorId]);
 
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
