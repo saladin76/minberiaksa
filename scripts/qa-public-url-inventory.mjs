@@ -45,6 +45,26 @@ export function queryRetained(before, after) {
   }
   return true;
 }
+/** Read HTML metadata without executing client scripts. */
+export function extractSeoLinks(html) {
+  const tags = [...html.matchAll(/<(?:link|meta)\b[^>]*>/gi)].map(x => x[0]);
+  const attrs = (tag) => Object.fromEntries(
+    [...tag.matchAll(/([\w-]+)\s*=\s*["']([^"']*)["']/g)]
+      .map(x => [x[1].toLowerCase(), x[2]])
+  );
+  let canonical = "";
+  let robots = "";
+  const alternates = {};
+  for (const tag of tags) {
+    const a = attrs(tag);
+    const rel = (a.rel || "").toLowerCase().split(/\s+/);
+    if (rel.includes("canonical")) canonical = a.href || "";
+    if (rel.includes("alternate") && a.hreflang) alternates[a.hreflang] = a.href || "";
+    if ((a.name || "").toLowerCase() === "robots") robots = (a.content || "").toLowerCase();
+  }
+  return { canonical, alternates, robots };
+}
+
 export const LEGACY_AD_PROBES = [
   "/ar/ghr", "/ar/monthly-donate",
   "/ar/donates", "/donates", "/ar/المشاريع",
@@ -142,13 +162,41 @@ async function main() {
       const output = await resolveRedirect(item);
       checks.push({ source: new URL(item).pathname, ...output });
     }
+    // Bounded SEO sample: no account, payment, API or donor pages.
+    const seoChecks = [];
+    for (const raw of sample) {
+      const target = safePublicUrl(raw);
+      if (!target) continue;
+      try {
+        const response = await retrieve(raw);
+        if (!response.ok) { seoChecks.push({ path: target.pathname, status: response.status }); continue; }
+        const { canonical, alternates, robots } = extractSeoLinks(await response.text());
+        let canonicalUrl = null;
+        try { canonicalUrl = canonical ? new URL(canonical, ORIGIN) : null; } catch { /* invalid canonical */ }
+        const normalized = (path) => path.replace(/\/$/, "") || "/";
+        const canonicalMatches = !!canonicalUrl && canonicalUrl.origin === ORIGIN
+          && normalized(canonicalUrl.pathname) === normalized(target.pathname);
+        const locale = target.pathname.match(/^\/([a-z]{2})(?:\/|$)/)?.[1];
+        const alternate = locale ? alternates[locale] : null;
+        let hreflangForSelf = false;
+        try { hreflangForSelf = !!alternate && normalized(new URL(alternate, ORIGIN).pathname) === normalized(target.pathname); }
+        catch { /* invalid alternate */ }
+        seoChecks.push({
+          path: target.pathname, status: response.status, canonical: canonicalUrl?.pathname || null,
+          canonicalMatches, hreflangForSelf, alternateLanguages: Object.keys(alternates).length,
+          noindex: robots.includes("noindex"),
+        });
+      } catch (error) { seoChecks.push({ path: target.pathname, error: String(error).slice(0, 100) }); }
+    }
+    report.seoChecks = seoChecks;
+    report.seoFindings = seoChecks.filter(row => row.error || row.status !== 200 || !row.canonicalMatches || !row.hreflangForSelf || row.noindex);
     report.checked = checks.length;
     report.failures = checks.filter(x => x.status !== 200);
     report.queryLoss = checks.filter(x => x.hops?.some(h => !h.retainedQuery));
     report.redirectChains = checks.filter(x => (x.hops?.length || 0) > 1);
   }
   console.log(JSON.stringify(report, null, 2));
-  if (shardErrors.length || report.queryLoss?.length || report.failures?.length) process.exitCode = 1;
+  if (shardErrors.length || report.queryLoss?.length || report.failures?.length || report.seoFindings?.length) process.exitCode = 1;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
