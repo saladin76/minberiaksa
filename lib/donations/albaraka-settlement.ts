@@ -80,11 +80,14 @@ export async function settleAlbarakaDonation(
   extra: Record<string, unknown> = {}
 ): Promise<boolean> {
   const responseCode = sale.ServiceResponseData?.ResponseCode ?? "";
-  let newlyPaid = false;
-  const paidIds: string[] = [];
-  const activatedIds: string[] = [];
+  // Each transaction attempt must own its event lists. When Mongo rolls back
+  // P2034, effects collected by the failed attempt must not escape the retry.
+  const settleOnce = async () => {
+    let newlyPaid = false;
+    const paidIds: string[] = [];
+    const activatedIds: string[] = [];
 
-  const settled = await prisma.$transaction(async (tx) => {
+    const settled = await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({
       where: { id: donationId },
       include: { items: true, categoryItems: true },
@@ -172,11 +175,27 @@ export async function settleAlbarakaDonation(
     }
     newlyPaid = true;
     return true;
-  });
+    }, { timeout: 30_000, maxWait: 10_000 });
+    return { settled, newlyPaid, paidIds, activatedIds };
+  };
 
-  if (newlyPaid) {
-    for (const id of paidIds) runAfterResponse(() => dispatchDonationPaid(id));
-    for (const id of activatedIds) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId: id }));
+  // Retry only Mongo's known write-conflict/deadlock error. The bank sale is
+  // never re-submitted: this retries ONLY the atomic local ledger transaction.
+  // Every attempt re-reads paidAt to prevent duplicate campaign increments.
+  let outcome: Awaited<ReturnType<typeof settleOnce>> | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      outcome = await settleOnce();
+      break;
+    } catch (error) {
+      if ((error as { code?: string })?.code !== "P2034" || attempt === 2) throw error;
+      await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+    }
   }
-  return settled;
+  if (!outcome) throw new Error("ALBARAKA_SETTLEMENT_RETRY_EXHAUSTED");
+  if (outcome.newlyPaid) {
+    for (const id of outcome.paidIds) runAfterResponse(() => dispatchDonationPaid(id));
+    for (const id of outcome.activatedIds) runAfterResponse(() => dispatchEvent("SUBSCRIPTION_CREATED", { donationId: id }));
+  }
+  return outcome.settled;
 }
