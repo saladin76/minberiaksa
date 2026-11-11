@@ -328,6 +328,7 @@ async function mockClarityRuntime(options: {
   optOut?: boolean;
   failure?: boolean;
   navigatePrivateThenPublic?: boolean;
+  hashAfterInit?: string;
   navigationPaths?: string[];
   changesAfterInit?: { enabled?: boolean; project?: string; failure?: boolean };
 } = {}) {
@@ -360,6 +361,10 @@ async function mockClarityRuntime(options: {
   await new Promise<void>(resolve => setImmediate(resolve));
   h.replayEffects();
   await new Promise<void>(resolve => setImmediate(resolve));
+  if (options.hashAfterInit) {
+    b.win.location.hash = options.hashAfterInit;
+    b.win.emit("hashchange");
+  }
   if (options.changesAfterInit) {
     if (options.changesAfterInit.enabled !== undefined) allow = options.changesAfterInit.enabled;
     if (options.changesAfterInit.project !== undefined) configured = options.changesAfterInit.project;
@@ -402,6 +407,14 @@ test("Clarity refuses a public route with a tokenized query and stops after quer
   assert.deepEqual(first.ids, [], "tokenized entry must never initialize Clarity");
   const second = await mockClarityRuntime({ navigationPaths: ["/ar/projects?access_token=fixture-secret", "/ar/projects?utm_source=google"] });
   assert.deepEqual(second.clarityCommands, ["stop", "start"], "query-only changes must stop and resume only after runtime verification");
+});
+
+test("Clarity refuses private URL fragments on entry and stops on hash-only changes", async () => {
+  const blocked = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/projects#guest-token" });
+  assert.deepEqual(blocked.ids, [], "private fragment prevents initialization");
+  const changed = await mockClarityRuntime({ hashAfterInit: "#access-token=private-fixture" });
+  assert.deepEqual(changed.ids, ["dynamic1234"]);
+  assert.deepEqual(changed.clarityCommands, ["stop"], "hashchange must stop without a React rerender");
 });
 
 test("Clarity stops on a private SPA route and resumes without a second init on a safe route", async () => {
