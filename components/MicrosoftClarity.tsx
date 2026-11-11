@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 import Clarity from "@microsoft/clarity";
 import { isMeasurementHost } from "@/lib/tracking/engagement-policy";
@@ -38,7 +38,7 @@ function privacyAllowsRecorder(): boolean {
  */
 export default function MicrosoftClarity() {
   const pathname = usePathname();
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const allowed = isMeasurementHost(window.location.hostname) &&
       isPublicAnalyticsPath(pathname || window.location.pathname) &&
