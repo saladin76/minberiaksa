@@ -183,6 +183,12 @@ function hooks() {
   return {
     react: {
       useRef(value: unknown) { const slot = slots[cursor] ??= { current: value }; cursor++; return slot; },
+      useLayoutEffect(setup: Effect, deps: unknown[]) {
+        const slot = slots[cursor] ??= {};
+        cursor++;
+        if (slot.deps && deps.every((dep, i) => Object.is(dep, slot.deps![i]))) return;
+        pending.push(() => { if (slot.cleanup) slot.cleanup(); slot.setup = setup; slot.cleanup = setup(); slot.deps = deps; });
+      },
       useEffect(setup: Effect, deps: unknown[]) {
         const slot = slots[cursor] ??= {};
         cursor++;
