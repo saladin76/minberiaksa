@@ -73,6 +73,7 @@ import {
 } from "@/lib/dashboard/format-dashboard-money";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
 import { dashboardDonationScopeParams, dashboardStatsScopeParams } from "@/lib/dashboard/home-donation-scope";
+import { dashboardDonationDisplayDate } from "@/lib/dashboard/donation-ledger-date";
 import { homeFiltersAreModified } from "@/lib/dashboard/home-filter-defaults";
 import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import {
@@ -1903,7 +1904,7 @@ export default function DashboardPage() {
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
                         {dt("المشروع / الفئة")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        {dt("التاريخ")}</th>
+                        {dt("تاريخ التحصيل / المحاولة")}</th>
                       <th className="px-3 py-3 text-start">{dt("عرض")}</th>
                     </tr>
                   </thead>
@@ -2076,13 +2077,13 @@ export default function DashboardPage() {
                           <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
                             <div className="flex flex-col leading-tight">
                               <span>
-                                {new Date(d.createdAt).toLocaleDateString("en-US", {
+                                {dashboardDonationDisplayDate(d).toLocaleDateString("en-US", {
                                   dateStyle: "medium",
                                   timeZone: "Europe/Istanbul",
                                 })}
                               </span>
                               <span className="text-[10px] text-slate-400" dir="ltr">
-                                {new Date(d.createdAt).toLocaleTimeString("en-US", {
+                                {dashboardDonationDisplayDate(d).toLocaleTimeString("en-US", {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                   hour12: true,
