@@ -15,6 +15,7 @@ async function loadAudit() {
     queryRetained: (from: string, to: string) => boolean;
     resolveRedirect: (from: string, fetcher: (url: string) => Promise<Response>) => Promise<{status: string | number; hops?: Array<{retainedQuery: boolean}>}>;
     LEGACY_AD_PROBES: string[];
+    extractSeoLinks: (html: string) => { canonical: string; alternates: Record<string,string>; robots: string };
   }>;
 }
 
@@ -55,6 +56,15 @@ test("redirect audit reports canonical redirection and catches dropped ad attrib
   } as Response));
   assert.equal(failure.status, "QUERY_LOST");
 });
+test("SEO inspection reads canonical and language alternates from server HTML", async () => {
+  const audit = await loadAudit();
+  const parsed = audit.extractSeoLinks('<html><head><link rel="canonical" href="https://minberiaksa.org/ar/bagislar"><link rel="alternate" hreflang="ar" href="https://minberiaksa.org/ar/bagislar"><link rel="alternate" hreflang="tr" href="https://minberiaksa.org/tr/bagislar"><meta name="robots" content="index,follow"></head></html>');
+  assert.equal(parsed.canonical, "https://minberiaksa.org/ar/bagislar");
+  assert.equal(parsed.alternates.ar, "https://minberiaksa.org/ar/bagislar");
+  assert.equal(parsed.alternates.tr, "https://minberiaksa.org/tr/bagislar");
+  assert.equal(parsed.robots, "index,follow");
+});
+
 test("known old ad URLs are inventoried, not deleted or redirected to a guessed recipient", async () => {
   const audit = await loadAudit();
   assert.ok(audit.LEGACY_AD_PROBES.includes("/ar/donates"));
