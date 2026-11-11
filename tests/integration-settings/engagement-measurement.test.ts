@@ -275,13 +275,13 @@ test("explicit consent withdrawal immediately blocks Clarity tags, identificatio
   const clarity: unknown[][] = [], google: unknown[][] = [];
   Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => google.push(args) });
   const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, { ...b.globals, navigator: { doNotTrack: "0", globalPrivacyControl: false } });
-  b.doc.cookie = "analytics_consent=denied";
+  Object.assign(b.doc, { cookie: "analytics_consent=denied" });
   (api.trackEngagement as (name: string) => void)("fixture_event");
   (api.clarityIdentify as (id: string) => void)("private-identity");
   assert.equal(clarity.length, 0);
   assert.equal(google.length, 0);
   assert.equal(b.win.dataLayer.length, 0);
-  b.doc.cookie = "analytics_consent=granted";
+  Object.assign(b.doc, { cookie: "analytics_consent=granted" });
   (api.trackEngagement as (name: string) => void)("fixture_event");
   assert.equal(google.length, 1, "re-enabled diagnostics only with permission on a public route");
 });
