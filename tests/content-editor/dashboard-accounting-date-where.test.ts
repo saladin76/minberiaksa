@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { accountingDateWhere } from "../../lib/dashboard/accounting-date-where";
+import { accountingDateWhere, canUseAccountingDate } from "../../lib/dashboard/accounting-date-where";
 import { istanbulDateKeysToUtcRange } from "../../lib/admin/istanbul-calendar";
 
 const { startDate, endDate } = istanbulDateKeysToUtcRange("2026-11-11", "2026-11-11");
@@ -53,4 +53,14 @@ test("all includes paid settlement, failed, and pending attempt arms", () => {
       },
     ],
   });
+});
+
+test("accounting calendar is limited to authorized revenue viewers and complete ranges", () => {
+  const allowed = { revenueAuthorized: true, dateBasis: "accounting", start: "2026-11-10", end: "2026-11-11" };
+  assert.equal(canUseAccountingDate(allowed), true);
+  assert.equal(canUseAccountingDate({ ...allowed, revenueAuthorized: false }), false);
+  assert.equal(canUseAccountingDate({ ...allowed, dateBasis: null }), false);
+  assert.equal(canUseAccountingDate({ ...allowed, dateBasis: "created" }), false);
+  assert.equal(canUseAccountingDate({ ...allowed, start: null }), false);
+  assert.equal(canUseAccountingDate({ ...allowed, end: null }), false);
 });
