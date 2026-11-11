@@ -41,7 +41,11 @@ export default function MicrosoftClarity() {
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const allowed = isMeasurementHost(window.location.hostname) &&
-      isPublicAnalyticsPath(pathname || window.location.pathname) &&
+      // Both router state and the live URL must be safe; they can briefly
+      // disagree during a client transition. Fail closed instead of trusting
+      // the still-public router state while the browser is on a private URL.
+      (!pathname || isPublicAnalyticsPath(pathname)) &&
+      isPublicAnalyticsPath(window.location.pathname) &&
       privacyAllowsRecorder();
     // The recorder persists across client navigation: disabling only its
     // initial load would expose private SPA routes visited later. Stop it at
