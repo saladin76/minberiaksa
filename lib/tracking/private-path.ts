@@ -4,8 +4,17 @@ const PRIVATE_PATH = /^(\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?)(api|dashboard|auth|acco
 function decodedPath(value: string): string | null {
   if (!value.startsWith("/") || value.startsWith("//")) return null;
   try {
-    const path = decodeURIComponent(value.split(/[?#]/, 1)[0]);
-    return path.startsWith("//") ? null : path;
+    // Nested percent encoding must not turn a protected route into a public
+    // analytics route (e.g. /ar/%2563heckout -> /ar/checkout).
+    let path = value.split(/[?#]/, 1)[0];
+    for (let depth = 0; depth < 4; depth++) {
+      const decoded = decodeURIComponent(path);
+      if (decoded === path) break;
+      path = decoded;
+    }
+    // Fail closed if still encoded after the bounded decode, or if decoding
+    // produced an external/protocol-relative path.
+    return path.startsWith("//") || /%[0-9a-f]{2}/i.test(path) ? null : path;
   }
   catch { return null; }
 }
