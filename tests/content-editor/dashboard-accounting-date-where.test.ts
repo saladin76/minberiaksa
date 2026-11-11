@@ -42,8 +42,15 @@ test("resolved includes paid settlement and failed attempts, never pending", () 
 
 test("all includes paid settlement, failed, and pending attempt arms", () => {
   const where = accountingDateWhere("all", startDate, endDate);
-  assert.equal(where.OR.length, 3);
-  assert.equal(where.OR[0].paidAt.gte, startDate);
-  assert.equal(where.OR[1].createdAt.gte, startDate);
-  assert.equal(where.OR[2].createdAt.gte, startDate);
+  assert.deepEqual(where, {
+    OR: [
+      { status: "PAID", paidAt: { gte: startDate, lte: endDate } },
+      { status: "FAILED", createdAt: { gte: startDate, lte: endDate } },
+      {
+        status: "PAID",
+        createdAt: { gte: startDate, lte: endDate },
+        OR: [{ paidAt: null }, { paidAt: { isSet: false } }],
+      },
+    ],
+  });
 });
