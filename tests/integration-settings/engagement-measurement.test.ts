@@ -388,10 +388,12 @@ test("actual Clarity loader fetches saved runtime config, initializes once and n
 
 test("public analytics paths deny donor credentials and tokenized query keys", () => {
   for (const locale of ["ar", "tr", "en", "fr"]) {
-    for (const query of ["donationId=donor-123", "access_token=secret", "paymentIntent=pi_test", "email=visitor%40example.invalid", "receipt_id=receipt-123", "code=oauth", "customerId=cus_test"]) {
+    for (const query of ["donationId=donor-123", "access_token=secret", "t=guest-token", "paymentIntent=pi_test", "email=visitor%40example.invalid", "receipt_id=receipt-123", "code=oauth", "customerId=cus_test", "redirect=https%3A%2F%2Fprivate.example", "sig=secret-signature"]) {
       assert.equal(isPublicAnalyticsPath(`/${locale}/projects?${query}`), false, query);
     }
     assert.equal(isPublicAnalyticsPath(`/${locale}/projects?utm_source=google&utm_campaign=winter&page=2`), true);
+    assert.equal(isPublicAnalyticsPath(`/${locale}/projects#token=synthetic-private`), false);
+    assert.equal(isPublicAnalyticsPath(`/${locale}/projects#payment-details`), false);
   }
 });
 
