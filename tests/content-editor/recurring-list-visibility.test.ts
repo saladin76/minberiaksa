@@ -6,27 +6,29 @@ import ts from "typescript";
 import { subscriptionPaymentSequence } from "../../lib/dashboard/subscription-payment-sequence";
 import { accountingDateWhere, canUseAccountingDate } from "../../lib/dashboard/accounting-date-where";
 import { dashboardDonationDateSortField } from "../../lib/dashboard/donation-ledger-date";
+import { istanbulDateKeysToUtcRange } from "../../lib/admin/istanbul-calendar";
 type Row = Record<string, unknown>;
 function load(file: string, dependencies: Record<string, unknown>) {
   const loaded = { exports: {} as Record<string, (arg: unknown) => Promise<{ status: number; body: Row }>> };
   new vm.Script(ts.transpileModule(readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, URL, console: { error() {} }, require: (name: string) => dependencies[name] ?? {} });
   return loaded.exports;
 }
-function harness(role: "monthly" | "admin" | "donor") {
+function harness(role: "monthly" | "admin" | "donor" | "revenue") {
   const queries: Row[] = [];
   const status = load("lib/dashboard/donation-usd-revenue.ts", {});
   const route = load("app/api/donations/route.ts", {
     "@/lib/dashboard/subscription-payment-sequence": { subscriptionPaymentSequence },
     "@/lib/dashboard/donation-financial-summary": { loadDonationFinancialSummaries: async () => new Map() },
     "next/server": { NextResponse: { json: (body: Row, init: { status?: number } = {}) => ({ body, status: init.status ?? 200 }) } },
-    "next-auth": { getServerSession: async () => ({ user: { id: "own-id", role: role === "admin" ? "ADMIN" : "DONOR" } }) },
-    "@/lib/dashboard/permissions": { userHasDashboardPermission: () => role === "monthly" }, "@/lib/dashboard/api-auth": { isRevenueDashboardUser: () => role === "admin" },
+    "next-auth": { getServerSession: async () => ({ user: { id: "own-id", role: role === "admin" ? "ADMIN" : role === "revenue" || role === "monthly" ? "STAFF" : "DONOR" } }) },
+    "@/lib/dashboard/permissions": { userHasDashboardPermission: () => role === "monthly" }, "@/lib/dashboard/api-auth": { isRevenueDashboardUser: () => role === "admin" || role === "revenue" },
     "@/lib/prisma": { prisma: { donation: { count: async (args: Row) => { queries.push(args); return 0; }, findMany: async (args: Row) => { queries.push(args); return []; } } } },
     "@/lib/dashboard/donation-usd-revenue": status,
     "@/lib/dashboard/donation-provider-filter": { donationProviderWhere: () => null },
     "@/lib/dashboard/recurring-frequency-filter": { parseFrequencyParam: () => null, donationFrequencyWhere: () => null, loadSubscriptionFrequencies: async () => () => null },
     "@/lib/dashboard/donation-relation-filters": { resolveDonationRelationFilterIds: async () => ({}) },
     "@/lib/dashboard/accounting-date-where": { accountingDateWhere, canUseAccountingDate },
+    "@/lib/admin/istanbul-calendar": { istanbulDateKeysToUtcRange },
     "@/lib/dashboard/donation-ledger-date": { dashboardDonationDateSortField },
   });
   return { get: (query: string) => route.GET({ url: "https://example.invalid/api/donations?" + query }), queries };
@@ -50,4 +52,42 @@ test("donor and staff primary list projections omit the private bank ledger, inq
     const omit = h.queries[1].omit as Record<string, unknown>;
     for (const key of ["bankOperations", "bankOperationLock", "bankOperationsRevision", "bankLastInquiry"]) assert.equal(omit?.[key], true, key);
   }
+});
+
+test("accounting mode is honored for revenue STAFF and ADMIN with settled date sorting", async () => {
+  for (const role of ["revenue", "admin"] as const) {
+    const h = harness(role);
+    const response = await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=PAID");
+    assert.equal(response.status, 200, role);
+    const query = JSON.stringify(h.queries[0].where);
+    assert.match(query, /"paidAt":\\{"gte":/);
+    assert.equal(query.includes('"createdAt":{'), false);
+    assert.equal(JSON.stringify(h.queries[1].orderBy), '{"paidAt":"desc"}');
+  }
+});
+
+test("donor cannot request another donor or switch accounting date basis", async () => {
+  const h = harness("donor");
+  const response = await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=PAID&userId=someone-else");
+  assert.equal(response.status, 200);
+  const where = JSON.stringify(h.queries[0].where);
+  assert.match(where, /"donorId":"own-id"/);
+  assert.equal(where.includes("someone-else"), false);
+  assert.equal(where.includes('"paidAt":{'), false);
+  assert.match(where, /"createdAt":\\{"gte":/);
+  assert.equal(JSON.stringify(h.queries[1].orderBy), '{"createdAt":"desc"}');
+});
+
+test("monthly-only staff cannot use accounting mode to read general donation ledger", async () => {
+  const h = harness("monthly");
+  const response = await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=PAID");
+  assert.equal(response.status, 403);
+  assert.equal(h.queries.length, 0);
+});
+
+test("accounting mode with incomplete date window falls back to legacy createdAt", async () => {
+  const h = harness("revenue");
+  const response = await h.get("dateBasis=accounting&start=2026-11-10&status=PAID");
+  assert.equal(response.status, 200);
+  assert.equal(JSON.stringify(h.queries[1].orderBy), '{"createdAt":"desc"}');
 });
