@@ -270,6 +270,22 @@ test("private donor routes block Clarity identity, custom events, GA4 and GTM di
   assert.deepEqual(b.win.dataLayer, []);
 });
 
+test("explicit consent withdrawal immediately blocks Clarity tags, identification and GTM diagnostics", () => {
+  const b = browser();
+  const clarity: unknown[][] = [], google: unknown[][] = [];
+  Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => google.push(args) });
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, { ...b.globals, navigator: { doNotTrack: "0", globalPrivacyControl: false } });
+  b.doc.cookie = "analytics_consent=denied";
+  (api.trackEngagement as (name: string) => void)("fixture_event");
+  (api.clarityIdentify as (id: string) => void)("private-identity");
+  assert.equal(clarity.length, 0);
+  assert.equal(google.length, 0);
+  assert.equal(b.win.dataLayer.length, 0);
+  b.doc.cookie = "analytics_consent=granted";
+  (api.trackEngagement as (name: string) => void)("fixture_event");
+  assert.equal(google.length, 1, "re-enabled diagnostics only with permission on a public route");
+});
+
 test("blocked or throwing analytics providers never break user interaction", () => {
   const b = browser();
   Object.assign(b.win, { clarity: () => { throw new Error("blocked"); }, gtag: () => { throw new Error("blocked"); } });
