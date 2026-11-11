@@ -101,6 +101,8 @@ const PAGE_SELECT = {
   verseTranslation: true,
   verseAttribution: true,
   heroImage: true,
+  heroImageLocales: true,
+  heroImageMode: true,
   imageAlt: true,
   logoImage: true,
   accentColor: true,
@@ -350,7 +352,9 @@ export async function getSuperCategory(
     verseArabic: row.verseArabic ?? "",
     verseTranslation: t?.verseTranslation || row.verseTranslation || "",
     verseAttribution: t?.verseAttribution || row.verseAttribution || "",
-    heroImage: row.heroImage ?? "",
+    heroImage: row.heroImageMode === "localized" && row.heroImageLocales && typeof row.heroImageLocales === "object" && !Array.isArray(row.heroImageLocales) && typeof (row.heroImageLocales as Record<string, unknown>)[locale] === "string"
+      ? String((row.heroImageLocales as Record<string, unknown>)[locale] || row.heroImage || "")
+      : row.heroImage ?? "",
     imageAlt: t?.imageAlt || row.imageAlt || t?.title || row.title,
     logoImage: t?.logoImage || row.logoImage || "",
     accentColor: row.accentColor || DEFAULT_ACCENT,
