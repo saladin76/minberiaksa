@@ -75,7 +75,9 @@ export function clarityIdentify(
   _pageId?: string,
   _friendlyName?: string
 ): void {
-  // Intentionally no-op; there are no callers in this repository.
+  // The signature remains compatible, but none of the caller-provided values
+  // may be forwarded to a recorder or diagnostic provider.
+  void [_userId, _sessionId, _pageId, _friendlyName];
 }
 
 /**
