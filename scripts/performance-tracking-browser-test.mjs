@@ -2,7 +2,7 @@
 import { build } from "esbuild";
 import { chromium, expect } from "@playwright/test";
 import { createServer } from "node:http";
-import { readFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import postcss from "postcss";
 import tailwindcss from "tailwindcss";
@@ -16,7 +16,18 @@ const label = (locale, key) => locale === "ar" ? key : dictionaries[locale][key]
 const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{setDashLocale}from'./lib/dashboard/i18n';import Settings from './app/(dashboard)/dashboard/platform-connections/tracking/_components/TrackingSettingsManager';import{WhatsappTemplateEditorDialog}from'./app/(dashboard)/dashboard/templates/_components/WhatsappTemplateEditorDialog';import TrackingPixels from './components/TrackingPixels';const p=new URLSearchParams(location.search);const locale=p.get('lang')||'ar';setDashLocale(locale);document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';createRoot(document.getElementById('root')).render(p.has('pixels')?<TrackingPixels><button>Interact</button></TrackingPixels>:p.has('editor')?<WhatsappTemplateEditorDialog id={'a'.repeat(24)} initialKind='CAMPAIGN' open onOpenChange={v=>{window.fixtureClosed=!v}}/>:<main style={{padding:16}}><Settings canManage canTest/></main>);`, resolveDir: process.cwd(), loader: "tsx" }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", tsconfig: path.resolve("tsconfig.json"), define: { "process.env.NODE_ENV": '"test"' } });
 const baseCss = (await readFile("app/[locale]/globals.css", "utf8")).replace(/^@config[^;]+;\s*/, "");
 const font = await readFile("public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2");
-const css = (await postcss([tailwindcss({ ...require("../tailwind.config.ts").default, content: ["app/(dashboard)/dashboard/templates/**/*.tsx", "app/(dashboard)/dashboard/platform-connections/tracking/**/*.tsx", "components/ui/**/*.tsx"] })]).process(baseCss, { from: undefined })).css + "@font-face{font-family:Cairo;src:url(/fixture.woff2)}:root{--font-cairo:Cairo;--font-montserrat:Arial}";
+// Node 24 native TS loading resolves tailwindcss/colors as ESM and fails
+// because that package exposes a .js path. Compile the Tailwind config to CJS
+// for this isolated browser fixture; preserve the real dashboard design tokens.
+const compiledTailwind = await build({
+  entryPoints: [path.resolve("tailwind.config.ts")],
+  bundle: true, write: false, platform: "node", format: "cjs", packages: "external",
+});
+const compiledTailwindPath = path.join(artifacts, "tailwind-fixture-config.cjs");
+await writeFile(compiledTailwindPath, compiledTailwind.outputFiles[0].text);
+const loadedTailwind = require(compiledTailwindPath);
+const tailwindConfig = loadedTailwind.default ?? loadedTailwind;
+const css = (await postcss([tailwindcss({ ...tailwindConfig, content: ["app/(dashboard)/dashboard/templates/**/*.tsx", "app/(dashboard)/dashboard/platform-connections/tracking/**/*.tsx", "components/ui/**/*.tsx"] })]).process(baseCss, { from: undefined })).css + "@font-face{font-family:Cairo;src:url(/fixture.woff2)}:root{--font-cairo:Cairo;--font-montserrat:Arial}";
 const id = "a".repeat(24);
 const source = { id, name: "fixture_original", body: "Hello {{1}}", category: "MARKETING", header: { type: "NONE" }, buttons: [{ type: "URL", text: "Donate", url: "https://minberiaksa.org/ar/bagislar?utm_campaign=shared" }, { type: "QUICK_REPLY", text: "إيقاف" }], submittedLocales: ["ar", "en", "tr"], translations: Object.fromEntries(["en", "tr"].map(locale => [locale, { body: "Hello {{1}}", buttons: [{ type: "URL", text: "Donate", url: `https://minberiaksa.org/${locale}/bagislar?language={{1}}` }, { type: "QUICK_REPLY", text: "STOP" }] }])) };
 let settings = {}, writes = [], templateWrites = [], configReads = 0;
@@ -58,6 +69,26 @@ try {
     await expect.poll(() => writes.length).toBe(1);
     assert.equal(writes[0].googleTagManagerId, "GTM-FIXTURE"); assert.equal(writes[0].googleTagManagerEnabled, true); checks++;
     await page.reload(); await expect(page.getByLabel(label(locale, "تفعيل حاوية Google Tag Manager"), { exact: true })).toBeChecked(); checks++;
+    // New Clarity card is an actual editable saved setting, not a decorative input.
+    await page.getByLabel("Project ID", { exact: true }).fill("U60R8ZHRZH");
+    await page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true }).check();
+    await page.getByRole("button", { name: label(locale, "حفظ الإعدادات"), exact: true }).first().click();
+    await expect.poll(() => writes.length).toBe(2);
+    assert.equal(writes[1].clarityEnabled, true);
+    assert.equal(writes[1].clarityProjectId, "U60R8ZHRZH"); checks++;
+    await page.reload();
+    await expect(page.getByLabel("Project ID", { exact: true })).toHaveValue("U60R8ZHRZH");
+    await expect(page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true })).toBeChecked(); checks++;
+    // Read-only inspection checks public settings, not provider recordings.
+    await page.getByRole("button", { name: label(locale, "مطابقة الإعداد العام المحفوظ"), exact: true }).click();
+    await expect.poll(() => configReads).toBeGreaterThan(0); checks++;
+    await page.screenshot({ path: path.join(artifacts, `connections-${locale}-${width}.png`), fullPage: true, animations: "disabled" });
+    await page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true }).uncheck();
+    await page.getByRole("button", { name: label(locale, "حفظ الإعدادات"), exact: true }).first().click();
+    await expect.poll(() => writes.length).toBe(3);
+    assert.equal(writes.at(-1).clarityEnabled, false); checks++;
+    await page.reload();
+    await expect(page.getByLabel(label(locale, "تفعيل Microsoft Clarity على صفحات الموقع العامة"), { exact: true })).not.toBeChecked(); checks++;
     await page.goto(`${base}/?editor=1&lang=${locale}`);
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: label(locale, "إعداد نسخة بتتبع إيرادات الحملات"), exact: true }).click();
@@ -85,6 +116,24 @@ try {
     assert.equal(requests.some(url => /gtm\.js|contentsquare/.test(url)), false); checks++;
     const commands = await page.evaluate(() => window.dataLayer.map(value => Array.from(value)));
     assert.equal(commands.filter(value => value[0] === "config").length, 3); checks++;
+    await page.close();
+  }
+  // With GTM active, the application must not also load a direct gtag.js.
+  {
+    settings = { googleTagManagerId: "GTM-FIXTURE", googleTagManagerEnabled: true };
+    const page = await browser.newPage();
+    const requests = [];
+    await page.route("**/*", route => {
+      if (!route.request().url().startsWith("https://")) return route.continue();
+      requests.push(route.request().url());
+      return route.fulfill({ contentType: "text/javascript", body: "/* synthetic tag */" });
+    });
+    await page.goto(`${base}/?pixels=1`);
+    await page.getByRole("button", { name: "Interact" }).click();
+    await expect.poll(() => requests.filter(url => url.includes("/gtm.js")).length).toBe(1);
+    assert.equal(requests.filter(url => url.includes("/gtag/js")).length, 0);
+    assert.equal(await page.evaluate(() => window.dataLayer.filter(item => item?.event === "gtm.js").length), 1);
+    checks++;
     await page.close();
   }
   assert.deepEqual(errors, []); assert.deepEqual(unexpected, []);
