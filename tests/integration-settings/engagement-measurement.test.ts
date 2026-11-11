@@ -339,7 +339,7 @@ async function mockClarityRuntime(options: {
   let failure = Boolean(options.failure);
   const client = clientModule("components/MicrosoftClarity.tsx", {
     react: h.react,
-    "next/navigation": { usePathname: () => options.routerPath ?? b.win.location.pathname },
+    "next/navigation": { usePathname: () => options.routerPath ?? b.win.location.pathname, useSearchParams: () => new URLSearchParams(b.win.location.search) },
     "@microsoft/clarity": { init: (id: string) => ids.push(id) },
     "@/lib/tracking/engagement-policy": policy,
     "@/lib/tracking/private-path": { isPublicAnalyticsPath },
@@ -384,6 +384,22 @@ test("actual Clarity loader fetches saved runtime config, initializes once and n
   assert.deepEqual(result.ids, ["dynamic1234"]);
   assert.ok(result.requests.every(url => url === "/api/tracking/config"));
   assert.ok(result.requests.length >= 1);
+});
+
+test("public analytics paths deny donor credentials and tokenized query keys", () => {
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    for (const query of ["donationId=donor-123", "access_token=secret", "paymentIntent=pi_test", "email=visitor%40example.invalid", "receipt_id=receipt-123", "code=oauth", "customerId=cus_test"]) {
+      assert.equal(isPublicAnalyticsPath(`/${locale}/projects?${query}`), false, query);
+    }
+    assert.equal(isPublicAnalyticsPath(`/${locale}/projects?utm_source=google&utm_campaign=winter&page=2`), true);
+  }
+});
+
+test("Clarity refuses a public route with a tokenized query and stops after query-only navigation", async () => {
+  const first = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/projects?donationId=fixture-donor" });
+  assert.deepEqual(first.ids, [], "tokenized entry must never initialize Clarity");
+  const second = await mockClarityRuntime({ navigationPaths: ["/ar/projects?access_token=fixture-secret", "/ar/projects?utm_source=google"] });
+  assert.deepEqual(second.clarityCommands, ["stop", "start"], "query-only changes must stop and resume only after runtime verification");
 });
 
 test("Clarity stops on a private SPA route and resumes without a second init on a safe route", async () => {
