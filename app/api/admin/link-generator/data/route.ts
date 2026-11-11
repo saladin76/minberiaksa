@@ -28,13 +28,26 @@ function buildSlugByLocale(
   return map;
 }
 
+/** Show real translated names in the destination picker while preserving
+ * stable IDs and locale-specific slugs in generated links. */
+function buildTitleByLocale(
+  base: string,
+  translations: Array<{ locale: string; title?: string | null; name?: string | null }>,
+  locales: string[],
+): Record<string, string> {
+  return Object.fromEntries(locales.map(locale => {
+    const translation = translations.find(row => row.locale === locale);
+    return [locale, translation?.title || translation?.name || base];
+  }));
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const denied = requireAdminOrDashboardPermission(session, "referrals");
     if (denied) return denied;
 
-    const [campaigns, categories, posts, postCategories] = await Promise.all([
+    const [campaigns, categories, superCategories, posts, postCategories] = await Promise.all([
       prisma.campaign.findMany({
         select: {
           id: true,
@@ -53,6 +66,16 @@ export async function GET() {
           translations: { select: { locale: true, name: true, slug: true } },
         },
         orderBy: { name: "asc" },
+      }),
+      prisma.superCategory.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          translations: { select: { locale: true, title: true, slug: true } },
+        },
+        orderBy: { order: "asc" },
       }),
       prisma.post.findMany({
         select: {
@@ -87,6 +110,7 @@ export async function GET() {
         id: c.id,
         slug: c.slug ?? null,
         title: c.title,
+        titleByLocale: buildTitleByLocale(c.title, c.translations, localesArr),
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(c.slug ?? null, c.translations, localesArr),
       };
@@ -103,8 +127,27 @@ export async function GET() {
         id: c.id,
         slug: c.slug ?? null,
         name: c.name,
+        titleByLocale: buildTitleByLocale(c.name, c.translations, localesArr),
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(c.slug ?? null, c.translations, localesArr),
+      };
+    });
+
+    const superCategoryRows = superCategories.map((row) => {
+      const supportedLocales = new Set<string>();
+      if (nonEmpty(row.title)) supportedLocales.add("ar");
+      for (const translation of row.translations) {
+        if (nonEmpty(translation.title)) supportedLocales.add(translation.locale);
+      }
+      const localesArr = [...supportedLocales];
+      return {
+        id: row.id,
+        slug: row.slug ?? null,
+        title: row.title,
+        titleByLocale: buildTitleByLocale(row.title, row.translations, localesArr),
+        published: true,
+        supportedLocales: localesArr,
+        slugByLocale: buildSlugByLocale(row.slug ?? null, row.translations, localesArr),
       };
     });
 
@@ -119,6 +162,7 @@ export async function GET() {
         id: p.id,
         slug: p.slug ?? null,
         title: p.title || "—",
+        titleByLocale: buildTitleByLocale(p.title || "—", p.translations, localesArr),
         published: p.published,
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(p.slug ?? null, p.translations, localesArr),
@@ -136,6 +180,7 @@ export async function GET() {
         id: c.id,
         slug: c.slug ?? null,
         name: c.name,
+        titleByLocale: buildTitleByLocale(c.name, c.translations, localesArr),
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(c.slug ?? null, c.translations, localesArr),
       };
@@ -146,6 +191,7 @@ export async function GET() {
       currencies: [...URL_CURRENCY_CODES_ORDERED],
       campaigns: campaignRows,
       categories: categoryRows,
+      superCategories: superCategoryRows,
       posts: postRows,
       postCategories: postCategoryRows,
     });
