@@ -14,13 +14,16 @@
  */
 
 import { isMeasurementHost, sanitizeEngagementData } from "./tracking/engagement-policy";
+import { isPublicAnalyticsPath } from "./tracking/private-path";
 
 type AnyRecord = Record<string, unknown>;
 
 /** Shared gate for this diagnostic layer; canonical conversion tracking is separate. */
 export function isEngagementEnabled(): boolean {
   try {
-    return typeof window !== "undefined" && isMeasurementHost(window.location.hostname);
+    return typeof window !== "undefined" &&
+      isMeasurementHost(window.location.hostname) &&
+      isPublicAnalyticsPath(window.location.pathname);
   } catch {
     return false;
   }
