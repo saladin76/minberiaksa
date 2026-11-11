@@ -57,6 +57,10 @@ test("private document, pending and profile paths are redacted from custom measu
     assert.doesNotMatch(measurementPath(path), new RegExp(secret));
     assert.doesNotMatch(JSON.stringify(sanitizeEngagementData({ path, href: `https://minberiaksa.org${path}?t=secret` })), /secret|600000/);
   }
+  for (const route of ["checkout", "cart", "recurring-donation", "subscription", "subscriptions", "login", "register"]) {
+    assert.equal(isPublicAnalyticsPath(`/ar/${route}`), false, route);
+    assert.equal(isPublicAnalyticsPath(`/tr/${route}/synthetic-private-id`), false, route);
+  }
   assert.equal(isPublicAnalyticsPath("/en/%70rofile/secret"), false);
   assert.equal(isPublicAnalyticsPath("//untrusted.example/private"), false);
   assert.equal(isPublicAnalyticsPath("/en/bagislar/gaza-bread"), true);
