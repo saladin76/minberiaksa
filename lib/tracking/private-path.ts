@@ -23,13 +23,16 @@ function decodedPath(value: string): string | null {
 /** Reject URLs containing personal, payment or authentication parameters.
  * Attribution UTM and campaign parameters remain eligible for public analytics. */
 function hasSensitiveQuery(value: string): boolean {
-  const query = value.split("?", 2)[1]?.split("#", 1)[0];
+  // The browser recorder may capture full document URLs including fragments.
+  // Hash-based authorization and login callback tokens are not safe evidence.
+  if (value.includes("#")) return true;
+  const query = value.split("?", 2)[1];
   if (!query) return false;
   try {
     for (const key of new URLSearchParams(query).keys()) {
       const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (/(?:token|secret|password|passwd|email|phone|mobile|session|credential|authorization|paymentintent|donationid|receiptid|transactionid|userid|customerid|otp|authcode|verificationcode|accesskey)/.test(normalized) ||
-          /^(?:code|state|key|auth|id)$/.test(normalized)) return true;
+          /^(?:t|code|state|key|auth|id|jwt|sig|next|return|redirect|redirecturi|callback|continue|destination|url|uri)$/.test(normalized)) return true;
     }
     return false;
   } catch { return true; }
