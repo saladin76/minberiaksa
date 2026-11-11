@@ -47,7 +47,7 @@ import {
   userWhereForDonorSearch,
 } from "@/lib/dashboard/donation-search";
 import { resolveDonationRelationFilterIds } from "@/lib/dashboard/donation-relation-filters";
-import { accountingDateWhere } from "@/lib/dashboard/accounting-date-where";
+import { accountingDateWhere, canUseAccountingDate } from "@/lib/dashboard/accounting-date-where";
 import { dashboardDonationDateSortField } from "@/lib/dashboard/donation-ledger-date";
 
 // GET /api/donations - Get all donations (admin) or user's donations
@@ -104,10 +104,12 @@ export async function GET(request: NextRequest) {
     // Explicit opt-in only: existing donor and admin listing clients still
     // filter by creation date. The dashboard's settled-date view follows the
     // chart's paidAt/createdAt financial calendar, and requires revenue access.
-    const useAccountingDate =
-      isAdmin &&
-      searchParams.get("dateBasis") === "accounting" &&
-      Boolean(startParam && endParam);
+    const useAccountingDate = canUseAccountingDate({
+      revenueAuthorized: isAdmin,
+      dateBasis: searchParams.get("dateBasis"),
+      start: startParam,
+      end: endParam,
+    });
     const accountingWhere = useAccountingDate
       ? accountingDateWhere(
           statusFilter,
