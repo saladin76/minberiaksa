@@ -105,6 +105,6 @@ async function main() {
   } finally { await prisma.$disconnect(); }
 }
 main().catch(err=>{
-  console.error("URL_INVENTORY_FAILED:",err?.code||err?.message==="DATABASE_URL_UNAVAILABLE"?"DATABASE_URL_UNAVAILABLE":err?.name||"UNKNOWN_ERROR");
+  console.error("URL_INVENTORY_FAILED:", err?.code || (err?.message === "DATABASE_URL_UNAVAILABLE" ? "DATABASE_URL_UNAVAILABLE" : err?.name || "UNKNOWN_ERROR"));
   process.exitCode=1;
 });
