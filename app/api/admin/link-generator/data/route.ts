@@ -28,6 +28,19 @@ function buildSlugByLocale(
   return map;
 }
 
+/** Show real translated names in the destination picker while preserving
+ * stable IDs and locale-specific slugs in generated links. */
+function buildTitleByLocale(
+  base: string,
+  translations: Array<{ locale: string; title?: string | null; name?: string | null }>,
+  locales: string[],
+): Record<string, string> {
+  return Object.fromEntries(locales.map(locale => {
+    const translation = translations.find(row => row.locale === locale);
+    return [locale, translation?.title || translation?.name || base];
+  }));
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -97,6 +110,7 @@ export async function GET() {
         id: c.id,
         slug: c.slug ?? null,
         title: c.title,
+        titleByLocale: buildTitleByLocale(c.title, c.translations, localesArr),
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(c.slug ?? null, c.translations, localesArr),
       };
@@ -113,6 +127,7 @@ export async function GET() {
         id: c.id,
         slug: c.slug ?? null,
         name: c.name,
+        titleByLocale: buildTitleByLocale(c.name, c.translations, localesArr),
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(c.slug ?? null, c.translations, localesArr),
       };
@@ -129,6 +144,7 @@ export async function GET() {
         id: row.id,
         slug: row.slug ?? null,
         title: row.title,
+        titleByLocale: buildTitleByLocale(row.title, row.translations, localesArr),
         published: true,
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(row.slug ?? null, row.translations, localesArr),
@@ -146,6 +162,7 @@ export async function GET() {
         id: p.id,
         slug: p.slug ?? null,
         title: p.title || "—",
+        titleByLocale: buildTitleByLocale(p.title || "—", p.translations, localesArr),
         published: p.published,
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(p.slug ?? null, p.translations, localesArr),
@@ -163,6 +180,7 @@ export async function GET() {
         id: c.id,
         slug: c.slug ?? null,
         name: c.name,
+        titleByLocale: buildTitleByLocale(c.name, c.translations, localesArr),
         supportedLocales: localesArr,
         slugByLocale: buildSlugByLocale(c.slug ?? null, c.translations, localesArr),
       };
