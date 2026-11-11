@@ -6,6 +6,7 @@ import {
   donationChartTypeWhere,
   summarizeScopedDonationChart,
 } from "../../lib/dashboard/donation-chart-filter-scope";
+import { dashboardDonationScopeParams } from "../../lib/dashboard/home-donation-scope";
 
 const start = new Date("2026-11-01T00:00:00.000Z");
 const end = new Date("2026-11-08T20:59:59.999Z");
@@ -54,8 +55,17 @@ test("filtered-period revenue does not mix failed or pending attempts with colle
 test("dashboard passes status/type into chart request and presents period metrics before the global band", () => {
   const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
   const chart = readFileSync("app/api/admin/donations/chart/route.ts", "utf8");
-  assert.match(page, /params\.set\("status", donationsStatusFilter\)/);
-  assert.match(page, /params\.set\("donationType", donationsTypeFilter\)/);
+  // The home page delegates query serialization to the shared scope helper,
+  // rather than calling params.set for each selector in the component itself.
+  assert.match(page, /dashboardDonationScopeParams\(/);
+  const scope = dashboardDonationScopeParams({
+    categoryId: "all", campaignId: "all", userId: "all",
+    start: "2026-11-01", end: "2026-11-08",
+    locale: "all", country: "all", provider: "all",
+    status: "FAILED", donationType: "MONTHLY",
+  });
+  assert.equal(scope.get("status"), "FAILED");
+  assert.equal(scope.get("donationType"), "MONTHLY");
   assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
   assert.ok(page.indexOf('eyebrow={dt("الإيرادات المحصلة للفترة")}') <
     page.indexOf('eyebrow={dt("إجمالي الإيرادات الناجحة")}'));
