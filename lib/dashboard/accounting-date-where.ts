@@ -16,3 +16,19 @@ export function accountingDateWhere(
 ) {
   return donationChartStatusWhere(status, startDate, endDate);
 }
+
+/**
+ * Opt-in financial calendar is available only to a revenue-authorized
+ * dashboard reader with a complete date window. It must never affect legacy
+ * donor listing requests or the subscription-only staff view.
+ */
+export function canUseAccountingDate(input: {
+  revenueAuthorized: boolean;
+  dateBasis: string | null;
+  start: string | null;
+  end: string | null;
+}): boolean {
+  return input.revenueAuthorized &&
+    input.dateBasis === "accounting" &&
+    Boolean(input.start && input.end);
+}
