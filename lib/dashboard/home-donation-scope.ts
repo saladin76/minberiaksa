@@ -35,15 +35,24 @@ export function dashboardDonationScopeParams(scope: HomeDonationScope): URLSearc
   return params;
 }
 
-/** The stats endpoint does not implement user/status/type filtering. */
+/** The stats endpoint does not implement donor/status/type filtering.
+ * Accept only supported dimensions so unsupported filters cannot trigger
+ * unnecessary KPI reloads or accidentally change the API request contract.
+ */
+export type HomeStatsScope = Pick<HomeDonationScope,
+  "categoryId" | "campaignId" | "start" | "end" | "locale" | "country" | "provider"
+>;
+
 export function dashboardStatsScopeParams(
-  scope: HomeDonationScope,
+  scope: HomeStatsScope,
   period: string,
 ): URLSearchParams {
-  const query=dashboardDonationScopeParams(scope);
-  query.delete("userId");
-  query.delete("status");
-  query.delete("donationType");
-  query.set("period",period);
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(scope)) {
+    if (value != null && value !== "" && value !== "all") {
+      query.set(key, value);
+    }
+  }
+  query.set("period", period);
   return query;
 }
