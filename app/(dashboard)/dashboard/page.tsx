@@ -72,6 +72,7 @@ import {
   DASHBOARD_DISPLAY_SYMBOLS,
 } from "@/lib/dashboard/format-dashboard-money";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
+import { dashboardDonationScopeParams, dashboardStatsScopeParams } from "@/lib/dashboard/home-donation-scope";
 import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import {
   istanbulTodayKey,
@@ -495,32 +496,23 @@ export default function DashboardPage() {
 
   // Chart data (filters + period + from/to + user  user from state or URL when coming via link)
   const fetchChartData = useCallback(async () => {
-    const userIdFromUrl = searchParams.get("userId");
-    const effectiveUserId = selectedUserId !== "all" ? selectedUserId : (userIdFromUrl && userIdFromUrl !== "all" ? userIdFromUrl : "all");
+    // URL deep-link is synchronized into selectedUserId above. Never silently
+    // re-apply the URL donor after the user explicitly clears that selection.
+    const effectiveUserId = selectedUserId;
     const requestId = ++chartRequestId.current;
     setChartLoading(true);
     setChartError(false);
     setChartData([]); // Never show stale amounts under the newly selected filter.
     try {
-      const params = new URLSearchParams();
-      params.set("period", chartPeriod);
-      // Compute the explicit Istanbul date range for every preset (not just
-      // custom) so the chart endpoint uses the same calendar semantics as the
-      // donations table  اليوم = today only, أمس = yesterday, شهر = first of
-      // the month → today, سنة = Jan 1 → today.
       const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-      if (start && end) {
-        params.set("start", start);
-        params.set("end", end);
-      }
-      if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
-      if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
-      if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
-      if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
-      if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-      if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
-      params.set("status", donationsStatusFilter);
-      params.set("donationType", donationsTypeFilter);
+      const params = dashboardDonationScopeParams({
+        categoryId: selectedCategory, campaignId: selectedCampaign,
+        userId: effectiveUserId, start, end,
+        locale: donationLocaleFilter, country: donationCountryFilter,
+        provider: donationProviderFilter, status: donationsStatusFilter,
+        donationType: donationsTypeFilter,
+      });
+      params.set("period", chartPeriod);
       const response = await axios.get(`/api/admin/donations/chart?${params}`);
       if (requestId !== chartRequestId.current) return;
       if (!Array.isArray(response.data)) throw new Error("Invalid chart response");
@@ -549,18 +541,14 @@ export default function DashboardPage() {
     const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 20_000);
     statsTimeoutRef.current = timeout;
     try {
-      const params = new URLSearchParams();
-      params.set("period", chartPeriod);
       const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-      if (start && end) {
-        params.set("start", start);
-        params.set("end", end);
-      }
-      if (selectedCategory !== "all") params.set("categoryId", selectedCategory);
-      if (selectedCampaign !== "all") params.set("campaignId", selectedCampaign);
-      if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
-      if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-      if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
+      const params = dashboardStatsScopeParams({
+        categoryId: selectedCategory, campaignId: selectedCampaign,
+        userId: selectedUserId, start, end,
+        locale: donationLocaleFilter, country: donationCountryFilter,
+        provider: donationProviderFilter, status: donationsStatusFilter,
+        donationType: donationsTypeFilter,
+      }, chartPeriod);
       const response = await fetch(`/api/admin/stats?${params}`, { signal: controller.signal });
       const data = await response.json();
       if (statsRequestRef.current !== controller) return;
@@ -615,21 +603,17 @@ export default function DashboardPage() {
       if (!quiet) setDonationsLoading(true);
       try {
         const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-        const params = new URLSearchParams();
+        const params = dashboardDonationScopeParams({
+          categoryId: selectedCategory, campaignId: selectedCampaign,
+          userId: selectedUserId, start, end,
+          locale: donationLocaleFilter, country: donationCountryFilter,
+          provider: donationProviderFilter, status: donationsStatusFilter,
+          donationType: donationsTypeFilter,
+        });
         params.set("page", String(page));
         params.set("limit", String(PAGE_SIZE));
         params.set("sortBy", donationsSortBy);
         params.set("sortOrder", donationsSortOrder);
-        if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
-        if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
-        if (selectedUserId !== "all") params.append("userId", selectedUserId);
-        if (start) params.set("start", start);
-        if (end) params.set("end", end);
-        if (donationsStatusFilter !== "all") params.set("status", donationsStatusFilter);
-        if (donationsTypeFilter !== "all") params.set("donationType", donationsTypeFilter);
-        if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
-        if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-        if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
