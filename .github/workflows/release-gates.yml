@@ -234,6 +234,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Staging build and connected E2E fail-closed guard
+        run: node --test tests/release/production-staging-boundary.test.mjs
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
