@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import {
   HOME_FILTER_DEFAULTS,
   homeFiltersAreModified,
@@ -27,4 +28,13 @@ test("clearing all resets to shared defined defaults", () => {
   assert.equal(reset.period, "month");
   assert.equal(reset.country, "all");
   assert.equal(reset.donationSearch, "");
+});
+
+test("clearing a donor deep-link restores global metrics and donor selector", () => {
+  const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
+  assert.equal(page.includes('!searchParams.get("userId")'), false);
+  assert.match(page, /selectedUserId === "all" && <>/);
+  assert.match(page, /selectedUserId === "all" && \(/);
+  assert.match(page, /const linkedDonorId = searchParams.get\("userId"\)/);
+  assert.match(page, /\}, \[linkedDonorId\]\)/);
 });
