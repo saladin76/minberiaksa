@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { SLUGS, type MinbarRoute } from "@/lib/minbar/routes";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 
-type PageKind = "home" | "campaigns" | "campaign" | "category" | "super_category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin" | "zakat" | "zakat_calculator" | "waqf" | "recurring" | "aqsa" | "jerusalem" | "reports" | "news" | "programs" | "achievement_videos" | "endorsement_videos" | "publications" | "courses" | "volunteer" | "partner" | "bank_accounts" | "cart";
+type PageKind = "home" | "campaigns" | "campaigns_legacy" | "bank_transfer" | "terms" | "privacy" | "donation_policy" | "cookies" | "accessibility" | "campaign" | "category" | "super_category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin" | "zakat" | "zakat_calculator" | "waqf" | "recurring" | "aqsa" | "jerusalem" | "reports" | "news" | "programs" | "achievement_videos" | "endorsement_videos" | "publications" | "courses" | "volunteer" | "partner" | "bank_accounts" | "cart";
 type LinkMode = "standard" | "marketing";
 type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "email" | "whatsapp" | "sms" | "organic";
 
@@ -47,6 +47,13 @@ interface MarketingForm {
 const PAGE_OPTIONS: { id: PageKind; label: string; hint?: string }[] = [
   { id: "home", get label() { return dt("الصفحة الرئيسية"); } },
   { id: "campaigns", get label() { return dt("قائمة المشاريع"); }, get hint() { return dt("بحث اختياري"); } },
+  { id: "campaigns_legacy", get label() { return dt("قائمة الحملات القديمة"); } },
+  { id: "bank_transfer", get label() { return dt("التحويل البنكي"); } },
+  { id: "terms", get label() { return dt("الشروط والأحكام"); } },
+  { id: "privacy", get label() { return dt("سياسة الخصوصية"); } },
+  { id: "donation_policy", get label() { return dt("سياسة التبرع"); } },
+  { id: "cookies", get label() { return dt("سياسة ملفات تعريف الارتباط"); } },
+  { id: "accessibility", get label() { return dt("إمكانية الوصول"); } },
   { id: "campaign", get label() { return dt("صفحة مشروع محددة"); } },
   { id: "category", get label() { return dt("تصنيف مشاريع"); } },
   { id: "super_category", get label() { return dt("قسم كبير / صفحة برنامج رئيسية"); } },
@@ -121,6 +128,7 @@ const STATIC_DESTINATIONS: Partial<Record<PageKind, MinbarRoute>> = {
   achievement_videos: "achievementVideos", endorsement_videos: "endorsementVideos",
   publications: "publications", courses: "courses", volunteer: "volunteer",
   partner: "partner", bank_accounts: "bankAccounts", cart: "cart",
+  terms: "terms", privacy: "privacy", donation_policy: "donationPolicy", cookies: "cookies", accessibility: "accessibility",
 };
 
 function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: string; donationId: string }): string {
@@ -129,6 +137,8 @@ function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: strin
   switch (kind) {
     case "home": return "/";
     case "campaigns": return "/bagislar";
+    case "campaigns_legacy": return "/campaigns";
+    case "bank_transfer": return "/bank-transfer";
     case "campaign": return `/bagislar/${encodeURIComponent(opts.resourceId)}`;
     case "super_category": return `/bagislar/${encodeURIComponent(opts.resourceId)}`;
     case "category": return `/category/${opts.resourceId}`;
