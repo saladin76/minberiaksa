@@ -61,6 +61,13 @@ test("private document, pending and profile paths are redacted from custom measu
     assert.equal(isPublicAnalyticsPath(`/ar/${route}`), false, route);
     assert.equal(isPublicAnalyticsPath(`/tr/${route}/synthetic-private-id`), false, route);
   }
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    for (const encoded of ["%2563heckout", "%252563heckout", "%2561ccount", "%2570rofile", "%2572eceipt", "%2563art"]) {
+      assert.equal(isPublicAnalyticsPath(`/${locale}/${encoded}/synthetic-private`), false, `${locale}/${encoded}`);
+    }
+    // Malformed and over-encoded paths must never opt into the recorder.
+    assert.equal(isPublicAnalyticsPath(`/${locale}/%2525252563heckout`), false);
+  }
   assert.equal(isPublicAnalyticsPath("/en/%70rofile/secret"), false);
   assert.equal(isPublicAnalyticsPath("//untrusted.example/private"), false);
   assert.equal(isPublicAnalyticsPath("/en/bagislar/gaza-bread"), true);
