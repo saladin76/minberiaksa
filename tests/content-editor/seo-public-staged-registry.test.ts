@@ -81,10 +81,37 @@ test("encoded unicode aliases normalize consistently while unsafe paths fail", (
     "//evil.example/path",
     "/ar/bagislar/%2Fadmin",
     "/ar/bagislar/%5cadmin",
+    "/ar/bagislar/%252fadmin",
+    "/ar/bagislar/%252e%252e/admin",
     "/ar/bagislar/../admin",
     "/ar/bagislar?a=1",
     "/ar/bagislar#fragment",
   ]) {
     assert.throws(() => normalizePublicPath(path));
   }
+});
+
+
+test("alias audit identifies unpublished targets without inventing destinations", () => {
+  const registry = new StagedPublicUrlRegistry(approved, translations, [
+    ...aliases,
+    { type: "project", entityId: "project-123", locale: "fr", path: "/fr/bagislar/pain-gaza" },
+  ]);
+  assert.deepEqual(registry.auditAliasTargets(), {
+    checked: 3,
+    unresolved: ["/fr/bagislar/pain-gaza"],
+    selfReferential: [],
+  });
+});
+
+test("alias audit flags a canonical URL mistakenly registered as a legacy alias", () => {
+  const registry = new StagedPublicUrlRegistry(approved, translations, [
+    { type: "project", entityId: "project-123", locale: "en", path: "/en/donate/gaza-bread" },
+  ]);
+  assert.deepEqual(registry.auditAliasTargets(), {
+    checked: 1,
+    unresolved: [],
+    selfReferential: ["/en/donate/gaza-bread"],
+  });
+  assert.equal(registry.resolveAlias("/en/donate/gaza-bread"), null);
 });
