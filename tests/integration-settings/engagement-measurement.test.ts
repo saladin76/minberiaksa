@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
-import { clarityProjectId, clarityUserRecordingsUrl } from "../../lib/tracking/clarity-config";
+import { clarityProjectId, clarityUserRecordingsUrl, normalizeClarityProjectId, resolveClarityConnection } from "../../lib/tracking/clarity-config";
 import { isPublicAnalyticsPath } from "../../lib/tracking/private-path";
 import {
   createPointerBurstDetector, donationStageView, isMeasurementHost, landingAttribution,
@@ -56,6 +56,17 @@ test("private document, pending and profile paths are redacted from custom measu
     assert.equal(isPublicAnalyticsPath(path), false, path);
     assert.doesNotMatch(measurementPath(path), new RegExp(secret));
     assert.doesNotMatch(JSON.stringify(sanitizeEngagementData({ path, href: `https://minberiaksa.org${path}?t=secret` })), /secret|600000/);
+  }
+  for (const route of ["checkout", "cart", "recurring-donation", "subscription", "subscriptions", "login", "register"]) {
+    assert.equal(isPublicAnalyticsPath(`/ar/${route}`), false, route);
+    assert.equal(isPublicAnalyticsPath(`/tr/${route}/synthetic-private-id`), false, route);
+  }
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    for (const encoded of ["%2563heckout", "%252563heckout", "%2561ccount", "%2570rofile", "%2572eceipt", "%2563art"]) {
+      assert.equal(isPublicAnalyticsPath(`/${locale}/${encoded}/synthetic-private`), false, `${locale}/${encoded}`);
+    }
+    // Malformed and over-encoded paths must never opt into the recorder.
+    assert.equal(isPublicAnalyticsPath(`/${locale}/%2525252563heckout`), false);
   }
   assert.equal(isPublicAnalyticsPath("/en/%70rofile/secret"), false);
   assert.equal(isPublicAnalyticsPath("//untrusted.example/private"), false);
@@ -179,6 +190,12 @@ function hooks() {
   return {
     react: {
       useRef(value: unknown) { const slot = slots[cursor] ??= { current: value }; cursor++; return slot; },
+      useLayoutEffect(setup: Effect, deps: unknown[]) {
+        const slot = slots[cursor] ??= {};
+        cursor++;
+        if (slot.deps && deps.every((dep, i) => Object.is(dep, slot.deps![i]))) return;
+        pending.push(() => { if (slot.cleanup) slot.cleanup(); slot.setup = setup; slot.cleanup = setup(); slot.deps = deps; });
+      },
       useEffect(setup: Effect, deps: unknown[]) {
         const slot = slots[cursor] ??= {};
         cursor++;
@@ -224,7 +241,7 @@ test("actual dispatcher sanitizes every destination and retains conversion-page 
   const b = browser();
   const clarity: unknown[][] = [], ga: unknown[][] = [];
   Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => ga.push(args) });
-  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy }, b.globals);
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
   const send = api.trackEngagement as (name: string, data: Record<string, unknown>) => void;
   const data = { path: "/ar/zakat", href: "https://pay.example.org/?token=secret", email: "secret@example.org", event: "purchase" };
   send("first_click", data);
@@ -235,48 +252,232 @@ test("actual dispatcher sanitizes every destination and retains conversion-page 
     b.win.location = new URL("https://minberiaksa.org" + path);
     send("page_visible_again", data);
   }
-  assert.equal(ga.length, 3);
+  assert.equal(ga.length, 1, "private conversion pages never emit engagement diagnostics");
   assert.equal(b.win.dataLayer.length, 1);
   b.win.location = new URL("https://toplamvakfii.vercel.app/ar");
   send("first_click", data);
-  assert.equal(ga.length, 3);
+  assert.equal(ga.length, 1, "unapproved hosts and sensitive routes must not emit diagnostics");
   assert.equal(b.win.dataLayer.length, 1);
+});
+
+test("private donor routes block Clarity identity, custom events, GA4 and GTM diagnostic data", () => {
+  const b = browser();
+  const clarity: unknown[][] = [], google: unknown[][] = [];
+  Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => google.push(args) });
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    for (const path of ["account/private", "cart", "checkout", "success/private-token", "profile", "recurring-donation"]) {
+      b.win.location = new URL(`https://minberiaksa.org/${locale}/${path}`);
+      (api.trackEngagement as (name: string, data: Record<string, unknown>) => void)("synthetic_test", { email: "private@example.invalid" });
+      (api.clarityIdentify as (id: string) => void)("synthetic-private-user");
+    }
+  }
+  assert.deepEqual(clarity, []);
+  assert.deepEqual(google, []);
+  assert.deepEqual(b.win.dataLayer, []);
+});
+
+test("legacy Clarity identify never forwards a donor identifier even on public pages", () => {
+  const b = browser();
+  const commands: unknown[][] = [];
+  Object.assign(b.win, { clarity: (...args: unknown[]) => commands.push(args) });
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
+  (api.clarityIdentify as (id: string) => void)("donor-email@example.invalid");
+  assert.equal(commands.length, 0);
+});
+
+test("explicit consent withdrawal immediately blocks Clarity tags, identification and GTM diagnostics", () => {
+  const b = browser();
+  const clarity: unknown[][] = [], google: unknown[][] = [];
+  Object.assign(b.win, { clarity: (...args: unknown[]) => clarity.push(args), gtag: (...args: unknown[]) => google.push(args) });
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, { ...b.globals, navigator: { doNotTrack: "0", globalPrivacyControl: false } });
+  Object.assign(b.doc, { cookie: "analytics_consent=denied" });
+  (api.trackEngagement as (name: string) => void)("fixture_event");
+  (api.clarityIdentify as (id: string) => void)("private-identity");
+  assert.equal(clarity.length, 0);
+  assert.equal(google.length, 0);
+  assert.equal(b.win.dataLayer.length, 0);
+  Object.assign(b.doc, { cookie: "analytics_consent=granted" });
+  (api.trackEngagement as (name: string) => void)("fixture_event");
+  assert.equal(google.length, 1, "re-enabled diagnostics only with permission on a public route");
 });
 
 test("blocked or throwing analytics providers never break user interaction", () => {
   const b = browser();
   Object.assign(b.win, { clarity: () => { throw new Error("blocked"); }, gtag: () => { throw new Error("blocked"); } });
-  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy }, b.globals);
+  const api = clientModule("lib/analytics.ts", { "./tracking/engagement-policy": policy, "./tracking/private-path": { isPublicAnalyticsPath } }, b.globals);
   assert.doesNotThrow(() => (api.trackEngagement as (name: string) => void)("first_click"));
 });
 
-test("actual Clarity loader initializes once and excludes preview/development hosts", () => {
-  for (const [host, expected] of [["minberiaksa.org", 1], ["toplamvakfii.vercel.app", 0]] as const) {
-    const b = browser("https://" + host + "/ar");
-    const h = hooks(), ids: string[] = [];
-    const loaded = clientModule("components/MicrosoftClarity.tsx", {
-      react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
-      "@/lib/tracking/engagement-policy": policy,
-      "@/lib/tracking/clarity-config": { clarityProjectId: () => clarityProjectId("configured-test-project") },
-    }, { ...b.globals, process: { env: { NODE_ENV: "production", NEXT_PUBLIC_CLARITY_ID: "configured-test-project" } } });
-    h.render(loaded.default as () => unknown);
-    h.replayEffects();
-    assert.equal(ids.length, expected);
-    if (expected) assert.equal(ids[0], "configured-test-project");
-    h.unmount();
+test("resolved Clarity configuration keeps the legacy project until an operator saves or disables", () => {
+  assert.deepEqual(resolveClarityConnection(null, ""), {
+    clarityProjectId: "u60r8zhrzh", clarityEnabled: true, claritySource: "legacy",
+  });
+  assert.equal(resolveClarityConnection({ clarityProjectId: "  TESTPROJECT42 ", clarityEnabled: true }, "").clarityProjectId, "testproject42");
+  assert.equal(resolveClarityConnection({ clarityEnabled: false }, "").clarityEnabled, false);
+  for (const bad of ["<script>", "https://clarity.invalid", "", "a"]) {
+    assert.equal(normalizeClarityProjectId(bad), null);
   }
 });
 
-test("Clarity falls back to the verified Minber project only on an allowed host", () => {
-  const b = browser(), h = hooks(), ids: string[] = [];
-  const loaded = clientModule("components/MicrosoftClarity.tsx", {
-    react: h.react, "@microsoft/clarity": { init: (id: string) => ids.push(id) },
+async function mockClarityRuntime(options: {
+  url?: string;
+  routerPath?: string;
+  enabled?: boolean;
+  project?: string;
+  optOut?: boolean;
+  failure?: boolean;
+  navigatePrivateThenPublic?: boolean;
+  hashAfterInit?: string;
+  consentAfterInit?: "denied" | "granted";
+  navigationPaths?: string[];
+  changesAfterInit?: { enabled?: boolean; project?: string; failure?: boolean };
+} = {}) {
+  const b = browser(options.url ?? "https://minberiaksa.org/ar");
+  const h = hooks(), ids: string[] = [], requests: string[] = [], clarityCommands: string[] = [];
+  (b.win as unknown as { clarity: (...args: string[]) => void }).clarity = (...args: string[]) => clarityCommands.push(args[0]);
+  let allow = options.enabled !== false;
+  let configured = options.project ?? "dynamic1234";
+  let failure = Boolean(options.failure);
+  const client = clientModule("components/MicrosoftClarity.tsx", {
+    react: h.react,
+    "next/navigation": { usePathname: () => options.routerPath ?? b.win.location.pathname, useSearchParams: () => new URLSearchParams(b.win.location.search) },
+    "@microsoft/clarity": { init: (id: string) => ids.push(id) },
     "@/lib/tracking/engagement-policy": policy,
-    "@/lib/tracking/clarity-config": { clarityProjectId: () => clarityProjectId("") },
-  }, b.globals);
-  h.render(loaded.default as () => unknown);
-  assert.deepEqual(ids, ["u60r8zhrzh"]);
+    "@/lib/tracking/private-path": { isPublicAnalyticsPath },
+    "@/lib/tracking/clarity-config": { normalizeClarityProjectId },
+    "@/lib/tracking/marketing-gate": { whenMarketingAllowed: (cb: () => void) => { cb(); return () => {}; } },
+  }, {
+    ...b.globals,
+    navigator: { doNotTrack: options.optOut ? "1" : "0", globalPrivacyControl: options.optOut },
+    AbortController,
+    fetch: async (url: string) => {
+      requests.push(url);
+      if (failure) return { ok: false };
+      return { ok: true, json: async () => ({ clarityEnabled: allow, clarityProjectId: configured }) };
+    },
+  });
+  h.render(client.default as () => unknown);
+  // Flush two promise continuations: GET and JSON normalization.
+  await new Promise<void>(resolve => setImmediate(resolve));
+  h.replayEffects();
+  await new Promise<void>(resolve => setImmediate(resolve));
+  if (options.hashAfterInit) {
+    b.win.location.hash = options.hashAfterInit;
+    b.win.emit("hashchange");
+  }
+  if (options.consentAfterInit) {
+    Object.assign(b.doc, { cookie: `analytics_consent=${options.consentAfterInit}` });
+    b.win.emit("analytics-consent-changed");
+    b.doc.emit("visibilitychange");
+  }
+  if (options.changesAfterInit) {
+    if (options.changesAfterInit.enabled !== undefined) allow = options.changesAfterInit.enabled;
+    if (options.changesAfterInit.project !== undefined) configured = options.changesAfterInit.project;
+    if (options.changesAfterInit.failure !== undefined) failure = options.changesAfterInit.failure;
+  }
+  const navigationPaths = options.navigationPaths ?? (options.navigatePrivateThenPublic
+    ? ["/ar/profile/private-record", "/ar/projects"] : []);
+  const snapshots: { path: string; commands: string[]; initializations: number }[] = [];
+  for (const path of navigationPaths) {
+    b.win.location = new URL("https://minberiaksa.org" + path);
+    h.render(client.default as () => unknown);
+    // A valid public route deliberately waits for a fresh runtime read before resuming.
+    await new Promise<void>(resolve => setImmediate(resolve));
+    snapshots.push({ path, commands: [...clarityCommands], initializations: ids.length });
+  }
   h.unmount();
+  return { ids, requests, clarityCommands, snapshots };
+}
+
+test("actual Clarity loader fetches saved runtime config, initializes once and never duplicates on replay", async () => {
+  const result = await mockClarityRuntime();
+  assert.deepEqual(result.ids, ["dynamic1234"]);
+  assert.ok(result.requests.every(url => url === "/api/tracking/config"));
+  assert.ok(result.requests.length >= 1);
+});
+
+test("public analytics paths deny donor credentials and tokenized query keys", () => {
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    for (const query of ["donationId=donor-123", "access_token=secret", "t=guest-token", "paymentIntent=pi_test", "email=visitor%40example.invalid", "receipt_id=receipt-123", "code=oauth", "customerId=cus_test", "redirect=https%3A%2F%2Fprivate.example", "sig=secret-signature"]) {
+      assert.equal(isPublicAnalyticsPath(`/${locale}/projects?${query}`), false, query);
+    }
+    assert.equal(isPublicAnalyticsPath(`/${locale}/projects?utm_source=google&utm_campaign=winter&page=2`), true);
+    assert.equal(isPublicAnalyticsPath(`/${locale}/projects#token=synthetic-private`), false);
+    assert.equal(isPublicAnalyticsPath(`/${locale}/projects#payment-details`), false);
+  }
+});
+
+test("Clarity refuses a public route with a tokenized query and stops after query-only navigation", async () => {
+  const first = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/projects?donationId=fixture-donor" });
+  assert.deepEqual(first.ids, [], "tokenized entry must never initialize Clarity");
+  const second = await mockClarityRuntime({ navigationPaths: ["/ar/projects?access_token=fixture-secret", "/ar/projects?utm_source=google"] });
+  assert.deepEqual(second.clarityCommands, ["stop", "start"], "query-only changes must stop and resume only after runtime verification");
+});
+
+test("Clarity refuses private URL fragments on entry and stops on hash-only changes", async () => {
+  const blocked = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/projects#guest-token" });
+  assert.deepEqual(blocked.ids, [], "private fragment prevents initialization");
+  const changed = await mockClarityRuntime({ hashAfterInit: "#access-token=private-fixture" });
+  assert.deepEqual(changed.ids, ["dynamic1234"]);
+  assert.deepEqual(changed.clarityCommands, ["stop"], "hashchange must stop without a React rerender");
+});
+
+test("Clarity stops after in-session consent withdrawal without route navigation", async () => {
+  const withdrawn = await mockClarityRuntime({ consentAfterInit: "denied" });
+  assert.deepEqual(withdrawn.ids, ["dynamic1234"]);
+  assert.deepEqual(withdrawn.clarityCommands, ["stop"]);
+  const consented = await mockClarityRuntime({ consentAfterInit: "granted" });
+  assert.deepEqual(consented.clarityCommands, [], "consent refresh does not duplicate init or force a new session");
+});
+
+test("Clarity stops on a private SPA route and resumes without a second init on a safe route", async () => {
+  const result = await mockClarityRuntime({ navigatePrivateThenPublic: true });
+  assert.deepEqual(result.ids, ["dynamic1234"]);
+  assert.deepEqual(result.clarityCommands, ["stop", "start"]);
+});
+
+test("Clarity navigation cycles across all locales stop on private routes and resume only after verified runtime config", async () => {
+  for (const locale of ["ar", "tr", "en", "fr"]) {
+    const result = await mockClarityRuntime({ navigationPaths: [
+      `/${locale}/checkout`, `/${locale}/profile/private`, `/${locale}/projects`,
+      `/${locale}/bagislar/gaza`, `/${locale}/cart`, `/${locale}/zakat`,
+    ] });
+    assert.deepEqual(result.clarityCommands, ["stop", "start", "stop", "start"], locale);
+    assert.equal(result.ids.length, 1, locale);
+    assert.ok(result.snapshots.filter(x => /checkout|profile|cart/.test(x.path)).every(x => x.commands.at(-1) === "stop"), locale);
+  }
+});
+
+test("Clarity refuses to restart after a saved disable, project switch or failed runtime refresh", async () => {
+  for (const changesAfterInit of [{ enabled: false }, { project: "otherproject99" }, { failure: true }]) {
+    const result = await mockClarityRuntime({ changesAfterInit, navigationPaths: ["/ar/checkout", "/ar/zakat", "/ar/projects"] });
+    assert.deepEqual(result.clarityCommands, ["stop", "stop", "stop"], JSON.stringify(changesAfterInit));
+    assert.equal(result.ids.length, 1);
+  }
+});
+
+test("Clarity denies stale router and live-URL disagreement during a private transition", async () => {
+  const staleRouter = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/checkout", routerPath: "/ar/projects" });
+  assert.deepEqual(staleRouter.ids, [], "live private URL vetoes the stale public router state");
+  const staleBrowser = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/projects", routerPath: "/ar/checkout" });
+  assert.deepEqual(staleBrowser.ids, [], "private router state vetoes a still-public URL");
+});
+
+test("Clarity never loads on dashboard, donor private routes, preview or explicit privacy opt-out", async () => {
+  for (const options of [
+    { url: "https://minberiaksa.org/dashboard/platform-connections/tracking" },
+    { url: "https://minberiaksa.org/tr/profile" },
+    { url: "https://minberiaksa.org/ar/success/private-receipt" },
+    { url: "https://toplamvakfii.vercel.app/ar" },
+    { optOut: true },
+    { enabled: false },
+    { failure: true },
+    { project: "<img src=x>" },
+  ]) {
+    const result = await mockClarityRuntime(options);
+    assert.equal(result.ids.length, 0, JSON.stringify(options));
+  }
 });
 
 test("actual route tracker ignores currency cleanup but tracks filters/navigation once with safe URLs", () => {
