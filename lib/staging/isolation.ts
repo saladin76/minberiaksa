@@ -21,7 +21,14 @@ export function assertNoExternalProviderCredentials(env: NodeJS.ProcessEnv): voi
     "SENDGRID_API_KEY", "BREVO_API_KEY", "ELASTIC_EMAIL_API_KEY",
     "GA4_API_SECRET",
   ];
-  if (forbidden.some(key => Boolean(env[key]))) return fail("EXTERNAL_CREDENTIALS_PRESENT");
+  // Deny newly introduced provider credentials too: an allow-by-omission
+  // list would silently accept ALBARAKA_API_TOKEN, PAYFOR_SECRET, etc.
+  // Generic Staging E2E must remain completely disconnected from providers.
+  const providerPrefix = /^(?:ALBARAKA|PAYFOR|PAYPAL|STRIPE|META|WHATSAPP|SENDGRID|BREVO|ELASTIC_EMAIL|GA4_API|TWILIO|SMTP|MAILGUN|RESEND|ZIRAAT|IYZICO|PAYTR)(?:_|$)/;
+  if (forbidden.some(key => Boolean(env[key])) ||
+      Object.entries(env).some(([key, value]) => Boolean(value) && providerPrefix.test(key))) {
+    return fail("EXTERNAL_CREDENTIALS_PRESENT");
+  }
   if (env.STAGING_EGRESS_POLICY !== "deny-external") return fail("EGRESS_POLICY_UNREVIEWED");
 }
 
