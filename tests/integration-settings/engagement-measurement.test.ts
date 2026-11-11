@@ -249,7 +249,7 @@ test("actual dispatcher sanitizes every destination and retains conversion-page 
   assert.equal(b.win.dataLayer.length, 1);
   b.win.location = new URL("https://toplamvakfii.vercel.app/ar");
   send("first_click", data);
-  assert.equal(ga.length, 3);
+  assert.equal(ga.length, 1, "unapproved hosts and sensitive routes must not emit diagnostics");
   assert.equal(b.win.dataLayer.length, 1);
 });
 
