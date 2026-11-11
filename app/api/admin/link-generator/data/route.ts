@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { routing } from "@/i18n/routing.config";
 import { URL_CURRENCY_CODES_ORDERED } from "@/lib/currency-link";
+import { pickLocaleSlug } from "@/lib/slug";
 
 function nonEmpty(s: string | null | undefined) {
   return typeof s === "string" && s.trim().length > 0;
@@ -22,8 +23,9 @@ function buildSlugByLocale(
 ): Record<string, string | null> {
   const map: Record<string, string | null> = {};
   for (const loc of supportedLocales) {
-    const t = translations.find((tr) => tr.locale === loc);
-    map[loc] = (t && nonEmpty(t.slug) ? (t.slug as string) : null) || baseSlug || null;
+    // Use precisely the same locale fallback order as the public page resolver.
+    // Arabic uses the base slug, other languages may fall back to English.
+    map[loc] = pickLocaleSlug(baseSlug, translations, loc);
   }
   return map;
 }
