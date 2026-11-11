@@ -322,6 +322,7 @@ test("resolved Clarity configuration keeps the legacy project until an operator 
 
 async function mockClarityRuntime(options: {
   url?: string;
+  routerPath?: string;
   enabled?: boolean;
   project?: string;
   optOut?: boolean;
@@ -338,7 +339,7 @@ async function mockClarityRuntime(options: {
   let failure = Boolean(options.failure);
   const client = clientModule("components/MicrosoftClarity.tsx", {
     react: h.react,
-    "next/navigation": { usePathname: () => b.win.location.pathname },
+    "next/navigation": { usePathname: () => options.routerPath ?? b.win.location.pathname },
     "@microsoft/clarity": { init: (id: string) => ids.push(id) },
     "@/lib/tracking/engagement-policy": policy,
     "@/lib/tracking/private-path": { isPublicAnalyticsPath },
@@ -409,6 +410,13 @@ test("Clarity refuses to restart after a saved disable, project switch or failed
     assert.deepEqual(result.clarityCommands, ["stop", "stop", "stop"], JSON.stringify(changesAfterInit));
     assert.equal(result.ids.length, 1);
   }
+});
+
+test("Clarity denies stale router and live-URL disagreement during a private transition", async () => {
+  const staleRouter = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/checkout", routerPath: "/ar/projects" });
+  assert.deepEqual(staleRouter.ids, [], "live private URL vetoes the stale public router state");
+  const staleBrowser = await mockClarityRuntime({ url: "https://minberiaksa.org/ar/projects", routerPath: "/ar/checkout" });
+  assert.deepEqual(staleBrowser.ids, [], "private router state vetoes a still-public URL");
 });
 
 test("Clarity never loads on dashboard, donor private routes, preview or explicit privacy opt-out", async () => {
