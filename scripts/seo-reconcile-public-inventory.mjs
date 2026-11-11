@@ -8,6 +8,20 @@
  *   /tmp/minber-seo-historical-urls.json > /tmp/minber-seo-url-reconciliation.json
  */
 import { readFileSync } from "node:fs";
+import { SLUGS, NOINDEX_ROUTES } from "../lib/minbar/routes.ts";
+
+// Classify the static pages in the live sitemap separately from CMS entities.
+const EXCLUDED_STATIC = new Set(["projectDetail", "reportDetail", "article",
+  "restorationProject", "ibadanProject"]);
+const STATIC_SLUGS = new Map();
+for (const [route, slug] of Object.entries(SLUGS)) {
+  if (NOINDEX_ROUTES.has(route) || EXCLUDED_STATIC.has(route)) continue;
+  if (STATIC_SLUGS.has(slug)) throw new Error("DUPLICATE_STATIC_ROUTE");
+  STATIC_SLUGS.set(slug, route);
+}
+STATIC_SLUGS.set("campaigns", "legacy-campaigns");
+STATIC_SLUGS.set("bank-transfer", "bank-transfer");
+
 
 const [sitemapFile, ownershipFile] = process.argv.slice(2);
 if (!sitemapFile || !ownershipFile) {
@@ -55,16 +69,18 @@ function main() {
       ownershipPaths: ownership.uniquePaths ?? null, ownershipRecords: ownership.records.length },
     totals: { distinctSitemapPaths: 0, inferredUniqueOwner: 0, unmatched: 0,
       ambiguousOwner: 0, priorSlugOnly: 0, matchedNotPublic: 0,
-      inferredCurrentTranslation: 0, inferredBaseOrCrossLocale: 0, staticOrUnmodeled: 0 },
+      inferredCurrentTranslation: 0, inferredBaseOrCrossLocale: 0, staticOrUnmodeled: 0, stillUnmatched: 0 },
     byLocale: {},
     unresolvedSamples: [],
     ambiguousSamples: [],
     historicalOnlySamples: [],
     staleSamples: [],
+    staticRouteSamples: [],
     notes: [
       "Sitemap-only match is not proof of historical ad usage or a safe redirect destination.",
       "Previous slug guesses were generated across 19 locales; require independent evidence.",
       "This comparison does not check live HTTP status, canonical, translation quality, SEO indexability, or all old URLs.",
+      "Static route shape matching is not proof of live HTTP 200 or an editorially localized page.",
     ],
   };
   const seen = new Set();
@@ -78,6 +94,18 @@ function main() {
     per.total++;
     const rows = matchedOwners.get(path) || [];
     if (!rows.length) {
+      const parts = path.split("/").filter(Boolean);
+      const staticSlug = parts.slice(1).join("/");
+      const staticKey = STATIC_SLUGS.get(staticSlug);
+      if (staticKey !== undefined) {
+        output.totals.staticOrUnmodeled++;
+        per.staticRouteShape = (per.staticRouteShape || 0) + 1;
+        if (output.staticRouteSamples.length < 30) {
+          output.staticRouteSamples.push({ path, route: staticKey });
+        }
+        continue;
+      }
+      output.totals.stillUnmatched++;
       output.totals.unmatched++;
       per.unmatched++;
       if (output.unresolvedSamples.length < 30) output.unresolvedSamples.push(path);
