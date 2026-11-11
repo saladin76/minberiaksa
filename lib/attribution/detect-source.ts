@@ -88,7 +88,7 @@ export function detectDonationSource(input: DetectSourceInput): DonationSourceRe
   if (platform === "organic" || platform === "unknown") {
     return { ...sourceInfo, platform, status: platform, confidence: platform === "unknown" ? 0 : 30,
       campaignName, campaignId, adsetId, adId, placement,
-      reasons: [platform === "unknown" ? "لا تتوفر بيانات كافية لتحديد المصدر؛ غياب التتبع لا يثبت أن الزيارة غير إعلانية" : `المصدر المسجل: ${signals.sourceLabel}`] };
+      reasons: [platform === "unknown" ? "لا تتوفر بيانات كافية لتحديد المصدر؛ غياب التتبع لا يثبت أن الزيارة غير إعلانية" : signals.sourceKind === "referral" ? `المُحيل المسجل: ${signals.sourceLabel}؛ هذا يثبت الإحالة فقط ولا يؤكد أنها إعلان ممول. درجة 30% هي اكتمال بيانات الإسناد وليست احتمال أن الزيارة مدفوعة.` : `المصدر المسجل: ${signals.sourceLabel}`] };
   }
 
   const hasPlatformClickId = signals.clickKeys.length > 0;
