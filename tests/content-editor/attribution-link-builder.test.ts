@@ -115,11 +115,13 @@ test("link-generator endpoint includes only active major sections with locale sl
   const response = await load(true)();
   assert.equal(response.status, 200);
   assert.equal(JSON.stringify(whereSeen), JSON.stringify({ isActive: true }));
-  const superCategories = response.body.superCategories as Array<{id: string; slugByLocale: Record<string, string>; supportedLocales: string[]}>;
+  const superCategories = response.body.superCategories as Array<{id: string; slugByLocale: Record<string, string>; titleByLocale: Record<string, string>; supportedLocales: string[]}>;
   assert.equal(superCategories.length, 1);
   assert.equal(superCategories[0].id, "major123");
   assert.equal(superCategories[0].slugByLocale.tr, "kudus");
   assert.equal(superCategories[0].slugByLocale.en, "jerusalem");
+  assert.equal(superCategories[0].titleByLocale.tr, "Kudüs");
+  assert.equal(superCategories[0].titleByLocale.en, "Jerusalem");
   assert.ok(superCategories[0].supportedLocales.includes("ar"));
 });
 
