@@ -21,9 +21,17 @@ type AnyRecord = Record<string, unknown>;
 /** Shared gate for this diagnostic layer; canonical conversion tracking is separate. */
 export function isEngagementEnabled(): boolean {
   try {
-    return typeof window !== "undefined" &&
-      isMeasurementHost(window.location.hostname) &&
-      isPublicAnalyticsPath(window.location.pathname);
+    if (typeof window === "undefined" || !isMeasurementHost(window.location.hostname) ||
+        !isPublicAnalyticsPath(window.location.pathname)) return false;
+    // The diagnostic dispatcher must obey the same privacy rejection as the
+    // automatic recorder. It must not identify a donor or push GTM data after
+    // explicit analytics opt-out, even if previously initialized scripts remain.
+    if (typeof navigator !== "undefined") {
+      const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
+      if (nav.globalPrivacyControl === true || nav.doNotTrack === "1") return false;
+    }
+    const cookie = typeof document === "undefined" ? "" : document.cookie || "";
+    return !/(?:^|;\\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookie);
   } catch {
     return false;
   }
