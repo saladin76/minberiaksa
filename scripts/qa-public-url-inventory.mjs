@@ -11,6 +11,7 @@
  * Does not modify slugs, ads, donation records, PM2, or deployment.
  */
 import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 export const ORIGIN = "https://minberiaksa.org";
 const MAX_SHARDS = 200;
@@ -143,6 +144,6 @@ async function main() {
   if (shardErrors.length || report.queryLoss?.length || report.failures?.length) process.exitCode = 1;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === fileURLToPath(new URL("file://" + process.argv[1]))) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   main().catch(e => { console.error(String(e)); process.exitCode = 1; });
 }
