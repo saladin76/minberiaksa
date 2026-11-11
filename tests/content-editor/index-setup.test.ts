@@ -51,6 +51,7 @@ async function runSetup(
     },
     require: (name: string) => {
       if (name === "../lib/donations/optional-user-email-index") return { ensureOptionalUserEmailIndex: async () => true };
+      if (name === "../lib/staging/isolation") return { verifyStagingDatabase: async () => { throw new Error("STAGING_VERIFICATION_MUST_NOT_RUN_IN_PRODUCTION_FIXTURE"); } };
       if (name === "@next/env") return { loadEnvConfig() {} };
       if (name === "../lib/database/mongo-index-client") return { createMongoIndexClient: async () => new Client() };
       throw new Error("Unexpected script dependency: " + name);
@@ -116,3 +117,25 @@ test("duplicate values fail production index setup and leave existing data intac
   assert.equal(result.disconnects, 1);
 });
 
+
+
+test("staging refuses production index mode before opening the database", async () => {
+  const result = await runSetup(["--production"], { MINBER_RUNTIME_ROLE: "staging" });
+  assert.equal(result.clients, 0);
+  assert.equal(result.commands.length, 0);
+  assert.equal(result.exitCode, 1);
+  assert.match(result.messages.join("\n"), /STAGING_PRODUCTION_INDEX_MODE_DENIED/);
+});
+
+test("staging index application requires reviewed approval and database role verification", async () => {
+  const missingApproval = await runSetup(["--apply"], { MINBER_RUNTIME_ROLE: "staging" });
+  assert.equal(missingApproval.clients, 0);
+  assert.equal(missingApproval.commands.length, 0);
+  assert.match(missingApproval.messages.join("\n"), /STAGING_INDEX_CHANGE_NOT_APPROVED/);
+  const unverified = await runSetup(["--apply"], {
+    MINBER_RUNTIME_ROLE: "staging", STAGING_INDEX_CHANGE_APPROVED: "1",
+  });
+  assert.equal(unverified.clients, 0);
+  assert.equal(unverified.commands.length, 0);
+  assert.match(unverified.messages.join("\n"), /STAGING_VERIFICATION_MUST_NOT_RUN_IN_PRODUCTION_FIXTURE/);
+});

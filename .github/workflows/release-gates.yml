@@ -12,6 +12,15 @@ on:
     branches: [main, master]
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_staging_e2e:
+        description: "Explicit authorization for isolated Staging acceptance (never Production)"
+        required: true
+        type: choice
+        options:
+          - DENY
+          - APPROVED_STAGING_ONLY
+        default: DENY
 
 permissions:
   contents: read
@@ -67,7 +76,9 @@ jobs:
 
   unit:
     name: Integration-settings suite
-    runs-on: ubuntu-latest
+    # Pin Noble rather than rolling ubuntu-latest: the Resolute apt mirror on
+    # the rolling image stalled while fetching FFmpeg and timed out twice.
+    runs-on: ubuntu-24.04
     env:
       # Prisma validate only needs a syntactically valid datasource URL; source-contract
       # tests must not depend on a live production/staging database.
@@ -82,12 +93,15 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
-        timeout-minutes: 5
+        timeout-minutes: 12
         run: |
+          set -euo pipefail
           if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
           fi
+          command -v ffmpeg
+          ffmpeg -hide_banner -version | head -n 1
       - run: npm run test:integration-settings
       - name: Content editor and audit regressions
         run: npm run test:content-editors
@@ -199,13 +213,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  e2e:
-    name: Playwright (critical journeys)
-    runs-on: ubuntu-latest
-    # The end-to-end suite needs a database and provider credentials to be meaningful. It runs when
-    # those secrets exist and is skipped, loudly, when they do not - a suite that silently passes
-    # against an empty environment is worse than no suite.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+  staging-safety:
+    name: Staging fail-closed safety tests
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -213,33 +223,57 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npx prisma generate
-      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
-      - name: Check for an end-to-end environment
-        id: env
-        run: |
-          if [ -z "${{ secrets.E2E_BASE_URL }}" ] && [ -z "${{ secrets.DATABASE_URL }}" ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No E2E_BASE_URL or DATABASE_URL secret. The end-to-end suite did NOT run."
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.env.outputs.ready == 'true'
-        run: npx playwright install --with-deps chromium
-      - if: steps.env.outputs.ready == 'true'
-        run: npm run test:e2e
+      - run: node --test tests/staging/*.test.mjs
+      - run: node --import tsx --test tests/staging/*.test.ts
+
+  # Mutating E2E is NEVER scheduled on pushes or pull requests.
+  # Only a manual, reviewed staging environment can authorize a test run.
+  e2e:
+    name: Playwright (critical journeys)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_staging_e2e == 'APPROVED_STAGING_ONLY' && github.ref_type == 'branch' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: staging-acceptance
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify approved Staging without exposing secrets
         env:
           E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          STAGING_APPROVED_BASE_URL: ${{ vars.STAGING_APPROVED_BASE_URL }}
+          STAGING_APPROVED_SHA: ${{ vars.STAGING_APPROVED_SHA }}
+          STAGING_APPROVED_INSTANCE_ID: ${{ vars.STAGING_APPROVED_INSTANCE_ID }}
+          STAGING_APPROVED_DB_IDENTITY_SHA256: ${{ vars.STAGING_APPROVED_DB_IDENTITY_SHA256 }}
+          STAGING_ATTESTATION_TOKEN: ${{ secrets.STAGING_ATTESTATION_TOKEN }}
           E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
           E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
-      - if: always() && steps.env.outputs.ready == 'true'
+        run: node scripts/staging-acceptance-preflight.mjs
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
+      - run: npx playwright install --with-deps chromium
+      - name: Run reviewed Staging browser acceptance
+        env:
+          CI: "true"
+          E2E_PREFLIGHT_PASSED: "1"
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          STAGING_APPROVED_BASE_URL: ${{ vars.STAGING_APPROVED_BASE_URL }}
+          STAGING_APPROVED_SHA: ${{ vars.STAGING_APPROVED_SHA }}
+          E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
+          E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
+        run: npm run test:e2e
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-staging-report
           path: e2e/.artifacts/
+          if-no-files-found: warn
           retention-days: 7
 
   fixture-build:
