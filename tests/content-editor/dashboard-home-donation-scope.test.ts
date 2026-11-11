@@ -39,7 +39,10 @@ test("all option values are omitted but explicit status is kept", () => {
 });
 
 test("stats scope intentionally excludes unsupported donor/status/type filters", () => {
-  const params=dashboardStatsScopeParams(base, "custom");
+  const { categoryId, campaignId, start, end, locale, country, provider } = base;
+  const params=dashboardStatsScopeParams({
+    categoryId, campaignId, start, end, locale, country, provider,
+  }, "custom");
   assert.equal(params.get("period"),"custom");
   assert.equal(params.get("userId"),null);
   assert.equal(params.get("status"),null);
@@ -52,4 +55,16 @@ test("unassigned country, locale filters stay explicit", () => {
   const params=dashboardDonationScopeParams({...base,country:"__unset",locale:"__unset"});
   assert.equal(params.get("country"),"__unset");
   assert.equal(params.get("locale"),"__unset");
+});
+
+test("KPI scope remains unchanged when donor, status or type changes", () => {
+  const { categoryId, campaignId, start, end, locale, country, provider } = base;
+  const supported = { categoryId, campaignId, start, end, locale, country, provider };
+  const original = dashboardStatsScopeParams(supported, "month").toString();
+  const changedOnlyUnsupported = {
+    ...base, userId: "other-donor", status: "FAILED", donationType: "ONE_TIME",
+  };
+  const { userId: _userId, status: _status, donationType: _donationType, ...stillSupported } =
+    changedOnlyUnsupported;
+  assert.equal(dashboardStatsScopeParams(stillSupported, "month").toString(), original);
 });
