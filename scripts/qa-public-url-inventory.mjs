@@ -12,6 +12,7 @@
  */
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { writeFile } from "node:fs/promises";
 
 export const ORIGIN = "https://minberiaksa.org";
 const MAX_SHARDS = 200;
@@ -194,6 +195,22 @@ async function main() {
     report.failures = checks.filter(x => x.status !== 200);
     report.queryLoss = checks.filter(x => x.hops?.some(h => !h.retainedQuery));
     report.redirectChains = checks.filter(x => (x.hops?.length || 0) > 1);
+  }
+  // Full public URL inventory is optional, so CI logs stay compact.
+  // Only sitemap-public URLs are written, never donor/checkout/API data.
+  const output = process.argv.find(arg => arg.startsWith("--output="))?.slice("--output=".length);
+  if (output) {
+    const inventory = list.map(url => {
+      const path = new URL(url).pathname;
+      return {
+        url, locale: path.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || "other",
+        family: path.startsWith("/ar/bagislar/") || /\/[a-z]{2}\/bagislar\//.test(path) ? "project_or_major_section"
+          : /\/[a-z]{2}\/category\//.test(path) ? "project_category"
+          : /\/[a-z]{2}\/blog\//.test(path) ? "blog_content" : "static_or_other",
+      };
+    });
+    await writeFile(resolve(output), JSON.stringify({ report, inventory }, null, 2) + "\n", { flag: "w" });
+    report.inventoryFile = resolve(output);
   }
   console.log(JSON.stringify(report, null, 2));
   if (shardErrors.length || report.queryLoss?.length || report.failures?.length || report.seoFindings?.length) process.exitCode = 1;
