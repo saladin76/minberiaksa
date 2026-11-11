@@ -526,7 +526,7 @@ export default function DashboardPage() {
     } finally {
       if (requestId === chartRequestId.current) setChartLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsStatusFilter, donationsTypeFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsStatusFilter, donationsTypeFilter]);
 
   useEffect(() => {
     fetchChartData();
@@ -545,10 +545,9 @@ export default function DashboardPage() {
       const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
       const params = dashboardStatsScopeParams({
         categoryId: selectedCategory, campaignId: selectedCampaign,
-        userId: selectedUserId, start, end,
+        start, end,
         locale: donationLocaleFilter, country: donationCountryFilter,
-        provider: donationProviderFilter, status: donationsStatusFilter,
-        donationType: donationsTypeFilter,
+        provider: donationProviderFilter,
       }, chartPeriod);
       const response = await fetch(`/api/admin/stats?${params}`, { signal: controller.signal });
       const data = await response.json();
