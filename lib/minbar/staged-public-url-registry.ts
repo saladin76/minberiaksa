@@ -81,6 +81,8 @@ export function normalizePublicPath(path: string): string {
   if (decoded.includes("//") || decoded.split("/").some(segment => segment === "." || segment === "..")) {
     throw new Error("UNSAFE_PUBLIC_PATH");
   }
+  // Reject double-encoded path separators and traversal before any reverse-proxy decoding.
+  if (/%(?:2f|5c|00|2e)/i.test(decoded)) throw new Error("AMBIGUOUS_PUBLIC_ENCODING");
   return decoded.normalize("NFC").replace(/\/+$/, "") || "/";
 }
 
@@ -185,6 +187,18 @@ export class StagedPublicUrlRegistry {
   }
 
   /** Does not preserve query here: redirect layer must preserve safe raw query separately. */
+  /** Preflight report: aliases with no published canonical destination block migration. */
+  auditAliasTargets(): { checked: number; unresolved: string[]; selfReferential: string[] } {
+    const unresolved: string[] = [];
+    const selfReferential: string[] = [];
+    for (const [path, alias] of this.aliases) {
+      const target = this.contentPath(alias.type, alias.entityId, alias.locale);
+      if (!target) unresolved.push(path);
+      else if (normalizePublicPath(target) === path) selfReferential.push(path);
+    }
+    return { checked: this.aliases.size, unresolved: unresolved.sort(), selfReferential: selfReferential.sort() };
+  }
+
   resolveAlias(path: string): string | null {
     const alias = this.aliases.get(normalizePublicPath(path));
     if (!alias) return null;
