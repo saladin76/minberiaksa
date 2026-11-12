@@ -62,3 +62,26 @@ test("real CheckoutPage emits non-paid funnel stages without PAN/CVC", () => {
   const canonical = readFileSync(resolve(root, "lib/tracking/canonical.ts"), "utf8");
   assert.match(canonical, /payment_submit:\s*"payment_submit"/);
 });
+
+test("anonymous funnel reporting is opt-in, bounded and independently permission-gated", () => {
+  const ledger = readFileSync(resolve(root, "lib/tracking/funnel-observations.ts"), "utf8");
+  assert.match(ledger, /FUNNEL_OBSERVATION_ENABLED/);
+  assert.match(ledger, /MAX_PER_MINUTE = 40/);
+  assert.match(ledger, /createIndexes: COLLECTION/);
+  assert.match(ledger, /expireAfterSeconds: TTL_SECONDS/);
+  assert.match(ledger, /source: "anonymous_client"/);
+  assert.match(ledger, /channel: "browser_reported"/);
+  const audit = readFileSync(resolve(root, "app/api/admin/tracking/funnel-audit/route.ts"), "utf8");
+  assert.match(audit, /requireAdminOrDashboardPermission\(session, "platformConnections"\)/);
+  assert.match(audit, /readFunnelSummary/);
+  assert.doesNotMatch(audit, /select: \{.*email|phone|cardNumber|accessToken/);
+});
+
+test("public event endpoint rejects unsupported events and strips query tokens", () => {
+  const route = readFileSync(resolve(root, "app/api/track/route.ts"), "utf8");
+  assert.match(route, /ALLOWED_FUNNEL_EVENTS\.has\(event\.event\)/);
+  assert.match(route, /raw\.length > 24_000/);
+  assert.match(route, /safePageUrl\(event\.page\?\.url, req\.url\)/);
+  assert.match(route, /recordFunnelObservation\(event, clientIp\)/);
+  assert.match(route, /providerFailure \? 502 : 200/);
+});
