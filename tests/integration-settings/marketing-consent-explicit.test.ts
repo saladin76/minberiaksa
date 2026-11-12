@@ -39,3 +39,21 @@ test("consent UI has deliberate allow/decline/reopen and Clarity enforces choice
   const engagement = readFileSync("lib/analytics.ts", "utf8");
   assert.match(engagement, /return hasMarketingConsent\(\)/);
 });
+
+test("tracking IP uses nginx-overwritten real IP over spoofed XFF", async () => {
+  const { getTrackingClientIp } = await import("../../lib/tracking/client-ip");
+  const headers = new Headers({
+    "x-forwarded-for": "198.51.100.111, 203.0.113.44",
+    "x-real-ip": "203.0.113.44",
+  });
+  const previous = process.env.TRACKING_TRUST_CLOUDFLARE;
+  try {
+    process.env.TRACKING_TRUST_CLOUDFLARE = "false";
+    assert.equal(getTrackingClientIp(headers), "203.0.113.44");
+    headers.delete("x-real-ip");
+    assert.equal(getTrackingClientIp(headers), "203.0.113.44");
+  } finally {
+    if (previous === undefined) delete process.env.TRACKING_TRUST_CLOUDFLARE;
+    else process.env.TRACKING_TRUST_CLOUDFLARE = previous;
+  }
+});
