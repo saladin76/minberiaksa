@@ -231,12 +231,6 @@ export function useConcierge() {
         ...(input.gift ? { gift: input.gift } : {}),
       });
       markConciergeAssisted({ intent: state.intent ?? null, campaignId: input.campaign?.id ?? null });
-      tracking?.trackAddToCart({
-        value: input.amountUSD,
-        currency: "USD",
-        contentIds: [input.campaign?.id ?? input.category?.id ?? input.genericTitleKey ?? "generic"],
-        contentName: input.campaign?.title ?? input.category?.title ?? undefined,
-      });
       track("donation_added_to_cart", { campaignId: input.campaign?.id ?? null, categoryId: input.category?.id ?? null, amountUSD: input.amountUSD, frequency: input.frequency });
       void call({
         step: {
@@ -264,7 +258,6 @@ export function useConcierge() {
         waqf: { unit: input.unit, count: input.count, donorName: input.donorName.trim(), onBehalf: input.onBehalf.trim() },
       });
       markConciergeAssisted({ intent: "waqf", campaignId: null });
-      tracking?.trackAddToCart({ value: total, currency: "USD", contentIds: [`waqf-${input.unit}`], quantity: input.count });
       track("donation_added_to_cart", { amountUSD: total, frequency: input.monthly ? "monthly" : "once" });
       void call({ step: { kind: "added", amountUSD: total, frequency: input.monthly ? "monthly" : "once", waqf: true } });
     },
