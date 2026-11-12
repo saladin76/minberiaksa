@@ -9,8 +9,12 @@ const LOCALES = new Set(["ar","tr","en","fr","de","es","id","pt","ur","sq","it",
 const RESERVED = new Set([
   "api","auth","dashboard","cart","checkout","account","success",
   "receipt","certificates","payment-failed","payment-cancelled",
-  "payment-processing","payment-pending","maintenance"
+  "payment-processing","payment-pending","donation-failed",
+  "donation-success","maintenance"
 ]);
+// These are real or legacy public landing destinations, not generic catalogue aliases.
+// They require a separate signed content-equivalence and ads migration decision.
+const PROTECTED_EXISTING_ROUTES = new Set(["campaigns","donates","bank-transfer"]);
 
 export function strictPublicPath(value) {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") ||
@@ -48,6 +52,8 @@ export function validateReviewManifest(manifest) {
     catch (e) { issues.push({index,code:"BAD_SOURCE_PATH",details:e.message});continue; }
     if (sources.has(source.path)) issues.push({index,code:"DUPLICATE_SOURCE",path:source.path});
     sources.add(source.path);
+    if (row.locale !== source.locale)
+      issues.push({index,code:"SOURCE_LOCALE_MISMATCH",path:source.path});
     if (!row.approved) {
       blockedCount++;
       if (row.redirectCode != null || row.proposedTarget != null)
@@ -66,6 +72,8 @@ export function validateReviewManifest(manifest) {
       issues.push({index,code:"CROSS_LANGUAGE_REDIRECT_REQUIRES_MANUAL_PLAN",path:source.path});
     if (RESERVED.has(source.head) || RESERVED.has(target.head))
       issues.push({index,code:"RESERVED_TRANSACTION_PATH",path:source.path});
+    if (PROTECTED_EXISTING_ROUTES.has(source.head) || PROTECTED_EXISTING_ROUTES.has(target.head))
+      issues.push({index,code:"PROTECTED_EXISTING_ROUTE",path:source.path});
 
     // A redirect must not claim that a different immutable entity owns its target.
     if (row.family !== null && row.entityId != null &&
