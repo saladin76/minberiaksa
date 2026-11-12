@@ -30,7 +30,7 @@ function fixtures(fault: Fault): Donation[] {
   paid[0] = {
     ...paid[0],
     createdAt: fault === "no-cross-day" ? "2026-11-11T07:00:00.000Z" : "2026-11-10T20:45:00.000Z",
-    paidAt: "2026-11-10T21:30:00.000Z",
+    paidAt: fault === "no-cross-day" ? "2026-11-11T08:00:00.000Z" : "2026-11-10T21:30:00.000Z",
   };
   return [
     ...paid,
