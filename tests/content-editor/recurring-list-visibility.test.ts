@@ -6,6 +6,7 @@ import ts from "typescript";
 import { subscriptionPaymentSequence } from "../../lib/dashboard/subscription-payment-sequence";
 import { accountingDateWhere, canUseAccountingDate } from "../../lib/dashboard/accounting-date-where";
 import { dashboardDonationDateSortField } from "../../lib/dashboard/donation-ledger-date";
+import { dashboardLocaleWhere, dashboardCountryWhere } from "../../lib/dashboard/donation-location-scope";
 import { istanbulDateKeysToUtcRange } from "../../lib/admin/istanbul-calendar";
 type Row = Record<string, unknown>;
 function load(file: string, dependencies: Record<string, unknown>) {
@@ -30,6 +31,7 @@ function harness(role: "monthly" | "admin" | "donor" | "revenue") {
     "@/lib/dashboard/accounting-date-where": { accountingDateWhere, canUseAccountingDate },
     "@/lib/admin/istanbul-calendar": { istanbulDateKeysToUtcRange },
     "@/lib/dashboard/donation-ledger-date": { dashboardDonationDateSortField },
+    "@/lib/dashboard/donation-location-scope": { dashboardLocaleWhere, dashboardCountryWhere },
   });
   return { get: (query: string) => route.GET({ url: "https://example.invalid/api/donations?" + query }), queries };
 }
