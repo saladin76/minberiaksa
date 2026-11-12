@@ -28,7 +28,6 @@ function privacyAllowsRecorder(): boolean {
   // Respect browser opt-out signals and explicit analytics cookie rejection.
   const signals = navigator as Navigator & { globalPrivacyControl?: boolean };
   if (signals.globalPrivacyControl === true || navigator.doNotTrack === "1") return false;
-  const cookie = typeof document === "undefined" ? "" : document.cookie;
   return hasMarketingConsent();
 }
 
