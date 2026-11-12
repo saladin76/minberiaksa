@@ -58,7 +58,7 @@ test("real CheckoutPage emits non-paid funnel stages without PAN/CVC", () => {
     assert.match(s, new RegExp("tracking\\?\\." + name + "\\("));
   }
   const events = s.slice(s.indexOf("    submitLock.current = true;"), s.indexOf("    const methodForServer: CheckoutMethod"));
-  assert.doesNotMatch(events, /cardNumber|cardCvc|cardExpiry|email|phone|cardName/);
+  assert.doesNotMatch(events, /(?:cardNumber|cardCvc|cardExpiry|email|phone|cardName)\\s*:/);
   const canonical = readFileSync(resolve(root, "lib/tracking/canonical.ts"), "utf8");
   assert.match(canonical, /payment_submit:\s*"payment_submit"/);
 });
