@@ -117,6 +117,7 @@ async function exercise(fault: Fault) {
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "", stderr = "";
+    if (!child.stdout || !child.stderr) throw Error("Child output capture unavailable");
     child.stdout.setEncoding("utf8").on("data", x => { stdout += x; });
     child.stderr.setEncoding("utf8").on("data", x => { stderr += x; });
     const [code] = await once(child, "close");
