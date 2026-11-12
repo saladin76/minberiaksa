@@ -245,7 +245,7 @@ try {
     await page.locator('[role="option"]').filter({hasText:"+49"}).first().click();
     assert.equal(await selector.getAttribute("data-country"),"de");
   }
-  await page.waitForResponse(res=>res.url().includes("/api/geo/client")&&res.ok());
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem("ip_country_code_v2")||"{}").code==="sa");
   await page.waitForTimeout(120);
   assert.equal(geoCalls,1);
   const chosen=state==="untouched"?"sa":state==="manual"?"de":"tr";
