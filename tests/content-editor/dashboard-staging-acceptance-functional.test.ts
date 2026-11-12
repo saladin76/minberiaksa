@@ -7,7 +7,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const script = resolve(dirname(fileURLToPath(import.meta.url)), "../../scripts/dashboard-pr202-staging-acceptance.mjs");
-type Fault = "none" | "wrong-chart" | "duplicate-page" | "no-cross-day";
+type Fault = "none" | "wrong-chart" | "wrong-day" | "duplicate-page" | "no-cross-day";
 type Donation = {
   id: string; status: "PAID" | "FAILED"; createdAt: string;
   paidAt: string | null; amountUSD: number; amount: number; currency: "USD";
@@ -32,6 +32,13 @@ function fixtures(fault: Fault): Donation[] {
     createdAt: fault === "no-cross-day" ? "2026-11-11T07:00:00.000Z" : "2026-11-10T20:45:00.000Z",
     paidAt: fault === "no-cross-day" ? "2026-11-11T08:00:00.000Z" : "2026-11-10T21:30:00.000Z",
   };
+  // A separate settled donation on the previous Istanbul day: otherwise a
+  // totals-only test would never detect moving money between date buckets.
+  paid[1] = {
+    ...paid[1],
+    createdAt: "2026-11-10T07:00:00.000Z",
+    paidAt: "2026-11-10T10:00:00.000Z",
+  };
   return [
     ...paid,
     { id: "fixture-failed", status: "FAILED", paidAt: null, createdAt: "2026-11-11T10:00:00.000Z", amountUSD: 7, amount: 7, currency: "USD" },
@@ -50,6 +57,14 @@ function filtered(rows: Donation[], status: string): Donation[] {
     if (status === "RESOLVED") return paid || failed;
     return paid || failed || pending;
   });
+}
+
+const istanbulFormatter = new Intl.DateTimeFormat("en-US",{
+  timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit",
+});
+function istanbulDateKey(raw: string): string {
+  const parts=Object.fromEntries(istanbulFormatter.formatToParts(new Date(raw)).map(p=>[p.type,p.value]));
+  return [parts.year,parts.month,parts.day].join("-");
 }
 
 async function exercise(fault: Fault) {
@@ -71,13 +86,27 @@ async function exercise(fault: Fault) {
     if (url.pathname === "/api/admin/donations/chart") {
       if (status !== 200) return send(status, { error: "unauthorized" });
       const selected = filtered(rows, url.searchParams.get("status") ?? "RESOLVED");
-      const paid = selected.filter(r => r.status === "PAID" && r.paidAt);
-      const failed = selected.filter(r => r.status === "FAILED");
-      const pending = selected.filter(r => r.status === "PAID" && !r.paidAt);
-      const count = paid.length + (fault === "wrong-chart" && url.searchParams.get("status") === "PAID" ? 1 : 0);
-      return send(200, [{ date: "2026-11-11", count,
-        amountUSD: paid.reduce((sum,r) => sum + r.amountUSD, 0),
-        countFailed: failed.length, countPending: pending.length }]);
+      const buckets = new Map<string,{date:string;count:number;countFailed:number;countPending:number;amountUSD:number}>();
+      for(const row of selected) {
+        const paid = row.status === "PAID" && row.paidAt !== null;
+        const date = istanbulDateKey(paid ? row.paidAt! : row.createdAt);
+        const b=buckets.get(date) ?? {date,count:0,countFailed:0,countPending:0,amountUSD:0};
+        if(paid) {b.count++; b.amountUSD+=row.amountUSD;}
+        else if(row.status==="FAILED") b.countFailed++;
+        else b.countPending++;
+        buckets.set(date,b);
+      }
+      const series=[...buckets.values()].sort((a,b)=>a.date.localeCompare(b.date));
+      if(fault==="wrong-chart" && url.searchParams.get("status")==="PAID") {
+        series[0].count++;
+      }
+      if(fault==="wrong-day" && url.searchParams.get("status")==="PAID" && series.length>1) {
+        // Overall financial totals still match, but one settlement is plotted
+        // on the wrong day. A per-day reconciliation MUST catch this.
+        series[0].count--; series[0].amountUSD-=5;
+        series[1].count++; series[1].amountUSD+=5;
+      }
+      return send(200, series);
     }
     if (url.pathname === "/api/donations") {
       if (status !== 200) return send(status, { error: "unauthorized" });
@@ -137,6 +166,13 @@ test("read-only staging acceptance checks roles, all five statuses and >100 pagi
   assert.ok(r.requests.filter(p => p === "/api/donations").length >= 8);
   for (const secret of Object.values(COOKIE)) assert.equal((r.stdout + r.stderr).includes(secret), false);
   assert.equal((r.stdout + r.stderr).includes("fixture-paid-0"), false);
+});
+
+test("staging acceptance rejects wrong accounting day despite identical overall totals", async () => {
+  const r = await exercise("wrong-day");
+  assert.notEqual(r.code, 0);
+  assert.match(r.stdout, /"dailyMatch":false/);
+  assert.match(r.stdout, /"result":"MISMATCH"/);
 });
 
 test("staging acceptance rejects incorrect financial chart totals", async () => {
