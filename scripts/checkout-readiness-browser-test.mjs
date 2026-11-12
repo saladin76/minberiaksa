@@ -230,6 +230,17 @@ try {
     await donorPhoneInput.pressSequentially("+905551234567");
     phoneTrace.push(["afterKeyboardReplace",await donorPhoneInput.inputValue()]);
   }
+  if((await donorPhoneInput.inputValue()).replace(/\D/g,"")!=="905551234567"){
+    // forceDialCode protects +90: selecting only the editable subscriber digits
+    // is a distinct, realistic interaction from selecting/retyping the whole E.164 number.
+    await donorPhoneInput.click();
+    await donorPhoneInput.evaluate(node=>{
+      const dialSeparator=node.value.indexOf(" ");
+      node.setSelectionRange(dialSeparator>=0?dialSeparator+1:3,node.value.length);
+    });
+    await donorPhoneInput.pressSequentially("5551234567");
+    phoneTrace.push(["afterLocalReplace",await donorPhoneInput.inputValue()]);
+  }
   await donorPhoneInput.blur();phoneTrace.push(["afterBlur",await donorPhoneInput.inputValue()]);
   console.log("Signed-in phone edit trace",JSON.stringify(phoneTrace));
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
