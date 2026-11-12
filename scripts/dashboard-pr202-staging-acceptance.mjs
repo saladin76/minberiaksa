@@ -118,7 +118,7 @@ function dailyChartTotals(rows) {
   const daily = new Map();
   for(const r of rows) {
     const key = r.date;
-    if(typeof key!=="string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(key) || daily.has(key)) {
+    if(typeof key!=="string" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(key) || daily.has(key)) {
       throw Error("Malformed or repeated financial chart date");
     }
     daily.set(key,{paid:Number(r.count)||0,failed:Number(r.countFailed)||0,
