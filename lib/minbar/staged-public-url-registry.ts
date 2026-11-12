@@ -51,6 +51,7 @@ export const INITIAL_ROUTE_PROPOSALS: readonly RouteProposal[] = [
 /** Existing checkout, donor and payment paths must never be claimed by public SEO routes. */
 const RESERVED_PREFIXES = new Set<string>([
   "api", "dashboard", "auth", "campaign", "campaigns", "category",
+  "donates", "bank-transfer", "donation-failed", "donation-success",
   ...[...NOINDEX_ROUTES].map(route => SLUGS[route].split("/")[0]).filter(Boolean),
 ]);
 
@@ -155,6 +156,8 @@ export class StagedPublicUrlRegistry {
     for (const alias of aliases) {
       const path = normalizePublicPath(alias.path);
       if (localePrefix(path) !== alias.locale) throw new Error("ALIAS_LOCALE_MISMATCH");
+      if (RESERVED_PREFIXES.has(path.split("/")[2] ?? ""))
+        throw new Error("PROTECTED_HISTORIC_ALIAS");
       if (!alias.entityId.trim()) throw new Error("INVALID_ALIAS_ENTITY");
       const owner = `entity:${alias.type}:${alias.entityId}:${alias.locale}`;
       if (this.pathOwners.has(path) && this.pathOwners.get(path) !== owner) {
