@@ -72,10 +72,12 @@ export async function GET(request: NextRequest) {
     const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
     const requestedLimit = Number.parseInt(searchParams.get("limit") || "10", 10);
     // Never pass negative or NaN skip/take into Prisma, including on legacy views.
-    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
     const limit = Number.isSafeInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 100)
       : 10;
+    const validPage = Number.isSafeInteger(requestedPage) && requestedPage > 0
+      && Number.isSafeInteger((requestedPage - 1) * limit);
+    const page = validPage ? requestedPage : 1;
     const skip = (page - 1) * limit;
 
     // Dashboard sends YYYY-MM-DD keys in the Istanbul calendar  interpret
