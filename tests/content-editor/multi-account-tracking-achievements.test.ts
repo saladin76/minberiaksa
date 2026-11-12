@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import * as googleScripts from "../../lib/tracking/google-script-policy";
+import * as clarityPolicy from "../../lib/tracking/clarity-config";
 import * as targets from "../../lib/tracking/google-ads-targets";
 import * as videoPlatform from "../../lib/content/video-platform";
 import * as translations from "../../lib/i18n/translation-fallback";
@@ -82,6 +83,7 @@ test("public settings expose enabled opted-in account targets without credential
   const api = load("lib/tracking/tracking-settings.ts", {
     "./google-ads-targets": targets,
     "./google-script-policy": googleScripts,
+    "./clarity-config": clarityPolicy,
     "@/lib/prisma": {
       prisma: {
         $runCommandRaw: async () => ({
@@ -102,6 +104,8 @@ test("public settings expose enabled opted-in account targets without credential
   const config = await api.getPublicTrackingConfig();
   assert.equal(config.googleAdsTargets.length, 2);
   assert.equal(config.facebookPixelId, "meta");
+  assert.equal(config.clarityProjectId, "u60r8zhrzh");
+  assert.equal(config.clarityEnabled, true);
   assert.ok(!JSON.stringify(config).includes("private"));
   accounts[0].configChecklist.googleAdsTrackingEnabled = false;
   const off = await api.getPublicTrackingConfig();

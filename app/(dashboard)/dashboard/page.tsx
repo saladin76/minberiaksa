@@ -617,6 +617,9 @@ export default function DashboardPage() {
         params.set("limit", String(PAGE_SIZE));
         params.set("sortBy", donationsSortBy);
         params.set("sortOrder", donationsSortOrder);
+        // Only the overview hides confirmed-recovered FAILED attempts.
+        // The FAILED filter and donor account/audit history remain untouched.
+        if (donationsStatusFilter !== "FAILED") params.set("hideRecoveredFailures", "1");
         if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
         if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
         if (selectedUserId !== "all") params.append("userId", selectedUserId);

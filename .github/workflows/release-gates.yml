@@ -67,7 +67,8 @@ jobs:
 
   unit:
     name: Integration-settings suite
-    runs-on: ubuntu-latest
+    # Pin Noble to avoid rolling Ubuntu apt-mirror stalls on FFmpeg.
+    runs-on: ubuntu-24.04
     env:
       # Prisma validate only needs a syntactically valid datasource URL; source-contract
       # tests must not depend on a live production/staging database.
@@ -82,12 +83,15 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
       - name: Voice encoder prerequisite
-        timeout-minutes: 5
+        timeout-minutes: 12
         run: |
+          set -euo pipefail
           if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg
           fi
+          command -v ffmpeg
+          ffmpeg -hide_banner -version | head -n 1
       - run: npm run test:integration-settings
       - name: Content editor and audit regressions
         run: npm run test:content-editors
@@ -199,48 +203,17 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+
+  # Fail-closed: the previous job ran mutating E2E on main whenever a database
+  # secret or URL existed; that cannot prove this is isolated Staging.
+  # Re-enable only in a separate, reviewed workflow after exact-SHA, DB role,
+  # process/PM2, egress and GitHub Environment attestation is in place.
   e2e:
-    name: Playwright (critical journeys)
+    name: Connected E2E — blocked until approved Staging isolation
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    # The end-to-end suite needs a database and provider credentials to be meaningful. It runs when
-    # those secrets exist and is skipped, loudly, when they do not - a suite that silently passes
-    # against an empty environment is worse than no suite.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npx prisma generate
-      - run: npx prisma generate --schema prisma/integration-settings.schema.prisma
-      - name: Check for an end-to-end environment
-        id: env
-        run: |
-          if [ -z "${{ secrets.E2E_BASE_URL }}" ] && [ -z "${{ secrets.DATABASE_URL }}" ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No E2E_BASE_URL or DATABASE_URL secret. The end-to-end suite did NOT run."
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.env.outputs.ready == 'true'
-        run: npx playwright install --with-deps chromium
-      - if: steps.env.outputs.ready == 'true'
-        run: npm run test:e2e
-        env:
-          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
-          E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
-      - if: always() && steps.env.outputs.ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: e2e/.artifacts/
-          retention-days: 7
+      - run: echo "CONNECTED_E2E_DISABLED_STAGING_ATTESTATION_REQUIRED"
 
   fixture-build:
     name: Production build and public style fixtures
@@ -261,6 +234,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Staging build and connected E2E fail-closed guard
+        run: node --test tests/release/production-staging-boundary.test.mjs
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
       - run: npx prisma generate --schema prisma/integration-settings.schema.prisma

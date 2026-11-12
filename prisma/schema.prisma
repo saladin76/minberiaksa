@@ -926,6 +926,9 @@ model Donation {
 
   createdAt DateTime  @default(now())
   paidAt    DateTime?
+  /// Only the operational dashboard hides a FAILED attempt after a later provider-confirmed
+  /// payment of the same donation intent. Never change payment status or delete audit history.
+  overviewRecoveredByDonationId String? @db.ObjectId
 
   items             DonationItem[]
   categoryItems     DonationCategoryItem[]

@@ -14,13 +14,24 @@
  */
 
 import { isMeasurementHost, sanitizeEngagementData } from "./tracking/engagement-policy";
+import { isPublicAnalyticsPath } from "./tracking/private-path";
 
 type AnyRecord = Record<string, unknown>;
 
 /** Shared gate for this diagnostic layer; canonical conversion tracking is separate. */
 export function isEngagementEnabled(): boolean {
   try {
-    return typeof window !== "undefined" && isMeasurementHost(window.location.hostname);
+    if (typeof window === "undefined" || !isMeasurementHost(window.location.hostname) ||
+        !isPublicAnalyticsPath(window.location.pathname + window.location.search)) return false;
+    // The diagnostic dispatcher must obey the same privacy rejection as the
+    // automatic recorder. It must not identify a donor or push GTM data after
+    // explicit analytics opt-out, even if previously initialized scripts remain.
+    if (typeof navigator !== "undefined") {
+      const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
+      if (nav.globalPrivacyControl === true || nav.doNotTrack === "1") return false;
+    }
+    const cookie = typeof document === "undefined" ? "" : document.cookie || "";
+    return !/(?:^|;\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookie);
   } catch {
     return false;
   }
@@ -53,19 +64,20 @@ export function clarityEvent(name: string): void {
   }
 }
 
-/** Identify a known user in Clarity (logged-in donors, admins). */
+/**
+ * Legacy compatibility shim. Never forward raw donor/user identifiers to a
+ * third-party session recorder. A reviewed anonymous identity flow would
+ * require explicit consent, minimization and security acceptance.
+ */
 export function clarityIdentify(
-  userId: string,
-  sessionId?: string,
-  pageId?: string,
-  friendlyName?: string
+  _userId: string,
+  _sessionId?: string,
+  _pageId?: string,
+  _friendlyName?: string
 ): void {
-  if (!isEngagementEnabled()) return;
-  try {
-    window.clarity?.("identify", userId, sessionId, pageId, friendlyName);
-  } catch {
-    /* noop */
-  }
+  // The signature remains compatible, but none of the caller-provided values
+  // may be forwarded to a recorder or diagnostic provider.
+  void [_userId, _sessionId, _pageId, _friendlyName];
 }
 
 /**
