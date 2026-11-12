@@ -67,10 +67,15 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")?.trim();
     const startParam = searchParams.get("start"); // YYYY-MM-DD
     const endParam = searchParams.get("end"); // YYYY-MM-DD
-    const sortBy = (searchParams.get("sortBy") || "date") as "date" | "amount";
-    const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10") || 10, 100);
+    const sortBy = searchParams.get("sortBy") === "amount" ? "amount" : "date";
+    const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+    const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
+    const requestedLimit = Number.parseInt(searchParams.get("limit") || "10", 10);
+    // Never pass negative or NaN skip/take into Prisma, including on legacy views.
+    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const limit = Number.isSafeInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 100)
+      : 10;
     const skip = (page - 1) * limit;
 
     // Dashboard sends YYYY-MM-DD keys in the Istanbul calendar  interpret
@@ -251,7 +256,13 @@ export async function GET(request: NextRequest) {
       statusFilter,
       sortBy
     );
-    const orderBy = { [dateSortField]: sortOrder };
+    // The revenue accounting view is paged while reconciling chart totals.
+    // When many donations share paidAt/createdAt (or amount), a stable _id
+    // tie-breaker prevents duplicate/omitted records between adjacent pages.
+    // Keep legacy list orderBy shape unchanged for existing callers.
+    const orderBy = useAccountingDate
+      ? [{ [dateSortField]: sortOrder }, { id: sortOrder }]
+      : { [dateSortField]: sortOrder };
 
     const total = await prisma.donation.count({ where });
     const donations = await prisma.donation.findMany({
