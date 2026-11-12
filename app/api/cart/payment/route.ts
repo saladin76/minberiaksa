@@ -204,7 +204,6 @@ export async function POST(request: NextRequest) {
          the plan is scheduled from its creation time. */
       schedule: scheduleIn,
       paymentMethod,
-      cardDetails = null,
       referralCode,
       locale: donationLocale,
       guest,
