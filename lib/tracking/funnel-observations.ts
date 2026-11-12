@@ -65,18 +65,18 @@ async function ensureIndexes() {
   return indexesReady;
 }
 
-export async function recordFunnelObservation(event: CanonicalEvent, clientIp: string | undefined): Promise<"recorded" | "duplicate" | "rate_limited" | "disabled" | "invalid"> {
-  if (!funnelObservationEnabled()) return "disabled";
-  const safe = sanitizeFunnelEvent(event);
-  if (!safe) return "invalid";
-  if (!clientIp || !process.env.NEXTAUTH_SECRET) return "invalid";
+/**
+ * Protects the PUBLIC CAPI/Events API mirror as well as optional observations.
+ * Fail closed on DB errors: marketing tracking may fail but checkout must not.
+ * Atomic Mongo counter is shared across workers and expires after two minutes.
+ */
+export async function claimFunnelDispatchBudget(clientIp: string | undefined): Promise<boolean> {
+  if (!clientIp || !process.env.NEXTAUTH_SECRET) return false;
   await ensureIndexes();
-
   const minute = Math.floor(Date.now() / 60_000);
   const actorId = crypto.createHmac("sha256", process.env.NEXTAUTH_SECRET)
     .update(clientIp + ":" + minute).digest("hex");
   const now = new Date();
-  // Atomic budget across PM2 workers, not an in-memory per-process counter.
   const quota = await prisma.$runCommandRaw(rawCommand({
     findAndModify: QUOTA_COLLECTION,
     query: { _id: actorId },
@@ -88,7 +88,17 @@ export async function recordFunnelObservation(event: CanonicalEvent, clientIp: s
     new: true,
   }));
   const used = Number((quota as { value?: { count?: number } } | null)?.value?.count ?? MAX_PER_MINUTE + 1);
-  if (used > MAX_PER_MINUTE) return "rate_limited";
+  return used <= MAX_PER_MINUTE;
+}
+
+export async function recordFunnelObservation(event: CanonicalEvent, clientIp: string | undefined): Promise<"recorded" | "duplicate" | "rate_limited" | "disabled" | "invalid"> {
+  if (!funnelObservationEnabled()) return "disabled";
+  const safe = sanitizeFunnelEvent(event);
+  if (!safe) return "invalid";
+  if (!process.env.NEXTAUTH_SECRET) return "invalid";
+  // Client IP is only used for the outer provider dispatch quota; never stored.
+  void clientIp;
+  await ensureIndexes();
 
   try {
     const response = await prisma.$runCommandRaw(rawCommand({
