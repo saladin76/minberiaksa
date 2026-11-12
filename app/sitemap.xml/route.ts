@@ -7,7 +7,7 @@ import { listShardIds, renderIndex } from "@/lib/sitemap";
  * ceiling (FALLBACK_BODY_TOO_LARGE). Keeping the path as the index means
  * anything already pointing here  robots.txt, Search Console  keeps working.
  */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
   const body = renderIndex(await listShardIds(), new Date());
