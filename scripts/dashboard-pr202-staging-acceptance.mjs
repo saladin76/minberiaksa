@@ -90,6 +90,8 @@ function listCounts(rows) {
 const statusCases=["PAID","FAILED","PENDING","RESOLVED","all"];
 let failures=0;
 let paidCoverage=0;
+let failedCoverage=0;
+let pendingCoverage=0;
 let crossDaySettlements=0;
 for(const [label,cookie,expected] of [...sessions, ["ANONYMOUS", "", 401]]){
   const o=await get("/api/admin/dashboard-filter-options",new URLSearchParams([["locale","ar"]]),cookie,expected);
@@ -123,6 +125,8 @@ for(const status of statusCases){
     if(page>=reportedPages)break;
   }
   if(pages.length!==reportedTotal)throw Error(status+": pagination incomplete ("+pages.length+"/"+reportedTotal+")");
+  if(status==="FAILED") failedCoverage=pages.filter(r => r.status==="FAILED" && r.paidAt==null).length;
+  if(status==="PENDING") pendingCoverage=pages.filter(r => r.status==="PAID" && r.paidAt==null).length;
   if(status==="PAID") {
     paidCoverage=pages.filter(effectivePaid).length;
     crossDaySettlements=pages.filter(r => effectivePaid(r) &&
@@ -151,7 +155,11 @@ if(crossDaySettlements===0) {
   failures++;
   console.error("NOT COVERED: no cross-day settled donation was exercised; seed or select an isolated staging window with delayed settlement.");
 }
-console.log(JSON.stringify({coverage:{settledPaid:paidCoverage,crossDaySettlements}}));
+if(failedCoverage===0 || pendingCoverage===0) {
+  failures++;
+  console.error("NOT COVERED: staging must include at least one FAILED and one unconfirmed PENDING attempt in the selected window.");
+}
+console.log(JSON.stringify({coverage:{settledPaid:paidCoverage,failedAttempts:failedCoverage,pendingAttempts:pendingCoverage,crossDaySettlements}}));
 if(failures) {
   console.error(failures+" acceptance mismatch or coverage gap(s); no financial writes performed.");
   process.exitCode=1;
