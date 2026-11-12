@@ -112,7 +112,13 @@ try {
     // Async eligibility checking temporarily disables confirmation.
     // Wait for readiness; never force-click or bypass this gate.
     await expect(sendConfirmation).toBeEnabled({ timeout: 15000 });
-    await sendConfirmation.click();
+    try {
+      await sendConfirmation.click();
+    } catch (error) {
+      // Radix may detach an alert action during an otherwise successful click.
+      // Never hide a real miss: both expected fixture writes must have happened.
+      if (writes.length !== 2 || campaign?.status !== "APPROVED") throw error;
+    }
     await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
     assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
 
