@@ -22,7 +22,7 @@ run(){
   fi
 }
 skip(){ SKIP=$((SKIP+1)); echo "SKIP: $1"; }
-export CI=1 NEXT_TELEMETRY_DISABLED=1 CAMPAIGNS_ONLY=1
+export CI=1 NEXT_TELEMETRY_DISABLED=1
 export NODE_OPTIONS='--max-old-space-size=4096'
 export DATABASE_URL='mongodb://127.0.0.1:1/blocked_qa?serverSelectionTimeoutMS=500&connectTimeoutMS=500'
 export NEXTAUTH_SECRET='isolated-qa-secret-no-live-provider' NEXTAUTH_URL='http://127.0.0.1:65535'
@@ -80,7 +80,7 @@ if test -f "$CHROME"; then
       bash "$ROOT/.qa-libs-helper.sh" "$CHROME" "$ROOT/.qa-browser-libs" "$ROOT/.qa-browser-cache"
     export LD_LIBRARY_PATH="$ROOT/.qa-browser-libs/usr/lib/x86_64-linux-gnu:$ROOT/.qa-browser-libs/lib/x86_64-linux-gnu:$ROOT/.qa-browser-libs/usr/lib"
   fi
-  if test -z "$(LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ldd "$CHROME" 2>/dev/null | grep 'not found' || true)"; then READY=1; fi
+  if test -z "$(LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" ldd "$CHROME" 2>/dev/null | grep 'not found' || true)"; then READY=1; fi
 fi
 
 # Existing CI fixture scripts, each bound to localhost, using mock bank/auth.
