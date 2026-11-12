@@ -23,7 +23,7 @@ import {
   type MetaCustomData,
 } from "@/lib/tracking/meta-capi";
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
-import { recordFunnelObservation } from "@/lib/tracking/funnel-observations";
+import { claimFunnelDispatchBudget, recordFunnelObservation } from "@/lib/tracking/funnel-observations";
 import { redactAnalyticsPath } from "@/lib/tracking/private-path";
 import { readMarketingConsent } from "@/lib/tracking/marketing-consent";
 
@@ -185,6 +185,21 @@ export async function POST(req: NextRequest) {
     };
 
     const clientIp = getTrackingClientIp(req.headers);
+    try {
+      if (!(await claimFunnelDispatchBudget(clientIp))) {
+        return NextResponse.json(
+          { ok: false, reason: "tracking rate limit" },
+          { status: 429, headers: { "Cache-Control": "no-store" } },
+        );
+      }
+    } catch {
+      // An unavailable marketing quota store never breaks checkout.
+      // It must also never fall open and relay unbounded provider requests.
+      return NextResponse.json(
+        { ok: false, reason: "tracking temporarily unavailable" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     const row = await getRawTrackingSettings();
     const facebookPixelId = trackingString(row, "facebookPixelId") || trackingString(row, "metaPixelId");
