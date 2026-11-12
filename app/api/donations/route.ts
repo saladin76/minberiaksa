@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
       // private reconciliation state at all. providerRaw is retained server-
       // side ONLY to derive securityMode, and stripped before serialization.
       omit: {
-        accessToken: true, cardDetails: true, attribution: true,
+        accessToken: true, cardDetails: true,
         originalDonorId: true, providerAuthCode: true, providerHostRefNum: true,
         paypalOrderId: true, paypalCaptureId: true,
         bankOperations: true, bankOperationLock: true,
