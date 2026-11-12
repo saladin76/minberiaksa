@@ -59,12 +59,15 @@ test("donor and staff primary list projections omit the private bank ledger, inq
     const h = harness(role); assert.equal((await h.get("subscriptionOnly=1")).status, 200);
     const omit = h.queries[1].omit as Record<string, unknown>;
     for (const key of PRIVATE_DONATION_LIST_KEYS) {
-      // providerRaw is the only private field read for internal securityMode;
-      // the final response strips it after deriving display-only evidence.
-      if (key === "providerRaw") continue;
+      // The raw provider response powers server-side securityMode; attribution
+      // and conversion timing power the revenue-only source badge. All are
+      // stripped/sanitized at serialization for callers without revenue access.
+      if (["providerRaw", "attribution", "conversionEventsSentAt", "conversionFailedEventsSentAt"].includes(key)) continue;
       assert.equal(omit?.[key], true, key);
     }
-    assert.equal(omit?.providerRaw, undefined, "providerRaw must remain available only inside the server");
+    for (const key of ["providerRaw", "attribution", "conversionEventsSentAt", "conversionFailedEventsSentAt"]) {
+      assert.equal(omit?.[key], undefined, key);
+    }
 
   }
 });
@@ -184,7 +187,9 @@ test("donor GET response redacts receipt bearer and raw gateway/card evidence, b
     accessToken: "never-return-receipt-token",
     providerRaw: { albarakaRequest: { mode: "2D", cvc: "never-return-cvc" } },
     cardDetails: { cardNumber: "never-return-full-card-number" },
-    attribution: { email: "never-return-tracking-profile" },
+    attribution: { utm_source: "google", utm_campaign: "Gaza aid", email: "never-return-tracking-profile" },
+    conversionEventsSentAt: "2026-11-11T11:00:00.000Z",
+    conversionFailedEventsSentAt: null,
     bankOperations: { sale: "never-return-ledger" },
     reconciliationLeaseToken: "never-return-lease",
     paypalCaptureId: "never-return-capture",
@@ -209,6 +214,16 @@ test("donor GET response redacts receipt bearer and raw gateway/card evidence, b
     "accessToken", "providerRaw", "cardDetails", "attribution",
     "bankOperations", "reconciliationLeaseToken", "paypalCaptureId",
   ]) assert.equal(Object.hasOwn(result, key), false, key);
+  const revenueResponse = await harness("revenue", [fixture]).get("page=1&limit=10");
+  assert.equal(revenueResponse.status, 200);
+  const revenueRow = ((revenueResponse.body.donations as Row[])[0]);
+  const marketing = revenueRow.attribution as Row;
+  assert.equal(marketing.utm_source, "google");
+  assert.equal(marketing.utm_campaign, "Gaza aid");
+  assert.equal(Object.hasOwn(marketing, "email"), false);
+  assert.equal(revenueRow.conversionEventsSentAt, "2026-11-11T11:00:00.000Z");
+  assert.equal(Object.hasOwn(revenueRow, "providerRaw"), false);
+  assert.equal(JSON.stringify(revenueResponse.body).includes("never-return-tracking-profile"), false);
   const serialized = JSON.stringify(body);
   for (const secret of [
     "never-return-receipt-token", "never-return-cvc", "never-return-full-card-number",
