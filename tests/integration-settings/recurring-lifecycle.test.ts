@@ -181,6 +181,30 @@ for (const frequency of ["DAILY", "FRIDAY", "MONTHLY"] as const) {
   }
 }
 
+test("recurring checkout never stores supplied PAN/CVV in subscription or donation", async () => {
+  const f = fixture();
+  const card = {
+    cardNumber: "5555555555554444", expiryDate: "12/29",
+    cvv: "987", cardholderName: "Synthetic Cardholder",
+  };
+  const result = await f.checkout.POST(request({
+    items: [{ campaignId: "project", amount: 10 }],
+    type: "DAILY", currency: "USD", paymentMethod: "CARD",
+    cardDetails: card,
+  }));
+  assert.equal(result.status, 200, JSON.stringify(result.data));
+  const plan = [...f.plans.values()][0];
+  const donation = [...f.donations.values()][0];
+  assert.ok(plan);
+  assert.ok(donation);
+  assert.equal(plan.cardDetails, null, "recurring subscription must not persist checkout PAN/CVV");
+  assert.equal(donation.cardDetails, null);
+  const persisted = JSON.stringify({ plan, donation, response: result.data });
+  for (const secret of [card.cardNumber, card.cvv, card.cardholderName]) {
+    assert.equal(persisted.includes(secret), false, "checkout must not store/return card-secret material");
+  }
+});
+
 test("unavailable recurring card checkout creates neither plan nor donation", async () => {
   const f = fixture(); f.setReady(false);
   const result = await f.checkout.POST(request({ items: [{ campaignId: "project", amount: 100 }], type: "DAILY", currency: "USD", paymentMethod: "CARD" }));

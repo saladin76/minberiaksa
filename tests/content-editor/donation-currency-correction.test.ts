@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { donationEditTotals } from "../../lib/donations/edit-totals";
+import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
 // Dynamic Prisma-shaped records are confined to this isolated route fixture.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -20,7 +21,8 @@ function harness() {
   });
   const prisma = { donation: { findUnique: async () => row }, campaign: { count: async () => 1 }, category: { count: async () => 1 }, $transaction: async (fn: (value: Row) => Promise<unknown>) => { const draft = structuredClone(row); const result = await fn(tx(draft)); row = draft; return result; } };
   const dependencies: Row = {
-    "@/lib/donations/edit-totals": { donationEditTotals }, "next/server": { NextResponse: { json: (body: unknown, options: Row = {}) => ({ body, status: options.status ?? 200 }) } }, "@/lib/prisma": { prisma },
+    "@/lib/donations/edit-totals": { donationEditTotals },
+    "@/lib/dashboard/donation-list-privacy": { donationListSafeFields }, "next/server": { NextResponse: { json: (body: unknown, options: Row = {}) => ({ body, status: options.status ?? 200 }) } }, "@/lib/prisma": { prisma },
     "next-auth": { getServerSession: async () => ({ user: { id: row.donorId, role: "ADMIN" } }) }, "../../auth/[...nextauth]/options": { authOptions: {} }, "@prisma/client": {},
     "@/lib/dashboard/permissions": { userHasDashboardPermission: () => true }, "@/lib/dashboard/api-auth": { isRevenueDashboardUser: () => true },
     "@/lib/exchange/convert-amount-in-currency-to-usd": { normalizeDonationCurrencyCode: (value: string) => value, convertAmountInCurrencyToUsd: async (amount: number, currency: string) => { conversions++; if (failFx) throw new Error("FX unavailable"); return amount * (currency === "USD" ? 1 : 2); } },

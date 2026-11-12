@@ -7,6 +7,7 @@ import { parseLocalAmount } from "../../lib/minbar/donation-amount";
 import * as schedule from "../../lib/donations/recurring-schedule";
 import * as mixed from "../../lib/donations/mixed-cart";
 import * as handoff from "../../lib/minbar/payment-handoff";
+import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
 
 // Heterogeneous synthetic Prisma and Stripe payloads used only by fixture adapters.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,6 +43,7 @@ function orderFixture() {
     "@/lib/locales": { isValidLocale: () => true },
     "@/lib/referral-server": { resolveReferralId: async () => null },
     "@/lib/dashboard/permissions": { userHasDashboardPermission: () => false },
+    "@/lib/dashboard/donation-list-privacy": { donationListSafeFields },
     "@/lib/preferred-lang": { inferLocaleFromRequest: () => "ar" },
     "@/lib/attribution/sanitize": { sanitizeDonationAttribution: () => null },
     "@/lib/audit-log": { writeAuditLog: async () => {} },

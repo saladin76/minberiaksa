@@ -14,7 +14,14 @@ export function donationChartStatusWhere(
   endDate: Date,
 ) {
   const paid = { status: "PAID", paidAt: { gte: startDate, lte: endDate } };
-  const failed = { status: "FAILED", createdAt: { gte: startDate, lte: endDate } };
+  // The chart already excludes failed rows with a paidAt, because a settled
+  // timestamp contradicts a FAILED attempt. Match this condition at the DB
+  // boundary too so its accounting-date ledger cannot show invisible rows.
+  const failed = {
+    status: "FAILED",
+    createdAt: { gte: startDate, lte: endDate },
+    OR: [{ paidAt: null }, { paidAt: { isSet: false } }],
+  };
   const pending = {
     status: "PAID",
     createdAt: { gte: startDate, lte: endDate },

@@ -10,6 +10,7 @@ import * as phone from "../../lib/communication/phone";
 import * as locales from "../../lib/locales";
 import * as runtimeTypes from "../../lib/communication/communication-runtime-types";
 import { donorAccountStatus } from "../../lib/dashboard/donor-account";
+import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
 import { donorProfileSchema } from "../../lib/dashboard/donor-profile";
 import type { NormalizedWebhookEvent } from "../../lib/communication/providers/meta-whatsapp/types";
 import type { SenderRoutingRequest, CommunicationSenderConfig, SenderRoutingRuleConfig, SenderRoutingResult } from "../../lib/communication/sender-router";
@@ -260,6 +261,7 @@ test("the existing user-update endpoint never serializes a stored password hash"
     "../../auth/[...nextauth]/options": {}, "@/lib/dashboard/permissions": {}, "@/lib/dashboard/api-auth": {}, "@/lib/audit-log": {}, "@/lib/badge-criteria": {},
     "@/lib/dashboard/donation-usd-revenue": {}, "@/lib/communication/donor-communication-profile-service": {}, "@/lib/dashboard/donor-account": { donorAccountStatus },
     "@/lib/dashboard/donation-financial-summary": {},
+    "@/lib/dashboard/donation-list-privacy": { donationListSafeFields },
     "@/lib/prisma": { prisma: { user: {
       findUnique: async () => ({ role: "DONOR", name: "Fixture", email: "fixture@example.test" }),
       update: async () => ({ id: "donor", role: "DONOR", name: "Updated", password: "FIXTURE_HASH_DO_NOT_RETURN" }),

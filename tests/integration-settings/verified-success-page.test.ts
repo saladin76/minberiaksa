@@ -34,3 +34,12 @@ test("success page verifies access before provider reconciliation and redirects 
   assert.match(page, /outcome === "PENDING_TRANSFER"/);
   assert.match(page, /outcome === "FAILED"/);
 });
+
+test("public success summary never serializes a bearer receipt token into RSC client props", () => {
+  const summary = readFileSync("lib/minbar/donation.ts", "utf8");
+  const page = readFileSync("app/[locale]/success/[id]/page.tsx", "utf8");
+  assert.doesNotMatch(summary, /accessToken:\s*true/);
+  assert.doesNotMatch(summary, /accessToken:\s*row\.accessToken/);
+  assert.doesNotMatch(summary, /accessToken:\s*string\s*\|\s*null/);
+  assert.match(page, /accessToken=\{token\s*\?\?\s*null\}/);
+});

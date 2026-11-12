@@ -8,12 +8,27 @@ import { prisma } from "@/lib/prisma";
 async function isGuestUser(userId: string): Promise<boolean> {
   const u = await prisma.user.findUnique({
     where: { id: userId },
-    select: { password: true, accounts: { select: { id: true }, take: 1 } },
+    select: {
+      password: true,
+      accounts: { select: { id: true }, take: 1 },
+      role: true,
+      registeredAt: true,
+      emailVerified: true,
+      mergedIntoUserId: true,
+    },
   });
-  if (!u) return false;
-  if (u.password) return false;
-  if (u.accounts.length > 0) return false;
-  return true;
+  if (!u || u.role !== "DONOR" || u.password || u.accounts.length > 0 ||
+      u.registeredAt || u.emailVerified || u.mergedIntoUserId) return false;
+
+  // Passwordless email/WhatsApp donors can have no password or OAuth account.
+  // A verified login identity, an existing session or an invitation means this
+  // is a real/claimable account, never an anonymous guest to reparent.
+  const [identity, session, invitation] = await Promise.all([
+    prisma.donorLoginIdentity.findFirst({ where: { userId }, select: { id: true } }),
+    prisma.session.findFirst({ where: { userId }, select: { id: true } }),
+    prisma.donorAccountInvitation.findFirst({ where: { userId }, select: { id: true } }),
+  ]);
+  return !identity && !session && !invitation;
 }
 
 export type LinkGuestResult =
@@ -25,8 +40,9 @@ export type LinkGuestResult =
  * delete the guest record. Backfills missing profile fields on the target so
  * we don't lose the phone / country / name the donor provided as a guest.
  *
- * Guarded: refuses to merge anything that already has a password or a linked
- * OAuth account  that would let a caller hijack a real user's donations.
+ * Guarded: refuses accounts with a password, OAuth, verified OTP identity,
+ * registration, a session, or an invitation. This prevents a verified
+ * passwordless donor from being mistaken for an unclaimed guest.
  */
 export async function linkGuestUserToTarget(
   guestUserId: string,
