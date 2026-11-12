@@ -1,13 +1,7 @@
-import { buildShard, listShardIds, renderUrlset } from "@/lib/sitemap";
+import { buildShard, renderUrlset } from "@/lib/sitemap";
 
 /** One shard of the sitemap, e.g. /sitemap/posts-0.xml. Indexed by /sitemap.xml. */
-export const revalidate = 3600;
-
-/** Prerender every shard at build time so crawlers never wait on a cold render. */
-export async function generateStaticParams(): Promise<{ id: string }[]> {
-  const ids = await listShardIds();
-  return ids.map((id) => ({ id: `${id}.xml` }));
-}
+export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
