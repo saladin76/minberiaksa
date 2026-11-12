@@ -7,6 +7,7 @@ import { initializeGoogleTracking, loadConfiguredGoogleTagManager } from "@/lib/
 import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
 import { ga4SafeEventPayload } from "@/lib/tracking/ga4-safe-event-payload";
 import { CART_ITEM_ADDED_EVENT, type MinbarCartItem } from "@/lib/minbar/cart";
+import { redactAnalyticsPath } from "@/lib/tracking/private-path";
 import {
   generateEventId,
   metaDonationEventId,
@@ -512,7 +513,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
           // Canonical funnel pages may carry receipt/access tokens in query.
           // Third-party pixels and server mirrors must receive only the origin
           // and pathname, never full URLs, query strings or hash fragments.
-          url:      typeof window !== "undefined" ? window.location.origin + window.location.pathname : undefined,
+          url:      typeof window !== "undefined" ? window.location.origin + redactAnalyticsPath(window.location.pathname) : undefined,
           referrer: typeof document !== "undefined" && document.referrer
             ? (() => { try { const u = new URL(document.referrer); return u.origin; } catch { return undefined; } })()
             : undefined,
