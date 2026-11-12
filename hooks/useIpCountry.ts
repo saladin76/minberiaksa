@@ -79,7 +79,7 @@ export function useIpCountry(fallback = "tr"): string {
     let active = true;
     pendingFetch.then((code) => { if (active && code) setCountry(code); });
     return () => { active = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return country;
 }
