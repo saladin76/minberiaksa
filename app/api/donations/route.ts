@@ -282,7 +282,9 @@ export async function GET(request: NextRequest) {
         bankOperationsRevision: true, bankLastInquiry: true,
         reconciliationLeaseToken: true, reconciliationLeaseUntil: true,
         reconciliationNextAt: true, reconciliationCheckedAt: true,
-        conversionEventsSentAt: true, conversionFailedEventsSentAt: true,
+        // Attribution and conversion timestamps remain server-side input for
+        // the revenue team's source badge. The serializer strips them for
+        // donors and sanitizes legacy snapshots for revenue readers.
       },
       include: {
         donor: { select: { id: true, name: true, email: true, image: true, password: true, verifiedAt: true, registeredAt: true, emailVerified: true, _count: { select: { accounts: true } } } },
@@ -318,7 +320,7 @@ export async function GET(request: NextRequest) {
       // Compute derived gateway evidence from the complete server-side row,
       // then serialize only the donor-visible subset; never expose bearer
       // receipt tokens, raw provider responses, stored card payloads or locks.
-      ...donationListSafeFields(donation),
+      ...donationListSafeFields(donation, { revenueAuthorized: isAdmin }),
       securityMode: donationPaymentEvidence(donation).securityMode,
       type: donation.subscriptionId ? ("MONTHLY" as const) : ("ONE_TIME" as const),
       frequency: donation.subscriptionId ? frequencyOf(donation.subscriptionId) : null,
