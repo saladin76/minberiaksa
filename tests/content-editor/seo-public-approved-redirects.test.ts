@@ -76,6 +76,49 @@ test("reject chains even with otherwise complete supplied evidence",()=>{
   assert.ok(hasIssue(result.issues, "REDIRECT_CHAIN"));
 });
 
+
+test("review rows cannot claim a different source locale", () => {
+  const result = validateReviewManifest(manifest({
+    ...row(), sourcePath: "/tr/bagislar/gazze-ekmek", locale: "ar",
+  }));
+  assert.equal(result.valid, false);
+  assert.ok(hasIssue(result.issues, "SOURCE_LOCALE_MISMATCH"));
+});
+
+test("independent campaign and legacy ad destinations cannot be auto-redirected", () => {
+  for (const path of ["/ar/campaigns", "/ar/donates", "/ar/bank-transfer"]) {
+    const result = validateReviewManifest(manifest({
+      ...row(), sourcePath: path, approved: true, redirectCode: 308,
+      proposedTarget: "/ar/المشاريع/خبز-غزة",
+      targetProof: {
+        httpStatus: 200, selfCanonical: true, indexable: true, contentReady: true,
+        entityId: "project-42", family: "project", locale: "ar",
+        urlPath: "/ar/المشاريع/خبز-غزة",
+      },
+      evidenceSources: ["real-sitemap", "native-review"],
+    }));
+    assert.ok(hasIssue(result.issues, "PROTECTED_EXISTING_ROUTE"), path);
+  }
+});
+
+test("existing active campaign and financial routes are never approved as destinations", () => {
+  for (const target of ["/ar/campaigns", "/ar/donates", "/ar/bank-transfer",
+    "/ar/donation-failed", "/ar/donation-success"]) {
+    const result = validateReviewManifest(manifest({
+      ...row(), approved: true, redirectCode: 308, proposedTarget: target,
+      targetProof: {
+        httpStatus: 200, selfCanonical: true, indexable: true, contentReady: true,
+        entityId: "project-42", family: "project", locale: "ar", urlPath: target,
+      },
+      evidenceSources: ["verified-source"],
+    }));
+    assert.equal(result.valid, false, target);
+    assert.ok(hasIssue(result.issues,
+      target.includes("campaigns") || target.includes("donates") || target.includes("bank-transfer")
+        ? "PROTECTED_EXISTING_ROUTE" : "RESERVED_TRANSACTION_PATH"), target);
+  }
+});
+
 test("accept structurally approved alias with complete provided evidence",()=>{
   const path="/ar/المشاريع/خبز-غزة";
   const result=validateReviewManifest(manifest({
