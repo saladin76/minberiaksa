@@ -30,7 +30,8 @@ export function dashboardDonationScopeParams(scope: HomeDonationScope): URLSearc
     donationType: scope.donationType,
   };
   for (const [key,value] of Object.entries(values)) {
-    if (value != null && value !== "" && value !== "all") params.set(key,value);
+    // "all" is an explicit status selector; omitting it would make chart default to RESOLVED.
+    if (value != null && value !== "" && (key === "status" || value !== "all")) params.set(key,value);
   }
   return params;
 }
