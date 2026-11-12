@@ -7,7 +7,7 @@ import { subscriptionPaymentSequence } from "../../lib/dashboard/subscription-pa
 import { accountingDateWhere, canUseAccountingDate } from "../../lib/dashboard/accounting-date-where";
 import { dashboardDonationDateSortField } from "../../lib/dashboard/donation-ledger-date";
 import { dashboardLocaleWhere, dashboardCountryWhere } from "../../lib/dashboard/donation-location-scope";
-import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
+import { PRIVATE_DONATION_LIST_KEYS, donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
 import { donationPaymentEvidence } from "../../lib/donations/payment-evidence";
 import { donorAccountStatus } from "../../lib/dashboard/donor-account";
 import { istanbulDateKeysToUtcRange } from "../../lib/admin/istanbul-calendar";
@@ -58,7 +58,14 @@ test("donor and staff primary list projections omit the private bank ledger, inq
   for (const role of ["donor", "monthly", "admin"] as const) {
     const h = harness(role); assert.equal((await h.get("subscriptionOnly=1")).status, 200);
     const omit = h.queries[1].omit as Record<string, unknown>;
-    for (const key of ["bankOperations", "bankOperationLock", "bankOperationsRevision", "bankLastInquiry"]) assert.equal(omit?.[key], true, key);
+    for (const key of PRIVATE_DONATION_LIST_KEYS) {
+      // providerRaw is the only private field read for internal securityMode;
+      // the final response strips it after deriving display-only evidence.
+      if (key === "providerRaw") continue;
+      assert.equal(omit?.[key], true, key);
+    }
+    assert.equal(omit?.providerRaw, undefined, "providerRaw must remain available only inside the server");
+
   }
 });
 
