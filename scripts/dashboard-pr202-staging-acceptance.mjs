@@ -101,6 +101,57 @@ function listCounts(rows) {
     return o;
   },{paid:0,failed:0,pending:0,usd:0});
 }
+// Independently reconstruct Istanbul daily buckets from the complete ledger.
+// Matching aggregate totals is insufficient: a charge could be assigned to
+// the wrong calendar day while the overall total still appears correct.
+const istanbulFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit",
+});
+function istanbulDateKey(raw) {
+  const date = new Date(raw);
+  if (!Number.isFinite(date.getTime())) throw Error("Invalid date in staging financial row");
+  const parts = Object.fromEntries(istanbulFormatter.formatToParts(date).map(p => [p.type, p.value]));
+  return [parts.year,parts.month,parts.day].join("-");
+}
+function emptyTotals() { return {paid:0,failed:0,pending:0,usd:0}; }
+function dailyChartTotals(rows) {
+  const daily = new Map();
+  for(const r of rows) {
+    const key = r.date;
+    if(typeof key!=="string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(key) || daily.has(key)) {
+      throw Error("Malformed or repeated financial chart date");
+    }
+    daily.set(key,{paid:Number(r.count)||0,failed:Number(r.countFailed)||0,
+      pending:Number(r.countPending)||0,usd:Number(r.amountUSD)||0});
+  }
+  return daily;
+}
+function dailyLedgerTotals(rows) {
+  const daily = new Map();
+  for(const r of rows) {
+    const paid = effectivePaid(r);
+    const failed = r.status==="FAILED" && r.paidAt==null;
+    const pending = r.status==="PAID" && r.paidAt==null;
+    if(!paid && !failed && !pending) throw Error("Unrecognized or contradictory financial ledger row");
+    const key = istanbulDateKey(paid ? r.paidAt : r.createdAt);
+    const totals = daily.get(key) ?? emptyTotals();
+    totals.paid += Number(paid);
+    totals.failed += Number(failed);
+    totals.pending += Number(pending);
+    if(paid) totals.usd += rowUsd(r);
+    daily.set(key,totals);
+  }
+  return daily;
+}
+function equalDailyBuckets(chart,ledger) {
+  const keys = new Set([...chart.keys(),...ledger.keys()]);
+  for(const key of keys) {
+    const a=chart.get(key)??emptyTotals(), b=ledger.get(key)??emptyTotals();
+    if(a.paid!==b.paid || a.failed!==b.failed || a.pending!==b.pending
+       || Math.abs(cents(a.usd)-cents(b.usd))>2) return false;
+  }
+  return true;
+}
 const statusCases=["PAID","FAILED","PENDING","RESOLVED","all"];
 let failures=0;
 let paidCoverage=0;
@@ -153,19 +204,19 @@ for(const status of statusCases){
   if(status==="PAID") {
     paidCoverage=pages.filter(effectivePaid).length;
     crossDaySettlements=pages.filter(r => effectivePaid(r) &&
-      new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(r.paidAt)) !==
-      new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(r.createdAt))
+      istanbulDateKey(r.paidAt) !== istanbulDateKey(r.createdAt)
     ).length;
   }
   const a=chartCounts(chart),b=listCounts(pages);
   const expectedPaid=status==="FAILED"||status==="PENDING"?0:a.paid;
   const expectedFailed=status==="PAID"||status==="PENDING"?0:a.failed;
   const expectedPending=status==="PAID"||status==="FAILED"||status==="RESOLVED"?0:a.pending;
+  const dailyMatch = equalDailyBuckets(dailyChartTotals(chart),dailyLedgerTotals(pages));
   const equal=a.paid===b.paid && a.failed===b.failed && a.pending===b.pending &&
     Math.abs(cents(a.usd)-cents(b.usd))<=Math.max(2,2*chart.length);
-  const ok=equal && a.paid===expectedPaid && a.failed===expectedFailed && a.pending===expectedPending;
+  const ok=dailyMatch && equal && a.paid===expectedPaid && a.failed===expectedFailed && a.pending===expectedPending;
   if(!ok)failures++;
-  console.log(JSON.stringify({status,result:ok?"PASS":"MISMATCH",
+  console.log(JSON.stringify({status,result:ok?"PASS":"MISMATCH",dailyMatch,
     chart:{paid:a.paid,failed:a.failed,pending:a.pending,usdCents:cents(a.usd)},
     list:{paid:b.paid,failed:b.failed,pending:b.pending,usdCents:cents(b.usd)},
     paginatedRows:pages.length}));
