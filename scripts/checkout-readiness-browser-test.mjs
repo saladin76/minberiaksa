@@ -15,6 +15,7 @@ const entry = `import React,{useState} from "react";import {createRoot} from "re
 import {NextIntlClientProvider} from "next-intl";
 import DonationDialog from "./components/DonationDialog";
 import CheckoutPage from "./components/minbar/checkout/CheckoutPage";
+import {checkoutDefaultPhoneCountry} from "./lib/minbar/checkout-phone-country";
 import {PayForCardForm} from "./components/PayForCardForm";
 import {submitGatewayForm} from "./lib/minbar/checkout";
 window.fixtureResult=submitGatewayForm;
@@ -24,7 +25,11 @@ const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
 writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:new URLSearchParams(location.search).get("currency")||"USD",schedule:{hour:9,minute:30,dayOfMonth:1}}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
-createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={new URLSearchParams(location.search).has("prefilled")?{firstName:"Existing",lastName:"Donor",email:"saved@example.invalid",phone:"+905550000000"}:null} defaultCountry={new URLSearchParams(location.search).has("saudi")?"sa":"tr"}/><Legacy/></>}</NextIntlClientProvider>);`;
+createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={new URLSearchParams(location.search).has("prefilled")?{firstName:"Existing",lastName:"Donor",email:"saved@example.invalid",phone:"+905550000000"}:null} defaultCountry={checkoutDefaultPhoneCountry({
+  ipCountry:new URLSearchParams(location.search).get("ipcountry")??(new URLSearchParams(location.search).has("saudi")?"SA":"TR"),
+  accountCountry:new URLSearchParams(location.search).get("accountcountry"),
+  existingPhone:new URLSearchParams(location.search).has("prefilled")?"+905550000000":"",
+})}/><Legacy/></>}</NextIntlClientProvider>);`;
 const mocks = {
   "@/components/SignInDialog": 'export function SignInPanel(){return null}',
   "@/hooks/useIpCountry": 'export function useIpCountry(){return "tr"}',
@@ -176,6 +181,40 @@ try {
    await page.close();
   }
  }
+ // Browser-level proof that the server-resolved IP country chooses the
+ // initial flag and dial code regardless of language, on mobile and desktop.
+ for(const [country,expected,code] of [
+   ["TR","tr","90"],["SA","sa","966"],["US","us","1"],
+   ["DE","de","49"],["AE","ae","971"],["MA","ma","212"],
+ ]){
+  for(const lang of ["ar","en","tr"]){
+   for(const width of [390,1440]){
+    const page=await browser.newPage({viewport:{width,height:900}});
+    page.on("pageerror",e=>errors.push(e.message));
+    await page.route("https://**/*",route=>route.abort());
+    await page.goto(origin+"/?lang="+lang+"&ipcountry="+country);
+    const selector=page.locator('.pay-phone button[aria-haspopup="listbox"]');
+    await selector.waitFor();
+    assert.equal(await selector.getAttribute("data-country"),expected,
+      "visitor IP country must determine flag independently from locale");
+    const digits=(await page.locator("#checkout-phone").inputValue()).replace(/\D/g,"");
+    assert.ok(digits.startsWith(code),"visitor country calling code must be automatic");
+    checks++;await page.close();
+   }
+  }
+ }
+ // A donor without an E.164 number uses IP rather than a stale profile
+ // country. If a phone is already saved, it must not change when travelling.
+ for(const [prefilled,expected] of [[false,"sa"],[true,"tr"]]){
+  const page=await browser.newPage({viewport:{width:390,height:900}});
+  await page.route("https://**/*",route=>route.abort());
+  await page.goto(origin+"/?lang=ar&ipcountry=SA&accountcountry=TR"+(prefilled?"&prefilled=1":""));
+  const selector=page.locator('.pay-phone button[aria-haspopup="listbox"]');
+  await selector.waitFor();
+  assert.equal(await selector.getAttribute("data-country"),expected);
+  checks++;await page.close();
+ }
+
  // Imported signed-in accounts must still correct required contact data.
  const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
  await page.locator("#albaraka-3d").uncheck();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
