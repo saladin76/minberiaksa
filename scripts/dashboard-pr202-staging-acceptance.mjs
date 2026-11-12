@@ -89,6 +89,8 @@ function listCounts(rows) {
 }
 const statusCases=["PAID","FAILED","PENDING","RESOLVED","all"];
 let failures=0;
+let paidCoverage=0;
+let crossDaySettlements=0;
 for(const [label,cookie,expected] of [...sessions, ["ANONYMOUS", "", 401]]){
   const o=await get("/api/admin/dashboard-filter-options",new URLSearchParams([["locale","ar"]]),cookie,expected);
   const c=await get("/api/admin/donations/chart",new URLSearchParams([["period","custom"],["start",start],["end",end],["status","PAID"]]),cookie,expected);
@@ -121,6 +123,13 @@ for(const status of statusCases){
     if(page>=reportedPages)break;
   }
   if(pages.length!==reportedTotal)throw Error(status+": pagination incomplete ("+pages.length+"/"+reportedTotal+")");
+  if(status==="PAID") {
+    paidCoverage=pages.filter(effectivePaid).length;
+    crossDaySettlements=pages.filter(r => effectivePaid(r) &&
+      new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(r.paidAt)) !==
+      new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(r.createdAt))
+    ).length;
+  }
   const a=chartCounts(chart),b=listCounts(pages);
   const expectedPaid=status==="FAILED"||status==="PENDING"?0:a.paid;
   const expectedFailed=status==="PAID"||status==="PENDING"?0:a.failed;
@@ -134,9 +143,18 @@ for(const status of statusCases){
     list:{paid:b.paid,failed:b.failed,pending:b.pending,usdCents:cents(b.usd)},
     paginatedRows:pages.length}));
 }
+if(paidCoverage===0) {
+  failures++;
+  console.error("NOT COVERED: zero settled paid donations in selected staging window; empty-data parity is insufficient.");
+}
+if(crossDaySettlements===0) {
+  failures++;
+  console.error("NOT COVERED: no cross-day settled donation was exercised; seed or select an isolated staging window with delayed settlement.");
+}
+console.log(JSON.stringify({coverage:{settledPaid:paidCoverage,crossDaySettlements}}));
 if(failures) {
-  console.error(failures+" comparison(s) require review; no financial writes performed.");
+  console.error(failures+" acceptance mismatch or coverage gap(s); no financial writes performed.");
   process.exitCode=1;
 } else {
-  console.log("All staged status and date comparisons matched; no donor data printed.");
+  console.log("All staging acceptance comparisons and required settlement coverage passed; no donor data printed.");
 }
