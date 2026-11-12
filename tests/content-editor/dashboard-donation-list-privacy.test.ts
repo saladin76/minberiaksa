@@ -50,6 +50,31 @@ test("donation listing strips internal receipt tokens, card material, payment an
 test("the donation GET response applies redaction at serialization boundary", () => {
   const source = readFileSync("app/api/donations/route.ts", "utf8");
   assert.match(source, /import \{ donationListSafeFields \}/);
-  assert.match(source, /\.\.\.donationListSafeFields\(donation\)/);
+  assert.match(source, /\.\.\.donationListSafeFields\(donation,\s*\{\s*revenueAuthorized:\s*isAdmin\s*\}\)/);
   assert.doesNotMatch(source, /\.\.\.donation,\s*securityMode/);
+});
+
+test("authorized revenue attribution is sanitized rather than raw and donor view omits it", () => {
+  const input = {
+    id: "fixture",
+    attribution: {
+      utm_source: "google", utm_campaign: "Gaza relief",
+      email: "confidential@example.test", api_key: "never-return-api-key",
+    },
+    conversionEventsSentAt: "2026-11-11T08:00:00.000Z",
+    conversionFailedEventsSentAt: null,
+    providerRaw: { cvc: "never-return-cvv" },
+  };
+  const donor = donationListSafeFields(input);
+  assert.equal(Object.hasOwn(donor, "attribution"), false);
+  assert.equal(Object.hasOwn(donor, "conversionEventsSentAt"), false);
+  const admin = donationListSafeFields(input, { revenueAuthorized: true }) as Record<string, unknown>;
+  const attribution = admin.attribution as Record<string, unknown>;
+  assert.equal(attribution.utm_source, "google");
+  assert.equal(attribution.utm_campaign, "Gaza relief");
+  assert.equal(Object.hasOwn(attribution, "email"), false);
+  assert.equal(Object.hasOwn(attribution, "api_key"), false);
+  assert.equal(admin.conversionEventsSentAt, input.conversionEventsSentAt);
+  assert.equal(Object.hasOwn(admin, "providerRaw"), false);
+  assert.equal(JSON.stringify(admin).includes("never-return-api-key"), false);
 });
