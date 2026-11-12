@@ -17,6 +17,16 @@ Endpoint: GET /api/donations/:id
 
 The authorized GET still performs Stripe self-heal (which can have side effects). Only test this path using fixture payment providers in isolation.
 
+## 1B. Guest-to-account donation claim (security gate)
+
+Endpoint: POST /api/users/link-guest
+
+Donation IDs appear in URLs, receipts, emails, and screenshots; ID alone must NEVER authorize transferring all donations in an anonymous account. A logged-in claimant must provide the donation's valid high-entropy accessToken, verified before the guest merge helper runs. Existing ownership of the same donation is idempotent without a merge.
+
+The success page forwards its incoming guest link token explicitly, not an accessToken embedded in the server-rendered donation summary. Anonymous requests (401), malformed IDs (400), unknown IDs (404), and missing/wrong tokens (403) must produce zero account-merging writes.
+
+A matching receipt token is necessary but not sufficient: existing password/OAuth accounts, verified email/WhatsApp OTP identities, registered accounts, active session records, admin-invited accounts, staff roles, and previously merged accounts must never be classified as unclaimed guests. Test all these scenarios with synthetic accounts.
+
 ## 2. Historical payment-card data (count-only; no edits)
 
 One legacy single-cadence recurring checkout persisted Subscription.cardDetails from input before this PR. Historical records may therefore contain PAN/CVV. New subscription creation explicitly persists cardDetails:null; recurring billing uses verified paymentCardId and encrypted saved cards.
