@@ -15,6 +15,7 @@
 
 import { isMeasurementHost, sanitizeEngagementData } from "./tracking/engagement-policy";
 import { isPublicAnalyticsPath } from "./tracking/private-path";
+import { hasMarketingConsent } from "./tracking/marketing-consent";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -31,7 +32,7 @@ export function isEngagementEnabled(): boolean {
       if (nav.globalPrivacyControl === true || nav.doNotTrack === "1") return false;
     }
     const cookie = typeof document === "undefined" ? "" : document.cookie || "";
-    return !/(?:^|;\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookie);
+    return hasMarketingConsent();
   } catch {
     return false;
   }
