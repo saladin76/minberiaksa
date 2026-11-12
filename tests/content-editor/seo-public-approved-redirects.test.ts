@@ -12,7 +12,10 @@ const row = () => ({
   approved:false,
   redirectCode:null,
 });
-const manifest = (...rows) => ({status:"REVIEW_ONLY_NOT_FOR_REDIRECTS",rows});
+const manifest = (...rows: Record<string, unknown>[]) => ({status:"REVIEW_ONLY_NOT_FOR_REDIRECTS",rows});
+// The JS validator returns generic issue objects; narrow before reading the code field.
+const hasIssue = (issues: readonly object[], code: string): boolean =>
+  issues.some(issue => "code" in issue && issue.code === code);
 
 test("all 1398 unapproved inventory rows remain safely blocked", () => {
   const rows=Array.from({length:1398},(_,i)=>({
@@ -29,7 +32,7 @@ test("reject unapproved rows with assigned redirects",()=>{
     ...row(), proposedTarget:"/ar/المشاريع/خبز-غزة",redirectCode:308
   }));
   assert.equal(result.valid,false);
-  assert.ok(result.issues.some(i=>i.code==="UNAPPROVED_WITH_REDIRECT"));
+  assert.ok(hasIssue(result.issues, "UNAPPROVED_WITH_REDIRECT"));
 });
 
 test("reject self redirects and missing validation evidence",()=>{
@@ -37,15 +40,15 @@ test("reject self redirects and missing validation evidence",()=>{
     ...row(),approved:true,redirectCode:301,proposedTarget:row().sourcePath
   }));
   assert.equal(result.valid,false);
-  assert.ok(result.issues.some(i=>i.code==="REDIRECT_TO_SELF"));
-  assert.ok(result.issues.some(i=>i.code==="MISSING_VERIFIED_TARGET_EVIDENCE"));
+  assert.ok(hasIssue(result.issues, "REDIRECT_TO_SELF"));
+  assert.ok(hasIssue(result.issues, "MISSING_VERIFIED_TARGET_EVIDENCE"));
 });
 
 test("reject redirects that target sensitive financial paths",()=>{
   const result=validateReviewManifest(manifest({
     ...row(),approved:true,redirectCode:308,proposedTarget:"/ar/checkout"
   }));
-  assert.ok(result.issues.some(i=>i.code==="RESERVED_TRANSACTION_PATH"));
+  assert.ok(hasIssue(result.issues, "RESERVED_TRANSACTION_PATH"));
 });
 
 test("reject mismatched entity and locale",()=>{
@@ -55,12 +58,12 @@ test("reject mismatched entity and locale",()=>{
       entityId:"project-99",family:"project",locale:"en",urlPath:"/en/donate/gaza-bread"},
     evidenceSources:["sitemap-export-20261111"]
   }));
-  assert.ok(result.issues.some(i=>i.code==="ENTITY_IDENTITY_MISMATCH"));
-  assert.ok(result.issues.some(i=>i.code==="CROSS_LANGUAGE_REDIRECT_REQUIRES_MANUAL_PLAN"));
+  assert.ok(hasIssue(result.issues, "ENTITY_IDENTITY_MISMATCH"));
+  assert.ok(hasIssue(result.issues, "CROSS_LANGUAGE_REDIRECT_REQUIRES_MANUAL_PLAN"));
 });
 
 test("reject chains even with otherwise complete supplied evidence",()=>{
-  function approved(from,to){
+  function approved(from: string, to: string){
     return {...row(),sourcePath:from,approved:true,redirectCode:308,proposedTarget:to,
       targetProof:{httpStatus:200,selfCanonical:true,indexable:true,contentReady:true,
       entityId:"project-42",family:"project",locale:"ar",urlPath:to},
@@ -70,7 +73,7 @@ test("reject chains even with otherwise complete supplied evidence",()=>{
     approved("/ar/bagislar/first","/ar/المشاريع/second"),
     approved("/ar/المشاريع/second","/ar/المشاريع/final")
   ));
-  assert.ok(result.issues.some(i=>i.code==="REDIRECT_CHAIN"));
+  assert.ok(hasIssue(result.issues, "REDIRECT_CHAIN"));
 });
 
 test("accept structurally approved alias with complete provided evidence",()=>{
