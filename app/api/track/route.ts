@@ -149,7 +149,10 @@ export async function POST(req: NextRequest) {
     event.page = {
       ...(event.page ?? {}),
       url: safePageUrl(event.page?.url, req.url),
-      referrer: safePageUrl(event.page?.referrer, req.url)?.match(/^https?:\\/\\/[^/]+/)?.[0],
+      referrer: (() => {
+        const safe = safePageUrl(event.page?.referrer, req.url);
+        return safe ? new URL(safe).origin : undefined;
+      })(),
     };
 
     const clientIp = getTrackingClientIp(req.headers);
