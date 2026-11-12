@@ -7,8 +7,8 @@
  *   STAGING_ADMIN_COOKIE='next-auth.session-token=...' \
  *   node scripts/dashboard-pr202-staging-acceptance.mjs
  *
- * Optional: STAGING_REVENUE_STAFF_COOKIE, STAGING_DENIED_STAFF_COOKIE,
- * STAGING_DONOR_COOKIE, STAGING_QUERY (extra category/campaign/provider/locale/country
+ * Required: STAGING_REVENUE_STAFF_COOKIE, STAGING_DENIED_STAFF_COOKIE,
+ * STAGING_DONOR_COOKIE. Optional: STAGING_QUERY (extra category/campaign/provider/locale/country
  * /donationType/userId filters), STAGING_START, STAGING_END.
  *
  * Never prints cookies, donor identities, API JSON bodies, or row identifiers.
@@ -41,8 +41,11 @@ const sessions = [
   ["REVENUE_STAFF", process.env.STAGING_REVENUE_STAFF_COOKIE, 200],
   ["DENIED_STAFF", process.env.STAGING_DENIED_STAFF_COOKIE, 403],
   ["DONOR", process.env.STAGING_DONOR_COOKIE, 403],
-].filter(([, cookie]) => Boolean(cookie));
-if (!sessions.some(([name]) => name === "ADMIN")) throw Error("Admin session required");
+];
+const missingSessions = sessions.filter(([, cookie]) => !cookie).map(([label]) => label);
+if (missingSessions.length) {
+  throw Error("Missing isolated staging cookies for roles: " + missingSessions.join(", "));
+}
 
 function requestUrl(path, params) {
   const u = new URL(path, root);
@@ -86,11 +89,17 @@ function listCounts(rows) {
 }
 const statusCases=["PAID","FAILED","PENDING","RESOLVED","all"];
 let failures=0;
-for(const [label,cookie,expected] of sessions){
+for(const [label,cookie,expected] of [...sessions, ["ANONYMOUS", "", 401]]){
   const o=await get("/api/admin/dashboard-filter-options",new URLSearchParams([["locale","ar"]]),cookie,expected);
   const c=await get("/api/admin/donations/chart",new URLSearchParams([["period","custom"],["start",start],["end",end],["status","PAID"]]),cookie,expected);
   if(expected===200 && (!Array.isArray(o?.items)||!Array.isArray(c))) throw Error(label+" invalid financial API response");
   console.log(label+": filter options/chart HTTP "+expected);
+}
+for(const [label,cookie] of sessions.filter(([, , expected]) => expected === 200)){
+  const p=new URLSearchParams([["start",start],["end",end],["status","PAID"],["dateBasis","accounting"],["limit","1"]]);
+  const data=await get("/api/donations",p,cookie);
+  if(!Array.isArray(data?.donations))throw Error(label+" invalid authorized donation list response");
+  console.log(label+": authorized accounting donation list HTTP 200");
 }
 for(const status of statusCases){
   const params=new URLSearchParams(extra);
