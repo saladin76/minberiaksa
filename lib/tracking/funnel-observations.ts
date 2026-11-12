@@ -93,7 +93,12 @@ export async function recordFunnelObservation(event: CanonicalEvent, clientIp: s
     const response = await prisma.$runCommandRaw(rawCommand({
       insert: COLLECTION,
       documents: [{
-        ...safe, observedAt: now, channel: "browser_reported", source: "anonymous_client",
+        ...safe,
+        // Even attacker-supplied event IDs are never persisted as plaintext:
+        // they might contain guessed phone numbers or other identifiers.
+        eventId: crypto.createHmac("sha256", process.env.NEXTAUTH_SECRET)
+          .update(safe.eventId).digest("hex"),
+        observedAt: now, channel: "browser_reported", source: "anonymous_client",
       }],
       ordered: true,
     }));
