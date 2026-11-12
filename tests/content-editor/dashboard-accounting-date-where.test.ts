@@ -18,7 +18,9 @@ test("settled donations are filtered by paidAt, not createdAt", () => {
 
 test("failed attempts are filtered by creation time", () => {
   assert.deepEqual(accountingDateWhere("FAILED", startDate, endDate), {
-    status: "FAILED", createdAt: { gte: startDate, lte: endDate },
+    status: "FAILED",
+    createdAt: { gte: startDate, lte: endDate },
+    OR: [{ paidAt: null }, { paidAt: { isSet: false } }],
   });
 });
 
@@ -35,7 +37,11 @@ test("resolved includes paid settlement and failed attempts, never pending", () 
   assert.deepEqual(where, {
     OR: [
       { status: "PAID", paidAt: { gte: startDate, lte: endDate } },
-      { status: "FAILED", createdAt: { gte: startDate, lte: endDate } },
+      {
+        status: "FAILED",
+        createdAt: { gte: startDate, lte: endDate },
+        OR: [{ paidAt: null }, { paidAt: { isSet: false } }],
+      },
     ],
   });
 });
@@ -45,7 +51,11 @@ test("all includes paid settlement, failed, and pending attempt arms", () => {
   assert.deepEqual(where, {
     OR: [
       { status: "PAID", paidAt: { gte: startDate, lte: endDate } },
-      { status: "FAILED", createdAt: { gte: startDate, lte: endDate } },
+      {
+        status: "FAILED",
+        createdAt: { gte: startDate, lte: endDate },
+        OR: [{ paidAt: null }, { paidAt: { isSet: false } }],
+      },
       {
         status: "PAID",
         createdAt: { gte: startDate, lte: endDate },
@@ -63,4 +73,13 @@ test("accounting calendar is limited to authorized revenue viewers and complete 
   assert.equal(canUseAccountingDate({ ...allowed, dateBasis: "created" }), false);
   assert.equal(canUseAccountingDate({ ...allowed, start: null }), false);
   assert.equal(canUseAccountingDate({ ...allowed, end: null }), false);
+});
+
+test("accounting query excludes FAILED rows carrying a contradictory paidAt", () => {
+  for (const status of ["FAILED", "RESOLVED", "all"]) {
+    const query = JSON.stringify(accountingDateWhere(status, startDate, endDate));
+    assert.equal(query.includes('"status":"FAILED"'), true);
+    assert.equal(query.includes('"paidAt":null'), true);
+    assert.equal(query.includes('"paidAt":{"isSet":false}'), true);
+  }
 });
