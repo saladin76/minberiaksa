@@ -3,18 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { linkGuestUserToTarget } from "@/lib/users/link-guest";
+import { donationTokenMatches } from "@/lib/donations/access-token";
 
 /**
- * Attach a guest-created donation (and every other guest donation under the
- * same anonymous user record) to the currently authenticated user.
+ * Attach guest donations to the current account only when the caller proves
+ * possession of the donation's high-entropy receipt bearer. A donation ID is
+ * public-facing and is NEVER proof of ownership.
  *
- * The donation id is treated as a bearer token here  exactly like
- * /api/donations/[id] does  because the only way the caller learned about
- * the id is by being the donor on the success page (or following an email
- * link sent to that donor). The linkGuestUserToTarget helper then refuses
- * to merge anything that has a password or a linked OAuth account, so the
- * worst a hostile caller can do with a stolen donation id is steal donations
- * that have never been claimed by any real account.
+ * The existing guest-only check in linkGuestUserToTarget is a separate guard,
+ * not a substitute for verifying the receipt token before ANY merge.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -23,18 +20,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await req.json().catch(() => null)) as { donationId?: string } | null;
-    const donationId = body?.donationId?.trim();
-    if (!donationId) {
-      return NextResponse.json({ error: "donationId is required" }, { status: 400 });
+    const body = (await req.json().catch(() => null)) as { donationId?: unknown; accessToken?: unknown } | null;
+    const donationId = typeof body?.donationId === "string" ? body.donationId.trim() : "";
+    if (!/^[a-f0-9]{24}$/i.test(donationId)) {
+      return NextResponse.json({ error: "Valid donationId is required" }, { status: 400 });
     }
 
     const donation = await prisma.donation.findUnique({
       where: { id: donationId },
-      select: { donorId: true },
+      select: { donorId: true, accessToken: true },
     });
     if (!donation) {
       return NextResponse.json({ error: "Donation not found" }, { status: 404 });
+    }
+
+    // Idempotent when already linked to the authenticated account. A caller
+    // cannot transfer another donor's history using a known donation ID.
+    if (donation.donorId === session.user.id) {
+      return NextResponse.json({ success: true, movedDonations: 0, alreadyLinked: true });
+    }
+    const token = typeof body?.accessToken === "string" ? body.accessToken : null;
+    if (!donationTokenMatches(donation.accessToken, token)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const result = await linkGuestUserToTarget(donation.donorId, session.user.id);

@@ -6,6 +6,7 @@ import { DonationFinancialStatus } from "@/components/dashboard/DonationFinancia
 import type { DonationFinancialSummary } from "@/lib/dashboard/donation-financial-summary";
 
 import { DashboardFilterPanel } from "@/components/dashboard/DashboardFilterPanel";
+import { normalizeDashboardCampaignFilterOptions, dashboardCampaignBelongsToCategory } from "@/lib/dashboard/home-campaign-filter";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useLocale } from "next-intl";
 import Link from "next/link";
@@ -71,6 +72,9 @@ import {
   DASHBOARD_DISPLAY_SYMBOLS,
 } from "@/lib/dashboard/format-dashboard-money";
 import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
+import { dashboardDonationScopeParams, dashboardStatsScopeParams } from "@/lib/dashboard/home-donation-scope";
+import { dashboardDonationDisplayDate } from "@/lib/dashboard/donation-ledger-date";
+import { homeFiltersAreModified } from "@/lib/dashboard/home-filter-defaults";
 import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import {
   istanbulTodayKey,
@@ -120,10 +124,9 @@ interface Category {
 interface CampaignOption {
   id: string;
   title: string;
-  // Many-to-many: a campaign can belong to multiple categories. `categoryId`
-  // is the legacy single-value alias (first category) for backwards-compat.
+  // Normalized by normalizeDashboardCampaignFilterOptions.
   categoryId?: string;
-  categoryIds?: string[];
+  categoryIds: string[];
 }
 
 interface UserOption {
@@ -306,9 +309,12 @@ export default function DashboardPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
-  // Sync user filter from URL (e.g. from users page "تحليل تبرعات")
+  // A deep-linked donor is the initial selection, not a permanent lock.
+  // Depend on the actual URL value, not the entire searchParams object, so
+  // clearing the donor is not undone by unrelated query-string changes.
+  const linkedDonorId = searchParams.get("userId");
   useEffect(() => {
-    const uid = searchParams.get("userId");
+    const uid = linkedDonorId;
     if (uid && uid !== "all") {
       setSelectedUserId(uid);
       fetch(`/api/users/${uid}`)
@@ -323,7 +329,7 @@ export default function DashboardPage() {
         })
         .catch(() => {});
     }
-  }, [searchParams]);
+  }, [linkedDonorId]);
 
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
@@ -406,12 +412,15 @@ export default function DashboardPage() {
         const lc = locale || "ar";
         const [categoriesRes, campaignsRes] = await Promise.all([
           fetch(`/api/categories?locale=${lc}&counts=true&limit=200`),
-          fetch(`/api/campaigns/all?locale=${lc}&isActiveFalse=true`),
+          fetch(`/api/admin/dashboard-filter-options?locale=${encodeURIComponent(lc)}`),
         ]);
+        if (!categoriesRes.ok || !campaignsRes.ok) {
+          throw new Error("Dashboard filter options request failed");
+        }
         const categoriesJson = await categoriesRes.json();
         const campaignsJson = await campaignsRes.json();
-        setCategories(categoriesJson?.items ?? categoriesJson ?? []);
-        setCampaigns(campaignsJson?.items ?? campaignsJson ?? []);
+        setCategories(Array.isArray(categoriesJson?.items) ? categoriesJson.items : []);
+        setCampaigns(normalizeDashboardCampaignFilterOptions(campaignsJson?.items));
       } catch (error) {
         console.error("Error fetching filters:", error);
       }
@@ -492,32 +501,23 @@ export default function DashboardPage() {
 
   // Chart data (filters + period + from/to + user  user from state or URL when coming via link)
   const fetchChartData = useCallback(async () => {
-    const userIdFromUrl = searchParams.get("userId");
-    const effectiveUserId = selectedUserId !== "all" ? selectedUserId : (userIdFromUrl && userIdFromUrl !== "all" ? userIdFromUrl : "all");
+    // URL deep-link is synchronized into selectedUserId above. Never silently
+    // re-apply the URL donor after the user explicitly clears that selection.
+    const effectiveUserId = selectedUserId;
     const requestId = ++chartRequestId.current;
     setChartLoading(true);
     setChartError(false);
     setChartData([]); // Never show stale amounts under the newly selected filter.
     try {
-      const params = new URLSearchParams();
-      params.set("period", chartPeriod);
-      // Compute the explicit Istanbul date range for every preset (not just
-      // custom) so the chart endpoint uses the same calendar semantics as the
-      // donations table  اليوم = today only, أمس = yesterday, شهر = first of
-      // the month → today, سنة = Jan 1 → today.
       const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-      if (start && end) {
-        params.set("start", start);
-        params.set("end", end);
-      }
-      if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
-      if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
-      if (effectiveUserId !== "all") params.append("userId", effectiveUserId);
-      if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
-      if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-      if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
-      params.set("status", donationsStatusFilter);
-      params.set("donationType", donationsTypeFilter);
+      const params = dashboardDonationScopeParams({
+        categoryId: selectedCategory, campaignId: selectedCampaign,
+        userId: effectiveUserId, start, end,
+        locale: donationLocaleFilter, country: donationCountryFilter,
+        provider: donationProviderFilter, status: donationsStatusFilter,
+        donationType: donationsTypeFilter,
+      });
+      params.set("period", chartPeriod);
       const response = await axios.get(`/api/admin/donations/chart?${params}`);
       if (requestId !== chartRequestId.current) return;
       if (!Array.isArray(response.data)) throw new Error("Invalid chart response");
@@ -530,7 +530,7 @@ export default function DashboardPage() {
     } finally {
       if (requestId === chartRequestId.current) setChartLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, searchParams, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsStatusFilter, donationsTypeFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsStatusFilter, donationsTypeFilter]);
 
   useEffect(() => {
     fetchChartData();
@@ -546,18 +546,13 @@ export default function DashboardPage() {
     const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 20_000);
     statsTimeoutRef.current = timeout;
     try {
-      const params = new URLSearchParams();
-      params.set("period", chartPeriod);
       const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-      if (start && end) {
-        params.set("start", start);
-        params.set("end", end);
-      }
-      if (selectedCategory !== "all") params.set("categoryId", selectedCategory);
-      if (selectedCampaign !== "all") params.set("campaignId", selectedCampaign);
-      if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
-      if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-      if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
+      const params = dashboardStatsScopeParams({
+        categoryId: selectedCategory, campaignId: selectedCampaign,
+        start, end,
+        locale: donationLocaleFilter, country: donationCountryFilter,
+        provider: donationProviderFilter,
+      }, chartPeriod);
       const response = await fetch(`/api/admin/stats?${params}`, { signal: controller.signal });
       const data = await response.json();
       if (statsRequestRef.current !== controller) return;
@@ -612,21 +607,20 @@ export default function DashboardPage() {
       if (!quiet) setDonationsLoading(true);
       try {
         const { start, end } = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-        const params = new URLSearchParams();
+        const params = dashboardDonationScopeParams({
+          categoryId: selectedCategory, campaignId: selectedCampaign,
+          userId: selectedUserId, start, end,
+          locale: donationLocaleFilter, country: donationCountryFilter,
+          provider: donationProviderFilter, status: donationsStatusFilter,
+          donationType: donationsTypeFilter,
+        });
         params.set("page", String(page));
         params.set("limit", String(PAGE_SIZE));
         params.set("sortBy", donationsSortBy);
         params.set("sortOrder", donationsSortOrder);
-        if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
-        if (selectedCampaign !== "all") params.append("campaignId", selectedCampaign);
-        if (selectedUserId !== "all") params.append("userId", selectedUserId);
-        if (start) params.set("start", start);
-        if (end) params.set("end", end);
-        if (donationsStatusFilter !== "all") params.set("status", donationsStatusFilter);
-        if (donationsTypeFilter !== "all") params.set("donationType", donationsTypeFilter);
-        if (donationLocaleFilter !== "all") params.set("locale", donationLocaleFilter);
-        if (donationCountryFilter !== "all") params.set("country", donationCountryFilter);
-        if (donationProviderFilter !== "all") params.set("provider", donationProviderFilter);
+        // Chart and table must use the same financial period: settled paid
+        // donations use paidAt; unresolved attempts use createdAt.
+        if (start && end) params.set("dateBasis", "accounting");
         if (donationsSearch) params.set("search", donationsSearch);
         const res = await fetch(`/api/donations?${params}`);
         const data = await res.json();
@@ -921,7 +915,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {!searchParams.get("userId") && <>
+        {selectedUserId === "all" && <>
           <MetricSummaryBand
             icon={Wallet}
             eyebrow={dt("إجمالي الإيرادات الناجحة")}
@@ -1555,11 +1549,29 @@ export default function DashboardPage() {
                 },
               ].filter(Boolean) as ActiveFilterChip[]}
               onClearAll={
-                selectedCategory !== "all" || selectedCampaign !== "all" || selectedUserId !== "all"
+                homeFiltersAreModified({
+                  categoryId: selectedCategory, campaignId: selectedCampaign,
+                  userId: selectedUserId, period: chartPeriod, dateFrom, dateTo,
+                  locale: donationLocaleFilter, country: donationCountryFilter,
+                  provider: donationProviderFilter, status: donationsStatusFilter,
+                  donationType: donationsTypeFilter, donationSearch: donationsSearch,
+                })
                   ? () => {
                       setSelectedCategory("all");
                       setSelectedCampaign("all");
                       setSelectedUserId("all");
+                      setChartPeriod("month");
+                      setDateFrom("");
+                      setDateTo("");
+                      setDonationLocaleFilter("all");
+                      setDonationCountryFilter("all");
+                      setDonationProviderFilter("all");
+                      setDonationsStatusFilter("RESOLVED");
+                      setDonationsTypeFilter("all");
+                      setDonationsSearch("");
+                      setUsersSearchInput("");
+                      setUsersSearchCommitted("");
+                      setDonationsPage(1);
                     }
                   : undefined
               }
@@ -1579,8 +1591,7 @@ export default function DashboardPage() {
         setSelectedCategory(categoryId);
         if (categoryId !== "all" && selectedCampaign !== "all") {
           const campaign = campaigns.find((item) => item.id === selectedCampaign);
-          const categoryIds = campaign?.categoryIds ?? (campaign?.categoryId ? [campaign.categoryId] : []);
-          if (campaign && !categoryIds.includes(categoryId)) {
+          if (campaign && !dashboardCampaignBelongsToCategory(campaign, categoryId)) {
             setSelectedCampaign("all");
           }
         }
@@ -1620,8 +1631,7 @@ export default function DashboardPage() {
         <SelectItem value="all" className="text-xs">{dt("جميع المشاريع")}</SelectItem>
         {campaigns
           .filter((c) => {
-            const ids = c.categoryIds ?? (c.categoryId ? [c.categoryId] : []);
-            const inCategory = selectedCategory === "all" || ids.includes(selectedCategory);
+            const inCategory = dashboardCampaignBelongsToCategory(c, selectedCategory);
             return inCategory && (!searchCampaign ||
               c.title.toLowerCase().includes(searchCampaign.toLowerCase()));
           })
@@ -1634,8 +1644,8 @@ export default function DashboardPage() {
     </Select>
   </div>
 
-  {/* User  hidden when viewing a specific user via link (?userId=...) */}
-  {!searchParams.get("userId") && (
+  {/* Show donor selector again after the URL donor filter is cleared. */}
+  {selectedUserId === "all" && (
     <div className="space-y-1 text-start">
       <label className="text-[11px] font-semibold text-slate-600">
         {dt("المستخدم")}</label>
@@ -1897,7 +1907,7 @@ export default function DashboardPage() {
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 max-w-[110px]">
                         {dt("المشروع / الفئة")}</th>
                       <th className="text-start py-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        {dt("التاريخ")}</th>
+                        {dt("تاريخ التحصيل / المحاولة")}</th>
                       <th className="px-3 py-3 text-start">{dt("عرض")}</th>
                     </tr>
                   </thead>
@@ -2070,13 +2080,13 @@ export default function DashboardPage() {
                           <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
                             <div className="flex flex-col leading-tight">
                               <span>
-                                {new Date(d.createdAt).toLocaleDateString("en-US", {
+                                {dashboardDonationDisplayDate(d).toLocaleDateString("en-US", {
                                   dateStyle: "medium",
                                   timeZone: "Europe/Istanbul",
                                 })}
                               </span>
                               <span className="text-[10px] text-slate-400" dir="ltr">
-                                {new Date(d.createdAt).toLocaleTimeString("en-US", {
+                                {dashboardDonationDisplayDate(d).toLocaleTimeString("en-US", {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                   hour12: true,

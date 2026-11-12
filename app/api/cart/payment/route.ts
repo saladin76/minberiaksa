@@ -9,6 +9,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { resolveReferralId } from "@/lib/referral-server";
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
+import { donationListSafeFields } from "@/lib/dashboard/donation-list-privacy";
 import { inferLocaleFromRequest } from "@/lib/preferred-lang";
 import { sanitizeDonationAttribution } from "@/lib/attribution/sanitize";
 import { writeAuditLog } from "@/lib/audit-log";
@@ -86,8 +87,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const campaignId = searchParams.get("campaignId");
     const userId = searchParams.get("userId");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
+    const requestedLimit = Number.parseInt(searchParams.get("limit") || "10", 10);
+    const limit = Number.isSafeInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 100) : 10;
+    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
+      && Number.isSafeInteger((requestedPage - 1) * limit) ? requestedPage : 1;
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {
@@ -104,6 +108,17 @@ export async function GET(request: NextRequest) {
     // Get donations with pagination
     const donations = await prisma.donation.findMany({
       where,
+      // This GET is callable by donors: do not fetch receipt access tokens,
+      // card details, raw PSP records or bank reconciliation state.
+      omit: {
+        accessToken: true, cardDetails: true, providerRaw: true,
+        originalDonorId: true, providerAuthCode: true, providerHostRefNum: true,
+        paypalOrderId: true, paypalCaptureId: true,
+        bankOperations: true, bankOperationLock: true, bankOperationsRevision: true,
+        bankLastInquiry: true, reconciliationLeaseToken: true,
+        reconciliationLeaseUntil: true, reconciliationNextAt: true,
+        reconciliationCheckedAt: true,
+      },
       include: {
         donor: {
           select: {
@@ -135,7 +150,9 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      donations,
+      donations: donations.map(row => donationListSafeFields(row, {
+        revenueAuthorized: userHasDashboardPermission(session.user, "revenue"),
+      })),
       pagination: {
         total,
         pages: Math.ceil(total / limit),
@@ -187,7 +204,6 @@ export async function POST(request: NextRequest) {
          the plan is scheduled from its creation time. */
       schedule: scheduleIn,
       paymentMethod,
-      cardDetails = null,
       referralCode,
       locale: donationLocale,
       guest,
@@ -805,7 +821,10 @@ export async function POST(request: NextRequest) {
             teamSupport: planTeamSupport,
             coverFees,
             paymentMethod,
-            cardDetails: paymentMethod === "CARD" ? cardDetails : null,
+            // A subscription is billed via its verified paymentCardId (or
+            // provider vault), never by persisting checkout PAN/CVV. Card
+            // verification values must remain ephemeral even for legacy plans.
+            cardDetails: null,
             donorId: donorId,
             referralId: referralId ?? undefined,
             frequency,

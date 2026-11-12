@@ -224,7 +224,9 @@ export function CampaignRowActions({
       {scheduleOpen ? <CampaignScheduleDialog campaign={campaign} onChanged={onChanged} onClose={() => setScheduleOpen(false)} /> : null}
       {campaign.status === "BLOCKED" ? <button type="button" onClick={event => { event.stopPropagation(); setRecoveryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 text-xs font-semibold text-sky-900">{dt("تشخيص واستكمال")}</button> : null}
       {canReviewFailures && campaign.status !== "BLOCKED" ? <button type="button" onClick={event => { event.stopPropagation(); setRetryOpen(true); }} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-xs font-semibold text-amber-900"><RefreshCw className="h-3.5 w-3.5" />{dt("إعادة محاولة الفشل")}</button> : null}
-      <DropdownMenu>
+      {/* Menu actions open separately modal AlertDialogs. A modal DropdownMenu
+          can leave body pointer events locked after a confirmation closes. */}
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
