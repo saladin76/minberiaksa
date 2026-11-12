@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { isIP } from "node:net";
 import { countryNameFromIsoCode } from "@/lib/geo/intl-country-name";
 import { lookupIpGeo } from "@/lib/geo/ip-lookup";
 
@@ -31,7 +32,10 @@ export function normalizeClientIp(ip: string): string {
  * browser or upstream proxy can put there.
  */
 export function getClientIp(request: NextRequest): string | null {
-  const cf = request.headers.get("cf-connecting-ip")?.trim();
+  // Only trust Cloudflare headers when the deployment explicitly trusts that proxy.
+  // Otherwise client-supplied CF headers can spoof geolocation on a direct VPS.
+  const cf = process.env.TRACKING_TRUST_CLOUDFLARE === "true"
+    ? request.headers.get("cf-connecting-ip")?.trim() : null;
   if (cf && !isNonRoutableOrLocalIp(cf)) return normalizeClientIp(cf);
   const real = request.headers.get("x-real-ip")?.trim();
   if (real && !isNonRoutableOrLocalIp(real)) return normalizeClientIp(real);
@@ -47,7 +51,7 @@ export function getClientIp(request: NextRequest): string | null {
 
 function isNonRoutableOrLocalIp(ip: string): boolean {
   const n = normalizeClientIp(ip);
-  if (!n) return true;
+  if (!n || !isIP(n)) return true;
   if (n === "::1" || n === "127.0.0.1") return true;
   if (n.startsWith("10.")) return true;
   if (n.startsWith("192.168.")) return true;
@@ -73,6 +77,7 @@ async function lookupGeoByIp(ip: string): Promise<ResolvedUserGeo | null> {
 }
 
 function geoFromVercelHeaders(request: NextRequest): ResolvedUserGeo | null {
+  if (process.env.VERCEL !== "1") return null;
   const code = request.headers.get("x-vercel-ip-country")?.trim().toUpperCase();
   if (!code || !/^[A-Z]{2}$/.test(code) || code === "XX") return null;
   const city = request.headers.get("x-vercel-ip-city")?.trim() || null;
@@ -86,6 +91,7 @@ function geoFromVercelHeaders(request: NextRequest): ResolvedUserGeo | null {
 }
 
 function geoFromCfCountryCode(request: NextRequest): ResolvedUserGeo | null {
+  if (process.env.TRACKING_TRUST_CLOUDFLARE !== "true") return null;
   const cf = request.headers.get("cf-ipcountry")?.trim().toUpperCase();
   if (!cf || !/^[A-Z]{2}$/.test(cf) || cf === "XX") return null;
   return {
@@ -98,8 +104,8 @@ function geoFromCfCountryCode(request: NextRequest): ResolvedUserGeo | null {
 
 /**
  * Country name + ISO code + optional city/region: the CDN's own geolocation
- * when the site runs behind one (Vercel, Cloudflare), else the client IP
- * looked up in several databases.
+ * when configured to trust one (Vercel, Cloudflare), else the proxy-reported
+ * client IP looked up in several databases.
  */
 export async function resolveGeoFromRequest(
   request: NextRequest
