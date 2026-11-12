@@ -223,11 +223,21 @@ try {
   await page.locator("#checkout-phone").fill("+90");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("5551234567");await page.locator("#checkout-phone").blur();
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
   assert.equal(await page.locator('input[type="checkbox"]').count(),1,"only the optional 3D checkbox is present");
+  const typedPhone=(await page.locator("#checkout-phone").inputValue()).replace(/\D/g,"");
+  assert.equal(typedPhone,"905551234567","edited phone must appear in the form before submission");
   assert.equal(calls.filter(r=>r.path==="/api/users/me/phone").length,0,"typing should not mutate profile");
-  const phonePatch=page.waitForRequest(req=>req.url().endsWith("/api/users/me/phone")&&req.method()==="PATCH");
-  await page.locator(".pay-form button[type=submit]").click();await phonePatch;
-  await page.waitForFunction(()=>window.fixtureSubmissions.length===1);
+  await page.locator(".pay-form button[type=submit]").click();
+  await page.waitForTimeout(750);
   const phoneUpdate=calls.find(r=>r.path==="/api/users/me/phone"&&r.method==="PATCH");
+  if(!phoneUpdate) {
+    const alerts=await page.locator('.pay-form [role="alert"]').allTextContents();
+    console.error("Phone PATCH not initiated at checkout",JSON.stringify({
+      typedPhone, alerts, phoneInvalid:await page.locator("#checkout-phone").getAttribute("aria-invalid"),
+      formCalls:calls.map(r=>r.path), pendingSubmit:await page.locator(".pay-form button[type=submit]").isDisabled(),
+    }));
+  }
+  assert.ok(phoneUpdate,"editing donor phone and submitting must initiate account update");
+  await page.waitForFunction(()=>window.fixtureSubmissions.length===1);
   assert.equal(phoneUpdate?.body?.phone?.replace(/\D/g,""),"905551234567","changed number must reach profile update");
   assert.equal(calls.filter(r=>r.path==="/api/credit-cards"&&r.method==="POST").length,1);
   assert.equal(calls.filter(r=>r.path==="/api/cart/payment").length,1);
