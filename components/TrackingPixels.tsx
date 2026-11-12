@@ -85,6 +85,25 @@ export interface TrackingConfig {
   xPixelId: string | null;
 }
 
+type PendingGa4Event = { eventName: string; payload: Record<string, unknown>; canonical: CanonicalEventName };
+
+/** Returns whether a sanitized event was accepted by its single browser owner. */
+function emitGa4Funnel(config: TrackingConfig, packet: PendingGa4Event): boolean {
+  if (config.googleTagManagerEnabled && config.googleTagManagerId) {
+    // GTM owns its initial PageView and handles subsequent commerce events.
+    if (packet.canonical === "page_view") return true;
+    window.dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({ event: packet.eventName, ecommerce: packet.payload });
+    return true;
+  }
+  if (config.gaMeasurementId && window.gtag) {
+    window.gtag("event", packet.eventName, packet.payload);
+    return true;
+  }
+  return false;
+}
+
 // ─── Legacy option types (kept for backward compat) ──────────────────────────
 
 export interface TrackingItem {
@@ -278,6 +297,7 @@ function buildGa4Items(
 
 export default function TrackingPixels({ children }: { children: React.ReactNode }) {
   const configRef = useRef<TrackingConfig | null>(null);
+  const pendingGa4Ref = useRef<PendingGa4Event[]>([]);
   const [config, setConfig] = useState<TrackingConfig | null>(null);
   // Mutable user data  updated by DonationDialog when user fills in details
   const userDataRef = useRef<Partial<CanonicalUser>>({});
@@ -420,6 +440,11 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       `;
       document.head.appendChild(script);
     }
+
+    // Checkout may fire before /api/tracking/config responds and before
+    // gtag.js/GTM bootstrap. Replay only privacy-allowlisted GA4 packets.
+    const pending = pendingGa4Ref.current.splice(0);
+    for (const packet of pending) emitGa4Funnel(config, packet);
   }, [config]);
 
   // ── Scroll depth tracking (25 / 50 / 75 / 100 %) ─────────────────────────────
@@ -586,18 +611,17 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
 
       // ── GA4 / GTM (single owner) ─────────────────────────────────────────
       const ga4EventName = GA4_EVENT_MAP[event.event];
-      if (ga4EventName && c) {
-        const ga4 = ga4SafeEventPayload(event);
-        if (c.googleTagManagerEnabled && c.googleTagManagerId) {
-          // GTM owns automatic PageView. Push remaining ecommerce/engagement
-          // events as sanitized dataLayer events and never invoke gtag as well.
-          if (event.event !== "page_view") {
-            window.dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
-            window.dataLayer.push({ ecommerce: null });
-            window.dataLayer.push({ event: ga4EventName, ecommerce: ga4 });
-          }
-        } else if (c.gaMeasurementId && window.gtag) {
-          window.gtag("event", ga4EventName, ga4);
+      if (ga4EventName) {
+        const packet: PendingGa4Event = {
+          eventName: ga4EventName,
+          payload: ga4SafeEventPayload(event),
+          canonical: event.event,
+        };
+        if (!c || !emitGa4Funnel(c, packet)) {
+          // A bounded in-memory queue, not storage. No personal fields enter it.
+          const pending = pendingGa4Ref.current;
+          if (pending.length === 50) pending.shift();
+          pending.push(packet);
         }
       }
 
