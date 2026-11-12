@@ -104,7 +104,11 @@ try {
     await expect(page.getByRole("alertdialog")).toContainText("100"); assert.equal(writes.length,0);
     await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click(); assert.equal(writes.length,0); checks++;
     await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
-    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
+    const sendConfirmation = page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true});
+    // Async eligibility checking temporarily disables confirmation.
+    // Wait for readiness; never force-click or bypass this gate.
+    await expect(sendConfirmation).toBeEnabled({ timeout: 15000 });
+    await sendConfirmation.click();
     await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
     assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
 
