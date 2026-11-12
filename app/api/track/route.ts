@@ -24,6 +24,7 @@ import {
 } from "@/lib/tracking/meta-capi";
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
 import { recordFunnelObservation } from "@/lib/tracking/funnel-observations";
+import { redactAnalyticsPath } from "@/lib/tracking/private-path";
 
 const TIKTOK_EVENTS_URL = "https://business-api.tiktok.com/open_api/v1.3/event/track/";
 
@@ -39,7 +40,7 @@ function safePageUrl(value: unknown, base: string): string | undefined {
   if (typeof value !== "string") return undefined;
   try {
     const u = new URL(value, base);
-    return ["https:", "http:"].includes(u.protocol) ? u.origin + u.pathname : undefined;
+    return ["https:", "http:"].includes(u.protocol) ? u.origin + redactAnalyticsPath(u.pathname) : undefined;
   } catch { return undefined; }
 }
 
