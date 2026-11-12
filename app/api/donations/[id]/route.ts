@@ -6,6 +6,7 @@ import { authOptions } from '../../auth/[...nextauth]/options';
 import { Prisma, SubscriptionStatus } from '@prisma/client';
 import { userHasDashboardPermission } from '@/lib/dashboard/permissions';
 import { isRevenueDashboardUser } from '@/lib/dashboard/api-auth';
+import { donationListSafeFields } from "@/lib/dashboard/donation-list-privacy";
 import { convertAmountInCurrencyToUsd, normalizeDonationCurrencyCode } from '@/lib/exchange/convert-amount-in-currency-to-usd';
 import {
   writeAuditLog,
@@ -139,8 +140,11 @@ export async function GET(
     }
 
     const sub = donation.subscription;
+    // Access to the record may be granted by a guest bearer. That token is
+    // needed only for the authorization check above, not in the response.
+    // Do not send raw PSP or stored card payloads to guests/owners/staff.
     const response = {
-      ...donation,
+      ...donationListSafeFields(donation, { revenueAuthorized: isRevenueDashboardUser(session) }),
       type: donation.subscriptionId ? ('MONTHLY' as const) : ('ONE_TIME' as const),
       // Default to CARD on read for legacy rows where the field was never
       // written. Every current create path sets CARD or PAYPAL explicitly,
