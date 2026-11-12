@@ -682,7 +682,9 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       const value = local && local.amount > 0 ? local.amount : item.amount;
       const currency = local && local.amount > 0 ? local.currency : item.currency;
       trackAddToCart({
-        value, currency, contentIds: [id], quantity: item.shareCount ?? 1,
+        // The cart line value is the total for all shares; quantity=1 avoids
+        // reporting value multiplied again by the share count.
+        value, currency, contentIds: [id], quantity: 1,
       });
     };
     window.addEventListener(CART_ITEM_ADDED_EVENT, onItemAdded);
