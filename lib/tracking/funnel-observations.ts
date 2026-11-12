@@ -16,6 +16,7 @@ const EVENTS = new Set<CanonicalEventName>([
   "view_content", "view_donation_page", "customize_product",
   "add_to_cart", "begin_checkout", "add_payment_info",
   "payment_submit", "payment_failed", "sign_up",
+  "page_view", "scroll_depth", "user_engagement", "_missing_event",
 ]);
 const MAX_PER_MINUTE = 40;
 const TTL_SECONDS = 60 * 60 * 24 * 7;
