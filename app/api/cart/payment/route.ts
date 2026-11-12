@@ -805,7 +805,10 @@ export async function POST(request: NextRequest) {
             teamSupport: planTeamSupport,
             coverFees,
             paymentMethod,
-            cardDetails: paymentMethod === "CARD" ? cardDetails : null,
+            // A subscription is billed via its verified paymentCardId (or
+            // provider vault), never by persisting checkout PAN/CVV. Card
+            // verification values must remain ephemeral even for legacy plans.
+            cardDetails: null,
             donorId: donorId,
             referralId: referralId ?? undefined,
             frequency,
