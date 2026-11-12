@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { bankBalance, moneyMinor, type BankDonation } from "../../lib/donations/bank-operations-core";
 import { inspectBankReply } from "../../lib/donations/bank-operations-inspection";
-import { albarakaBankBody, parsePayForBankReply, payForBankFields, callBankOperation, type BankReply } from "../../lib/donations/bank-operations-provider";
+import { albarakaBankBody, parsePayForBankReply, payForBankFields, payForOperationsConfig, payForResponseBelongsToSale, callBankOperation, type BankReply } from "../../lib/donations/bank-operations-provider";
 import { executeBankAdjustment, inquireBankDonation, resolveBankAdjustment } from "../../lib/donations/bank-operations-service";
 import type { AlbarakaConfig } from "../../lib/albaraka";
 const id = "1".repeat(24), actor = { id: "2".repeat(24), name: "Finance Admin" };
@@ -54,6 +54,54 @@ test("Albaraka follows the documented original currency, MAC and 3D order prefix
   const reverse = albarakaBankBody(donation(), cfg, "VOID"); assert.equal(reverse.ReferenceCode, "123456789012345678"); assert.equal(reverse.OrderId, null); assert.equal(reverse.MACParams, "MerchantNo:TerminalNo:ReferenceCode:OrderId"); assert.ok(!("Amount" in reverse));
 });
 test("PayFor secondary requests contain no card data or 3D password", () => { const fields = payForBankFields(donation("PAYFOR"), "REFUND", "REFUND-ID", 305); assert.equal(fields.OrgOrderId, "A".repeat(24)); assert.equal(fields.PurchAmount, "3.05"); assert.equal(fields.TxnType, "Refund"); assert.equal(fields.SecureType, "NonSecure"); assert.ok(!("Pan" in fields)); assert.ok(!("MerchantPass" in fields)); });
+test("PayFor API request matches the bank integration guide for inquiry, void and refund", () => {
+  const sale = donation("PAYFOR");
+  const inquiry = payForBankFields(sale, "INQUIRE", "LOCAL-Q");
+  assert.deepEqual(Object.keys(inquiry).sort(), ["MbrId", "MerchantID", "UserCode", "UserPass", "OrderId", "SecureType", "TxnType", "Currency", "Lang"].sort());
+  assert.equal(inquiry.OrderId, sale.providerOrderId);
+  assert.equal(inquiry.SecureType, "Inquiry");
+  assert.equal(inquiry.TxnType, "OrderInquiry");
+  const voidFields = payForBankFields(sale, "VOID", "LOCAL-V");
+  assert.deepEqual(Object.keys(voidFields).sort(), ["MbrId", "MerchantID", "UserCode", "UserPass", "OrgOrderId", "SecureType", "TxnType", "Currency", "Lang"].sort());
+  assert.equal(voidFields.OrgOrderId, sale.providerOrderId);
+  assert.equal(voidFields.TxnType, "Void");
+  assert.ok(!("PurchAmount" in voidFields));
+  assert.ok(!("OrderId" in voidFields), "the bank does not document a new adjustment OrderId");
+  const refund = payForBankFields(sale, "REFUND", "LOCAL-R", 305);
+  assert.equal(refund.OrgOrderId, sale.providerOrderId);
+  assert.equal(refund.PurchAmount, "3.05");
+  assert.equal(refund.SecureType, "NonSecure");
+  assert.ok(!("OrderId" in refund));
+  for (const amount of [undefined, 0, -1, 1001, 0.25, Number.NaN]) assert.throws(() => payForBankFields(sale, "REFUND", "LOCAL-R", amount), /INVALID_AMOUNT/);
+});
+
+test("PayFor secondary reply requires identity of the original sale, not just arbitrary adjustment ID", () => {
+  const order = "A".repeat(24);
+  assert.equal(payForResponseBelongsToSale({ OrgOrderId: order, OrderId: "OTHER" }, order, "REFUND"), true);
+  assert.equal(payForResponseBelongsToSale({ OrderId: order }, order, "VOID"), true);
+  assert.equal(payForResponseBelongsToSale({ OrderId: "LOCAL-R" }, order, "REFUND"), false);
+  assert.equal(payForResponseBelongsToSale({ OrgOrderId: "FOREIGN", OrderId: order }, order, "REFUND"), false);
+  assert.equal(payForResponseBelongsToSale({ OrderId: order }, order, "INQUIRE"), true);
+  assert.equal(payForResponseBelongsToSale({ OrderId: "FOREIGN" }, order, "INQUIRE"), false);
+});
+
+test("PayFor nonfinal/error status codes never authorize another automatic money attempt", async () => {
+  const saved = { ...process.env }, originalFetch = global.fetch;
+  Object.assign(process.env, { PAYFOR_API_URL: "https://bank.invalid/api", PAYFOR_API_FORMAT: "FORM", PAYFOR_MBR_ID: "1", PAYFOR_MERCHANT_ID: "2", PAYFOR_USER_CODE: "3", PAYFOR_USER_PASS: "test-not-real" });
+  const sale = donation("PAYFOR");
+  try {
+    for (const code of ["V000", "V020", "V036", "V9196", "V9199", "91", "96", "M61"]) {
+      global.fetch = async () => new Response(JSON.stringify({ ProcReturnCode: code, OrderId: sale.providerOrderId, OrgOrderId: sale.providerOrderId, TxnType: "Refund", Currency: "978", PurchAmount: "1.00", TxnResult: "Failed" }));
+      const result = await callBankOperation(sale, "REFUND", "LOCAL-R", 100);
+      assert.equal(result.state, "UNKNOWN", code);
+    }
+    global.fetch = async () => new Response(JSON.stringify({ ProcReturnCode: "00", OrgOrderId: sale.providerOrderId, TxnType: "Refund", Currency: "978", PurchAmount: "1.00", TxnResult: "Success" }));
+    assert.equal((await callBankOperation(sale, "REFUND", "LOCAL-R", 100)).state, "SUCCEEDED");
+    global.fetch = async () => new Response(JSON.stringify({ ProcReturnCode: "00", OrderId: "LOCAL-R", TxnType: "Refund", Currency: "978", PurchAmount: "1.00", TxnResult: "Success" }));
+    assert.equal((await callBankOperation(sale, "REFUND", "LOCAL-R", 100)).state, "UNKNOWN");
+  } finally { global.fetch = originalFetch; process.env = saved; }
+});
+
 test("the XML boundary rejects malformed, duplicate, nested and entity payloads and strips secrets", () => {
   assert.deepEqual(parsePayForBankReply('<Reply><ProcReturnCode>00</ProcReturnCode><OrderId>TEST</OrderId><Pan>4242424242424242</Pan><UserPass>secret</UserPass></Reply>'), { ProcReturnCode: "00", OrderId: "TEST" });
   for (const xml of ['<Reply><OrderId>A</OrderId><OrderId>B</OrderId></Reply>', '<Reply><OrderId>A</OrderId>', '<Reply><OrderId><Nested>A</Nested></OrderId></Reply>', '<!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]><Reply/>', 'OrderId=A&OrderId=B&ProcReturnCode=00']) assert.deepEqual(parsePayForBankReply(xml), {});
@@ -140,4 +188,66 @@ test("an HTTP error or malformed JSON can never count as Albaraka approval", asy
     global.fetch = async () => new Response("null");
     assert.equal(isAlbarakaApproved(await albarakaService("Agreement", {}, { correlationId: "TEST", config: cfg })), false);
   } finally { global.fetch = originalFetch; }
+});
+
+test("Ziraat public checkout, 3D Host and reporting URLs are never treated as a refund API", async () => {
+  const saved = { ...process.env };
+  const originalFetch = global.fetch;
+  let calls = 0;
+  Object.assign(process.env, {
+    PAYFOR_API_FORMAT: "FORM",
+    PAYFOR_MBR_ID: "1", PAYFOR_MERCHANT_ID: "2",
+    PAYFOR_USER_CODE: "3", PAYFOR_USER_PASS: "test-not-real",
+  });
+  try {
+    global.fetch = async () => { calls++; throw new Error("unexpected bank request"); };
+    for (const url of [
+      "https://vpos.ziraatkatilim.com.tr/MPI/Default.aspx",
+      "https://vpos.ziraatkatilim.com.tr/MPI/3DHost.aspx",
+      "https://vpos.ziraatkatilim.com.tr/login",
+      "https://vpos.ziraatkatilim.com.tr/login/",
+    ]) {
+      process.env.PAYFOR_API_URL = url;
+      assert.throws(() => payForOperationsConfig(), /BANK_NOT_CONFIGURED/);
+      await assert.rejects(callBankOperation(donation("PAYFOR"), "INQUIRE", "TEST"), /BANK_NOT_CONFIGURED/);
+    }
+    assert.equal(calls, 0, "no bank API calls may be made to checkout/reporting pages");
+  } finally {
+    global.fetch = originalFetch;
+    process.env = saved;
+  }
+});
+
+test("PayFor uses raw PayforRequest XML only when XML_BODY is explicitly configured", async () => {
+  const saved = { ...process.env }, originalFetch = global.fetch;
+  Object.assign(process.env, {
+    PAYFOR_API_URL: "https://bank.invalid/xmlgate",
+    PAYFOR_API_FORMAT: "XML_BODY",
+    PAYFOR_MBR_ID: "1",
+    PAYFOR_MERCHANT_ID: "2",
+    PAYFOR_USER_CODE: "3",
+    PAYFOR_USER_PASS: "synthetic-only",
+  });
+  try {
+    let requested = false;
+    global.fetch = async (_url, init) => {
+      requested = true;
+      const headers = new Headers(init?.headers);
+      assert.equal(headers.get("Content-Type"), "text/xml; charset=utf-8");
+      const body = String(init?.body);
+      assert.match(body, /^<PayforRequest>/);
+      assert.match(body, /<TxnType>OrderInquiry<\/TxnType>/);
+      assert.match(body, /<SecureType>Inquiry<\/SecureType>/);
+      assert.match(body, /<OrderId>A{24}<\/OrderId>/);
+      assert.ok(!body.includes("prmstr="));
+      assert.ok(!body.includes("MerchantPass"));
+      return new Response("<PayforResponse><ProcReturnCode>00</ProcReturnCode><OrderId>" + "A".repeat(24) + "</OrderId></PayforResponse>");
+    };
+    const response = await callBankOperation(donation("PAYFOR"), "INQUIRE", "LOCAL-QUERY");
+    assert.equal(requested, true);
+    assert.equal(response.code, "00");
+  } finally {
+    global.fetch = originalFetch;
+    process.env = saved;
+  }
 });
