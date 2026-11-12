@@ -5,6 +5,8 @@ import React, { useEffect, useRef, createContext, useContext, useCallback, useSt
 import { track as vercelTrack } from "@vercel/analytics";
 import { initializeGoogleTracking, loadConfiguredGoogleTagManager } from "@/lib/tracking/google-script-policy";
 import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
+import { ga4SafeEventPayload } from "@/lib/tracking/ga4-safe-event-payload";
+import { CART_ITEM_ADDED_EVENT, type MinbarCartItem } from "@/lib/minbar/cart";
 import {
   generateEventId,
   metaDonationEventId,
@@ -507,8 +509,13 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         event_time: Math.floor(Date.now() / 1000),
         ...partial,
         page: {
-          url:      typeof window !== "undefined" ? window.location.href  : undefined,
-          referrer: typeof document !== "undefined" ? document.referrer   : undefined,
+          // Canonical funnel pages may carry receipt/access tokens in query.
+          // Third-party pixels and server mirrors must receive only the origin
+          // and pathname, never full URLs, query strings or hash fragments.
+          url:      typeof window !== "undefined" ? window.location.origin + window.location.pathname : undefined,
+          referrer: typeof document !== "undefined" && document.referrer
+            ? (() => { try { const u = new URL(document.referrer); return u.origin; } catch { return undefined; } })()
+            : undefined,
           title:    typeof document !== "undefined" ? document.title      : undefined,
           language: typeof navigator !== "undefined" ? navigator.language : undefined,
           ...partial.page,
@@ -579,39 +586,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       // ── GA4 ───────────────────────────────────────────────────────────────
       const ga4EventName = GA4_EVENT_MAP[event.event];
       if (c?.gaMeasurementId && window.gtag && ga4EventName) {
-        const d  = event.donation ?? {};
-        const p  = event.payment  ?? {};
-        const u  = event.user     ?? {};
-        const ga4: Record<string, unknown> = {};
-        if (d.amount ?? d.amount_usd) ga4.value    = d.amount ?? d.amount_usd;
-        if (d.currency)               ga4.currency  = d.currency;
-        if (p.transaction_id)         ga4.transaction_id = p.transaction_id;
-        if (event.items?.length) {
-          ga4.items = event.items.map((i) => ({
-            item_id:       i.item_id,
-            item_name:     i.item_name,
-            item_category: i.item_category,
-            price:         i.price,
-            quantity:      i.quantity ?? 1,
-          }));
-        }
-        // User / customer info  for GTM enhanced matching and Meta CAPI via GTM
-        if (u.email)            ga4.email            = u.email;
-        if (u.phone)            ga4.phone            = u.phone;
-        if (u.first_name)       ga4.first_name       = u.first_name;
-        if (u.last_name)        ga4.last_name        = u.last_name;
-        if (u.gender)           ga4.gender           = u.gender;
-        if (u.date_of_birth)    ga4.date_of_birth    = u.date_of_birth;
-        if (u.city)             ga4.city             = u.city;
-        if (u.state)            ga4.state            = u.state;
-        if (u.zip)              ga4.zip              = u.zip;
-        if (u.country_code)     ga4.country          = u.country_code;
-        if (u.external_id)      ga4.external_id      = u.external_id;
-        if (u.fbp)              ga4.fbp              = u.fbp;
-        if (u.fbc)              ga4.fbc              = u.fbc;
-        if (u.subscription_id)  ga4.subscription_id  = u.subscription_id;
-        if (u.user_agent)       ga4.user_agent       = u.user_agent;
-        if (event.custom) Object.assign(ga4, event.custom);
+        const ga4 = ga4SafeEventPayload(event);
         window.gtag("event", ga4EventName, ga4);
       }
 
@@ -694,6 +669,25 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         : buildGa4Items(contentIds, value, contentName, quantity).map((i) => ({ ...i })),
     });
   }, [sendCanonical]);
+
+  // Minbar's new cart is a separate flow from the legacy DonationDialog.
+  // Listen to actual item additions (not cart hydration, language changes,
+  // currency switches or saved-cart edits) to avoid duplicate AddToCart.
+  useEffect(() => {
+    const onItemAdded = (event: Event) => {
+      const item = (event as CustomEvent<MinbarCartItem>).detail;
+      if (!item || !(item.amount > 0)) return;
+      const id = item.projectId ?? item.categoryId ?? item.titleKey ?? item.upsellId ?? "donation";
+      const local = item.local;
+      const value = local && local.amount > 0 ? local.amount : item.amount;
+      const currency = local && local.amount > 0 ? local.currency : item.currency;
+      trackAddToCart({
+        value, currency, contentIds: [id], quantity: item.shareCount ?? 1,
+      });
+    };
+    window.addEventListener(CART_ITEM_ADDED_EVENT, onItemAdded);
+    return () => window.removeEventListener(CART_ITEM_ADDED_EVENT, onItemAdded);
+  }, [trackAddToCart]);
 
   const trackCustomizeProduct = useCallback((options: TrackCustomizeProductOptions) => {
     sendCanonical({
