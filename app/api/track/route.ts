@@ -25,6 +25,7 @@ import {
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
 import { recordFunnelObservation } from "@/lib/tracking/funnel-observations";
 import { redactAnalyticsPath } from "@/lib/tracking/private-path";
+import { readMarketingConsent } from "@/lib/tracking/marketing-consent";
 
 const TIKTOK_EVENTS_URL = "https://business-api.tiktok.com/open_api/v1.3/event/track/";
 
@@ -127,6 +128,33 @@ function attributionParams(event: CanonicalEvent): Record<string, unknown> {
 
 export async function POST(req: NextRequest) {
   try {
+    // Optional client-reported marketing events may NEVER bypass a denial:
+    // even a direct API call cannot trigger provider CAPI when the browser
+    // has not given consent. Financial settlement callbacks use other routes.
+    if (readMarketingConsent(req.headers.get("cookie") ?? "", {
+      doNotTrack: req.headers.get("dnt"),
+      globalPrivacyControl: req.headers.get("sec-gpc") === "1",
+    }) !== "granted") {
+      return NextResponse.json({ ok: false, reason: "marketing consent required" }, { status: 403 });
+    }
+    // Browser-originating tracking only; do not let an arbitrary website use
+    // this unauthenticated API as a CAPI relay.
+    const origin = req.headers.get("origin");
+    const site = req.headers.get("sec-fetch-site");
+    if (site && !["same-origin", "none"].includes(site)) {
+      return NextResponse.json({ ok: false, reason: "cross-site tracking rejected" }, { status: 403 });
+    }
+    if (origin) {
+      try {
+        const actual = new URL(req.url);
+        const source = new URL(origin);
+        if (source.host !== actual.host || source.protocol !== actual.protocol) {
+          return NextResponse.json({ ok: false, reason: "tracking origin mismatch" }, { status: 403 });
+        }
+      } catch {
+        return NextResponse.json({ ok: false, reason: "invalid origin" }, { status: 403 });
+      }
+    }
     const length = Number(req.headers.get("content-length") ?? 0);
     if (length > 24_000) {
       return NextResponse.json({ ok: false, reason: "payload too large" }, { status: 413 });
