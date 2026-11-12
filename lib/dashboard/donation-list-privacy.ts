@@ -40,7 +40,7 @@ export function donationListSafeFields<T extends object>(
   donation: T,
   options: { revenueAuthorized?: boolean } = {},
 ): Omit<T, (typeof PRIVATE_DONATION_LIST_KEYS)[number]> {
-  const safe: Record<string, unknown> = { ...donation };
+  const safe: Record<string, unknown> = { ...(donation as Record<string, unknown>) };
   const attribution = safe.attribution;
   const conversionEventsSentAt = safe.conversionEventsSentAt;
   const conversionFailedEventsSentAt = safe.conversionFailedEventsSentAt;
