@@ -84,23 +84,21 @@ export default function SuccessPage({
     }
   })();
 
-  /* A donor who gave as a guest and then signed in still owns this donation.
-     Claiming it here attaches it  and every other donation under the same
-     anonymous record  to their account, so it appears in their history and
-     their receipts are theirs. The route refuses to merge anything already
-     claimed by a real account, so this is safe to fire once on arrival. */
+  /* A returning guest may claim their donations after signing in, but only
+     with the matching high-entropy receipt bearer from this success link.
+     A public donation ID alone must never authorize account merging. */
   useEffect(() => {
     if (!session?.user?.id || linked.current) return;
     linked.current = true;
     fetch("/api/users/link-guest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ donationId: donation.id }),
+      body: JSON.stringify({ donationId: donation.id, accessToken: accessToken ?? undefined }),
     }).catch(() => {
       /* Best effort: the donation is recorded either way, and an admin can
          attach it later. Nothing on this page depends on it. */
     });
-  }, [session?.user?.id, donation.id]);
+  }, [session?.user?.id, donation.id, accessToken]);
 
   const [copied, setCopied] = useState(false);
 

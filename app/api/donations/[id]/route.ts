@@ -6,6 +6,7 @@ import { authOptions } from '../../auth/[...nextauth]/options';
 import { Prisma, SubscriptionStatus } from '@prisma/client';
 import { userHasDashboardPermission } from '@/lib/dashboard/permissions';
 import { isRevenueDashboardUser } from '@/lib/dashboard/api-auth';
+import { donationListSafeFields } from "@/lib/dashboard/donation-list-privacy";
 import { convertAmountInCurrencyToUsd, normalizeDonationCurrencyCode } from '@/lib/exchange/convert-amount-in-currency-to-usd';
 import {
   writeAuditLog,
@@ -37,20 +38,36 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ error: 'Donation ID required' }, { status: 400 });
+    if (!/^[a-f0-9]{24}$/i.test(id)) {
+      return NextResponse.json({ error: 'Valid donation ID required' }, { status: 400 });
     }
     const session = await getServerSession(authOptions);
 
-    // Self-heal: if Stripe already confirmed the payment but the webhook
-    // hasn't landed yet (common in dev / with slow webhook delivery), finalize
-    // the donation and increment campaign totals here so the success page
-    // reflects reality. Safe for guests and logged-in donors alike.
+    // An ID is not authorization. Check only the fields required for access
+    // BEFORE calling either payment provider or performing a settlement.
+    // This also avoids loading private donor details for unauthorized guests.
+    const access = await prisma.donation.findUnique({
+      where: { id },
+      select: { donorId: true, accessToken: true },
+    });
+    if (!access) {
+      return NextResponse.json({ error: 'Donation not found' }, { status: 404 });
+    }
+    const canViewAllDonations = Boolean(session?.user) &&
+      (userHasDashboardPermission(session!.user, 'revenue') ||
+       userHasDashboardPermission(session!.user, 'donationsEdit'));
+    const presented = request.nextUrl.searchParams.get(DONATION_TOKEN_PARAM);
+    const isOwner = Boolean(session?.user) && session!.user.id === access.donorId;
+    if (!canViewAllDonations && !isOwner &&
+        !donationTokenMatches(access.accessToken, presented)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Authorized owner/staff or valid guest bearer only. Stripe's self-heal
+    // preserves the existing success-page semantics, but unknown IDs and
+    // unauthorized requests cannot cause gateway calls or financial writes.
     await reconcileStripeDonation(id);
-    // PayPal is the authority on an unconfirmed PayPal row too: when staff
-    // open it (the edit dialog), ask PayPal so the status they edit is real.
-    // Not for anonymous callers, who could otherwise drive PayPal calls by id.
-    if (isRevenueDashboardUser(session) && /^[a-f0-9]{24}$/i.test(id)) {
+    if (isRevenueDashboardUser(session)) {
       await reconcilePayPalDonation(id).catch((err) => console.error("[donation GET] PayPal reconcile failed:", id, err));
     }
 
@@ -121,26 +138,21 @@ export async function GET(
       );
     }
 
-    // A signed-in owner or a dashboard user is let in by their session. Anyone
-    // else  a guest, or a signed-in non-owner  needs the donation's access
-    // token (`?t=`): the id alone is an identifier, not a secret, and this
-    // response carries the donor's name, contact details and amount
-    // (`DEPLOYED_VS_DESIGN_AUDIT.md` § P1.2).
-    const canViewAllDonations =
-      Boolean(session) &&
-      (userHasDashboardPermission(session!.user, 'revenue') ||
-        userHasDashboardPermission(session!.user, 'donationsEdit'));
-    const isOwner = Boolean(session) && session!.user.id === donation.donorId;
-    if (!canViewAllDonations && !isOwner) {
-      const presented = request.nextUrl.searchParams.get(DONATION_TOKEN_PARAM);
-      if (!donationTokenMatches(donation.accessToken, presented)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    // Re-check after reconciliation: donor ownership or guest access may
+    // have changed between reads, so stale authorization must never expose
+    // a reassigned donation or a rotated receipt token.
+    const stillOwner = Boolean(session?.user) && session!.user.id === donation.donorId;
+    if (!canViewAllDonations && !stillOwner &&
+        !donationTokenMatches(donation.accessToken, presented)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const sub = donation.subscription;
+    // Access to the record may be granted by a guest bearer. That token is
+    // needed only for the authorization check above, not in the response.
+    // Do not send raw PSP or stored card payloads to guests/owners/staff.
     const response = {
-      ...donation,
+      ...donationListSafeFields(donation, { revenueAuthorized: isRevenueDashboardUser(session) }),
       type: donation.subscriptionId ? ('MONTHLY' as const) : ('ONE_TIME' as const),
       // Default to CARD on read for legacy rows where the field was never
       // written. Every current create path sets CARD or PAYPAL explicitly,
@@ -153,7 +165,7 @@ export async function GET(
       nextBillingDate: sub?.nextBillingDate ?? null,
       lastBillingDate: sub?.lastBillingDate ?? null,
     };
-    return NextResponse.json(response);
+    return NextResponse.json(response, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     console.error('Error fetching donation:', error);
     return NextResponse.json(
