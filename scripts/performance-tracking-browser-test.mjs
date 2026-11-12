@@ -109,6 +109,7 @@ try {
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/*", route => { if (!route.request().url().startsWith("https://")) return route.continue(); requests.push(route.request().url()); return route.fulfill({ contentType: "text/javascript", body: "/* fixture: no provider call */" }); });
     settings = {}; configReads = 0;
+    await page.context().addCookies([{ name: "analytics_consent", value: "granted", url: base }]);
     await page.goto(`${base}${pathname}?pixels=1`);
     if (pathname === "/") { assert.equal(configReads, 0); await page.getByRole("button", { name: "Interact" }).click(); }
     try { await expect.poll(() => requests.filter(url => url.includes("/gtag/js")).length).toBe(1); }
@@ -128,6 +129,7 @@ try {
       requests.push(route.request().url());
       return route.fulfill({ contentType: "text/javascript", body: "/* synthetic tag */" });
     });
+    await page.context().addCookies([{ name: "analytics_consent", value: "granted", url: base }]);
     await page.goto(`${base}/?pixels=1`);
     await page.getByRole("button", { name: "Interact" }).click();
     await expect.poll(() => requests.filter(url => url.includes("/gtm.js")).length).toBe(1);
