@@ -73,6 +73,9 @@ export default function SearchablePhoneInput({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const userTouchedPhoneRef = useRef(false);
+  const userSelectedCountryRef = useRef(false);
+  const lastDefaultCountryRef = useRef(defaultCountry);
 
   const { inputValue, country, setCountry, handlePhoneValueChange, inputRef } = usePhoneInput({
     defaultCountry,
@@ -82,6 +85,21 @@ export default function SearchablePhoneInput({
       onChange?.(phone, { inputValue: formatted, country: selectedCountry });
     },
   });
+
+  // The IP lookup used by donation dialogs resolves asynchronously. The phone
+  // widget initially renders with a fallback country (TR) and the library does
+  // not automatically re-apply a changed defaultCountry. Update only while
+  // untouched, never overwrite an existing number or a manual country choice.
+  useEffect(() => {
+    const next = typeof defaultCountry === "string" ? defaultCountry.toLowerCase() : "";
+    if (next === lastDefaultCountryRef.current) return;
+    lastDefaultCountryRef.current = next;
+    if (!countries.some((item) => item.iso2 === next)) return;
+    const digits = (value ?? "").replace(/\D/g, "");
+    if (userTouchedPhoneRef.current || userSelectedCountryRef.current ||
+        (digits && digits !== country.dialCode)) return;
+    if (country.iso2 !== next) setCountry(next, { focusOnInput: false });
+  }, [defaultCountry, value, country.dialCode, country.iso2, setCountry]);
 
   const language = locale.split("-")[0].toLowerCase();
   const copy = labels[language] || labels.en;
@@ -124,6 +142,7 @@ export default function SearchablePhoneInput({
   };
 
   const selectCountry = (iso2: string) => {
+    userSelectedCountryRef.current = true;
     setCountry(iso2, { focusOnInput: true });
     setOpen(false);
     setQuery("");
@@ -222,11 +241,14 @@ export default function SearchablePhoneInput({
         ref={inputRef}
         type="tel"
         inputMode="tel"
-        disabled={disabled}
-        required={required}
+        disabled={disabled ?? inputProps?.disabled}
+        required={required ?? inputProps?.required}
         className={`react-international-phone-input ${inputClassName || ""}`}
         value={inputValue}
-        onChange={handlePhoneValueChange}
+        onChange={(event) => {
+          userTouchedPhoneRef.current = true;
+          handlePhoneValueChange(event);
+        }}
       />
     </div>
   );
