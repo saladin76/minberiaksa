@@ -262,9 +262,10 @@ export async function GET(request: NextRequest) {
     // When many donations share paidAt/createdAt (or amount), a stable _id
     // tie-breaker prevents duplicate/omitted records between adjacent pages.
     // Keep legacy list orderBy shape unchanged for existing callers.
-    const orderBy = useAccountingDate
-      ? [{ [dateSortField]: sortOrder }, { id: sortOrder }]
-      : { [dateSortField]: sortOrder };
+    const primaryOrder: Prisma.DonationOrderByWithRelationInput =
+      { [dateSortField]: sortOrder };
+    const orderBy: Prisma.DonationOrderByWithRelationInput | Prisma.DonationOrderByWithRelationInput[] =
+      useAccountingDate ? [primaryOrder, { id: sortOrder }] : primaryOrder;
 
     const total = await prisma.donation.count({ where });
     const donations = await prisma.donation.findMany({
