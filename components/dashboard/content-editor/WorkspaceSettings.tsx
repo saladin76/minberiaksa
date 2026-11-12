@@ -92,7 +92,7 @@ export function WorkspaceSettings({
         .filter(
           (f) =>
             f.section === section &&
-            (f.type !== "custom" || (kind === "videos" && f.key === "url")) &&
+            (f.type !== "custom" || (kind === "videos" && f.key === "url") || (kind === "super-categories" && f.key === "heroImageLocales")) &&
             !(kind === "campaigns" && ["defaultDonationAmounts", "defaultShareCounts"].includes(f.key)) &&
             !(
               kind === "campaigns" &&
@@ -135,6 +135,38 @@ export function WorkspaceSettings({
               <p className="font-semibold">{dt(f.label)}</p>
               <DocumentUploadField value={String(value || "")} onChange={(url) => onChange(f.key, url)} onUploadingChange={onUploadingChange} />
             </section>;
+          if (kind === "super-categories" && f.key === "heroImageLocales") {
+            if (settings.heroImageMode !== "localized") return null;
+            const images = settings.heroImageLocales && typeof settings.heroImageLocales === "object" && !Array.isArray(settings.heroImageLocales)
+              ? settings.heroImageLocales as Record<string, string> : {};
+            return (
+              <section key={f.key} className="space-y-4 rounded-xl border bg-white p-5">
+                <h3 className="text-sm font-semibold">{dt("صورة الواجهة لكل لغة")}</h3>
+                <p className="text-xs text-slate-500">{dt("إذا تركت صورة لغة فارغة، ستظهر صورة الواجهة الافتراضية لها.")}</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {SUPPORTED_LOCALES.map((locale) => (
+                    <div key={locale} className="rounded-lg border p-3">
+                      <ImageUploadField
+                        label={LOCALES[locale].nativeLabel}
+                        value={String(images[locale] || "")}
+                        onUploadingChange={onUploadingChange}
+                        onChange={(url) => onChange(f.key, { ...images, [locale]: url })}
+                        previewClass="w-full h-36"
+                      />
+                      <input
+                        aria-label={`رابط صورة ${LOCALES[locale].nativeLabel}`}
+                        className={inputClass + " mt-2"}
+                        dir="ltr"
+                        placeholder={dt("أو رابط صورة")}
+                        value={String(images[locale] || "")}
+                        onChange={(event) => onChange(f.key, { ...images, [locale]: event.target.value })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          }
           if (f.type === "image")
             return (
               <section key={f.key} className="rounded-xl border bg-white p-5">

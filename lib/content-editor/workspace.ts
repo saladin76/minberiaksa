@@ -148,7 +148,9 @@ export const SETTING_FIELDS: Record<ContentKind, SettingField[]> = {
     field("campaignIds", "المشاريع ذات الصلة (حتى ثلاثة)", "review", "ids"),
   ],
   "super-categories": [
-    field("heroImage", "صورة الواجهة", "media", "image"),
+    field("heroImageMode", "صور الواجهة حسب اللغة", "media", "select", [["shared", "صورة واحدة لكل اللغات"], ["localized", "صورة مستقلة لكل لغة"]]),
+    field("heroImage", "صورة الواجهة الافتراضية", "media", "image"),
+    field("heroImageLocales", "صور الواجهة لكل لغة", "media", "custom"),
     field("logoImage", "الشعار", "media", "image"),
     field("accentColor", "لون الواجهة", "media"),
     field("heroVideoId", "معرّف فيديو YouTube", "media"),

@@ -35,6 +35,16 @@ export function validateWorkspaceSettings(
       }
       result.suggestedByCurrency = amountsByCurrency(byCurrency); continue;
     }
+    if (kind === "super-categories" && key === "heroImageLocales") {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("صور اللغات غير صالحة");
+      const locales: Record<string, string> = {};
+      for (const [locale, url] of Object.entries(value)) {
+        if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale) || typeof url !== "string" || url.length > 2048 || !safeEditorUrl(url)) throw new Error("رابط صورة اللغة غير صالح");
+        if (url.trim()) locales[locale] = url.trim();
+      }
+      result.heroImageLocales = locales;
+      continue;
+    }
     if (kind === "campaigns" && ["suggestedDonations", "suggestedShareCounts", "shareLabels"].includes(key)) {
       if (!value || typeof value !== "object" || Array.isArray(value) || JSON.stringify(value).length > 16000) throw new Error("إعدادات المبالغ أو الوحدات غير صالحة");
       result[key] = key === "suggestedDonations" ? parseSuggestedDonations(value) : key === "suggestedShareCounts" ? parseSuggestedShareCounts(value) : parseShareLabels(value) || {};
