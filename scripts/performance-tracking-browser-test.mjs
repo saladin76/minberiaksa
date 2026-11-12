@@ -104,6 +104,23 @@ try {
     const box = await dialog.boundingBox(); assert.ok(box.x >= 0 && box.width <= width); checks++;
     await page.close();
   }
+  // Denied and missing consent must not load marketing pixels even after
+  // a real interaction. No bank, Meta, or donor API request is made.
+  for (const consent of ["missing", "denied"]) {
+    const page = await browser.newPage();
+    const network = [];
+    if (consent === "denied") {
+      await page.context().addCookies([{ name: "analytics_consent", value: "denied", url: base }]);
+    }
+    await page.route("https://**/*", route => { network.push(route.request().url()); return route.abort(); });
+    await page.goto(`${base}/?pixels=1`);
+    await page.getByRole("button", { name: "Interact" }).click();
+    await page.waitForTimeout(200);
+    assert.equal(network.length, 0, `no external scripts for ${consent} consent`);
+    assert.equal(await page.evaluate(() => typeof window.fbq), "undefined");
+    checks++;
+    await page.close();
+  }
   for (const pathname of ["/", "/tr/success/fixture", "/ar/donation-failed/fixture"]) {
     const page = await browser.newPage(); const requests = [];
     page.on("pageerror", error => errors.push(error.message));
