@@ -243,7 +243,7 @@ export function useConcierge() {
         },
       });
     },
-    [call, state.intent, track, tracking]
+    [call, state.intent, track]
   );
 
   const addWaqf = useCallback(
@@ -261,7 +261,7 @@ export function useConcierge() {
       track("donation_added_to_cart", { amountUSD: total, frequency: input.monthly ? "monthly" : "once" });
       void call({ step: { kind: "added", amountUSD: total, frequency: input.monthly ? "monthly" : "once", waqf: true } });
     },
-    [call, track, tracking]
+    [call, track]
   );
 
   /* Other components (the project page CTA) open the panel through a window event. */
