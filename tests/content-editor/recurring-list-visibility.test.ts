@@ -144,3 +144,18 @@ test("invalid page, limit and sort inputs fall back to safe Prisma arguments", a
     assert.equal(JSON.stringify(findMany.orderBy), '{"createdAt":"desc"}');
   }
 });
+
+test("page overflow cannot produce an unsafe Prisma skip", async () => {
+  const h = harness("revenue");
+  assert.equal((await h.get("page=9007199254740991&limit=100")).status, 200);
+  assert.equal(h.queries[1].skip, 0);
+  assert.equal(h.queries[1].take, 100);
+});
+
+test("accounting pagination starts at the requested safe page with deterministic tie order", async () => {
+  const h = harness("revenue");
+  assert.equal((await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=PAID&page=2&limit=100")).status, 200);
+  assert.equal(h.queries[1].skip, 100);
+  assert.equal(h.queries[1].take, 100);
+  assert.equal(JSON.stringify(h.queries[1].orderBy), '[{"paidAt":"desc"},{"id":"desc"}]');
+});
