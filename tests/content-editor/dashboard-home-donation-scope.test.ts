@@ -68,3 +68,10 @@ test("KPI scope remains unchanged when donor, status or type changes", () => {
   // runtime whitelist must ignore unsupported properties too.
   assert.equal(dashboardStatsScopeParams(changedOnlyUnsupported, "month").toString(), original);
 });
+
+test("explicit all status remains in graph/list requests instead of falling back to RESOLVED", () => {
+  const params = dashboardDonationScopeParams({ ...base, status: "all" });
+  assert.equal(params.get("status"), "all");
+  assert.equal(params.get("donationType"), "MONTHLY");
+  assert.equal(params.get("start"), base.start);
+});
