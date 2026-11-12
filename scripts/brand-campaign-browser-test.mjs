@@ -33,7 +33,7 @@ let campaign = null, writes = [], deleteFails = false;
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, "http://fixture"), json = (body, status = 200) => { response.writeHead(status, { "Content-Type": "application/json" }); response.end(JSON.stringify(body)); };
   if (url.pathname === "/bundle.js") { response.setHeader("Content-Type", "application/javascript"); return response.end(bundle.outputFiles[0].contents); }
-  if (url.pathname === "/style.css") { response.setHeader("Content-Type", "text/css"); return response.end(css + theme + '@font-face{font-family:Cairo;src:url(/ar.woff2);unicode-range:U+0600-06FF;}@font-face{font-family:Cairo;src:url(/latin.woff2);unicode-range:U+0000-00FF;}body{font-family:Cairo,system-ui;margin:0;background:#f8fafc}'); }
+  if (url.pathname === "/style.css") { response.setHeader("Content-Type", "text/css"); return response.end(css + theme + '@font-face{font-family:Cairo;src:url(/ar.woff2);unicode-range:U+0600-06FF;}@font-face{font-family:Cairo;src:url(/latin.woff2);unicode-range:U+0000-00FF;}body{font-family:Cairo,system-ui;margin:0;background:#f8fafc}[role="alertdialog"],[role="alertdialog"] *{animation:none!important;transition:none!important}'); }
   if (files[url.pathname]) { response.setHeader("Content-Type", files[url.pathname].type); return response.end(files[url.pathname].data); }
   if (url.pathname.startsWith("/api")) {
     if (url.pathname === "/api/auth/google-config") return json({ clientId: null });
