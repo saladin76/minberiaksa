@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mergeDonationProviderFilter } from '@/lib/dashboard/donation-provider-filter';
+import { dashboardLocaleWhere, dashboardCountryWhere } from '@/lib/dashboard/donation-location-scope';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
@@ -16,21 +17,13 @@ import {
 } from '@/lib/admin/istanbul-calendar';
 
 function mergeLocaleFilter(where: Record<string, unknown>, locale: string | null): Record<string, unknown> {
-  if (!locale || locale === 'all') return where;
-  const lw =
-    locale === '__unset'
-      ? { OR: [{ locale: null }, { locale: '' }] }
-      : { locale };
-  return { AND: [where, lw] };
+  const filter = dashboardLocaleWhere(locale);
+  return filter ? { AND: [where, filter] } : where;
 }
 
 function mergeCountryFilter(where: Record<string, unknown>, country: string | null): Record<string, unknown> {
-  if (!country || country === 'all') return where;
-  const cw =
-    country === '__unset'
-      ? { OR: [{ donorCountryCode: null }, { donorCountryCode: '' }] }
-      : { donorCountryCode: country.toUpperCase() };
-  return { AND: [where, cw] };
+  const filter = dashboardCountryWhere(country);
+  return filter ? { AND: [where, filter] } : where;
 }
 
 export async function GET(request: NextRequest) {

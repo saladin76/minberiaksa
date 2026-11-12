@@ -399,6 +399,17 @@ async function donationPaidAttachments(donationId: string): Promise<EmailAttachm
 }
 
 export async function dispatchDonationPaid(donationId: string): Promise<void> {
+  // Preserve the FAILED payment record; only link a strictly matched, later
+  // bank-confirmed retry for the operational dashboard's compact view.
+  // Never delay receipts or gateway settlement if optional display bookkeeping fails.
+  try {
+    const { linkRecoveredFailedAttempts } = await import("@/lib/dashboard/donation-overview-recovery");
+    await linkRecoveredFailedAttempts(donationId);
+  } catch (error) {
+    console.error("dispatchDonationPaid overview recovery match failed", {
+      donationId, reason: error instanceof Error ? error.message : String(error),
+    });
+  }
   /* Serials are minted here, at confirmation, before anything is sent 
      `DONATION_LOGIC_SPEC §2`. Idempotent: a replayed webhook finds the same
      records. A failure is logged and never blocks the notifications. */

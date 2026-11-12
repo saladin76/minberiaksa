@@ -33,7 +33,7 @@ let campaign = null, writes = [], deleteFails = false;
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, "http://fixture"), json = (body, status = 200) => { response.writeHead(status, { "Content-Type": "application/json" }); response.end(JSON.stringify(body)); };
   if (url.pathname === "/bundle.js") { response.setHeader("Content-Type", "application/javascript"); return response.end(bundle.outputFiles[0].contents); }
-  if (url.pathname === "/style.css") { response.setHeader("Content-Type", "text/css"); return response.end(css + theme + '@font-face{font-family:Cairo;src:url(/ar.woff2);unicode-range:U+0600-06FF;}@font-face{font-family:Cairo;src:url(/latin.woff2);unicode-range:U+0000-00FF;}body{font-family:Cairo,system-ui;margin:0;background:#f8fafc}'); }
+  if (url.pathname === "/style.css") { response.setHeader("Content-Type", "text/css"); return response.end(css + theme + '@font-face{font-family:Cairo;src:url(/ar.woff2);unicode-range:U+0600-06FF;}@font-face{font-family:Cairo;src:url(/latin.woff2);unicode-range:U+0000-00FF;}body{font-family:Cairo,system-ui;margin:0;background:#f8fafc}[role="alertdialog"],[role="alertdialog"] *{animation:none!important;transition:none!important}'); }
   if (files[url.pathname]) { response.setHeader("Content-Type", files[url.pathname].type); return response.end(files[url.pathname].data); }
   if (url.pathname.startsWith("/api")) {
     if (url.pathname === "/api/auth/google-config") return json({ clientId: null });
@@ -88,7 +88,10 @@ try {
       await page.getByRole("button", { name: ui(locale, "إجراءات حملة {0}").replace("{0}", "Fixture campaign") }).click();
       await page.getByRole("menuitem", { name: ui(locale, "حذف الحملة التي لم تُرسل") }).click();
       const dialog = page.getByRole("alertdialog"); await expect(dialog).toContainText("Fixture campaign");
-      await dialog.getByRole("button", { name: ui(locale, "إلغاء"), exact: true }).click(); assert.equal(writes.length, 0); checks++;
+      await dialog.getByRole("button", { name: ui(locale, "إلغاء"), exact: true }).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).pointerEvents), { timeout: 10000 }).not.toBe("none");
+    assert.equal(writes.length, 0); checks++;
       await page.getByRole("button", { name: ui(locale, "إجراءات حملة {0}").replace("{0}", "Fixture campaign") }).click();
       await page.getByRole("menuitem", { name: ui(locale, "حذف الحملة التي لم تُرسل") }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: ui(locale, "حذف الحملة"), exact: true }).click(); await expect(page.getByText("Deleted", { exact: true })).toBeVisible();
@@ -102,9 +105,22 @@ try {
     writes=[];
     await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
     await expect(page.getByRole("alertdialog")).toContainText("100"); assert.equal(writes.length,0);
-    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click(); assert.equal(writes.length,0); checks++;
+    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إلغاء"),exact:true}).click();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).pointerEvents), { timeout: 10000 }).not.toBe("none");
+    assert.equal(writes.length,0); checks++;
     await page.getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
-    await page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true}).click();
+    const sendConfirmation = page.getByRole("alertdialog").getByRole("button",{name:ui(locale,"إرسال الآن"),exact:true});
+    // Async eligibility checking temporarily disables confirmation.
+    // Wait for readiness; never force-click or bypass this gate.
+    await expect(sendConfirmation).toBeEnabled({ timeout: 15000 });
+    try {
+      await sendConfirmation.click();
+    } catch (error) {
+      // Radix may detach an alert action during an otherwise successful click.
+      // Never hide a real miss: both expected fixture writes must have happened.
+      if (writes.length !== 2 || campaign?.status !== "APPROVED") throw error;
+    }
     await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
     assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
 

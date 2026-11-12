@@ -129,7 +129,7 @@ export default function DonationsPage() {
       try {
         setLoading(true);
         const response = await axios.get('/api/donations', {
-          params: { page, limit: itemsPerPage, search: debouncedSearch || undefined },
+          params: { page, limit: itemsPerPage, search: debouncedSearch || undefined, hideRecoveredFailures: '1' },
         });
         setDonations(response.data.donations);
         setTotalPages(response.data.pagination.pages);

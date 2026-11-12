@@ -8,10 +8,13 @@ import { getRawTrackingSettings, TRACKING_SETTINGS_COLLECTION } from "@/lib/trac
 import { writeAuditLog, auditActorFromDashboardSession } from "@/lib/audit-log";
 import { encryptIntegrationSecret, integrationEncryptionKeyIsConfigured } from "@/lib/integration-settings/crypto";
 import { googleTagManagerId } from "@/lib/tracking/google-script-policy";
+import { normalizeClarityProjectId, resolveClarityConnection } from "@/lib/tracking/clarity-config";
 import { parseGa4ServiceAccountJson } from "@/lib/marketing/ga4-reporting";
 
 
 const PLAIN_FIELDS = [
+  "clarityProjectId",
+  "clarityEnabled",
   "googleTagManagerId",
   "googleTagManagerEnabled",
   "facebookPixelId",
@@ -119,6 +122,9 @@ function serializeSettings(raw: TrackingRaw | null) {
     output[`${field}Masked`] = maskSecret(secret);
   }
 
+  Object.assign(output, resolveClarityConnection(raw));
+  // A saved project ID is not evidence of an externally verified recording.
+  output.clarityExternalVerifiedAt = null;
   output.gaServiceAccountJsonPresent = typeof raw?.gaServiceAccountEncrypted === "string"
     && raw.gaServiceAccountEncrypted.trim().length > 0;
 
@@ -238,6 +244,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const existing = await getRawTrackingSettings();
+    if (Object.hasOwn(bodyRaw, "clarityEnabled") && typeof bodyRaw.clarityEnabled !== "boolean") {
+      return NextResponse.json({ error: "INVALID_CLARITY_ENABLED" }, { status: 400 });
+    }
+    if (Object.hasOwn(bodyRaw, "clarityProjectId")) {
+      const rawId = bodyRaw.clarityProjectId;
+      if (rawId !== null && rawId !== "" && !normalizeClarityProjectId(rawId)) {
+        return NextResponse.json({ error: "INVALID_CLARITY_PROJECT_ID" }, { status: 400 });
+      }
+      bodyRaw.clarityProjectId = normalizeClarityProjectId(rawId);
+    }
+    if (bodyRaw.clarityEnabled === true && Object.hasOwn(bodyRaw, "clarityProjectId") && !bodyRaw.clarityProjectId) {
+      return NextResponse.json({ error: "CLARITY_PROJECT_ID_REQUIRED" }, { status: 400 });
+    }
     if (Object.hasOwn(bodyRaw, "googleTagManagerEnabled") && typeof bodyRaw.googleTagManagerEnabled !== "boolean") {
       return NextResponse.json({ error: "INVALID_GTM_SETTING" }, { status: 400 });
     }

@@ -13,14 +13,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { blockedTrackingMacros, campaignSlug, hasTrackingMacros, serializeAdParameters } from "@/lib/marketing/tracking-link-policy";
 import { cn } from "@/lib/utils";
+import { SLUGS, type MinbarRoute } from "@/lib/minbar/routes";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 
-type PageKind = "home" | "campaigns" | "campaign" | "category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin";
+type PageKind = "home" | "campaigns" | "campaigns_legacy" | "bank_transfer" | "terms" | "privacy" | "donation_policy" | "cookies" | "accessibility" | "campaign" | "category" | "super_category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin" | "zakat" | "zakat_calculator" | "waqf" | "recurring" | "aqsa" | "jerusalem" | "reports" | "news" | "programs" | "achievement_videos" | "endorsement_videos" | "publications" | "courses" | "volunteer" | "partner" | "bank_accounts" | "cart";
 type LinkMode = "standard" | "marketing";
 type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "email" | "whatsapp" | "sms" | "organic";
 
-interface EntityRow { id: string; slug?: string | null; title?: string; name?: string; published?: boolean; supportedLocales: string[]; slugByLocale?: Record<string, string | null>; }
-interface Bundle { locales: string[]; currencies: string[]; campaigns: EntityRow[]; categories: EntityRow[]; posts: EntityRow[]; postCategories: EntityRow[]; }
+interface EntityRow { id: string; slug?: string | null; title?: string; name?: string; titleByLocale?: Record<string, string>; published?: boolean; supportedLocales: string[]; slugByLocale?: Record<string, string | null>; }
+interface Bundle { locales: string[]; currencies: string[]; campaigns: EntityRow[]; categories: EntityRow[]; superCategories: EntityRow[]; posts: EntityRow[]; postCategories: EntityRow[]; }
 interface ReferralRow { id: string; code: string; name: string | null; }
 interface MarketingForm {
   platform: MarketingPlatform;
@@ -46,8 +47,16 @@ interface MarketingForm {
 const PAGE_OPTIONS: { id: PageKind; label: string; hint?: string }[] = [
   { id: "home", get label() { return dt("الصفحة الرئيسية"); } },
   { id: "campaigns", get label() { return dt("قائمة المشاريع"); }, get hint() { return dt("بحث اختياري"); } },
+  { id: "campaigns_legacy", get label() { return dt("قائمة الحملات القديمة"); } },
+  { id: "bank_transfer", get label() { return dt("التحويل البنكي"); } },
+  { id: "terms", get label() { return dt("الشروط والأحكام"); } },
+  { id: "privacy", get label() { return dt("سياسة الخصوصية"); } },
+  { id: "donation_policy", get label() { return dt("سياسة التبرع"); } },
+  { id: "cookies", get label() { return dt("سياسة ملفات تعريف الارتباط"); } },
+  { id: "accessibility", get label() { return dt("إمكانية الوصول"); } },
   { id: "campaign", get label() { return dt("صفحة مشروع محددة"); } },
-  { id: "category", get label() { return dt("صفحة حملة / تصنيف مشاريع"); } },
+  { id: "category", get label() { return dt("تصنيف مشاريع"); } },
+  { id: "super_category", get label() { return dt("قسم كبير / صفحة برنامج رئيسية"); } },
   { id: "blog", get label() { return dt("المدونة"); } },
   { id: "blog_post", get label() { return dt("مقال محدد"); } },
   { id: "blog_post_category", get label() { return dt("تصنيف مقالات"); } },
@@ -57,6 +66,23 @@ const PAGE_OPTIONS: { id: PageKind; label: string; hint?: string }[] = [
   { id: "success", get label() { return dt("صفحة شكر عامة"); } },
   { id: "success_donation", get label() { return dt("صفحة شكر لتبرع محدد"); } },
   { id: "auth_signin", get label() { return dt("تسجيل الدخول"); } },
+  { id: "zakat", get label() { return dt("التبرع بالزكاة"); } },
+  { id: "zakat_calculator", get label() { return dt("حاسبة الزكاة"); } },
+  { id: "waqf", get label() { return dt("مشاريع الوقف"); } },
+  { id: "recurring", get label() { return dt("التبرع الدوري"); } },
+  { id: "aqsa", get label() { return dt("المسجد الأقصى"); } },
+  { id: "jerusalem", get label() { return dt("القدس والبلدة القديمة"); } },
+  { id: "reports", get label() { return dt("الإنجازات والتقارير"); } },
+  { id: "news", get label() { return dt("الأخبار"); } },
+  { id: "programs", get label() { return dt("البرامج المصورة"); } },
+  { id: "achievement_videos", get label() { return dt("الإنجازات بالفيديو"); } },
+  { id: "endorsement_videos", get label() { return dt("التزكيات بالفيديو"); } },
+  { id: "publications", get label() { return dt("إصدارات المؤسسة"); } },
+  { id: "courses", get label() { return dt("الدورات"); } },
+  { id: "volunteer", get label() { return dt("التطوع"); } },
+  { id: "partner", get label() { return dt("كن شريكًا"); } },
+  { id: "bank_accounts", get label() { return dt("الحسابات البنكية"); } },
+  { id: "cart", get label() { return dt("سلة التبرعات"); } },
 ];
 
 const PLATFORM_OPTIONS: { id: MarketingPlatform; label: string; source: string; medium: string; channel: string; hint: string }[] = [
@@ -92,14 +118,29 @@ const initialMarketingForm: MarketingForm = {
 };
 
 function needsResourcePick(kind: PageKind) {
-  return kind === "campaign" || kind === "category" || kind === "blog_post" || kind === "blog_post_category";
+  return kind === "campaign" || kind === "category" || kind === "super_category" || kind === "blog_post" || kind === "blog_post_category";
 }
 
+const STATIC_DESTINATIONS: Partial<Record<PageKind, MinbarRoute>> = {
+  zakat: "zakat", zakat_calculator: "zakatCalculator", waqf: "waqf",
+  recurring: "recurring", aqsa: "aqsa", jerusalem: "jerusalem",
+  reports: "reports", news: "news", programs: "programs",
+  achievement_videos: "achievementVideos", endorsement_videos: "endorsementVideos",
+  publications: "publications", courses: "courses", volunteer: "volunteer",
+  partner: "partner", bank_accounts: "bankAccounts", cart: "cart",
+  terms: "terms", privacy: "privacy", donation_policy: "donationPolicy", cookies: "cookies", accessibility: "accessibility",
+};
+
 function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: string; donationId: string }): string {
+  const mapped = STATIC_DESTINATIONS[kind];
+  if (mapped) return `/${SLUGS[mapped]}`;
   switch (kind) {
     case "home": return "/";
     case "campaigns": return "/bagislar";
+    case "campaigns_legacy": return "/campaigns";
+    case "bank_transfer": return "/bank-transfer";
     case "campaign": return `/bagislar/${encodeURIComponent(opts.resourceId)}`;
+    case "super_category": return `/bagislar/${encodeURIComponent(opts.resourceId)}`;
     case "category": return `/category/${opts.resourceId}`;
     case "blog": return "/blog";
     case "blog_post": return `/blog/${opts.resourceId}`;
@@ -114,8 +155,8 @@ function buildPath(kind: PageKind, opts: { resourceId: string; profileTab: strin
   }
 }
 
-function entityLabel(row: EntityRow) {
-  const text = (row.title || row.name || row.id).slice(0, 96);
+function entityLabel(row: EntityRow, locale = "ar") {
+  const text = (row.titleByLocale?.[locale] || row.title || row.name || row.id).slice(0, 96);
   return row.published === false ? dt("{0} (مسودة)", [text]) : text;
 }
 
@@ -212,6 +253,7 @@ export default function TrackingLinkBuilder() {
   const [pageKind, setPageKind] = useState<PageKind>("home");
   const [resourceId, setResourceId] = useState("");
   const [campaignSearch, setCampaignSearch] = useState("");
+  const [resourceSearch, setResourceSearch] = useState("");
   const [profileTab, setProfileTab] = useState<"account" | "donations" | "support">("account");
   const [donationId, setDonationId] = useState("");
   const [locale, setLocale] = useState("ar");
@@ -252,6 +294,7 @@ export default function TrackingLinkBuilder() {
     setPageKind("home");
     setResourceId("");
     setCampaignSearch("");
+    setResourceSearch("");
     setProfileTab("account");
     setDonationId("");
     setLocale("ar");
@@ -267,11 +310,19 @@ export default function TrackingLinkBuilder() {
     if (!bundle) return [];
     if (pageKind === "campaign") return bundle.campaigns.filter(row => row.published !== false);
     if (pageKind === "category") return bundle.categories.filter(row => row.published !== false);
+    if (pageKind === "super_category") return (bundle.superCategories || []).filter(row => row.published !== false);
     if (pageKind === "blog_post") return bundle.posts.filter(row => row.published !== false);
     if (pageKind === "blog_post_category") return bundle.postCategories.filter(row => row.published !== false);
     return [];
   }, [bundle, pageKind]);
 
+  const filteredResources = useMemo(() => {
+    const search = resourceSearch.trim().toLocaleLowerCase();
+    return search ? resourceList.filter(row =>
+      (row.title || row.name || row.slug || row.id).toLocaleLowerCase().includes(search) ||
+      Object.values(row.titleByLocale || {}).some(title => title.toLocaleLowerCase().includes(search))
+    ) : resourceList;
+  }, [resourceList, resourceSearch]);
   const selectedResource = useMemo(() => resourceList.find((row) => row.id === resourceId), [resourceList, resourceId]);
   const detailsOk = useMemo(() => {
     if (needsResourcePick(pageKind)) return Boolean(selectedResource);
@@ -354,7 +405,7 @@ export default function TrackingLinkBuilder() {
       const isMarketingLink = linkMode === "marketing";
       const registryName = isMarketingLink
         ? identifierValue(marketingForm.campaignName) || identifierValue(effectiveMarketingForm.campaignId) || (dynamicTemplate ? dt("قالب إعلان {0}", [selectedPlatform.label]) : marketingParams.utm_campaign) || "Marketing link"
-        : `${pageOptionLabel(pageKind)}${selectedResource ? ` - ${entityLabel(selectedResource)}` : ""}`;
+        : `${pageOptionLabel(pageKind)}${selectedResource ? ` - ${entityLabel(selectedResource, locale)}` : ""}`;
       const standardPlatform = "ORGANIC";
       const standardChannel = "SITE_LINK";
       const adGroupId = isMarketingLink && effectiveMarketingForm.platform === "google_ads" ? identifierValue(effectiveMarketingForm.adsetId) : undefined;
@@ -466,8 +517,14 @@ export default function TrackingLinkBuilder() {
           </section>
 
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
-            <SelectField label={dt("٢ · الوجهة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
-            {needsResourcePick(pageKind) ? <SelectField label={dt("المشروع أو المحتوى")} value={resourceId} onValueChange={setResourceId} options={resourceList.map((row) => ({ value: row.id, label: entityLabel(row) }))} placeholder={dt("اختر المحتوى")} /> : null}
+            <SelectField label={dt("٢ · الوجهة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setResourceSearch(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
+            {needsResourcePick(pageKind) ? (
+              <div className="space-y-2">
+                <Field label={dt("ابحث عن المشروع أو القسم أو المحتوى")} value={resourceSearch} onChange={setResourceSearch} placeholder={dt("اكتب الاسم لتصفية الخيارات")} />
+                <SelectField label={dt("المشروع أو القسم أو المحتوى")} value={resourceId} onValueChange={setResourceId} options={filteredResources.map((row) => ({ value: row.id, label: entityLabel(row, locale) }))} placeholder={dt("اختر المحتوى")} />
+                <p className="text-xs text-muted-foreground">{dt("عدد النتائج")}: {filteredResources.length}</p>
+              </div>
+            ) : null}
             {pageKind === "campaigns" ? <Field label={dt("بحث في قائمة المشاريع")} value={campaignSearch} onChange={setCampaignSearch} placeholder={dt("يضاف كـ search")} /> : null}
             {pageKind === "success_donation" ? <Field label={dt("معرف التبرع")} value={donationId} onChange={setDonationId} placeholder={dt("24 حرف")} dir="ltr" /> : null}
             {pageKind === "profile" ? <SelectField label={dt("تبويب الملف")} value={profileTab} onValueChange={(v) => setProfileTab(v as typeof profileTab)} options={[{ value: "account", label: dt("معلوماتي") }, { value: "donations", label: dt("التبرعات") }, { value: "support", label: dt("الدعم") }]} /> : null}

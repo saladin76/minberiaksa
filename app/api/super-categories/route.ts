@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
         title: true,
         subtitle: true,
         heroImage: true,
+        heroImageMode: true,
+        heroImageLocales: true,
         logoImage: true,
         accentColor: true,
         order: true,
@@ -51,7 +53,9 @@ export async function GET(request: NextRequest) {
         slug: row.slug,
         title: t?.title ?? row.title,
         subtitle: t?.subtitle || row.subtitle || "",
-        heroImage: row.heroImage ?? "",
+        heroImage: row.heroImageMode === "localized" && row.heroImageLocales && typeof row.heroImageLocales === "object" && !Array.isArray(row.heroImageLocales) && typeof (row.heroImageLocales as Record<string, unknown>)[locale] === "string"
+          ? String((row.heroImageLocales as Record<string, unknown>)[locale] || row.heroImage || "")
+          : row.heroImage ?? "",
         logoImage: t?.logoImage || row.logoImage || "",
         accentColor: row.accentColor ?? "",
         order: row.order,

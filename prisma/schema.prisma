@@ -926,6 +926,9 @@ model Donation {
 
   createdAt DateTime  @default(now())
   paidAt    DateTime?
+  /// Only the operational dashboard hides a FAILED attempt after a later provider-confirmed
+  /// payment of the same donation intent. Never change payment status or delete audit history.
+  overviewRecoveredByDonationId String? @db.ObjectId
 
   items             DonationItem[]
   categoryItems     DonationCategoryItem[]
@@ -3476,6 +3479,10 @@ model SuperCategory {
 
   // ── Customisation ──
   heroImage        String?
+  /// Optional localized hero images; keys are enabled locales (ar/tr/en/fr).
+  heroImageLocales Json?
+  /// Use localized images when available, otherwise the shared hero image.
+  heroImageMode    String @default("shared")
   /// The programme's wordmark. A locale may override it in its translation row
   /// when the lockup is script-specific.
   logoImage        String?

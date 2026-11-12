@@ -2,6 +2,7 @@ import { subscriptionLifecycleWhere } from "@/lib/donations/subscription-lifecyc
 import { mergeDonationProviderFilter } from "@/lib/dashboard/donation-provider-filter";
 import { recurringPlanTotals } from "@/lib/dashboard/recurring-plan-totals";
 import { NextRequest, NextResponse } from 'next/server';
+import { dashboardLocaleWhere, dashboardCountryWhere } from '@/lib/dashboard/donation-location-scope';
 import { prisma } from '@/lib/prisma';
 import { getCurrentCalendarMonthIstanbulRange } from '@/lib/admin/current-calendar-month-utc';
 import { getServerSession } from 'next-auth';
@@ -80,21 +81,13 @@ function buildDonationWhereAllTime(
 }
 
 function mergeLocaleFilter(where: Record<string, unknown>, locale: string | null): Record<string, unknown> {
-  if (!locale || locale === 'all') return where;
-  const lw =
-    locale === '__unset'
-      ? { OR: [{ locale: null }, { locale: '' }] }
-      : { locale };
-  return { AND: [where, lw] };
+  const filter = dashboardLocaleWhere(locale);
+  return filter ? { AND: [where, filter] } : where;
 }
 
 function mergeCountryFilter(where: Record<string, unknown>, country: string | null): Record<string, unknown> {
-  if (!country || country === 'all') return where;
-  const cw =
-    country === '__unset'
-      ? { OR: [{ donorCountryCode: null }, { donorCountryCode: '' }] }
-      : { donorCountryCode: country.toUpperCase() };
-  return { AND: [where, cw] };
+  const filter = dashboardCountryWhere(country);
+  return filter ? { AND: [where, filter] } : where;
 }
 
 function mergeFilters(

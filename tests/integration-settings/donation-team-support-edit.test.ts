@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { donationEditTotals } from "../../lib/donations/edit-totals";
+import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
 
 function harness(role = "ADMIN") {
   const before = { id: "gift", amount: 100, teamSupport: 10, fees: 3, coverFees: true, totalAmount: 113,
@@ -24,6 +25,7 @@ function harness(role = "ADMIN") {
     "@/lib/exchange/convert-amount-in-currency-to-usd": { normalizeDonationCurrencyCode: (x: string) => x, convertAmountInCurrencyToUsd: async (value: number) => value / 2 },
     "@/lib/audit-log": { auditActorFromDashboardSession: () => ({ actorName: "Reviewer" }), writeAuditLog: async (entry: unknown) => audits.push(entry as Audit) },
     "@/lib/donations/edit-totals": { donationEditTotals },
+    "@/lib/dashboard/donation-list-privacy": { donationListSafeFields },
     "@/lib/donations/reconcile-stripe-donation": {}, "@/lib/donations/paypal-donation": {},
     "@/lib/donations/access-token": {}, "@/lib/donations/subscription-provider-control": {},
     "@/lib/campaign/current-amount": { recomputeCampaignCurrentAmount: async (_tx: unknown, id: string) => totals.push(id) },

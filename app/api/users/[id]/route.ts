@@ -8,7 +8,8 @@ import {
   sanitizeDashboardPermissions,
   userCanViewUserProfilesInDashboard,
 } from '@/lib/dashboard/permissions';
-import { requireAdminSession } from '@/lib/dashboard/api-auth';
+import { requireAdminSession, isRevenueDashboardUser } from '@/lib/dashboard/api-auth';
+import { donationListSafeFields } from "@/lib/dashboard/donation-list-privacy";
 import { writeAuditLog } from '@/lib/audit-log';
 import { getBadgeIdsByUser } from '@/lib/badge-criteria';
 import { PAID_DONATION_FILTER } from '@/lib/dashboard/donation-usd-revenue';
@@ -49,7 +50,14 @@ export async function GET(
       where: { id },
       include: {
         donations: {
-          omit: { bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true },
+          omit: {
+            accessToken: true, cardDetails: true, providerRaw: true,
+            originalDonorId: true, providerAuthCode: true, providerHostRefNum: true,
+            paypalOrderId: true, paypalCaptureId: true,
+            bankOperations: true, bankOperationLock: true, bankOperationsRevision: true, bankLastInquiry: true,
+            reconciliationLeaseToken: true, reconciliationLeaseUntil: true,
+            reconciliationNextAt: true, reconciliationCheckedAt: true,
+          },
           include: {
             subscription: {
               select: {
@@ -93,7 +101,7 @@ export async function GET(
     const withType = (d: typeof user.donations[0], type: 'ONE_TIME' | 'MONTHLY') => {
       const sub = d.subscription;
       return {
-        ...d,
+        ...donationListSafeFields(d, { revenueAuthorized: isRevenueDashboardUser(session) }),
         type,
         /** Donation charge status (PAID / FAILED)  unchanged for revenue totals */
         paymentStatus: d.status,

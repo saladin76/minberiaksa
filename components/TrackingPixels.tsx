@@ -373,16 +373,20 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       window.fbq?.("track", "PageView");
     }
 
-    // The configured destinations share one library. Custom GTM is opt-in so
-    // old containers cannot silently install additional tags or recorders.
-    initializeGoogleTracking({
-      gaMeasurementId: config.gaMeasurementId,
-      adsIds: googleAdsTargets(config).map(target => target.conversionId),
-    }, window, document);
-    loadConfiguredGoogleTagManager({
-      googleTagManagerId: config.googleTagManagerId,
-      googleTagManagerEnabled: config.googleTagManagerEnabled,
-    }, window, document);
+    // Mutually exclusive ownership. With GTM enabled the container loads once
+    // and owns Google tags; we do not install a parallel gtag.js/GA4/Ads config.
+    // The canonical payment-confirmed conversion source remains unchanged.
+    if (config.googleTagManagerEnabled && config.googleTagManagerId) {
+      loadConfiguredGoogleTagManager({
+        googleTagManagerId: config.googleTagManagerId,
+        googleTagManagerEnabled: true,
+      }, window, document);
+    } else {
+      initializeGoogleTracking({
+        gaMeasurementId: config.gaMeasurementId,
+        adsIds: googleAdsTargets(config).map(target => target.conversionId),
+      }, window, document);
+    }
 
     // TikTok Pixel
     if (config.tiktokPixelId) {

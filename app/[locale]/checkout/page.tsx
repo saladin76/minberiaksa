@@ -10,6 +10,7 @@ import { listCategoryTitles } from "@/lib/minbar/category-page";
 import { banksFor } from "@/lib/minbar/banks-server";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import CheckoutPage from "@/components/minbar/checkout/CheckoutPage";
+import { checkoutDefaultPhoneCountry } from "@/lib/minbar/checkout-phone-country";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -81,8 +82,13 @@ export default async function Checkout({ params }: Props) {
         phone: account?.phone ?? user.phone ?? "",
       }
     : null;
-  /* Flag order: the account's country, else where the request came from. */
-  const defaultCountry = (account?.countryCode ?? ipCountry ?? "TR").toLowerCase();
+  /* If the donor has no saved phone, use the visitor's IP first. A saved
+     international number must not change merely because its owner travels. */
+  const defaultCountry = checkoutDefaultPhoneCountry({
+    ipCountry,
+    accountCountry: account?.countryCode,
+    existingPhone: donor?.phone,
+  });
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>

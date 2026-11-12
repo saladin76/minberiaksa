@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, useId } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { Loader2, Save, TestTube2, RefreshCw } from "lucide-react";
+import { Loader2, Save, TestTube2, RefreshCw, ExternalLink } from "lucide-react";
+import { normalizeClarityProjectId, clarityProjectDashboardUrl } from "@/lib/tracking/clarity-config";
+import { googleTagManagerId } from "@/lib/tracking/google-script-policy";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +16,11 @@ type Platform = "meta" | "ga4" | "google_ads" | "tiktok" | "x";
 type SecretKey = "facebookAccessToken" | "gaApiSecret" | "tiktokAccessToken" | "xAccessToken";
 
 type Settings = {
+  clarityProjectId: string | null;
+  clarityEnabled: boolean;
+  claritySource?: "saved" | "legacy" | "disabled";
+  clarityExternalVerifiedAt?: string | null;
+  updatedAt?: string | null;
   googleTagManagerId: string | null;
   googleTagManagerEnabled: boolean;
   id: string | null;
@@ -65,6 +72,8 @@ type DiagnosticItem = {
 type Diagnostics = Partial<Record<Platform, DiagnosticItem>>;
 
 const defaults: Settings = {
+  clarityProjectId: null,
+  clarityEnabled: false,
   googleTagManagerId: null,
   googleTagManagerEnabled: false,
   id: null,
@@ -150,6 +159,8 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   const [testing, setTesting] = useState<Platform | null>(null);
   const [refreshingDiagnostics, setRefreshingDiagnostics] = useState(false);
   const [lastTest, setLastTest] = useState<Partial<Record<Platform, string>>>({});
+  const [runtimeCheck, setRuntimeCheck] = useState<{ matched: boolean; when: string } | null>(null);
+  const [checkingRuntime, setCheckingRuntime] = useState(false);
 
   const unsaved = savedSettings !== null && (
     JSON.stringify(settings) !== JSON.stringify(savedSettings) ||
@@ -197,11 +208,30 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
   }
 
   async function save() {
+    if (settings.clarityProjectId && !normalizeClarityProjectId(settings.clarityProjectId)) {
+      toast.error(dt("معرّف Clarity غير صالح؛ يُسمح فقط بحروف وأرقام إنجليزية بطول 6 إلى 32."));
+      return;
+    }
+    if (settings.clarityEnabled && !normalizeClarityProjectId(settings.clarityProjectId)) {
+      toast.error(dt("أدخل معرّف مشروع Clarity صحيحًا قبل التفعيل."));
+      return;
+    }
+    if (settings.googleTagManagerId && !googleTagManagerId(settings.googleTagManagerId)) {
+      toast.error(dt("معرّف حاوية GTM غير صالح."));
+      return;
+    }
+    if (settings.googleTagManagerEnabled && !googleTagManagerId(settings.googleTagManagerId)) {
+      toast.error(dt("أدخل معرّف حاوية GTM قبل التفعيل."));
+      return;
+    }
     // Pixel/tag ids and API tokens drive live conversion tracking for every donation.
     if (!window.confirm(dt("سيؤثر هذا الحفظ على تتبع التحويلات الفعلي لكل التبرعات الجديدة (معرّفات البكسل والمفاتيح). هل تريد المتابعة؟"))) return;
     setSaving(true);
     try {
       const payload: Record<string, unknown> = { ...settings };
+      delete payload.claritySource;
+      delete payload.clarityExternalVerifiedAt;
+      delete payload.updatedAt;
       delete payload.id;
       (Object.keys(secrets) as SecretKey[]).forEach((k) => { if (secrets[k].trim()) payload[k] = secrets[k].trim(); });
       payload.clearFacebookAccessToken = clearSecrets.facebookAccessToken;
@@ -212,6 +242,7 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
       const stored = { ...defaults, ...res.data, metaDonateEventName: res.data.metaDonateEventName ?? "Donate" };
       setSettings(stored);
       setSavedSettings(stored);
+      setRuntimeCheck(null);
       setSecrets({ facebookAccessToken: "", gaApiSecret: "", tiktokAccessToken: "", xAccessToken: "" });
       setClearSecrets({ facebookAccessToken: false, gaApiSecret: false, tiktokAccessToken: false, xAccessToken: false });
       await loadDiagnostics();
@@ -223,6 +254,30 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
         : dt("فشل حفظ الإعدادات"));
     }
     finally { setSaving(false); }
+  }
+
+  async function verifySavedRuntimeConfig() {
+    if (!savedSettings || unsaved) {
+      toast.error(dt("احفظ التعديلات أولًا قبل فحص إعدادات الموقع العامة."));
+      return;
+    }
+    setCheckingRuntime(true);
+    try {
+      const response = await axios.get<{ clarityProjectId?: string | null; clarityEnabled?: boolean; googleTagManagerId?: string | null; googleTagManagerEnabled?: boolean }>("/api/tracking/config", { headers: { "Cache-Control": "no-cache" } });
+      const loaded = response.data;
+      const matched = loaded.clarityProjectId === savedSettings.clarityProjectId &&
+        loaded.clarityEnabled === savedSettings.clarityEnabled &&
+        loaded.googleTagManagerId === (savedSettings.googleTagManagerEnabled ? googleTagManagerId(savedSettings.googleTagManagerId) : null) &&
+        loaded.googleTagManagerEnabled === savedSettings.googleTagManagerEnabled;
+      setRuntimeCheck({ matched, when: new Date().toISOString() });
+      if (matched) toast.success(dt("تطابق الإعداد المحفوظ مع إعداد التشغيل العام؛ استقبال التسجيلات يحتاج تحققًا خارجيًا."));
+      else toast.error(dt("إعداد التشغيل العام لا يطابق القيم المحفوظة. راجع التخزين والتخزين المؤقت."));
+    } catch {
+      setRuntimeCheck(null);
+      toast.error(dt("تعذر قراءة إعداد التتبع العام."));
+    } finally {
+      setCheckingRuntime(false);
+    }
   }
 
   async function saveGa4ReportServiceAccount() {
@@ -314,7 +369,34 @@ export default function TrackingSettingsManager({ canManage, canTest }: { canMan
     <div className="grid gap-3 md:grid-cols-5"><Status label="Meta" status={status.meta} /><Status label="GA4" status={status.ga4} /><Status label="Google Ads" status={status.google_ads} /><Status label="TikTok" status={status.tiktok} /><Status label="X" status={status.x} /></div>
 
     <PlatformCard canTest={canTest} blocked={unsaved || saving || !savedSettings || testing !== null} title={dt("فيسبوك / Meta")} desc="Pixel + Conversion API" platform="meta" testing={testing} test={test}><Field disabled={!canManage || saving} label="Pixel ID" value={txt(settings.facebookPixelId)} onChange={(v) => set("facebookPixelId", v || null)} /><Field disabled={!canManage || saving} label={dt("Dataset ID اختياري")} value={txt(settings.metaDatasetId)} onChange={(v) => set("metaDatasetId", v || null)} />{secretField("facebookAccessToken", "Conversion API Access Token")}<Field disabled={!canManage || saving} label="Test Event Code" value={txt(settings.facebookTestEventCode)} onChange={(v) => set("facebookTestEventCode", v || null)} /><Field disabled={!canManage || saving} label="Donate Event Name" value={txt(settings.metaDonateEventName)} onChange={(v) => set("metaDonateEventName", v || "Donate")} /><TestBox platform="meta" /></PlatformCard>
-    <Card><CardHeader><CardTitle>{dt("Google Tag Manager (اختياري)")}</CardTitle><CardDescription>{dt("تعمل وسوم GA4 وحسابات Google Ads المحفوظة مباشرة. فعّل حاوية مخصصة فقط عند الحاجة، وتجنب إضافة الوسوم نفسها داخلها حتى لا تتكرر الأحداث ويتباطأ الموقع.")}</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-2"><Field disabled={!canManage || saving} label={dt("معرّف حاوية GTM")} value={txt(settings.googleTagManagerId)} onChange={(v) => set("googleTagManagerId", v.trim() || null)} /><Toggle disabled={!canManage || saving} label={dt("تفعيل حاوية Google Tag Manager")} checked={settings.googleTagManagerEnabled} onChange={(v) => set("googleTagManagerEnabled", v)} /></CardContent></Card>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <Card>
+        <CardHeader><CardTitle>Microsoft Clarity</CardTitle><CardDescription>{dt("إدارة مشروع تسجيل الجلسات من الإعدادات المحفوظة دون إعادة البناء. لا يُحمّل المسجل في لوحة التحكم أو الصفحات الخاصة، ويُحترم منع التتبع.")}</CardDescription></CardHeader>
+        <CardContent className="space-y-3">
+          <Field disabled={!canManage || saving} label="Project ID" placeholder="u60r8zhrzh" value={txt(settings.clarityProjectId)} onChange={v => set("clarityProjectId", v)} />
+          <Toggle disabled={!canManage || saving} label={dt("تفعيل Microsoft Clarity على صفحات الموقع العامة")} checked={settings.clarityEnabled} onChange={v => set("clarityEnabled", v)} />
+          <p role="status" className="text-xs text-slate-600">{settings.clarityEnabled && normalizeClarityProjectId(settings.clarityProjectId) ? dt("مُهيّأ — وليس تحققًا من وصول تسجيلات") : dt("غير مفعّل أو المعرّف غير صالح")}</p>
+          {settings.claritySource === "legacy" ? <p className="text-xs text-amber-700">{dt("المعرّف الحالي موروث من إعداد الموقع القديم؛ الحفظ ينقله إلى الإعدادات الدائمة.")}</p> : null}
+          <p className="text-xs text-slate-500">{dt("آخر حفظ لإعدادات التتبع")}: {shortDate(settings.updatedAt)}</p>
+          <p className="text-xs text-slate-500">{dt("التحقق الخارجي من استقبال الجلسات")}: {settings.clarityExternalVerifiedAt ? shortDate(settings.clarityExternalVerifiedAt) : dt("غير متحقق؛ راجع المشروع داخل Microsoft Clarity")}</p>
+          {clarityProjectDashboardUrl(settings.clarityProjectId) ? <a className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 underline" href={clarityProjectDashboardUrl(settings.clarityProjectId)!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" />{dt("فتح مشروع Clarity")}</a> : null}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Google Tag Manager</CardTitle><CardDescription>{dt("يستخدم نفس إعدادات GTM الحالية. عند تفعيله تصبح الحاوية مالكة وسوم Google ولا يثبت الموقع gtag.js مباشرةً معها. لا تضف Purchase مكررًا داخل الحاوية.")}</CardDescription></CardHeader>
+        <CardContent className="space-y-3">
+          <Field disabled={!canManage || saving} label={dt("معرّف حاوية GTM")} placeholder="GTM-XXXXXXX" value={txt(settings.googleTagManagerId)} onChange={v => set("googleTagManagerId", v)} />
+          <Toggle disabled={!canManage || saving} label={dt("تفعيل حاوية Google Tag Manager")} checked={settings.googleTagManagerEnabled} onChange={v => set("googleTagManagerEnabled", v)} />
+          <p role="status" className="text-xs text-slate-600">{settings.googleTagManagerEnabled && googleTagManagerId(settings.googleTagManagerId) ? dt("مُهيّأ — يلزم فحص الوسوم في المعاينة لتجنب تكرار GA4 وGoogle Ads") : dt("الحاوية غير مفعّلة")}</p>
+          <p className="text-xs text-amber-700">{dt("تفعيل GTM لا يثبت وصول أحداث Purchase ولا يغيّر تأكيد الدفع من الخادم. راجع Tag Assistant قبل الاعتماد.")}</p>
+          <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 underline"><ExternalLink className="h-3.5 w-3.5" />Google Tag Manager</a>
+        </CardContent>
+      </Card>
+    </div>
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50 p-3 text-xs">
+      <Button type="button" variant="outline" onClick={verifySavedRuntimeConfig} disabled={checkingRuntime || saving || Boolean(unsaved)}>{checkingRuntime ? <Loader2 className="me-1 h-4 w-4 animate-spin" /> : <RefreshCw className="me-1 h-4 w-4" />}{dt("مطابقة الإعداد العام المحفوظ")}</Button>
+      <span role="status" className="text-slate-600">{runtimeCheck ? runtimeCheck.matched ? dt("الإعداد العام مطابق، ولم يُثبت استقبال أحداث خارجية") : dt("عدم تطابق الإعداد العام") : dt("لم يُفحص الإعداد العام بعد")}{runtimeCheck ? ` — ${shortDate(runtimeCheck.when)}` : ""}</span>
+    </div>
     <PlatformCard canTest={canTest} blocked={unsaved || saving || !savedSettings || testing !== null} title="Google Analytics 4" desc="Measurement Protocol + Data API reports" platform="ga4" testing={testing} test={test}><Field disabled={!canManage || saving} label="Measurement ID" value={txt(settings.gaMeasurementId)} onChange={(v) => set("gaMeasurementId", v || null)} />{secretField("gaApiSecret", "Measurement Protocol API Secret")}<Field disabled={!canManage || saving} label={dt("Property ID (يُستخدم للتقارير أيضًا)")} value={txt(settings.gaPropertyId)} onChange={(v) => set("gaPropertyId", v || null)} /><Field disabled={!canManage || saving} label={dt("Stream ID اختياري")} value={txt(settings.gaStreamId)} onChange={(v) => set("gaStreamId", v || null)} /><Toggle disabled={!canManage || saving} label="Debug Mode" checked={settings.gaDebugMode} onChange={(v) => set("gaDebugMode", v)} />
       <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3 md:col-span-2">
         <div><p className="text-sm font-semibold text-slate-800">{dt("صلاحية قراءة تقارير GA4")}</p><p className="mt-1 text-xs leading-5 text-slate-600">{dt("تستخدم التقارير Property ID الموجود أعلاه. أضف حساب خدمة بصلاحية Viewer؛ هذا المفتاح للقراءة فقط ومنفصل عن API Secret المستخدم لإرسال الأحداث.")}</p></div>

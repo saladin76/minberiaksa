@@ -15,6 +15,9 @@ const entry = `import React,{useState} from "react";import {createRoot} from "re
 import {NextIntlClientProvider} from "next-intl";
 import DonationDialog from "./components/DonationDialog";
 import CheckoutPage from "./components/minbar/checkout/CheckoutPage";
+import {checkoutDefaultPhoneCountry} from "./lib/minbar/checkout-phone-country";
+import SearchablePhoneInput from "./components/SearchablePhoneInput";
+import {useIpCountry} from "./hooks/useIpCountry";
 import {PayForCardForm} from "./components/PayForCardForm";
 import {submitGatewayForm} from "./lib/minbar/checkout";
 window.fixtureResult=submitGatewayForm;
@@ -24,7 +27,12 @@ const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
 writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:new URLSearchParams(location.search).get("currency")||"USD",schedule:{hour:9,minute:30,dayOfMonth:1}}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
-createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={null} defaultCountry={new URLSearchParams(location.search).has("saudi")?"sa":"tr"}/><Legacy/></>}</NextIntlClientProvider>);`;
+function PhoneGeoHarness(){const ip=useIpCountry();const [v,setV]=useState(new URLSearchParams(location.search).has("savednumber")?"+905551234567":"");return <SearchablePhoneInput locale={lang} defaultCountry={ip} value={v} onChange={setV} forceDialCode inputProps={{id:"geo-phone",autoComplete:"tel"}}/>}
+createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("geo-test")?<PhoneGeoHarness/>:new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={new URLSearchParams(location.search).has("prefilled")?{firstName:"Existing",lastName:"Donor",email:"saved@example.invalid",phone:"+905550000000"}:null} defaultCountry={checkoutDefaultPhoneCountry({
+  ipCountry:new URLSearchParams(location.search).get("ipcountry")??(new URLSearchParams(location.search).has("saudi")?"SA":"TR"),
+  accountCountry:new URLSearchParams(location.search).get("accountcountry"),
+  existingPhone:new URLSearchParams(location.search).has("prefilled")?"+905550000000":"",
+})}/><Legacy/></>}</NextIntlClientProvider>);`;
 const mocks = {
   "@/components/SignInDialog": 'export function SignInPanel(){return null}',
   "@/hooks/useIpCountry": 'export function useIpCountry(){return "tr"}',
@@ -110,7 +118,24 @@ try {
    await checkField("firstName");await page.locator("#checkout-firstName").fill("Fixture donor");
    await page.locator("#checkout-email").fill("invalid@");await checkField("email");
    await page.locator("#checkout-email").fill("fixture@example.invalid");await checkField("phone");
-   await page.locator("#checkout-phone").fill("+90");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("5551234567");await page.locator("#checkout-phone").blur();await checkField("cardNumber");
+   // Exercise the real country picker on both mobile and desktop.
+   const phoneInput=page.locator("#checkout-phone");
+   assert.equal(await phoneInput.getAttribute("type"),"tel");
+   assert.equal(await phoneInput.getAttribute("autocomplete"),"tel");
+   assert.equal(await phoneInput.getAttribute("required"),"");
+   assert.equal(await phoneInput.evaluate(node=>node.closest('[data-clarity-mask="True"]')!==null),true);
+   const selector=page.locator('.pay-phone button[aria-haspopup="listbox"]');
+   assert.equal(await selector.getAttribute("data-country"),"tr");
+   await selector.click();
+   const countrySearch=page.locator('.pay-phone input[role="combobox"]');
+   await countrySearch.fill(lang==="ar"?"٩٦٦":"+966");
+   const saOption=page.locator('.pay-phone [role="option"]').filter({hasText:"+966"}).first();
+   await saOption.waitFor();await saOption.click();
+   assert.equal(await selector.getAttribute("data-country"),"sa");
+   await phoneInput.fill("+966");await phoneInput.press("End");
+   await phoneInput.pressSequentially("501234567");await phoneInput.blur();
+   assert.equal((await phoneInput.inputValue()).replace(/\D/g,""),"966501234567");
+   await checkField("cardNumber");checks++;
    await page.locator("#checkout-cardNumber").fill("4111111111111111");await checkField("cardExpiry");
    await page.locator("#checkout-cardExpiry").fill("1239");await checkField("cardCvc");
    await page.locator("#checkout-cardCvc").fill("123");
@@ -133,6 +158,8 @@ try {
    const order=requests.slice(before).find(row=>row.path==="/api/cart/payment");
    assert.equal(requests.slice(before).find(row=>row.path==="/api/albaraka/3d/initiate").body.securityMode,mode);
    assert.equal(order.body.items[0].campaignId,"600000000000000000000001");assert.equal(order.body.items[0].amount,25);assert.equal(order.body.currency,"USD");
+   assert.equal(order.body.routingPhone.replace(/\D/g,""),"966501234567","selected calling code must reach payment routing");
+   assert.equal(order.body.guest.phone.replace(/\D/g,""),"966501234567","phone must reach donor details");
    assert.equal(await page.evaluate(()=>sessionStorage.getItem("mia_guest_donation_access_v1")?.includes("a".repeat(48))||Object.values(sessionStorage).some(value=>value.includes("a".repeat(48)))),true);checks++;
    const translations=JSON.parse(await readFile("i18n/messages/"+lang+".json","utf8")).DonationDialog;
    await page.goto(origin+"/?dialog=1&lang="+lang,{waitUntil:"domcontentloaded"});
@@ -157,6 +184,80 @@ try {
    await page.close();
   }
  }
+ // Browser-level proof that the server-resolved IP country chooses the
+ // initial flag and dial code regardless of language, on mobile and desktop.
+ for(const [country,expected,code] of [
+   ["TR","tr","90"],["SA","sa","966"],["US","us","1"],
+   ["DE","de","49"],["AE","ae","971"],["MA","ma","212"],
+ ]){
+  for(const lang of ["ar","en","tr"]){
+   for(const width of [390,1440]){
+    const page=await browser.newPage({viewport:{width,height:900}});
+    page.on("pageerror",e=>errors.push(e.message));
+    await page.route("https://**/*",route=>route.abort());
+    await page.goto(origin+"/?lang="+lang+"&ipcountry="+country);
+    const selector=page.locator('.pay-phone button[aria-haspopup="listbox"]');
+    await selector.waitFor();
+    assert.equal(await selector.getAttribute("data-country"),expected,
+      "visitor IP country must determine flag independently from locale");
+    const digits=(await page.locator("#checkout-phone").inputValue()).replace(/\D/g,"");
+    assert.ok(digits.startsWith(code),"visitor country calling code must be automatic");
+    checks++;await page.close();
+   }
+  }
+ }
+ // A donor without an E.164 number uses IP rather than a stale profile
+ // country. If a phone is already saved, it must not change when travelling.
+ for(const [prefilled,expected] of [[false,"sa"],[true,"tr"]]){
+  const page=await browser.newPage({viewport:{width:390,height:900}});
+  await page.route("https://**/*",route=>route.abort());
+  await page.goto(origin+"/?lang=ar&ipcountry=SA&accountcountry=TR"+(prefilled?"&prefilled=1":""));
+  const selector=page.locator('.pay-phone button[aria-haspopup="listbox"]');
+  await selector.waitFor();
+  assert.equal(await selector.getAttribute("data-country"),expected);
+  checks++;await page.close();
+ }
+
+ // Dynamic IP result: useIpCountry() initially returns TR, then receives SA
+ // from our simulated geo API. Unedited fields must update automatically,
+ // but manual country selection, typing and saved numbers must never change.
+ for(const state of ["untouched","typing","manual","saved"]){
+  const page=await browser.newPage({viewport:{width:390,height:900}});
+  page.on("pageerror",e=>errors.push(e.message));
+  let geoCalls=0;
+  await page.route("**/api/geo/client", async route=>{
+    geoCalls++;
+    await new Promise(resolve=>setTimeout(resolve,900));
+    await route.fulfill({json:{ok:true,country_code:"SA"}});
+  });
+  await page.goto(origin+"/?lang=en&geo-test=1"+(state==="saved"?"&savednumber=1":""));
+  const selector=page.locator('button[aria-haspopup="listbox"]');
+  await selector.waitFor();
+  assert.equal(await selector.getAttribute("data-country"),"tr");
+  const phone=page.locator("#geo-phone");
+  if(state==="typing"){
+    await phone.click();await phone.press("End");
+    await phone.pressSequentially("5551234567");
+    assert.ok((await phone.inputValue()).replace(/\D/g,"").length>5);
+  }else if(state==="manual"){
+    await selector.click();
+    await page.locator('input[role="combobox"]').fill("+49");
+    await page.locator('[role="option"]').filter({hasText:"+49"}).first().click();
+    assert.equal(await selector.getAttribute("data-country"),"de");
+  }
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem("ip_country_code_v2")||"{}").code==="sa");
+  await page.waitForTimeout(120);
+  assert.equal(geoCalls,1);
+  const chosen=state==="untouched"?"sa":state==="manual"?"de":"tr";
+  assert.equal(await selector.getAttribute("data-country"),chosen,
+    "late IP country must not override user input or saved number");
+  if(state==="untouched")
+    assert.ok((await phone.inputValue()).replace(/\D/g,"").startsWith("966"));
+  if(state==="saved")
+    assert.equal((await phone.inputValue()).replace(/\D/g,""),"905551234567");
+  checks++;await page.close();
+ }
+
  // Imported signed-in accounts must still correct required contact data.
  const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
  await page.locator("#albaraka-3d").uncheck();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
@@ -197,12 +298,51 @@ try {
    throw new Error("Unexpected API "+url.pathname);
   });
   await page.addInitScript(()=>{window.fixtureSubmissions=[];HTMLFormElement.prototype.submit=function(){window.fixtureSubmissions.push({action:this.action,fields:Object.fromEntries(new FormData(this))})}});
-  await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
+  await page.goto(origin+"/?lang=en&signed=1&prefilled=1");await page.locator("#checkout-cardNumber").waitFor();
+   assert.equal((await page.locator("#checkout-phone").inputValue()).replace(/\D/g,""),"905550000000","saved donor phone prefill");
+   assert.equal(await page.locator("#checkout-email").inputValue(),"saved@example.invalid","saved donor email prefill");
   await page.locator("#albaraka-3d").uncheck();await page.locator("#checkout-email").fill("fixture@example.invalid");
-  await page.locator("#checkout-phone").fill("+90");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("5551234567");await page.locator("#checkout-phone").blur();
+  const donorPhoneInput=page.locator("#checkout-phone");
+  const phoneTrace=[["initial",await donorPhoneInput.inputValue()]];
+  await donorPhoneInput.fill("+90");phoneTrace.push(["afterFill",await donorPhoneInput.inputValue()]);
+  await donorPhoneInput.press("End");await donorPhoneInput.pressSequentially("5551234567");
+  phoneTrace.push(["afterKeys",await donorPhoneInput.inputValue()]);
+  if((await donorPhoneInput.inputValue()).replace(/\D/g,"")!=="905551234567"){
+    await donorPhoneInput.click();await donorPhoneInput.press("ControlOrMeta+A");
+    await donorPhoneInput.pressSequentially("+905551234567");
+    phoneTrace.push(["afterKeyboardReplace",await donorPhoneInput.inputValue()]);
+  }
+  if((await donorPhoneInput.inputValue()).replace(/\D/g,"")!=="905551234567"){
+    // forceDialCode protects +90: selecting only the editable subscriber digits
+    // is a distinct, realistic interaction from selecting/retyping the whole E.164 number.
+    await donorPhoneInput.click();
+    await donorPhoneInput.evaluate(node=>{
+      const dialSeparator=node.value.indexOf(" ");
+      node.setSelectionRange(dialSeparator>=0?dialSeparator+1:3,node.value.length);
+    });
+    await donorPhoneInput.pressSequentially("5551234567");
+    phoneTrace.push(["afterLocalReplace",await donorPhoneInput.inputValue()]);
+  }
+  await donorPhoneInput.blur();phoneTrace.push(["afterBlur",await donorPhoneInput.inputValue()]);
+  console.log("Signed-in phone edit trace",JSON.stringify(phoneTrace));
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
   assert.equal(await page.locator('input[type="checkbox"]').count(),1,"only the optional 3D checkbox is present");
-  await page.locator(".pay-form button[type=submit]").click();await page.waitForFunction(()=>window.fixtureSubmissions.length===1);
+  const typedPhone=(await page.locator("#checkout-phone").inputValue()).replace(/\D/g,"");
+  assert.equal(typedPhone,"905551234567","edited phone must appear in the form before submission");
+  assert.equal(calls.filter(r=>r.path==="/api/users/me/phone").length,0,"typing should not mutate profile");
+  await page.locator(".pay-form button[type=submit]").click();
+  await page.waitForTimeout(750);
+  const phoneUpdate=calls.find(r=>r.path==="/api/users/me/phone"&&r.method==="PATCH");
+  if(!phoneUpdate) {
+    const alerts=await page.locator('.pay-form [role="alert"]').allTextContents();
+    console.error("Phone PATCH not initiated at checkout",JSON.stringify({
+      typedPhone, alerts, phoneInvalid:await page.locator("#checkout-phone").getAttribute("aria-invalid"),
+      formCalls:calls.map(r=>r.path), pendingSubmit:await page.locator(".pay-form button[type=submit]").isDisabled(),
+    }));
+  }
+  assert.ok(phoneUpdate,"editing donor phone and submitting must initiate account update");
+  await page.waitForFunction(()=>window.fixtureSubmissions.length===1);
+  assert.equal(phoneUpdate?.body?.phone?.replace(/\D/g,""),"905551234567","changed number must reach profile update");
   assert.equal(calls.filter(r=>r.path==="/api/credit-cards"&&r.method==="POST").length,1);
   assert.equal(calls.filter(r=>r.path==="/api/cart/payment").length,1);
   const bank=calls.find(r=>r.path==="/api/albaraka/3d/initiate");assert.equal(bank.body.savedCardId,vaultWorks?"fixture-saved-card":undefined);
