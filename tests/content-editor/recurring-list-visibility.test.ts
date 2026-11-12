@@ -7,6 +7,9 @@ import { subscriptionPaymentSequence } from "../../lib/dashboard/subscription-pa
 import { accountingDateWhere, canUseAccountingDate } from "../../lib/dashboard/accounting-date-where";
 import { dashboardDonationDateSortField } from "../../lib/dashboard/donation-ledger-date";
 import { dashboardLocaleWhere, dashboardCountryWhere } from "../../lib/dashboard/donation-location-scope";
+import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
+import { donationPaymentEvidence } from "../../lib/donations/payment-evidence";
+import { donorAccountStatus } from "../../lib/dashboard/donor-account";
 import { istanbulDateKeysToUtcRange } from "../../lib/admin/istanbul-calendar";
 type Row = Record<string, unknown>;
 function load(file: string, dependencies: Record<string, unknown>) {
@@ -14,7 +17,7 @@ function load(file: string, dependencies: Record<string, unknown>) {
   new vm.Script(ts.transpileModule(readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText).runInNewContext({ module: loaded, exports: loaded.exports, URL, console: { error() {} }, require: (name: string) => dependencies[name] ?? {} });
   return loaded.exports;
 }
-function harness(role: "monthly" | "admin" | "donor" | "revenue") {
+function harness(role: "monthly" | "admin" | "donor" | "revenue", fixtures: Row[] = []) {
   const queries: Row[] = [];
   const status = load("lib/dashboard/donation-usd-revenue.ts", {});
   const route = load("app/api/donations/route.ts", {
@@ -23,7 +26,7 @@ function harness(role: "monthly" | "admin" | "donor" | "revenue") {
     "next/server": { NextResponse: { json: (body: Row, init: { status?: number } = {}) => ({ body, status: init.status ?? 200 }) } },
     "next-auth": { getServerSession: async () => ({ user: { id: "own-id", role: role === "admin" ? "ADMIN" : role === "revenue" || role === "monthly" ? "STAFF" : "DONOR" } }) },
     "@/lib/dashboard/permissions": { userHasDashboardPermission: () => role === "monthly" }, "@/lib/dashboard/api-auth": { isRevenueDashboardUser: () => role === "admin" || role === "revenue" },
-    "@/lib/prisma": { prisma: { donation: { count: async (args: Row) => { queries.push(args); return 0; }, findMany: async (args: Row) => { queries.push(args); return []; } } } },
+    "@/lib/prisma": { prisma: { donation: { count: async (args: Row) => { queries.push(args); return fixtures.length; }, findMany: async (args: Row) => { queries.push(args); return fixtures; } } } },
     "@/lib/dashboard/donation-usd-revenue": status,
     "@/lib/dashboard/donation-provider-filter": { donationProviderWhere: () => null },
     "@/lib/dashboard/recurring-frequency-filter": { parseFrequencyParam: () => null, donationFrequencyWhere: () => null, loadSubscriptionFrequencies: async () => () => null },
@@ -32,6 +35,9 @@ function harness(role: "monthly" | "admin" | "donor" | "revenue") {
     "@/lib/admin/istanbul-calendar": { istanbulDateKeysToUtcRange },
     "@/lib/dashboard/donation-ledger-date": { dashboardDonationDateSortField },
     "@/lib/dashboard/donation-location-scope": { dashboardLocaleWhere, dashboardCountryWhere },
+    "@/lib/dashboard/donation-list-privacy": { donationListSafeFields },
+    "@/lib/donations/payment-evidence": { donationPaymentEvidence },
+    "@/lib/dashboard/donor-account": { donorAccountStatus },
   });
   return { get: (query: string) => route.GET({ url: "https://example.invalid/api/donations?" + query }), queries };
 }
@@ -158,4 +164,48 @@ test("accounting pagination starts at the requested safe page with deterministic
   assert.equal(h.queries[1].skip, 100);
   assert.equal(h.queries[1].take, 100);
   assert.equal(JSON.stringify(h.queries[1].orderBy), '[{"paidAt":"desc"},{"id":"desc"}]');
+});
+
+test("donor GET response redacts receipt bearer and raw gateway/card evidence, but retains safe display fields", async () => {
+  const fixture = {
+    id: "own-donation", donorId: "own-id",
+    status: "PAID", paidAt: "2026-11-11T08:00:00.000Z",
+    createdAt: "2026-11-10T12:00:00.000Z",
+    amountUSD: 12.5, amount: 12.5, totalAmount: 12.5,
+    teamSupport: 0, fees: 0, currency: "USD", provider: "ALBARAKA",
+    subscriptionId: null, paymentMethod: "CARD",
+    accessToken: "never-return-receipt-token",
+    providerRaw: { albarakaRequest: { mode: "2D", cvc: "never-return-cvc" } },
+    cardDetails: { cardNumber: "never-return-full-card-number" },
+    attribution: { email: "never-return-tracking-profile" },
+    bankOperations: { sale: "never-return-ledger" },
+    reconciliationLeaseToken: "never-return-lease",
+    paypalCaptureId: "never-return-capture",
+    items: [], categoryItems: [], comments: [], referral: null,
+    donor: {
+      id: "own-id", name: "Fixture Donor", email: "fixture@example.test",
+      image: null, password: "never-return-password-hash", verifiedAt: null,
+      registeredAt: "2026-11-01T00:00:00.000Z", emailVerified: null,
+      _count: { accounts: 0 },
+    },
+  };
+  const h = harness("donor", [fixture]);
+  const response = await h.get("page=1&limit=10");
+  assert.equal(response.status, 200);
+  const body = response.body;
+  const result = (body.donations as Row[])[0];
+  assert.equal(result.id, "own-donation");
+  assert.equal(result.securityMode, "2D", "safe evidence still derived on server before redaction");
+  assert.equal((result.donor as Row).accountStatus, "MEMBER");
+  assert.equal((result.donor as Row).email, "fixture@example.test");
+  for (const key of [
+    "accessToken", "providerRaw", "cardDetails", "attribution",
+    "bankOperations", "reconciliationLeaseToken", "paypalCaptureId",
+  ]) assert.equal(Object.hasOwn(result, key), false, key);
+  const serialized = JSON.stringify(body);
+  for (const secret of [
+    "never-return-receipt-token", "never-return-cvc", "never-return-full-card-number",
+    "never-return-tracking-profile", "never-return-ledger", "never-return-lease",
+    "never-return-capture", "never-return-password-hash",
+  ]) assert.equal(serialized.includes(secret), false, secret);
 });
