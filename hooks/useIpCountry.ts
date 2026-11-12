@@ -14,7 +14,7 @@ interface CacheEntry {
 }
 
 // Module-level singleton  only one fetch in-flight regardless of how many components mount
-let pendingFetch: Promise<string> | null = null;
+let pendingFetch: Promise<string | null> | null = null;
 
 function readCache(): string | null {
   try {
@@ -22,7 +22,12 @@ function readCache(): string | null {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const entry: CacheEntry = JSON.parse(raw);
-    if (Date.now() - entry.ts > CACHE_TTL_MS) { localStorage.removeItem(CACHE_KEY); return null; }
+    if (!entry || typeof entry.code !== "string" || !/^[a-z]{2}$/.test(entry.code) ||
+        !Number.isFinite(entry.ts) || entry.ts > Date.now() ||
+        Date.now() - entry.ts > CACHE_TTL_MS) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
     return entry.code;
   } catch { return null; }
 }
@@ -34,18 +39,18 @@ function writeCache(code: string) {
   } catch { /* ignore */ }
 }
 
-async function fetchCountryCode(fallback: string): Promise<string> {
+async function fetchCountryCode(): Promise<string | null> {
   try {
     // Server-side geo lookup (Vercel headers → CF → ipapi). Replaces the old
     // direct ipapi.co fetch, which was getting blocked by antivirus / CORS /
     // ad-blockers in production (visible in the Meta Pixel diagnostic console).
     const res = await fetch("/api/geo/client", { credentials: "omit" });
-    if (!res.ok) return fallback;
+    if (!res.ok) return null;
     const data = await res.json() as { ok?: boolean; country_code?: string };
-    if (!data.ok) return fallback;
+    if (!data.ok) return null;
     const code = typeof data.country_code === "string" ? data.country_code.trim().toLowerCase() : "";
-    return /^[a-z]{2}$/.test(code) ? code : fallback;
-  } catch { return fallback; }
+    return /^[a-z]{2}$/.test(code) && !["xx", "eu", "ap"].includes(code) ? code : null;
+  } catch { return null; }
 }
 
 /**
@@ -63,14 +68,16 @@ export function useIpCountry(fallback = "tr"): string {
 
     // Single shared fetch
     if (!pendingFetch) {
-      pendingFetch = fetchCountryCode(fallback).then((code) => {
-        writeCache(code);
+      pendingFetch = fetchCountryCode().then((code) => {
+        // A failure is not a real IP-country detection. Never pin TR (or another
+        // fallback) in a six-hour cache because an API was briefly unavailable.
+        if (code) writeCache(code);
         return code;
-      });
+      }).finally(() => { pendingFetch = null; });
     }
 
     let active = true;
-    pendingFetch.then((code) => { if (active) setCountry(code); });
+    pendingFetch.then((code) => { if (active && code) setCountry(code); });
     return () => { active = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
