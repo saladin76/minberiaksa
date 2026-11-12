@@ -222,8 +222,8 @@ export default function SearchablePhoneInput({
         ref={inputRef}
         type="tel"
         inputMode="tel"
-        disabled={disabled}
-        required={required}
+        disabled={disabled ?? inputProps?.disabled}
+        required={required ?? inputProps?.required}
         className={`react-international-phone-input ${inputClassName || ""}`}
         value={inputValue}
         onChange={handlePhoneValueChange}
