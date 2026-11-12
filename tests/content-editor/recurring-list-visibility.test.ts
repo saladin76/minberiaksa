@@ -93,3 +93,23 @@ test("accounting mode with incomplete date window falls back to legacy createdAt
   assert.equal(response.status, 200);
   assert.equal(JSON.stringify(h.queries[1].orderBy), '{"createdAt":"desc"}');
 });
+
+test("all-status accounting GET includes settled, failed and pending date arms", async () => {
+  const h = harness("revenue");
+  const response = await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=all");
+  assert.equal(response.status, 200);
+  const where = JSON.stringify(h.queries[0].where);
+  assert.match(where, /"paidAt":\\{"gte":/);
+  assert.match(where, /"createdAt":\\{"gte":/);
+  assert.match(where, /"status":"FAILED"/);
+  assert.match(where, /"isSet":false/);
+});
+
+test("unassigned country and locale include legacy absent fields in revenue listing", async () => {
+  const h = harness("revenue");
+  const response = await h.get("status=PAID&country=__unset&locale=__unset");
+  assert.equal(response.status, 200);
+  const where = JSON.stringify(h.queries[0].where);
+  assert.match(where, /"donorCountryCode":\\{"isSet":false\\}/);
+  assert.match(where, /"locale":\\{"isSet":false\\}/);
+});
