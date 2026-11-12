@@ -16,6 +16,8 @@ import {NextIntlClientProvider} from "next-intl";
 import DonationDialog from "./components/DonationDialog";
 import CheckoutPage from "./components/minbar/checkout/CheckoutPage";
 import {checkoutDefaultPhoneCountry} from "./lib/minbar/checkout-phone-country";
+import SearchablePhoneInput from "./components/SearchablePhoneInput";
+import {useIpCountry} from "./hooks/useIpCountry";
 import {PayForCardForm} from "./components/PayForCardForm";
 import {submitGatewayForm} from "./lib/minbar/checkout";
 window.fixtureResult=submitGatewayForm;
@@ -25,7 +27,8 @@ const lang=new URLSearchParams(location.search).get("lang")||"en";
 document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
 writeCart([{projectId:"fixture-project",typeKey:"project",freqKey:new URLSearchParams(location.search).get("frequency")||"once",amount:25,currency:new URLSearchParams(location.search).get("currency")||"USD",schedule:{hour:9,minute:30,dayOfMonth:1}}]);
 function Legacy(){const [card,setCard]=useState({cardNumber:"",expiryDate:"",cvv:"",cardholderName:""});const [focus,setFocus]=useState("");return <div id="legacy"><PayForCardForm cardDetails={card} setCardDetails={setCard} cardFocus={focus} setCardFocus={setFocus}/></div>}
-createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={new URLSearchParams(location.search).has("prefilled")?{firstName:"Existing",lastName:"Donor",email:"saved@example.invalid",phone:"+905550000000"}:null} defaultCountry={checkoutDefaultPhoneCountry({
+function PhoneGeoHarness(){const ip=useIpCountry();const [v,setV]=useState(new URLSearchParams(location.search).has("savednumber")?"+905551234567":"");return <SearchablePhoneInput locale={lang} defaultCountry={ip} value={v} onChange={setV} forceDialCode inputProps={{id:"geo-phone",autoComplete:"tel"}}/>}
+createRoot(document.getElementById("root")).render(<NextIntlClientProvider locale={lang} timeZone="UTC" messages={{ar,en,tr}[lang]}>{new URLSearchParams(location.search).has("geo-test")?<PhoneGeoHarness/>:new URLSearchParams(location.search).has("dialog")?<DonationDialog isOpen guestMode oneTimeOnly onClose={()=>{}} campaignId="600000000000000000000001" campaignTitle="Fixture project" initialDonationAmount={25}/>:<><CheckoutPage projects={[{id:"600000000000000000000001",slug:"fixture-project",title:"Fixture project"}]} categories={[]} banks={[]} donor={new URLSearchParams(location.search).has("prefilled")?{firstName:"Existing",lastName:"Donor",email:"saved@example.invalid",phone:"+905550000000"}:null} defaultCountry={checkoutDefaultPhoneCountry({
   ipCountry:new URLSearchParams(location.search).get("ipcountry")??(new URLSearchParams(location.search).has("saudi")?"SA":"TR"),
   accountCountry:new URLSearchParams(location.search).get("accountcountry"),
   existingPhone:new URLSearchParams(location.search).has("prefilled")?"+905550000000":"",
@@ -212,6 +215,46 @@ try {
   const selector=page.locator('.pay-phone button[aria-haspopup="listbox"]');
   await selector.waitFor();
   assert.equal(await selector.getAttribute("data-country"),expected);
+  checks++;await page.close();
+ }
+
+ // Dynamic IP result: useIpCountry() initially returns TR, then receives SA
+ // from our simulated geo API. Unedited fields must update automatically,
+ // but manual country selection, typing and saved numbers must never change.
+ for(const state of ["untouched","typing","manual","saved"]){
+  const page=await browser.newPage({viewport:{width:390,height:900}});
+  page.on("pageerror",e=>errors.push(e.message));
+  let geoCalls=0;
+  await page.route("**/api/geo/client", async route=>{
+    geoCalls++;
+    await new Promise(resolve=>setTimeout(resolve,900));
+    await route.fulfill({json:{ok:true,country_code:"SA"}});
+  });
+  await page.goto(origin+"/?lang=en&geo-test=1"+(state==="saved"?"&savednumber=1":""));
+  const selector=page.locator('button[aria-haspopup="listbox"]');
+  await selector.waitFor();
+  assert.equal(await selector.getAttribute("data-country"),"tr");
+  const phone=page.locator("#geo-phone");
+  if(state==="typing"){
+    await phone.click();await phone.press("End");
+    await phone.pressSequentially("5551234567");
+    assert.ok((await phone.inputValue()).replace(/\D/g,"").length>5);
+  }else if(state==="manual"){
+    await selector.click();
+    await page.locator('input[role="combobox"]').fill("+49");
+    await page.locator('[role="option"]').filter({hasText:"+49"}).first().click();
+    assert.equal(await selector.getAttribute("data-country"),"de");
+  }
+  await page.waitForResponse(res=>res.url().includes("/api/geo/client")&&res.ok());
+  await page.waitForTimeout(120);
+  assert.equal(geoCalls,1);
+  const chosen=state==="untouched"?"sa":state==="manual"?"de":"tr";
+  assert.equal(await selector.getAttribute("data-country"),chosen,
+    "late IP country must not override user input or saved number");
+  if(state==="untouched")
+    assert.ok((await phone.inputValue()).replace(/\D/g,"").startsWith("966"));
+  if(state==="saved")
+    assert.equal((await phone.inputValue()).replace(/\D/g,""),"905551234567");
   checks++;await page.close();
  }
 
