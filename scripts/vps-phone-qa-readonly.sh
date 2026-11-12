@@ -108,7 +108,11 @@ fi
 printf '\n=== ISOLATED BRANCH CHECKS (NO PRODUCTION DB) ===\n'
 # The clone must contain no production environment files.
 export CI=1 NEXT_TELEMETRY_DISABLED=1 CAMPAIGNS_ONLY=1
-export DATABASE_URL='mongodb://127.0.0.1:1/minbar_qa_blocked_db'
+# Production data access is intentionally blocked. Use a short MongoDB server
+# selection timeout: sitemap static prerender invokes read queries and catches DB
+# failures, but the default ~30s timeout trips Next.js's 60s prerender watchdog.
+# This mirrors the successful GitHub CI fixture-build connection timeout.
+export DATABASE_URL='mongodb://127.0.0.1:1/minbar_qa_blocked_db?serverSelectionTimeoutMS=500&connectTimeoutMS=500'
 export NEXTAUTH_URL='http://127.0.0.1:65535'
 export NEXTAUTH_SECRET='isolated-qa-only-not-production-2026'
 # Match the successful GitHub fixture-build environment. All strings here are
