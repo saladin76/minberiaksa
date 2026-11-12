@@ -177,9 +177,7 @@ try {
   }
  }
  // Imported signed-in accounts must still correct required contact data.
- const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=en&signed=1&prefilled=1");await page.locator("#checkout-cardNumber").waitFor();
-  assert.equal((await page.locator("#checkout-phone").inputValue()).replace(/\D/g,""),"905550000000","saved donor phone prefill");
-  assert.equal(await page.locator("#checkout-email").inputValue(),"saved@example.invalid","saved donor email prefill");
+ const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
  await page.locator("#albaraka-3d").uncheck();await page.locator(".pay-form button[type=submit]").click();await page.locator('#checkout-email[aria-invalid="true"]').waitFor();assert.equal(await page.evaluate(()=>document.activeElement.id),"checkout-email");checks++;await page.close();
  for(const frequency of ["daily","monthly","friday"]){
   const page=await browser.newPage();await page.route("https://**/*",route=>route.abort());await page.goto(origin+"/?lang=ar&frequency="+frequency);await page.locator("#checkout-cardNumber").waitFor();
@@ -218,7 +216,9 @@ try {
    throw new Error("Unexpected API "+url.pathname);
   });
   await page.addInitScript(()=>{window.fixtureSubmissions=[];HTMLFormElement.prototype.submit=function(){window.fixtureSubmissions.push({action:this.action,fields:Object.fromEntries(new FormData(this))})}});
-  await page.goto(origin+"/?lang=en&signed=1");await page.locator("#checkout-cardNumber").waitFor();
+  await page.goto(origin+"/?lang=en&signed=1&prefilled=1");await page.locator("#checkout-cardNumber").waitFor();
+   assert.equal((await page.locator("#checkout-phone").inputValue()).replace(/\D/g,""),"905550000000","saved donor phone prefill");
+   assert.equal(await page.locator("#checkout-email").inputValue(),"saved@example.invalid","saved donor email prefill");
   await page.locator("#albaraka-3d").uncheck();await page.locator("#checkout-email").fill("fixture@example.invalid");
   await page.locator("#checkout-phone").fill("+90");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("5551234567");await page.locator("#checkout-phone").blur();
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
