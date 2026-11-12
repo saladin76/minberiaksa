@@ -99,10 +99,10 @@ test("all-status accounting GET includes settled, failed and pending date arms",
   const response = await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=all");
   assert.equal(response.status, 200);
   const where = JSON.stringify(h.queries[0].where);
-  assert.match(where, /"paidAt":\\{"gte":/);
-  assert.match(where, /"createdAt":\\{"gte":/);
-  assert.match(where, /"status":"FAILED"/);
-  assert.match(where, /"isSet":false/);
+  assert.equal(where.includes('"paidAt":{"gte":'), true);
+  assert.equal(where.includes('"createdAt":{"gte":'), true);
+  assert.equal(where.includes('"status":"FAILED"'), true);
+  assert.equal(where.includes('"isSet":false'), true);
 });
 
 test("unassigned country and locale include legacy absent fields in revenue listing", async () => {
@@ -110,6 +110,6 @@ test("unassigned country and locale include legacy absent fields in revenue list
   const response = await h.get("status=PAID&country=__unset&locale=__unset");
   assert.equal(response.status, 200);
   const where = JSON.stringify(h.queries[0].where);
-  assert.match(where, /"donorCountryCode":\\{"isSet":false\\}/);
-  assert.match(where, /"locale":\\{"isSet":false\\}/);
+  assert.equal(where.includes('"donorCountryCode":{"isSet":false}'), true);
+  assert.equal(where.includes('"locale":{"isSet":false}'), true);
 });
