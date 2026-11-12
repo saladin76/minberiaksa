@@ -112,3 +112,11 @@ test("checkout server component uses its resolved IP and never locale for phone 
   assert.match(src, /ipCountry,\s*accountCountry:\s*account\?\.countryCode,\s*existingPhone:\s*donor\?\.phone/);
   assert.match(src, /defaultCountry=\{defaultCountry\}/);
 });
+
+test("failed geo responses must not be cached as a verified IP-country match", () => {
+  const hook = readFileSync("hooks/useIpCountry.ts", "utf8");
+  assert.match(hook, /if \(code\) writeCache\(code\)/);
+  assert.match(hook, /pendingFetch = null/);
+  assert.match(hook, /if \(active && code\) setCountry\(code\)/);
+  assert.doesNotMatch(hook, /writeCache\(fallback\)/);
+});
