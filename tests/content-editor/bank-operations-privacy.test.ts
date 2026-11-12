@@ -23,12 +23,16 @@ const donation: Row = {
   bankOperationLock: "PRIVATE-LOCK", bankOperationsRevision: 1, bankLastInquiry: { actorId: "PRIVATE-ACTOR" },
 };
 function project(row: Row, omit: Row) { return Object.fromEntries(Object.entries(row).filter(([key]) => !omit?.[key])); }
-function load(file: string, prisma: Row) {
+function load(file: string, prisma: Row, session: Row | null = { user: { id: donorId, role: "DONOR" } }) {
   const loaded = { exports: {} as Row };
   const deps: Row = {
     "@/lib/donations/subscription-lifecycle": subscriptionLifecycle,
     "next/server": { NextResponse: { json: (body: Row, options: Row = {}) => ({ body, status: options.status || 200 }) } },
-    "next-auth": { getServerSession: async () => ({ user: { id: donorId, role: "DONOR" } }) },
+    "next-auth": { getServerSession: async () => session },
+    "@/lib/donations/access-token": {
+      DONATION_TOKEN_PARAM: "t",
+      donationTokenMatches: (stored: string, presented: string) => stored === presented,
+    },
     "@/lib/prisma": { prisma },
     "@/lib/dashboard/permissions": { userHasDashboardPermission: () => false, userCanViewUserProfilesInDashboard: () => false },
     "@/lib/dashboard/api-auth": { isRevenueDashboardUser: () => false },
@@ -59,4 +63,19 @@ test("personal account donation history excludes internal bank evidence at the d
   const result = await route.GET({}, { params: Promise.resolve({ id: donorId }) });
   assertPrivate(result); assert.equal(result.body.user.donations[0].amount, 10);
   assert.equal(result.body.user.donations[0].financialSummary.state, "REFUNDED");
+});
+
+test("guest with a valid receipt token sees donation details without receiving the bearer or raw card data", async () => {
+  const route = load("app/api/donations/[id]/route.ts",
+    { donation: { findUnique: async ({ omit }: Row) => project(donation, omit) } }, null);
+  const valid = await route.GET({
+    nextUrl: new URL("https://example.invalid/api/donations/" + donationId + "?t=PRIVATE-GUEST-BEARER"),
+  }, { params: Promise.resolve({ id: donationId }) });
+  assertPrivate(valid);
+  assert.equal(valid.body.id, donationId);
+  assert.equal(valid.body.accessToken, undefined);
+  const denied = await route.GET({
+    nextUrl: new URL("https://example.invalid/api/donations/" + donationId + "?t=wrong"),
+  }, { params: Promise.resolve({ id: donationId }) });
+  assert.equal(denied.status, 403);
 });
