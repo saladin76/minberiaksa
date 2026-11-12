@@ -64,7 +64,7 @@ test("accounting mode is honored for revenue STAFF and ADMIN with settled date s
     const query = JSON.stringify(h.queries[0].where);
     assert.match(query, /"paidAt":\{"gte":/);
     assert.equal(query.includes('"createdAt":{'), false);
-    assert.equal(JSON.stringify(h.queries[1].orderBy), '{"paidAt":"desc"}');
+    assert.equal(JSON.stringify(h.queries[1].orderBy), '[{"paidAt":"desc"},{"id":"desc"}]');
   }
 });
 
@@ -112,4 +112,35 @@ test("unassigned country and locale include legacy absent fields in revenue list
   const where = JSON.stringify(h.queries[0].where);
   assert.equal(where.includes('"donorCountryCode":{"isSet":false}'), true);
   assert.equal(where.includes('"locale":{"isSet":false}'), true);
+});
+
+test("accounting pagination deterministically breaks equal-date and equal-amount ties by id", async () => {
+  for (const sort of ["sortBy=date&sortOrder=asc", "sortBy=amount&sortOrder=desc"] as const) {
+    const h = harness("revenue");
+    assert.equal((await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=PAID&"+sort)).status, 200);
+    const orderBy = h.queries[1].orderBy;
+    const expected = sort.startsWith("sortBy=date")
+      ? '[{"paidAt":"asc"},{"id":"asc"}]'
+      : '[{"amountUSD":"desc"},{"id":"desc"}]';
+    assert.equal(JSON.stringify(orderBy), expected);
+  }
+});
+
+test("accounting FAILED list excludes anomalous rows with paidAt, without changing legacy listing", async () => {
+  const h = harness("revenue");
+  assert.equal((await h.get("dateBasis=accounting&start=2026-11-10&end=2026-11-11&status=FAILED")).status, 200);
+  const where = JSON.stringify(h.queries[0].where);
+  assert.equal(where.includes('"status":"FAILED"'), true);
+  assert.equal(where.includes('"paidAt":{"isSet":false}'), true);
+});
+
+test("invalid page, limit and sort inputs fall back to safe Prisma arguments", async () => {
+  for (const input of ["page=-99&limit=-5&sortOrder=evil&sortBy=unexpected", "page=NaN&limit=NaN"]) {
+    const h = harness("revenue");
+    assert.equal((await h.get(input)).status, 200);
+    const findMany = h.queries[1];
+    assert.equal(findMany.skip, 0);
+    assert.equal(findMany.take, 10);
+    assert.equal(JSON.stringify(findMany.orderBy), '{"createdAt":"desc"}');
+  }
 });
