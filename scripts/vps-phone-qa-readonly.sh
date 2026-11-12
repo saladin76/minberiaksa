@@ -111,6 +111,13 @@ export CI=1 NEXT_TELEMETRY_DISABLED=1 CAMPAIGNS_ONLY=1
 export DATABASE_URL='mongodb://127.0.0.1:1/minbar_qa_blocked_db'
 export NEXTAUTH_URL='http://127.0.0.1:65535'
 export NEXTAUTH_SECRET='isolated-qa-only-not-production-2026'
+# Match the successful GitHub fixture-build environment. All strings here are
+# deliberately invalid QA placeholders, not secrets or live provider credentials.
+# Auth options validate these variables at module import during next build.
+export GOOGLE_CLIENT_ID='fixture-client'
+export GOOGLE_CLIENT_SECRET='fixture-secret'
+export STRIPE_SECRET_KEY='sk_test_fixture_no_network'
+export SITE_INDEXING='off'
 export CONTENT_EDITOR_ARTIFACTS="$OUT/artifacts"
 export PLAYWRIGHT_BROWSERS_PATH="$PWD/.qa-playwright-browsers"
 export NODE_OPTIONS='--max-old-space-size=4096'
@@ -130,7 +137,21 @@ else
     run 'IP country and trusted proxy unit tests' 240 node --import tsx --test tests/integration-settings/checkout-phone-ip-default.test.ts
     run 'Integration regression suite' 1200 npm run test:integration-settings
     run 'Playwright Chromium installation in clone' 600 npx --no-install playwright install chromium
-    run 'Checkout phone/IP browser fixtures' 900 node --import tsx scripts/checkout-readiness-browser-test.mjs
+    # Installing Chromium alone does not provide Linux shared libraries. Explicit
+    # SKIP keeps the host immutable and avoids mistaking a missing libatk for a
+    # failed donation flow. Use GitHub CI as independent browser evidence.
+    CHROME_BIN="$(find "$PLAYWRIGHT_BROWSERS_PATH" -type f -name chrome-headless-shell -print -quit 2>/dev/null || true)"
+    if [[ -z "$CHROME_BIN" ]]; then
+      skip 'VPS Chromium browser test: browser executable unavailable'
+    else
+      MISSING_LIBS="$(ldd "$CHROME_BIN" 2>/dev/null | grep 'not found' || true)"
+      if [[ -n "$MISSING_LIBS" ]]; then
+        printf 'VPS browser dependencies absent (install separately with approval):\n%s\n' "$MISSING_LIBS"
+        skip 'VPS Chromium browser test: missing system libraries; GitHub CI browser test is independent'
+      else
+        run 'Checkout phone/IP browser fixtures' 900 node --import tsx scripts/checkout-readiness-browser-test.mjs
+      fi
+    fi
     run 'Isolated Next.js production build (no DB write)' 1500 npx --no-install next build
   fi
 fi
