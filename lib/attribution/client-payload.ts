@@ -32,6 +32,22 @@ function getRawCookie(name: string): string | undefined {
   try { return decodeURIComponent(hit.split("=").slice(1).join("=")); } catch { return undefined; }
 }
 
+// GA4 session cookies: GS1.1.<session timestamp> or GS2.1.s<timestamp>$...
+// Do not confuse the app's custom session_id with a GA4 session_id.
+function currentGa4SessionId(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const ids = new Set<string>();
+  for (const part of document.cookie.split("; ")) {
+    const separator = part.indexOf("=");
+    if (separator < 0 || !/^_ga_[A-Za-z0-9]+$/.test(part.slice(0, separator))) continue;
+    const raw = part.slice(separator + 1);
+    const match = raw.match(/^GS1\.\d+\.(\d{9,13})\./) ?? raw.match(/^GS2\.\d+\.s(\d{9,13})(?:\$|$)/);
+    if (match) ids.add(match[1]);
+  }
+  // Avoid incorrectly joining a donation to one of several GA4 properties.
+  return ids.size === 1 ? [...ids][0] : undefined;
+}
+
 function getOrCreateSessionId(): string | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -205,6 +221,12 @@ export function getDonationAttributionPayload(): Record<string, string> {
       if (m) out.ga_client_id = m[1];
     }
   }
+
+  // Capture GA4's current session at donation creation, not as a long-lived
+  // attribution cookie: subsequent donations can belong to later sessions.
+  const gaSessionId = currentGa4SessionId();
+  if (gaSessionId) out.ga_session_id = gaSessionId;
+  else delete out.ga_session_id;
 
   return out;
 }

@@ -229,9 +229,14 @@ async function sendGa4Purchase(row: LoadedDonation, amount: number, currency: st
   }
 
   const attribution = (row.attribution ?? undefined) as Attribution | undefined;
-  const gaClientId = getStr(attribution, "ga_client_id") || `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
+  const gaClientId = getStr(attribution, "ga_client_id");
   const sessionIdRaw = getStr(attribution, "ga_session_id");
-  const sessionNum = sessionIdRaw ? parseInt(sessionIdRaw.replace(/\D/g, "").slice(0, 12), 10) : undefined;
+  // Do not fabricate a client ID or attach an app-specific session to GA4.
+  const sessionNum = sessionIdRaw && /^\d{9,13}$/.test(sessionIdRaw) ? Number(sessionIdRaw) : undefined;
+  if (!gaClientId || !/^\d+\.\d+$/.test(gaClientId) || sessionNum == null) {
+    await recordConversionEvent({ donationId: row.id, eventId, eventName: "purchase", platform: "GA4", channel: "server", status: "SKIPPED", dedupKey: eventId, value: amount, currency, error: "missing GA4 client/session identifiers" });
+    return;
+  }
   const items = row.items.map((it) => ({ item_id: it.campaignId, item_name: it.campaign?.title ?? "Donation", item_category: "donation", price: it.amount, quantity: 1 }));
   for (const ci of row.categoryItems) items.push({ item_id: ci.categoryId, item_name: ci.category?.name ?? "Category", item_category: "donation", price: ci.amount, quantity: 1 });
   if (row.teamSupport > 0) items.push({ item_id: "team_support", item_name: "Team Support", item_category: "team_support", price: row.teamSupport, quantity: 1 });
