@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
 import { prisma } from "@/lib/prisma";
 import { donationStatusWhere } from "@/lib/dashboard/donation-usd-revenue";
+import { donationListSafeFields } from "@/lib/dashboard/donation-list-privacy";
 import { isValidLocale } from "@/lib/locales";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
@@ -303,7 +304,10 @@ export async function GET(request: NextRequest) {
     const frequencyOf = await loadSubscriptionFrequencies(prisma, pageSubscriptionIds);
 
     const formattedDonations = donations.map((donation) => ({
-      ...donation,
+      // Compute derived gateway evidence from the complete server-side row,
+      // then serialize only the donor-visible subset; never expose bearer
+      // receipt tokens, raw provider responses, stored card payloads or locks.
+      ...donationListSafeFields(donation),
       securityMode: donationPaymentEvidence(donation).securityMode,
       type: donation.subscriptionId ? ("MONTHLY" as const) : ("ONE_TIME" as const),
       frequency: donation.subscriptionId ? frequencyOf(donation.subscriptionId) : null,
