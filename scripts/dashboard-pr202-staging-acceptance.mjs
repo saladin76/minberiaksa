@@ -30,11 +30,11 @@ if (host === "minberiaksa.org" || host === "www.minberiaksa.org" ||
 }
 // Cookies are security credentials: never transmit them to an unintended host
 // because of a typo, redirected URL, or insecure network transport.
-const approvedHost = process.env.STAGING_ALLOWED_HOST?.trim().toLowerCase().replace(/\\.$/, "");
+const approvedHost = process.env.STAGING_ALLOWED_HOST?.trim().toLowerCase().replace(/[.]$/, "");
 if (!approvedHost || approvedHost !== host) {
   throw Error("STAGING_ALLOWED_HOST must explicitly match the isolated staging hostname");
 }
-const loopback = ["localhost", "127.0.0.1", "::1"].includes(host);
+const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host);
 if (root.protocol !== "https:" && !loopback) {
   throw Error("External staging must use HTTPS to protect session cookies");
 }
