@@ -106,6 +106,10 @@ export async function reconcileUnconfirmedDonations(options: ReconcileOptions = 
       // Verify provider evidence before ever changing an existing FAILED row.
       OR: [
         { status: "PAID" },
+        // Bank-confirmed sales can remain Processing/PendingConfirmation when
+        // local ledger settlement encounters a Mongo write conflict. Inquiry
+        // is read-only and never initiates another bank charge.
+        { provider: "ALBARAKA", providerTxnResult: { in: ["Processing", "PendingConfirmation"] } },
         { status: "FAILED", provider: "ALBARAKA", createdAt: { gte: failedRecoverySince } },
         { status: "FAILED", paymentMethod: "PAYPAL", createdAt: { gte: failedRecoverySince } },
       ],
