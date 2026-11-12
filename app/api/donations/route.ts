@@ -48,6 +48,7 @@ import {
 } from "@/lib/dashboard/donation-search";
 import { resolveDonationRelationFilterIds } from "@/lib/dashboard/donation-relation-filters";
 import { accountingDateWhere, canUseAccountingDate } from "@/lib/dashboard/accounting-date-where";
+import { dashboardLocaleWhere, dashboardCountryWhere } from "@/lib/dashboard/donation-location-scope";
 import { dashboardDonationDateSortField } from "@/lib/dashboard/donation-ledger-date";
 
 // GET /api/donations - Get all donations (admin) or user's donations
@@ -223,19 +224,8 @@ export async function GET(request: NextRequest) {
       searchWhere = donationWhereForDonorSearch(donorIds, matchingDonationIds);
     }
 
-    const localeWhere =
-      localeFilter && localeFilter !== "all"
-        ? localeFilter === "__unset"
-          ? { OR: [{ locale: null }, { locale: "" }] }
-          : { locale: localeFilter }
-        : null;
-
-    const countryWhere =
-      countryFilter && countryFilter !== "all"
-        ? countryFilter === "__unset"
-          ? { OR: [{ donorCountryCode: null }, { donorCountryCode: "" }] }
-          : { donorCountryCode: countryFilter.toUpperCase() }
-        : null;
+    const localeWhere = dashboardLocaleWhere(localeFilter);
+    const countryWhere = dashboardCountryWhere(countryFilter);
 
     // ONE_TIME means "no subscriptionId". MongoDB may store it as null or
     // omit the field entirely; cover both with isSet:false || null.
