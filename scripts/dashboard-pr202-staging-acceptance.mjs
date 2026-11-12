@@ -4,6 +4,7 @@
  *
  * Usage:
  *   STAGING_URL=https://staging.example.org \
+ *   STAGING_ALLOWED_HOST=staging.example.org \
  *   STAGING_ADMIN_COOKIE='next-auth.session-token=...' \
  *   node scripts/dashboard-pr202-staging-acceptance.mjs
  *
@@ -26,6 +27,19 @@ const host = root.hostname.toLowerCase().replace(/\.$/, "");
 if (host === "minberiaksa.org" || host === "www.minberiaksa.org" ||
     host.endsWith(".minberiaksa.org") && !host.startsWith("staging.") && !host.startsWith("test.")) {
   throw Error("Refusing production Minber hostname");
+}
+// Cookies are security credentials: never transmit them to an unintended host
+// because of a typo, redirected URL, or insecure network transport.
+const approvedHost = process.env.STAGING_ALLOWED_HOST?.trim().toLowerCase().replace(/\\.$/, "");
+if (!approvedHost || approvedHost !== host) {
+  throw Error("STAGING_ALLOWED_HOST must explicitly match the isolated staging hostname");
+}
+const loopback = ["localhost", "127.0.0.1", "::1"].includes(host);
+if (root.protocol !== "https:" && !loopback) {
+  throw Error("External staging must use HTTPS to protect session cookies");
+}
+if (root.pathname !== "/" || root.search || root.hash) {
+  throw Error("STAGING_URL must be a staging origin without a path, query or fragment");
 }
 if (!process.env.STAGING_ADMIN_COOKIE) throw Error("Missing STAGING_ADMIN_COOKIE");
 const start = process.env.STAGING_START ?? "2026-11-10";
@@ -121,10 +135,19 @@ for(const status of statusCases){
       reportedPages=Number(data.pagination?.pages);
       if(!Number.isInteger(reportedTotal)||!Number.isInteger(reportedPages)||reportedPages>1000)throw Error("Invalid or excessive listing pagination");
     }
+    if(Number(data.pagination?.total)!==reportedTotal || Number(data.pagination?.pages)!==reportedPages) {
+      throw Error(status+": pagination totals changed during read-only reconciliation");
+    }
     pages.push(...data.donations);
     if(page>=reportedPages)break;
   }
   if(pages.length!==reportedTotal)throw Error(status+": pagination incomplete ("+pages.length+"/"+reportedTotal+")");
+  // Duplicate rows between pages can accidentally conceal omissions. Do not
+  // print row identifiers; only confirm they exist and are globally unique.
+  const ids = pages.map(row=>row.id);
+  if(ids.some(id=>typeof id!=="string" || !id) || new Set(ids).size!==ids.length) {
+    throw Error(status+": invalid or duplicate donation IDs across paginated results");
+  }
   if(status==="FAILED") failedCoverage=pages.filter(r => r.status==="FAILED" && r.paidAt==null).length;
   if(status==="PENDING") pendingCoverage=pages.filter(r => r.status==="PAID" && r.paidAt==null).length;
   if(status==="PAID") {
