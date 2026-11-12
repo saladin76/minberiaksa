@@ -584,21 +584,27 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         });
       }
 
-      // ── GA4 ───────────────────────────────────────────────────────────────
+      // ── GA4 / GTM (single owner) ─────────────────────────────────────────
       const ga4EventName = GA4_EVENT_MAP[event.event];
-      if (c?.gaMeasurementId && window.gtag && ga4EventName) {
+      if (ga4EventName && c) {
         const ga4 = ga4SafeEventPayload(event);
-        window.gtag("event", ga4EventName, ga4);
+        if (c.googleTagManagerEnabled && c.googleTagManagerId) {
+          // GTM owns automatic PageView. Push remaining ecommerce/engagement
+          // events as sanitized dataLayer events and never invoke gtag as well.
+          if (event.event !== "page_view") {
+            window.dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+            window.dataLayer.push({ ecommerce: null });
+            window.dataLayer.push({ event: ga4EventName, ecommerce: ga4 });
+          }
+        } else if (c.gaMeasurementId && window.gtag) {
+          window.gtag("event", ga4EventName, ga4);
+        }
       }
 
-      // ── X (Twitter) ───────────────────────────────────────────────────────
-      if (c?.xPixelId && window.twq) {
-        const d = event.donation ?? {};
-        window.twq("event", c.xPixelId, {
-          tw_sale_amount:    d.amount ?? d.amount_usd,
-          tw_order_quantity: event.items?.reduce((s, i) => s + (i.quantity ?? 1), 0) ?? 1,
-        });
-      }
+      // ── X (Twitter) ──────────────────────────────────────────────────────
+      // X's twq("event", conversionId) is a conversion, not a funnel event.
+      // Never fire it for page/cart/checkout; paid donations are emitted only
+      // by SuccessFinalConversionTracker after verified settlement.
 
       // ── Vercel Analytics (custom events) ─────────────────────────────────
       if (VERCEL_FORWARDED_EVENTS.has(event.event)) {
