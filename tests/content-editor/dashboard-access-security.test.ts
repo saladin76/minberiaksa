@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import * as permissions from "../../lib/dashboard/permissions";
 import * as apiAuth from "../../lib/dashboard/api-auth";
 import * as legacyWrite from "../../lib/content-editor/legacy-write";
+import { donationListSafeFields } from "../../lib/dashboard/donation-list-privacy";
 // Prisma-shaped fixtures exercise the real route; no production database is used.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -244,6 +245,7 @@ function members(role = "ADMIN", live = 0, targetRole = "DONOR") {
     "@/lib/dashboard/donor-account": {},
     "@/lib/communication/donor-communication-profile-service": {},
     "@/lib/dashboard/donation-financial-summary": {},
+    "@/lib/dashboard/donation-list-privacy": { donationListSafeFields },
     "@/lib/prisma": { prisma },
   });
   const invoke = (method: string, body: Row = {}) =>
