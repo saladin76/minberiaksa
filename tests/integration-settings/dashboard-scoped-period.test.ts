@@ -16,7 +16,9 @@ test("period status uses paidAt for confirmed revenue and createdAt for failed/p
     status: "PAID", paidAt: { gte: start, lte: end },
   });
   assert.deepEqual(donationChartStatusWhere("FAILED", start, end), {
-    status: "FAILED", createdAt: { gte: start, lte: end },
+    status: "FAILED",
+    createdAt: { gte: start, lte: end },
+    OR: [{ paidAt: null }, { paidAt: { isSet: false } }],
   });
   assert.deepEqual(donationChartStatusWhere("PENDING", start, end), {
     status: "PAID", createdAt: { gte: start, lte: end },
