@@ -9833,5 +9833,21 @@
   "مطابقة الإعداد العام المحفوظ": "Verify saved public configuration",
   "الإعداد العام مطابق، ولم يُثبت استقبال أحداث خارجية": "Public configuration matches; external event delivery is unverified",
   "عدم تطابق الإعداد العام": "Public configuration mismatch",
-  "لم يُفحص الإعداد العام بعد": "Public configuration not yet checked"
+  "لم يُفحص الإعداد العام بعد": "Public configuration not yet checked",
+  "تصنيف مشاريع": "Project category",
+  "قسم كبير / صفحة برنامج رئيسية": "Major section / programme landing page",
+  "التبرع بالزكاة": "Pay zakat",
+  "مشاريع الوقف": "Endowment projects",
+  "التزكيات بالفيديو": "Video testimonials",
+  "إصدارات المؤسسة": "Publications",
+  "كن شريكًا": "Become a partner",
+  "سلة التبرعات": "Donation cart",
+  "ابحث عن المشروع أو القسم أو المحتوى": "Search projects, sections and content",
+  "اكتب الاسم لتصفية الخيارات": "Type a name to filter options",
+  "المشروع أو القسم أو المحتوى": "Project, section or content",
+  "عدد النتائج": "Results",
+  "قائمة الحملات القديمة": "Legacy campaigns catalogue",
+  "الشروط والأحكام": "Terms and conditions",
+  "سياسة الخصوصية": "Privacy policy",
+  "سياسة ملفات تعريف الارتباط": "Cookie policy"
 }
