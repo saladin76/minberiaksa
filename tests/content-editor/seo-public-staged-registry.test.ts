@@ -117,9 +117,19 @@ test("alias audit flags a canonical URL mistakenly registered as a legacy alias"
 });
 
 test("public SEO route approval cannot claim sensitive or independently served paths", () => {
-  for (const slug of ["checkout", "success", "receipt", "cart", "campaigns", "category", "api", "dashboard"]) {
+  for (const slug of ["checkout", "success", "receipt", "cart", "campaigns", "donates",
+    "bank-transfer", "donation-failed", "donation-success", "category", "api", "dashboard"]) {
     assert.throws(() => new StagedPublicUrlRegistry([
       { locale: "en", route: "projects", slug, status: "approved" },
     ]), /RESERVED_PUBLIC_ROUTE/);
+  }
+});
+
+test("staged aliases never claim live campaign landing pages or private payment paths", () => {
+  for (const path of ["/ar/campaigns", "/ar/donates", "/ar/bank-transfer",
+    "/ar/checkout", "/ar/success/123", "/ar/donation-failed"]) {
+    assert.throws(() => new StagedPublicUrlRegistry(approved, translations, [
+      { type: "project", entityId: "project-123", locale: "ar", path },
+    ]), /PROTECTED_HISTORIC_ALIAS/, path);
   }
 });
