@@ -220,7 +220,18 @@ try {
    assert.equal((await page.locator("#checkout-phone").inputValue()).replace(/\D/g,""),"905550000000","saved donor phone prefill");
    assert.equal(await page.locator("#checkout-email").inputValue(),"saved@example.invalid","saved donor email prefill");
   await page.locator("#albaraka-3d").uncheck();await page.locator("#checkout-email").fill("fixture@example.invalid");
-  await page.locator("#checkout-phone").fill("+90");await page.locator("#checkout-phone").press("End");await page.locator("#checkout-phone").pressSequentially("5551234567");await page.locator("#checkout-phone").blur();
+  const donorPhoneInput=page.locator("#checkout-phone");
+  const phoneTrace=[["initial",await donorPhoneInput.inputValue()]];
+  await donorPhoneInput.fill("+90");phoneTrace.push(["afterFill",await donorPhoneInput.inputValue()]);
+  await donorPhoneInput.press("End");await donorPhoneInput.pressSequentially("5551234567");
+  phoneTrace.push(["afterKeys",await donorPhoneInput.inputValue()]);
+  if((await donorPhoneInput.inputValue()).replace(/\D/g,"")!=="905551234567"){
+    await donorPhoneInput.click();await donorPhoneInput.press("ControlOrMeta+A");
+    await donorPhoneInput.pressSequentially("+905551234567");
+    phoneTrace.push(["afterKeyboardReplace",await donorPhoneInput.inputValue()]);
+  }
+  await donorPhoneInput.blur();phoneTrace.push(["afterBlur",await donorPhoneInput.inputValue()]);
+  console.log("Signed-in phone edit trace",JSON.stringify(phoneTrace));
   await page.locator("#checkout-cardNumber").fill("4111111111111111");await page.locator("#checkout-cardExpiry").fill("1239");await page.locator("#checkout-cardCvc").fill("123");await page.locator('#card-fields input[autocomplete="cc-name"]').fill("Fixture Donor");
   assert.equal(await page.locator('input[type="checkbox"]').count(),1,"only the optional 3D checkbox is present");
   const typedPhone=(await page.locator("#checkout-phone").inputValue()).replace(/\D/g,"");
