@@ -23,6 +23,7 @@ import {
   type MetaCustomData,
 } from "@/lib/tracking/meta-capi";
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
+import { recordFunnelObservation } from "@/lib/tracking/funnel-observations";
 
 const TIKTOK_EVENTS_URL = "https://business-api.tiktok.com/open_api/v1.3/event/track/";
 
@@ -140,7 +141,22 @@ export async function POST(req: NextRequest) {
       results.ga4 = await sendGa4BrowserMirror(event, gaMeasurementId);
     }
 
-    return NextResponse.json({ ok: true, ...results });
+    // The optional dashboard ledger is anonymous and *client-reported*.
+    // Do not confuse its receipt with confirmed payment or remote provider
+    // ingestion. A forged/browser event can never create paid revenue.
+    let observation: string = "disabled";
+    try {
+      observation = await recordFunnelObservation(event, clientIp);
+    } catch {
+      observation = "unavailable";
+    }
+    const meta = results.meta as { ok?: boolean; skipped?: boolean } | undefined;
+    const tiktok = results.tiktok as { ok?: boolean; skipped?: boolean } | undefined;
+    const providerFailure = [meta, tiktok].some(value => value && value.ok === false && !value.skipped);
+    return NextResponse.json(
+      { ok: !providerFailure, observation, ...results },
+      { status: providerFailure ? 502 : 200, headers: { "Cache-Control": "no-store" } },
+    );
   } catch (err) {
     console.error("[/api/track] error:", err);
     return NextResponse.json({ ok: false, error: "internal error" }, { status: 200 });
