@@ -85,3 +85,15 @@ test("public event endpoint rejects unsupported events and strips query tokens",
   assert.match(route, /recordFunnelObservation\(event, clientIp\)/);
   assert.match(route, /providerFailure \? 502 : 200/);
 });
+
+test("GTM ecommerce uses sanitized dataLayer and X only converts on paid success", () => {
+  const pix = readFileSync(resolve(root, "components/TrackingPixels.tsx"), "utf8");
+  assert.match(pix, /function emitGa4Funnel/);
+  assert.match(pix, /window\.dataLayer\.push\(\{ event: packet\.eventName, ecommerce: packet\.payload \}\)/);
+  assert.match(pix, /pendingGa4Ref\.current\.splice\(0\)/);
+  assert.match(pix, /ga4SafeEventPayload\(event\)/);
+  const funnel = pix.slice(pix.indexOf("// ── Core canonical sender"), pix.indexOf("// ── Public API"));
+  assert.doesNotMatch(funnel, /window\.twq\("event"/);
+  const success = readFileSync(resolve(root, "components/SuccessFinalConversionTracker.tsx"), "utf8");
+  assert.match(success, /fireXDonationConversion/);
+});
