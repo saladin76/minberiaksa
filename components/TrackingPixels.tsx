@@ -5,6 +5,7 @@ import React, { useEffect, useRef, createContext, useContext, useCallback, useSt
 import { track as vercelTrack } from "@vercel/analytics";
 import { initializeGoogleTracking, loadConfiguredGoogleTagManager } from "@/lib/tracking/google-script-policy";
 import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
+import { hasMarketingConsent, MARKETING_CONSENT_EVENT } from "@/lib/tracking/marketing-consent";
 import { ga4SafeEventPayload } from "@/lib/tracking/ga4-safe-event-payload";
 import { CART_ITEM_ADDED_EVENT, type MinbarCartItem } from "@/lib/minbar/cart";
 import { redactAnalyticsPath } from "@/lib/tracking/private-path";
@@ -319,7 +320,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     let fired = false;
 
     const load = () => {
-      if (fired) return;
+      if (fired || !hasMarketingConsent()) return;
       fired = true;
 
       fetch("/api/tracking/config")
@@ -340,22 +341,26 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         .catch(() => setConfig(null));
     };
 
+    // Conversion pages also obey consent; loading immediately would bypass it.
     // Fire-now path for conversion pages. The match is locale-agnostic  any
     // pathname segment "/success/<id>" qualifies.
     const isConversionPage = /\/(success|donation-failed)(\/|$)/.test(window.location.pathname);
     if (isConversionPage) {
       load();
-      return;
+      window.addEventListener(MARKETING_CONSENT_EVENT, load);
+      return () => window.removeEventListener(MARKETING_CONSENT_EVENT, load);
     }
 
     // Everything else waits for the shared marketing gate: the first real
     // interaction, or shortly after `load` (lib/tracking/marketing-gate.ts).
-    return whenMarketingAllowed(load);
+    const cancelGate = whenMarketingAllowed(load);
+    window.addEventListener(MARKETING_CONSENT_EVENT, load);
+    return () => { cancelGate(); window.removeEventListener(MARKETING_CONSENT_EVENT, load); };
   }, []);
 
   // ── Inject pixel scripts once config is ready ────────────────────────────────
   useEffect(() => {
-    if (!config) return;
+    if (!config || !hasMarketingConsent()) return;
 
     // Facebook Pixel (Meta)
     if (config.facebookPixelId) {
@@ -519,6 +524,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   const sendCanonical = useCallback(
     (partial: Omit<CanonicalEvent, "event_time"> & { event_time?: number }) => {
       if (typeof window !== "undefined") {
+        if (!hasMarketingConsent()) return;
         const path = window.location.pathname;
         if (/\/(success|donation-failed)(\/|$)/.test(path)) {
           if (process.env.NODE_ENV !== "production") {
@@ -650,6 +656,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   // ── Public API ────────────────────────────────────────────────────────────────
 
   const setUserData = useCallback((user: Partial<CanonicalUser>) => {
+    if (!hasMarketingConsent()) return;
     userDataRef.current = { ...userDataRef.current, ...user };
     // Also identify in TikTok Pixel
     if (configRef.current?.tiktokPixelId && window.ttq?.identify) {
