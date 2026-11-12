@@ -5,7 +5,7 @@
  * No cookies, authorization headers, POST/PATCH, payment provider, cron or DB.
  * Only findings and counts are saved; no response bodies or donor data.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 
 const ORIGIN = "https://minberiaksa.org";
 const MAX_REQUESTS = 230;
