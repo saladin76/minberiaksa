@@ -54,7 +54,7 @@ test("filtered-period revenue does not mix failed or pending attempts with colle
   assert.equal(result.attemptedFailedAmountUSD, 620);
 });
 
-test("dashboard passes status/type into chart request and presents period metrics before the global band", () => {
+test("dashboard shows only filter-scoped primary cards without duplicate summary", () => {
   const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
   const chart = readFileSync("app/api/admin/donations/chart/route.ts", "utf8");
   // The home page delegates query serialization to the shared scope helper,
@@ -68,9 +68,14 @@ test("dashboard passes status/type into chart request and presents period metric
   });
   assert.equal(scope.get("status"), "FAILED");
   assert.equal(scope.get("donationType"), "MONTHLY");
+  const cards = readFileSync("components/dashboard/HomeDonationSummary.tsx", "utf8");
   assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
-  assert.ok(page.indexOf('eyebrow={dt("الإيرادات المحصلة للفترة")}') <
-    page.indexOf('eyebrow={dt("إجمالي الإيرادات الناجحة")}'));
+  assert.match(page, /<HomeDonationSummary[\s\S]*?scoped=\{scoped\}/);
+  assert.doesNotMatch(page, /نتائج الفترة المحددة|<MetricSummaryBand/);
+  assert.doesNotMatch(cards, /\/api\/admin\/dashboard-summary|\/api\/admin\/bank-transfers\/summary/);
+  for (const field of ["paidAmountUSD", "oneTimeAmountUSD", "recurringAmountUSD", "failedCount", "pendingCount", "teamSupportUSD"]) {
+    assert.match(cards, new RegExp("scoped\\." + field));
+  }
   assert.match(chart, /donationChartStatusWhere\(/);
   assert.match(chart, /donationChartTypeWhere\(/);
   assert.match(chart, /countPending/);
