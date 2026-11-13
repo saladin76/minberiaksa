@@ -71,6 +71,7 @@ export function CampaignRowActions({
   onChanged: () => void;
 }) {
   const [busy, setBusy] = React.useState(false);
+  const sendingRef = React.useRef(false);
   const [plan, setPlan] = React.useState<SendPlan | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [controlsOpen, setControlsOpen] = React.useState(false);
@@ -183,7 +184,9 @@ export function CampaignRowActions({
   };
 
   const send = async () => {
-    setConfirmOpen(false);
+    // Synchronous guard prevents duplicate sends before React updates busy.
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setBusy(true);
     try {
       if (canConfirm) {
@@ -214,7 +217,9 @@ export function CampaignRowActions({
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
+      sendingRef.current = false;
       setBusy(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -287,7 +292,7 @@ export function CampaignRowActions({
         onChanged={onChanged}
       />
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialog open={confirmOpen} onOpenChange={open => { if (!sendingRef.current) setConfirmOpen(open); }}>
         <AlertDialogContent dir={dashDir()}>
           <AlertDialogHeader>
             <AlertDialogTitle>{dtx("إرسال «{0}»؟", [campaign.name])}</AlertDialogTitle>
@@ -303,8 +308,8 @@ export function CampaignRowActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{dt("إلغاء")}</AlertDialogCancel>
-            <AlertDialogAction disabled={busy} onClick={send} className="bg-emerald-600 hover:bg-emerald-700">
+            <AlertDialogCancel disabled={busy}>{dt("إلغاء")}</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={event => { event.preventDefault(); void send(); }} className="bg-emerald-600 hover:bg-emerald-700">
               {dt("إرسال الآن")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
