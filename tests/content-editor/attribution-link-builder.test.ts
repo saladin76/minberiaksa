@@ -188,6 +188,6 @@ test("ad destinations never expose private, checkout, or receipt routes and Snap
 
 test("link generator filters unpublished and deleted projects server-side", () => {
   const source = fs.readFileSync("app/api/admin/link-generator/data/route.ts", "utf8");
-  assert.match(source, /where: \{ isActive: true, OR: \[\{ isDeleted: false \}, \{ isDeleted: \{ isSet: false \} \} \] \}/);
+  assert.match(source, /where:\s*\{\s*isActive:\s*true,\s*OR:\s*\[\s*\{\s*isDeleted:\s*false\s*\},\s*\{\s*isDeleted:\s*\{\s*isSet:\s*false\s*\}\s*\}\s*\]\s*\}/);
   assert.match(source, /prisma\.post\.findMany\(\{\s*where: \{ published: true \}/);
 });
