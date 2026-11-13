@@ -71,7 +71,10 @@ test("dashboard shows only filter-scoped primary cards without duplicate summary
   const cards = readFileSync("components/dashboard/HomeDonationSummary.tsx", "utf8");
   assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
   assert.match(page, /<HomeDonationSummary[\s\S]*?scoped=\{scoped\}/);
-  assert.doesNotMatch(page, /نتائج الفترة المحددة|<MetricSummaryBand/);
+  assert.doesNotMatch(page, /نتائج الفترة المحددة/);
+  // The only summary band left is the clearly labelled all-time strip, which filters never change.
+  assert.equal((page.match(/<MetricSummaryBand/g) ?? []).length, 1);
+  assert.match(page, /<MetricSummaryBand[\s\S]{0,200}badge=\{dt\("كل الوقت"\)\}/);
   assert.doesNotMatch(cards, /\/api\/admin\/dashboard-summary|\/api\/admin\/bank-transfers\/summary/);
   for (const field of ["paidAmountUSD", "oneTimeAmountUSD", "recurringAmountUSD", "failedCount", "pendingCount", "teamSupportUSD"]) {
     assert.match(cards, new RegExp("scoped\\." + field));
