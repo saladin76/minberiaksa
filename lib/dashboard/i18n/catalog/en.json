@@ -4659,6 +4659,7 @@
   "حفظ هذا العرض": "Save this view",
   "حفظ وإرسال إلى Meta": "Save and send to Meta",
   "حفظ ونسخ الرابط": "Save and copy link",
+  "نسخ بصيغة مُرمَّزة": "Copy encoded link",
   "حقائق وتوجيهات يستخدمها المساعد في إجاباته، سطر لكل ملاحظة. مثال: «حملة الشتاء لغزة هي الأولوية هذا الشهر» أو «الإيصال يصل بالبريد خلال 24 ساعة». لا تتجاوز قواعد المساعد الأساسية.": "Facts and guidance the assistant uses in its answers, one line per note. Example: “The Gaza winter campaign is the priority this month” or “The receipt arrives by email within 24 hours”. They don't override the assistant's core rules.",
   "حققت ROAS {0}x وإيراد {1} مع {2} تبرعات.": "Achieved a ROAS of {0}x and revenue of {1} with {2} donations.",
   "حقل «مبلغ آخر»": "“Other amount” field",

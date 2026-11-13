@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { blockedTrackingMacros, campaignSlug, hasTrackingMacros, serializeAdParameters } from "@/lib/marketing/tracking-link-policy";
+import { toReadableUrl } from "@/lib/marketing/readable-url";
 import { cn } from "@/lib/utils";
 import { SLUGS, type MinbarRoute } from "@/lib/minbar/routes";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
@@ -366,6 +367,11 @@ export default function TrackingLinkBuilder() {
     return qs ? `${base}?${qs}` : base;
   }, [path, detailsOk, autoLocale, locale, currency, refCode, pageKind, profileTab, campaignSearch, openCartPayment, marketingParams, autoCurrency]);
 
+  // fullUrl stays canonical (percent-encoded) for href, storage and matching;
+  // readableUrl is what people see and paste into chats and posts.
+  const readableUrl = useMemo(() => toReadableUrl(fullUrl), [fullUrl]);
+  const hasEncodedForm = readableUrl !== fullUrl;
+
   useEffect(() => { setLastSavedLink(null); }, [fullUrl, marketingForm]);
 
   const dynamicTemplate = linkMode === "marketing" && marketingForm.autoPlatformData;
@@ -382,7 +388,7 @@ export default function TrackingLinkBuilder() {
   const unintendedMacros = linkMode === "marketing" && !dynamicTemplate && hasTrackingMacros(fullUrl + " " + marketingForm.campaignName);
   const needsCampaignName = linkMode === "marketing" && !dynamicTemplate && !marketingForm.campaignName.trim() && !marketingForm.campaignId.trim();
   const canUseLink = Boolean(fullUrl) && !(linkMode === "marketing" && NON_AD_DESTINATIONS.has(pageKind)) && !needsCampaignName && !blockedMacros.length && !unintendedMacros;
-  const copyValue = dynamicTemplate ? adParameters : fullUrl;
+  const copyValue = dynamicTemplate ? adParameters : readableUrl;
   async function copyText(value: string) {
     if (!value || !canUseLink) return;
     try { await navigator.clipboard.writeText(value); toast.success(dt("تم النسخ")); }
@@ -593,10 +599,11 @@ export default function TrackingLinkBuilder() {
               <p className="text-sm leading-6 text-slate-600">{dt("ضع رابط الصفحة في خانة رابط الموقع داخل الإعلان، ومعلمات التتبع في خانة URL Parameters. هذه المتغيرات تُستبدل عند تشغيل الإعلان؛ لا تشارك القالب كرابط مباشر.")}</p>
               <CopyOutput label={dt("١ · رابط الموقع Website URL")} value={destinationUrl} disabled={!canUseLink} onCopy={() => copyText(destinationUrl)} />
               <CopyOutput label={dt("٢ · معلمات التتبع URL Parameters")} value={adParameters} disabled={!canUseLink} onCopy={() => copyText(adParameters)} />
-            </div> : <CopyOutput label={dt("الرابط الكامل")} value={needsCampaignName ? "" : fullUrl} disabled={!canUseLink} onCopy={copyUrl} />}
+            </div> : <CopyOutput label={dt("الرابط الكامل")} value={needsCampaignName ? "" : readableUrl} disabled={!canUseLink} onCopy={copyUrl} />}
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!canUseLink || saving} className="min-h-11 gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{dynamicTemplate ? dt("حفظ ونسخ معلمات الإعلان") : dt("حفظ ونسخ الرابط")}</Button>
               <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!canUseLink || saving} variant="outline" className="min-h-11 gap-2"><Save className="h-4 w-4" />{dt("حفظ فقط")}</Button>
+              {!dynamicTemplate && hasEncodedForm && canUseLink ? <Button type="button" variant="ghost" onClick={() => copyText(fullUrl)} className="min-h-11 gap-2 text-muted-foreground"><Copy className="h-4 w-4" />{dt("نسخ بصيغة مُرمَّزة")}</Button> : null}
               {fullUrl && canUseLink ? <Button asChild type="button" variant="ghost" className="min-h-11 gap-2"><a href={destinationUrl || fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{dt("معاينة الصفحة")}</a></Button> : null}
             </div>
             {lastSavedLink ? (
