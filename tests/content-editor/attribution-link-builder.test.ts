@@ -175,3 +175,19 @@ test("all literal attribution UI labels are present in English and Turkish catal
     for (const path of paths) for (const match of fs.readFileSync(path, "utf8").matchAll(/dt\("([^"\n]+)"/g)) assert.ok(catalog[match[1]], `${locale}: ${match[1]}`);
   }
 });
+
+test("ad destinations never expose private, checkout, or receipt routes and Snapchat has a preset", () => {
+  const source = fs.readFileSync(builderPath, "utf8");
+  assert.match(source, /NON_AD_DESTINATIONS = new Set<PageKind>/);
+  for (const kind of ["profile", "success", "success_donation", "auth_signin", "cart"]) {
+    assert.ok(source.includes('"' + kind + '"'), kind);
+  }
+  assert.match(source, /id: "snapchat", label: "Snapchat Ads", source: "snapchat"/);
+  assert.match(source, /NON_AD_DESTINATIONS\.has\(pageKind\)/);
+});
+
+test("link generator filters unpublished and deleted projects server-side", () => {
+  const source = fs.readFileSync("app/api/admin/link-generator/data/route.ts", "utf8");
+  assert.match(source, /where: \{ isActive: true, OR: \[\{ isDeleted: false \}, \{ isDeleted: \{ isSet: false \} \} \] \}/);
+  assert.match(source, /prisma\.post\.findMany\(\{\s*where: \{ published: true \}/);
+});
