@@ -8,7 +8,7 @@
  */
 export function currentGa4SessionIdFromCookies(
   cookieHeader: string,
-  browser?: Pick<Navigator, "doNotTrack" | "globalPrivacyControl"> | undefined
+  browser?: { doNotTrack?: string | null; globalPrivacyControl?: boolean }
 ): string | undefined {
   if (browser?.globalPrivacyControl === true || browser?.doNotTrack === "1" || browser?.doNotTrack === "yes") return undefined;
   if (/(?:^|;\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookieHeader)) return undefined;
