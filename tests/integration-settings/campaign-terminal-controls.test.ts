@@ -24,3 +24,15 @@ test("campaign rows show sent-with-issues accurately and hide controls for termi
   assert.equal(isResumableBlockedCampaign({ status: "BLOCKED", metadata: { sendProgress: { done: false } } }), true);
   for (const campaign of [{ status: "BLOCKED" }, { status: "BLOCKED", metadata: { sendProgress: { done: true } } }, { status: "CANCELLED", metadata: { sendProgress: { done: false } } }]) assert.equal(isResumableBlockedCampaign(campaign), false);
 });
+
+test("sending confirmation remains mounted during async request and cannot double dispatch", () => {
+  const actions = readFileSync("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignRowActions.tsx", "utf8");
+  const send = actions.slice(actions.indexOf("  const send = async () =>"), actions.indexOf("\\n  return (", actions.indexOf("  const send = async () =>")));
+  assert.match(send, /if \(sendingRef\.current\) return;/);
+  assert.match(send, /sendingRef\.current = true;/);
+  assert.doesNotMatch(send.slice(0, send.indexOf("    try {")), /setConfirmOpen\(false\)/);
+  assert.match(send, /finally \{[\s\S]*?sendingRef\.current = false;[\s\S]*?setConfirmOpen\(false\)/);
+  assert.match(actions, /onOpenChange=\{open => \{ if \(!sendingRef\.current\) setConfirmOpen\(open\); \}\}/);
+  assert.match(actions, /<AlertDialogCancel disabled=\{busy\}>/);
+  assert.match(actions, /onClick=\{event => \{ event\.preventDefault\(\); void send\(\); \}\}/);
+});
