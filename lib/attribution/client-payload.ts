@@ -1,6 +1,7 @@
 "use client";
 
 import { DONATION_ATTRIBUTION_KEYS, safeAttributionUrl, isPaymentReturnPage, type DonationAttributionKey } from "./sanitize";
+import { currentGa4SessionIdFromCookies } from "./ga4-session-cookie";
 import { captureStoredClickIds, clearStoredClickIds } from "@/lib/tracking/click-id-storage";
 
 const PREFIX = "ala_attr_";
@@ -205,6 +206,16 @@ export function getDonationAttributionPayload(): Record<string, string> {
       if (m) out.ga_client_id = m[1];
     }
   }
+
+  // Read only the active GA4 session from browser cookies, not the application's
+  // separate session_id. Never persist it in a 30-day attribution cookie.
+  // Respect explicit analytics denial, GPC and DNT.
+  const gaSessionId = currentGa4SessionIdFromCookies(
+    document.cookie,
+    typeof navigator !== "undefined" ? navigator : undefined
+  );
+  if (gaSessionId) out.ga_session_id = gaSessionId;
+  else delete out.ga_session_id;
 
   return out;
 }
