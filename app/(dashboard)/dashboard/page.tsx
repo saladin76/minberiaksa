@@ -347,7 +347,7 @@ export default function DashboardPage() {
   );
 
   const [chartLoading, setChartLoading] = useState(true);
-  const [chartError, setChartError] = useState(false);
+  const [, setChartError] = useState(false);
   const chartRequestId = useRef(0);
   const [chartView, setChartView] = useState<ChartViewType>("bar");
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
