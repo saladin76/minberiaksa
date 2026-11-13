@@ -27,7 +27,7 @@ test("campaign rows show sent-with-issues accurately and hide controls for termi
 
 test("sending confirmation remains mounted during async request and cannot double dispatch", () => {
   const actions = readFileSync("app/(dashboard)/dashboard/communication/campaigns/_components/CampaignRowActions.tsx", "utf8");
-  const send = actions.slice(actions.indexOf("  const send = async () =>"), actions.indexOf("\\n  return (", actions.indexOf("  const send = async () =>")));
+  const send = actions.slice(actions.indexOf("  const send = async () =>"), actions.indexOf("\n  return (", actions.indexOf("  const send = async () =>")));
   assert.match(send, /if \(sendingRef\.current\) return;/);
   assert.match(send, /sendingRef\.current = true;/);
   assert.doesNotMatch(send.slice(0, send.indexOf("    try {")), /setConfirmOpen\(false\)/);
