@@ -54,7 +54,7 @@ test("filtered-period revenue does not mix failed or pending attempts with colle
   assert.equal(result.attemptedFailedAmountUSD, 620);
 });
 
-test("dashboard passes status/type into chart request and presents period metrics before the global band", () => {
+test("dashboard retains filtered chart requests without restoring the removed duplicate metrics band", () => {
   const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
   const chart = readFileSync("app/api/admin/donations/chart/route.ts", "utf8");
   // The home page delegates query serialization to the shared scope helper,
@@ -68,9 +68,9 @@ test("dashboard passes status/type into chart request and presents period metric
   });
   assert.equal(scope.get("status"), "FAILED");
   assert.equal(scope.get("donationType"), "MONTHLY");
-  assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
-  assert.ok(page.indexOf('eyebrow={dt("الإيرادات المحصلة للفترة")}') <
-    page.indexOf('eyebrow={dt("إجمالي الإيرادات الناجحة")}'));
+  assert.doesNotMatch(page, /aria-label=\{dt\("نتائج الفترة المحددة"\)\}/);
+  assert.doesNotMatch(page, /eyebrow=\{dt\("الإيرادات المحصلة للفترة"\)\}/);
+  assert.match(page, /eyebrow=\{dt\("إجمالي الإيرادات الناجحة"\)\}/);
   assert.match(chart, /donationChartStatusWhere\(/);
   assert.match(chart, /donationChartTypeWhere\(/);
   assert.match(chart, /countPending/);
