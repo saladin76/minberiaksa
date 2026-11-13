@@ -351,7 +351,7 @@ export default function JerusalemPage({ verse, projects }: JerusalemPageProps) {
             </Button>
           </div>
           {projects.length ? (
-            <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
+            <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 20 }}>
               {projects.map((project) => (
                 <ProjectDonateCard key={project.id} project={project} />
               ))}
