@@ -505,7 +505,7 @@ export default function AqsaPage({ verse, isra, projects, category = null }: Aqs
                the way this page lays out its cards. */
             <CategoryProgramme page={category}>
               {projects.length ? (
-                <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
+                <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 20 }}>
                   {projects.map((project) => (
                     <ProjectDonateCard key={project.id} project={project} tag={category.name} />
                   ))}
@@ -515,7 +515,7 @@ export default function AqsaPage({ verse, isra, projects, category = null }: Aqs
               )}
             </CategoryProgramme>
           ) : projects.length ? (
-            <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 20 }}>
+            <div className="qd-work" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 20 }}>
               {projects.map((project) => (
                 <ProjectDonateCard key={project.id} project={project} />
               ))}
