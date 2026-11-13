@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import * as sanitize from "../../lib/attribution/sanitize";
+import * as ga4SessionCookie from "../../lib/attribution/ga4-session-cookie";
 
 function fixture() {
   const cookies = new Map<string, string>(), storage = new Map<string, string>();
@@ -14,8 +15,8 @@ function fixture() {
   const clickSource = ts.transpileModule(fs.readFileSync("lib/tracking/click-id-storage.ts", "utf8"), { compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022} }).outputText;
   new vm.Script(clickSource).runInNewContext({module:clickIds,exports:clickIds.exports,window,URLSearchParams,sessionStorage});
   const source = ts.transpileModule(fs.readFileSync("lib/attribution/client-payload.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, window, document, URLSearchParams, sessionStorage, require: (name: string) => name === "./sanitize" ? sanitize : name === "@/lib/tracking/click-id-storage" ? clickIds.exports : undefined });
-  return { payload: () => loaded.exports.getDonationAttributionPayload(), visit: (url: string) => { const next = new URL(url); window.location = { href: next.href, search: next.search }; loaded.exports.captureAttributionFromUrl(); }, get: (key: string) => { const value = cookies.get("ala_attr_" + key); return value ? decodeURIComponent(value) : undefined; } };
+  new vm.Script(source).runInNewContext({ module: loaded, exports: loaded.exports, window, document, URLSearchParams, sessionStorage, require: (name: string) => name === "./sanitize" ? sanitize : name === "./ga4-session-cookie" ? ga4SessionCookie : name === "@/lib/tracking/click-id-storage" ? clickIds.exports : undefined });
+  return { cookie: (name: string, value: string) => cookies.set(name, value), payload: () => loaded.exports.getDonationAttributionPayload(), visit: (url: string) => { const next = new URL(url); window.location = { href: next.href, search: next.search }; loaded.exports.captureAttributionFromUrl(); }, get: (key: string) => { const value = cookies.get("ala_attr_" + key); return value ? decodeURIComponent(value) : undefined; } };
 }
 test("a new campaign replaces stale exact identity instead of crediting the previous campaign", () => {
   const f = fixture(); f.visit("https://minberiaksa.org/ar/bagislar?utm_source=whatsapp&utm_medium=communication&utm_campaign=old&utm_id=old&campaign_id=old&language=ar");
@@ -39,4 +40,15 @@ test("a fresh Meta click updates both fbclid and its matching fbc cookie",()=>{
 });
 test("Snap's official mixed-case ScCid parameter is captured and retained through checkout",()=>{
   const f=fixture();f.visit("https://minberiaksa.org/ar?ScCid=snap-click");f.visit("https://minberiaksa.org/ar/checkout");assert.equal(f.payload().scclid,"snap-click");
+});
+
+test("checkout capture includes only genuine GA4 session IDs from a browser cookie", () => {
+  const f = fixture();
+  f.visit("https://minberiaksa.org/ar/bagislar?utm_source=google&utm_medium=cpc");
+  f.cookie("_ga", "GA1.1.123456789.1763000000");
+  f.cookie("_ga_ABC", "GS2.1.s1763000000$o2$g1$t1763000040$j60$l0$h0");
+  assert.equal(f.payload().ga_client_id, "123456789.1763000000");
+  assert.equal(f.payload().ga_session_id, "1763000000");
+  f.cookie("analytics_consent", "denied");
+  assert.equal(f.payload().ga_session_id, undefined);
 });
