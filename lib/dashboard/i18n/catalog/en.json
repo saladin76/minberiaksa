@@ -1,4 +1,7 @@
 {
+  "حملة داخلية": "Internal campaign",
+  "القناة: ": "Channel: ",
+  "الحملة: ": "Campaign: ",
   "تعذّر تحميل قائمة البنوك. راجع سجل العمليات أدناه، وأعد تحميل البنوك قبل استيراد كشف جديد.": "The bank list could not be loaded. Review transactions below and reload banks before importing a new statement.",
   "تقويم التبرعات حسب أيام الأسبوع": "Donation calendar by weekday",
   "أيام الأسبوع": "Days of the week",
