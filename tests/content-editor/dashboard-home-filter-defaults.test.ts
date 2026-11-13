@@ -33,7 +33,7 @@ test("clearing all resets to shared defined defaults", () => {
 test("clearing a donor deep-link restores global metrics and donor selector", () => {
   const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
   assert.equal(page.includes('!searchParams.get("userId")'), false);
-  assert.match(page, /selectedUserId === "all" && <>/);
+  // The donor selector is a conditional JSX wrapper. Keep the guard and\n  // verify it contains the actual selector rather than locking the test to a fragment syntax.\n  assert.match(page, /\{selectedUserId === "all" && \(\s*<div[\s\S]*?<Select[\s\S]*?value=\{selectedUserId\}/);
   assert.match(page, /selectedUserId === "all" && \(/);
   assert.match(page, /const linkedDonorId = searchParams.get\("userId"\)/);
   assert.match(page, /\}, \[linkedDonorId\]\)/);
