@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, statfs, unlink, writeFile } from "node:fs/promises";
+import { mkdir, statfs, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve, sep } from "node:path";
 
 /** Opaque image names, not user-supplied titles, paths, or filenames. */
