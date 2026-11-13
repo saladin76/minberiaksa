@@ -114,7 +114,7 @@ const server=createServer(async(request,response)=>{const url=new URL(request.ur
  if(url.pathname==="/api/communication/campaigns"&&url.searchParams.get("countersMode")==="poll")return json({ok:true,deliveryCountersReady:true,counters:{[id]:{sent:100,delivered:90,read:50,clicked:0,replied:12,failed:10}}});
  if(url.pathname==="/api/communication/campaigns")return json({ok:true,outcomesReady:true,campaigns:[{id,name:"Fixture confirmed campaign",channel:"WHATSAPP",purpose:"MARKETING",status:"SENT",audienceSegmentKey:null,templateGroupId:null,sentCount:100,deliveredCount:90,readCount:50,clickedCount:0,repliedCount:12,donationCount:2,revenue:150.25,unpricedPaidCount:0,trackingRequiresTemplateUpdate:true,failedCount:10,createdAt:"2026-10-25T01:00:00Z",updatedAt:"2026-10-25T01:00:00Z"}],unattributed:{donationCount:3,revenue:75.5,unpricedPaidCount:1}});
  if(url.pathname==="/api/admin/stats")return json({totalAmount:100,paidCount:4,failedCount:1,totalCampaigns:2,totalCategories:1,totalUsers:4,totalDonations:5,paidRevenueAllTimeUnfiltered:9876543.21,paidCountAllTimeUnfiltered:12345,monthlyRecurringRevenueUnfiltered:125,activeMonthlyCountUnfiltered:7,oneTimeCount:1,monthlyCount:3,activeMonthlyCount:1,monthlyRecurringRevenue:25,thisMonthRevenue:50,campaignDonationsTotal:100,categoryDonationsTotal:0,recentDonations:[]});
- if(url.pathname==="/api/admin/donations/chart")return json([{date:"2026-10-26",amountUSD:100,count:4,amountOneTime:25,countOneTime:1,amountMonthly:75,countMonthly:3,amountFailed:25,countFailed:1}]);
+ if(url.pathname==="/api/admin/donations/chart")return json(url.searchParams.get("provider")==="PAYPAL"?[{date:"2026-10-26",amountUSD:35,count:2,amountOneTime:5,countOneTime:1,amountMonthly:30,countMonthly:1,amountFailed:0,countFailed:0}]:[{date:"2026-10-26",amountUSD:100,count:4,amountOneTime:25,countOneTime:1,amountMonthly:75,countMonthly:3,amountFailed:25,countFailed:1}]);
  if(url.pathname==="/api/admin/donations/countries")return json({countries:[{code:"TR",count:4}],unsetCount:0});
  if(url.pathname==="/api/admin/dashboard-summary")return json({today:{amountUSD:120,count:2,unpriced:0},month:{amountUSD:600,count:10,unpriced:0},support:{amountUSD:50,count:4,unpriced:0},failed:{amountUSD:150,count:3,unpriced:0},averageUSD:60,todayKey:"2026-10-26",monthKey:"2026-10"});
  if(url.pathname==="/api/admin/bank-transfers/summary")return json({totalUsd:0,totals:{},approvedCount:0,pendingCount:0});
@@ -341,18 +341,17 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await open("summary");
  await page.getByRole("heading",{name:ui(locale,"المؤشرات"),exact:true}).waitFor();
  const metricSection=page.getByRole("region",{name:ui(locale,"المؤشرات"),exact:true});
- await metricSection.getByText("$600",{exact:true}).waitFor();
- assert.equal(await metricSection.getByRole("article").count(),6);
- await metricSection.getByText("$60",{exact:true}).waitFor();
- const allTime=page.getByRole("region",{name:ui(locale,"إجمالي الإيرادات الناجحة"),exact:true});
- await allTime.getByText("$9,876,543.21",{exact:true}).waitFor();
- await allTime.getByText("$800.04",{exact:true}).waitFor();
- await allTime.getByText(ui(locale,"متوسط التبرع"),{exact:true}).waitFor();checks++;
+ await metricSection.getByText("$100",{exact:true}).waitFor();
+ assert.equal(await metricSection.getByRole("article").count(),7);
+ await metricSection.getByText("$75",{exact:true}).waitFor();
+ await metricSection.getByText(ui(locale,"متوسط التبرع"),{exact:true}).waitFor();
+ assert.equal(await page.getByRole("region",{name:ui(locale,"نتائج الفترة المحددة"),exact:true}).count(),0);
+ assert.equal(requests.some(row=>row.path==="/api/admin/dashboard-summary"||row.path==="/api/admin/bank-transfers/summary"),false,"filtered cards must not fetch unscoped summaries");checks++;
 
  for(const width of [1440,390,320]){
   await page.setViewportSize({width,height:1000});
   const dimensions=await metricSection.getByRole("article").evaluateAll(cards=>cards.map(card=>({height:card.getBoundingClientRect().height,scroll:card.scrollWidth,width:card.clientWidth})));
-  assert.equal(dimensions.length,6);assert.ok(dimensions.every(card=>card.height<=130&&card.scroll<=card.width+1),"compact revenue cards remain readable without horizontal overflow");
+  assert.equal(dimensions.length,7);assert.ok(dimensions.every(card=>card.height<=130&&card.scroll<=card.width+1),"compact revenue cards remain readable without horizontal overflow");
   await metricSection.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-compact-revenue-"+width+".png")});checks++;
  }
  await page.setViewportSize({width:1440,height:1000});
@@ -366,7 +365,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  const providerReads=Promise.all(["/api/donations","/api/admin/stats","/api/admin/donations/chart"].map(endpoint=>page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname===endpoint&&url.searchParams.get("provider")==="PAYPAL"})));
  await gateway.click();await page.getByRole("option",{name:"PayPal",exact:true}).click({noWaitAfter:true});
  await providerReads;
- await allTime.getByText("$9,876,543.21",{exact:true}).waitFor();await allTime.getByText("$800.04",{exact:true}).waitFor();await metricSection.getByText("$60",{exact:true}).waitFor();checks++;
+ await metricSection.getByText("$35",{exact:true}).waitFor();await metricSection.getByText("$30",{exact:true}).waitFor();assert.equal(await metricSection.getByText("$100",{exact:true}).count(),0,"old unfiltered revenue must disappear");checks++;
  for(const endpoint of ["/api/donations","/api/admin/stats","/api/admin/donations/chart"]) assert.ok(requests.some(row=>row.path===endpoint&&row.query.provider==="PAYPAL"),endpoint+" must retain provider filter");
  await page.getByRole("button",{name:ui(locale,"تصدير التقرير"),exact:true}).click();
  assert.equal(await page.getByRole("dialog").getByRole("combobox",{name:ui(locale,"بوابة الدفع"),exact:true}).textContent(),"PayPal");await page.keyboard.press("Escape");
