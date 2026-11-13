@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { UploadApiResponse } from 'cloudinary';
 import cloudinary from '@/lib/cloudinary';
+import { isVpsImageId, publicImageStorageEnabled, removePublicImage, savePublicImage } from '@/lib/uploads/vps-public-image';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/options';
 import {
@@ -71,7 +72,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await uploadBuffer(buffer, 'campaigns');
+    // Prefer durable VPS storage. Old Cloudinary-backed URLs remain valid.
+    // If VPS storage is configured but fails, fail closed instead of silently
+    // switching providers: this makes operational outages visible.
+    const result = publicImageStorageEnabled()
+      ? await savePublicImage(buffer, file.type.toLowerCase())
+      : await uploadBuffer(buffer, 'campaigns').then(asset => ({ url: asset.secure_url, public_id: asset.public_id }));
 
     const actor = auditActorFromSiteSession(session);
     queueAuditLog({
@@ -84,7 +90,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
-      url: result.secure_url,
+      url: result.url,
       public_id: result.public_id,
     });
   } catch (error) {
@@ -116,8 +122,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Public ID is required' }, { status: 400 });
     }
 
-    // Delete from Cloudinary
-    await cloudinary.uploader.destroy(`campaigns/${publicId}`);
+    // Avoid deleting arbitrary provider IDs or an entire Cloudinary folder.
+    if (isVpsImageId(publicId)) {
+      await removePublicImage(publicId);
+    } else {
+      // Legacy deletion is kept only for the existing Cloudinary-backed assets.
+      // The previous behavior is unchanged pending a separate deletion audit.
+      await cloudinary.uploader.destroy(`campaigns/${publicId}`);
+    }
 
     const actor = auditActorFromSiteSession(session);
     queueAuditLog({
