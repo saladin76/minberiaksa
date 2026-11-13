@@ -5,26 +5,37 @@ import { createFormatDashboardMoney } from "@/lib/dashboard/format-dashboard-mon
 import { dt } from "@/lib/dashboard/i18n";
 import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import { cn } from "@/lib/utils";
-import { CircleDollarSign, HeartHandshake, Repeat, RefreshCw, TrendingUp, TriangleAlert, Wallet } from "lucide-react";
+import { CalendarDays, CircleDollarSign, HeartHandshake, Repeat, RefreshCw, TrendingUp, TriangleAlert, Wallet } from "lucide-react";
 
 type Scoped = ReturnType<typeof summarizeScopedDonationChart>;
 type Props = {
   scoped: Scoped;
   loading: boolean;
   periodLabel: string;
+  /** Today's settled revenue under the same filters; the period is fixed to today. */
+  today?: { scoped: Scoped; loading: boolean; error: boolean };
   onRefresh?: () => void;
 };
 
 /**
  * The headline cards share the exact filtered, settled chart series.
  * No independent all-time/today/month fetch may overwrite the active scope.
+ * The optional "today" card is separate: same filters, period fixed to today.
  */
-export function HomeDonationSummary({ scoped, loading, periodLabel, onRefresh }: Props) {
+export function HomeDonationSummary({ scoped, loading, periodLabel, today, onRefresh }: Props) {
   const { getSelectedCurrency, convertToCurrency } = useCurrency();
   const format = createFormatDashboardMoney({ getSelectedCurrency, convertToCurrency });
-  const money = (amount: number) => loading ? "…" : format(amount, "USD", amount);
-  const number = (count: number) => loading ? "…" : count.toLocaleString("en-US");
+  const money = (amount: number, busy = loading) => busy ? "…" : format(amount, "USD", amount);
+  const number = (count: number, busy = loading) => busy ? "…" : count.toLocaleString("en-US");
+  const todayCard = today ? [{
+    title: dt("إيرادات ناجحة ({0})", [dt("اليوم")]),
+    amount: today.error ? null : today.scoped.paidAmountUSD,
+    count: today.error ? null : today.scoped.paidCount,
+    loading: today.loading,
+    icon: CalendarDays, tone: "border-teal-200 bg-gradient-to-br from-teal-50 to-white", iconTone: "bg-teal-100 text-teal-700", accent: "bg-teal-500",
+  }] : [];
   const cards = [
+    ...todayCard,
     { title: dt("تبرعات ناجحة"), amount: scoped.paidAmountUSD, count: scoped.paidCount, icon: CircleDollarSign, tone: "border-emerald-200 bg-gradient-to-br from-emerald-50 to-white", iconTone: "bg-emerald-100 text-emerald-700", accent: "bg-emerald-500" },
     { title: dt("لمرة واحدة"), amount: scoped.oneTimeAmountUSD, count: scoped.oneTimeCount, icon: Wallet, tone: "border-blue-200 bg-gradient-to-br from-blue-50 to-white", iconTone: "bg-blue-100 text-blue-700", accent: "bg-blue-500" },
     { title: dt("دورية"), amount: scoped.recurringAmountUSD, count: scoped.recurringCount, icon: Repeat, tone: "border-violet-200 bg-gradient-to-br from-violet-50 to-white", iconTone: "bg-violet-100 text-violet-700", accent: "bg-violet-500" },
@@ -54,9 +65,9 @@ export function HomeDonationSummary({ scoped, loading, periodLabel, onRefresh }:
               <h3 className="text-xs font-semibold leading-4 text-slate-700">{card.title}</h3>
             </div>
             <p className="my-1 break-words text-[22px] font-bold leading-6 tabular-nums tracking-tight text-slate-950" dir="ltr">
-              {card.amount === null ? card.count === null ? "—" : number(card.count) : money(card.amount)}
+              {card.amount === null ? card.count === null ? "—" : number(card.count, "loading" in card ? card.loading : loading) : money(card.amount, "loading" in card ? card.loading : loading)}
             </p>
-            {card.count !== null && <span className="inline-flex rounded-full border border-white/80 bg-white/75 px-2 py-0.5 text-[10px] font-medium leading-3 text-slate-600">{dt("عدد: {0}", [number(card.count)])}</span>}
+            {card.count !== null && <span className="inline-flex rounded-full border border-white/80 bg-white/75 px-2 py-0.5 text-[10px] font-medium leading-3 text-slate-600">{dt("عدد: {0}", [number(card.count, "loading" in card ? card.loading : loading)])}</span>}
             {card.title === dt("تبرعات فاشلة") && <p className="text-[10px] text-rose-700">{dt("مبلغ المحاولات الفاشلة ليس إيرادًا")}</p>}
           </article>;
         })}
