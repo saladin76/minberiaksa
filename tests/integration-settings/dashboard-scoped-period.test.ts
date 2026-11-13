@@ -54,7 +54,7 @@ test("filtered-period revenue does not mix failed or pending attempts with colle
   assert.equal(result.attemptedFailedAmountUSD, 620);
 });
 
-test("dashboard retains filtered chart requests without restoring the removed duplicate metrics band", () => {
+test("dashboard shows only filter-scoped primary cards without duplicate summary", () => {
   const page = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
   const chart = readFileSync("app/api/admin/donations/chart/route.ts", "utf8");
   // The home page delegates query serialization to the shared scope helper,
@@ -68,9 +68,14 @@ test("dashboard retains filtered chart requests without restoring the removed du
   });
   assert.equal(scope.get("status"), "FAILED");
   assert.equal(scope.get("donationType"), "MONTHLY");
-  assert.doesNotMatch(page, /aria-label=\{dt\("نتائج الفترة المحددة"\)\}/);
-  assert.doesNotMatch(page, /eyebrow=\{dt\("الإيرادات المحصلة للفترة"\)\}/);
-  assert.match(page, /eyebrow=\{dt\("إجمالي الإيرادات الناجحة"\)\}/);
+  const cards = readFileSync("components/dashboard/HomeDonationSummary.tsx", "utf8");
+  assert.match(page, /summarizeScopedDonationChart\(chartData\)/);
+  assert.match(page, /<HomeDonationSummary[\s\S]*?scoped=\{scoped\}/);
+  assert.doesNotMatch(page, /نتائج الفترة المحددة|<MetricSummaryBand/);
+  assert.doesNotMatch(cards, /\/api\/admin\/dashboard-summary|\/api\/admin\/bank-transfers\/summary/);
+  for (const field of ["paidAmountUSD", "oneTimeAmountUSD", "recurringAmountUSD", "failedCount", "pendingCount", "teamSupportUSD"]) {
+    assert.match(cards, new RegExp("scoped\\." + field));
+  }
   assert.match(chart, /donationChartStatusWhere\(/);
   assert.match(chart, /donationChartTypeWhere\(/);
   assert.match(chart, /countPending/);
