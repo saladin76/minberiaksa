@@ -490,6 +490,34 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
       const inspected = await inspectMediaFile(file, type).catch(() => ({ size: file.size } as MediaInfo));
       setMediaInfo(inspected);
 
+      // Prefer persistent VPS media storage; Cloudinary is only an optional
+      // compatibility fallback when that storage is not configured.
+      const vpsForm = new FormData();
+      vpsForm.set("file", file);
+      let vpsResult: { handle?: string; url?: string; publicId?: string } | null = null;
+      try {
+        const upload = await axios.post("/api/templates/whatsapp/media-upload", vpsForm);
+        vpsResult = upload.data;
+      } catch (vpsError) {
+        const reason = (vpsError as { response?: { data?: { reason?: string } } }).response?.data?.reason;
+        if (reason !== "TEMPLATE_MEDIA_LOCAL_STORAGE_DISABLED") throw vpsError;
+      }
+      if (vpsResult) {
+        if (!vpsResult.handle || !vpsResult.url || !vpsResult.publicId) throw new Error("Incomplete VPS/Meta media upload confirmation");
+        setHeader((previous) => ({
+          ...previous,
+          exampleHandle: vpsResult.handle,
+          mediaUrl: vpsResult.url,
+          mediaPublicId: vpsResult.publicId,
+          fileName: file.name,
+          mimeType: mediaMime,
+        }));
+        toast.success(inspected.ratioOk === false
+          ? dt("تم الرفع، لكن نسبة الأبعاد ليست مثالية لعرض واتساب.")
+          : dt("تم رفع الوسائط والتحقق منها وإرسال العينة إلى Meta."));
+        return;
+      }
+
       const signature = await axios.post("/api/templates/whatsapp/media-signature", { kind: type });
       const signed = signature.data as {
         uploadUrl: string;
