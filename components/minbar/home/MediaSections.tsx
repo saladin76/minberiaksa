@@ -162,6 +162,7 @@ function ReelRail({
 }) {
   const t = useTranslations("homepage");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
 
   return (
     <Rail
@@ -180,6 +181,14 @@ function ReelRail({
         const external = !embeddable && Boolean(media.watchUrl);
         const playable = embeddable || external;
         const tag = video.regionKey ? (t.has(video.regionKey) ? t(video.regionKey) : video.regionKey) : "";
+        // Turkish diacritics and localized region names must resolve to the
+        // proper destination even when CMS stores only a translated label.
+        const regionHint = `${video.regionKey} ${tag}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("tr");
+        const stillHref = regionHint.includes("aqsa") || regionHint.includes("aksa")
+          ? miaPath("aqsa", locale)
+          : regionHint.includes("quds") || regionHint.includes("kudus")
+            ? miaPath("jerusalem", locale)
+            : miaPath("reports", locale);
 
         const content = (
           <>
@@ -241,9 +250,13 @@ function ReelRail({
             {content}
           </a>
         ) : (
-          <div key={video.id} className="mia-reel" style={cardStyle}>
+          // A CMS entry with a still but no uploaded video remains useful as
+          // a regional project link. Never present it as a playable recording.
+          <Link key={video.id}
+            href={stillHref}
+            className="mia-reel" style={{ ...cardStyle, textDecoration: "none", cursor: "pointer" }}>
             {content}
-          </div>
+          </Link>
         );
       })}
     </Rail>
