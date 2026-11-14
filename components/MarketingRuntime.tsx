@@ -2,6 +2,7 @@
 
 import React from "react";
 import TrackingPixels from "@/components/TrackingPixels";
+import MarketingConsentBanner from "@/components/MarketingConsentBanner";
 import { AttributionCapture } from "@/components/AttributionCapture";
 import { RoutePageViewTracker } from "@/components/RoutePageViewTracker";
 import { SuccessFinalConversionTracker } from "@/components/SuccessFinalConversionTracker";
@@ -25,6 +26,7 @@ import ReferralTracker from "@/components/ReferralTracker";
 export function MarketingRuntime({ children }: { children: React.ReactNode }) {
   return (
     <TrackingPixels>
+      <MarketingConsentBanner />
       <RoutePageViewTracker />
       <SuccessFinalConversionTracker />
       <AttributionCapture />

@@ -603,6 +603,7 @@ try {
       body: "window.fixtureTagLoaded=true;",
     });
   });
+  await page.context().addCookies([{ name: "analytics_consent", value: "granted", url: origin }]);
   await page.goto(`${origin}/ar/success/fixture?surface=pixels`);
   await expect
     .poll(() => page.evaluate(() => typeof window.gtag))

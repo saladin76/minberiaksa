@@ -5,6 +5,10 @@ import React, { useEffect, useRef, createContext, useContext, useCallback, useSt
 import { track as vercelTrack } from "@vercel/analytics";
 import { initializeGoogleTracking, loadConfiguredGoogleTagManager } from "@/lib/tracking/google-script-policy";
 import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
+import { hasMarketingConsent, MARKETING_CONSENT_EVENT } from "@/lib/tracking/marketing-consent";
+import { ga4SafeEventPayload } from "@/lib/tracking/ga4-safe-event-payload";
+import { CART_ITEM_ADDED_EVENT, type MinbarCartItem } from "@/lib/minbar/cart";
+import { redactAnalyticsPath } from "@/lib/tracking/private-path";
 import {
   generateEventId,
   metaDonationEventId,
@@ -80,6 +84,25 @@ export interface TrackingConfig {
   gaMeasurementId: string | null;
   tiktokPixelId: string | null;
   xPixelId: string | null;
+}
+
+type PendingGa4Event = { eventName: string; payload: Record<string, unknown>; canonical: CanonicalEventName };
+
+/** Returns whether a sanitized event was accepted by its single browser owner. */
+function emitGa4Funnel(config: TrackingConfig, packet: PendingGa4Event): boolean {
+  if (config.googleTagManagerEnabled && config.googleTagManagerId) {
+    // GTM owns its initial PageView and handles subsequent commerce events.
+    if (packet.canonical === "page_view") return true;
+    window.dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({ event: packet.eventName, ecommerce: packet.payload });
+    return true;
+  }
+  if (config.gaMeasurementId && window.gtag) {
+    window.gtag("event", packet.eventName, packet.payload);
+    return true;
+  }
+  return false;
 }
 
 // ─── Legacy option types (kept for backward compat) ──────────────────────────
@@ -275,6 +298,7 @@ function buildGa4Items(
 
 export default function TrackingPixels({ children }: { children: React.ReactNode }) {
   const configRef = useRef<TrackingConfig | null>(null);
+  const pendingGa4Ref = useRef<PendingGa4Event[]>([]);
   const [config, setConfig] = useState<TrackingConfig | null>(null);
   // Mutable user data  updated by DonationDialog when user fills in details
   const userDataRef = useRef<Partial<CanonicalUser>>({});
@@ -296,7 +320,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
     let fired = false;
 
     const load = () => {
-      if (fired) return;
+      if (fired || !hasMarketingConsent()) return;
       fired = true;
 
       fetch("/api/tracking/config")
@@ -317,22 +341,26 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         .catch(() => setConfig(null));
     };
 
+    // Conversion pages also obey consent; loading immediately would bypass it.
     // Fire-now path for conversion pages. The match is locale-agnostic  any
     // pathname segment "/success/<id>" qualifies.
     const isConversionPage = /\/(success|donation-failed)(\/|$)/.test(window.location.pathname);
     if (isConversionPage) {
       load();
-      return;
+      window.addEventListener(MARKETING_CONSENT_EVENT, load);
+      return () => window.removeEventListener(MARKETING_CONSENT_EVENT, load);
     }
 
     // Everything else waits for the shared marketing gate: the first real
     // interaction, or shortly after `load` (lib/tracking/marketing-gate.ts).
-    return whenMarketingAllowed(load);
+    const cancelGate = whenMarketingAllowed(load);
+    window.addEventListener(MARKETING_CONSENT_EVENT, load);
+    return () => { cancelGate(); window.removeEventListener(MARKETING_CONSENT_EVENT, load); };
   }, []);
 
   // ── Inject pixel scripts once config is ready ────────────────────────────────
   useEffect(() => {
-    if (!config) return;
+    if (!config || !hasMarketingConsent()) return;
 
     // Facebook Pixel (Meta)
     if (config.facebookPixelId) {
@@ -417,6 +445,11 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
       `;
       document.head.appendChild(script);
     }
+
+    // Checkout may fire before /api/tracking/config responds and before
+    // gtag.js/GTM bootstrap. Replay only privacy-allowlisted GA4 packets.
+    const pending = pendingGa4Ref.current.splice(0);
+    for (const packet of pending) emitGa4Funnel(config, packet);
   }, [config]);
 
   // ── Scroll depth tracking (25 / 50 / 75 / 100 %) ─────────────────────────────
@@ -491,6 +524,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   const sendCanonical = useCallback(
     (partial: Omit<CanonicalEvent, "event_time"> & { event_time?: number }) => {
       if (typeof window !== "undefined") {
+        if (!hasMarketingConsent()) return;
         const path = window.location.pathname;
         if (/\/(success|donation-failed)(\/|$)/.test(path)) {
           if (process.env.NODE_ENV !== "production") {
@@ -507,8 +541,13 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         event_time: Math.floor(Date.now() / 1000),
         ...partial,
         page: {
-          url:      typeof window !== "undefined" ? window.location.href  : undefined,
-          referrer: typeof document !== "undefined" ? document.referrer   : undefined,
+          // Canonical funnel pages may carry receipt/access tokens in query.
+          // Third-party pixels and server mirrors must receive only the origin
+          // and pathname, never full URLs, query strings or hash fragments.
+          url:      typeof window !== "undefined" ? window.location.origin + redactAnalyticsPath(window.location.pathname) : undefined,
+          referrer: typeof document !== "undefined" && document.referrer
+            ? (() => { try { const u = new URL(document.referrer); return u.origin; } catch { return undefined; } })()
+            : undefined,
           title:    typeof document !== "undefined" ? document.title      : undefined,
           language: typeof navigator !== "undefined" ? navigator.language : undefined,
           ...partial.page,
@@ -576,53 +615,26 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         });
       }
 
-      // ── GA4 ───────────────────────────────────────────────────────────────
+      // ── GA4 / GTM (single owner) ─────────────────────────────────────────
       const ga4EventName = GA4_EVENT_MAP[event.event];
-      if (c?.gaMeasurementId && window.gtag && ga4EventName) {
-        const d  = event.donation ?? {};
-        const p  = event.payment  ?? {};
-        const u  = event.user     ?? {};
-        const ga4: Record<string, unknown> = {};
-        if (d.amount ?? d.amount_usd) ga4.value    = d.amount ?? d.amount_usd;
-        if (d.currency)               ga4.currency  = d.currency;
-        if (p.transaction_id)         ga4.transaction_id = p.transaction_id;
-        if (event.items?.length) {
-          ga4.items = event.items.map((i) => ({
-            item_id:       i.item_id,
-            item_name:     i.item_name,
-            item_category: i.item_category,
-            price:         i.price,
-            quantity:      i.quantity ?? 1,
-          }));
+      if (ga4EventName) {
+        const packet: PendingGa4Event = {
+          eventName: ga4EventName,
+          payload: ga4SafeEventPayload(event),
+          canonical: event.event,
+        };
+        if (!c || !emitGa4Funnel(c, packet)) {
+          // A bounded in-memory queue, not storage. No personal fields enter it.
+          const pending = pendingGa4Ref.current;
+          if (pending.length === 50) pending.shift();
+          pending.push(packet);
         }
-        // User / customer info  for GTM enhanced matching and Meta CAPI via GTM
-        if (u.email)            ga4.email            = u.email;
-        if (u.phone)            ga4.phone            = u.phone;
-        if (u.first_name)       ga4.first_name       = u.first_name;
-        if (u.last_name)        ga4.last_name        = u.last_name;
-        if (u.gender)           ga4.gender           = u.gender;
-        if (u.date_of_birth)    ga4.date_of_birth    = u.date_of_birth;
-        if (u.city)             ga4.city             = u.city;
-        if (u.state)            ga4.state            = u.state;
-        if (u.zip)              ga4.zip              = u.zip;
-        if (u.country_code)     ga4.country          = u.country_code;
-        if (u.external_id)      ga4.external_id      = u.external_id;
-        if (u.fbp)              ga4.fbp              = u.fbp;
-        if (u.fbc)              ga4.fbc              = u.fbc;
-        if (u.subscription_id)  ga4.subscription_id  = u.subscription_id;
-        if (u.user_agent)       ga4.user_agent       = u.user_agent;
-        if (event.custom) Object.assign(ga4, event.custom);
-        window.gtag("event", ga4EventName, ga4);
       }
 
-      // ── X (Twitter) ───────────────────────────────────────────────────────
-      if (c?.xPixelId && window.twq) {
-        const d = event.donation ?? {};
-        window.twq("event", c.xPixelId, {
-          tw_sale_amount:    d.amount ?? d.amount_usd,
-          tw_order_quantity: event.items?.reduce((s, i) => s + (i.quantity ?? 1), 0) ?? 1,
-        });
-      }
+      // ── X (Twitter) ──────────────────────────────────────────────────────
+      // X's twq("event", conversionId) is a conversion, not a funnel event.
+      // Never fire it for page/cart/checkout; paid donations are emitted only
+      // by SuccessFinalConversionTracker after verified settlement.
 
       // ── Vercel Analytics (custom events) ─────────────────────────────────
       if (VERCEL_FORWARDED_EVENTS.has(event.event)) {
@@ -644,6 +656,7 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
   // ── Public API ────────────────────────────────────────────────────────────────
 
   const setUserData = useCallback((user: Partial<CanonicalUser>) => {
+    if (!hasMarketingConsent()) return;
     userDataRef.current = { ...userDataRef.current, ...user };
     // Also identify in TikTok Pixel
     if (configRef.current?.tiktokPixelId && window.ttq?.identify) {
@@ -694,6 +707,27 @@ export default function TrackingPixels({ children }: { children: React.ReactNode
         : buildGa4Items(contentIds, value, contentName, quantity).map((i) => ({ ...i })),
     });
   }, [sendCanonical]);
+
+  // Minbar's new cart is a separate flow from the legacy DonationDialog.
+  // Listen to actual item additions (not cart hydration, language changes,
+  // currency switches or saved-cart edits) to avoid duplicate AddToCart.
+  useEffect(() => {
+    const onItemAdded = (event: Event) => {
+      const item = (event as CustomEvent<MinbarCartItem>).detail;
+      if (!item || !(item.amount > 0)) return;
+      const id = item.projectId ?? item.categoryId ?? item.titleKey ?? item.upsellId ?? "donation";
+      const local = item.local;
+      const value = local && local.amount > 0 ? local.amount : item.amount;
+      const currency = local && local.amount > 0 ? local.currency : item.currency;
+      trackAddToCart({
+        // The cart line value is the total for all shares; quantity=1 avoids
+        // reporting value multiplied again by the share count.
+        value, currency, contentIds: [id], quantity: 1,
+      });
+    };
+    window.addEventListener(CART_ITEM_ADDED_EVENT, onItemAdded);
+    return () => window.removeEventListener(CART_ITEM_ADDED_EVENT, onItemAdded);
+  }, [trackAddToCart]);
 
   const trackCustomizeProduct = useCallback((options: TrackCustomizeProductOptions) => {
     sendCanonical({

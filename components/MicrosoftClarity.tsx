@@ -7,6 +7,7 @@ import { isMeasurementHost } from "@/lib/tracking/engagement-policy";
 import { isPublicAnalyticsPath } from "@/lib/tracking/private-path";
 import { normalizeClarityProjectId } from "@/lib/tracking/clarity-config";
 import { whenMarketingAllowed } from "@/lib/tracking/marketing-gate";
+import { hasMarketingConsent } from "@/lib/tracking/marketing-consent";
 
 declare global {
   interface Window {
@@ -27,8 +28,7 @@ function privacyAllowsRecorder(): boolean {
   // Respect browser opt-out signals and explicit analytics cookie rejection.
   const signals = navigator as Navigator & { globalPrivacyControl?: boolean };
   if (signals.globalPrivacyControl === true || navigator.doNotTrack === "1") return false;
-  const cookie = typeof document === "undefined" ? "" : document.cookie;
-  return !/(?:^|;\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookie);
+  return hasMarketingConsent();
 }
 
 /**

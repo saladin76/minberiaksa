@@ -137,6 +137,8 @@ export const CART_SCHEMA_KEY = "mia_cart_schema";
 export const CART_COUNT_KEY = "mia_basket";
 /** Fired on every write so the header badge updates without a reload. */
 export const CART_UPDATED_EVENT = "mia:basket-updated";
+/** Fired only for a genuine item addition; payload is a public cart line without gift/PII. */
+export const CART_ITEM_ADDED_EVENT = "mia:basket-item-added";
 
 export const CART_SCHEMA_VERSION = 2;
 
@@ -312,6 +314,14 @@ export function writeCart(items: MinbarCartItem[]): void {
 export function addToCart(item: MinbarCartItem): MinbarCartItem[] {
   const next = [...readCart(), item];
   writeCart(next);
+  if (isBrowser()) {
+    // Do not leak gift names, recipient contacts, memorial names or notes to
+    // event listeners. Analytics receives category/amount/currency only.
+    const { projectId, categoryId, titleKey, upsellId, amount, currency, local, shareCount } = item;
+    window.dispatchEvent(new CustomEvent(CART_ITEM_ADDED_EVENT, {
+      detail: { projectId, categoryId, titleKey, upsellId, amount, currency, local, shareCount },
+    }));
+  }
   return next;
 }
 

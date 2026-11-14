@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { hasMarketingConsent } from "@/lib/tracking/marketing-consent";
 import {
   fireGoogleAdsDonationConversion,
   fireTikTokDonationConversion,
@@ -97,7 +98,7 @@ function fireMetaBrowserDonate(payload: DonateTrackingPayload, eventName: "Donat
 async function waitAndFireMetaBrowserDonate(payload: DonateTrackingPayload, eventName: "Donate" | "Purchase", eventId: string, isCancelled: () => boolean) {
   let lastError = "fbq unavailable";
   for (let attempt = 1; attempt <= META_BROWSER_MAX_ATTEMPTS; attempt += 1) {
-    if (isCancelled()) return { ok: false, error: "cancelled" };
+    if (isCancelled() || !hasMarketingConsent()) return { ok: false, error: "cancelled" };
     const result = fireMetaBrowserDonate(payload, eventName, eventId);
     if (result.ok) return result;
     lastError = result.error || lastError;
@@ -127,7 +128,7 @@ export function SuccessFinalConversionTracker() {
 
   useEffect(() => {
     const id = donationIdFromPath(pathname);
-    if (!id || typeof window === "undefined") return;
+    if (!id || typeof window === "undefined" || !hasMarketingConsent()) return;
     if (activeRef.current === id) return;
     activeRef.current = id;
 
@@ -159,7 +160,7 @@ export function SuccessFinalConversionTracker() {
       const config = await fetch("/api/tracking/config", { cache: "no-store" }).then(res => res.json()).catch(() => ({})) as PublicTrackingConfig;
       // Each Meta event has its own guard: a prior Donate never suppresses Purchase.
       for (const event of payload.metaEvents ?? [{ eventName: "Donate" as const, eventId: payload.eventId }]) {
-        if (cancelled) return;
+        if (cancelled || !hasMarketingConsent()) return;
         const eventPayload = { ...payload, eventId: event.eventId };
         try {
           if (window.localStorage.getItem(`marketing_final_browser:${event.eventId}`)) continue;
@@ -176,7 +177,7 @@ export function SuccessFinalConversionTracker() {
       const otherKey = `marketing_final_other:${payload.eventId}`;
       let otherDone = false;
       try { otherDone = !!window.localStorage.getItem(otherKey); } catch {}
-      if (!otherDone) {
+      if (!otherDone && hasMarketingConsent()) {
         await Promise.allSettled([
           fireGoogleAdsDonationConversion(config, payload),
           fireTikTokDonationConversion(config, payload),

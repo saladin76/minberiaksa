@@ -20,5 +20,11 @@ export function getTrackingClientIp(headers: Pick<Headers, "get">): string | und
     const cf = normalizeTrackingClientIp(headers.get("cf-connecting-ip"));
     if (cf) return cf;
   }
-  return normalizeTrackingClientIp(headers.get("x-forwarded-for")) ?? normalizeTrackingClientIp(headers.get("x-real-ip"));
+  // Nginx overwrites X-Real-IP with its direct peer address, whereas
+  // proxy_add_x_forwarded_for appends to a caller-controlled chain. Trusting
+  // its FIRST value would allow spoofing anti-abuse identities and CAPI IPs.
+  const realIp = normalizeTrackingClientIp(headers.get("x-real-ip"));
+  if (realIp) return realIp;
+  const forwarded = headers.get("x-forwarded-for");
+  return forwarded ? normalizeTrackingClientIp(forwarded.split(",").at(-1)) : undefined;
 }

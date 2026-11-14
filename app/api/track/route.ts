@@ -10,7 +10,7 @@ import { getTrackingClientIp } from "@/lib/tracking/client-ip";
 
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import type { CanonicalEvent } from "@/lib/tracking/canonical";
+import type { CanonicalEvent, CanonicalEventName } from "@/lib/tracking/canonical";
 import {
   META_EVENT_MAP,
   META_CAPI_OFF_CHANNEL,
@@ -23,8 +23,28 @@ import {
   type MetaCustomData,
 } from "@/lib/tracking/meta-capi";
 import { getRawTrackingSettings, trackingString } from "@/lib/tracking/tracking-settings";
+import { claimFunnelDispatchBudget, recordFunnelObservation } from "@/lib/tracking/funnel-observations";
+import { redactAnalyticsPath } from "@/lib/tracking/private-path";
+import { readMarketingConsent } from "@/lib/tracking/marketing-consent";
 
 const TIKTOK_EVENTS_URL = "https://business-api.tiktok.com/open_api/v1.3/event/track/";
+
+// Validation prevents arbitrary public payloads from turning into fabricated
+// provider events. Confirmed paid conversions remain inaccessible here.
+const ALLOWED_FUNNEL_EVENTS = new Set<CanonicalEventName>([
+  "page_view", "view_content", "view_donation_page", "customize_product",
+  "add_to_cart", "begin_checkout", "add_payment_info", "payment_submit",
+  "payment_failed", "sign_up", "scroll_depth", "user_engagement", "_missing_event",
+]);
+
+function safePageUrl(value: unknown, base: string): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const u = new URL(value, base);
+    return ["https:", "http:"].includes(u.protocol) ? u.origin + redactAnalyticsPath(u.pathname) : undefined;
+  } catch { return undefined; }
+}
+
 
 function sha256(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
@@ -108,12 +128,78 @@ function attributionParams(event: CanonicalEvent): Record<string, unknown> {
 
 export async function POST(req: NextRequest) {
   try {
-    const event = (await req.json()) as CanonicalEvent;
-    if (!event?.event) {
-      return NextResponse.json({ ok: false, reason: "missing event" }, { status: 400 });
+    // Optional client-reported marketing events may NEVER bypass a denial:
+    // even a direct API call cannot trigger provider CAPI when the browser
+    // has not given consent. Financial settlement callbacks use other routes.
+    if (readMarketingConsent(req.headers.get("cookie") ?? "", {
+      doNotTrack: req.headers.get("dnt"),
+      globalPrivacyControl: req.headers.get("sec-gpc") === "1",
+    }) !== "granted") {
+      return NextResponse.json({ ok: false, reason: "marketing consent required" }, { status: 403 });
     }
+    // Browser-originating tracking only; do not let an arbitrary website use
+    // this unauthenticated API as a CAPI relay.
+    const origin = req.headers.get("origin");
+    const site = req.headers.get("sec-fetch-site");
+    if (site && !["same-origin", "none"].includes(site)) {
+      return NextResponse.json({ ok: false, reason: "cross-site tracking rejected" }, { status: 403 });
+    }
+    if (origin) {
+      try {
+        const actual = new URL(req.url);
+        const source = new URL(origin);
+        if (source.host !== actual.host || source.protocol !== actual.protocol) {
+          return NextResponse.json({ ok: false, reason: "tracking origin mismatch" }, { status: 403 });
+        }
+      } catch {
+        return NextResponse.json({ ok: false, reason: "invalid origin" }, { status: 403 });
+      }
+    }
+    const length = Number(req.headers.get("content-length") ?? 0);
+    if (length > 24_000) {
+      return NextResponse.json({ ok: false, reason: "payload too large" }, { status: 413 });
+    }
+    const raw = await req.text();
+    if (raw.length > 24_000) {
+      return NextResponse.json({ ok: false, reason: "payload too large" }, { status: 413 });
+    }
+    let event: CanonicalEvent;
+    try { event = JSON.parse(raw) as CanonicalEvent; }
+    catch { return NextResponse.json({ ok: false, reason: "invalid JSON" }, { status: 400 }); }
+    if (!event || !ALLOWED_FUNNEL_EVENTS.has(event.event) ||
+        typeof event.event_id !== "string" ||
+        !/^[a-zA-Z0-9_-]{8,128}$/.test(event.event_id) ||
+        !Number.isFinite(event.event_time) ||
+        Math.abs(Date.now() / 1000 - event.event_time) > 3_600) {
+      return NextResponse.json({ ok: false, reason: "invalid tracking event" }, { status: 400 });
+    }
+    // A caller may provide a checkout receipt token, auth query or third-party
+    // referrer. Never let those URLs reach CAPI, TikTok or audit trails.
+    event.page = {
+      ...(event.page ?? {}),
+      url: safePageUrl(event.page?.url, req.url),
+      referrer: (() => {
+        const safe = safePageUrl(event.page?.referrer, req.url);
+        return safe ? new URL(safe).origin : undefined;
+      })(),
+    };
 
     const clientIp = getTrackingClientIp(req.headers);
+    try {
+      if (!(await claimFunnelDispatchBudget(clientIp))) {
+        return NextResponse.json(
+          { ok: false, reason: "tracking rate limit" },
+          { status: 429, headers: { "Cache-Control": "no-store" } },
+        );
+      }
+    } catch {
+      // An unavailable marketing quota store never breaks checkout.
+      // It must also never fall open and relay unbounded provider requests.
+      return NextResponse.json(
+        { ok: false, reason: "tracking temporarily unavailable" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     const row = await getRawTrackingSettings();
     const facebookPixelId = trackingString(row, "facebookPixelId") || trackingString(row, "metaPixelId");
@@ -140,7 +226,22 @@ export async function POST(req: NextRequest) {
       results.ga4 = await sendGa4BrowserMirror(event, gaMeasurementId);
     }
 
-    return NextResponse.json({ ok: true, ...results });
+    // The optional dashboard ledger is anonymous and *client-reported*.
+    // Do not confuse its receipt with confirmed payment or remote provider
+    // ingestion. A forged/browser event can never create paid revenue.
+    let observation: string = "disabled";
+    try {
+      observation = await recordFunnelObservation(event, clientIp);
+    } catch {
+      observation = "unavailable";
+    }
+    const meta = results.meta as { ok?: boolean; skipped?: boolean } | undefined;
+    const tiktok = results.tiktok as { ok?: boolean; skipped?: boolean } | undefined;
+    const providerFailure = [meta, tiktok].some(value => value && value.ok === false && !value.skipped);
+    return NextResponse.json(
+      { ok: !providerFailure, observation, ...results },
+      { status: providerFailure ? 502 : 200, headers: { "Cache-Control": "no-store" } },
+    );
   } catch (err) {
     console.error("[/api/track] error:", err);
     return NextResponse.json({ ok: false, error: "internal error" }, { status: 200 });

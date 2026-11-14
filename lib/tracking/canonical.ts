@@ -201,6 +201,7 @@ export const GA4_EVENT_MAP: Partial<Record<CanonicalEventName, string>> = {
   add_to_cart: "add_to_cart",
   begin_checkout: "begin_checkout",
   add_payment_info: "add_payment_info",
+  payment_submit: "payment_submit",
   payment_failed: "exception",
   sign_up: "sign_up",
   scroll_depth: "scroll",

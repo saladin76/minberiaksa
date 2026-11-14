@@ -3,6 +3,7 @@ import { albarakaResultPath, navigatePaymentResult, needsPaymentResultCheck } fr
 import PaymentResultWatcher from "./PaymentResultWatcher";
 import { mixedCartNotice } from "@/lib/donations/mixed-cart-copy";
 import { usePaymentRouting } from "@/hooks/usePaymentRouting";
+import { useTracking } from "@/components/TrackingPixels";
 import { PaymentCurrencyNotice } from "@/components/PaymentCurrencyNotice";
 import { SavedCardPicker } from "./SavedCardPicker";
 import { AlbarakaVerificationChoice } from "./AlbarakaVerificationChoice";
@@ -157,6 +158,8 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const teamRecurring = teamSupportIsRecurring(items, teamRecurringChoice);
 
   const router = useRouter();
+  const tracking = useTracking();
+  const checkoutEventSent = useRef(false);
   const { data: session } = useSession();
   const tCards = useTranslations("DonationDialog");
   const [savedCards, setSavedCards] = useState<Array<{ id: string; last4: string; cardType: string; expiryDate: string; cardholderName?: string | null; isDefault: boolean }>>([]);
@@ -293,6 +296,22 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
   const pricingReady = hydrated && (currency === "USD" || inLocal);
   const payableDisplayTotal = items.reduce((sum, item) => sum + lineValue(item), 0) + lineValue({ amount: teamSupportCharged, local: teamSupportCharged > 0 ? teamSupportLocal : undefined });
 
+  // A checkout view is not a completed donation. Emit BeginCheckout exactly
+  // once after the basket and currency are hydrated; never read private form
+  // fields or manufacture a payment success event from a page view.
+  useEffect(() => {
+    if (checkoutEventSent.current || !pricingReady || items.length === 0) return;
+    checkoutEventSent.current = true;
+    tracking?.trackInitiateCheckout({
+      value: payableDisplayTotal,
+      currency,
+      numItems: items.length,
+      contentIds: items.map(item => item.projectId ?? item.categoryId ?? item.titleKey ?? "donation"),
+      donationType: orderTypeForCart === "ONE_TIME" ? "ONE_TIME" : "MONTHLY",
+    });
+  }, [pricingReady, items, currency, payableDisplayTotal, orderTypeForCart, tracking]);
+
+
 
   /* Albaraka in Ortak Ödeme Sayfası mode collects the card on the bank's own
      page. Asking for it here too would make the donor type it twice, and the
@@ -424,6 +443,20 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     submitLock.current = true;
     setSubmitting(true);
     setError(null);
+    // Event names describe the validated attempt, never a successful payment.
+    // Never include PAN, CVC, donor email/phone or cardholder name.
+    tracking?.trackAddPaymentInfo({
+      value: payableDisplayTotal,
+      currency,
+      paymentMethod: method === "bank" ? "BANK_TRANSFER" : method.toUpperCase(),
+    });
+    tracking?.trackPaymentSubmit({
+      value: payableDisplayTotal,
+      currency,
+      donationType: orderTypeForCart === "ONE_TIME" ? "ONE_TIME" : "MONTHLY",
+      gateway: method === "card" ? gateway.toLowerCase() : method === "paypal" ? "paypal" : undefined,
+      is3ds: gateway === "PAYFOR" || (gateway === "ALBARAKA" && verificationMode === "3D"),
+    });
 
     const methodForServer: CheckoutMethod =
       method === "bank" ? "BANK_TRANSFER" : method === "paypal" ? "PAYPAL" : "CARD";
