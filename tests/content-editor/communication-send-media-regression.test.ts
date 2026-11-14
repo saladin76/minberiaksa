@@ -79,6 +79,10 @@ test("actual editor sends the signed PDF ID to storage and retains public URL an
     normalizeMediaMime: (candidate: File, kind: string) => candidate.type || (kind === "DOCUMENT" ? "application/pdf" : candidate.type),
     inspectMediaFile: async () => ({size: file.size}), setHeader: (fn: (previous: Record<string, string>) => Record<string, string>) => header = fn(header), toast: {success: () => {}, error: assert.fail},
     axios: {post: async (url: string, data: FormData | Record<string, unknown>) => {
+      if (url === "/api/templates/whatsapp/media-upload") {
+        assert.ok(data instanceof FormData);
+        throw { response: { data: { reason: "TEMPLATE_MEDIA_LOCAL_STORAGE_DISABLED" }, status: 503 } };
+      }
       phase++;
       if (phase === 1) return {data: {uploadUrl: "https://storage.test/upload", publicId: "unique.pdf", apiKey: "key", timestamp: 123, folder: "media", signature: "signed"}};
       if (phase === 2) { assert.ok(data instanceof FormData); assert.equal(data.get("public_id"), "unique.pdf"); assert.equal(data.get("signature"), "signed"); return {data: {secure_url: "https://storage.test/unique.pdf", public_id: "media/unique.pdf"}}; }
@@ -92,4 +96,47 @@ test("actual editor sends the signed PDF ID to storage and retains public URL an
   assert.equal(header.exampleHandle, "meta-sample");
   assert.equal(header.fileName, file.name);
   assert.match(header.mediaUrl, /\.pdf$/);
+});
+
+test("editor uses VPS media storage before Cloudinary and retains the confirmed Meta handle", async () => {
+  const path = root + "templates/_components/WhatsappTemplateEditorDialog.tsx";
+  const ast = ts.createSourceFile(path, fs.readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let expression = "";
+  const walk = (node: ts.Node) => { if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "uploadSample") expression = node.initializer!.getText(ast); ts.forEachChild(node, walk); };
+  walk(ast);
+  const file = new File(["\xff\xd8\xffQA"], "fixture.jpg", { type: "image/jpeg" });
+  let header: Record<string, string> = { type: "IMAGE" }, error = "", calls = 0;
+  const mod = {exports: null as unknown as (file: File) => Promise<void>};
+  const transpiled = ts.transpileModule("module.exports = " + expression, {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText;
+  vm.runInNewContext(transpiled, {
+    module: mod, header, FormData, MEDIA_SPECS: {IMAGE: { accept: ["image/jpeg"], maxBytes: 5_000_000, formats: "JPG"}},
+    dt: (s: string) => s, formatMegabytes: String, setUploadError: (s: string) => error = s,
+    setUploadingSample: () => {}, setMediaInfo: () => {}, normalizeMediaMime: () => "image/jpeg",
+    inspectMediaFile: async () => ({size: file.size, ratioOk: true}),
+    setHeader: (fn: (prev: Record<string,string>) => Record<string,string>) => header = fn(header),
+    toast: {success: () => {}, error: () => {}},
+    axios: { post: async (url: string, data: unknown) => {
+      calls++;
+      assert.equal(url, "/api/templates/whatsapp/media-upload");
+      assert.ok(data instanceof FormData);
+      assert.equal(data.get("file"), file);
+      return { data: { handle: "meta-h-confirmed", url: "https://minberiaksa.org/api/templates/whatsapp/media-public/11111111-1111-4111-8111-111111111111.jpg", publicId: "11111111-1111-4111-8111-111111111111.jpg" } };
+    } },
+  });
+  await mod.exports(file);
+  assert.equal(calls, 1, "No Cloudinary request should be made");
+  assert.equal(error, "");
+  assert.equal(header.exampleHandle, "meta-h-confirmed");
+  assert.match(header.mediaUrl, /media-public\//);
+});
+
+test("VPS media upload requires an authenticated operator and keeps image/document limits", () => {
+  const route = fs.readFileSync("app/api/templates/whatsapp/media-upload/route.ts", "utf8");
+  assert.match(route, /requireAdminOrDashboardPermission\(session, "templates"\)/);
+  assert.match(route, /5 \* 1024 \* 1024/);
+  assert.match(route, /100 \* 1024 \* 1024/);
+  assert.match(route, /discardPublicTemplateMedia\(stored.publicId\)/);
+  const publicRoute = fs.readFileSync("app/api/templates/whatsapp/media-public/[filename]/route.ts", "utf8");
+  assert.match(publicRoute, /templateMediaAbsolutePath\(filename\)/);
+  assert.match(publicRoute, /templateMediaMime\(filename\)/);
 });
