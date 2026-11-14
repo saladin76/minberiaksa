@@ -350,6 +350,12 @@ export default function DashboardPage() {
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState(false);
   const chartRequestId = useRef(0);
+  // "Today" card: same filters as the indicators, but the period is always the
+  // current Istanbul day and only settled (PAID) donations count as revenue.
+  const [todayData, setTodayData] = useState<ChartDataPoint[]>([]);
+  const [todayLoading, setTodayLoading] = useState(true);
+  const [todayError, setTodayError] = useState(false);
+  const todayRequestId = useRef(0);
   const [chartView, setChartView] = useState<ChartViewType>("bar");
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
   useEffect(() => {
@@ -536,6 +542,39 @@ export default function DashboardPage() {
     fetchChartData();
   }, [fetchChartData]);
 
+  const fetchTodayData = useCallback(async () => {
+    const requestId = ++todayRequestId.current;
+    setTodayLoading(true);
+    setTodayError(false);
+    setTodayData([]);
+    try {
+      const { start, end } = getDonationsDateRange("day", "", "");
+      const params = dashboardDonationScopeParams({
+        categoryId: selectedCategory, campaignId: selectedCampaign,
+        userId: selectedUserId, start, end,
+        locale: donationLocaleFilter, country: donationCountryFilter,
+        provider: donationProviderFilter, status: "PAID",
+        donationType: donationsTypeFilter,
+      });
+      params.set("period", "day");
+      const response = await axios.get(`/api/admin/donations/chart?${params}`);
+      if (requestId !== todayRequestId.current) return;
+      if (!Array.isArray(response.data)) throw new Error("Invalid chart response");
+      setTodayData(response.data);
+    } catch (error) {
+      if (requestId !== todayRequestId.current) return;
+      console.error("Error fetching today's donations:", error);
+      setTodayError(true);
+      setTodayData([]);
+    } finally {
+      if (requestId === todayRequestId.current) setTodayLoading(false);
+    }
+  }, [selectedCategory, selectedCampaign, selectedUserId, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsTypeFilter]);
+
+  useEffect(() => {
+    fetchTodayData();
+  }, [fetchTodayData]);
+
   // Stats  affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   const fetchStats = useCallback(async () => {
     statsRequestRef.current?.abort();
@@ -704,9 +743,10 @@ export default function DashboardPage() {
       fetchDonations(1, false),
       fetchStats(),
       fetchChartData(),
+      fetchTodayData(),
       fetchCountries(),
     ]);
-  }, [fetchDonations, fetchStats, fetchChartData, fetchCountries]);
+  }, [fetchDonations, fetchStats, fetchChartData, fetchTodayData, fetchCountries]);
   const donationActions = useDonationActions({
     enabled: canEditDonations,
     onChange: refreshAfterDonationMutation,
@@ -896,6 +936,7 @@ export default function DashboardPage() {
               scoped={scoped}
               loading={chartLoading}
               periodLabel={PERIOD_LABELS[chartPeriod]}
+              today={{ scoped: summarizeScopedDonationChart(todayData), loading: todayLoading, error: todayError }}
               onRefresh={refreshAfterDonationMutation}
             />
           )}
