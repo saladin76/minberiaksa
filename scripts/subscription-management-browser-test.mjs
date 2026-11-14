@@ -207,6 +207,16 @@ try {
   await writeFile(path.join(output, 'verification.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
 } catch (error) {
   if (activePage && !activePage.isClosed()) {
+    // Synthetic fixture only: log the exact request scopes used by the failing
+    // subscriptions navigation; no production token or donor data is present.
+    const latestSubscriptions = requests.filter(row => row.path === '/api/admin/subscriptions').slice(-12)
+      .map(row => ({ method: row.method, query: row.query }));
+    console.error('SUBSCRIPTION_NAVIGATION_DIAGNOSTIC', JSON.stringify({
+      url: activePage.url(),
+      requests: latestSubscriptions,
+      rows: await activePage.locator('#subscriptions tbody tr').evaluateAll(rows =>
+        rows.map(row => ({ id: row.id, text: row.textContent?.slice(0,90) }))),
+    }));
     console.error(await activePage.evaluate(() => ({lang:document.documentElement.lang,width:innerWidth,scrollWidth:document.documentElement.scrollWidth,scrollX,offenders:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return (r.left < -2 || r.right > innerWidth+2)&&!el.closest('.overflow-x-auto')}).map(el=>({tag:el.tagName,classes:el.className,left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right})).slice(0,15)}))); 
     await activePage.screenshot({path:path.join(output,'failure.png'),fullPage:true});
   }
