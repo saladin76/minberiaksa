@@ -2,6 +2,7 @@ import * as cadence from "../../lib/templates/recurring-cadence";
 import {trackCampaignBody,campaignTrackingValues} from "../../lib/communication/campaign-message-tracking";
 import {buildMetaComponents} from "../../lib/communication/providers/meta-whatsapp/parameters";
 import * as attributionSanitize from "../../lib/attribution/sanitize";
+import * as ga4SessionCookie from "../../lib/attribution/ga4-session-cookie";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -388,7 +389,7 @@ test("actual email, SMS and approved Meta campaign links survive checkout captur
   const window={location:{href:url,search:new URL(url).search}};
   const loaded={exports:{} as {captureAttributionFromUrl:()=>void;getDonationAttributionPayload:()=>Record<string,string>}};
   const output=ts.transpileModule(fs.readFileSync("lib/attribution/client-payload.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,window,document,Date,Math,URLSearchParams,sessionStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value),removeItem:(key:string)=>storage.delete(key)},require:(name:string)=>name==="./sanitize"?attributionSanitize:{captureStoredClickIds:()=>({}),clearStoredClickIds:()=>{}}});
+  new vm.Script(output).runInNewContext({module:loaded,exports:loaded.exports,window,document,Date,Math,URLSearchParams,sessionStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value),removeItem:(key:string)=>storage.delete(key)},require:(name:string)=>name==="./sanitize"?attributionSanitize:name==="./ga4-session-cookie"?ga4SessionCookie:{captureStoredClickIds:()=>({}),clearStoredClickIds:()=>{}}});
   loaded.exports.captureAttributionFromUrl();
   window.location={href:"https://minberiaksa.org/en/checkout?currency=EUR",search:"?currency=EUR"};
   const snapshot=attributionSanitize.sanitizeDonationAttribution(loaded.exports.getDonationAttributionPayload());
