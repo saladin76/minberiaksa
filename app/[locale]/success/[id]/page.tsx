@@ -13,6 +13,7 @@ import { reconcileStripeDonation } from "@/lib/donations/reconcile-stripe-donati
 import { donationAccess } from "@/lib/certificates/http";
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import SuccessPage from "@/components/minbar/success/SuccessPage";
+import DonationTrustMark from "@/components/minbar/success/DonationTrustMark";
 
 interface Props {
   params: Promise<{ locale: string; id: string }>;
@@ -99,6 +100,7 @@ export default async function Success({ params, searchParams }: Props) {
 
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+      <DonationTrustMark donationId={id} token={token ?? null} />
       <SuccessPage donation={donation} verse={verseBlock(quran, "baqarah_261", locale)} documents={documents} accessToken={token ?? null} />
     </MinbarMessages>
   );
