@@ -1,5 +1,5 @@
 import { safeAcquisitionLandingPage } from "@/lib/attribution/sanitize";
-import { ga4SessionIdForMeasurement } from "./ga4-session";
+import * as ga4Session from "./ga4-session";
 import { prisma } from "@/lib/prisma";
 import {
   getMetaCapiCredentials,
@@ -232,7 +232,8 @@ async function sendGa4Purchase(row: LoadedDonation, amount: number, currency: st
   const attribution = (row.attribution ?? undefined) as Attribution | undefined;
   const gaClientId = getStr(attribution, "ga_client_id") || `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
   // Join the purchase to the visitor's real GA4 session for THIS Measurement ID only.
-  const sessionNum = ga4SessionIdForMeasurement(attribution as Record<string, unknown> | undefined, gaMeasurementId);
+  // If the helper is ever unavailable (e.g. a stubbed module), send exactly as before: no session_id.
+  const sessionNum = typeof ga4Session.ga4SessionIdForMeasurement === "function" ? ga4Session.ga4SessionIdForMeasurement(attribution as Record<string, unknown> | undefined, gaMeasurementId) : undefined;
   const items = row.items.map((it) => ({ item_id: it.campaignId, item_name: it.campaign?.title ?? "Donation", item_category: "donation", price: it.amount, quantity: 1 }));
   for (const ci of row.categoryItems) items.push({ item_id: ci.categoryId, item_name: ci.category?.name ?? "Category", item_category: "donation", price: ci.amount, quantity: 1 });
   if (row.teamSupport > 0) items.push({ item_id: "team_support", item_name: "Team Support", item_category: "team_support", price: row.teamSupport, quantity: 1 });
