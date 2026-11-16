@@ -9857,5 +9857,21 @@
   "قائمة الحملات القديمة": "Legacy campaigns catalogue",
   "الشروط والأحكام": "Terms and conditions",
   "سياسة الخصوصية": "Privacy policy",
-  "سياسة ملفات تعريف الارتباط": "Cookie policy"
+  "سياسة ملفات تعريف الارتباط": "Cookie policy",
+  "آخر تغيير {0} · بواسطة {1}": "Last changed {0} · by {1}",
+  "إعادة التشغيل الكامل": "Resume everything",
+  "إغلاق الموقع بالكامل": "Close the whole site",
+  "إغلاق الموقع: تظهر صفحة صيانة للزوار. تبقى لوحة التحكم وتسجيل الدخول وردود البنوك تعمل.": "Close the site: visitors see a maintenance page. The dashboard, sign-in and bank callbacks keep working.",
+  "إيقاف التبرعات": "Pause donations",
+  "إيقاف التبرعات: الموقع يبقى ظاهراً، ويتوقف بدء أي دفع جديد، ويظهر للزوار شريط بأن نظام التبرع قيد التحسين. الدفعات التي بدأت عند البنك تكتمل وتُسجَّل.": "Pause donations: the site stays visible, no new payment can start, and visitors see a notice that the donation system is being improved. Payments already at the bank complete and are recorded.",
+  "التبرعات متوقفة · الموقع يعمل": "Donations paused · the site is up",
+  "الموقع مغلق بالكامل (وضع الطوارئ)": "The site is fully closed (emergency mode)",
+  "الموقع يعمل بشكل طبيعي": "The site is running normally",
+  "تأكيد": "Confirm",
+  "تعذر تحميل حالة الموقع": "Could not load the site status",
+  "تعذر تغيير حالة الموقع": "Could not change the site status",
+  "تم تطبيق التغيير. قد يستغرق حتى 5 ثوانٍ.": "Change applied. It can take up to 5 seconds.",
+  "حالة الموقع": "Site status",
+  "للتأكيد اكتب الكلمة: {0}": "To confirm, type the word: {0}",
+  "هل تريد إعادة تشغيل الموقع والتبرعات للجميع؟": "Reopen the site and donations for everyone?"
 }
