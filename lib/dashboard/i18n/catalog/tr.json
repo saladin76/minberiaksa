@@ -9778,5 +9778,21 @@
   "قائمة الحملات القديمة": "Eski kampanya kataloğu",
   "الشروط والأحكام": "Şartlar ve koşullar",
   "سياسة الخصوصية": "Gizlilik politikası",
-  "سياسة ملفات تعريف الارتباط": "Çerez politikası"
+  "سياسة ملفات تعريف الارتباط": "Çerez politikası",
+  "آخر تغيير {0} · بواسطة {1}": "Son değişiklik {0} · {1} tarafından",
+  "إعادة التشغيل الكامل": "Her şeyi yeniden aç",
+  "إغلاق الموقع بالكامل": "Siteyi tamamen kapat",
+  "إغلاق الموقع: تظهر صفحة صيانة للزوار. تبقى لوحة التحكم وتسجيل الدخول وردود البنوك تعمل.": "Siteyi kapat: ziyaretçiler bakım sayfası görür. Yönetim paneli, giriş ve banka geri dönüşleri çalışmaya devam eder.",
+  "إيقاف التبرعات": "Bağışları durdur",
+  "إيقاف التبرعات: الموقع يبقى ظاهراً، ويتوقف بدء أي دفع جديد، ويظهر للزوار شريط بأن نظام التبرع قيد التحسين. الدفعات التي بدأت عند البنك تكتمل وتُسجَّل.": "Bağışları durdur: site görünür kalır, yeni ödeme başlatılamaz ve ziyaretçiler bağış sisteminin iyileştirildiğine dair bir duyuru görür. Bankada başlamış ödemeler tamamlanır ve kaydedilir.",
+  "التبرعات متوقفة · الموقع يعمل": "Bağışlar durduruldu · site açık",
+  "الموقع مغلق بالكامل (وضع الطوارئ)": "Site tamamen kapalı (acil durum modu)",
+  "الموقع يعمل بشكل طبيعي": "Site normal çalışıyor",
+  "تأكيد": "Onayla",
+  "تعذر تحميل حالة الموقع": "Site durumu yüklenemedi",
+  "تعذر تغيير حالة الموقع": "Site durumu değiştirilemedi",
+  "تم تطبيق التغيير. قد يستغرق حتى 5 ثوانٍ.": "Değişiklik uygulandı. 5 saniye kadar sürebilir.",
+  "حالة الموقع": "Site durumu",
+  "للتأكيد اكتب الكلمة: {0}": "Onaylamak için şu kelimeyi yazın: {0}",
+  "هل تريد إعادة تشغيل الموقع والتبرعات للجميع؟": "Site ve bağışlar herkes için yeniden açılsın mı?"
 }
