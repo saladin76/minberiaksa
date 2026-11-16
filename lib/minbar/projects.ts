@@ -174,7 +174,7 @@ function selectFor(locale: string) {
  * ranked and unranked groups separately so every public surface follows the
  * same rule: explicit priority first, newest unranked projects after it.
  */
-async function findPublishedCampaignRows(
+async function readPublishedCampaignRows(
   locale: string,
   options: { categoryId?: string; limit?: number } = {},
 ): Promise<CampaignRow[]> {
@@ -290,6 +290,38 @@ function sharesFor(row: CampaignRow, locale: string): MinbarProjectShares | null
     priceByCurrency: shareConfig.priceByCurrency && Object.keys(shareConfig.priceByCurrency).length ? shareConfig.priceByCurrency : null,
     unit: unit ? { singular: unit.singular, plural: unit.plural } : null,
   };
+}
+
+/**
+ * The published-project list, shared for a short time across requests.
+ *
+ * The database is a long round trip from the server (~130 ms each), and this list
+ * (every published campaign with its categories and translations) was re-read on
+ * every project page (related projects), programme page and list page. It is kept
+ * for PUBLISHED_ROWS_TTL_MS, so a list may show an edit up to that much later.
+ * A single project page still reads its own project fresh on every request
+ * (getProject), so unpublishing a project takes effect on its own page at once.
+ * Each caller gets its own array copy; rows are never mutated (see toProject).
+ */
+const PUBLISHED_ROWS_TTL_MS = 60_000;
+const publishedRowsCache = new Map<string, { expires: number; rows: Promise<CampaignRow[]> }>();
+export function clearPublishedCampaignCache(): void { publishedRowsCache.clear(); }
+async function findPublishedCampaignRows(
+  locale: string,
+  options: { categoryId?: string; limit?: number } = {},
+): Promise<CampaignRow[]> {
+  // Only the production server shares the list; tests and development always read fresh.
+  if (!(typeof process !== "undefined" && process.env?.NODE_ENV === "production")) return readPublishedCampaignRows(locale, options);
+  const key = JSON.stringify([locale, options.categoryId ?? null, options.limit ?? null]);
+  const now = Date.now();
+  const hit = publishedRowsCache.get(key);
+  if (hit && hit.expires > now) return [...(await hit.rows)];
+  if (publishedRowsCache.size > 500) publishedRowsCache.clear();
+  const rows = readPublishedCampaignRows(locale, options);
+  publishedRowsCache.set(key, { expires: now + PUBLISHED_ROWS_TTL_MS, rows });
+  // A failed read is never served from the cache.
+  rows.catch(() => { if (publishedRowsCache.get(key)?.rows === rows) publishedRowsCache.delete(key); });
+  return [...(await rows)];
 }
 
 function toProject(row: CampaignRow, locale: string, detail = false): MinbarProject {
