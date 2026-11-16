@@ -310,6 +310,8 @@ async function findPublishedCampaignRows(
   locale: string,
   options: { categoryId?: string; limit?: number } = {},
 ): Promise<CampaignRow[]> {
+  // Only the production server shares the list; tests and development always read fresh.
+  if (!(typeof process !== "undefined" && process.env?.NODE_ENV === "production")) return readPublishedCampaignRows(locale, options);
   const key = JSON.stringify([locale, options.categoryId ?? null, options.limit ?? null]);
   const now = Date.now();
   const hit = publishedRowsCache.get(key);
