@@ -33,8 +33,8 @@ test("concurrent visitors share one in-flight read, each gets its own array", as
   let reads = 0; const api = load(async () => { reads++; await new Promise((r) => setTimeout(r, 10)); return [{ id: "b" }, { id: "a" }]; }, { now: 0 });
   const [x, y] = await Promise.all([api.findPublishedCampaignRows("ar"), api.findPublishedCampaignRows("ar")]);
   assert.equal(reads, 1);
-  x.reverse(); assert.deepEqual(plain(y.map((r: any) => r.id)), ["b", "a"], "an in-place sort by one caller never leaks to another");
-  assert.deepEqual(plain((await api.findPublishedCampaignRows("ar")).map((r: any) => r.id)), ["b", "a"]);
+  x.reverse(); assert.deepEqual(plain(y.map((r) => (r as { id: string }).id)), ["b", "a"], "an in-place sort by one caller never leaks to another");
+  assert.deepEqual(plain((await api.findPublishedCampaignRows("ar")).map((r) => (r as { id: string }).id)), ["b", "a"]);
 });
 
 test("a failed read is not cached", async () => {
