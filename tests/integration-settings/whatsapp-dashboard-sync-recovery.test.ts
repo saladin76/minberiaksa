@@ -30,6 +30,8 @@ function dashboard(permitted = true, withCatalogue = true, catalogue: { template
     "next-auth": { getServerSession: async () => ({ user: { id: "admin" } }) },
     "@/app/api/auth/[...nextauth]/options": { authOptions: {} },
     "@/lib/prisma": { prisma },
+    // Same constant answers as the prisma stub above (dashboards now query through these, 2026-11-18).
+    "@/lib/communication/delivery-raw-query": { rawCountDeliveries: async () => 0, rawGroupByDeliveries: async () => [], rawFindDeliveries: async () => [], rawCountProviderEvents: async () => 0 },
     "@/lib/dashboard/api-auth": { requireAdminOrDashboardPermission: () => permitted ? null : { status: 403, body: {} } },
     "@/lib/communication/whatsapp-delivery-progress": { whatsappDeliveryProgress: () => { throw new Error("No delivery rows expected"); } },
     "@/lib/communication/runtime-config": { getActiveMetaWhatsappRuntimeConfig: async () => ({ configured: true }) },
