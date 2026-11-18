@@ -11,6 +11,7 @@ import MinbarFooter from "@/components/minbar/shell/Footer";
 import ConciergeLauncher from "@/components/minbar/concierge/ConciergeLauncher";
 import CartReminder from "@/components/CartReminder";
 import DonationPauseBanner from "@/components/minbar/shell/DonationPauseBanner";
+import FieldGallery from "@/components/minbar/shell/FieldGallery";
 import { CurrencyFromUrlSync } from "@/components/CurrencyFromUrlSync";
 import IntlProviderClient from "./IntlProviderClient";
 import { SUPPORTED_LOCALES, localeDirection } from "@/lib/locales";
@@ -157,6 +158,7 @@ export default async function Rootlayout({
                   from its measured height, because that height changes with the
                   language, the back button and the viewport. */}
               <main><DonationPauseBanner locale={locale} />{children}</main>
+              <FieldGallery locale={locale} />
               {/* The tagline is the footer's one string from the `homepage`
                   namespace. Passing it in keeps a 10KB bundle out of the shell
                   for the sake of a single sentence. */}
