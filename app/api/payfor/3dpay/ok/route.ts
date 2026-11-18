@@ -15,7 +15,7 @@ import { isValidLocale } from "@/lib/locales";
 // get the signal on bank rejects.
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
-import { mergePayForProviderRaw, PAYFOR_UNVERIFIED_APPROVAL, payForErrorMessage, redactPayForResponse, verifyPayForResponseHash } from "@/lib/payfor";
+import { mergePayForProviderRaw, PAYFOR_UNVERIFIED_APPROVAL, payForErrorMessage, redactPayForResponse, verifyPayForRequestEcho, verifyPayForResponseHash } from "@/lib/payfor";
 
 export async function POST(req: NextRequest) {
   const origin = paymentPublicOrigin(req.url);
@@ -57,6 +57,16 @@ export async function POST(req: NextRequest) {
 
       // Idempotency: if already confirmed by a prior callback, just redirect to success
       if (donation.paidAt !== null) return { ok: true as const };
+
+      /* Nothing changes without proof the callback is genuine and about this donation: the bank's
+         signature, or our own request signature echoed back (3D-stage failures carry only that).
+         A forged POST is ignored and the donor simply sees the failure page (owner, 2026-11-18). */
+      const genuine = (orderId === donation.id || (!!donation.providerOrderId && orderId === donation.providerOrderId))
+        && (verifyPayForResponseHash(raw, process.env.PAYFOR_MERCHANT_PASS) || verifyPayForRequestEcho(raw, process.env.PAYFOR_MERCHANT_PASS));
+      if (!genuine) {
+        console.error("[PayFor OK] callback not authenticated; donation left unchanged", { donationId: donation.id, procReturnCode });
+        return { ok: false as const, reason: "unverified" as const };
+      }
 
       /* The amount must be the one we asked the bank for. `payforRequest` was
          snapshotted at initiate; the FX conversion is deliberately not re-run

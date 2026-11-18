@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse } from "@/lib/payfor";
+import { mergePayForProviderRaw, payForErrorMessage, redactPayForResponse, verifyPayForRequestEcho, verifyPayForResponseHash } from "@/lib/payfor";
 import { paymentPublicOrigin } from "@/lib/payment-public-origin";
 import { isValidLocale } from "@/lib/locales";
 
@@ -35,7 +35,14 @@ export async function POST(req: NextRequest) {
       where: { id: donationId },
     });
 
-    if (donation && donation.paidAt === null) {
+    /* Only a genuine callback about this donation's order may mark it failed and message the donor:
+       the bank's signature, or our own request signature echoed back (owner, 2026-11-18). */
+    const genuine = !!donation
+      && (orderId === donation.id || (!!donation.providerOrderId && orderId === donation.providerOrderId))
+      && (verifyPayForResponseHash(raw, process.env.PAYFOR_MERCHANT_PASS) || verifyPayForRequestEcho(raw, process.env.PAYFOR_MERCHANT_PASS));
+    if (donation && !genuine) console.error("[PayFor FAIL] callback not authenticated; donation left unchanged", { donationId });
+
+    if (donation && genuine && donation.paidAt === null) {
       await prisma.donation.update({
         where: { id: donationId },
         data: {

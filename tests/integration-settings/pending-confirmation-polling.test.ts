@@ -126,7 +126,7 @@ test("a browser failure cannot overwrite a pending bank inquiry or a concurrentl
       "@/lib/events/dispatch": { dispatchEvent: () => { events++; } },
       "@/lib/tracking/donation-conversion-server": { sendDonationFailedConversions: async () => {} },
       "@/lib/donations/mongo-null": nulls,
-      "@/lib/prisma": { prisma: { donation: { findUnique: async () => ({ id: "fixture", status: "PAID", paidAt: null, providerTxnResult: result }), updateMany: async () => { writes++; return { count: 0 }; } } } },
+      "@/lib/certificates/http": { authorizeDonationAccess: async () => null }, "@/lib/prisma": { prisma: { donation: { findUnique: async () => ({ id: "fixture", status: "PAID", paidAt: null, providerTxnResult: result }), updateMany: async () => { writes++; return { count: 0 }; } } } },
     };
     const mod = { exports: {} as { PATCH: (request: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response> } };
     const code = ts.transpileModule(readFileSync("app/api/donations/[id]/fail/route.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
