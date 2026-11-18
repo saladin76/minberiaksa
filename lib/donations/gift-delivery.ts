@@ -34,12 +34,12 @@ import { donationCampaignTitle } from "@/lib/templates/donation-projects";
 
 type GiftMessages = Record<string, string>;
 
-function giftMessages(locale: string): GiftMessages {
+export function giftMessages(locale: string): GiftMessages {
   const ns = messagesFor(locale).Gift;
   return ns && typeof ns === "object" ? (ns as GiftMessages) : {};
 }
 
-function fill(template: string | undefined, vars: Record<string, string>): string {
+export function fill(template: string | undefined, vars: Record<string, string>): string {
   if (!template) return "";
   return template.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? "");
 }
@@ -48,7 +48,7 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 }
 
-function formatAmount(amount: number, currency: string, locale: string): string {
+export function formatAmount(amount: number, currency: string, locale: string): string {
   try {
     return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
   } catch {
@@ -56,7 +56,7 @@ function formatAmount(amount: number, currency: string, locale: string): string 
   }
 }
 
-function giftEmailHtml(m: GiftMessages, vars: Record<string, string>, showAmount: boolean, message: string | null, projectUrl: string): string {
+export function giftEmailHtml(m: GiftMessages, vars: Record<string, string>, showAmount: boolean, message: string | null, projectUrl: string): string {
   const rtl = /[؀-ۿ]/.test(vars.recipientName + (m.title ?? ""));
   const lines = [
     `<h2 style="margin:0 0 12px;font-size:20px;color:#10212b">${escapeHtml(fill(m.emailTitle, vars))}</h2>`,
@@ -78,8 +78,26 @@ export interface GiftDeliveryResult {
   errors: number;
 }
 
-/** Tell every gift recipient on a confirmed donation who has not been told yet. */
+/**
+ * Tell every gift recipient on a confirmed donation who has not been told yet: project lines,
+ * then waqf lines (same channels, same safeguards). Each part runs whatever the other found;
+ * a problem with waqf gifts is logged and never undoes or blocks the project gifts.
+ */
 export async function deliverDonationGifts(donationId: string, options: { approvalBlockedOnly?: boolean } = {}): Promise<GiftDeliveryResult> {
+  const result = await deliverProjectGifts(donationId, options);
+  try {
+    const waqf = await (await import("./waqf-gift-delivery")).deliverWaqfGifts(donationId, options);
+    result.lines += waqf.lines; result.emailsSent += waqf.emailsSent; result.whatsappSent += waqf.whatsappSent; result.errors += waqf.errors;
+  } catch (error) {
+    // Logged, not counted: a waqf problem must not change the project gifts' outcome.
+    // The waqf lines keep their own per-line state and are retried by the same triggers.
+    console.error("[gift-delivery] waqf gifts:", error instanceof Error ? error.message : error);
+  }
+  return result;
+}
+
+/** Project (campaign) lines given in someone's name. */
+async function deliverProjectGifts(donationId: string, options: { approvalBlockedOnly?: boolean }): Promise<GiftDeliveryResult> {
   const result: GiftDeliveryResult = { lines: 0, emailsSent: 0, whatsappSent: 0, errors: 0 };
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },

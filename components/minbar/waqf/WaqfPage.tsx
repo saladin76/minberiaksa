@@ -12,6 +12,7 @@ import ZakatBanner from "@/components/minbar/banners/ZakatBanner";
 import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import WaqfCertificatePreview from "./WaqfCertificatePreview";
+import GiftFields, { type GiftState } from "@/components/minbar/gift/GiftFields";
 
 /**
  * Al-Quds Waqf  ported from `Minbar/الأوقاف.dc.html`.
@@ -108,6 +109,9 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
   const [monthly, setMonthly] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState(false);
+  /* A waqf may be given in someone else's name: the certificate is issued to them. */
+  const [gift, setGift] = useState<GiftState>({ configured: false, ready: false, value: null });
+  const [giftError, setGiftError] = useState(false);
   const [openFaq, setOpenFaq] = useState(-1);
   /* On a phone the certificate sits behind a button (`#waqf-cert-toggle`);
      on wider screens it is always beside the picker. */
@@ -128,6 +132,8 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
     const ok = name.trim().length > 0 && onBehalf.trim().length > 0;
     setError(!ok);
     if (!ok) focusMissingName();
+    /* A half-filled gift is refused rather than silently dropped, as on projects. */
+    if (ok && gift.configured && !gift.ready) { setGiftError(true); return false; }
     return ok;
   };
 
@@ -142,6 +148,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
     amount: total,
     currency: "USD",
     waqf: { unit, count, donorName: name.trim(), onBehalf: onBehalf.trim() },
+    ...(gift.ready && gift.value ? { gift: gift.value } : {}),
   });
 
   const onAdd = () => {
@@ -276,6 +283,8 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
                 </div>
               ) : null}
 
+              <GiftFields onChange={setGift} showError={giftError} previewLine={t("qudsWaqfProjects")} />
+
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, paddingTop: 4, borderTop: "1px solid var(--border)" }}>
                 <span style={{ fontSize: 12.5, fontWeight: 900, color: "var(--muted)", letterSpacing: ".06em" }}>{tCommon("total")}</span>
                 <b dir="ltr" style={{ fontSize: 26, unicodeBidi: "isolate" }}>
@@ -376,7 +385,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
               </svg>
               {certPreviewOpen ? t("hideCertPreview") : t("showCertPreview")}
             </button>
-            <WaqfCertificatePreview unit={unit} count={count} total={format(total)} name={name} onBehalf={onBehalf} open={certPreviewOpen} />
+            <WaqfCertificatePreview unit={unit} count={count} total={format(total)} name={gift.ready && gift.value ? gift.value.recipientName : name} onBehalf={onBehalf} open={certPreviewOpen} />
           </div>
         </div>
       </section>

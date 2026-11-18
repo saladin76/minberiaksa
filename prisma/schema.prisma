@@ -1208,6 +1208,23 @@ model DonationWaqfItem {
   /// Whom the waqf is made on behalf of ("وقد أوقفها عن").
   onBehalf   String
 
+  /// A gift: this waqf was given in someone else's name (owner, 2026-11-18). The certificate is
+  /// issued to `giftRecipientName`, credits the donor as "Gifted by", and once the donation is
+  /// confirmed the recipient is told on the chosen channels (`lib/donations/waqf-gift-delivery.ts`).
+  /// Same columns and meaning as on `DonationItem`.
+  giftRecipientName  String?
+  giftRecipientEmail String?
+  giftRecipientPhone String?
+  giftMessage        String?
+  giftChannels       String[]  @default([])
+  /// false: the certificate and the messages leave out the value (the count stays).
+  giftShowAmount     Boolean   @default(true)
+  giftDeliveredAt    DateTime?
+  giftDeliveryState  Json?
+  giftDeliveryLock   String?
+  giftDeliveryLockUntil DateTime?
+  giftDeliveryError  String?
+
   donation    Donation     @relation(fields: [donationId], references: [id], onDelete: Cascade)
   certificate Certificate?
 

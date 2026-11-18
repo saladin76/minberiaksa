@@ -88,6 +88,8 @@ export async function renderWaqfHtml(doc: WaqfDocument, assetBase: string): Prom
       total={doc.total}
       donorName={doc.donorName}
       onBehalf={doc.onBehalf}
+      giftFrom={doc.giftFrom}
+      hideTotal={doc.hideTotal}
       certNo={doc.certNo}
       certDate={doc.certDate}
       details={doc.details}
