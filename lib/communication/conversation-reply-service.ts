@@ -171,5 +171,9 @@ export async function sendConversationReply(
   }
   const archived = await markDeliveryStatus(created.data.id, "SENT", { providerMessageId: sent.providerMessageId });
   if (!archived.ok) return { ok: false, reason: "ACCEPTED_UNRECORDED" };
+  // Inbox conversation layer: the conversation is answered. Lazy and fail-safe: never affects the reply.
+  void import("./inbox-conversations")
+    .then((m) => m.touchOutbound({ senderId, phone: to, text: text || (mediaSpec ? `[${mediaSpec.kind}]` : null), at: new Date() }))
+    .catch(() => undefined);
   return { ok: true, deliveryId: created.data.id, providerMessageId: sent.providerMessageId };
 }
