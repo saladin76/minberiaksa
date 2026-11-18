@@ -136,6 +136,26 @@ export function verifyPayForResponseHash(
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+/**
+ * Our own 3DPay request signature as the bank echoes it back (MbrId … Rnd, with `Hash`). Every callback
+ * carries it, including 3D-stage failures (V034, MR…) whose ResponseHash is signed differently, and it
+ * cannot be produced without the merchant password. Verified on all 236 production callbacks of the
+ * previous 60 days (2026-11-18). Proof the callback is about an order we started; NOT proof of payment —
+ * approvals still require verifyPayForResponseHash.
+ */
+export function verifyPayForRequestEcho(response: Record<string, unknown>, merchantPass: string | undefined): boolean {
+  const provided = String(response.Hash ?? "");
+  if (!provided || !merchantPass) return false;
+  const field = (key: string) => String(response[key] ?? "");
+  const expected = payForHash({
+    mbrId: field("MbrId"), orderId: field("OrderId"), purchAmount: field("PurchAmount"), okUrl: field("OkUrl"),
+    failUrl: field("FailUrl"), txnType: field("TxnType"), installmentCount: field("InstallmentCount"), rnd: field("Rnd"), merchantPass,
+  });
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 /** The bank's own reason for a decline. PayFor sends it as `ErrMsg`, not `ErrorMessage`. */
 export function payForErrorMessage(response: Record<string, unknown>): string {
   for (const key of ["ErrMsg", "ErrorMessage", "errorMessage", "ErrorData"]) {

@@ -2088,7 +2088,7 @@ const DonationDialog = ({
           // prevent the row from incorrectly counting as PAID. Fire-and-forget  the
           // donation-failed page works even if this PATCH fails.
           axios
-            .patch(`/api/donations/${targetDonationId}/fail`, {
+            .patch(withDonationToken(`/api/donations/${targetDonationId}/fail`, targetToken), {
               reason: confirmError.message ?? "stripe_confirm_failed",
             })
             .catch(() => {});

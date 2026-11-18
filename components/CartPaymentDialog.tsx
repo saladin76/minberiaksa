@@ -578,7 +578,7 @@ const CartPaymentDialog = ({
           // Mark donation FAILED for audit trail, then send the user to the explanatory
           // failure page (which carries the bank-transfer fallback so we don't lose the donation).
           axios
-            .patch(`/api/donations/${targetDonationId}/fail`, {
+            .patch(withDonationToken(`/api/donations/${targetDonationId}/fail`, targetToken), {
               reason: confirmError.message ?? "stripe_confirm_failed",
             })
             .catch(() => {});

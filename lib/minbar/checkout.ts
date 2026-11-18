@@ -1,6 +1,6 @@
 import { paymentResultTarget } from "./payment-handoff";
 import type { MinbarCartItem } from "./cart";
-import { rememberGuestDonationAccess } from "../donations/guest-access-client";
+import { rememberGuestDonationAccess, resolveGuestDonationAccess } from "../donations/guest-access-client";
 import { lineLocal, type LocalAmount } from "@/lib/minbar/donation-amount";
 import type { MinbarProject } from "./projects";
 import { orderTypeForItems, type OrderType } from "@/lib/donations/recurring-schedule";
@@ -457,7 +457,10 @@ export function submitGatewayForm(form: GatewayForm, browserFields: Record<strin
  */
 export async function markDonationFailed(donationId: string, reason: string): Promise<void> {
   try {
-    await fetch(`/api/donations/${donationId}/fail`, {
+    // The donor's guest token proves it is their donation (the server requires it, 2026-11-18).
+    let token: string | null = null;
+    try { token = resolveGuestDonationAccess(donationId); } catch { token = null; }
+    await fetch(`/api/donations/${donationId}/fail${token ? `?t=${encodeURIComponent(token)}` : ""}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reason }),
