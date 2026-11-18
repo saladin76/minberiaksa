@@ -34,6 +34,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { CHART_THEME } from "@/lib/dashboard/chart-theme";
 import { HomeDonationSummary } from "@/components/dashboard/HomeDonationSummary";
 import { MetricSummaryBand } from "@/components/dashboard/MetricSummaryBand";
+import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import {
   DashboardFilterBar,
   type ActiveFilterChip,
@@ -75,7 +76,6 @@ import { getPeriodDateKeys } from "@/lib/dashboard/period-date-range";
 import { dashboardDonationScopeParams, dashboardStatsScopeParams } from "@/lib/dashboard/home-donation-scope";
 import { dashboardDonationDisplayDate } from "@/lib/dashboard/donation-ledger-date";
 import { homeFiltersAreModified } from "@/lib/dashboard/home-filter-defaults";
-import { summarizeScopedDonationChart } from "@/lib/dashboard/donation-chart-filter-scope";
 import {
   istanbulTodayKey,
   istanbulAddCalendarDaysKey,
@@ -350,6 +350,12 @@ export default function DashboardPage() {
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState(false);
   const chartRequestId = useRef(0);
+  // "Today" card: same filters as the indicators, but the period is always the
+  // current Istanbul day and only settled (PAID) donations count as revenue.
+  const [todayData, setTodayData] = useState<ChartDataPoint[]>([]);
+  const [todayLoading, setTodayLoading] = useState(true);
+  const [todayError, setTodayError] = useState(false);
+  const todayRequestId = useRef(0);
   const [chartView, setChartView] = useState<ChartViewType>("bar");
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
   useEffect(() => {
@@ -536,6 +542,39 @@ export default function DashboardPage() {
     fetchChartData();
   }, [fetchChartData]);
 
+  const fetchTodayData = useCallback(async () => {
+    const requestId = ++todayRequestId.current;
+    setTodayLoading(true);
+    setTodayError(false);
+    setTodayData([]);
+    try {
+      const { start, end } = getDonationsDateRange("day", "", "");
+      const params = dashboardDonationScopeParams({
+        categoryId: selectedCategory, campaignId: selectedCampaign,
+        userId: selectedUserId, start, end,
+        locale: donationLocaleFilter, country: donationCountryFilter,
+        provider: donationProviderFilter, status: "PAID",
+        donationType: donationsTypeFilter,
+      });
+      params.set("period", "day");
+      const response = await axios.get(`/api/admin/donations/chart?${params}`);
+      if (requestId !== todayRequestId.current) return;
+      if (!Array.isArray(response.data)) throw new Error("Invalid chart response");
+      setTodayData(response.data);
+    } catch (error) {
+      if (requestId !== todayRequestId.current) return;
+      console.error("Error fetching today's donations:", error);
+      setTodayError(true);
+      setTodayData([]);
+    } finally {
+      if (requestId === todayRequestId.current) setTodayLoading(false);
+    }
+  }, [selectedCategory, selectedCampaign, selectedUserId, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsTypeFilter]);
+
+  useEffect(() => {
+    fetchTodayData();
+  }, [fetchTodayData]);
+
   // Stats  affected by فترة (period + dateFrom/dateTo) and category/campaign filters
   const fetchStats = useCallback(async () => {
     statsRequestRef.current?.abort();
@@ -704,9 +743,10 @@ export default function DashboardPage() {
       fetchDonations(1, false),
       fetchStats(),
       fetchChartData(),
+      fetchTodayData(),
       fetchCountries(),
     ]);
-  }, [fetchDonations, fetchStats, fetchChartData, fetchCountries]);
+  }, [fetchDonations, fetchStats, fetchChartData, fetchTodayData, fetchCountries]);
   const donationActions = useDonationActions({
     enabled: canEditDonations,
     onChange: refreshAfterDonationMutation,
@@ -793,25 +833,8 @@ export default function DashboardPage() {
     );
   }
 
-  // These figures are derived from the exact same filtered/settled series as
-  // the chart, not from global stats or the first page of donation rows.
+  // Filtered and confirmed chart series also powers the primary metric cards.
   const scoped = summarizeScopedDonationChart(chartData);
-  const selectedRange = getDonationsDateRange(chartPeriod, dateFrom, dateTo);
-  const periodCaption = selectedRange.start && selectedRange.end
-    ? `${selectedRange.start} — ${selectedRange.end}`
-    : PERIOD_LABELS[chartPeriod];
-  const activeScopeLabels = [
-    PERIOD_LABELS[chartPeriod],
-    selectedCategory !== "all" ? `${dt("الفئة")}: ${categories.find(c => c.id === selectedCategory)?.name ?? selectedCategory}` : null,
-    selectedCampaign !== "all" ? `${dt("المشروع")}: ${campaigns.find(c => c.id === selectedCampaign)?.title ?? selectedCampaign}` : null,
-    selectedUserId !== "all" ? `${dt("المستخدم")}: ${users.find(u => u.id === selectedUserId)?.name || users.find(u => u.id === selectedUserId)?.email || selectedUserId}` : null,
-    donationLocaleFilter !== "all" ? `${dt("لغة الموقع (التبرع)")}: ${donationLocaleFilter}` : null,
-    donationCountryFilter !== "all" ? `${dt("الدولة")}: ${donationCountryFilter === "__unset" ? dt("غير محدد") : getCountryDisplayNameFromCode(donationCountryFilter, locale)}` : null,
-    donationProviderFilter !== "all" ? `${dt("بوابة الدفع")}: ${donationProviderFilter}` : null,
-    donationsStatusFilter !== "RESOLVED" ? `${dt("حالة التبرع")}: ${donationsStatusFilter === "PAID" ? dt("ناجح") : donationsStatusFilter === "FAILED" ? dt("فاشل") : donationsStatusFilter === "PENDING" ? dt("محاولات بحاجة لتحقق") : dt("كل الحالات (مع غير المحسومة)")}` : null,
-    donationsTypeFilter !== "all" ? `${dt("نوع التبرع")}: ${donationsTypeFilter === "ONE_TIME" ? dt("لمرة واحدة") : dt("شهري")}` : null,
-  ].filter((value): value is string => Boolean(value));
-
   const oneTimeTotal = stats?.oneTimeTotalAmount ?? 0;
   const monthlyTotal = stats?.monthlyTotalAmount ?? 0;
   const revenueSplitData = [
@@ -884,41 +907,8 @@ export default function DashboardPage() {
 
 
 
-        <section aria-label={dt("نتائج الفترة المحددة")} className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-start">
-              <h2 className="text-base font-bold text-slate-900">{dt("نتائج الفترة المحددة")}</h2>
-              <p className="text-xs text-slate-500">{periodCaption} · {dt("بتوقيت إسطنبول")}</p>
-            </div>
-            <span className="text-xs text-slate-500">{dt("تتغير النتائج حسب الفلاتر أدناه")}</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5" aria-label={dt("عوامل التصفية")}>
-            {activeScopeLabels.map(label => <span key={label} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">{label}</span>)}
-          </div>
-          {chartError ? (
-            <div role="alert" className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              {dt("تعذر تحميل نتائج الفترة المحددة. لا يمكن عرض أرقام موثوقة الآن.")}
-              <Button variant="outline" size="sm" className="ms-3" onClick={() => void fetchChartData()}>{dt("إعادة المحاولة")}</Button>
-            </div>
-          ) : (
-            <MetricSummaryBand
-              icon={Wallet}
-              eyebrow={dt("الإيرادات المحصلة للفترة")}
-              badge={PERIOD_LABELS[chartPeriod]}
-              value={chartLoading ? "…" : formatInSelectedCurrency(scoped.paidAmountUSD)}
-              note={dt("المبالغ المؤكدة فقط. الإخفاقات والمحاولات قيد التأكيد ليست إيرادًا، والعملة المعروضة هي العملة المختارة في اللوحة.")}
-              stats={[
-                { label: dt("تبرعات ناجحة"), value: chartLoading ? "…" : scoped.paidCount.toLocaleString("en-US"), icon: HandCoins },
-                { label: dt("لمرة واحدة"), value: chartLoading ? "…" : formatInSelectedCurrency(scoped.oneTimeAmountUSD), icon: Wallet },
-                { label: dt("دورية"), value: chartLoading ? "…" : formatInSelectedCurrency(scoped.recurringAmountUSD), icon: Repeat },
-                { label: dt("تبرعات فاشلة"), value: chartLoading ? "…" : donationsStatusFilter === "PAID" || donationsStatusFilter === "PENDING" ? "—" : scoped.failedCount.toLocaleString("en-US"), icon: RefreshCw },
-                { label: dt("قيد التأكيد"), value: chartLoading ? "…" : donationsStatusFilter === "all" || donationsStatusFilter === "PENDING" ? scoped.pendingCount.toLocaleString("en-US") : "—", icon: Calculator },
-              ]}
-            />
-          )}
-        </section>
 
-        {selectedUserId === "all" && <>
+        {selectedUserId === "all" && (
           <MetricSummaryBand
             icon={Wallet}
             eyebrow={dt("إجمالي الإيرادات الناجحة")}
@@ -933,8 +923,24 @@ export default function DashboardPage() {
               { label: dt("متوسط التبرع"), icon: Calculator, value: stats?.paidRevenueAllTimeUnfiltered != null && (stats.paidCountAllTimeUnfiltered ?? 0) > 0 ? formatInSelectedCurrency(stats.paidRevenueAllTimeUnfiltered / stats.paidCountAllTimeUnfiltered!) : "—" },
             ]}
           />
-          <HomeDonationSummary onRefresh={refreshAfterDonationMutation} />
-        </>}
+        )}
+
+        <section className="space-y-3" aria-label={dt("المؤشرات الأساسية")}>
+          {chartError ? (
+            <div role="alert" className="rounded-xl border border-rose-200 bg-white p-4 text-sm text-rose-700">
+              {dt("تعذر تحميل بيانات الفلتر الحالية. لن نعرض أرقامًا قديمة على أنها نتائج جديدة.")}
+              <Button variant="outline" size="sm" className="ms-3" onClick={() => void fetchChartData()}>{dt("إعادة المحاولة")}</Button>
+            </div>
+          ) : (
+            <HomeDonationSummary
+              scoped={scoped}
+              loading={chartLoading}
+              periodLabel={PERIOD_LABELS[chartPeriod]}
+              today={{ scoped: summarizeScopedDonationChart(todayData), loading: todayLoading, error: todayError }}
+              onRefresh={refreshAfterDonationMutation}
+            />
+          )}
+        </section>
 
         {/* التحليلات */}
         <section className="space-y-4">

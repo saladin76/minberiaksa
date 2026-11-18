@@ -37,6 +37,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   /* A super category owns this slug ahead of any campaign  the programme
      pages live under /projects/<slug> and are rows, not files. */
+  // Start the project lookup now, alongside the programme check: each database round trip
+  // is ~130 ms away, so waiting for one before starting the other costs a full trip.
+  // A programme still owns the slug first; then this result is simply not used.
+  const projectLookup = projectForRequest(key, locale);
+  projectLookup.catch(() => undefined);
   const superCategory = await superCategoryForRequest(key, locale);
   if (superCategory) {
     return applyEditorialSeo(buildPageMetadata(locale, {
@@ -50,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }),await readPublicEditorialSeo('super-categories',key,locale));
   }
 
-  const project = await projectForRequest(key, locale);
+  const project = await projectLookup;
   // An unpublished or missing project must not produce indexable metadata 
   // `PRODUCTION_SEO_CONTRACT.md` requires a real 404, not a soft one.
   if (!project) return { title: "", robots: { index: false, follow: false } };
@@ -59,7 +64,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
      then the localised title, description and cover. A campaign-level OG
      image is the last resort for the picture only  another language's title
      would be wrong here. */
-  const [seo, urls] = await Promise.all([getProjectSeo(project.id, locale), readPublicEditorialUrls("campaigns", project.id)]);
+  const [seo, urls, editorialSeo] = await Promise.all([
+    getProjectSeo(project.id, locale),
+    readPublicEditorialUrls("campaigns", project.id),
+    readPublicEditorialSeo("campaigns", project.id, locale),
+  ]);
   const title = seo.locale.seoTitle || project.title;
   const meta = buildPageMetadata(locale, {
     title,
@@ -77,7 +86,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     meta.openGraph = { ...meta.openGraph, ...(ogTitle ? { title: ogTitle } : {}), ...(ogDescription ? { description: ogDescription } : {}) };
     meta.twitter = { ...meta.twitter, ...(ogTitle ? { title: ogTitle } : {}), ...(ogDescription ? { description: ogDescription } : {}) };
   }
-  return applyEditorialSeo(meta,await readPublicEditorialSeo('campaigns',project.id,locale));
+  return applyEditorialSeo(meta, editorialSeo);
 }
 
 /**
@@ -90,6 +99,11 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const [{ locale, slug }, query] = await Promise.all([params, searchParams]);
   const key = decodeURIComponent(slug);
 
+  // Start the project lookup now, alongside the programme check: each database round trip
+  // is ~130 ms away, so waiting for one before starting the other costs a full trip.
+  // A programme still owns the slug first; then this result is simply not used.
+  const projectLookup = projectForRequest(key, locale);
+  projectLookup.catch(() => undefined);
   const superCategory = await superCategoryForRequest(key, locale);
   if (superCategory) {
     if (key !== superCategory.slug) permanentRedirect(withIncomingQuery(miaPath("projectDetail", locale, encodeURIComponent(superCategory.slug)), query));
@@ -103,7 +117,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     );
   }
 
-  const project = await projectForRequest(key, locale);
+  const project = await projectLookup;
   if (!project) notFound();
   if (project.redirectedFrom) {
     permanentRedirect(withIncomingQuery(

@@ -107,6 +107,34 @@ async function countDeferredQuietRecipients(campaignId: string): Promise<number>
   return prisma.communicationCampaignDeferredRecipient.count({ where: { campaignId } });
 }
 
+/** Staged e-mail waves (./staged-send). Loaded lazily and fail-open: on any problem the batch is sent exactly as before. */
+async function stageEmailWaves(campaign: CommunicationCampaign, plan: SendPlan, startedAt: string): Promise<SendPlan> {
+  try {
+    return await (await import("./staged-send")).queueStagedRecipients(campaign, plan, new Date(startedAt));
+  } catch (error) {
+    console.error("[staged-send] waves skipped:", error instanceof Error ? error.message : "unknown");
+    return plan;
+  }
+}
+/** True while the remaining waves are held because the waves already sent were spam-blocked. Fail-open. */
+async function stagedWavesHeld(campaign: CommunicationCampaign): Promise<boolean> {
+  try {
+    const held = await (await import("./staged-send")).stagedHold(campaign);
+    if (held.firstTime) {
+      await writeAuditLog({
+        actorRole: "SYSTEM", action: "communication.campaign.staged_hold", entityType: "CommunicationCampaign", entityId: campaign.id,
+        messageAr: `أُوقفت الدفعات المتبقية لحملة «${campaign.name}» تلقائياً: ${held.ratePct}% من الرسائل المرسلة رُفضت كبريد مزعج (من ${held.processed}). راجعوا الحملة قبل الإكمال.`,
+        messageEn: `Remaining waves of "${campaign.name}" held automatically: ${held.ratePct}% spam-blocked of ${held.processed} processed.`,
+        metadata: { ratePct: held.ratePct, processed: held.processed }, stream: "TEAM",
+      }).catch(() => {});
+    }
+    return held.hold;
+  } catch (error) {
+    console.error("[staged-send] hold check skipped:", error instanceof Error ? error.message : "unknown");
+    return false;
+  }
+}
+
 async function loadWhatsappTemplateTruth(templateId: string): Promise<{
   byWaba: Map<string, Parameters<typeof resolveExactVariantForLocale>[0]>;
   templateMedia: { header?: unknown; translations?: unknown };
@@ -488,6 +516,7 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
     if (!liveCampaign || liveCampaign.status !== "SENDING" || leaseOf(liveCampaign)?.token !== lease.token) throw new Error("CAMPAIGN_STATE_CHANGED");
     const liveGate = await evaluateCampaignSendControls(liveCampaign);
     if (!liveGate.ok) { base.blocked = liveGate.reason; break; }
+    plan = await stageEmailWaves(liveCampaign, plan, progress.startedAt);
     const quietSlice = await queueRecipientQuietHours(campaignId, plan, liveGate.controls);
     plan = quietSlice.plan;
     const remainingRecipients = Math.max(plan.audienceTotal - progress.total, plan.total);
@@ -521,7 +550,9 @@ async function executeCampaignRun(campaignId: string, opts: ExecutionOptions): P
     if (liveGate.ok) {
       const modeForDeferred = liveGate.controls.autoSpeed ? autoSpeedMode({ remainingRecipients: await countDeferredQuietRecipients(campaignId), remainingDaily: liveGate.remainingDaily, scheduledStopAt: liveGate.controls.scheduledStopAt }) : liveGate.controls.speedMode;
       const deferredBatchSize = Math.max(1, Math.min(speedSettings(modeForDeferred).batchSize, liveGate.remainingDaily ?? 1000, 1000));
-      const due = await loadDueQuietRecipients(campaignId, liveGate.controls, deferredBatchSize);
+      const held = await stagedWavesHeld(fresh);
+      if (held) base.blocked = "STAGED_SPAM_HOLD";
+      const due = held ? { recipients: [] as SendPlan["recipients"], queueIds: [] as string[] } : await loadDueQuietRecipients(campaignId, liveGate.controls, deferredBatchSize);
       if (due.recipients.length) {
         const deferredPlan: SendPlan = { campaignId, channel, status: "SENDING", total: due.recipients.length, audienceTotal: Math.max(firstPlan.audienceTotal, progress.total), eligible: due.recipients.length, skipped: 0, reasons: {}, coverage: { ok: true, undecided: [] }, providerReady: true, senderReady: true, willSend: true, truncated: false, nextCursor: cursor, exhausted: true, recipients: due.recipients, skippedList: [] };
         const tally = await runBatch(deferredPlan, modeForDeferred);

@@ -8,6 +8,8 @@ import {
   type DonationSourceResult,
   type DetectSourceInput,
 } from "@/lib/attribution/detect-source";
+import { communicationCampaignRef } from "@/lib/attribution/communication-campaign";
+import { useCommunicationCampaignName } from "@/lib/dashboard/use-communication-campaign-names";
 import {
   Tooltip,
   TooltipContent,
@@ -23,14 +25,12 @@ interface DonationSourceBadgeProps extends DetectSourceInput {
 }
 
 /**
- * The pill shows the ad campaign name (الحملة الإعلانية / `utm_campaign`) 
- * that's what the team recognises when scanning the table; the platform
- * ("Meta", "Google Ads", …) is one hover away in the tooltip.
- *
- * Campaign names are long and free-form ("Retargeting | Value"), so the pill is
- * width-capped and its label truncates instead of shoving the neighbouring
- * column out of alignment. The full name stays in the tooltip below and in the
- * attribution details dialog, so nothing is lost.
+ * Two lines instead of one truncated pill:
+ *   line 1 — the channel (Meta, Google Ads, واتساب …) is always fully visible;
+ *   line 2 — the campaign, smaller, and the only part that truncates.
+ * Internal WhatsApp / email / SMS campaigns (utm_medium=communication) show the
+ * campaign's real name instead of its database id. Display only: detection,
+ * attribution aggregates and conversion tracking are unchanged.
  */
 
 const STATUS_DOT_CLASS: Record<DonationSourceResult["status"], string> = {
@@ -49,6 +49,9 @@ const STATUS_PILL_CLASS: Record<DonationSourceResult["status"], string> = {
   unknown: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
+const COMMUNICATION_PILL_CLASS = "bg-sky-50 text-sky-800 border-sky-200";
+const COMMUNICATION_DOT_CLASS = "bg-sky-500";
+
 export function DonationSourceBadge({
   attribution,
   conversionEventsSentAt,
@@ -63,16 +66,23 @@ export function DonationSourceBadge({
     conversionFailedEventsSentAt,
     status,
   });
+  const communication = communicationCampaignRef(attribution);
+  const communicationName = useCommunicationCampaignName(communication?.campaignId ?? null);
 
   const platformLabel = dt(PLATFORM_LABEL_AR[result.platform]);
   const statusLabel = result.sourceKind === "referral" ? dt("إحالة خارجية (غير مؤكدة كإعلان)") : dt(STATUS_LABEL_AR[result.status]);
   // utm_campaign is the name a marketer typed in Ads Manager; campaign_id is the
   // numeric fallback for links that carried the id but lost the utm params.
-  const campaignLabel =
-    result.campaignName ?? (result.campaignId ? `#${result.campaignId}` : null);
+  const adCampaignLabel = result.campaignName ?? (result.campaignId ? `#${result.campaignId}` : null);
   // Organic rows have no campaign at all, so they keep falling back to "غير إعلاني".
-  const sourceLabel = result.platform === "organic" || result.platform === "unknown" ? result.sourceLabel : platformLabel;
-  const pillLabel = compact ? statusLabel : [sourceLabel, campaignLabel].filter(Boolean).join(" · ");
+  const adSourceLabel = result.platform === "organic" || result.platform === "unknown" ? result.sourceLabel : platformLabel;
+
+  const channelLabel = communication ? dt(communication.channelLabel) : adSourceLabel;
+  const campaignLabel = communication
+    ? communicationName ?? (communicationName === undefined ? "…" : dt("حملة داخلية"))
+    : adCampaignLabel;
+  const pillClass = communication ? COMMUNICATION_PILL_CLASS : STATUS_PILL_CLASS[result.status];
+  const dotClass = communication ? COMMUNICATION_DOT_CLASS : STATUS_DOT_CLASS[result.status];
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -80,16 +90,18 @@ export function DonationSourceBadge({
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium leading-none min-w-[86px] max-w-[180px]",
-              STATUS_PILL_CLASS[result.status],
+              "inline-flex min-w-[86px] max-w-[220px] flex-col items-start gap-0.5 rounded-lg border px-2 py-1 text-start leading-tight",
+              pillClass,
               className
             )}
           >
-            <span
-              className={cn("inline-block shrink-0 w-1.5 h-1.5 rounded-full", STATUS_DOT_CLASS[result.status])}
-              aria-hidden
-            />
-            <span className="truncate">{pillLabel}</span>
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-semibold">
+              <span className={cn("inline-block h-1.5 w-1.5 shrink-0 rounded-full", dotClass)} aria-hidden />
+              {compact ? statusLabel : channelLabel}
+            </span>
+            {!compact && campaignLabel ? (
+              <bdi className="block max-w-[200px] truncate text-[11px] font-normal opacity-75">{campaignLabel}</bdi>
+            ) : null}
           </span>
         </TooltipTrigger>
         <TooltipContent
@@ -97,25 +109,40 @@ export function DonationSourceBadge({
           className="max-w-xs bg-white text-slate-800 border border-slate-200 shadow-md p-3 space-y-1.5 text-start"
         >
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold break-words">{[sourceLabel, campaignLabel].filter(Boolean).join(" · ")}</span>
-            <span className="text-[10px] text-slate-500 shrink-0">{statusLabel}</span>
+            <span className="text-xs font-semibold break-words">{[channelLabel, campaignLabel].filter(Boolean).join(" · ")}</span>
+            <span className="text-[10px] text-slate-500 shrink-0">{communication ? dt("حملة داخلية") : statusLabel}</span>
           </div>
-          <div className="text-[11px] text-slate-600">
-            <span className="text-slate-400">{dt("المنصة: ")}</span>
-            {platformLabel}
-          </div>
+          {communication ? (
+            <>
+              <div className="text-[11px] text-slate-600">
+                <span className="text-slate-400">{dt("القناة: ")}</span>
+                {dt(communication.channelLabel)}
+              </div>
+              <div className="break-words text-[11px] text-slate-600">
+                <span className="text-slate-400">{dt("الحملة: ")}</span>
+                <bdi>{communicationName ?? communication.campaignId ?? "—"}</bdi>
+              </div>
+            </>
+          ) : (
+            <div className="text-[11px] text-slate-600">
+              <span className="text-slate-400">{dt("المنصة: ")}</span>
+              {platformLabel}
+            </div>
+          )}
           {result.placement ? (
             <div className="text-[11px] text-slate-600">
               <span className="text-slate-400">{dt("الموضع: ")}</span>
               {result.placement}
             </div>
           ) : null}
-          <div className="text-[11px] text-slate-600">
-            <span className="text-slate-400">{dt("اكتمال بيانات التتبع: ")}</span>
-            {result.confidence}%
-          </div>
+          {communication ? null : (
+            <div className="text-[11px] text-slate-600">
+              <span className="text-slate-400">{dt("اكتمال بيانات التتبع: ")}</span>
+              {result.confidence}%
+            </div>
+          )}
           {result.sourceDetails.filter(detail => !["first_landing_page", "first_referrer"].includes(detail.key)).map(detail => <div key={detail.key} className="break-words text-[11px] text-slate-600"><bdi className="text-slate-400">{detail.key}</bdi>: <bdi>{detail.key === "attribution_origin" && detail.value === "subscription_signup" ? dt("مصدر الاشتراك الأصلي") : detail.value}</bdi></div>)}
-          {result.reasons.length > 0 ? (
+          {!communication && result.reasons.length > 0 ? (
             <ul className="text-[10.5px] text-slate-500 space-y-0.5 mt-1 border-t border-slate-100 pt-1.5">
               {result.reasons.map((r, i) => (
                 <li key={i}>• {r}</li>

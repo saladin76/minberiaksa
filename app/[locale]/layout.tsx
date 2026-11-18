@@ -10,6 +10,7 @@ import MobileBottomNav from "@/components/minbar/shell/MobileBottomNav";
 import MinbarFooter from "@/components/minbar/shell/Footer";
 import ConciergeLauncher from "@/components/minbar/concierge/ConciergeLauncher";
 import CartReminder from "@/components/CartReminder";
+import DonationPauseBanner from "@/components/minbar/shell/DonationPauseBanner";
 import { CurrencyFromUrlSync } from "@/components/CurrencyFromUrlSync";
 import IntlProviderClient from "./IntlProviderClient";
 import { SUPPORTED_LOCALES, localeDirection } from "@/lib/locales";
@@ -155,7 +156,7 @@ export default async function Rootlayout({
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the
                   language, the back button and the viewport. */}
-              <main>{children}</main>
+              <main><DonationPauseBanner locale={locale} />{children}</main>
               {/* The tagline is the footer's one string from the `homepage`
                   namespace. Passing it in keeps a 10KB bundle out of the shell
                   for the sake of a single sentence. */}
