@@ -29,7 +29,7 @@ const files = {
   "/ar.woff2": { type: "font/woff2", data: await readFile("public/fonts/cairo/cairo-200-1000-arabic-714d40cf.woff2") },
   "/latin.woff2": { type: "font/woff2", data: await readFile("public/fonts/cairo/cairo-200-1000-latin-caa2f572.woff2") },
 };
-let campaign = null, writes = [], deleteFails = false;
+let campaign = null, writes = [], deleteFails = false, campaignScenario = "success";
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, "http://fixture"), json = (body, status = 200) => { response.writeHead(status, { "Content-Type": "application/json" }); response.end(JSON.stringify(body)); };
   if (url.pathname === "/bundle.js") { response.setHeader("Content-Type", "application/javascript"); return response.end(bundle.outputFiles[0].contents); }
@@ -40,10 +40,11 @@ const server = createServer(async (request, response) => {
     if (request.method === "GET") return url.pathname.endsWith("/send") ? json({ok:true,plan:{audienceTotal:100,total:100}}) : json({ ok: true, campaign });
     let raw = ""; for await (const chunk of request) raw += chunk; writes.push({ method: request.method, body: raw ? JSON.parse(raw) : null });
     if (request.method === "DELETE") { if (deleteFails) return json({ ok: false, error: "DB_UNAVAILABLE" }, 503); campaign = null; return json({ ok: true, deleted: true, archived: false }); }
-    if (url.pathname.endsWith("/send")) return json({ok:true,summary:{sent:100,skipped:0,failed:0}});
-    if (url.pathname.endsWith("/transition")) { campaign.status = "APPROVED"; return json({ ok: true, campaign }); }
+    if (url.pathname.endsWith("/send")) return campaignScenario === "send-error" ? json({ok:false,error:"SEND_UNAVAILABLE"},503) : json({ok:true,summary:{sent:100,skipped:0,failed:0}});
+    if (url.pathname.endsWith("/transition")) { if (campaignScenario === "pending") await new Promise(resolve => setTimeout(resolve, 700)); campaign.status = "APPROVED"; return json({ ok: true, campaign }); }
     return json({ error: "UNEXPECTED_FIXTURE_REQUEST" }, 404);
   }
+  campaignScenario = url.searchParams.get("scenario") || "success";
   response.setHeader("Content-Type", "text/html"); response.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><link rel="icon" href="/icon.png"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>');
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve)); const origin = `http://127.0.0.1:${server.address().port}`;
@@ -124,6 +125,42 @@ try {
     await expect(page.getByText("APPROVED", { exact: true })).toBeVisible();
     assert.equal(writes.length,2); assert.equal(writes[0].body.action,"CONFIRM");assert.equal(writes[1].body.confirm,true);checks++;
 
+
+    // Real browser, synthetic HTTP fixture: delayed approval must not dismiss
+    // confirmation or generate an additional POST while the first is in flight.
+    writes = [];
+    campaign = { id, name: "Fixture campaign", channel, status: "DRAFT", sentCount: 0, deliveredCount: 0, readCount: 0, failedCount: 0, repliedCount: 0, clickedCount: 0 };
+    await page.goto(`${origin}/?lang=${locale}&channel=${channel}&status=DRAFT&scenario=pending`);
+    await page.getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true }).click();
+    const pendingDialog = page.getByRole("alertdialog");
+    const confirmPending = pendingDialog.getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true });
+    await expect(confirmPending).toBeEnabled();
+    await confirmPending.click();
+    await expect.poll(() => writes.length).toBe(1);
+    await expect(pendingDialog).toBeVisible();
+    await expect(confirmPending).toBeDisabled();
+    await expect(pendingDialog.getByRole("button", { name: ui(locale, "إلغاء"), exact: true })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(pendingDialog).toBeVisible();
+    const sendButtonBox = await confirmPending.boundingBox(); assert.ok(sendButtonBox);
+    await page.mouse.click(sendButtonBox.x + sendButtonBox.width / 2, sendButtonBox.y + sendButtonBox.height / 2);
+    await expect.poll(() => writes.length).toBe(2);
+    await expect(pendingDialog).toHaveCount(0);
+    assert.equal(writes[0].body.action, "CONFIRM");
+    assert.equal(writes[1].body.confirm, true);
+    checks++;
+
+    // Server-side fixture failure is visible to the operator, not confused
+    // with a successful send. No live WhatsApp, SMS, or email provider is used.
+    writes = [];
+    campaign = { id, name: "Fixture campaign", channel, status: "DRAFT", sentCount: 0, deliveredCount: 0, readCount: 0, failedCount: 0, repliedCount: 0, clickedCount: 0 };
+    await page.goto(`${origin}/?lang=${locale}&channel=${channel}&status=DRAFT&scenario=send-error`);
+    await page.getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: ui(locale, "إرسال الآن"), exact: true }).click();
+    await expect(page.getByText("SEND_UNAVAILABLE", { exact: true })).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    assert.equal(writes.length, 2);
+    checks++;
     await page.close();
   }
   assert.deepEqual(errors, []);

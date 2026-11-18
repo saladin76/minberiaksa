@@ -41,5 +41,13 @@ export function reminderPreviousAttemptWindows(cooldownCutoff: Date, failedCutof
       status: { in: [...REMINDER_FAILED_OR_SKIPPED_STATUSES] },
       createdAt: { gte: failedCutoff },
     },
+    // Accepted by the provider and then refused by the recipient's server (spam block, invalid
+    // address): the message did go out, so the full cooldown applies. Retrying such a reminder
+    // weekly reached 836 donors repeatedly in 30 days and hurt the domain's reputation (2026-11-18).
+    {
+      status: { in: [...REMINDER_FAILED_OR_SKIPPED_STATUSES] },
+      providerMessageId: { not: null },
+      createdAt: { gte: cooldownCutoff },
+    },
   ];
 }
