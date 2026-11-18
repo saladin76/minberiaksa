@@ -92,6 +92,12 @@ export function AutoTranslateButton({
       const failures: Record<string, string> = {};
       const warnings: Record<string, string[]> = {};
       for (const code of requestedLocales) {
+        // A provider can return partial text alongside an explicit locale error.
+        // Such text must never be applied to the editor as a successful translation.
+        if (errors[code]) {
+          failures[code] = errors[code];
+          continue;
+        }
         const item = raw[code];
         if (item && typeof item === "object") {
           const fields = Object.fromEntries(Object.entries(item.fields ?? {}).filter(([, value]) => typeof value === "string" && value.trim()));
@@ -102,7 +108,6 @@ export function AutoTranslateButton({
             if (notes.length) warnings[code] = notes;
           } else failures[code] = errors[code] || dt("لم تُنتج الخدمة نصًا صالحًا لهذه اللغة");
         } else failures[code] = errors[code] || dt("لم تكتمل ترجمة هذه اللغة");
-        if (errors[code]) failures[code] = errors[code];
       }
       const done = Object.keys(translations);
       if (done.length) onResult(translations, overwrite);
