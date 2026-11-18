@@ -15,7 +15,7 @@ import { calculateZakat } from "@/lib/minbar/zakat-calculation";
  * The calculation, exactly as the handoff specifies:
  *   assets = cash + metals + investments + trade goods
  *   net    = max(0, assets − liabilities)
- *   nisāb  = 85g gold, or 595g silver, at the rate the donor enters
+ *   nisāb  = 80.18g gold (Turkish edition), otherwise 85g gold; or 595g silver, at the rate the donor enters
  *   due    = net ≥ nisāb ? net × 2.5% : 0
  *
  * Karat is weighted by purity (21/24, 18/24) rather than counted at the 24k
@@ -112,8 +112,8 @@ export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = 
   const [openFaq, setOpenFaq] = useState(0);
 
   const totals = useMemo(
-    () => calculateZakat(values, goldRate, silverRate, mode),
-    [values, goldRate, silverRate, mode],
+    () => calculateZakat(values, goldRate, silverRate, mode, locale === "tr" ? 80.18 : 85),
+    [values, goldRate, silverRate, mode, locale],
   );
   const aboveNisab = totals.nisab > 0 && totals.net >= totals.nisab;
   const setField = (key: string, raw: string) =>

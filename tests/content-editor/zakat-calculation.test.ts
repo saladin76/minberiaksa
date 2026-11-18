@@ -36,3 +36,14 @@ test("zakat accepts Arabic digits and ignores malformed numeric values", () => {
   assert.equal(totals.cash, 10000);
   assert.equal(totals.due, 250);
 });
+
+test("Turkish gold nisab follows the requested 80.18 gram standard without changing other locales", () => {
+  const values = { cash: "8200" };
+  const tr = calculateZakat(values, "100", "1", "gold", 80.18);
+  const defaultResult = calculateZakat(values, "100", "1", "gold");
+  assert.equal(tr.nisab, 8018);
+  assert.equal(tr.due, 205);
+  assert.equal(defaultResult.nisab, 8500);
+  assert.equal(defaultResult.due, 0);
+  assert.equal(calculateZakat(values, "100", "1", "silver", 80.18).nisab, 595);
+});

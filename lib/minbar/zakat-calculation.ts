@@ -13,6 +13,7 @@ export function calculateZakat(
   goldRate: string,
   silverRate: string,
   mode: "gold" | "silver",
+  goldNisabGrams = 85,
 ) {
   const amount = (raw: string | undefined) => {
     // The general amount parser removes punctuation, including a minus sign.
@@ -28,6 +29,6 @@ export function calculateZakat(
   const metals = (value("gold24") + value("gold21") * 21 / 24 + value("gold18") * 18 / 24) * gold + value("silver") * silver;
   const invest = sum(FIELDS.invest), trade = sum(FIELDS.trade), liabilities = sum(FIELDS.liabilities);
   const net = Math.max(0, cash + metals + invest + trade - liabilities);
-  const nisab = mode === "gold" ? 85 * gold : 595 * silver;
+  const nisab = mode === "gold" ? goldNisabGrams * gold : 595 * silver;
   return { cash, metals, invest, trade, liabilities, net, nisab, due: nisab > 0 && net >= nisab ? net * 0.025 : 0 };
 }
