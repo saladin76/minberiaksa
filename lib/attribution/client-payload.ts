@@ -32,6 +32,36 @@ function getRawCookie(name: string): string | undefined {
   try { return decodeURIComponent(hit.split("=").slice(1).join("=")); } catch { return undefined; }
 }
 
+/**
+ * Every GA4 web-stream session cookie (_ga_<suffix>) as "SUFFIX:session" pairs.
+ * Kept inline (no import) so sandboxed fixtures load this module unchanged.
+ * The server keeps only the stream matching its Measurement ID. Never fabricated,
+ * never stored in an attribution cookie; skipped on explicit denial, GPC or DNT.
+ */
+function currentGa4SessionStreams(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { globalPrivacyControl?: boolean }) : undefined;
+  if (nav?.globalPrivacyControl === true || nav?.doNotTrack === "1" || nav?.doNotTrack === "yes") return undefined;
+  const cookies = document.cookie || "";
+  if (/(?:^|;\s*)(?:analytics_consent|tracking_consent)=(?:denied|rejected|false|0)(?:;|$)/i.test(cookies)) return undefined;
+  const streams = new Map<string, string>();
+  for (const part of cookies.split(";")) {
+    const trimmed = part.trim(), separator = trimmed.indexOf("=");
+    if (separator < 1) continue;
+    const name = /^_ga_([A-Za-z0-9]{1,24})$/.exec(trimmed.slice(0, separator));
+    if (!name) continue;
+    let value = trimmed.slice(separator + 1);
+    try { value = decodeURIComponent(value); } catch { continue; }
+    const session = /^GS1\.\d+\.(\d{10})\./.exec(value) || /^GS2\.\d+\.s(\d{10})(?:\$|$)/.exec(value);
+    if (!session) continue;
+    const suffix = name[1].toUpperCase();
+    if (streams.has(suffix) && streams.get(suffix) !== session[1]) streams.set(suffix, "");
+    else streams.set(suffix, session[1]);
+  }
+  const pairs = [...streams].filter(([, session]) => session).slice(0, 8).map(([suffix, session]) => `${suffix}:${session}`);
+  return pairs.length ? pairs.join(",") : undefined;
+}
+
 function getOrCreateSessionId(): string | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -204,6 +234,17 @@ export function getDonationAttributionPayload(): Record<string, string> {
       const m = ga.match(/^GA\d\.\d\.(.+)$/);
       if (m) out.ga_client_id = m[1];
     }
+  }
+
+  const gaStreams = currentGa4SessionStreams();
+  if (gaStreams) {
+    out.ga_session_streams = gaStreams;
+    const pairs = gaStreams.split(",");
+    if (pairs.length === 1) out.ga_session_id = pairs[0].split(":")[1];
+    else delete out.ga_session_id;
+  } else {
+    delete out.ga_session_streams;
+    delete out.ga_session_id;
   }
 
   return out;

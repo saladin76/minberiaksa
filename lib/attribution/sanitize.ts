@@ -62,6 +62,7 @@ export const DONATION_ATTRIBUTION_KEYS = [
   "fbc",
   "ga_client_id",
   "ga_session_id",
+  "ga_session_streams",
   "session_id",
   "landing_page",
   "first_landing_page",
