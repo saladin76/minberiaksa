@@ -29,7 +29,7 @@ function harness() {
     "@/lib/minbar/cart": { addToCart: (item: unknown) => cart.push(item) },
     "@/lib/minbar/waqf": { WAQF_MAX_COUNT: 100, WAQF_UNIT_PRICE_USD: { share: 100, meter: 1500 } },
     "@/hooks/useMinbarMoney": { useMinbarMoney: () => ({ format: String, formatNumber: String }) },
-    "@/components/minbar/banners/ZakatBanner": {}, "@/components/minbar/banners/TravelBanner": {}, "@/components/minbar/banners/IbadanBanner": {}, "./WaqfCertificatePreview": {},
+    "@/components/minbar/banners/ZakatBanner": {}, "@/components/minbar/banners/TravelBanner": {}, "@/components/minbar/banners/IbadanBanner": {}, "./WaqfCertificatePreview": {}, "@/components/minbar/gift/GiftFields": {},
   };
   const loaded = { exports: {} as { default: (props: Record<string, unknown>) => Element } };
   const source = ts.transpileModule(readFileSync("components/minbar/waqf/WaqfPage.tsx", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
