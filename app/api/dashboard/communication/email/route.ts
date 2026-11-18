@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
+import { rawCountDeliveries, rawCountProviderEvents, rawFindDeliveries, rawGroupByDeliveries } from "@/lib/communication/delivery-raw-query";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { retryPreflight } from "@/lib/communication/delivery-retry-service";
 import { getActiveElasticEmailRuntimeConfig } from "@/lib/communication/runtime-config";
@@ -100,14 +101,14 @@ export async function GET(request: NextRequest) {
       emailRuntime,
       activeEmailSenderCount,
     ] = await Promise.all([
-      prisma.communicationDelivery.count({ where: rangeWhere }),
-      prisma.communicationDelivery.groupBy({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
-      prisma.communicationDelivery.count({ where: { ...rangeWhere, status: { in: [...FAILED_STATUSES] } } }),
+      rawCountDeliveries({ where: rangeWhere }),
+      rawGroupByDeliveries({ by: ["status"], where: rangeWhere, _count: { _all: true } }),
+      rawCountDeliveries({ where: { ...rangeWhere, status: { in: [...FAILED_STATUSES] } } }),
       // Email tracking is live only when an EMAIL provider event has actually arrived.
       // WhatsApp events must never make the email dashboard claim its webhooks are working.
-      prisma.communicationProviderEvent.count({ where: { channel: CHANNEL } }),
-      prisma.communicationDelivery.count({ where: { channel: CHANNEL, ...purposeWhere } }),
-      prisma.communicationDelivery.findMany({
+      rawCountProviderEvents({ where: { channel: CHANNEL } }),
+      rawCountDeliveries({ where: { channel: CHANNEL, ...purposeWhere } }),
+      rawFindDeliveries({
         where: listWhere,
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -119,11 +120,11 @@ export async function GET(request: NextRequest) {
           openedAt: true, clickedAt: true, failedAt: true, retriedAt: true,
         },
       }),
-      prisma.communicationDelivery.count({ where: listWhere }),
+      rawCountDeliveries({ where: listWhere }),
       // No `orderBy: { _count: … }` here: on MongoDB it comes back in the wrong order (verified 
       // it returned ascending), which combined with `take` would silently return the *least* used
       // templates. Sorted in JS below instead; the distinct-template count is tiny.
-      prisma.communicationDelivery.groupBy({ by: ["templateName"], where: rangeWhere, _count: { _all: true } }),
+      rawGroupByDeliveries({ by: ["templateName"], where: rangeWhere, _count: { _all: true } }),
       retryPreflight({ channel: "EMAIL", purposeGroup, campaignId: campaignId || undefined, ...(campaignId ? {} : { from, to }) }),
       getActiveElasticEmailRuntimeConfig(),
       prisma.communicationSender.count({
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
 
     // Daily buckets for the trend chart, built in JS: MongoDB has no date_trunc through Prisma
     // and the row counts here are small enough that one scan beats N queries.
-    const bucketRows = await prisma.communicationDelivery.findMany({
+    const bucketRows = await rawFindDeliveries({
       where: rangeWhere,
       select: { createdAt: true, status: true, providerMessageId: true, sentAt: true, deliveredAt: true, openedAt: true, clickedAt: true },
       orderBy: { createdAt: "asc" },

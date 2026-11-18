@@ -35,7 +35,7 @@ test("campaign audience eligibility is resolved before count and pagination", ()
 test("email tracking is scoped to email events and retries are readiness-gated", () => {
   const route = read("app/api/dashboard/communication/email/route.ts");
   const ui = read("app/(dashboard)/dashboard/communication/email/_components/EmailChannelDashboard.tsx");
-  assert.match(route, /communicationProviderEvent\.count\(\{ where: \{ channel: CHANNEL \} \}\)/);
+  assert.match(route, /rawCountProviderEvents\(\{ where: \{ channel: CHANNEL \} \}\)/); // still scoped to e-mail events
   assert.match(route, /getActiveElasticEmailRuntimeConfig/);
   assert.match(route, /senderReady:/);
   assert.match(ui, /retryReady/);
