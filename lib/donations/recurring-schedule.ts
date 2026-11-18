@@ -561,3 +561,45 @@ export function consentSnapshotFor(input: {
     acceptedAt: input.now.toISOString(),
   };
 }
+
+// ── After a decline: keep trying until it succeeds or the donor stops it (owner, 2026-11-18) ──
+
+/**
+ * Consecutive declines after which a plan stops and the donor is asked for a new card. With the
+ * in-cycle ladder (1h, 6h, 24h) and one attempt per regular charge after that, 12 stays under the
+ * card networks' reattempt limits (about 15 in 30 days) even for a daily plan.
+ */
+export const MAX_CONSECUTIVE_DECLINES = 12;
+
+/** Issuer answers that must never be retried (lost, stolen, closed, invalid or expired card). */
+const HARD_DECLINE_ISO = new Set(["04", "07", "12", "14", "15", "33", "41", "43", "54", "62"]);
+
+export type RecurringDeclineKind = "hard" | "merchant" | "soft";
+
+/** hard: never retry · merchant: a problem on our terminal, not the donor's card · soft: worth retrying. */
+export function classifyRecurringDecline(isoCode: string | null | undefined, reason: string): RecurringDeclineKind {
+  if (isoCode && HARD_DECLINE_ISO.has(String(isoCode).trim().padStart(2, "0"))) return "hard";
+  if (/unauthori[sz]ed request|terminal|işyeri|i̇şyeri|isyeri|merchant/i.test(reason)) return "merchant";
+  return "soft";
+}
+
+/**
+ * When to try again after the `attempt`-th consecutive decline, or null to stop. A plan is no longer
+ * given up after one cycle: once the in-cycle ladder is spent it waits for its next regular charge
+ * (tomorrow, next Friday, next month) and tries again — until it succeeds, the donor stops it from
+ * their profile, a hard decline arrives, or MAX_CONSECUTIVE_DECLINES is reached.
+ */
+export function nextAttemptAfterDecline(
+  plan: { frequency: string | null; scheduleRule?: unknown; timezone?: string | null },
+  attempt: number,
+  now: Date,
+  kind: RecurringDeclineKind,
+): Date | null {
+  if (kind === "hard" || attempt >= MAX_CONSECUTIVE_DECLINES) return null;
+  return nextRetryForPlan(plan, attempt, now) ?? nextChargeForPlan(plan, now);
+}
+
+/** The donor hears once per streak of declines and once when the plan stops — never about our own terminal. */
+export function shouldTellDonorAboutDecline(attempt: number, stopped: boolean, kind: RecurringDeclineKind): boolean {
+  return kind !== "merchant" && (attempt === 1 || stopped);
+}
