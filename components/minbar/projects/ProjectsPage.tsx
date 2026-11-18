@@ -184,7 +184,7 @@ export default function ProjectsPage({ projects, slides, filters }: ProjectsPage
       <section id="all" style={{ position: "relative", background: "transparent", padding: "46px 0 66px", overflow: "hidden" }}>
         <div style={{ position: "relative", maxWidth: 1240, margin: "0 auto", padding: "0 24px", display: "grid", gap: 24 }}>
           {visible.length ? (
-            <div className="proj-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 22, justifyContent: "center" }}>
+            <div className="proj-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))", gap: 22, justifyContent: "center" }}>
               {visible.map((project) => (
                 <ProjectDonateCard key={project.slug} project={project} />
               ))}
