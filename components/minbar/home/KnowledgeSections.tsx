@@ -1,4 +1,5 @@
 "use client";
+import { ORG } from "@/lib/minbar/org";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -173,7 +174,7 @@ const CATEGORY_LABEL: Record<string, { ns: "navigation" | "common"; key: string 
   reports: { ns: "navigation", key: "reports" },
 };
 
-export function FaqSection({ faqs, whatsappNumber = "905398436050" }: { faqs: CmsFaq[]; whatsappNumber?: string }) {
+export function FaqSection({ faqs, whatsappNumber = ORG.whatsapp }: { faqs: CmsFaq[]; whatsappNumber?: string }) {
   const t = useTranslations("homepage");
   const tNav = useTranslations("navigation");
   const tCommon = useTranslations("common");
