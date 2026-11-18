@@ -34,7 +34,7 @@ import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { nextChargeAfterPayment, nextRetryForPlan } from "./recurring-schedule";
+import { classifyRecurringDecline, nextAttemptAfterDecline, nextChargeAfterPayment, shouldTellDonorAboutDecline } from "./recurring-schedule";
 import { inspectRecurringBillingSafety, applyRecurringBillingSafety, deferClosedFridayWindow } from "./recurring-billing-safety";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
@@ -463,7 +463,14 @@ async function recordFailure(
   rehearsal?: RehearsalCycle
 ): Promise<RecurringChargeOutcome> {
   if (err) console.error("[albaraka-recurring]", reason, sub.id, err);
-  const retryAt = nextRetryForPlan(sub, attempt, now);
+  // Keep trying until it succeeds or the donor stops it; stop at once on a hard decline (owner, 2026-11-18).
+  const declineResponse = raw?.ServiceResponseData;
+  const declineCode = typeof declineResponse === "object" && declineResponse && !Array.isArray(declineResponse)
+    ? (declineResponse as Record<string, unknown>).ResponseCode
+    : undefined;
+  const declineIso = typeof declineCode === "string" || typeof declineCode === "number" ? albarakaIsoCode(String(declineCode).trim()) : null;
+  const kind = txnResult === "Unknown" ? "soft" : classifyRecurringDecline(declineIso, reason);
+  const retryAt = nextAttemptAfterDecline(sub, attempt, now, kind);
 
   const recorded = await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donationId }, select: { paidAt: true, providerRaw: true } });
@@ -499,7 +506,7 @@ async function recordFailure(
   });
   if (!recorded) return { subscriptionId: sub.id, donationId, result: "already_attempted", amountUSD };
 
-  if (!rehearsal) {
+  if (!rehearsal && shouldTellDonorAboutDecline(attempt, !retryAt, kind)) {
     runAfterResponse(() => dispatchEvent("DONATION_FAILED", { donationId }));
     void sendDonationFailedConversions(donationId);
   }
