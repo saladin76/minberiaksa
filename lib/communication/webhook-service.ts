@@ -335,6 +335,11 @@ export async function processWhatsappEvents(events: NormalizedWebhookEvent[]): P
     } else {
       summary.processed += 1;
       summary.inbound += 1;
+      // Inbox conversation layer (language tab, unread, ordering). Lazy and fail-safe: never blocks receiving.
+      const contact = normalizePhoneE164(event.from) ?? event.from;
+      if (contact) void import("./inbox-conversations")
+        .then((m) => m.touchInbound({ senderId, phone: contact, text: event.text ?? (event.messageType ? `[${event.messageType}]` : null), profileName: event.profileName ?? null, at: messageEventTime(event.timestamp) }))
+        .catch(() => undefined);
     }
 
     /*
