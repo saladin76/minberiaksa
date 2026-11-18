@@ -1,4 +1,5 @@
 "use client";
+import { ORG } from "@/lib/minbar/org";
 
 import { decimalAmount } from "@/lib/minbar/numeric-input";
 import { useMemo, useState, type CSSProperties, type ReactElement } from "react";
@@ -94,7 +95,7 @@ export interface ZakatCalculatorProps {
   whatsappNumber?: string;
 }
 
-export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = "905398436050" }: ZakatCalculatorProps) {
+export default function ZakatCalculator({ rates, guidePdfHref, whatsappNumber = ORG.whatsapp }: ZakatCalculatorProps) {
   const locale = useLocale();
   const t = useTranslations("zakat");
   const tCommon = useTranslations("common");
