@@ -142,6 +142,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "siteContent", get title() { return dt("الشهادات"); }, href: "/dashboard/certificates", icon: "award", keywords: ["certificate", "certificates", "receipt", "waqf", "thanks", "شهادة", "شهادات", "إهداء", "إيصال", "وقف", "شكر"] },
       { key: "team", get title() { return dt("الفريق"); }, href: "/dashboard/users/team", icon: "userCog", keywords: ["team", "staff", "permissions", "صلاحيات"] },
       { key: "generalSettings", get title() { return dt("الإعدادات"); }, href: "/dashboard/general/payment-gateways", icon: "settings", keywords: ["settings", "payment", "gateways", "stripe"] },
+      { key: "generalSettings", get title() { return dt("تجديدات الخدمات"); }, href: "/dashboard/renewals", icon: "repeat", adminOnly: true, keywords: ["renewal", "subscription", "billing", "expiry", "تجديد", "اشتراك", "دفع"] },
       { key: "logs", get title() { return dt("الأمان وسجل الوصول"); }, href: "/dashboard/security", icon: "shield", adminOnly: true, keywords: ["security", "ip", "country", "block", "حظر", "أمان"] },
       { key: "logs", get title() { return dt("سجلات النظام"); }, href: "/dashboard/logs", icon: "scrollText", keywords: ["logs", "audit", "system"] },
     ],
