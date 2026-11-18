@@ -141,6 +141,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // A slow Meta publish can outlive the proxy timeout and the client may retry the same create.
+  // Never create (and re-submit to Meta) a second template with the same name.
+  const existing = await prisma.whatsappTemplate.findFirst({
+    where: { name: parsed.data.name, OR: [{ provider: null }, { provider: { isSet: false } }, { provider: { in: ["META_WHATSAPP", "MANUAL"] } }] },
+    select: { id: true, name: true },
+  });
+  if (existing) {
+    return NextResponse.json(
+      {
+        error: `يوجد قالب باسم ${existing.name} بالفعل. افتحه من قائمة القوالب بدلًا من إنشائه مرة أخرى.`,
+        code: "WHATSAPP_TEMPLATE_NAME_EXISTS",
+        existingId: existing.id,
+      },
+      { status: 409 },
+    );
+  }
+
   const actor = auditActorFromDashboardSession(session!);
   const created = await prisma.whatsappTemplate.create({
     data: {

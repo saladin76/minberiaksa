@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { blockedTrackingMacros, campaignSlug, hasTrackingMacros, serializeAdParameters } from "@/lib/marketing/tracking-link-policy";
+import { toReadableUrl } from "@/lib/marketing/readable-url";
 import { cn } from "@/lib/utils";
 import { SLUGS, type MinbarRoute } from "@/lib/minbar/routes";
 import { dashDir, dt } from "@/lib/dashboard/i18n";
 
 type PageKind = "home" | "campaigns" | "campaigns_legacy" | "bank_transfer" | "terms" | "privacy" | "donation_policy" | "cookies" | "accessibility" | "campaign" | "category" | "super_category" | "blog" | "blog_post" | "blog_post_category" | "about_us" | "contact_us" | "profile" | "success" | "success_donation" | "auth_signin" | "zakat" | "zakat_calculator" | "waqf" | "recurring" | "aqsa" | "jerusalem" | "reports" | "news" | "programs" | "achievement_videos" | "endorsement_videos" | "publications" | "courses" | "volunteer" | "partner" | "bank_accounts" | "cart";
 type LinkMode = "standard" | "marketing";
-type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "email" | "whatsapp" | "sms" | "organic";
+type MarketingPlatform = "meta" | "google_ads" | "tiktok" | "x" | "snapchat" | "email" | "whatsapp" | "sms" | "organic";
 
 interface EntityRow { id: string; slug?: string | null; title?: string; name?: string; titleByLocale?: Record<string, string>; published?: boolean; supportedLocales: string[]; slugByLocale?: Record<string, string | null>; }
 interface Bundle { locales: string[]; currencies: string[]; campaigns: EntityRow[]; categories: EntityRow[]; superCategories: EntityRow[]; posts: EntityRow[]; postCategories: EntityRow[]; }
@@ -90,6 +91,7 @@ const PLATFORM_OPTIONS: { id: MarketingPlatform; label: string; source: string; 
   { id: "google_ads", label: "Google Ads", source: "google", medium: "paid_search", channel: "google_ads", get hint() { return dt("بحث، Display، YouTube، Performance Max"); } },
   { id: "tiktok", label: "TikTok Ads", source: "tiktok", medium: "paid_social", channel: "tiktok_ads", get hint() { return dt("حملات تيك توك المدفوعة"); } },
   { id: "x", label: "X Ads", source: "x", medium: "paid_social", channel: "x_ads", get hint() { return dt("إعلانات منصة X"); } },
+  { id: "snapchat", label: "Snapchat Ads", source: "snapchat", medium: "paid_social", channel: "snapchat_ads", hint: "Snapchat paid campaigns: enter real campaign and ad IDs; click IDs are appended by the platform." },
   { id: "email", label: "Email", source: "email", medium: "email", channel: "email", get hint() { return dt("حملات البريد عبر نظام التواصل"); } },
   { id: "whatsapp", label: "WhatsApp", source: "whatsapp", medium: "messaging", channel: "whatsapp", get hint() { return dt("حملات واتساب عبر Meta Cloud API أو روابط مشاركة"); } },
   { id: "sms", label: "SMS", source: "sms", medium: "messaging", channel: "sms", get hint() { return dt("حملات الرسائل النصية عبر نظام التواصل"); } },
@@ -120,6 +122,9 @@ const initialMarketingForm: MarketingForm = {
 function needsResourcePick(kind: PageKind) {
   return kind === "campaign" || kind === "category" || kind === "super_category" || kind === "blog_post" || kind === "blog_post_category";
 }
+
+// Never offer private, transactional or authentication routes as paid-ad landing pages.
+const NON_AD_DESTINATIONS = new Set<PageKind>(["profile", "success", "success_donation", "auth_signin", "cart"]);
 
 const STATIC_DESTINATIONS: Partial<Record<PageKind, MinbarRoute>> = {
   zakat: "zakat", zakat_calculator: "zakatCalculator", waqf: "waqf",
@@ -362,6 +367,11 @@ export default function TrackingLinkBuilder() {
     return qs ? `${base}?${qs}` : base;
   }, [path, detailsOk, autoLocale, locale, currency, refCode, pageKind, profileTab, campaignSearch, openCartPayment, marketingParams, autoCurrency]);
 
+  // fullUrl stays canonical (percent-encoded) for href, storage and matching;
+  // readableUrl is what people see and paste into chats and posts.
+  const readableUrl = useMemo(() => toReadableUrl(fullUrl), [fullUrl]);
+  const hasEncodedForm = readableUrl !== fullUrl;
+
   useEffect(() => { setLastSavedLink(null); }, [fullUrl, marketingForm]);
 
   const dynamicTemplate = linkMode === "marketing" && marketingForm.autoPlatformData;
@@ -377,8 +387,8 @@ export default function TrackingLinkBuilder() {
   const blockedMacros = blockedTrackingMacros(fullUrl + " " + marketingForm.campaignName);
   const unintendedMacros = linkMode === "marketing" && !dynamicTemplate && hasTrackingMacros(fullUrl + " " + marketingForm.campaignName);
   const needsCampaignName = linkMode === "marketing" && !dynamicTemplate && !marketingForm.campaignName.trim() && !marketingForm.campaignId.trim();
-  const canUseLink = Boolean(fullUrl) && !needsCampaignName && !blockedMacros.length && !unintendedMacros;
-  const copyValue = dynamicTemplate ? adParameters : fullUrl;
+  const canUseLink = Boolean(fullUrl) && !(linkMode === "marketing" && NON_AD_DESTINATIONS.has(pageKind)) && !needsCampaignName && !blockedMacros.length && !unintendedMacros;
+  const copyValue = dynamicTemplate ? adParameters : readableUrl;
   async function copyText(value: string) {
     if (!value || !canUseLink) return;
     try { await navigator.clipboard.writeText(value); toast.success(dt("تم النسخ")); }
@@ -510,14 +520,14 @@ export default function TrackingLinkBuilder() {
               <button type="button" aria-pressed={linkMode === "standard"} onClick={() => setLinkMode("standard")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "standard" ? "border-brand bg-blue-50 text-brand" : "border-border bg-white hover:bg-muted/40")}>
                 <Link2 className="mb-2 h-5 w-5" /><div className="font-bold">{dt("مشاركة مباشرة")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("رابط بسيط للمشاركة دون بيانات حملة.")}</p>
               </button>
-              <button type="button" aria-pressed={linkMode === "marketing"} onClick={() => setLinkMode("marketing")} className={cn("rounded-xl border p-4 text-start transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
+              <button type="button" aria-pressed={linkMode === "marketing"} onClick={() => { setLinkMode("marketing"); if (NON_AD_DESTINATIONS.has(pageKind)) setPageKind("home"); }} className={cn("rounded-xl border p-4 text-start transition", linkMode === "marketing" ? "border-brand-orange bg-orange-50 text-[#8f3a23]" : "border-border bg-white hover:bg-muted/40")}>
                 <Megaphone className="mb-2 h-5 w-5" /><div className="font-bold">{dt("تتبع حملة")}</div><p className="mt-1 text-xs text-muted-foreground">{dt("اربط التبرعات بحملة إعلانية أو رسالة تسويقية.")}</p>
               </button>
             </div>
           </section>
 
           <section className="grid gap-4 border-t pt-5 sm:grid-cols-2">
-            <SelectField label={dt("٢ · الوجهة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setResourceSearch(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
+            <SelectField label={dt("٢ · الوجهة")} value={pageKind} onValueChange={(v) => { setPageKind(v as PageKind); setResourceId(""); setResourceSearch(""); setCampaignSearch(""); setDonationId(""); }} options={PAGE_OPTIONS.filter(p => linkMode !== "marketing" || !NON_AD_DESTINATIONS.has(p.id)).map((p) => ({ value: p.id, label: p.hint ? `${p.label}  ${p.hint}` : p.label }))} />
             {needsResourcePick(pageKind) ? (
               <div className="space-y-2">
                 <Field label={dt("ابحث عن المشروع أو القسم أو المحتوى")} value={resourceSearch} onChange={setResourceSearch} placeholder={dt("اكتب الاسم لتصفية الخيارات")} />
@@ -589,10 +599,11 @@ export default function TrackingLinkBuilder() {
               <p className="text-sm leading-6 text-slate-600">{dt("ضع رابط الصفحة في خانة رابط الموقع داخل الإعلان، ومعلمات التتبع في خانة URL Parameters. هذه المتغيرات تُستبدل عند تشغيل الإعلان؛ لا تشارك القالب كرابط مباشر.")}</p>
               <CopyOutput label={dt("١ · رابط الموقع Website URL")} value={destinationUrl} disabled={!canUseLink} onCopy={() => copyText(destinationUrl)} />
               <CopyOutput label={dt("٢ · معلمات التتبع URL Parameters")} value={adParameters} disabled={!canUseLink} onCopy={() => copyText(adParameters)} />
-            </div> : <CopyOutput label={dt("الرابط الكامل")} value={needsCampaignName ? "" : fullUrl} disabled={!canUseLink} onCopy={copyUrl} />}
+            </div> : <CopyOutput label={dt("الرابط الكامل")} value={needsCampaignName ? "" : readableUrl} disabled={!canUseLink} onCopy={copyUrl} />}
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={() => saveRegistryLink(true)} disabled={!canUseLink || saving} className="min-h-11 gap-2">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{dynamicTemplate ? dt("حفظ ونسخ معلمات الإعلان") : dt("حفظ ونسخ الرابط")}</Button>
               <Button type="button" onClick={() => saveRegistryLink(false)} disabled={!canUseLink || saving} variant="outline" className="min-h-11 gap-2"><Save className="h-4 w-4" />{dt("حفظ فقط")}</Button>
+              {!dynamicTemplate && hasEncodedForm && canUseLink ? <Button type="button" variant="ghost" onClick={() => copyText(fullUrl)} className="min-h-11 gap-2 text-muted-foreground"><Copy className="h-4 w-4" />{dt("نسخ بصيغة مُرمَّزة")}</Button> : null}
               {fullUrl && canUseLink ? <Button asChild type="button" variant="ghost" className="min-h-11 gap-2"><a href={destinationUrl || fullUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{dt("معاينة الصفحة")}</a></Button> : null}
             </div>
             {lastSavedLink ? (

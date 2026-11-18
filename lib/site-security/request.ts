@@ -30,6 +30,9 @@ export async function checkSiteAccess(
   request: NextRequest,
   event?: NextFetchEvent,
 ) {
+  // Emergency switch first. Lazy and fail-open: a problem here never closes the site.
+  const closed = await import("./emergency").then((m) => m.emergencyResponse(request)).catch(() => null);
+  if (closed) return closed;
   if (isSecurityExemptPath(request.nextUrl.pathname)) return null;
   const ip = securityClientIp(request.headers);
   if (!ip) return null;

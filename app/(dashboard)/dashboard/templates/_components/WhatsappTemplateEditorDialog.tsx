@@ -713,16 +713,66 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
       }
       onOpenChange(false);
     } catch (error) {
-      const data = (error as {
+      const failure = error as {
         response?: {
+          status?: number;
           data?: {
             error?: string;
+            code?: string;
+            existingId?: string;
             saved?: boolean;
             template?: { id?: string };
             publish?: { errors?: Array<{ reason?: string; detail?: string }> };
-          };
+          } | string;
         };
-      }).response?.data;
+      };
+      const status = failure.response?.status;
+      const rawData = failure.response?.data;
+      const data = rawData && typeof rawData === "object" ? rawData : undefined;
+      const attachTemplate = async (id: string) => {
+        setWorkingId(id);
+        const fresh = await axios.get(`/api/templates/whatsapp/${id}`).catch(() => null);
+        if (fresh?.data?.template) {
+          const persisted = fresh.data.template as ApiTemplate;
+          setLoadedTemplate(persisted);
+          setSubmittedLocales(new Set((persisted.submittedLocales ?? []).filter((locale): locale is SupportedLocale => SUPPORTED_LOCALES.includes(locale as SupportedLocale))));
+        }
+      };
+      if (status === 409 && data?.code === "WHATSAPP_TEMPLATE_NAME_EXISTS" && data.existingId) {
+        await attachTemplate(data.existingId);
+        setPublishError("");
+        toast.success(dt("القالب محفوظ بالفعل، وفتحناه هنا. راجع حالته في Meta قبل أي تعديل."));
+        return;
+      }
+      // The proxy can cut a slow Meta publish (502/503/504 without an app response) while the
+      // server still finishes the save. Never report that as a failure, and never let the next
+      // click create the same template again.
+      const lostResponse = !failure.response || ([502, 503, 504].includes(status ?? 0) && !data);
+      if (lostResponse) {
+        if (workingId) {
+          await attachTemplate(workingId);
+          const message = dt("انقطع الاتصال قبل تأكيد الحفظ. أعدنا تحميل القالب؛ راجع حالته قبل إعادة المحاولة.");
+          setPublishError(message);
+          toast.error(message);
+          return;
+        }
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          if (attempt) await new Promise((resolve) => setTimeout(resolve, 4000));
+          const list = await axios.get("/api/templates/whatsapp").catch(() => null);
+          const match = (list?.data?.templates as Array<{ id: string; name: string }> | undefined)?.find((row) => row.name === name);
+          if (match) {
+            await attachTemplate(match.id);
+            setPublishError("");
+            toast.success(dt("تم حفظ القالب، لكن رد Meta استغرق وقتًا أطول. راجع حالة كل لغة في قائمة القوالب."));
+            onOpenChange(false);
+            return;
+          }
+        }
+        const message = dt("تعذّر تأكيد الحفظ بسبب انقطاع الاتصال. تحقّق من قائمة القوالب قبل إعادة المحاولة حتى لا يتكرر الإرسال.");
+        setPublishError(message);
+        toast.error(message);
+        return;
+      }
       if (data?.saved && data.template?.id) {
         setWorkingId(data.template.id);
         // Partial publication can freeze some languages even when the overall request failed.

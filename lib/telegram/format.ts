@@ -144,6 +144,11 @@ export interface DonationNotificationOptions {
    * of the separate "first donation" banner this used to post as a second message.
    */
   isNewDonor?: boolean;
+  /**
+   * Show the projects/categories the donation went to. Off for the automatic
+   * channel card (kept short); the /donation details turn it on.
+   */
+  showTarget?: boolean;
 }
 
 /**
@@ -171,7 +176,7 @@ export function formatDonationNotification(
   // ⭐ = first-time donor. Inline on the donor line rather than a second message.
   lines.push(`👤 <b>المتبرع:</b> ${options.isNewDonor ? "⭐ " : ""}${donorLine(d.donor)}`);
   lines.push(`🌍 <b>الدولة:</b> ${countryLine(d.donorCountryCode)}`);
-  lines.push(`🎯 <b>الوجهة:</b> ${targetLine(d)}`);
+  if (options.showTarget) lines.push(`🎯 <b>الوجهة:</b> ${targetLine(d)}`);
   lines.push(
     `🏦 <b>البوابة:</b> ${htmlEscape(providerLabel(d))}${
       d.subscriptionId ? " · 🔁 شهري" : ""
@@ -199,7 +204,7 @@ export function formatDonationNotification(
 /** Long-form details block used by the /donation <id> command. */
 export function formatDonationDetails(d: FormattableDonation): string {
   // For details we want everything  reuse notification + raw fields the brief skips.
-  const base = formatDonationNotification(d);
+  const base = formatDonationNotification(d, { showTarget: true });
   const extras: string[] = [];
   if (d.providerOrderId) extras.push(`🆔 <b>Order ID:</b> <code>${htmlEscape(d.providerOrderId)}</code>`);
   if (d.teamSupport && d.teamSupport > 0) {
