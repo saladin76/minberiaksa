@@ -876,8 +876,21 @@ function MonthlySubscriptionsDashboard() {
           toast.error(data?.error || dt("فشل في تحميل الاشتراكات"));
           return;
         }
-        const list = Array.isArray(data.subscriptions) ? data.subscriptions : [];
-        setSubsRows((prev) => (append ? [...prev, ...list] : list));
+        const list: SubscriptionRow[] = Array.isArray(data.subscriptions) ? data.subscriptions : [];
+        // Defense in depth: never render another donor's rows if a stale or
+        // incorrectly scoped response arrives while switching donor accounts.
+        // The server must still enforce authorization and tenant ownership.
+        const scopedList = list.filter((row) =>
+          (effectiveUserId === "all" || row.donor?.id === effectiveUserId) &&
+          (!linkedSubscriptionId || row.id === linkedSubscriptionId)
+        );
+        if (scopedList.length !== list.length) {
+          toast.error(dt("فشل في تحميل الاشتراكات"));
+          setSubsRows([]);
+          setSubsTotal(0);
+          return;
+        }
+        setSubsRows((prev) => (append ? [...prev, ...scopedList] : scopedList));
         setSubsTotal(data.pagination?.total ?? 0);
         setSubsLoadedFor(`${effectiveUserId === "all" ? "" : effectiveUserId}:${linkedSubscriptionId}:${linkedRequestId}`);
       } catch {
