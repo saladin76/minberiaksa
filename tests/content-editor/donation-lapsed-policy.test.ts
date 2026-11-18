@@ -20,7 +20,7 @@ test("successful messages respect full cooldown while failures back off for seve
   const cooldown = new Date("2026-08-10T00:00:00.000Z");
   const failed = new Date("2026-11-01T00:00:00.000Z");
   const windows = reminderPreviousAttemptWindows(cooldown, failed);
-  assert.equal(windows.length, 2);
+  assert.equal(windows.length, 3);
   assert.deepEqual(windows[0].createdAt, { gte: cooldown });
   assert.deepEqual(windows[1].createdAt, { gte: failed });
   const successful = new Set<string>(windows[0].status.in);
@@ -31,4 +31,8 @@ test("successful messages respect full cooldown while failures back off for seve
   assert.ok(failedStatuses.has("SKIPPED"));
   assert.equal(successful.has("FAILED"), false);
   assert.equal(failedStatuses.has("SENT"), false);
+  // A failure after the provider accepted the message counts as sent: full cooldown, no weekly retry.
+  assert.deepEqual(windows[2].createdAt, { gte: cooldown });
+  assert.deepEqual(windows[2].providerMessageId, { not: null });
+  assert.deepEqual(new Set<string>(windows[2].status.in), failedStatuses);
 });

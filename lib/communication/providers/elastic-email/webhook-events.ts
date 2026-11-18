@@ -92,6 +92,21 @@ function normalizeEventKey(event: string): string {
   return event.toLowerCase().replace(/[\s_-]/g, "");
 }
 
+/**
+ * Elastic reports a refused send as a "suppress"/"error" event whose reason is only in the text
+ * (owner audit, 2026-11-18: 1,736 such addresses were never suppressed). Only permanent reasons
+ * suppress; a spam block or a temporary 4.x.x failure is about reputation or timing, not the address.
+ */
+export function suppressionForError(message: string | null | undefined): EmailSuppressionReason {
+  const m = String(message ?? "");
+  if (!m) return "none";
+  if (/status was\W{0,3}unsubscribed/i.test(m)) return "unsubscribe";
+  if (/status was\W{0,3}(abuse|complaint|spam)/i.test(m)) return "complaint";
+  if (/status was\W{0,3}(invalid|bounced|not ?deliverable)/i.test(m)) return "hard-bounce";
+  if (/\b5\.1\.[0-9]\b|user unknown|no such user|account (does not exist|is disabled|has been disabled)|mailbox (not found|does not exist)|recipient address rejected: (user|unknown)/i.test(m)) return "hard-bounce";
+  return "none";
+}
+
 export function suppressionForEvent(event: string | null): EmailSuppressionReason {
   if (!event) return "none";
   return SUPPRESSION_BY_EVENT[normalizeEventKey(event)] ?? "none";
@@ -166,7 +181,8 @@ export function normalizeElasticEmailEvents(payload: unknown): NormalizedEmailEv
       errorMessage: status === "FAILED" || status === "BOUNCED" ? pick(raw, ERROR_KEYS) : null,
       occurredAt,
       idempotencyKey: `elastic:${providerMessageId}:${resolvedEvent}:${occurredAt ?? ""}`,
-      suppression: suppressionForEvent(resolvedEvent),
+      suppression: suppressionForEvent(resolvedEvent) !== "none" ? suppressionForEvent(resolvedEvent)
+        : status === "FAILED" || status === "BOUNCED" ? suppressionForError(pick(raw, ERROR_KEYS)) : "none",
     });
   }
   return out;
