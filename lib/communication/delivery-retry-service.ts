@@ -431,13 +431,46 @@ export type RetryPreflight = {
   eligible: number; candidateIds: string[]; missingContent: number; alreadyRetried: number; bounced: number; cap: number;
   oldestDays: number | null; byReason: Array<{ reason: string; count: number }>;
 };
+/**
+ * The preflight only needs to know WHETHER each failed message still has its archived content, so the
+ * database answers that itself with retryPayloadBlockReason's exact rule (e-mail: non-blank renderedBody;
+ * WhatsApp: a templateId and object variables) and returns one flag per row. Downloading every body made
+ * the e-mail dashboard pull ~19 MB and wait ~5 s on each load (2026-11-18). The retry itself is unchanged.
+ */
+type PreflightRow = { id: string; errorMessage: string | null; createdAt: Date; channel: string; templateId: string | null };
+async function withArchivedPayloadFlags(rows: PreflightRow[]): Promise<Array<PreflightRow & { renderedBody: string | null; variables: unknown }>> {
+  if (!rows.length) return [];
+  const ready = new Set<string>();
+  for (let i = 0; i < rows.length; i += 5000) {
+    const ids = rows.slice(i, i + 5000).map((row) => ({ $oid: row.id }));
+    const result = (await prisma.$runCommandRaw({
+      aggregate: "CommunicationDelivery",
+      pipeline: [
+        { $match: { _id: { $in: ids } } },
+        { $project: { ok: { $cond: [
+          { $eq: ["$channel", "WHATSAPP"] },
+          { $and: [{ $ne: [{ $ifNull: ["$templateId", null] }, null] }, { $eq: [{ $type: "$variables" }, "object"] }] },
+          { $gt: [{ $strLenCP: { $trim: { input: { $cond: [{ $eq: [{ $type: "$renderedBody" }, "string"] }, "$renderedBody", ""] } } } }, 0] },
+        ] } } },
+        { $match: { ok: true } },
+      ],
+      cursor: { batchSize: 10000 },
+    })) as { cursor?: { firstBatch?: Array<{ _id: { $oid?: string } | string }> } };
+    for (const doc of result.cursor?.firstBatch ?? []) ready.add(typeof doc._id === "string" ? doc._id : String(doc._id?.$oid ?? ""));
+  }
+  // Same shape retryPayloadBlockReason reads: a placeholder body / variables object marks "content present".
+  return rows.map((row) => ready.has(row.id)
+    ? { ...row, renderedBody: row.channel === "WHATSAPP" ? null : "archived", variables: row.channel === "WHATSAPP" ? {} : null }
+    : { ...row, renderedBody: null, variables: null });
+}
+
 export async function retryPreflight(filter: RetryCandidateFilter): Promise<RetryPreflight> {
   const scope = retryScope(filter);
   const [eligibleRows, alreadyRetried, bounced] = await Promise.all([
     prisma.communicationDelivery.findMany({
       where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }] },
-      select: { id: true, errorMessage: true, createdAt: true, channel: true, templateId: true, renderedBody: true, variables: true }, orderBy: { createdAt: "asc" },
-    }),
+      select: { id: true, errorMessage: true, createdAt: true, channel: true, templateId: true }, orderBy: { createdAt: "asc" },
+    }).then(withArchivedPayloadFlags),
     prisma.communicationDelivery.count({ where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, retriedAt: { not: null } } }),
     prisma.communicationDelivery.count({ where: { ...scope, status: { in: [...NON_RETRYABLE_TERMINAL] } } }),
   ]);
