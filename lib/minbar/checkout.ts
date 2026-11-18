@@ -128,7 +128,19 @@ export interface OrderLines {
    * Waqf rows carry no amount: the server prices them from the fixed unit
    * price, so a basket edited by hand cannot buy a metre for a dollar.
    */
-  waqfItems: Array<{ unit: "share" | "meter"; count: number; donorName: string; onBehalf: string }>;
+  waqfItems: Array<{ unit: "share" | "meter"; count: number; donorName: string; onBehalf: string; gift?: OrderGift }>;
+}
+
+/** A basket gift as the order API takes it — the same for a campaign line and a waqf line. */
+function orderGift(gift: NonNullable<MinbarCartItem["gift"]>): OrderGift {
+  return {
+    recipientName: gift.recipientName,
+    recipientPhone: gift.recipientPhone || null,
+    recipientEmail: gift.recipientEmail || null,
+    message: gift.message || null,
+    channels: gift.channels.map((c) => (c === "email" ? ("EMAIL" as const) : ("WHATSAPP" as const))),
+    showAmount: gift.showAmount,
+  };
 }
 
 /**
@@ -166,18 +178,7 @@ export function toOrderItems(
         amount: item.amount,
         ...(local ? { local } : {}),
         ...(item.shareCount ? { shareCount: item.shareCount } : {}),
-        ...(item.gift
-          ? {
-              gift: {
-                recipientName: item.gift.recipientName,
-                recipientPhone: item.gift.recipientPhone || null,
-                recipientEmail: item.gift.recipientEmail || null,
-                message: item.gift.message || null,
-                channels: item.gift.channels.map((c) => (c === "email" ? ("EMAIL" as const) : ("WHATSAPP" as const))),
-                showAmount: item.gift.showAmount,
-              },
-            }
-          : {}),
+        ...(item.gift ? { gift: orderGift(item.gift) } : {}),
       });
     }
     else if (item.categoryId) {
@@ -191,6 +192,7 @@ export function toOrderItems(
         count: item.waqf.count,
         donorName: item.waqf.donorName.trim(),
         onBehalf: item.waqf.onBehalf.trim(),
+        ...(item.gift ? { gift: orderGift(item.gift) } : {}),
       });
     }
     else {

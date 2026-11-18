@@ -14,7 +14,7 @@ interface Props {
 }
 
 /** The page's own namespaces, on top of the shell bundle. */
-const NAMESPACES = ["waqf", "certificates", "zakat", "homepage", "quran"] as const;
+const NAMESPACES = ["waqf", "certificates", "zakat", "homepage", "quran", "cart", "Gift"] as const;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;

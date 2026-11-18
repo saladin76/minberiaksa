@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { WaqfCopy } from "@/lib/certificates/copy-defaults";
+import { giftFromLabel } from "@/lib/certificates/gift-label";
 
 /**
  * The official waqf certificate  `handoff-certificates/شهادة الاوقاف.dc.html`.
@@ -26,6 +27,10 @@ export interface WaqfCertificateSheetProps {
   total: string;
   donorName: string;
   onBehalf: string;
+  /** A gifted waqf: the donor, credited on a small "Gifted by" line. */
+  giftFrom?: string;
+  /** A gift whose donor asked not to show the value: the count stays, the amount goes. */
+  hideTotal?: boolean;
   /** The issued number  or a marked preview value before payment. */
   certNo: string;
   certDate: string;
@@ -67,6 +72,8 @@ export default function WaqfCertificateSheet({
   total,
   donorName,
   onBehalf,
+  giftFrom,
+  hideTotal = false,
   certNo,
   certDate,
   details,
@@ -162,15 +169,20 @@ export default function WaqfCertificateSheet({
               <span style={{ whiteSpace: "nowrap" }}>
                 {endowedLine} (<b>{count}</b>)
               </span>
-              <span style={{ display: "flex", alignItems: "baseline", gap: 4, flex: 1 }}>
+              {hideTotal ? null : <span style={{ display: "flex", alignItems: "baseline", gap: 4, flex: 1 }}>
                 <span style={{ whiteSpace: "nowrap" }}>{copy.valueLabel}</span>
                 <b dir="ltr" style={{ unicodeBidi: "isolate", flex: 1, borderBottom: `1px solid ${RULE}`, textAlign: "center" }}>{total}</b>
-              </span>
+              </span>}
             </div>
 
             {onBehalf.trim() ? <div style={{ ...line, display: "flex", alignItems: "baseline", gap: 6 }}>
               <span style={{ whiteSpace: "nowrap" }}>{copy.onBehalfLabel}</span>
               <span style={{ flex: 1, borderBottom: `1px solid ${RULE}`, textAlign: "center", fontWeight: 800 }}>{onBehalf}</span>
+            </div> : null}
+
+            {giftFrom?.trim() ? <div style={{ ...line, display: "flex", alignItems: "baseline", gap: 6, fontSize: "clamp(8px,1.5cqw,13px)", opacity: 0.85 }}>
+              <span style={{ whiteSpace: "nowrap" }}>{giftFromLabel(locale)}:</span>
+              <span style={{ flex: 1, textAlign: "center", fontWeight: 700 }}>{giftFrom}</span>
             </div> : null}
 
             {/* The waqf's legal wording  reviewed content, never paraphrased. */}

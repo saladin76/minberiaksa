@@ -4,6 +4,7 @@ import { Prisma, type Certificate, type DonationReceipt, type DonationWaqfItem }
 import { prisma } from "@/lib/prisma";
 import { isValidLocale, DEFAULT_LOCALE } from "@/lib/locales";
 import { nextSequenceNumber, padSerial } from "./sequences";
+import { waqfGiftPresentation } from "./gift-label";
 
 /**
  * Issuing the three documents a confirmed donation carries
@@ -159,7 +160,8 @@ async function ensureWaqfCertificate(
         count: item.count,
         amount: item.amount,
         currency: donation.currency,
-        donorName: item.donorName,
+        // A gifted waqf is issued in the recipient's name (the donor is credited on the face).
+        donorName: waqfGiftPresentation(item).name,
         dedicatedTo: item.onBehalf,
         issuedAt: donation.paidAt ?? new Date(),
         locale,

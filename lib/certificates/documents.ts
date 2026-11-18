@@ -13,6 +13,13 @@ import { getReceiptCopy, getThanksCopy, getWaqfCopy, loadCopyOverrides } from ".
 import type { ReceiptCopy, ReceiptOrgData, ThanksCopy, WaqfCopy } from "./copy-defaults";
 import type { IssuedDocuments, IssuedWaqfCertificate } from "./issue";
 import { documentDate } from "./date";
+import { waqfGiftPresentation } from "./gift-label";
+
+/** The gift parts of a waqf certificate, from its line. */
+function giftFields(item: Parameters<typeof waqfGiftPresentation>[0]): { giftFrom?: string; hideTotal?: boolean } {
+  const g = waqfGiftPresentation(item);
+  return g.giftFrom ? { giftFrom: g.giftFrom, hideTotal: g.hideTotal } : {};
+}
 
 /**
  * From the persisted records to the props each sheet renders  the one place
@@ -48,6 +55,10 @@ export interface WaqfDocument {
   total: string;
   donorName: string;
   onBehalf: string;
+  /** A gifted waqf: the donor's name for the "Gifted by" line. */
+  giftFrom?: string;
+  /** The donor asked not to show the value (the count stays). */
+  hideTotal?: boolean;
   certNo: string;
   certDate: string;
   details?: string;
@@ -132,6 +143,7 @@ export function buildWaqfDocument(cert: IssuedWaqfCertificate, copy: WaqfCopy, l
     total: money(cert.amount, cert.currency, locale),
     donorName: cert.donorName,
     onBehalf: cert.dedicatedTo ?? cert.waqfItem.onBehalf,
+    ...giftFields(cert.waqfItem),
     certNo: String(cert.number),
     certDate: documentDate(cert.issuedAt, locale),
     copy,
@@ -345,8 +357,9 @@ export async function successDocumentsFor(donationId: string, docs: IssuedDocume
       unit: item.unit === "METER" ? ("meter" as const) : ("share" as const),
       count: item.count,
       total: money(item.amount, donation.currency, locale),
-      donorName: item.donorName,
+      donorName: waqfGiftPresentation(item).name,
       onBehalf: item.onBehalf,
+      ...giftFields(item),
       certNo: "",
       certDate: "",
       copy: waqfCopy,

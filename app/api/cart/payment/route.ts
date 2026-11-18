@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
       gift?: unknown;
     };
     type CategoryItemIn = { categoryId: string; amount: number; local?: unknown };
-    type WaqfItemIn = { unit: "share" | "meter"; count: number; donorName: string; onBehalf: string };
+    type WaqfItemIn = { unit: "share" | "meter"; count: number; donorName: string; onBehalf: string; gift: GiftOrderInput | null };
 
     /* A line gives either to a campaign, to a category as a whole (a category
        page's donation box may target the category itself), or buys waqf units.
@@ -269,7 +269,10 @@ export async function POST(request: NextRequest) {
       if (!line || !isWaqfUnitKey(line.unit) || !(count >= 1 && count <= WAQF_MAX_COUNT) || !donorName || !onBehalf) {
         return NextResponse.json({ error: "Every waqf line needs a unit, a count and both names" }, { status: 400 });
       }
-      waqfItems.push({ unit: line.unit, count, donorName, onBehalf });
+      /* A waqf line may be a gift, validated exactly like a campaign line's. */
+      const waqfGift = parseGiftOrder(line.gift);
+      if (!waqfGift.ok) return NextResponse.json({ error: waqfGift.error }, { status: 400 });
+      waqfItems.push({ unit: line.unit, count, donorName, onBehalf, gift: waqfGift.gift });
     }
 
     // Validate required fields
@@ -645,7 +648,7 @@ export async function POST(request: NextRequest) {
       : {};
     /* The plan's copy of the lines carries no gift: the recipient is told
        once, off the first (paid) donation, and later instalments are plain. */
-    const planLines = recurringCheckoutLines({ items: itemsResolved, categoryItems: categoryItemsResolved, waqfItems: waqfResolved }, lineFrequencies);
+    const planLines = recurringCheckoutLines({ items: itemsResolved, categoryItems: categoryItemsResolved, waqfItems: waqfResolved.map((line) => ({ ...line, gift: null })) }, lineFrequencies);
     const planCampaignLines = planLines.items.length
       ? {
           items: {
@@ -687,6 +690,7 @@ export async function POST(request: NextRequest) {
               amountUSD: line.amountUSD,
               donorName: line.donorName,
               onBehalf: line.onBehalf,
+              ...giftLineData(line.gift),
             })),
           },
         }
@@ -754,7 +758,7 @@ export async function POST(request: NextRequest) {
             ...(donationAttribution ? { attribution: donationAttribution } : {}),
             ...(campaignWrites.length ? { items: { create: campaignWrites.map((row, index) => ({ ...row, ...giftLineData(group.items[index].gift) })) } } : {}),
             ...(categoryWrites.length ? { categoryItems: { create: categoryWrites } } : {}),
-            ...(group.waqfItems.length ? { waqfItems: { create: group.waqfItems.map(line => ({ unit: line.unit === "meter" ? "METER" as const : "SHARE" as const, count: line.count, unitPrice: line.unitPrice, amount: line.amount, amountUSD: line.amountUSD, donorName: line.donorName, onBehalf: line.onBehalf })) } } : {}),
+            ...(group.waqfItems.length ? { waqfItems: { create: group.waqfItems.map(line => ({ unit: line.unit === "meter" ? "METER" as const : "SHARE" as const, count: line.count, unitPrice: line.unitPrice, amount: line.amount, amountUSD: line.amountUSD, donorName: line.donorName, onBehalf: line.onBehalf, ...giftLineData(line.gift) })) } } : {}),
           } });
           donations.push(donation);
         }
@@ -815,7 +819,7 @@ export async function POST(request: NextRequest) {
       const selectLines = (recurring: boolean) => ({
         ...(itemsResolved.some((_, i) => (lineFrequencies[i] !== "once") === recurring) ? { items: { create: itemsResolved.filter((_, i) => (lineFrequencies[i] !== "once") === recurring).map(item => ({ campaignId: item.campaignId, amount: item.amount, amountUSD: item.amountUSD, ...(item.shareCount ? { shareCount: item.shareCount } : {}), ...giftLineData(item.gift) })) } } : {}),
         ...(categoryItemsResolved.some((_, i) => (lineFrequencies[itemsResolved.length + i] !== "once") === recurring) ? { categoryItems: { create: categoryItemsResolved.filter((_, i) => (lineFrequencies[itemsResolved.length + i] !== "once") === recurring).map(item => ({ categoryId: item.categoryId, amount: item.amount, amountUSD: item.amountUSD })) } } : {}),
-        ...(waqfResolved.some((_, i) => (lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] !== "once") === recurring) ? { waqfItems: { create: waqfResolved.filter((_, i) => (lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] !== "once") === recurring).map(line => ({ unit: line.unit === "meter" ? ("METER" as const) : ("SHARE" as const), count: line.count, unitPrice: line.unitPrice, amount: line.amount, amountUSD: line.amountUSD, donorName: line.donorName, onBehalf: line.onBehalf })) } } : {}),
+        ...(waqfResolved.some((_, i) => (lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] !== "once") === recurring) ? { waqfItems: { create: waqfResolved.filter((_, i) => (lineFrequencies[itemsResolved.length + categoryItemsResolved.length + i] !== "once") === recurring).map(line => ({ unit: line.unit === "meter" ? ("METER" as const) : ("SHARE" as const), count: line.count, unitPrice: line.unitPrice, amount: line.amount, amountUSD: line.amountUSD, donorName: line.donorName, onBehalf: line.onBehalf, ...giftLineData(line.gift) })) } } : {}),
       });
       const result = await prisma.$transaction(async (tx) => {
         const sub = await tx.subscription.create({
