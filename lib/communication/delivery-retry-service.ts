@@ -464,15 +464,37 @@ async function withArchivedPayloadFlags(rows: PreflightRow[]): Promise<Array<Pre
     : { ...row, renderedBody: null, variables: null });
 }
 
+/**
+ * The preflight runs on every e-mail/WhatsApp dashboard load. Through Prisma its queries become $expr full
+ * scans of CommunicationDelivery (~20 s); the index-friendly functions return the same results (verified on
+ * production data, 2026-11-18). They are loaded on demand: if they cannot be (sandboxed tests, or any failure),
+ * the original Prisma path is used — slower but identical — so the dashboard never breaks over speed.
+ */
+type PreflightFind = (args: { where?: unknown; select?: Record<string, boolean>; orderBy?: { createdAt: "asc" | "desc" } }) => Promise<Array<{ id: string; errorMessage: string | null; createdAt: Date; channel: string; templateId: string | null }>>;
+type PreflightCount = (args: { where?: unknown }) => Promise<number>;
+async function preflightQueries(): Promise<{ find: PreflightFind; count: PreflightCount }> {
+  try {
+    const fast = await import("./delivery-raw-query");
+    return { find: fast.rawFindDeliveries as unknown as PreflightFind, count: fast.rawCountDeliveries as unknown as PreflightCount };
+  } catch (error) {
+    if (process.env.NODE_ENV === "production") console.warn("[retryPreflight] index-friendly queries unavailable; using Prisma", error instanceof Error ? error.message : error);
+    return {
+      find: (args) => prisma.communicationDelivery.findMany(args as never) as unknown as ReturnType<PreflightFind>,
+      count: (args) => prisma.communicationDelivery.count(args as never),
+    };
+  }
+}
+
 export async function retryPreflight(filter: RetryCandidateFilter): Promise<RetryPreflight> {
   const scope = retryScope(filter);
+  const q = await preflightQueries();
   const [eligibleRows, alreadyRetried, bounced] = await Promise.all([
-    prisma.communicationDelivery.findMany({
+    q.find({
       where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, OR: [{ retriedAt: null }, { retriedAt: { isSet: false } }] },
       select: { id: true, errorMessage: true, createdAt: true, channel: true, templateId: true }, orderBy: { createdAt: "asc" },
     }).then(withArchivedPayloadFlags),
-    prisma.communicationDelivery.count({ where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, retriedAt: { not: null } } }),
-    prisma.communicationDelivery.count({ where: { ...scope, status: { in: [...NON_RETRYABLE_TERMINAL] } } }),
+    q.count({ where: { ...scope, status: { in: [...RETRYABLE_STATUSES] }, retriedAt: { not: null } } }),
+    q.count({ where: { ...scope, status: { in: [...NON_RETRYABLE_TERMINAL] } } }),
   ]);
   const readyRows = eligibleRows.filter(hasArchivedRetryPayload);
   const counts = new Map<string, number>();
