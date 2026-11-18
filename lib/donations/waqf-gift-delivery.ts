@@ -52,7 +52,7 @@ export async function deliverWaqfGifts(donationId: string, options: { approvalBl
   const docs = await ensureDonationDocuments(donationId);
   if (!docs) return result;
   const locale = docs.locale;
-  const m = { ...giftMessages(locale), emailAttachment: attachmentLine(locale) };
+  const m: Record<string, string> = { ...giftMessages(locale), emailAttachment: attachmentLine(locale) };
   const base = paymentPublicOrigin("https://minberiaksa.org");
   const sendConfig = await resolveTriggerSendConfig();
   const emailSender = resolveTriggerSender(sendConfig, "EMAIL", { locale, purpose: "TRANSACTIONAL" });
