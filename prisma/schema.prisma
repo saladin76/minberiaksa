@@ -918,6 +918,8 @@ model Donation {
 
   /// UTM/ads/GA/Meta snapshot from client at checkout (JSON). Server conversions use the same donation id as event_id.
   attribution                  Json?
+  /// Classified donation source (lib/attribution/source-channel.ts), set by /api/cron/donation-source.
+  sourceChannel                String?
   /// Legacy: Meta Donate sent. New contract: Meta Donate + Purchase accepted.
   /// Per-event Meta/GA4 truth and retries live in ConversionEvent, independently.
   conversionEventsSentAt       DateTime?

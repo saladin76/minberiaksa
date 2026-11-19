@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mergeDonationProviderFilter } from '@/lib/dashboard/donation-provider-filter';
+import { mergeDonationSourceFilter } from '@/lib/dashboard/donation-source-filter';
 import { dashboardLocaleWhere, dashboardCountryWhere } from '@/lib/dashboard/donation-location-scope';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     const allScopeFilters = [innerWhere, ...relationFilters, ...(typeWhere ? [typeWhere] : [])];
     const queryWhere = allScopeFilters.length > 1 ? { AND: allScopeFilters } : innerWhere;
-    const baseWhere = mergeDonationProviderFilter(mergeCountryFilter(mergeLocaleFilter(queryWhere, locale), country), searchParams.get('provider'));
+    const baseWhere = mergeDonationSourceFilter(mergeDonationProviderFilter(mergeCountryFilter(mergeLocaleFilter(queryWhere, locale), country), searchParams.get('provider')), searchParams.get('source'));
 
     // Query only the requested status/type, without mistaking pending for revenue.
     const donations = await prisma.donation.findMany({

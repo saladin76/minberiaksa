@@ -1,6 +1,7 @@
 import { loadReportSubscriptions } from "@/lib/dashboard/report-subscriptions";
 import { dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
 import { donationProviderWhere } from "@/lib/dashboard/donation-provider-filter";
+import { donationSourceWhere } from "@/lib/dashboard/donation-source-filter";
 /**
  * GET /api/admin/donations/export
  *
@@ -94,6 +95,8 @@ async function localizedGET(request: NextRequest) {
     const filters: Prisma.DonationWhereInput[] = [baseWhere];
     const providerFilter = donationProviderWhere(sp.get("provider"));
     if (providerFilter) filters.push(providerFilter);
+    const sourceFilter = donationSourceWhere(sp.get("source"));
+    if (sourceFilter) filters.push(sourceFilter);
     // ناجح / قيد التأكيد / فاشل, as the tables show them.
     const statusWhere = donationStatusWhere(status);
     if (statusWhere) filters.push(statusWhere);

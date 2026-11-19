@@ -13,6 +13,8 @@ export type HomeDonationScope = {
   provider: string;
   status: string;
   donationType: string;
+  /** Classified donation source (Donation.sourceChannel); chart, list and export only. */
+  source?: string;
 };
 
 export function dashboardDonationScopeParams(scope: HomeDonationScope): URLSearchParams {
@@ -28,6 +30,7 @@ export function dashboardDonationScopeParams(scope: HomeDonationScope): URLSearc
     provider: scope.provider,
     status: scope.status,
     donationType: scope.donationType,
+    source: scope.source ?? null,
   };
   for (const [key,value] of Object.entries(values)) {
     // "all" is an explicit status selector; omitting it would make chart default to RESOLVED.

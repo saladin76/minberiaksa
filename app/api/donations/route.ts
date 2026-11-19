@@ -248,13 +248,17 @@ export async function GET(request: NextRequest) {
     const statusWhere = donationStatusWhere(statusFilter);
 
     const providerWhere = isAdmin ? donationProviderWhere(searchParams.get("provider")) : null;
+    // Inline (no new import: sandboxed route tests load this file with a fixed import list). Must equal SOURCE_CHANNELS.
+    const DONATION_SOURCE_CHANNELS: readonly string[] = ["facebook", "instagram", "whatsapp", "email", "google_ads", "google_search", "tiktok", "direct", "other", "unknown"];
+    const sourceParam = (searchParams.get("source") ?? "").trim();
+    const sourceWhere = isAdmin && DONATION_SOURCE_CHANNELS.includes(sourceParam) ? { sourceChannel: sourceParam } : null;
     // Keep prior audited behavior: suppress superseded failures in the
     // expressly opted-in operational overview, never in donor/audit history.
     const hideRecoveredFailures = isAdmin && searchParams.get("hideRecoveredFailures") === "1" && statusFilter !== "FAILED";
     const recoveredViewWhere = hideRecoveredFailures
       ? { OR: [{ status: { not: "FAILED" } }, { overviewRecoveredByDonationId: null }, { overviewRecoveredByDonationId: { isSet: false } }] }
       : null;
-    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere, accountingWhere, recoveredViewWhere].filter(
+    const extraFilters = [...relatedFilters, searchWhere, localeWhere, countryWhere, donationTypeWhere, frequencyWhere, statusWhere, providerWhere, sourceWhere, accountingWhere, recoveredViewWhere].filter(
       (w) => w != null
     );
     const where: Record<string, unknown> =

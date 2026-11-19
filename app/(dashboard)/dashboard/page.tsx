@@ -377,6 +377,7 @@ export default function DashboardPage() {
   >("all");
   const [donationCountryFilter, setDonationCountryFilter] = useState<string>("all");
   const [donationProviderFilter, setDonationProviderFilter] = useState("all");
+  const [donationSourceFilter, setDonationSourceFilter] = useState("all");
   const [countryOptions, setCountryOptions] = useState<{ code: string; count: number }[]>([]);
   const [countryUnsetCount, setCountryUnsetCount] = useState(0);
 
@@ -520,7 +521,7 @@ export default function DashboardPage() {
         categoryId: selectedCategory, campaignId: selectedCampaign,
         userId: effectiveUserId, start, end,
         locale: donationLocaleFilter, country: donationCountryFilter,
-        provider: donationProviderFilter, status: donationsStatusFilter,
+        provider: donationProviderFilter, source: donationSourceFilter, status: donationsStatusFilter,
         donationType: donationsTypeFilter,
       });
       params.set("period", chartPeriod);
@@ -536,7 +537,7 @@ export default function DashboardPage() {
     } finally {
       if (requestId === chartRequestId.current) setChartLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsStatusFilter, donationsTypeFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationSourceFilter, donationsStatusFilter, donationsTypeFilter]);
 
   useEffect(() => {
     fetchChartData();
@@ -553,7 +554,7 @@ export default function DashboardPage() {
         categoryId: selectedCategory, campaignId: selectedCampaign,
         userId: selectedUserId, start, end,
         locale: donationLocaleFilter, country: donationCountryFilter,
-        provider: donationProviderFilter, status: "PAID",
+        provider: donationProviderFilter, source: donationSourceFilter, status: "PAID",
         donationType: donationsTypeFilter,
       });
       params.set("period", "day");
@@ -569,7 +570,7 @@ export default function DashboardPage() {
     } finally {
       if (requestId === todayRequestId.current) setTodayLoading(false);
     }
-  }, [selectedCategory, selectedCampaign, selectedUserId, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsTypeFilter]);
+  }, [selectedCategory, selectedCampaign, selectedUserId, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationSourceFilter, donationsTypeFilter]);
 
   useEffect(() => {
     fetchTodayData();
@@ -650,7 +651,7 @@ export default function DashboardPage() {
           categoryId: selectedCategory, campaignId: selectedCampaign,
           userId: selectedUserId, start, end,
           locale: donationLocaleFilter, country: donationCountryFilter,
-          provider: donationProviderFilter, status: donationsStatusFilter,
+          provider: donationProviderFilter, source: donationSourceFilter, status: donationsStatusFilter,
           donationType: donationsTypeFilter,
         });
         params.set("page", String(page));
@@ -699,6 +700,7 @@ export default function DashboardPage() {
       donationLocaleFilter,
       donationCountryFilter,
       donationProviderFilter,
+      donationSourceFilter,
       donationsSearch,
     ]
   );
@@ -710,7 +712,7 @@ export default function DashboardPage() {
     if (loading) return;
     setDonationsPage(1);
     fetchDonations(1, false);
-  }, [loading, selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationsSortBy, donationsSortOrder, donationsStatusFilter, donationsTypeFilter, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationsSearch, fetchDonations]);
+  }, [loading, selectedCategory, selectedCampaign, selectedUserId, chartPeriod, dateFrom, dateTo, donationsSortBy, donationsSortOrder, donationsStatusFilter, donationsTypeFilter, donationLocaleFilter, donationCountryFilter, donationProviderFilter, donationSourceFilter, donationsSearch, fetchDonations]);
 
   const loadMoreDonations = () => {
     const next = donationsPage + 1;
@@ -1468,6 +1470,16 @@ export default function DashboardPage() {
                       <BarChart3 className="w-4 h-4" />
                       {dt("التبرعات عبر الزمن")}</TabsTrigger>
                   </TabsList>
+                  <Select value={chartView} onValueChange={(v) => setChartView(v as ChartViewType)}>
+                    <SelectTrigger className="h-8 w-[120px] px-2 text-xs rounded-lg border-slate-200 bg-white" aria-label={dt("نوع الرسم")}>
+                      <SelectValue placeholder={dt("نوع الرسم")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bar" className="text-xs">{dt("أعمدة")}</SelectItem>
+                      <SelectItem value="line" className="text-xs">{dt("خط")}</SelectItem>
+                      <SelectItem value="area" className="text-xs">{dt("منطقة")}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {chartView === "bar" && chartMetric === "amount" && (
                     <button
                       type="button"
@@ -1575,6 +1587,7 @@ export default function DashboardPage() {
                       setDonationLocaleFilter("all");
                       setDonationCountryFilter("all");
                       setDonationProviderFilter("all");
+                      setDonationSourceFilter("all");
                       setDonationsStatusFilter("RESOLVED");
                       setDonationsTypeFilter("all");
                       setDonationsSearch("");
@@ -1731,18 +1744,26 @@ export default function DashboardPage() {
     </Select>
   </div>
 
-  {/* Chart Type */}
+  {/* Donation source (classified attribution) */}
   <div className="space-y-1 text-start">
     <label className="text-[11px] font-semibold text-slate-600">
-      {dt("نوع الرسم")}</label>
-    <Select value={chartView} onValueChange={(v) => setChartView(v as ChartViewType)}>
+      {dt("مصدر التبرع")}</label>
+    <Select value={donationSourceFilter} onValueChange={setDonationSourceFilter}>
       <SelectTrigger className="w-full h-10 px-3 text-[13px] rounded-lg border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 focus:border-brand focus:ring-2 focus:ring-brand/15">
-        <SelectValue placeholder={dt("اختر النوع")} />
+        <SelectValue placeholder={dt("كل المصادر")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="bar" className="text-xs">{dt("أعمدة")}</SelectItem>
-        <SelectItem value="line" className="text-xs">{dt("خط")}</SelectItem>
-        <SelectItem value="area" className="text-xs">{dt("منطقة")}</SelectItem>
+        <SelectItem value="all" className="text-xs">{dt("كل المصادر")}</SelectItem>
+        <SelectItem value="facebook" className="text-xs">{dt("فيسبوك")}</SelectItem>
+        <SelectItem value="instagram" className="text-xs">{dt("إنستغرام")}</SelectItem>
+        <SelectItem value="whatsapp" className="text-xs">{dt("واتساب")}</SelectItem>
+        <SelectItem value="email" className="text-xs">{dt("البريد الإلكتروني")}</SelectItem>
+        <SelectItem value="google_ads" className="text-xs">{dt("إعلانات Google")}</SelectItem>
+        <SelectItem value="google_search" className="text-xs">{dt("بحث Google")}</SelectItem>
+        <SelectItem value="tiktok" className="text-xs">{dt("تيك توك")}</SelectItem>
+        <SelectItem value="direct" className="text-xs">{dt("مباشر")}</SelectItem>
+        <SelectItem value="other" className="text-xs">{dt("أخرى")}</SelectItem>
+        <SelectItem value="unknown" className="text-xs">{dt("غير معروف")}</SelectItem>
       </SelectContent>
     </Select>
   </div>
