@@ -165,7 +165,7 @@ export const RECEIPT_FIELDS: ReadonlyArray<{ name: keyof ReceiptCopy; i18nKey: s
 
 /** Defaults with no i18n key  the template's own literal values. */
 export const RECEIPT_LITERAL_DEFAULTS: Pick<ReceiptCopy, "docTitleLatin" | "pairNote"> = {
-  docTitleLatin: "Bağış Makbuzu / Donation Receipt",
+  docTitleLatin: "BAĞIŞ MAKBUZU / DONATION RECEIPT", // stored in capitals: Turkish casing would render DONATİON RECEİPT
   pairNote: "Bu makbuz Türkçe nüshası ile birlikte geçerlidir.",
 };
 
