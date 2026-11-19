@@ -133,7 +133,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
       <aside className={`${activeId ? "hidden md:flex" : "flex"} w-full flex-col border-l md:w-[380px] md:min-w-[380px]`}>
         <div className="space-y-2 border-b p-3">
           <div className="flex gap-1 overflow-x-auto text-xs">
-            <button type="button" onClick={() => setLang("all")} className={`rounded-full px-3 py-1 ${lang === "all" ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>{dt("الكل")}{counts?.all ? ` · ${counts.all}` : ""}</button>
+            <button type="button" onClick={() => setLang("all")} className={`whitespace-nowrap rounded-full px-3 py-1 ${lang === "all" ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>{dt("الكل")}{counts?.all ? ` · ${counts.all}` : ""}</button>
             {LANGS.map((l) => (
               <button key={l.key} type="button" onClick={() => setLang(l.key)} className={`whitespace-nowrap rounded-full px-3 py-1 ${lang === l.key ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>
                 {l.flag} {dt(l.label)}{counts?.[l.key] ? <b className="ms-1 rounded-full bg-emerald-500 px-1.5 text-white">{counts[l.key]}</b> : null}
@@ -196,26 +196,37 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
           </header>
 
           <div className="flex-1 space-y-1 overflow-y-auto px-4 py-3">
-            {!detail ? <p className="text-center text-sm text-slate-500">{dt("جارٍ التحميل…")}</p> : detail.timeline.map((m, i) => {
+            {!detail ? <p className="text-center text-sm text-slate-500">{dt("جارٍ التحميل…")}</p> : (() => {
+              // Status lines (SENT/DELIVERED/READ) that follow an outgoing message become its ticks.
+              const rank: Record<string, number> = { SENT: 1, DELIVERED: 2, READ: 3, REPLIED: 3 };
+              const best = new Map<string, string>(); let owner: string | null = null;
+              for (const it of detail.timeline) {
+                if (it.kind === "outbound") { owner = it.id; best.set(it.id, (it.status || "SENT").toUpperCase()); }
+                else if (it.kind === "inbound") owner = null;
+                else if (owner && it.status) { const st = it.status.toUpperCase(), cur = best.get(owner) || "SENT";
+                  if (/FAIL|BOUNCE/.test(st)) best.set(owner, "FAILED"); else if (cur !== "FAILED" && (rank[st] ?? 0) > (rank[cur] ?? 0)) best.set(owner, st); }
+              }
+              return detail.timeline.map((m, i) => {
               const prev = detail.timeline[i - 1]; const d = m.at ? new Date(m.at) : null;
               const dayBreak = d && (!prev?.at || !sameDay(new Date(prev.at), d));
               return (
                 <div key={m.id}>
                   {dayBreak ? <div className="my-2 text-center"><span className="rounded-md bg-white/80 px-2 py-0.5 text-[11px] text-slate-600 shadow-sm">{d!.toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "long" })}</span></div> : null}
                   {m.kind === "status" ? (
-                    <p className="text-center text-[11px] text-slate-500">{m.text || m.status}</p>
+                    /FAIL|BOUNCE|ERROR/i.test(m.status || "") ? <p className="text-center text-[11px] text-red-600">⚠ {m.text || m.status}</p> : null
                   ) : (
                     <div className={`flex ${m.kind === "inbound" ? "justify-start" : "justify-end"}`}>
                       <div className={`max-w-[75%] rounded-lg px-3 py-1.5 text-sm shadow-sm ${m.kind === "inbound" ? "rounded-tr-none bg-white" : "rounded-tl-none bg-[#d9fdd3]"}`}>
                         {m.media ? <InboxMedia conversationId={active.id} itemId={m.id} media={m.media} /> : null}
                         {m.text ? <p className="whitespace-pre-wrap break-words" dir="auto">{m.text}</p> : null}
                         <span className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-500">
-                          {d ? d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }) : ""}{m.kind === "outbound" ? <Ticks status={m.status} /> : null}
+                          {d ? d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }) : ""}{m.kind === "outbound" ? <Ticks status={best.get(m.id) ?? m.status} /> : null}
                         </span>
                       </div>
                     </div>)}
                 </div>);
-            })}
+              });
+            })()}
             <div ref={bottomRef} />
           </div>
 
