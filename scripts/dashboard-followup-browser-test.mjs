@@ -172,7 +172,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
      await page.getByRole("dialog").waitFor({state:"detached"});
      await page.waitForFunction(()=>getComputedStyle(document.body).pointerEvents!=="none",undefined,{timeout:3000});
      await page.getByRole("link",{name:ui(locale,"محادثات واتساب"),exact:true}).click();
-     await page.waitForURL(`${origin}/dashboard/communication/inbox`);
+     await page.waitForURL(`${origin}/dashboard/communication/conversations`);
    };
    for(const close of ["cancel","close","escape"]){
      const writesBefore=requests.filter(row=>row.path.endsWith("/profile")&&row.method==="PUT").length;
@@ -234,7 +234,7 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
    assert.equal(await preferredLanguage.evaluate(node=>{const r=node.getBoundingClientRect();return node===document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)}),true,"The final profile field must accept pointer input");
    await page.screenshot({animations:"disabled",path:path.join(artifacts,locale+"-donor-profile-scrolled-"+label+".png"),fullPage:true});checks++;
    await open("topbar");const link=page.getByRole("link",{name:ui(locale,"واتساب، {0} محادثة غير مقروءة").replace("{0}","27"),exact:true});await link.waitFor();
-   assert.equal(await link.getAttribute("href"),"/dashboard/communication/inbox");const bounds=await link.boundingBox();assert.ok(bounds.width>=40&&bounds.height>=40);
+   assert.equal(await link.getAttribute("href"),"/dashboard/communication/conversations");const bounds=await link.boundingBox();assert.ok(bounds.width>=40&&bounds.height>=40);
    const overlaps=await page.locator("header button, header a").evaluateAll(nodes=>{
      const controls=nodes.map(node=>({rect:node.getBoundingClientRect(),label:node.getAttribute("aria-label")||node.textContent})).filter(item=>item.rect.width>0&&item.rect.height>0);
      const collisions=[];for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++){

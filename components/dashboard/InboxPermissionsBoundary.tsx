@@ -4,7 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 function isInbox(path: string): boolean {
-  return path === "/dashboard/communication/inbox" || path.startsWith("/dashboard/communication/inbox/");
+  return path === "/dashboard/communication/inbox" || path.startsWith("/dashboard/communication/inbox/")
+    || path === "/dashboard/communication/conversations" || path.startsWith("/dashboard/communication/conversations/");
 }
 
 /** Permissions-Policy belongs to the document, not to an App Router response. */

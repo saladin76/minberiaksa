@@ -16,8 +16,10 @@ export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams, userId = session?.user?.id ?? null;
   const lang = sp.get("language"), view = sp.get("view");
   try {
+    // countsOnly: the top-bar WhatsApp badge polls the unread total without loading the list.
+    const countsOnly = sp.get("countsOnly") === "1";
     const [conversations, counts] = await Promise.all([
-      listInboxConversations({ language: isInboxLanguage(lang) ? lang : "all", view: view === "mine" || view === "unread" || view === "done" ? view : "all", userId, q: sp.get("q") ?? "", before: sp.get("before") }),
+      countsOnly ? Promise.resolve([]) : listInboxConversations({ language: isInboxLanguage(lang) ? lang : "all", view: view === "mine" || view === "unread" || view === "done" ? view : "all", userId, q: sp.get("q") ?? "", before: sp.get("before") }),
       inboxCounts(userId),
     ]);
     return reply({ conversations, counts });

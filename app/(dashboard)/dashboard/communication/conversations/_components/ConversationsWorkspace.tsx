@@ -84,7 +84,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
     if (!activeId) return;
     setDetail(null); setReplyWindow(null); setDraft(""); setAttachment(null); setNotice("");
     void loadDetail(activeId);
-    void fetch(`${API}/conversations`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeId, read: true }) }).then(() => loadList()).catch(() => undefined);
+    void fetch(`${API}/conversations`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeId, read: true }) }).then(() => { window.dispatchEvent(new Event("whatsapp-inbox-updated")); return loadList(); }).catch(() => undefined);
     const t = setInterval(() => void loadDetail(activeId), 5_000);
     return () => clearInterval(t);
   }, [activeId, loadDetail, loadList]);
