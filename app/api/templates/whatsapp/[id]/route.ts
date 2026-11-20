@@ -115,7 +115,9 @@ export async function PATCH(
       : editable.translations;
     for (const locale of newlyAddedLocales) {
       const translation = translations && typeof translations === "object" ? translations[locale] : undefined;
-      if (!hasWhatsappUnsubscribeQuickReply(translation?.buttons)) {
+      // The default Arabic copy keeps its buttons at the template root (validated above); other languages carry their own.
+      const localeButtons = translation?.buttons ?? (locale === "ar" ? rootButtons : undefined);
+      if (!hasWhatsappUnsubscribeQuickReply(localeButtons)) {
         return NextResponse.json({
           error: `القالب التسويقي يحتاج زرًا واضحًا لإيقاف الرسائل في نسخة اللغة ${locale}.`,
           code: "WHATSAPP_MARKETING_UNSUBSCRIBE_REQUIRED",
