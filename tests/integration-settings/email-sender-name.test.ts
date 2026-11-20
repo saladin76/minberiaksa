@@ -23,5 +23,5 @@ test("the sender is the institution's name in the message's language", () => {
 test("no language keeps the configured sender; an explicit sender name always wins", () => {
   assert.equal(name(null), null);
   assert.equal(name(""), null);
-  assert.match(src, /senderName: input\.senderName\?\.trim\(\) \|\| institutionSenderName\(input\.locale\),/);
+  assert.match(src, /senderName: input\.senderName\?\.trim\(\) \|\| \(input\.purpose === "MARKETING" \? null : institutionSenderName\(input\.locale\)\),/, "marketing keeps the configured sender");
 });
