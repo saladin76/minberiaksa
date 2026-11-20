@@ -56,6 +56,12 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
   const [counts, setCounts] = useState<Counts | null>(null);
   const [listError, setListError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Opened from a donor's profile (?phone=…): search that number and open its conversation (2026-11-20).
+  const [wantedPhone, setWantedPhone] = useState("");
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("phone")?.replace(/\D/g, "") ?? "";
+    if (wanted.length >= 6) { setWantedPhone(wanted); setQ(wanted); setQuery(wanted); }
+  }, []);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [replyWindow, setReplyWindow] = useState<ReplyWindow | null>(null);
   const [draft, setDraft] = useState(""), [attachment, setAttachment] = useState<InboxAttachment | null>(null);
@@ -118,6 +124,11 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
     } catch { setListError(dt("تعذّر تحميل المحادثات")); }
   }, [lang, view, query]);
   useEffect(() => { void loadList(); const t = setInterval(() => void loadList(), 10_000); return () => clearInterval(t); }, [loadList]);
+  useEffect(() => {
+    if (!wantedPhone) return;
+    const hit = items.find((c) => String(c.phone).replace(/\D/g, "").endsWith(wantedPhone.slice(-9)));
+    if (hit) { setActiveId(hit.id); setWantedPhone(""); }
+  }, [items, wantedPhone]);
 
   const loadDetail = useCallback(async (id: string) => {
     try {

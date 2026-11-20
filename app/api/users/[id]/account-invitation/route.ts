@@ -16,7 +16,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const invitation = await prisma.donorAccountInvitation.findUnique({ where: { id } });
   if (invitation?.status === "SENT" && invitation.sentAt && Date.now() - invitation.sentAt.getTime() > 600_000) invitation.status = "EXPIRED";
   const delivery = invitation?.deliveryId ? await prisma.communicationDelivery.findUnique({ where: { id: invitation.deliveryId }, select: { status: true, errorMessage: true } }) : null;
-  return NextResponse.json({ invitation, delivery }, { headers: { "Cache-Control": "no-store" } });
+  // The same "registered member" rule as the donors list, so a member is never offered account creation (2026-11-20).
+  const { donorAccountWhere } = await import("@/lib/dashboard/donor-account");
+  const member = (await prisma.user.count({ where: { AND: [{ id }, donorAccountWhere("MEMBER")] } }).catch(() => 0)) > 0;
+  return NextResponse.json({ invitation, delivery, member }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
