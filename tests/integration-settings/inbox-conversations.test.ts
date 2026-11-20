@@ -51,7 +51,13 @@ function loadStore(db: Record<string, Doc[]>): Store {
     if (v && typeof v === "object" && !(v instanceof Date)) { const o = v as Doc; if ("$gt" in o) return (d[k] as number) > (o.$gt as number); if ("$lt" in o) return (d[k] as Date) < (o.$lt as Date); if ("$regex" in o) return new RegExp(String(o.$regex), String(o.$options ?? "")).test(String(d[k] ?? "")); }
     return d[k] === v; });
   const prisma = {
-    $runCommandRaw: async (c: Doc): Promise<Doc> => {
+    $runCommandRaw: async (input: Doc): Promise<Doc> => {
+      // Like real MongoDB, read extended-JSON dates ({ $date }) as dates.
+      const reviveDates = (v: unknown): unknown => v instanceof Date ? v
+        : Array.isArray(v) ? v.map(reviveDates)
+        : v && typeof v === "object" ? (Object.keys(v).length === 1 && typeof (v as { $date?: unknown }).$date === "string" ? new Date((v as { $date: string }).$date) : Object.fromEntries(Object.entries(v).map(([k, y]) => [k, reviveDates(y)])))
+        : v;
+      const c = reviveDates(input) as Doc;
       if (typeof c.find === "string") { const f = { ...(c.filter as Doc) }; const or = f.$or as Doc[] | undefined; delete f.$or;
         const r = col(c.find).filter((d) => match(d, f) && (!or || or.some((o) => match(d, o)))).sort((a, b) => +(b.lastMessageAt as Date) - +(a.lastMessageAt as Date)); return { cursor: { firstBatch: r } }; }
       if (typeof c.update === "string") { for (const u of c.updates as Array<{ q: Doc; upsert?: boolean; u: { $set?: Doc; $setOnInsert?: Doc; $inc?: Doc } }>) {

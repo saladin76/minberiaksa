@@ -11,7 +11,16 @@ import { classifyInboxLanguage, isInboxLanguage, type InboxLanguage, type Langua
  */
 const COLLECTION = "InboxConversation";
 const DAY = 86_400_000;
-const raw = (cmd: Record<string, unknown>) => prisma.$runCommandRaw(cmd as Prisma.InputJsonObject);
+/**
+ * Raw commands take MongoDB extended JSON: a JavaScript Date must travel as { $date }, or it is stored as text
+ * and sorts below every real date (the conversation list showed no new message for two days, 2026-11-20).
+ */
+export const toExtendedJson = (value: unknown): unknown =>
+  value instanceof Date ? { $date: value.toISOString() }
+  : Array.isArray(value) ? value.map(toExtendedJson)
+  : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, toExtendedJson(v)]))
+  : value;
+const raw = (cmd: Record<string, unknown>) => prisma.$runCommandRaw(toExtendedJson(cmd) as Prisma.InputJsonObject);
 const rows = (r: unknown) => ((r as { cursor?: { firstBatch?: Record<string, unknown>[] } })?.cursor?.firstBatch ?? []);
 const preview = (text: string | null | undefined) => String(text ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
 
