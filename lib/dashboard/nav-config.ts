@@ -109,7 +109,6 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
       { key: "messages", get title() { return dt("الحملات التسويقية"); }, href: "/dashboard/communication/campaigns", icon: "megaphone", keywords: ["campaigns", "marketing", "حملات", "تسويق", "broadcast", "bulk"] },
       { key: "messages", get title() { return dt("البريد الإلكتروني"); }, href: "/dashboard/communication/email", icon: "mail", keywords: ["email", "بريد", "elastic"] },
       { key: "messages", get title() { return dt("واتساب"); }, href: "/dashboard/communication/whatsapp", icon: "messageCircle", keywords: ["whatsapp", "واتساب", "meta"] },
-      { key: "messages", get title() { return dt("المحادثات"); }, href: "/dashboard/communication/conversations", icon: "messageCircle", keywords: ["conversations", "inbox", "chat", "محادثات", "صندوق", "ردود"] },
       // Replies were counted by the sidebar badge long before there was a screen to open.
       { key: "messages", get title() { return dt("الرسائل النصية"); }, href: "/dashboard/communication/sms", icon: "messageSquare", keywords: ["sms", "نصية", "netgsm", "brevo"] },
       { key: "templates", get title() { return dt("القوالب والمحفّزات"); }, href: "/dashboard/templates", icon: "mail", keywords: ["email", "whatsapp", "sms", "templates", "triggers", "قوالب", "محفزات"] },

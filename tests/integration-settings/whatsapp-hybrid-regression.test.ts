@@ -85,9 +85,9 @@ test("WhatsApp inbox accurately labels its approved-template picker outside the 
   requires(smartDialog, [/initialMode\?: "FREEFORM" \| "UTILITY" \| "MARKETING"/, /const preferred = initialMode/, /setMode\(preferred\)/]);
 });
 test("dashboard topbar makes unread WhatsApp conversations visually prominent", () => {
-  requires("app/(dashboard)/dashboard/DashboardLayoutClient.tsx", [/communication\/inbox\/summary/, /setInterval\(run, 30000\)/]);
-  requires("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx", [/href="\/dashboard\/communication\/inbox"/, /WhatsappMark/, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/, /href="\/dashboard\/inbox"/]);
-  requires("lib/dashboard/nav-config.ts", [], [/href: "\/dashboard\/communication\/inbox"/, /href: "\/dashboard\/inbox"/]);
+  requires("app/(dashboard)/dashboard/DashboardLayoutClient.tsx", [/communication\/inbox\/conversations\?countsOnly=1/, /setInterval\(run, 30000\)/]);
+  requires("app/(dashboard)/dashboard/_shell/DashboardTopbar.tsx", [/href="\/dashboard\/communication\/conversations"/, /WhatsappMark/, /whatsappInboxCount > 99 \? "99\+" : whatsappInboxCount/, /href="\/dashboard\/inbox"/]);
+  requires("lib/dashboard/nav-config.ts", [], [/href: "\/dashboard\/communication\/inbox"/, /href: "\/dashboard\/inbox"/, /href: "\/dashboard\/communication\/conversations"/]);
 });
 test("campaign wizard never assumes an error response is JSON", () => {
   requires("app/(dashboard)/dashboard/communication/campaigns/new/_components/NewCampaignWizard.tsx", [/async function readApiJson/, /await response\.text\(\)/, /HTTP \$\{response\.status\}/], [/const listJson = await listRes\.json\(\)/, /const json = await res\.json\(\)/]);

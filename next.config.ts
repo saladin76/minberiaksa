@@ -220,6 +220,10 @@ const nextConfig: NextConfig = {
         source: "/dashboard/communication/inbox/:path*",
         headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), browsing-topics=()" }],
       },
+      {
+        source: "/dashboard/communication/conversations/:path*",
+        headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), browsing-topics=()" }],
+      },
       /* `/public` files are served with `max-age=0` by default, so every visit
          re-downloaded the logo, the pattern tile and every font. Fonts and the
          hero stills are named per version and never change in place; the other

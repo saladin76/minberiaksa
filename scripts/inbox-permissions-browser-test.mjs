@@ -29,6 +29,8 @@ const routes = [
   ["/dashboard/communication/inbox", true],
   ["/dashboard/communication/inbox/", true],
   ["/dashboard/communication/inbox/conversation", true],
+  ["/dashboard/communication/conversations", true],
+  ["/dashboard/communication/conversations-other", false],
 ];
 for (const [pathname, allowed] of routes) {
   const response = await unstable_getResponseFromNextConfig({ url: `https://minberiaksa.org${pathname}`, nextConfig });

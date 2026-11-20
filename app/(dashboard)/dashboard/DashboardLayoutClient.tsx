@@ -200,10 +200,10 @@ function DashboardContent({
       if (running || document.hidden) return;
       running = true;
       try {
-        const res = await fetch('/api/dashboard/communication/inbox/summary', { cache: 'no-store', signal: AbortSignal.timeout(20000) });
+        const res = await fetch('/api/dashboard/communication/inbox/conversations?countsOnly=1', { cache: 'no-store', signal: AbortSignal.timeout(20000) });
         if (!res.ok) return;
         const data = await res.json();
-        const count = Number(data?.unread);
+        const count = Number(data?.counts?.all);
         if (!cancelled && Number.isFinite(count)) setWhatsappInboxCount(Math.max(0, count));
       } catch { /* Retain the last confirmed count during transient failures. */ }
       finally { running = false; }
