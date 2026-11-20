@@ -24,6 +24,16 @@ import { donorAccountStatus, donorAccountWhere } from "@/lib/dashboard/donor-acc
 type UserScope = 'donors' | 'team' | 'all';
 
 // GET /api/users  scope=donors | scope=team | omit/empty/all = every role (no role filter)
+/** Registered donors overall: a slow-changing total, kept 5 minutes so the donors page does not recount it on every load. */
+let registeredDonorsCache: { at: number; value: Promise<number> } | null = null;
+function registeredDonorsTotalCached(load: () => Promise<number>): Promise<number> {
+  if (!registeredDonorsCache || Date.now() - registeredDonorsCache.at > 5 * 60_000) {
+    const value = load().catch((error) => { registeredDonorsCache = null; throw error; });
+    registeredDonorsCache = { at: Date.now(), value };
+  }
+  return registeredDonorsCache.value;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -73,7 +83,7 @@ export async function GET(request: NextRequest) {
     // The global registered-account card must not wait for list joins, sorting or filtered totals.
     if (searchParams.get("summary") === "registered") {
       if (scope !== "donors") return NextResponse.json({ error: "Invalid summary scope" }, { status: 400 });
-      const registeredDonorsTotal = await prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER"), { OR: [{ mergedIntoUserId: null }, { mergedIntoUserId: { isSet: false } }] }] } });
+      const registeredDonorsTotal = await registeredDonorsTotalCached(() => prisma.user.count({ where: { role: "DONOR", AND: [donorAccountWhere("MEMBER"), { OR: [{ mergedIntoUserId: null }, { mergedIntoUserId: { isSet: false } }] }] } }));
       return NextResponse.json({ registeredDonorsTotal }, { headers: { "Cache-Control": "private, no-store" } });
     }
 
