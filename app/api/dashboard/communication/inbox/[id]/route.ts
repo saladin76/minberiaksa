@@ -43,6 +43,7 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("read"), eventId: z.string().regex(/^event:[a-f0-9]{24}$/i) }),
   z.object({ action: z.literal("followup") }),
   z.object({ action: z.literal("link") }),
+  z.object({ action: z.literal("template"), templateId: z.string().regex(/^[a-f0-9]{24}$/i), language: z.string().regex(/^[a-z]{2}$/), name: z.string().max(120).nullish() }),
 ]);
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -72,6 +73,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     // The accepted outbound archive resolves the queue. A handled marker written
     // here could hide a NEW inbound message that arrived while the send was running.
+    return NextResponse.json({ ok: true, deliveryId: sent.deliveryId, providerMessageId: sent.providerMessageId });
+  }
+
+  if (parsed.data.action === "template") {
+    /* After the 24-hour window an approved template is the only way back to the donor (owner, 2026-11-20). */
+    const { sendConversationTemplate } = await import("@/lib/communication/conversation-template-service");
+    const sent = await sendConversationTemplate(conversationId, parsed.data.templateId, parsed.data.language, parsed.data.name ?? null, actor);
+    if (!sent.ok) return NextResponse.json({ error: sent.reason, detail: sent.detail ?? null }, { status: ["DO_NOT_CONTACT", "TEMPLATE_NEEDS_DATA", "TEMPLATE_NOT_APPROVED", "MARKETING_OPTED_OUT"].includes(sent.reason) ? 409 : 502 });
     return NextResponse.json({ ok: true, deliveryId: sent.deliveryId, providerMessageId: sent.providerMessageId });
   }
 

@@ -6,6 +6,13 @@ import { InboxMedia } from "../../inbox/_components/InboxMedia";
 import { inboxAlertsEnabled, notificationPermission, requestNotificationPermission, setInboxAlertsEnabled } from "@/lib/communication/inbox-alerts";
 
 type QuickReply = { id: string; language: string; title: string; body: string };
+type SendableTemplate = { id: string; name: string; language: string; preview: string };
+const TEMPLATE_ERRORS: Record<string, string> = {
+  DO_NOT_CONTACT: "هذا المتبرع طلب عدم التواصل.",
+  TEMPLATE_NEEDS_DATA: "هذا القالب يحتاج بيانات غير موجودة في المحادثة (مثل تفاصيل تبرع). اختر قالباً آخر.",
+  TEMPLATE_NOT_APPROVED: "هذا القالب غير معتمد لدى Meta لهذا الرقم.",
+  MARKETING_OPTED_OUT: "هذا المتبرع أوقف الرسائل التسويقية؛ يمكن إرسال قالب خدمي فقط.",
+};
 
 type Lang = "ar" | "tr" | "fr" | "en";
 type View = "all" | "mine" | "unread" | "done";
@@ -72,6 +79,31 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
     try { const r = await fetch(`${API}/quick-replies?language=${encodeURIComponent(lang)}`, { cache: "no-store" }); if (r.ok) setQuick(((await r.json()) as { replies: QuickReply[] }).replies); } catch { /* keep the last list */ }
   }, []);
   useEffect(() => { setShowQuick(false); if (activeLang) void loadQuick(activeLang); }, [activeLang, loadQuick]);
+
+  // Approved templates: the only way back to a donor after the 24-hour window.
+  const [tplOpen, setTplOpen] = useState(false), [tplList, setTplList] = useState<SendableTemplate[] | null>(null), [tplBusy, setTplBusy] = useState(false);
+  useEffect(() => { setTplOpen(false); setTplList(null); }, [activeId]);
+  const openTemplates = async () => {
+    if (!active) return;
+    setTplOpen(true); setTplList(null);
+    try {
+      const r = await fetch(`${API}/templates?conversation=${encodeURIComponent(active.id)}&language=${active.language}&name=${encodeURIComponent(active.name ?? "")}`, { cache: "no-store" });
+      const d = (await r.json().catch(() => ({}))) as { templates?: SendableTemplate[]; error?: string };
+      if (!r.ok) { setTplOpen(false); setNotice(dt(TEMPLATE_ERRORS[d.error ?? ""] ?? "تعذّر تحميل القوالب.")); return; }
+      setTplList(d.templates ?? []);
+    } catch { setTplOpen(false); setNotice(dt("تعذّر تحميل القوالب.")); }
+  };
+  const sendTemplate = async (t: SendableTemplate) => {
+    if (!active || tplBusy) return;
+    if (!window.confirm(dt("إرسال القالب «{0}» إلى {1}؟", [t.name, active.name || active.phone]))) return;
+    setTplBusy(true); setNotice("");
+    try {
+      const r = await fetch(`${API}/${encodeURIComponent(active.id)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "template", templateId: t.id, language: active.language, name: active.name }) });
+      const d = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) { setNotice(dt(TEMPLATE_ERRORS[d.error ?? ""] ?? "تعذّر إرسال القالب.") + (TEMPLATE_ERRORS[d.error ?? ""] ? "" : ` (${d.error ?? r.status})`)); return; }
+      setTplOpen(false); await loadDetail(active.id); await loadList();
+    } finally { setTplBusy(false); }
+  };
 
   useEffect(() => { const t = setTimeout(() => setQuery(q.trim()), 350); return () => clearTimeout(t); }, [q]);
   useEffect(() => { fetch(`${API}/conversations/staff`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : { staff: [] })).then((d: { staff?: Array<{ id: string; name: string }> }) => setStaff(d.staff ?? [])).catch(() => undefined); }, []);
@@ -253,7 +285,22 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
           <footer className="border-t bg-[#f0f2f5] p-2">
             {notice ? <p className="mb-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">{notice}</p> : null}
             {replyWindow && !replyWindow.open ? (
-              <p className="rounded-lg bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">{dt("مرّت أكثر من 24 ساعة على آخر رسالة من المتبرع، فقواعد واتساب لا تسمح بالرد الحر. يمكن مراسلته بقالب معتمد من صفحة الحملات.")}</p>
+              <div className="space-y-2">
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">{dt("مرّت أكثر من 24 ساعة على آخر رسالة من المتبرع، فقواعد واتساب لا تسمح بالرد الحر. أرسل قالباً معتمداً لبدء المحادثة من جديد.")}</p>
+                {!tplOpen ? (
+                  <button type="button" onClick={() => void openTemplates()} className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-bold text-white">{dt("إرسال قالب معتمد")}</button>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto rounded-lg border bg-white p-2">
+                    <div className="mb-1 flex items-center justify-between text-xs text-slate-500"><span>{dt("القوالب المعتمدة")}</span><button type="button" onClick={() => setTplOpen(false)} aria-label={dt("إغلاق")}>✕</button></div>
+                    {tplList === null ? <p className="p-2 text-xs text-slate-500">{dt("جارٍ التحميل…")}</p> : tplList.length === 0 ? <p className="p-2 text-xs text-slate-500">{dt("لا قوالب معتمدة متاحة لهذا الرقم.")}</p> : tplList.map((t) => (
+                      <div key={t.id} className="border-b py-2 last:border-0">
+                        <div className="flex items-center justify-between gap-2"><b className="truncate text-xs" dir="ltr">{t.name}</b><span className="text-[10px] text-slate-400" dir="ltr">{t.language}</span></div>
+                        <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-slate-600" dir="auto">{t.preview}</p>
+                        <button type="button" disabled={tplBusy} onClick={() => void sendTemplate(t)} className="mt-1 rounded bg-emerald-700 px-2 py-1 text-xs text-white disabled:opacity-40">{dt("إرسال")}</button>
+                      </div>))}
+                  </div>
+                )}
+              </div>
             ) : detail?.donor?.doNotContact ? (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-xs text-red-700">{dt("هذا المتبرع طلب عدم التواصل.")}</p>
             ) : (<>
