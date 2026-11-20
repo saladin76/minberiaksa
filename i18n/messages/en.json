@@ -1071,12 +1071,12 @@
     "contactLabel": "Contact",
     "ctaTagline": "Let us be a minbar for Al-Quds",
     "heroTitle": "About us",
-    "heroSubtitle": "Minbar Al Aqsa is an international foundation for scholars, orators and preachers, based in Istanbul, Türkiye. It brings them together from around the world to raise awareness of the cause of Bayt al-Maqdis and Al-Aqsa Mosque through various platforms.",
+    "heroSubtitle": "Minbar Al Aqsa is an international association for scholars, orators and preachers, based in Istanbul, Türkiye. It brings them together from around the world to raise awareness of the cause of Bayt al-Maqdis and Al-Aqsa Mosque through various platforms.",
     "mission": "Working with orators and preachers to build awareness of the cause of Bayt al-Maqdis and to strengthen the steadfastness of its people.",
     "howWeWork": "We rely on a field team in Al-Quds and Gaza to execute and follow up projects, documenting every stage with photos and reports. We publish no unverified number and describe no undocumented work.",
     "vision": "The first reference for orators and preachers worldwide in serving the cause of Bayt al-Maqdis.",
-    "visionDetail": "Minbar Al Aqsa is an international foundation for scholars, orators and preachers, based in Istanbul, seeking to gather them from around the world to raise awareness of Bayt al-Maqdis and Al-Aqsa Mosque through various platforms.",
-    "legalText": "A humanitarian foundation officially registered in Türkiye (Minbar Al Aqsa Derneği), based in Istanbul and operating under Turkish charity regulations.",
+    "visionDetail": "Minbar Al Aqsa is an international association for scholars, orators and preachers, based in Istanbul, seeking to gather them from around the world to raise awareness of Bayt al-Maqdis and Al-Aqsa Mosque through various platforms.",
+    "legalText": "A humanitarian association officially registered in Türkiye (Minbar Al Aqsa Derneği), based in Istanbul and operating under Turkish charity regulations.",
     "licenseDate": "Licensed under Turkish law on 19/07/2018",
     "objective1": "Uniting the efforts of orators and preachers worldwide in serving the cause of Bayt al-Maqdis.",
     "objective2": "Expanding into available countries and coordinating with relevant bodies to serve the cause of Bayt al-Maqdis.",
@@ -1166,7 +1166,7 @@
     "programs": {
       "eyebrow": "Action Plan",
       "title": "Six Programs, Not Scattered Campaigns",
-      "lead": "Each program has a defined goal, a measurable indicator, and its share of the foundation's resources.",
+      "lead": "Each program has a defined goal, a measurable indicator, and its share of the association's resources.",
       "kpiPrefix": "Indicator:"
     },
     "timeline": {
@@ -1176,7 +1176,7 @@
     "reports": {
       "eyebrow": "Field Documentation",
       "title": "Reports and Documents",
-      "lead": "Periodic reports with documents and execution photos, published after approval by the foundation's management.",
+      "lead": "Periodic reports with documents and execution photos, published after approval by the association's management.",
       "cta": "Request a Detailed Report"
     },
     "closing": {
@@ -1721,7 +1721,7 @@
     "emptyCart": "Your Cart is Empty",
     "itemsHeading": "Your Donation Items",
     "recurringNudge": "Repeat this donation monthly with one tap",
-    "recurringNudgeText": "Give automatically. Contact the foundation to change or stop your plan.",
+    "recurringNudgeText": "Give automatically. Contact the association to change or stop your plan.",
     "recurringNudgeEyebrow": "Make Your Impact Ongoing",
     "dataAccuracyNote": "Make sure your details are correct so your receipt and donation certificate reach you",
     "orFillManually": "Or Fill in Manually",
@@ -1805,7 +1805,7 @@
     "rcpTotalLabel": "Total Paid",
     "rcpWordsLabel": "Only",
     "rcpAccountantLabel": "Responsible Accountant",
-    "rcpLegalNote": "A receipt issued electronically by Minbar Al Aqsa International Association, serving as an official proof of donation. Amounts are spent on the items specified above according to the foundation's approved policies and are non-refundable after execution.",
+    "rcpLegalNote": "A receipt issued electronically by Minbar Al Aqsa International Association, serving as an official proof of donation. Amounts are spent on the items specified above according to the association's approved policies and are non-refundable after execution.",
     "certTitleShare": "Endowment Share Certificate",
     "certTitleMeter": "Endowment Meter Certificate",
     "inNameOf": "In the Name Of",
@@ -1945,7 +1945,7 @@
     "notesPlaceholder": "Write your notes here…",
     "addedToCart": "Added to Basket",
     "allRightsReserved": "All Rights Reserved",
-    "bookletTagFoundation": "Foundation Publication",
+    "bookletTagFoundation": "Association Publication",
     "bookletIsharatSummary": "A reading of the Qur'anic signs concerning the Children of Israel and the qualities of those raised against them, in a plain, foundational style.",
     "readBooklet": "Read the Booklet",
     "bookletFormatPdf": "Booklet · PDF",
@@ -1978,15 +1978,15 @@
     "whatsappLabel": "Chat on WhatsApp"
   },
   "email": {
-    "pageTitle": "Foundation Emails to Donors",
-    "pageSubtitle": "Ready-made 600px-wide templates that work in every email client, in the foundation's identity with unified copy.",
+    "pageTitle": "Association Emails to Donors",
+    "pageSubtitle": "Ready-made 600px-wide templates that work in every email client, in the association's identity with unified copy.",
     "footerNote": "Internal team tool  not part of the public site navigation.",
     "ui": {
       "subjectLabel": "Subject Line",
       "preheaderLabel": "Preheader Text",
       "senderLabel": "From: Minbar Al Aqsa International Association",
       "footerTagline": "Al-Quds is a trust  let us be a minbar for Al-Quds",
-      "unsubscribeNote": "You received this email because you are in contact with the foundation",
+      "unsubscribeNote": "You received this email because you are in contact with the association",
       "unsubscribeLink": "Unsubscribe"
     },
     "welcome": {
@@ -2001,7 +2001,7 @@
       "step1": "Document library: donation confirmations and certificates ready to download.",
       "step2": "Giving plans: edit or pause your recurring donation.",
       "cta0": "Activate Account",
-      "cta2_0": "Learn About the Foundation",
+      "cta2_0": "Learn About the Association",
       "closing": "If you did not create this account, please ignore this email."
     },
     "success": {
@@ -2088,7 +2088,7 @@
       "row2Label": "Project",
       "row3Label": "Certificate Number",
       "cta0": "Download the Gift Certificate",
-      "cta2_0": "Learn About the Foundation",
+      "cta2_0": "Learn About the Association",
       "closing": "The donation amount does not appear on this certificate unless the giver chose to show it."
     },
     "report": {
@@ -2135,7 +2135,7 @@
       "row2Label": "Date",
       "cta0": "Download Zakat Confirmation",
       "cta2_0": "Zakat Calculator",
-      "closing": "Zakat is distributed to its legitimate categories according to the foundation's guidelines."
+      "closing": "Zakat is distributed to its legitimate categories according to the association's guidelines."
     }
   },
   "homepage": {
@@ -2260,7 +2260,7 @@
     "docsLibrary": "Document Library",
     "docsLibraryText": "Your receipts and certificates, ready to download.",
     "givingPlans": "Giving Plans",
-    "givingPlansText": "Contact the foundation to change or stop your recurring donation.",
+    "givingPlansText": "Contact the association to change or stop your recurring donation.",
     "faq1Q": "Is the calculator a religious ruling?",
     "faq1A": "No. It is an estimate based on the values you enter. Consult a trusted religious authority to confirm whether Zakat is due and how much.",
     "faq2Q": "Does Zakat stay separate from other donations?",
@@ -2287,13 +2287,13 @@
     "accountEyebrow": "Your Account",
     "gazaReliefGroup": "Gaza Relief",
     "waqfArea9": "Iftar Tables",
-    "videoAlt": "The Foundation's Introductory Video",
+    "videoAlt": "The Association's Introductory Video",
     "waqfCtaQuds": "Endow in Al-Quds",
     "programsTitle": "Our Programs",
     "programsAll": "All Programs",
     "coursesTitle": "Our Courses",
     "coursesAll": "All Courses",
-    "coursesLead": "Educational and training courses offered by the foundation on the cause of Bayt al-Maqdis and Al-Aqsa Mosque, for preachers, imams and all who are interested.",
+    "coursesLead": "Educational and training courses offered by the association on the cause of Bayt al-Maqdis and Al-Aqsa Mosque, for preachers, imams and all who are interested.",
     "courseDetails": "Course Details",
     "kindSeminar": "Seminar",
     "kindCourse": "Course",
@@ -2517,7 +2517,7 @@
     "termsDonationsH": "2. Donations",
     "termsDonationsP": "Donations made through the website are voluntary and final, and the funds go to the project or intention you selected. Zakat is never mixed with Sadaqah or Waqf within the payment flow.",
     "termsContentH": "3. Content",
-    "termsContentP": "All texts and images on the website are the property of the Foundation and may not be republished without prior permission.",
+    "termsContentP": "All texts and images on the website are the property of the Association and may not be republished without prior permission.",
     "termsChangesH": "4. Changes",
     "termsChangesP": "These terms may be updated from time to time; your continued use of the website constitutes acceptance of any changes.",
     "privacyTitle": "Privacy Policy",
@@ -2528,7 +2528,7 @@
     "privCookiesH": "3. Cookies",
     "privCookiesP": "We use essential cookies to run the website and remember your preferences (language and currency), plus analytics cookies to understand and improve how the site is used. You can manage your preferences in your browser settings.",
     "privSecurityH": "4. Data Security",
-    "privSecurityP": "Your data is stored on encrypted servers, and access is limited to authorized staff within the Foundation.",
+    "privSecurityP": "Your data is stored on encrypted servers, and access is limited to authorized staff within the Association.",
     "privRightsH": "5. Your Rights",
     "privRightsP": "You may request access to, correction of, or deletion of your data by contacting us by email.",
     "privContactH": "6. Contact",
@@ -2597,7 +2597,7 @@
     "groupDonate": "Give",
     "groupJerusalemAqsa": "Al-Quds & Al-Aqsa",
     "groupKnowledge": "Knowledge",
-    "groupFoundation": "The Foundation"
+    "groupFoundation": "The Association"
   },
   "partner": {
     "metaDescription": "Institutional partnerships with companies, organisations and donor bodies to support Al-Quds and Gaza projects at a wider scale.",
@@ -3215,8 +3215,8 @@
     "track3Text": "Technical support and development for the website and internal systems.",
     "track4Title": "Remote Support",
     "track4Text": "Administrative and technical work done from anywhere in the world.",
-    "track5Title": "Foundation Representative in Your Country",
-    "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+    "track5Title": "Association Representative in Your Country",
+    "track5Text": "Representing the association officially in your country and following up its activities and donors there."
   },
   "transferReceipt": {
     "stepTransfer": "Transfer",
