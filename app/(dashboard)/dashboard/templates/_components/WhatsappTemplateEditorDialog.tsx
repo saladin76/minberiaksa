@@ -2,6 +2,7 @@
 
 import { trackedTemplateButtons } from "@/lib/communication/tracked-template-draft";
 import { templateButtonProblem } from "@/lib/communication/template-locale-media";
+import { explainMetaTemplateError, metaTemplateFormatProblems } from "@/lib/communication/meta-template-messages";
 import * as React from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -627,6 +628,9 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
     setPublishError("");
     const invalidButtons=Object.entries(locales).find(([locale,draft])=>!submittedLocales.has(locale as SupportedLocale)&&templateButtonProblem(draft?.buttons ?? []));
     if(invalidButtons){setPublishError(`${LOCALE_LABELS[invalidButtons[0] as SupportedLocale]}: ${templateButtonProblem(invalidButtons[1]?.buttons ?? [])}`);return;}
+    // Meta's format rules, checked here in Arabic so a rejection never has to come back from Meta (2026-11-20).
+    const formatProblems = metaTemplateFormatProblems(locales, submittedLocales);
+    if (formatProblems.length) { const text = formatProblems.join("\n"); setPublishError(text); toast.error(text); return; }
     const arabic = locales[DEFAULT_LOCALE] ?? emptyLocale();
     if (category === "MARKETING") {
       const missingOptOut = Object.entries(locales).find(([locale, draft]) =>
@@ -785,8 +789,11 @@ export function WhatsappTemplateEditorDialog({ initialKind, id, open, onOpenChan
       }
       const provider = data?.publish?.errors?.[0];
       const problem=[data?.error,provider?.reason,provider?.detail].filter(Boolean).join(" — ") || dt("فشل حفظ القالب");
-      setPublishError(problem);
-      toast.error(problem);
+      // Meta's rejection explained in Arabic first; its raw text stays as technical detail.
+      const explained = explainMetaTemplateError(problem);
+      const shown = explained ? `${explained}\n\n${dt("تفاصيل تقنية:")} ${problem}` : problem;
+      setPublishError(shown);
+      toast.error(shown);
     } finally {
       setSaving(false);
     }
