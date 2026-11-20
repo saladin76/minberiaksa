@@ -37,6 +37,7 @@ import { DashboardTextTranslator } from "./_shell/DashboardTextTranslator";
 import { DashboardAutoEnhancements } from "./_components/DashboardAutoEnhancements";
 import { ProjectEditorSectionsEnhancer } from "./_components/ProjectEditorSectionsEnhancer";
 import { dt, parseDashLocale, setDashLocale } from "@/lib/dashboard/i18n";
+import { alertOnNewInboxMessages, inboxAlertsEnabled, setInboxTitleCount } from "@/lib/communication/inbox-alerts";
 
 const COLLAPSE_STORAGE_KEY = 'dashboard-nav-collapsed';
 /* Keyed by the group's displayed title, so built per language. */
@@ -196,15 +197,22 @@ function DashboardContent({
     if (!canUseWhatsappInbox) { setWhatsappInboxCount(0); return; }
     let cancelled = false;
     let running = false;
+    let last: number | null = null;
     const run = async () => {
-      if (running || document.hidden) return;
+      // With alerts on, keep checking from a background tab: that is when an alert matters most.
+      if (running || (document.hidden && !inboxAlertsEnabled())) return;
       running = true;
       try {
         const res = await fetch('/api/dashboard/communication/inbox/conversations?countsOnly=1', { cache: 'no-store', signal: AbortSignal.timeout(20000) });
         if (!res.ok) return;
         const data = await res.json();
         const count = Number(data?.counts?.all);
-        if (!cancelled && Number.isFinite(count)) setWhatsappInboxCount(Math.max(0, count));
+        if (!cancelled && Number.isFinite(count)) {
+          const next = Math.max(0, count);
+          alertOnNewInboxMessages(last, next, { title: dt("رسالة واتساب جديدة"), body: dt("لديك {0} محادثة غير مقروءة", [next]), href: "/dashboard/communication/conversations" });
+          last = next;
+          setWhatsappInboxCount(next);
+        }
       } catch { /* Retain the last confirmed count during transient failures. */ }
       finally { running = false; }
     };
@@ -220,6 +228,9 @@ function DashboardContent({
       document.removeEventListener("visibilitychange", run);
     };
   }, [canUseWhatsappInbox]);
+
+  // The unread total also shows in the tab title, so it is visible with the dashboard in the background.
+  useEffect(() => { setInboxTitleCount(whatsappInboxCount); }, [whatsappInboxCount]);
 
   /**
    * Same shape for the finance queue: bank-transfer receipts waiting on a decision. The review
