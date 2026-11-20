@@ -3,6 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dt } from "@/lib/dashboard/i18n";
 import { InboxAttachments, type InboxAttachment } from "../../inbox/_components/InboxAttachments";
 import { InboxMedia } from "../../inbox/_components/InboxMedia";
+import { inboxAlertsEnabled, notificationPermission, requestNotificationPermission, setInboxAlertsEnabled } from "@/lib/communication/inbox-alerts";
+
+type QuickReply = { id: string; language: string; title: string; body: string };
 
 type Lang = "ar" | "tr" | "fr" | "en";
 type View = "all" | "mine" | "unread" | "done";
@@ -57,6 +60,18 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
   const listed = useMemo(() => items.find((c) => c.id === activeId) ?? null, [items, activeId]);
   useEffect(() => { if (listed) setPinned(listed); else if (!activeId) setPinned(null); }, [listed, activeId]);
   const active = listed ?? (pinned && pinned.id === activeId ? pinned : null);
+  const activeLang = active?.language ?? null;
+
+  // Alerts (sound, browser notification, tab title) are raised by the dashboard layout; this is the per-device switch.
+  const [alertsOn, setAlertsOn] = useState(true), [notifyPerm, setNotifyPerm] = useState<string>("default");
+  useEffect(() => { setAlertsOn(inboxAlertsEnabled()); setNotifyPerm(notificationPermission()); }, []);
+
+  // Team quick replies for the open conversation's language.
+  const [quick, setQuick] = useState<QuickReply[]>([]), [showQuick, setShowQuick] = useState(false), [qTitle, setQTitle] = useState(""), [qBody, setQBody] = useState("");
+  const loadQuick = useCallback(async (lang: string) => {
+    try { const r = await fetch(`${API}/quick-replies?language=${encodeURIComponent(lang)}`, { cache: "no-store" }); if (r.ok) setQuick(((await r.json()) as { replies: QuickReply[] }).replies); } catch { /* keep the last list */ }
+  }, []);
+  useEffect(() => { setShowQuick(false); if (activeLang) void loadQuick(activeLang); }, [activeLang, loadQuick]);
 
   useEffect(() => { const t = setTimeout(() => setQuery(q.trim()), 350); return () => clearTimeout(t); }, [q]);
   useEffect(() => { fetch(`${API}/conversations/staff`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : { staff: [] })).then((d: { staff?: Array<{ id: string; name: string }> }) => setStaff(d.staff ?? [])).catch(() => undefined); }, []);
@@ -146,6 +161,11 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
               </button>))}
           </div>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={dt("بحث بالاسم أو الرقم أو نص الرسالة")} className="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm outline-none" />
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+            <button type="button" onClick={() => { const v = !alertsOn; setInboxAlertsEnabled(v); setAlertsOn(v); }} className="rounded px-2 py-1 hover:bg-slate-100">{alertsOn ? `🔔 ${dt("التنبيهات مفعّلة")}` : `🔕 ${dt("التنبيهات متوقفة")}`}</button>
+            {alertsOn && notifyPerm === "default" ? <button type="button" onClick={async () => setNotifyPerm(await requestNotificationPermission())} className="rounded bg-emerald-50 px-2 py-1 text-emerald-800">{dt("تفعيل إشعارات المتصفح")}</button> : null}
+            {alertsOn && notifyPerm === "denied" ? <span>{dt("إشعارات المتصفح محجوبة من إعدادات المتصفح")}</span> : null}
+          </div>
         </div>
         <ul className="flex-1 overflow-y-auto">
           {listError && <li className="p-4 text-sm text-red-700">{listError}</li>}
@@ -236,13 +256,26 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">{dt("مرّت أكثر من 24 ساعة على آخر رسالة من المتبرع، فقواعد واتساب لا تسمح بالرد الحر. يمكن مراسلته بقالب معتمد من صفحة الحملات.")}</p>
             ) : detail?.donor?.doNotContact ? (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-xs text-red-700">{dt("هذا المتبرع طلب عدم التواصل.")}</p>
-            ) : (
+            ) : (<>
+              {showQuick ? <div className="mb-2 max-h-56 overflow-y-auto rounded-lg border bg-white p-2 text-sm">
+                {quick.length === 0 ? <p className="p-2 text-xs text-slate-500">{dt("لا ردود جاهزة لهذه اللغة بعد")}</p> : quick.map((r) => (
+                  <div key={r.id} className="flex items-start gap-2 rounded px-2 py-1 hover:bg-slate-50">
+                    <button type="button" className="min-w-0 flex-1 text-start" onClick={() => { setDraft(r.body); setShowQuick(false); }}><b className="block truncate text-xs">{r.title}</b><span className="block truncate text-xs text-slate-500" dir="auto">{r.body}</span></button>
+                    <button type="button" aria-label={dt("حذف")} className="text-xs text-slate-400 hover:text-red-600" onClick={async () => { await fetch(`${API}/quick-replies?id=${r.id}`, { method: "DELETE" }).catch(() => undefined); if (activeLang) void loadQuick(activeLang); }}>✕</button>
+                  </div>))}
+                <div className="mt-2 space-y-1 border-t pt-2">
+                  <input value={qTitle} onChange={(e) => setQTitle(e.target.value)} maxLength={60} placeholder={dt("عنوان الرد")} className="w-full rounded border px-2 py-1 text-xs" />
+                  <textarea value={qBody} onChange={(e) => setQBody(e.target.value)} maxLength={1000} rows={2} placeholder={dt("نص الرد")} dir="auto" className="w-full rounded border px-2 py-1 text-xs" />
+                  <button type="button" disabled={!qTitle.trim() || !qBody.trim()} onClick={async () => { if (!activeLang) return; await fetch(`${API}/quick-replies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ language: activeLang, title: qTitle, body: qBody }) }).catch(() => undefined); setQTitle(""); setQBody(""); void loadQuick(activeLang); }} className="rounded bg-emerald-700 px-2 py-1 text-xs text-white disabled:opacity-40">{dt("حفظ كرد جاهز")}</button>
+                </div>
+              </div> : null}
               <div className="flex items-end gap-2">
+                <button type="button" onClick={() => setShowQuick((v) => !v)} className={`grid h-10 w-10 place-items-center rounded-full ${showQuick ? "bg-emerald-100" : "bg-white"}`} aria-label={dt("الردود الجاهزة")} title={dt("الردود الجاهزة")}>⚡</button>
                 <InboxAttachments attachment={attachment ?? undefined} onChange={setAttachment} disabled={sending} onError={(m: string) => setNotice(m)} onRecordingChange={setRecording} />
                 <textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
                   rows={1} placeholder={dt("اكتب رسالة")} dir="auto" className="max-h-32 min-h-[40px] flex-1 resize-none rounded-lg bg-white px-3 py-2 text-sm outline-none" />
                 <button type="button" onClick={() => void send()} disabled={sending || recording || (!draft.trim() && !attachment)} className="grid h-10 w-10 place-items-center rounded-full bg-emerald-600 text-white disabled:opacity-40" aria-label={dt("إرسال")}>➤</button>
-              </div>)}
+              </div></>)}
           </footer>
         </>)}
       </section>
