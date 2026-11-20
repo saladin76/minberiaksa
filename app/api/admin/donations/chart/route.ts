@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
         currency: true,
         status: true,
         paidAt: true,
-        items: { select: { amount: true, amountUSD: true } },
-        categoryItems: { select: { amount: true, amountUSD: true } },
+        // items / categoryItems are not read below (donationRowUsdApprox uses amountUSD, amount, currency): loading them
+        // for every donation in the range cost two large relation queries (2026-11-20).
       },
     });
 
