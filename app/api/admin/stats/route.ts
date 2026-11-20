@@ -229,6 +229,40 @@ export async function GET(request: NextRequest) {
     // exclude it from MRR / "التبرعات الشهرية الناشطة" so a failed-only sub doesn't inflate the totals.
     const activeMonthlyWhere = { AND: [subscriptionWhere, subscriptionLifecycleWhere("ACTIVE")] };
 
+    // Independent reads start now and run alongside the block below (same queries, same results; only overlapped).
+    const totalPaidAggP = prisma.donation.aggregate({ _sum: { amountUSD: true }, where: paidWhere });
+    const supportFeesP = (async () => {
+      const SUPPORT_FEES_PAGE = 5000;
+      const totals = { teamSupport: 0, fees: 0 };
+      let cursor: string | undefined;
+      for (;;) {
+        const page = await prisma.donation.findMany({
+          where: paidWhere,
+          select: { id: true, amountUSD: true, amount: true, currency: true, totalAmount: true, teamSupport: true, fees: true },
+          orderBy: { id: "asc" },
+          take: SUPPORT_FEES_PAGE,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        });
+        if (page.length === 0) break;
+        const part = toUSD(page);
+        totals.teamSupport += part.teamSupport;
+        totals.fees += part.fees;
+        if (page.length < SUPPORT_FEES_PAGE) break;
+        cursor = page[page.length - 1].id;
+      }
+      return totals;
+    })();
+    const globalPaidWhere = { ...PAID_DONATION_FILTER };
+    const globalPaidAggP = prisma.donation.aggregate({ _sum: { amountUSD: true }, where: globalPaidWhere });
+    const globalActiveSubscriptionWhere = subscriptionLifecycleWhere("ACTIVE");
+    const globalCountsP = Promise.all([
+      prisma.donation.count({ where: globalPaidWhere }),
+      prisma.subscription.count({ where: globalActiveSubscriptionWhere }),
+      recurringPlanTotals(prisma, globalActiveSubscriptionWhere),
+    ]);
+    // A rejected early read is awaited below; until then it must not surface as an unhandled rejection.
+    for (const p of [totalPaidAggP, supportFeesP, globalPaidAggP, globalCountsP]) p.catch(() => undefined);
+
     const [
       totalCampaigns,
       totalCategories,
@@ -351,10 +385,7 @@ export async function GET(request: NextRequest) {
     // can undercount when subscriptionId is *unset* (not explicit null) on legacy
     // Mongo rows, because Prisma's { subscriptionId: null } and { not: null } both
     // miss those. Use the unified aggregate as the source of truth.
-    const totalPaidAgg = await prisma.donation.aggregate({
-      _sum: { amountUSD: true },
-      where: paidWhere,
-    });
+    const totalPaidAgg = await totalPaidAggP;
     let totalAmount = totalPaidAgg._sum?.amountUSD ?? 0;
     if (totalAmount === 0 && paidCount > 0) {
       const fb = await donationUsdRevenueFallback(paidWhere);
@@ -395,24 +426,7 @@ export async function GET(request: NextRequest) {
     // Read in fixed-size pages keyed on id instead of one `take: 100000` query: memory
     // stays flat as the ledger grows, and nothing past row 100,000 is silently dropped
     // (which "All time" would otherwise hit first).
-    const SUPPORT_FEES_PAGE = 5000;
-    const supportFeesTotals = { teamSupport: 0, fees: 0 };
-    let supportFeesCursor: string | undefined;
-    for (;;) {
-      const page = await prisma.donation.findMany({
-        where: paidWhere,
-        select: { id: true, amountUSD: true, amount: true, currency: true, totalAmount: true, teamSupport: true, fees: true },
-        orderBy: { id: "asc" },
-        take: SUPPORT_FEES_PAGE,
-        ...(supportFeesCursor ? { cursor: { id: supportFeesCursor }, skip: 1 } : {}),
-      });
-      if (page.length === 0) break;
-      const part = toUSD(page);
-      supportFeesTotals.teamSupport += part.teamSupport;
-      supportFeesTotals.fees += part.fees;
-      if (page.length < SUPPORT_FEES_PAGE) break;
-      supportFeesCursor = page[page.length - 1].id;
-    }
+    const supportFeesTotals = await supportFeesP;
     function toUSD(
       rows: {
         amountUSD: number | null;
@@ -467,9 +481,7 @@ export async function GET(request: NextRequest) {
     const failedTotalAmount = failedTotalResult._sum?.amountUSD ?? 0;
 
     /** All successful charges ever  ignores period / category / campaign query filters */
-    const globalPaidWhere = { ...PAID_DONATION_FILTER };
-    let paidRevenueAllTimeUnfiltered =
-      (await prisma.donation.aggregate({ _sum: { amountUSD: true }, where: globalPaidWhere }))._sum?.amountUSD ?? 0;
+    let paidRevenueAllTimeUnfiltered = (await globalPaidAggP)._sum?.amountUSD ?? 0;
     if (paidRevenueAllTimeUnfiltered === 0) {
       const globalPaidCount = await prisma.donation.count({ where: globalPaidWhere });
       if (globalPaidCount > 0) {
@@ -481,13 +493,7 @@ export async function GET(request: NextRequest) {
     // NOT affected by the period/category/campaign filters. The filtered `paidCount`,
     // `activeMonthlyCount` and `monthlyRecurringRevenue` above cannot be shown next to that
     // claim  on a filtered view they would quietly contradict the figure they sit beside.
-    const globalActiveSubscriptionWhere = subscriptionLifecycleWhere("ACTIVE");
-    const [paidCountAllTimeUnfiltered, activeMonthlyCountUnfiltered, mrrUnfilteredResult] =
-      await Promise.all([
-        prisma.donation.count({ where: globalPaidWhere }),
-        prisma.subscription.count({ where: globalActiveSubscriptionWhere }),
-        recurringPlanTotals(prisma, globalActiveSubscriptionWhere),
-      ]);
+    const [paidCountAllTimeUnfiltered, activeMonthlyCountUnfiltered, mrrUnfilteredResult] = await globalCountsP;
     const monthlyRecurringRevenueUnfiltered = mrrUnfilteredResult.total.monthlyUSD;
 
     return NextResponse.json({
