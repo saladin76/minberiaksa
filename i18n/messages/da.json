@@ -107,7 +107,7 @@
     "programs": {
       "eyebrow": "Handlingsplan",
       "title": "Seks Programmer, Ikke Spredte Kampagner",
-      "lead": "Hvert program har et defineret mål, en måleindikator og sin andel af fondens ressourcer.",
+      "lead": "Hvert program har et defineret mål, en måleindikator og sin andel af foreningens ressourcer.",
       "kpiPrefix": "Indikator:"
     },
     "timeline": {
@@ -117,7 +117,7 @@
     "reports": {
       "eyebrow": "Feltdokumentation",
       "title": "Rapporter og Dokumenter",
-      "lead": "Periodiske rapporter med dokumenter og gennemførelsesfotos, offentliggjort efter godkendelse fra fondens ledelse.",
+      "lead": "Periodiske rapporter med dokumenter og gennemførelsesfotos, offentliggjort efter godkendelse fra foreningens ledelse.",
       "cta": "Anmod om en Detaljeret Rapport"
     },
     "closing": {
@@ -450,7 +450,7 @@
     "fireWitnessTitle": "Vidne til Branden",
     "fireWitnessPre": "Dr.",
     "fireWitnessName": "Ikrima Sabri",
-    "fireWitnessPost": "— prædikant i Al-Aqsa-moskeen og Minbarens vogter ved Minbar Al Aqsa Internationale Fond, som selv undersøgte branden  siger, at gerningsmændene var flere og handlede under officiel dækning: brandstederne var mange, med letantændelige stoffer utilgængelige for offentligheden, og hovedmålet var minbaren, symbolet på byens befrielse. De kom klokken syv om morgenen, da få var til stede; Al-Quds' indbyggere  mænd, kvinder, gamle og børn  løb til og dannede kæder med jord og vand, indtil brandbiler nåede frem fra Hebron, Betlehem og Ramallah, efter at besættelsesmyndighederne havde hindret deres vej.",
+    "fireWitnessPost": "— prædikant i Al-Aqsa-moskeen og Minbarens vogter ved Minbar Al Aqsa Internationale Forening, som selv undersøgte branden  siger, at gerningsmændene var flere og handlede under officiel dækning: brandstederne var mange, med letantændelige stoffer utilgængelige for offentligheden, og hovedmålet var minbaren, symbolet på byens befrielse. De kom klokken syv om morgenen, da få var til stede; Al-Quds' indbyggere  mænd, kvinder, gamle og børn  løb til og dannede kæder med jord og vand, indtil brandbiler nåede frem fra Hebron, Betlehem og Ramallah, efter at besættelsesmyndighederne havde hindret deres vej.",
     "gatesLead": "Moskeen har porte i sine nordlige og vestlige mure; ti er åbne i dag, resten har været lukket i århundreder eller blev forseglet senere. Syd- og østmuren er helt lukkede.",
     "custodyPre": "Al-Aqsa-moskeen Forvaltes af",
     "custodyAwqaf": "Jerusalems awqaf-departement og Al-Aqsa-moskeens anliggender",
@@ -662,7 +662,7 @@
     "emptyCart": "Din Kurv er Tom",
     "itemsHeading": "Dine Gaver",
     "recurringNudge": "Gentag gaven hver måned med ét klik",
-    "recurringNudgeText": "Donér automatisk. Kontakt fonden for at ændre eller stoppe din aftale.",
+    "recurringNudgeText": "Donér automatisk. Kontakt foreningen for at ændre eller stoppe din aftale.",
     "recurringNudgeEyebrow": "Lad Din Indsats Fortsætte",
     "dataAccuracyNote": "Tjek at dine oplysninger er korrekte, så kvittering og gavebevis når dig",
     "orFillManually": "Eller Udfyld Manuelt",
@@ -709,7 +709,7 @@
     "certNoLabel": "Certifikatnr.",
     "countShares": "Antal Andele",
     "countMeters": "Antal Meter",
-    "certifiesThat": "Minbar Al Aqsa Internationale Fond bekræfter, at",
+    "certifiesThat": "Minbar Al Aqsa Internationale Forening bekræfter, at",
     "endowedShares": "Har Stiftet Waqf-andele, i Antal",
     "endowedMeters": "Har Stiftet Waqf-meter, i Antal",
     "valueLabel": "Til en værdi af:",
@@ -719,9 +719,9 @@
     "waqfLegalText": "Et gyldigt islamisk Waqf, der ikke kan bortgives, arves eller kræves tilbage. Ejerskabet har dermed forladt stifteren og er blevet et Waqf for Gud den Ophøjede i Al-Quds' og Al-Aqsa-moskeens tjeneste; det forvaltes i waqfens interesse, udvikles og bevares, så dets afkast finansierer projekter, der støtter Al-Quds-folkets udholdenhed samt plejen og vedligeholdelsen af Al-Aqsa-moskeen.",
     "thanksTitle": "Tak og Anerkendelse",
     "nameLabel": "Dette certifikat tildeles i anerkendelse til",
-    "thanksBody": "Minbar Al Aqsa Internationale Fond har den ære at nedfælde denne tak for det, I har givet i søgen efter Guds velbehag, til støtte for folket i Al-Quds og Palæstina og deres udholdenhed, i dokumenterede og fulgte projekter. Jeres navn er indført i registret over dem, der støtter ribat omkring den velsignede Al-Aqsa-moské; må Gud tage imod det og lægge det i jeres gode gerningers vægtskål.",
+    "thanksBody": "Minbar Al Aqsa Internationale Forening har den ære at nedfælde denne tak for det, I har givet i søgen efter Guds velbehag, til støtte for folket i Al-Quds og Palæstina og deres udholdenhed, i dokumenterede og fulgte projekter. Jeres navn er indført i registret over dem, der støtter ribat omkring den velsignede Al-Aqsa-moské; må Gud tage imod det og lægge det i jeres gode gerningers vægtskål.",
     "duaText": "Må Gud velsigne det, I har givet, og samle os med jer i en befriet Al-Aqsa-moskés gårde.",
-    "orgName": "Minbar Al Aqsa Internationale Fond",
+    "orgName": "Minbar Al Aqsa Internationale Forening",
     "savePdfCert": "Gem Certifikatet Som PDF",
     "savePdfReceipt": "Gem Kvitteringen Som PDF",
     "back": "Tilbage",
@@ -746,7 +746,7 @@
     "rcpTotalLabel": "Samlet Betalt",
     "rcpWordsLabel": "Kun",
     "rcpAccountantLabel": "Ansvarlig Revisor",
-    "rcpLegalNote": "En kvittering udstedt elektronisk af Minbar Al Aqsa Internationale Fond, der udgør et officielt bevis på donationen. Beløbene bruges på de ovennævnte poster i henhold til fondens godkendte politikker og refunderes ikke efter gennemførelse.",
+    "rcpLegalNote": "En kvittering udstedt elektronisk af Minbar Al Aqsa Internationale Forening, der udgør et officielt bevis på donationen. Beløbene bruges på de ovennævnte poster i henhold til foreningens godkendte politikker og refunderes ikke efter gennemførelse.",
     "certTitleShare": "Waqf-andelscertifikat",
     "certTitleMeter": "Waqf-metercertifikat",
     "inNameOf": "I Navnet På",
@@ -886,7 +886,7 @@
     "notesPlaceholder": "Skriv dine noter her…",
     "addedToCart": "Lagt i Kurven",
     "allRightsReserved": "Alle Rettigheder Forbeholdes",
-    "bookletTagFoundation": "Foundation Publication",
+    "bookletTagFoundation": "Association Publication",
     "bookletIsharatSummary": "A reading of the Qur'anic signs concerning the Children of Israel and the qualities of those raised against them, in a plain, foundational style.",
     "readBooklet": "Read the Booklet",
     "bookletFormatPdf": "Booklet · PDF",
@@ -919,15 +919,15 @@
     "whatsappLabel": "Chat på WhatsApp"
   },
   "email": {
-    "pageTitle": "Fondens E-mails til Donorer",
-    "pageSubtitle": "Færdige skabeloner, 600 px brede, der virker i alle e-mailklienter, i fondens identitet.",
+    "pageTitle": "Foreningens E-mails til Donorer",
+    "pageSubtitle": "Færdige skabeloner, 600 px brede, der virker i alle e-mailklienter, i foreningens identitet.",
     "footerNote": "Internt teamværktøj  vises ikke i webstedets offentlige navigation.",
     "ui": {
       "subjectLabel": "Emnelinje",
       "preheaderLabel": "Forhåndsvisningstekst (Preheader)",
-      "senderLabel": "Afsender: Minbar Al Aqsa Internationale Fond",
+      "senderLabel": "Afsender: Minbar Al Aqsa Internationale Forening",
       "footerTagline": "Al-Quds er en hellig betroelse · Lad os være en minbar for Al-Quds",
-      "unsubscribeNote": "Du modtager denne e-mail, fordi du er i kontakt med fonden",
+      "unsubscribeNote": "Du modtager denne e-mail, fordi du er i kontakt med foreningen",
       "unsubscribeLink": "Afmeld"
     },
     "welcome": {
@@ -942,7 +942,7 @@
       "step1": "Dokumentbibliotek: donationsbekræftelser og certifikater klar til download.",
       "step2": "Giveplaner: rediger eller sæt din faste donation på pause.",
       "cta0": "Aktivér Konto",
-      "cta2_0": "Lær Fonden at Kende",
+      "cta2_0": "Lær Foreningen at Kende",
       "closing": "Hvis du ikke oprettede denne konto, kan du se bort fra denne e-mail."
     },
     "success": {
@@ -1023,13 +1023,13 @@
       "title": "En donation for Al-Quds' folk er tilegnet dig",
       "intro": "Nogen donerede for Al-Quds' folk og tilegnede dig denne handling; her er gavecertifikatet i dit navn.",
       "highlightLabel": "Certifikat i Navnet",
-      "highlightNote": "Fra Minbar Al Aqsa Internationale Fond",
+      "highlightNote": "Fra Minbar Al Aqsa Internationale Forening",
       "row0Label": "Givet af",
       "row1Label": "Deres Besked til Dig",
       "row2Label": "Projekt",
       "row3Label": "Certifikatnummer",
       "cta0": "Download Gavecertifikatet",
-      "cta2_0": "Lær Fonden at Kende",
+      "cta2_0": "Lær Foreningen at Kende",
       "closing": "Donationsbeløbet vises kun på certifikatet, hvis giveren har valgt at vise det."
     },
     "report": {
@@ -1076,7 +1076,7 @@
       "row2Label": "Dato",
       "cta0": "Download Zakat-bekræftelsen",
       "cta2_0": "Zakat-beregner",
-      "closing": "Zakat bruges på de foreskrevne kategorier efter fondens retningslinjer."
+      "closing": "Zakat bruges på de foreskrevne kategorier efter foreningens retningslinjer."
     }
   },
   "homepage": {
@@ -1201,7 +1201,7 @@
     "docsLibrary": "Dokumentbibliotek",
     "docsLibraryText": "Dine kvitteringer og certifikater klar til download.",
     "givingPlans": "Donationsplaner",
-    "givingPlansText": "Kontakt fonden for at ændre eller stoppe din faste donation.",
+    "givingPlansText": "Kontakt foreningen for at ændre eller stoppe din faste donation.",
     "faq1Q": "Hvordan ved jeg at min donation kom frem?",
     "faq1A": "Du får kvittering på e-mail, og opdateringerne offentliggøres på projektsiden når de er godkendt.",
     "faq2Q": "Kan jeg øremærke donationen til et bestemt projekt?",
@@ -1228,13 +1228,13 @@
     "accountEyebrow": "Din Konto",
     "gazaReliefGroup": "Nødhjælp i Gaza",
     "waqfArea9": "Støtte til Trængende Familier",
-    "videoAlt": "Fondens Præsentationsvideo",
+    "videoAlt": "Foreningens Præsentationsvideo",
     "waqfCtaQuds": "Stift et Waqf i Al-Quds",
     "programsTitle": "Vores Programmer",
     "programsAll": "Alle Programmer",
     "coursesTitle": "Vores Kurser",
     "coursesAll": "Alle Kurser",
-    "coursesLead": "Videnskabelige kurser og uddannelse fra fonden om Bayt al-Maqdis og Al-Aqsa-moskeens sag  for prædikanter og alle interesserede.",
+    "coursesLead": "Videnskabelige kurser og uddannelse fra foreningen om Bayt al-Maqdis og Al-Aqsa-moskeens sag  for prædikanter og alle interesserede.",
     "courseDetails": "Kursusdetaljer",
     "kindSeminar": "Seminar",
     "kindCourse": "Kursus",
@@ -1458,7 +1458,7 @@
     "termsDonationsH": "2. Donationer",
     "termsDonationsP": "Donationer via hjemmesiden er frivillige og endelige; beløbene går til det projekt eller den intention, du har valgt. Zakat blandes aldrig med sadaqa eller Waqf i betalingsforløbet.",
     "termsContentH": "3. Indhold",
-    "termsContentP": "Alle tekster og billeder på hjemmesiden tilhører fonden og må ikke genudgives uden forudgående tilladelse.",
+    "termsContentP": "Alle tekster og billeder på hjemmesiden tilhører foreningen og må ikke genudgives uden forudgående tilladelse.",
     "termsChangesH": "4. Ændringer",
     "termsChangesP": "Disse vilkår kan opdateres fra tid til anden; fortsat brug af hjemmesiden betragtes som accept af ændringerne.",
     "privacyTitle": "Privatlivspolitik",
@@ -1469,7 +1469,7 @@
     "privCookiesH": "3. Cookies",
     "privCookiesP": "Vi bruger nødvendige cookies til at drive hjemmesiden og huske dine præferencer (sprog og valuta), samt analytiske cookies til at forstå og forbedre brugen af siden. Du kan administrere dine præferencer i browserindstillingerne.",
     "privSecurityH": "4. Datasikkerhed",
-    "privSecurityP": "Dine data opbevares på krypterede servere, og adgangen er begrænset til autoriseret personale i fonden.",
+    "privSecurityP": "Dine data opbevares på krypterede servere, og adgangen er begrænset til autoriseret personale i foreningen.",
     "privRightsH": "5. Dine rettigheder",
     "privRightsP": "Du kan anmode om indsigt i, rettelse af eller sletning af dine data ved at kontakte os via e-mail.",
     "privContactH": "6. Kontakt",
@@ -1538,7 +1538,7 @@
     "groupDonate": "Giv en Gave",
     "groupJerusalemAqsa": "Al-Quds og Al-Aqsa",
     "groupKnowledge": "Viden",
-    "groupFoundation": "Fonden"
+    "groupFoundation": "Foreningen"
   },
   "partner": {
     "metaDescription": "Institutionelle partnerskaber med virksomheder, organisationer og donororganer for at støtte projekterne i Al-Quds og Gaza i større skala.",
@@ -2085,7 +2085,7 @@
     "ctaTitle": "Din Zakat når dem, der har mest brug for den",
     "ctaText": "Den anvendes i Zakat-berettigede projekter i Al-Quds og Gaza, og du modtager en gennemførelsesrapport.",
     "collapseCalculator": "Skjul Beregneren",
-    "whyText": "Palæstinas indbyggere udsættes for vedvarende tiltag, der har forværret deres økonomiske situation: Fattigdommen når 80 %, og arbejdsløsheden 30 %. Hos Minbar Al Aqsa International Foundation sikrer vi, at Zakat-midlerne når frem, letter deres byrde og hjælper dem med at blive på deres jord.",
+    "whyText": "Palæstinas indbyggere udsættes for vedvarende tiltag, der har forværret deres økonomiske situation: Fattigdommen når 80 %, og arbejdsløsheden 30 %. Hos Minbar Al Aqsa International Association sikrer vi, at Zakat-midlerne når frem, letter deres byrde og hjælper dem med at blive på deres jord.",
     "rewardText": "Når du giver din Zakat til Palæstina, forenes velsignelsen ved at give Zakat med det hellige lands velsignelse, og du opnår dobbelt belønning.",
     "masarifIntro": "Vi fordeler Zakat strengt inden for dens foreskrevne kategorier, som fastsat i Allahs, den Ophøjedes, ord:",
     "masarifAyahRef": "At-Tawbah: 60",
@@ -2156,8 +2156,8 @@
     "track3Text": "Technical support and development for the website and internal systems.",
     "track4Title": "Remote Support",
     "track4Text": "Administrative and technical work done from anywhere in the world.",
-    "track5Title": "Foundation Representative in Your Country",
-    "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+    "track5Title": "Association Representative in Your Country",
+    "track5Text": "Representing the association officially in your country and following up its activities and donors there."
   },
   "Recurring": {
     "nextChargeOn": "Næste trækning: {date}",

@@ -1721,7 +1721,7 @@
     "emptyCart": "Sepetiniz Boş",
     "itemsHeading": "Bağış Kalemlerin",
     "recurringNudge": "Bu bağışı tek dokunuşla aylık tekrarla",
-    "recurringNudgeText": "Otomatik bağış yapın. Planınızı değiştirmek veya durdurmak için vakıfla iletişime geçin.",
+    "recurringNudgeText": "Otomatik bağış yapın. Planınızı değiştirmek veya durdurmak için dernekle iletişime geçin.",
     "recurringNudgeEyebrow": "Etkin Sürekli Olsun",
     "dataAccuracyNote": "Makbuz ve bağış sertifikanın ulaşabilmesi için bilgilerinin doğruluğundan emin ol",
     "orFillManually": "Veya Elle Doldur",
@@ -1945,7 +1945,7 @@
     "notesPlaceholder": "Notlarınızı buraya yazın…",
     "addedToCart": "Sepete Eklendi",
     "allRightsReserved": "Tüm Hakları Saklıdır",
-    "bookletTagFoundation": "Foundation Publication",
+    "bookletTagFoundation": "Association Publication",
     "bookletIsharatSummary": "A reading of the Qur'anic signs concerning the Children of Israel and the qualities of those raised against them, in a plain, foundational style.",
     "readBooklet": "Read the Booklet",
     "bookletFormatPdf": "Booklet · PDF",
@@ -2260,7 +2260,7 @@
     "docsLibrary": "Belge Kütüphanesi",
     "docsLibraryText": "Makbuz ve sertifikaların indirilmeye hazır.",
     "givingPlans": "Bağış Planları",
-    "givingPlansText": "Düzenli bağışınızı değiştirmek veya durdurmak için vakıfla iletişime geçin.",
+    "givingPlansText": "Düzenli bağışınızı değiştirmek veya durdurmak için dernekle iletişime geçin.",
     "faq1Q": "Hesaplayıcı bir fetva mıdır?",
     "faq1A": "Hayır. Hesaplayıcı girdiğiniz değerlere dayalı bir tahmindir. Zekâtın gerekliliği ve miktarı için güvenilir bir dinî mercie başvurun.",
     "faq2Q": "Zekât diğer bağışlardan ayrı mı kalır?",
@@ -3215,8 +3215,8 @@
     "track3Text": "Technical support and development for the website and internal systems.",
     "track4Title": "Remote Support",
     "track4Text": "Administrative and technical work done from anywhere in the world.",
-    "track5Title": "Foundation Representative in Your Country",
-    "track5Text": "Representing the foundation officially in your country and following up its activities and donors there."
+    "track5Title": "Association Representative in Your Country",
+    "track5Text": "Representing the association officially in your country and following up its activities and donors there."
   },
   "transferReceipt": {
     "stepTransfer": "Havale",
