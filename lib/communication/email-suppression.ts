@@ -75,6 +75,13 @@ export async function suppressEmailRecipient(
     // unsubscribe or hard bounce must change email only; only a complaint sets
     // the global do-not-contact flag.
     await ensureProfilesForUsers([user.id]);
+    // A WhatsApp STOP is kept in consentSource as well; an e-mail unsubscribe must not erase it (a donor who had
+    // pressed STOP received a WhatsApp campaign after unsubscribing from e-mail, 2026-11-20). E-mail stays blocked
+    // by emailOptIn=false and the suppression list either way.
+    const current = await Promise.resolve()
+      .then(() => prisma.donorCommunicationProfile.findUnique({ where: { userId: user.id }, select: { consentSource: true } }))
+      .catch(() => null);
+    const keepsWhatsappStop = current?.consentSource === "meta-whatsapp-inbound-opt-out";
     await prisma.donorCommunicationProfile
       .update({
         where: { userId: user.id },
@@ -82,7 +89,7 @@ export async function suppressEmailRecipient(
           email: address,
           emailOptIn: false,
           ...(isComplaint ? { doNotContact: true } : {}),
-          consentSource: `elastic-email:${reason}`,
+          ...(keepsWhatsappStop ? {} : { consentSource: `elastic-email:${reason}` }),
           lastConsentAt: new Date(),
         },
       })
