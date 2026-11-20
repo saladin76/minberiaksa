@@ -48,6 +48,7 @@ import { ACTION_PERMISSION_ROWS, DASHBOARD_PERMISSION_ROWS } from "@/lib/dashboa
 import { userHasDashboardPermission } from "@/lib/dashboard/permissions";
 import type { UserProfileCardData } from "@/lib/dashboard/user-profile-card";
 import DonorAccountInvitation from "@/components/dashboard/DonorAccountInvitation";
+import DonorContactStatus from "@/components/dashboard/DonorContactStatus";
 import { resolveUserCountry } from "@/lib/dashboard/resolve-user-country";
 import {
   GENDER_LABEL_AR,
@@ -469,6 +470,7 @@ export function ViewUserProfileDialog({
               {/* Every donation of this donor; the default view is the successful rows «الإجمالي» sums. */}
               <UserDonationsTable userId={user.id} formatMoney={formatMoney} />
               {user.role === "DONOR" && <DonorAccountInvitation userId={user.id} />}
+            {user.role === "DONOR" && <DonorContactStatus userId={user.id} />}
 
               {/* Two-column info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
