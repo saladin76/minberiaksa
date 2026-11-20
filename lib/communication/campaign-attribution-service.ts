@@ -223,7 +223,7 @@ async function loadCampaignUtmLinks(): Promise<CampaignUtmLink[]> {
   // Do not claim an alias is unique when a campaign/link scan reached its safety bound.
   if (rows.length >= 10_000 || campaigns.length >= 10_000) throw new Error("COMMUNICATION_ATTRIBUTION_LINK_SCAN_INCOMPLETE");
 
-  const templateIds = [...new Set(campaigns.map((campaign) => campaign.templateGroupId).filter((id): id is string => Boolean(id)))];
+  const templateIds = [...new Set(campaigns.map((campaign) => campaign.templateGroupId).filter((id): id is string => typeof id === "string" && /^[a-f0-9]{24}$/i.test(id)))];
   let templateLinks: CampaignUtmLink[] = [];
   if (templateIds.length) {
     const variants = await readAttributionStage("TEMPLATE_VARIANTS", () => prisma.whatsappTemplateWabaVariant.findMany({

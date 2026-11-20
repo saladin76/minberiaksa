@@ -92,10 +92,10 @@ test("legacy channel-named WhatsApp media is recognized only through its registe
 
 test("approved WhatsApp template links map to campaigns and shared aliases remain ambiguous", () => {
   const links = campaignUtmLinksFromWhatsAppTemplates([
-    { campaignId: campaignA, channel: "WHATSAPP", templateId: "template-1" },
-    { campaignId: campaignB, channel: "WHATSAPP", templateId: "template-1" },
+    { campaignId: campaignA, channel: "WHATSAPP", templateId: "6a00000000000000000000a1" },
+    { campaignId: campaignB, channel: "WHATSAPP", templateId: "6a00000000000000000000a1" },
   ], [{
-    templateId: "template-1",
+    templateId: "6a00000000000000000000a1",
     componentsSchema: [{ type: "BUTTONS", buttons: [{
       type: "URL",
       url: "https://minberiaksa.org/ar/bagislar?utm_source=whatsapp&utm_medium=communication&utm_campaign=whatsapp-campaign",
@@ -158,9 +158,9 @@ test("campaign reporting can recover the UTM from the approved template when no 
         attribution: { utm_source: "whatsapp", utm_medium: "communication", utm_campaign: "whatsapp-campaign" },
       }] },
       communicationCampaignTrackingLink: { findMany: async () => [] },
-      communicationCampaign: { findMany: async () => [{ id: campaignA, channel: "WHATSAPP", templateGroupId: "template-1" }] },
+      communicationCampaign: { findMany: async () => [{ id: campaignA, channel: "WHATSAPP", templateGroupId: "6a00000000000000000000a1" }] },
       whatsappTemplateWabaVariant: { findMany: async () => [{
-        templateId: "template-1",
+        templateId: "6a00000000000000000000a1",
         componentsSchema: [{ type: "BUTTONS", buttons: [{
           type: "URL",
           url: "https://minberiaksa.org/ar/bagislar?utm_source=whatsapp&utm_medium=communication&utm_campaign=whatsapp-campaign",
