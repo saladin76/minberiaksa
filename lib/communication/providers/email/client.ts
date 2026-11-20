@@ -86,7 +86,8 @@ export async function sendEmailMessage(input: EmailSendInput, runtime?: ElasticE
     subject: input.subject,
     html,
     text: input.text,
-    senderName: input.senderName?.trim() || institutionSenderName(input.locale),
+    // Owner, 2026-11-20: the localized institution name is for automatic messages only, never marketing campaigns.
+    senderName: input.senderName?.trim() || (input.purpose === "MARKETING" ? null : institutionSenderName(input.locale)),
     senderEmail: input.senderEmail,
     replyTo: input.replyTo,
     channelName: input.channelName,
