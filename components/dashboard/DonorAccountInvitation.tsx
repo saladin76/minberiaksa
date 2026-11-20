@@ -5,7 +5,7 @@ import { dt } from "@/lib/dashboard/i18n";
 
 export default function DonorAccountInvitation({ userId }: { userId: string }) {
   const { data: session } = useSession();
-  const [channel, setChannel] = useState("EMAIL"), [status, setStatus] = useState(""), [busy, setBusy] = useState(false);
+  const [channel, setChannel] = useState("EMAIL"), [status, setStatus] = useState(""), [busy, setBusy] = useState(false), [member, setMember] = useState<boolean | null>(null);
   useEffect(() => {
     if (session?.user?.role !== "ADMIN") return;
     let active = true;
@@ -14,6 +14,7 @@ export default function DonorAccountInvitation({ userId }: { userId: string }) {
         const response = await fetch(`/api/users/${userId}/account-invitation`, { cache: "no-store" });
         if (!response.ok) return;
         const data = await response.json();
+        if (active) setMember(Boolean(data.member));
         const state = data.invitation?.status;
         if (active) setStatus(state === "ACTIVATED" ? dt("تم التفعيل") : state === "EXPIRED" ? dt("انتهت صلاحية الدعوة؛ يمكن إعادة الإرسال") : data.delivery?.status === "FAILED" || state === "FAILED" ? dt("تعذّر الإرسال") : ["DELIVERED", "READ"].includes(data.delivery?.status) ? dt("تم تسليم الدعوة") : state === "SENT" ? dt("أُرسلت الدعوة؛ لم يُؤكد التسليم بعد") : dt("لم يُدعَ"));
       } catch { if (active) setStatus(dt("تعذر تحديث حالة الدعوة")); }
@@ -33,6 +34,9 @@ export default function DonorAccountInvitation({ userId }: { userId: string }) {
     } catch { setStatus(dt("تعذّر الإرسال")); }
     finally { setBusy(false); }
   }
+  // A registered member already has an account: show that, never "create an account".
+  if (member === null) return null;
+  if (member) return <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900">✓ {dt("عضو مسجّل: للمتبرع حساب مفعّل على الموقع.")}</p>;
   return <section className="rounded-xl border bg-white p-4">
     <h3 className="font-bold">{dt("إنشاء حساب وإرسال دعوة الدخول")}</h3>
     <p className="my-2 text-sm">{dt("يتفعل الحساب بعد تحقق المتبرع من الكود. إذا كان لديه حساب، تصله دعوة للدخول إلى الحساب نفسه.")}</p>

@@ -662,6 +662,13 @@ export function ViewUserProfileDialog({
                     </Link>
                   </Button>
                 )}
+                {canOpenCommunication && user.phone && (
+                  <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
+                    <Link href={`/dashboard/communication/conversations?phone=${encodeURIComponent(user.phone)}`} onClick={() => onOpenChange(false)}>
+                      <MessageCircle className="h-3.5 w-3.5" />{dt("محادثة واتساب")}
+                    </Link>
+                  </Button>
+                )}
                 {canOpenCommunication && (
                   <Button
                     size="sm"
