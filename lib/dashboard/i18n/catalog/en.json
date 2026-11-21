@@ -1,4 +1,5 @@
 {
+  "إجمالي العملية (بعملة التبرع)": "Transaction total (donation currency)",
   "اسم العرض (مثلاً: متبرعو تركيا عبر فيسبوك)": "View name (e.g. Türkiye donors via Facebook)",
   "مشاركة هذا العرض مع الفريق؟ (موافق = مشترك، إلغاء = لي فقط)": "Share this view with the team? (OK = shared, Cancel = only me)",
   "حذف العرض «{0}»؟": "Delete the view “{0}”?",

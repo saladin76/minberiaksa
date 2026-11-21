@@ -19,7 +19,7 @@
  */
 
 import ExcelJS from "exceljs";
-import { dashDir, dashIntl, dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
+import { dashDir, dt, withReportLanguage } from "@/lib/dashboard/report-i18n";
 import { exportCountryName, exportLanguageName, exportPaymentMethod, exportPaymentStatus } from "@/lib/dashboard/export-labels";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ const DONATION_COLUMNS: ColSpec<DonationExportRow>[] = [
   { key: "amount", get header() { return dt("مبلغ التبرع"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amount },
   { key: "teamSupport", get header() { return dt("دعم الفريق"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.teamSupport },
   { key: "fees", get header() { return dt("رسوم المعالجة"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.fees },
-  { key: "totalAmount", get header() { return dt("إجمالي العملية"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalAmount },
+  { key: "totalAmount", get header() { return dt("إجمالي العملية (بعملة التبرع)"); }, width: 18, align: "right", numFmt: "#,##0.00", value: (r) => r.totalAmount },
   { key: "amountUSD", get header() { return dt("بالدولار (USD)"); }, width: 14, align: "right", numFmt: "#,##0.00", value: (r) => r.amountUSD },
   { key: "coverFees", get header() { return dt("غطى الرسوم"); }, width: 12, align: "center", value: (r) => (r.coverFees ? dt("نعم") : dt("لا")) },
   { key: "campaigns", get header() { return dt("الحملات"); }, width: 36, value: (r) => r.campaigns.map((c) => c.title).join(dt("؛ ")) },
@@ -589,7 +589,8 @@ function addReportHeader(sheet: ExcelJS.Worksheet, input: DonationExportInput, c
   sheet.getCell("A2").font = { name: "Arial", size: 12, bold: true, color: { argb: "FF243F4D" } };
   sheet.getRow(2).height = 26;
   sheet.getCell("A3").value = dt("أُنشئ في: {0} — توقيت إسطنبول", [
-    new Intl.DateTimeFormat(dashIntl("ar-EG"), { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date()),
+    // Same digits and shape as the period line (yyyy-mm-dd hh:mm), no hidden direction marks (2026-11-21).
+    new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/Istanbul" }).format(new Date()).replace(",", ""),
   ]);
   sheet.getCell("A3").font = { name: "Arial", size: 10, color: { argb: "FF64748B" } };
   sheet.getCell("A4").value = dt("الملخص المالي للدفعات المؤكدة فقط؛ لا تُجمع مبالغ العملات المختلفة.");
