@@ -5764,3 +5764,26 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
     line-height: 1.35;
   }
 }
+
+/* ── Phones: mobile review 2026-11-21 ─────────────────────────────────────────────────────────────────
+   1) the assistant and WhatsApp buttons step aside while the page scrolls (data-mia-scrolling, set by
+      MobileBottomNav), so they no longer cover numbers, amount chips and donate buttons or catch a thumb;
+   2) any open dialog hides the bottom bar and both buttons, so a dialog's own buttons stay reachable;
+   3) each bottom-bar icon carries its name;
+   4) the page ends above the bottom bar, so the footer is never under it. */
+@media (max-width: 767px) {
+  .cg-launch-wrap, .mia-scope .mia-wa-fab { transition: opacity .2s ease, transform .2s ease; }
+  html[data-mia-scrolling="1"] .cg-launch-wrap,
+  html[data-mia-scrolling="1"] .mia-scope .mia-wa-fab { opacity: 0 !important; transform: translateY(14px) !important; pointer-events: none !important; }
+  /* Only a dialog that is really open: scroll locked by it, or open by its own state. A dialog kept in the page
+     while closed must never hide the bar. */
+  body[data-scroll-locked] .mia-mobile-bottom-nav, body[style*="overflow: hidden"] .mia-mobile-bottom-nav,
+  body:has([role="dialog"][data-state="open"]) .mia-mobile-bottom-nav, body:has([role="dialog"][aria-modal="true"]:not([hidden])) .mia-mobile-bottom-nav,
+  body[data-scroll-locked] .mia-scope .mia-wa-fab, body[style*="overflow: hidden"] .mia-scope .mia-wa-fab,
+  body:has([role="dialog"][data-state="open"]) .mia-scope .mia-wa-fab, body:has([role="dialog"][aria-modal="true"]:not([hidden])) .mia-scope .mia-wa-fab { display: none !important; }
+  .mia-mobile-bottom-nav__item { gap: 1px; padding-block: 2px; }
+  .mia-mobile-bottom-nav__icon { width: 30px; height: 30px; }
+  .mia-mobile-bottom-nav__label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; line-height: 1.15; font-weight: 600; }
+  .mia-mobile-bottom-nav__item.is-active .mia-mobile-bottom-nav__label { font-weight: 800; }
+  .mia-scope::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); }
+}
