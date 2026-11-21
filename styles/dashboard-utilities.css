@@ -31,7 +31,6 @@
   .dash-vivid [role="tablist"] > * { flex: 0 0 auto; }
   .dash-vivid main { max-width: 100vw; }
   .dash-vivid main > header + div { max-width: 100vw; overflow-x: auto; }
-  .dash-vivid main > header + div * { min-width: 0; }
   .dash-vivid main > header + div table { min-width: max-content; }
 }
 
