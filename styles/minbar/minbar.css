@@ -5778,9 +5778,9 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
   /* Only a dialog that is really open: scroll locked by it, or open by its own state. A dialog kept in the page
      while closed must never hide the bar. */
   body[data-scroll-locked] .mia-mobile-bottom-nav, body[style*="overflow: hidden"] .mia-mobile-bottom-nav,
-  body:has([role="dialog"][data-state="open"]) .mia-mobile-bottom-nav, body:has([role="dialog"][aria-modal="true"]:not([hidden])) .mia-mobile-bottom-nav,
+  body:has([role="dialog"][data-state="open"]) .mia-mobile-bottom-nav, body:has([role="dialog"][aria-modal="true"]:not([hidden]):not([aria-hidden="true"]):not([data-open="0"])) .mia-mobile-bottom-nav,
   body[data-scroll-locked] .mia-scope .mia-wa-fab, body[style*="overflow: hidden"] .mia-scope .mia-wa-fab,
-  body:has([role="dialog"][data-state="open"]) .mia-scope .mia-wa-fab, body:has([role="dialog"][aria-modal="true"]:not([hidden])) .mia-scope .mia-wa-fab { display: none !important; }
+  body:has([role="dialog"][data-state="open"]) .mia-scope .mia-wa-fab, body:has([role="dialog"][aria-modal="true"]:not([hidden]):not([aria-hidden="true"]):not([data-open="0"])) .mia-scope .mia-wa-fab { display: none !important; }
   .mia-mobile-bottom-nav__item { gap: 1px; padding-block: 2px; }
   .mia-mobile-bottom-nav__icon { width: 30px; height: 30px; }
   .mia-mobile-bottom-nav__label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; line-height: 1.15; font-weight: 600; }
