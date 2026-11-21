@@ -14,5 +14,7 @@ test("only a really open dialog hides the bar (never a closed one kept in the pa
   assert.doesNotMatch(block, /body:has\(\[role="dialog"\]\)\s/);
   assert.match(block, /\[role="dialog"\]\[data-state="open"\]/);
   assert.match(block, /body\[data-scroll-locked\]/);
+  // The assistant sheet stays in the page while closed (aria-hidden, data-open="0"): it must never count as open.
+  assert.match(block, /\[aria-modal="true"\]:not\(\[hidden\]\):not\(\[aria-hidden="true"\]\):not\(\[data-open="0"\]\)/);
   assert.equal((block.match(/\{/g) ?? []).length, (block.match(/\}/g) ?? []).length);
 });
