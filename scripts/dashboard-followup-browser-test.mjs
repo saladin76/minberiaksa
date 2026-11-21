@@ -364,10 +364,10 @@ try{browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIU
  await page.getByRole("dialog").getByText(ui(locale,"عرض التفاصيل"),{exact:true}).waitFor();
  await page.getByRole("dialog").getByText("Fixture DAILY",{exact:true}).waitFor();
  await page.keyboard.press("Escape");checks++;
- const gateway=page.getByRole("combobox",{name:ui(locale,"بوابة الدفع"),exact:true});
+ const gateway=page.getByRole("button",{name:ui(locale,"بوابة الدفع"),exact:true});
  const providerReads=Promise.all(["/api/donations","/api/admin/stats","/api/admin/donations/chart"].map(endpoint=>page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname===endpoint&&url.searchParams.get("provider")==="PAYPAL"})));
- await gateway.click();await page.getByRole("option",{name:"PayPal",exact:true}).click({noWaitAfter:true});
- await providerReads;
+ await gateway.click();await page.getByRole("checkbox",{name:"PayPal",exact:true}).check({noWaitAfter:true});
+ await providerReads;await page.getByRole("button",{name:ui(locale,"تم"),exact:true}).click();
  await metricSection.getByText("$35",{exact:true}).waitFor();await todayCard.getByText("$3",{exact:true}).waitFor();await metricSection.getByText("$30",{exact:true}).waitFor();assert.equal(await metricSection.getByText("$100",{exact:true}).count(),0,"old unfiltered revenue must disappear");checks++;
  for(const endpoint of ["/api/donations","/api/admin/stats","/api/admin/donations/chart"]) assert.ok(requests.some(row=>row.path===endpoint&&row.query.provider==="PAYPAL"),endpoint+" must retain provider filter");
  await page.getByRole("button",{name:ui(locale,"تصدير التقرير"),exact:true}).click();

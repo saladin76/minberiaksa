@@ -117,7 +117,7 @@ function buildDonationItemWhere(
     ),
   };
   if (campaignId && campaignId !== 'all') {
-    base.campaignId = campaignId;
+    base.campaignId = campaignId.includes(",") ? { in: campaignId.split(",").map((v) => v.trim()).filter(Boolean) } : campaignId;
   } else if (categoryCampaignIds !== null) {
     base.campaignId = { in: categoryCampaignIds };
   }
@@ -141,7 +141,7 @@ function buildDonationCategoryItemWhere(
     ),
   };
   if (categoryId && categoryId !== 'all') {
-    base.categoryId = categoryId;
+    base.categoryId = categoryId.includes(",") ? { in: categoryId.split(",").map((v) => v.trim()).filter(Boolean) } : categoryId;
   }
   return base;
 }
