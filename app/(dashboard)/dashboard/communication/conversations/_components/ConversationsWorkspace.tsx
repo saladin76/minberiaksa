@@ -196,9 +196,9 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
       <aside className={`${activeId ? "hidden md:flex" : "flex"} w-full flex-col border-l md:w-[380px] md:min-w-[380px]`}>
         <div className="space-y-2 border-b p-3">
           <div className="flex gap-1 overflow-x-auto text-xs">
-            <button type="button" onClick={() => setLang("all")} className={`whitespace-nowrap rounded-full px-3 py-1 ${lang === "all" ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>{dt("الكل")}{counts?.all ? ` · ${counts.all}` : ""}</button>
+            <button type="button" onClick={() => setLang("all")} className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 ${lang === "all" ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>{dt("الكل")}{counts?.all ? ` · ${counts.all}` : ""}</button>
             {LANGS.map((l) => (
-              <button key={l.key} type="button" onClick={() => setLang(l.key)} className={`whitespace-nowrap rounded-full px-3 py-1 ${lang === l.key ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>
+              <button key={l.key} type="button" onClick={() => setLang(l.key)} className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 ${lang === l.key ? "bg-emerald-700 text-white" : "bg-slate-100"}`}>
                 {l.flag} {dt(l.label)}{counts?.[l.key] ? <b className="ms-1 rounded-full bg-emerald-500 px-1.5 text-white">{counts[l.key]}</b> : null}
               </button>))}
           </div>
