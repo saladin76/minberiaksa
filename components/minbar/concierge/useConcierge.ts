@@ -57,6 +57,27 @@ function projectSlugFrom(pathname: string, route: MinbarRoute | null): string | 
 let turnSeq = 0;
 const nextId = () => `t${Date.now().toString(36)}${(turnSeq++).toString(36)}`;
 
+const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
+let fallbackSessionId: string | null = null;
+/** The server accepts 8–64 of [A-Za-z0-9_-]; anything else (blocked storage, an old format) gets a fresh id. */
+function safeSessionId(id: unknown): string {
+  if (typeof id === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(id)) return id;
+  fallbackSessionId ??= `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+  return fallbackSessionId;
+}
+/** Keeps only what the request schema accepts, so one stale field cannot reject the whole request. */
+function cleanState(s: ConversationState & { cartCampaignIds?: string[] }): ConversationState & { cartCampaignIds?: string[] } {
+  const ids = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && OBJECT_ID.test(x)).slice(0, max) : undefined);
+  const out: Record<string, unknown> = { ...s };
+  out.shownCampaignIds = ids(s.shownCampaignIds, 30);
+  out.cartCampaignIds = ids(s.cartCampaignIds, 50);
+  if (typeof out.selectedCampaignId === "string" && !OBJECT_ID.test(out.selectedCampaignId)) delete out.selectedCampaignId;
+  for (const k of ["turns", "amountTurn"]) if (typeof out[k] === "number" && ((out[k] as number) > 50 || (out[k] as number) < 0)) delete out[k];
+  if (typeof out.region === "string") out.region = (out.region as string).slice(0, 60);
+  if (typeof out.giftRecipientName === "string") out.giftRecipientName = (out.giftRecipientName as string).slice(0, 120);
+  return out as ConversationState & { cartCampaignIds?: string[] };
+}
+
 export function useConcierge() {
   const locale = useLocale();
   const router = useRouter();
@@ -99,23 +120,23 @@ export function useConcierge() {
       if (input.message || (input.step && input.step.kind !== "open")) markConciergeTouched();
       setLoading(true);
       try {
-        const history = turns.slice(-6).map((t) => ({ role: t.role, text: t.text.slice(0, 1200) }));
-        const res = await fetch("/api/ai/donation-concierge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            sessionId: getConciergeSessionId(),
-            locale,
-            currency,
-            page,
-            state: { ...state, cartCampaignIds: cartCampaignIds() },
-            history,
-            ...(input.message ? { message: input.message } : {}),
-            ...(input.step ? { step: input.step } : {}),
-            ...(input.step && echo ? { label: echo.slice(0, 200) } : {}),
-          }),
-        });
+        const history = turns.slice(-6).filter((t) => !t.error).map((t) => ({ role: t.role, text: t.text.slice(0, 1200) }));
+        /* A request the server rejects (400) showed "assistant unavailable" (two donors on 2026-11-21). The body is
+           cleaned first (valid session id, only well-formed ids in the state), and a rejected request is retried
+           once without state or history, so a stale conversation can never lock the assistant. */
+        const sessionId = safeSessionId(getConciergeSessionId());
+        const base = {
+          sessionId,
+          locale,
+          ...(currency && /^[A-Z]{3}$/.test(currency) ? { currency } : {}),
+          page: { ...page, pathname: (page.pathname ?? "").slice(0, 300) },
+          ...(input.message ? { message: input.message } : {}),
+          ...(input.step ? { step: input.step } : {}),
+          ...(input.step && echo ? { label: echo.slice(0, 200) } : {}),
+        };
+        const post = (body: object) => fetch("/api/ai/donation-concierge", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify(body) });
+        let res = await post({ ...base, state: cleanState({ ...state, cartCampaignIds: cartCampaignIds() }), history });
+        if (res.status === 400) res = await post(base);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as ConciergeResponse;
         setState(data.state);

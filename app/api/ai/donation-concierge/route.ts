@@ -88,7 +88,11 @@ export async function POST(request: NextRequest) {
     return noStore({ error: "Invalid JSON" }, { status: 400 });
   }
   const parsed = conciergeRequestSchema.safeParse(body);
-  if (!parsed.success) return noStore({ error: "Invalid request", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
+  if (!parsed.success) {
+    // Field names only (no values): enough to see why a donor's request was refused (2026-11-21).
+    console.warn("[concierge] invalid request:", Object.keys(parsed.error.flatten().fieldErrors).join(", ") || parsed.error.issues[0]?.message);
+    return noStore({ error: "Invalid request", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
+  }
 
   const req = { ...parsed.data, locale: isValidLocale(parsed.data.locale) ? parsed.data.locale : DEFAULT_LOCALE };
 
