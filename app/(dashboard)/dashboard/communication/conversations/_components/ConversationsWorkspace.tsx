@@ -30,7 +30,9 @@ const LANGS: Array<{ key: Lang; label: string; flag: string }> = [
   { key: "fr", label: "الفرنسية", flag: "🇫🇷" }, { key: "en", label: "الإنجليزية", flag: "🇬🇧" },
 ];
 const API = "/api/dashboard/communication/inbox";
-const initials = (c: Conversation) => (c.name || c.phone).replace(/^\+/, "").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+/** A name with no letter in it (".", "-", "?") is not a name: show the number (mobile review, 2026-11-21). */
+const displayName = (c: Conversation): string => (c.name && /\p{L}/u.test(c.name) ? c.name : c.phone);
+const initials = (c: Conversation) => displayName(c).replace(/^\+/, "").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 function shortTime(iso: string | null): string {
   if (!iso) return "";
@@ -104,7 +106,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
   };
   const sendTemplate = async (t: SendableTemplate) => {
     if (!active || tplBusy) return;
-    if (!window.confirm(dt("إرسال القالب «{0}» إلى {1}؟", [t.name, active.name || active.phone]))) return;
+    if (!window.confirm(dt("إرسال القالب «{0}» إلى {1}؟", [t.name, displayName(active)]))) return;
     setTplBusy(true); setNotice("");
     try {
       const r = await fetch(`${API}/${encodeURIComponent(active.id)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "template", templateId: t.id, language: active.language, name: active.name }) });
@@ -222,7 +224,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">{initials(c)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <b className="truncate text-sm" dir="auto">{c.name || c.phone}</b>
+                    <b className="truncate text-sm" dir="auto">{displayName(c)}</b>
                     <span className={`shrink-0 text-[11px] ${c.unreadCount ? "font-bold text-emerald-600" : "text-slate-400"}`}>{shortTime(c.lastMessageAt)}</span>
                   </span>
                   <span className="flex items-center justify-between gap-2">
@@ -245,7 +247,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
             <button type="button" onClick={() => setActiveId(null)} className="rounded px-2 py-1 text-lg md:hidden" aria-label={dt("رجوع")}>→</button>
             <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">{initials(active)}</span>
             <span className="min-w-0 flex-1">
-              <b className="block truncate text-sm" dir="auto">{active.name || active.phone}</b>
+              <b className="block truncate text-sm" dir="auto">{displayName(active)}</b>
               <span className="text-xs text-slate-500" dir="ltr">{active.phone}</span>
               {detail?.donor?.doNotContact ? <span className="ms-2 rounded bg-red-100 px-1.5 text-[10px] text-red-700">{dt("طلب عدم التواصل")}</span> : null}
             </span>
