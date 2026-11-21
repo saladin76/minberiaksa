@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { dt } from "@/lib/dashboard/i18n";
+import { dt, dashIntl } from "@/lib/dashboard/i18n";
 
 type Mode = "OFF" | "DONATIONS" | "SITE";
 type State = { mode: Mode; changedAt: string | null; changedBy: string | null };
@@ -47,7 +47,7 @@ export default function EmergencySwitch() {
         <div>
           <h2 className="text-base font-bold">{dt("حالة الموقع")}</h2>
           <p className="text-sm font-semibold" role="status">{state ? label : "…"}</p>
-          {state?.changedAt && <p className="text-xs text-slate-500">{dt("آخر تغيير {0} · بواسطة {1}", [new Date(state.changedAt).toLocaleString(), state.changedBy ?? "—"])}</p>}
+          {state?.changedAt && <p className="text-xs text-slate-500">{dt("آخر تغيير {0} · بواسطة {1}", [new Date(state.changedAt).toLocaleString(dashIntl("ar"), { timeZone: "Europe/Istanbul" }), state.changedBy ?? "—"])}</p>}
         </div>
         {state && (
           <div className="flex flex-wrap gap-2">

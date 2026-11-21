@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { dt } from "@/lib/dashboard/i18n";
+import { dt, dashIntl } from "@/lib/dashboard/i18n";
 
 type Gateway = "PAYFOR" | "ALBARAKA";
 type Choice = Gateway | "AUTO";
@@ -133,7 +133,7 @@ export default function DonorGatewayOverrides() {
       <h3 className="mt-5 text-sm font-bold">{dt("سجل التحويلات")}</h3>
       {log.length === 0 ? <p className="text-sm text-slate-500">{dt("لا توجد تحويلات بعد")}</p> : (
         <ul className="mt-1 space-y-1 text-xs text-slate-700">{log.slice(0, 30).map((l, i) => (
-          <li key={i}>{new Date(l.at).toLocaleString()} · {l.scope === "COUNTRY" ? countries.name(l.country ?? "") : who(donors[l.userId ?? ""], l.userId ?? "")} · {label(l.from)} → {label(l.to)} · {l.reason} · {l.by}</li>))}</ul>)}
+          <li key={i}>{new Date(l.at).toLocaleString(dashIntl("ar"), { timeZone: "Europe/Istanbul" })} · {l.scope === "COUNTRY" ? countries.name(l.country ?? "") : who(donors[l.userId ?? ""], l.userId ?? "")} · {label(l.from)} → {label(l.to)} · {l.reason} · {l.by}</li>))}</ul>)}
 
       {error && <p className="mt-2 text-sm text-red-700" role="alert">{error}</p>}
       {notice && <p className="mt-2 text-sm text-emerald-700">{notice}</p>}

@@ -259,7 +259,7 @@ export default function SiteSecurityManager() {
                         ? dt("منتهية")
                         : rule.expiresAt
                           ? new Date(rule.expiresAt).toLocaleString(
-                              dashIntl("ar"),
+                              dashIntl("ar"), { timeZone: "Europe/Istanbul" },
                             )
                           : dt("دائمة")}
                   </td>
@@ -350,7 +350,7 @@ export default function SiteSecurityManager() {
                     {row.country ? names.of(row.country) : dt("غير معروف")}
                   </td>
                   <td className="p-2">
-                    {new Date(row.lastSeenAt).toLocaleString(dashIntl("ar"))}
+                    {new Date(row.lastSeenAt).toLocaleString(dashIntl("ar"), { timeZone: "Europe/Istanbul" })}
                   </td>
                   <td className="max-w-xs break-all p-2 text-xs" dir="ltr">
                     {row.path}
