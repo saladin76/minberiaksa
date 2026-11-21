@@ -25,6 +25,14 @@ export type SmartAudienceDraft = {
     recurringFrequencies?: string[];
     excludeRecurringFrequencies?: string[];
     minDonationAmountUSD?: number | null;
+    maxDonationAmountUSD?: number | null;
+    minTotalUSD?: number | null;
+    maxTotalUSD?: number | null;
+    minDonationCount?: number | null;
+    maxDonationCount?: number | null;
+    sourceChannels?: string[];
+    accountStatus?: "MEMBER" | "GUEST" | null;
+    excludeUndeliverable?: boolean;
     hasContact?: boolean;
   };
   excludeUserIds?: string[];
@@ -210,7 +218,7 @@ export function SmartAudienceBuilder({
   const updateFilters = (patch: Partial<SmartAudienceDraft["filters"]>) =>
     onChange({ ...value, channel, filters: { ...value.filters, ...patch } });
 
-  const setMany = (key: "countries" | "locales" | "projectIds" | "badgeIds", next: string[]) =>
+  const setMany = (key: "countries" | "locales" | "projectIds" | "badgeIds" | "sourceChannels", next: string[]) =>
     updateFilters({ [key]: next });
 
   const addExcluded = (donor: DonorSearchResult) => {
@@ -290,15 +298,43 @@ export function SmartAudienceBuilder({
           <MultiPick label={dt("يحمل وساماً")} allLabel={dt("كل المتبرعين")} selected={value.filters.badgeIds ?? []} onChange={(next) => setMany("badgeIds", next)}
             options={badges} />
 
+          <div className="space-y-1 text-xs text-slate-600">
+            <span>{dt("مبلغ تبرع واحد بالدولار (من – إلى)")}</span>
+            <div className="flex items-center gap-2">
+              <Input type="number" min={0} value={value.filters.minDonationAmountUSD ?? ""} onChange={(e) => updateFilters({ minDonationAmountUSD: e.target.value === "" ? null : Number(e.target.value) })} placeholder={dt("من")} aria-label={dt("مبلغ تبرع واحد بالدولار (من – إلى)") + " — " + dt("من")} />
+              <span>–</span>
+              <Input type="number" min={0} value={value.filters.maxDonationAmountUSD ?? ""} onChange={(e) => updateFilters({ maxDonationAmountUSD: e.target.value === "" ? null : Number(e.target.value) })} placeholder={dt("إلى")} aria-label={dt("مبلغ تبرع واحد بالدولار (من – إلى)") + " — " + dt("إلى")} />
+            </div>
+          </div>
+
+          <div className="space-y-1 text-xs text-slate-600">
+            <span>{dt("مجموع ما تبرع به بالدولار (من – إلى)")}</span>
+            <div className="flex items-center gap-2">
+              <Input type="number" min={0} value={value.filters.minTotalUSD ?? ""} onChange={(e) => updateFilters({ minTotalUSD: e.target.value === "" ? null : Number(e.target.value) })} placeholder={dt("من")} aria-label={dt("مجموع ما تبرع به بالدولار (من – إلى)") + " — " + dt("من")} />
+              <span>–</span>
+              <Input type="number" min={0} value={value.filters.maxTotalUSD ?? ""} onChange={(e) => updateFilters({ maxTotalUSD: e.target.value === "" ? null : Number(e.target.value) })} placeholder={dt("إلى")} aria-label={dt("مجموع ما تبرع به بالدولار (من – إلى)") + " — " + dt("إلى")} />
+            </div>
+          </div>
+
+          <div className="space-y-1 text-xs text-slate-600">
+            <span>{dt("عدد تبرعاته (من – إلى)")}</span>
+            <div className="flex items-center gap-2">
+              <Input type="number" min={0} value={value.filters.minDonationCount ?? ""} onChange={(e) => updateFilters({ minDonationCount: e.target.value === "" ? null : Number(e.target.value) })} placeholder={dt("من")} aria-label={dt("عدد تبرعاته (من – إلى)") + " — " + dt("من")} />
+              <span>–</span>
+              <Input type="number" min={0} value={value.filters.maxDonationCount ?? ""} onChange={(e) => updateFilters({ maxDonationCount: e.target.value === "" ? null : Number(e.target.value) })} placeholder={dt("إلى")} aria-label={dt("عدد تبرعاته (من – إلى)") + " — " + dt("إلى")} />
+            </div>
+          </div>
+
+          <MultiPick label={dt("مصدر التبرع")} allLabel={dt("كل المصادر")} selected={value.filters.sourceChannels ?? []} onChange={(next) => setMany("sourceChannels", next)}
+            options={[["facebook", "فيسبوك"], ["instagram", "إنستغرام"], ["whatsapp", "واتساب"], ["email", "البريد"], ["google_ads", "إعلانات Google"], ["google_search", "بحث Google"], ["tiktok", "تيك توك"], ["direct", "مباشر"], ["other", "أخرى"]].map(([v, l]) => ({ value: v, label: dt(l) }))} />
+
           <label className="space-y-1 text-xs text-slate-600">
-            <span>{dt("الحد الأدنى للتبرع بالدولار")}</span>
-            <Input
-              type="number"
-              min={0}
-              value={value.filters.minDonationAmountUSD ?? ""}
-              onChange={(e) => updateFilters({ minDonationAmountUSD: e.target.value ? Number(e.target.value) : null })}
-              placeholder={dt("مثال: 100")}
-            />
+            <span>{dt("نوع الحساب")}</span>
+            <select value={value.filters.accountStatus ?? ""} onChange={(e) => updateFilters({ accountStatus: (e.target.value || null) as "MEMBER" | "GUEST" | null })} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="">{dt("الكل")}</option>
+              <option value="MEMBER">{dt("أعضاء مسجّلون")}</option>
+              <option value="GUEST">{dt("ضيوف (بلا حساب)")}</option>
+            </select>
           </label>
 
           <fieldset className="space-y-2 rounded-lg border p-3">
@@ -322,6 +358,11 @@ export function SmartAudienceBuilder({
                 onChange={(e) => updateFilters({ hasContact: e.target.checked })}
               />
               {dt("لديهم وسيلة اتصال للقناة فقط")}</label>
+            {channel === "WHATSAPP" ? (
+              <label className="flex items-center gap-2 text-xs text-slate-700">
+                <input type="checkbox" checked={value.filters.excludeUndeliverable === true} onChange={(e) => updateFilters({ excludeUndeliverable: e.target.checked })} />
+                {dt("استثناء الأرقام التي لا تستقبل واتساب (فشلت مرتين أو أكثر)")}</label>
+            ) : null}
           </div>
         </div>
       </section>
