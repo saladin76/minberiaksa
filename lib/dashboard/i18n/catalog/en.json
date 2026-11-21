@@ -1,4 +1,6 @@
 {
+  "أدوات المحادثة": "Conversation tools",
+  "إرفاق": "Attach",
   "تغير النص العربي أثناء الترجمة. أعد الترجمة من النسخة الحالية.": "The Arabic text changed during translation. Translate again from the current version.",
   "تغير النص العربي أثناء الترجمة؛ لم تُطبق نتائج قديمة.": "The Arabic text changed during translation; older results were not applied.",
   "لم تُنتج الخدمة نصًا صالحًا لهذه اللغة": "The service did not return valid text for this language",
