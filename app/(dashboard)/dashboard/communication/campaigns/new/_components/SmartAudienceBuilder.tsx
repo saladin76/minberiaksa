@@ -57,6 +57,54 @@ type Facets = {
   projects: Array<{ id: string; name: string; slug: string | null }>;
 };
 
+type PickOption = { value: string; label: string; count?: number };
+
+/** Several values at once (countries, languages, projects, badges): searchable checklist with counts (2026-11-21). */
+function MultiPick({ label, allLabel, options, selected, onChange }: {
+  label: string; allLabel: string; options: PickOption[]; selected: string[]; onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = React.useState(false), [q, setQ] = React.useState("");
+  const box = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const chosen = options.filter((o) => selected.includes(o.value));
+  const summary = chosen.length === 0 ? allLabel : chosen.length <= 2 ? chosen.map((o) => o.label).join("، ") : `${chosen.slice(0, 2).map((o) => o.label).join("، ")} +${chosen.length - 2}`;
+  const shown = q.trim() ? options.filter((o) => o.label.toLowerCase().includes(q.trim().toLowerCase())) : options;
+  const toggle = (v: string) => onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+  return (
+    <div className="relative space-y-1 text-xs text-slate-600" ref={box}>
+      <span>{label}</span>
+      <button type="button" onClick={() => setOpen((v) => !v)} className={`flex h-10 w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 text-start text-sm ${chosen.length ? "border-emerald-400" : "border-slate-200"}`} aria-expanded={open}>
+        <span className="truncate">{summary}</span>
+        {chosen.length ? <span className="shrink-0 rounded-full bg-emerald-100 px-2 text-[11px] font-bold text-emerald-800">{chosen.length}</span> : null}
+      </button>
+      {open ? (
+        <div className="absolute z-30 mt-1 w-full min-w-[240px] rounded-lg border bg-white p-2 shadow-lg">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={dt("بحث…")} className="mb-2 w-full rounded border px-2 py-1 text-sm" autoFocus />
+          <div className="max-h-64 overflow-y-auto">
+            {shown.map((o) => (
+              <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
+                <input type="checkbox" checked={selected.includes(o.value)} onChange={() => toggle(o.value)} />
+                <span className="flex-1 truncate">{o.label}</span>
+                {typeof o.count === "number" ? <span className="text-[11px] text-slate-400">{o.count}</span> : null}
+              </label>
+            ))}
+            {shown.length === 0 ? <p className="p-2 text-xs text-slate-400">{dt("لا نتائج")}</p> : null}
+          </div>
+          <div className="mt-2 flex justify-between border-t pt-2">
+            <button type="button" onClick={() => onChange([])} className="text-xs text-slate-500 hover:text-red-600">{dt("مسح الاختيار")}</button>
+            <button type="button" onClick={() => setOpen(false)} className="rounded bg-slate-800 px-2 py-1 text-xs text-white">{dt("تم")}</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 type DonorSearchResult = {
   id: string;
   name: string | null;
@@ -82,6 +130,17 @@ export function SmartAudienceBuilder({
   onPreview?: (preview: SmartAudiencePreview | null) => void;
 }) {
   const [facets, setFacets] = React.useState<Facets>({ countries: [], projects: [] });
+  const [badges, setBadges] = React.useState<PickOption[]>([]);
+  React.useEffect(() => {
+    fetch("/api/admin/badges", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const rows = (Array.isArray(data) ? data : data?.badges ?? []) as Array<{ id: string; name?: unknown; title?: unknown }>;
+        const text = (v: unknown) => (typeof v === "string" ? v : v && typeof v === "object" ? String((v as Record<string, unknown>).ar ?? Object.values(v as Record<string, unknown>)[0] ?? "") : "");
+        setBadges(rows.map((b) => ({ value: b.id, label: text(b.name) || text(b.title) || b.id })));
+      })
+      .catch(() => {});
+  }, []);
   const [preview, setPreview] = React.useState<SmartAudiencePreview | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [previewAttempt, setPreviewAttempt] = React.useState(0);
@@ -151,8 +210,8 @@ export function SmartAudienceBuilder({
   const updateFilters = (patch: Partial<SmartAudienceDraft["filters"]>) =>
     onChange({ ...value, channel, filters: { ...value.filters, ...patch } });
 
-  const setSingle = (key: "countries" | "locales" | "projectIds", raw: string) =>
-    updateFilters({ [key]: raw ? [raw] : [] });
+  const setMany = (key: "countries" | "locales" | "projectIds" | "badgeIds", next: string[]) =>
+    updateFilters({ [key]: next });
 
   const addExcluded = (donor: DonorSearchResult) => {
     if (value.excludeUserIds?.includes(donor.id)) return;
@@ -189,33 +248,11 @@ export function SmartAudienceBuilder({
             </div>
             <span className="block text-[11px]">{dt("عبر أي قناة. اتركها فارغة لإلغاء الاستبعاد؛ رسائل الإيصالات لا تُحتسب.")}</span>
           </label>
-          <label className="space-y-1 text-xs text-slate-600">
-            <span>{dt("الدولة")}</span>
-            <select
-              value={value.filters.countries?.[0] ?? ""}
-              onChange={(e) => setSingle("countries", e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-            >
-              <option value="">{dt("كل الدول")}</option>
-              {facets.countries.map((country) => (
-                <option key={country.code} value={country.code}>{country.name} ({country.count})</option>
-              ))}
-            </select>
-          </label>
+          <MultiPick label={dt("الدولة")} allLabel={dt("كل الدول")} selected={value.filters.countries ?? []} onChange={(next) => setMany("countries", next)}
+            options={facets.countries.map((c) => ({ value: c.code, label: c.name, count: c.count }))} />
 
-          <label className="space-y-1 text-xs text-slate-600">
-            <span>{dt("لغة المتبرع")}</span>
-            <select
-              value={value.filters.locales?.[0] ?? ""}
-              onChange={(e) => setSingle("locales", e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-            >
-              <option value="">{dt("كل اللغات")}</option>
-              {SUPPORTED_LOCALES.map((locale) => (
-                <option key={locale} value={locale}>{LOCALE_LABELS[locale]}</option>
-              ))}
-            </select>
-          </label>
+          <MultiPick label={dt("لغة المتبرع")} allLabel={dt("كل اللغات")} selected={value.filters.locales ?? []} onChange={(next) => setMany("locales", next)}
+            options={SUPPORTED_LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l] }))} />
 
           <label className="space-y-1 text-xs text-slate-600">
             <span>{dt("آخر تبرع")}</span>
@@ -247,19 +284,11 @@ export function SmartAudienceBuilder({
             </select>
           </label>
 
-          <label className="space-y-1 text-xs text-slate-600">
-            <span>{dt("تبرع لمشروع")}</span>
-            <select
-              value={value.filters.projectIds?.[0] ?? ""}
-              onChange={(e) => setSingle("projectIds", e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-            >
-              <option value="">{dt("كل المشاريع")}</option>
-              {facets.projects.map((project) => (
-                <option key={project.id} value={project.id}>{project.name}</option>
-              ))}
-            </select>
-          </label>
+          <MultiPick label={dt("تبرع لمشروع")} allLabel={dt("كل المشاريع")} selected={value.filters.projectIds ?? []} onChange={(next) => setMany("projectIds", next)}
+            options={facets.projects.map((p) => ({ value: p.id, label: p.name }))} />
+
+          <MultiPick label={dt("يحمل وساماً")} allLabel={dt("كل المتبرعين")} selected={value.filters.badgeIds ?? []} onChange={(next) => setMany("badgeIds", next)}
+            options={badges} />
 
           <label className="space-y-1 text-xs text-slate-600">
             <span>{dt("الحد الأدنى للتبرع بالدولار")}</span>
