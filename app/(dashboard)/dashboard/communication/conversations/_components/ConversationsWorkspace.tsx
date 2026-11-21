@@ -66,6 +66,9 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
   const [replyWindow, setReplyWindow] = useState<ReplyWindow | null>(null);
   const [draft, setDraft] = useState(""), [attachment, setAttachment] = useState<InboxAttachment | null>(null);
   const [recording, setRecording] = useState(false), [sending, setSending] = useState(false), [notice, setNotice] = useState("");
+  // Phone layout (2026-11-21): the conversation tools and the attachment buttons fold away so the messages and the text box keep the screen.
+  const [showTools, setShowTools] = useState(false);
+  const [showAttach, setShowAttach] = useState(false);
   const [staff, setStaff] = useState<Array<{ id: string; name: string }>>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   // The open conversation stays on screen even when it leaves the current list (e.g. marked done).
@@ -186,7 +189,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
   const windowLabel = replyWindow?.open ? dt("نافذة الرد مفتوحة: متبقٍّ {0}", [`${Math.floor(replyWindow.remainingMs / 3_600_000)}:${String(Math.floor((replyWindow.remainingMs % 3_600_000) / 60_000)).padStart(2, "0")}`]) : dt("نافذة الرد مغلقة");
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-[520px] overflow-hidden rounded-xl border bg-white" dir="rtl">
+    <div className="flex h-[calc(100dvh-7rem)] min-h-[420px] overflow-hidden rounded-xl border bg-white md:h-[calc(100vh-7rem)] md:min-h-[520px]" dir="rtl">
       {/* ── conversation list ── */}
       <aside className={`${activeId ? "hidden md:flex" : "flex"} w-full flex-col border-l md:w-[380px] md:min-w-[380px]`}>
         <div className="space-y-2 border-b p-3">
@@ -238,7 +241,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
         {!active ? (
           <div className="m-auto text-center text-sm text-slate-500"><p className="text-base font-bold text-slate-700">{dt("اختر محادثة")}</p><p>{dt("المحادثات مصنّفة حسب اللغة، ويمكن تعيين كل محادثة لموظف.")}</p></div>
         ) : (<>
-          <header className="flex flex-wrap items-center gap-2 border-b bg-white px-3 py-2">
+          <header className="flex flex-wrap items-center gap-2 border-b bg-white px-2 py-1.5 md:px-3 md:py-2">
             <button type="button" onClick={() => setActiveId(null)} className="rounded px-2 py-1 text-lg md:hidden" aria-label={dt("رجوع")}>→</button>
             <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">{initials(active)}</span>
             <span className="min-w-0 flex-1">
@@ -247,6 +250,8 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
               {detail?.donor?.doNotContact ? <span className="ms-2 rounded bg-red-100 px-1.5 text-[10px] text-red-700">{dt("طلب عدم التواصل")}</span> : null}
             </span>
             <span className={`rounded-full px-2 py-1 text-[11px] ${replyWindow?.open ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>⏱ {windowLabel}</span>
+            <button type="button" onClick={() => setShowTools((v) => !v)} className={`grid h-9 w-9 place-items-center rounded-full text-lg md:hidden ${showTools ? "bg-slate-200" : "bg-slate-100"}`} aria-expanded={showTools} aria-label={dt("أدوات المحادثة")}>⋯</button>
+            <div className={`${showTools ? "flex" : "hidden"} w-full flex-wrap items-center gap-2 md:flex md:w-auto`}>
             <select value={active.language} onChange={(e) => void patch({ language: e.target.value })} className="rounded border px-1 py-1 text-xs" aria-label={dt("اللغة")}>
               {LANGS.map((l) => <option key={l.key} value={l.key}>{l.flag} {dt(l.label)}</option>)}
             </select>
@@ -256,6 +261,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
               {staff.map((s) => <option key={s.id} value={s.id}>{s.id === currentUserId ? `${s.name} (${dt("أنا")})` : s.name}</option>)}
             </select>
             <button type="button" onClick={() => void patch({ status: active.status === "DONE" ? "OPEN" : "DONE" })} className={`rounded px-2 py-1 text-xs font-bold ${active.status === "DONE" ? "bg-slate-200" : "bg-emerald-700 text-white"}`}>{active.status === "DONE" ? dt("إعادة فتح") : dt("تم ✓")}</button>
+            </div>
           </header>
 
           <div className="flex-1 space-y-1 overflow-y-auto px-4 py-3">
@@ -329,9 +335,12 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
               </div> : null}
               <div className="flex items-end gap-2">
                 <button type="button" onClick={() => setShowQuick((v) => !v)} className={`grid h-10 w-10 place-items-center rounded-full ${showQuick ? "bg-emerald-100" : "bg-white"}`} aria-label={dt("الردود الجاهزة")} title={dt("الردود الجاهزة")}>⚡</button>
-                <InboxAttachments attachment={attachment ?? undefined} onChange={setAttachment} disabled={sending} onError={(m: string) => setNotice(m)} onRecordingChange={setRecording} />
+                <button type="button" onClick={() => setShowAttach((v) => !v)} className={`grid h-10 w-10 shrink-0 place-items-center rounded-full md:hidden ${showAttach || attachment ? "bg-emerald-100" : "bg-white"}`} aria-expanded={showAttach} aria-label={dt("إرفاق")}>📎</button>
+                <div className={`${showAttach || attachment || recording ? "block" : "hidden"} md:block`}>
+                  <InboxAttachments attachment={attachment ?? undefined} onChange={setAttachment} disabled={sending} onError={(m: string) => setNotice(m)} onRecordingChange={setRecording} />
+                </div>
                 <textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-                  rows={1} placeholder={dt("اكتب رسالة")} dir="auto" className="max-h-32 min-h-[40px] flex-1 resize-none rounded-lg bg-white px-3 py-2 text-sm outline-none" />
+                  rows={1} placeholder={dt("اكتب رسالة")} dir="auto" className="max-h-32 min-h-[40px] min-w-0 flex-1 resize-none rounded-lg bg-white px-3 py-2 text-base outline-none md:text-sm" />
                 <button type="button" onClick={() => void send()} disabled={sending || recording || (!draft.trim() && !attachment)} className="grid h-10 w-10 place-items-center rounded-full bg-emerald-600 text-white disabled:opacity-40" aria-label={dt("إرسال")}>➤</button>
               </div></>)}
           </footer>
