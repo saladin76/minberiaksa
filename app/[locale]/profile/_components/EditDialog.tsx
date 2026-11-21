@@ -67,7 +67,7 @@ const EditDialog = ({ title, value, onSave, type = "text", icon: Icon }: EditDia
             {title}
           </p>
           <p className="text-sm font-medium text-gray-900 truncate">
-            {value || (
+            {value ? (type === "tel" ? <bdi dir="ltr">{value}</bdi> : value) : (
               <span className="text-gray-400 italic">{t("notSpecified")}</span>
             )}
           </p>

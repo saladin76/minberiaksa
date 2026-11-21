@@ -5787,3 +5787,10 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
   .mia-mobile-bottom-nav__item.is-active .mia-mobile-bottom-nav__label { font-weight: 800; }
   .mia-scope::after { content: ""; display: block; height: calc(86px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* iPhone content-visibility 2026-11-21: Safari on iPhone painted the homepage sections below the hero only after the
+   scroll reached them, so a donor scrolling saw blank cream screens (mobile review). Chrome and Android keep the
+   deferred rendering above (it is what lifted PageSpeed); iOS draws the sections normally. */
+@supports (-webkit-touch-callout: none) {
+  .mia-scope .mia-home > section:not(.mia-hero) { content-visibility: visible; }
+}

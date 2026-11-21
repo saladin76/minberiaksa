@@ -34,3 +34,10 @@
   .dash-vivid main > header + div * { min-width: 0; }
   .dash-vivid main > header + div table { min-width: max-content; }
 }
+
+/* inputs 16px 2026-11-21: iPhone zooms the page into any field under 16 px when it is tapped (21 dashboard fields
+   in 11 files were 12–14 px). Phones only; computers keep the compact size. */
+@media (max-width: 767px) {
+  .dash-vivid input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  .dash-vivid select, .dash-vivid textarea { font-size: 16px; }
+}
