@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
+/** "a,b" → ["a","b"]; "all" or empty → null. */
+function idList(raw: string | null | undefined): string[] | null {
+  const ids = [...new Set(String(raw ?? "").split(",").map((v) => v.trim()).filter((v) => v && v !== "all"))];
+  return ids.length ? ids : null;
+}
+
 export type DonationRelationFilterInput = {
   campaignId?: string | null;
   categoryId?: string | null;
@@ -23,25 +29,25 @@ export async function resolveDonationRelationFilterIds({
   campaignId,
   categoryId,
 }: DonationRelationFilterInput): Promise<DonationRelationFilterIds> {
-  const selectedCampaignId = campaignId && campaignId !== "all" ? campaignId : null;
-  const selectedCategoryId = categoryId && categoryId !== "all" ? categoryId : null;
+  const selectedCampaignId = idList(campaignId);
+  const selectedCategoryId = idList(categoryId);
 
   const [campaignItems, categoryCampaigns, categoryItems] = await Promise.all([
     selectedCampaignId
       ? prisma.donationItem.findMany({
-          where: { campaignId: selectedCampaignId },
+          where: { campaignId: { in: selectedCampaignId } },
           select: { donationId: true },
         })
       : Promise.resolve(null),
     selectedCategoryId
       ? prisma.campaign.findMany({
-          where: { categoryIds: { has: selectedCategoryId } },
+          where: { categoryIds: { hasSome: selectedCategoryId } },
           select: { id: true },
         })
       : Promise.resolve(null),
     selectedCategoryId
       ? prisma.donationCategoryItem.findMany({
-          where: { categoryId: selectedCategoryId },
+          where: { categoryId: { in: selectedCategoryId } },
           select: { donationId: true },
         })
       : Promise.resolve(null),
@@ -84,14 +90,14 @@ export async function resolveSubscriptionRelationFilterIds({
 }: DonationRelationFilterInput & {
   categoryCampaignIds?: readonly string[] | null;
 }): Promise<{ campaignSubscriptionIds: string[] | null; categorySubscriptionIds: string[] | null }> {
-  const selectedCampaignId = campaignId && campaignId !== "all" ? campaignId : null;
-  const selectedCategoryId = categoryId && categoryId !== "all" ? categoryId : null;
+  const selectedCampaignId = idList(campaignId);
+  const selectedCategoryId = idList(categoryId);
   const campaignIds = categoryCampaignIds ? [...categoryCampaignIds] : [];
 
   const [campaignItems, categoryCampaignItems, categoryItems] = await Promise.all([
     selectedCampaignId
       ? prisma.subscriptionItem.findMany({
-          where: { campaignId: selectedCampaignId },
+          where: { campaignId: { in: selectedCampaignId } },
           select: { subscriptionId: true },
         })
       : Promise.resolve(null),
@@ -103,7 +109,7 @@ export async function resolveSubscriptionRelationFilterIds({
       : Promise.resolve(null),
     selectedCategoryId
       ? prisma.subscriptionCategoryItem.findMany({
-          where: { categoryId: selectedCategoryId },
+          where: { categoryId: { in: selectedCategoryId } },
           select: { subscriptionId: true },
         })
       : Promise.resolve(null),

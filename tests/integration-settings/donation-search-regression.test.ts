@@ -120,8 +120,9 @@ test("dashboard chart and metrics share scalar donation relation filters", () =>
 
 test("changing dashboard category clears a selected project outside that category", () => {
   const source = readFileSync("app/(dashboard)/dashboard/page.tsx", "utf8");
-  assert.match(source, /onValueChange=\{\(categoryId\) =>/);
-  assert.match(source, /setSelectedCampaign\("all"\)/);
+  // Several categories: a chosen project is kept only if it belongs to at least one of them (2026-11-21).
+  assert.match(source, /setSelectedCategory\(pickValue\(next\)\)/);
+  assert.match(source, /setSelectedCampaign\(\(cur\) => pickValue\(pickList\(cur\)\.filter\([^]*?next\.some\(\(cid\) => dashboardCampaignBelongsToCategory\(c, cid\)\)/);
 });
 
 test("donation-failed page has one hosted donation form instead of duplicate embeds", () => {
