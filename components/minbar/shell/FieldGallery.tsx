@@ -1,16 +1,21 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { routeForPathname } from "@/lib/minbar/routes";
 import { galleryCaption, galleryHiddenOn, galleryTexts, galleryVariant, type PublicGalleryImage } from "@/lib/site-gallery/shared";
 
-/** "Moments from the field": visible gallery images above the footer, with a full-size viewer. */
+/** "Moments from the field": one row of square photos that slides sideways, above the footer of the home page and
+    of each project page only (owner, 2026-11-21: it used to appear on every page), with a full-size viewer. */
 export default function FieldGallery({ locale }: { locale: string }) {
   const pathname = usePathname() ?? "";
-  const hidden = galleryHiddenOn(pathname);
+  const rtl = locale.startsWith("ar");
+  const route = routeForPathname(pathname);
+  const hidden = galleryHiddenOn(pathname) || (route !== "home" && route !== "projectDetail");
+  const row = useRef<HTMLDivElement>(null);
+  const slide = (dir: 1 | -1) => { const el = row.current; if (el) el.scrollBy({ left: dir * (rtl ? -1 : 1) * el.clientWidth * 0.85, behavior: "smooth" }); };
   const [images, setImages] = useState<PublicGalleryImage[]>([]);
   const [open, setOpen] = useState<number | null>(null);
   const t = galleryTexts(locale);
-  const rtl = locale.startsWith("ar");
 
   useEffect(() => {
     if (hidden) return;
@@ -37,13 +42,21 @@ export default function FieldGallery({ locale }: { locale: string }) {
   const current = open !== null ? images[open] : null;
   return (
     <section aria-labelledby="field-gallery-title" dir={rtl ? "rtl" : "ltr"} style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 16px 8px" }}>
-      <h2 id="field-gallery-title" style={{ fontSize: 22, fontWeight: 800, margin: "0 0 16px", color: "var(--deep, #0f2a3d)" }}>{t.title}</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, margin: "0 0 14px" }}>
+        <h2 id="field-gallery-title" style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "var(--deep, #0f2a3d)" }}>{t.title}</h2>
+        {images.length > 2 && (
+          <div className="fg-arrows" style={{ display: "flex", gap: 8 }}>
+            <button type="button" onClick={() => slide(-1)} aria-label={t.previous} style={arrowBtn}>{rtl ? "›" : "‹"}</button>
+            <button type="button" onClick={() => slide(1)} aria-label={t.next} style={arrowBtn}>{rtl ? "‹" : "›"}</button>
+          </div>
+        )}
+      </div>
+      <div ref={row} className="fg-row" style={{ display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
         {images.map((img, i) => {
           const caption = galleryCaption(img.captions, locale);
           return (
             <button key={img.id} type="button" onClick={() => setOpen(i)} aria-label={caption || t.title}
-              style={{ padding: 0, border: 0, borderRadius: 12, overflow: "hidden", cursor: "zoom-in", background: "#e9eef2", aspectRatio: "4 / 3" }}>
+              style={{ flex: "0 0 auto", width: "clamp(140px, 40vw, 220px)", padding: 0, border: 0, borderRadius: 12, overflow: "hidden", cursor: "zoom-in", background: "#e9eef2", aspectRatio: "1 / 1", scrollSnapAlign: "start" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary already serves the sized variant */}
               <img src={galleryVariant(img.url, "thumb")} alt={caption} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </button>
@@ -68,4 +81,5 @@ export default function FieldGallery({ locale }: { locale: string }) {
     </section>
   );
 }
+const arrowBtn = { width: 36, height: 36, borderRadius: 999, border: "1px solid rgba(15,42,61,.18)", background: "#fff", color: "var(--deep, #0f2a3d)", fontSize: 20, lineHeight: 1, cursor: "pointer" } as const;
 const navBtn = { padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.4)", background: "transparent", color: "#fff", fontWeight: 700, cursor: "pointer" } as const;
