@@ -213,6 +213,20 @@ export function NewCampaignWizard() {
     fallbackLocale: "ar",
   });
   const [sendControls, setSendControls] = React.useState<CampaignSendControlsDraft>(DEFAULT_SEND_CONTROLS);
+  // Opened from the dashboard's "campaign for this result": ?audience=<base64 JSON> fills the smart audience (2026-11-21).
+  const [carried, setCarried] = React.useState<{ kept: string[]; dropped: string[] } | null>(null);
+  React.useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("audience");
+    if (!raw) return;
+    try {
+      const data = JSON.parse(decodeURIComponent(escape(atob(raw)))) as { filters?: Record<string, unknown>; kept?: string[]; dropped?: string[] };
+      if (data.filters && typeof data.filters === "object") {
+        setSmartAudience((current) => ({ ...current, filters: { ...current.filters, ...(data.filters as SmartAudienceDraft["filters"]) } }));
+        setAudienceMode("SMART");
+      }
+      setCarried({ kept: Array.isArray(data.kept) ? data.kept.map(String) : [], dropped: Array.isArray(data.dropped) ? data.dropped.map(String) : [] });
+    } catch { /* a malformed link starts an empty audience */ }
+  }, []);
   const [saving, setSaving] = React.useState(false);
 
   const steps = React.useMemo(
@@ -533,6 +547,7 @@ export function NewCampaignWizard() {
             ))}
           </div>
 
+          {carried ? <p className="mb-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-900">{dt("من لوحة التحكم")} · {dt("نُقلت")}: {carried.kept.join("، ") || "—"}{carried.dropped.length ? ` · ${dt("لم تُنقل (لا مقابل لها في الجمهور)")}: ${carried.dropped.join("، ")}` : ""}</p> : null}
           {audienceMode === "SMART" && (
             <SmartAudienceBuilder
               channel={channel as SmartAudienceDraft["channel"]}
