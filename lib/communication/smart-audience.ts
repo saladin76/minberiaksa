@@ -24,7 +24,19 @@ export type SmartAudienceFilters = {
   excludeRecurringFrequencies?: string[];
   minDonationAmountUSD?: number | null;
   hasContact?: boolean;
+  /** Phase B (owner, 2026-11-21) */
+  maxDonationAmountUSD?: number | null;
+  minTotalUSD?: number | null;
+  maxTotalUSD?: number | null;
+  minDonationCount?: number | null;
+  maxDonationCount?: number | null;
+  sourceChannels?: string[];
+  accountStatus?: "MEMBER" | "GUEST" | null;
+  excludeUndeliverable?: boolean;
 };
+
+const SOURCE_CHANNELS = new Set(["facebook", "instagram", "whatsapp", "email", "google_ads", "google_search", "tiktok", "direct", "other", "unknown"]);
+const num = (v: unknown, min: number, max: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : null);
 
 export type SmartAudienceDefinition = {
   version: 1;
@@ -96,6 +108,14 @@ export function normalizeSmartAudienceDefinition(input: unknown, channel: Commun
       excludeRecurringFrequencies: cleanAudienceFrequencies(f.excludeRecurringFrequencies),
       minDonationAmountUSD,
       hasContact: f.hasContact === true,
+      maxDonationAmountUSD: num(f.maxDonationAmountUSD, 0, 10_000_000),
+      minTotalUSD: num(f.minTotalUSD, 0, 100_000_000),
+      maxTotalUSD: num(f.maxTotalUSD, 0, 100_000_000),
+      minDonationCount: num(f.minDonationCount, 0, 100_000) === null ? null : Math.floor(num(f.minDonationCount, 0, 100_000) as number),
+      maxDonationCount: num(f.maxDonationCount, 0, 100_000) === null ? null : Math.floor(num(f.maxDonationCount, 0, 100_000) as number),
+      sourceChannels: cleanList(f.sourceChannels).filter((c) => SOURCE_CHANNELS.has(c)),
+      accountStatus: f.accountStatus === "MEMBER" || f.accountStatus === "GUEST" ? f.accountStatus : null,
+      excludeUndeliverable: f.excludeUndeliverable === true,
     },
     excludeUserIds: cleanList(raw.excludeUserIds).slice(0, 500),
     fallbackLocale: fallback,
@@ -144,15 +164,19 @@ export function buildSmartAudienceUserWhere(definition: SmartAudienceDefinition)
   if (f.projectIds?.length) {
     donationClauses.push({ status: "PAID", items: { some: { campaignId: { in: f.projectIds } } } });
   }
-  if (f.minDonationAmountUSD && f.minDonationAmountUSD > 0) {
+  const minAmt = f.minDonationAmountUSD && f.minDonationAmountUSD > 0 ? f.minDonationAmountUSD : null;
+  const maxAmt = typeof f.maxDonationAmountUSD === "number" && f.maxDonationAmountUSD > 0 ? f.maxDonationAmountUSD : null;
+  if (minAmt !== null || maxAmt !== null) {
+    const range = { ...(minAmt !== null ? { gte: minAmt } : {}), ...(maxAmt !== null ? { lte: maxAmt } : {}) };
     donationClauses.push({
       status: "PAID",
       OR: [
-        { amountUSD: { gte: f.minDonationAmountUSD } },
-        { AND: [{ amountUSD: null }, { currency: "USD" }, { amount: { gte: f.minDonationAmountUSD } }] },
+        { amountUSD: range },
+        { AND: [{ amountUSD: null }, { currency: "USD" }, { amount: range }] },
       ],
     });
   }
+  if (f.sourceChannels?.length) donationClauses.push({ status: "PAID", sourceChannel: { in: f.sourceChannels } });
   if (donationClauses.length) {
     where.donations = { some: donationClauses.length === 1 ? donationClauses[0] : { AND: donationClauses } };
   }
@@ -193,24 +217,61 @@ async function resolveSmartAudienceUserWhere(definition: SmartAudienceDefinition
     const excluded = [...new Set([...(definition.excludeUserIds || []), ...recent.map(row => row.recipientUserId).filter((id): id is string => Boolean(id))])];
     where.id = { notIn: excluded };
   }
-  const badgeIds = definition.filters.badgeIds ?? [];
-  if (!badgeIds.length) return where;
-
-  const badges = await prisma.badge.findMany({
-    where: { id: { in: badgeIds } },
-    select: { id: true, criteria: true },
-  });
-
-  const matched = new Set<string>();
-  for (const badge of badges) {
-    const ids = await getUserIdsMatchingBadge(badge.criteria);
-    for (const id of ids) matched.add(id);
+  const f = definition.filters;
+  const keepOnly: Array<Set<string>> = [];
+  const badgeIds = f.badgeIds ?? [];
+  if (badgeIds.length) {
+    const badges = await prisma.badge.findMany({ where: { id: { in: badgeIds } }, select: { id: true, criteria: true } });
+    const matched = new Set<string>();
+    for (const badge of badges) for (const id of await getUserIdsMatchingBadge(badge.criteria)) matched.add(id);
+    keepOnly.push(matched);
   }
-
-  const existingId = where.id && typeof where.id === "object" && !Array.isArray(where.id)
-    ? where.id as Prisma.StringFilter
-    : {};
-  where.id = { ...existingId, in: [...matched] };
+  // Lifetime totals and counts: one aggregation over paid donations (USD, same fallback as the amount filter).
+  const wantsTotals = [f.minTotalUSD, f.maxTotalUSD, f.minDonationCount, f.maxDonationCount].some((v) => typeof v === "number");
+  if (wantsTotals) {
+    const range = (k: string, lo: number | null | undefined, hi: number | null | undefined) =>
+      typeof lo === "number" || typeof hi === "number" ? { [k]: { ...(typeof lo === "number" ? { $gte: lo } : {}), ...(typeof hi === "number" ? { $lte: hi } : {}) } } : {};
+    const res = (await prisma.$runCommandRaw({
+      aggregate: "Donation",
+      pipeline: [
+        { $match: { status: "PAID", donorId: { $ne: null } } },
+        { $group: { _id: "$donorId", total: { $sum: { $cond: [{ $gt: ["$amountUSD", 0] }, "$amountUSD", { $cond: [{ $eq: ["$currency", "USD"] }, "$amount", 0] }] } }, n: { $sum: 1 } } },
+        { $match: { ...range("total", f.minTotalUSD, f.maxTotalUSD), ...range("n", f.minDonationCount, f.maxDonationCount) } },
+        { $project: { _id: 1 } },
+      ],
+      cursor: { batchSize: 200_000 },
+    })) as unknown as { cursor?: { firstBatch?: Array<{ _id: { $oid: string } | string }> } };
+    keepOnly.push(new Set((res.cursor?.firstBatch ?? []).map((r) => (typeof r._id === "string" ? r._id : r._id.$oid))));
+  }
+  if (f.accountStatus) {
+    const { donorAccountWhere } = await import("@/lib/dashboard/donor-account");
+    const current = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+    where.AND = [...current, donorAccountWhere(f.accountStatus)];
+  }
+  // WhatsApp numbers Meta reported twice or more as undeliverable (131026): sending again only costs money.
+  const dropIds: string[] = [];
+  if (f.excludeUndeliverable && definition.channel === "WHATSAPP") {
+    const res = (await prisma.$runCommandRaw({
+      aggregate: "CommunicationDelivery",
+      pipeline: [
+        { $match: { channel: "WHATSAPP", status: "FAILED", recipientUserId: { $ne: null }, errorMessage: { $regex: "131026" } } },
+        { $group: { _id: "$recipientUserId", n: { $sum: 1 } } },
+        { $match: { n: { $gte: 2 } } },
+      ],
+      cursor: { batchSize: 100_000 },
+    })) as unknown as { cursor?: { firstBatch?: Array<{ _id: { $oid: string } | string }> } };
+    for (const r of res.cursor?.firstBatch ?? []) dropIds.push(typeof r._id === "string" ? r._id : r._id.$oid);
+  }
+  if (!keepOnly.length && !dropIds.length) return where;
+  const existing = where.id && typeof where.id === "object" && !Array.isArray(where.id) ? (where.id as Prisma.StringFilter) : {};
+  const idFilter: Prisma.StringFilter = { ...existing };
+  if (keepOnly.length) {
+    let ids = [...keepOnly[0]];
+    for (const next of keepOnly.slice(1)) ids = ids.filter((id) => next.has(id));
+    idFilter.in = ids;
+  }
+  if (dropIds.length) idFilter.notIn = [...new Set([...((existing.notIn as string[] | undefined) ?? []), ...dropIds])];
+  where.id = idFilter;
   return where;
 }
 

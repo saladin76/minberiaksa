@@ -1,4 +1,10 @@
 {
+  "مبلغ تبرع واحد بالدولار (من – إلى)": "A single donation in USD (from – to)",
+  "مجموع ما تبرع به بالدولار (من – إلى)": "Total donated in USD (from – to)",
+  "عدد تبرعاته (من – إلى)": "Number of donations (from – to)",
+  "أعضاء مسجّلون": "Registered members",
+  "ضيوف (بلا حساب)": "Guests (no account)",
+  "استثناء الأرقام التي لا تستقبل واتساب (فشلت مرتين أو أكثر)": "Exclude numbers that do not receive WhatsApp (failed twice or more)",
   "مسح الاختيار": "Clear selection",
   "يحمل وساماً": "Holds a badge",
   "كل المتبرعين": "All donors",
