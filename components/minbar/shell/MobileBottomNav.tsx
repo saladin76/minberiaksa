@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { profileHref } from "@/lib/minbar/profile-navigation";
 import Link from "next/link";
 import { useLocale } from "next-intl";
@@ -111,6 +112,20 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
   const dir = localeDirection(locale);
   const current = routeForPathname(pathname);
 
+  /* While the page scrolls, the floating assistant and WhatsApp buttons step aside (styles/minbar/minbar.css),
+     so they neither hide what the donor reads nor catch a scrolling thumb (mobile review, 2026-11-21). */
+  useEffect(() => {
+    const root = document.documentElement;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      root.dataset.miaScrolling = "1";
+      clearTimeout(timer);
+      timer = setTimeout(() => { delete root.dataset.miaScrolling; }, 650);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); clearTimeout(timer); delete root.dataset.miaScrolling; };
+  }, []);
+
   const activeRoute: MinbarRoute | null =
     current === "projectDetail" ? "projects" : current === "donationSuccess" ? "home" : current;
 
@@ -138,6 +153,7 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
               <span className="mia-mobile-bottom-nav__icon" aria-hidden="true">
                 <NavIcon name={item.icon} />
               </span>
+              <span className="mia-mobile-bottom-nav__label" aria-hidden="true">{ariaLabel}</span>
             </Link>
           );
         })}
