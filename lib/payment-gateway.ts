@@ -13,15 +13,18 @@
 
 
 /** Gateway an admin can nominate as the main one in the dashboard. */
-export type MainGateway = "STRIPE" | "ALBARAKA";
+/** PAYFOR as main (2026-11-22, Albaraka outage E999): one-time card donations in every currency go through
+ *  PayFor (the path Saudi donors already use); recurring stays on Albaraka; with PayFor's switch off it falls back
+ *  to Albaraka, so the main gateway can never point at a disabled rail. */
+export type MainGateway = "STRIPE" | "ALBARAKA" | "PAYFOR";
 
 /** Gateway actually used to charge a specific donation. */
 export type ResolvedGateway = "STRIPE" | "ALBARAKA" | "PAYFOR";
 
-export const MAIN_GATEWAYS: readonly MainGateway[] = ["STRIPE", "ALBARAKA"] as const;
+export const MAIN_GATEWAYS: readonly MainGateway[] = ["STRIPE", "ALBARAKA", "PAYFOR"] as const;
 
 export function isMainGateway(value: unknown): value is MainGateway {
-  return value === "STRIPE" || value === "ALBARAKA";
+  return value === "STRIPE" || value === "ALBARAKA" || value === "PAYFOR";
 }
 
 /** Normalises anything stored/received into a valid main gateway, defaulting to Stripe. */
@@ -64,6 +67,7 @@ export function resolveGateway({
   ) {
     return "PAYFOR";
   }
+  if (mainGateway === "PAYFOR") return payforEnabled ? "PAYFOR" : "ALBARAKA";
   return mainGateway;
 }
 

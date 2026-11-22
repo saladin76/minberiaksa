@@ -152,7 +152,7 @@ export async function PUT(request: NextRequest) {
     if (body.mainGateway !== undefined) {
       if (!isMainGateway(body.mainGateway)) {
         return NextResponse.json(
-          { error: 'mainGateway must be "STRIPE" or "ALBARAKA"' },
+          { error: 'mainGateway must be "STRIPE", "ALBARAKA" or "PAYFOR"' },
           { status: 400 }
         );
       }
@@ -167,6 +167,10 @@ export async function PUT(request: NextRequest) {
           },
           { status: 400 }
         );
+      }
+      // PayFor as main needs PayFor switched on (this request or already saved).
+      if (body.mainGateway === "PAYFOR" && (body.payforEnabled === false || (body.payforEnabled === undefined && (await prisma.globalSettings.findFirst({ orderBy: { createdAt: "asc" }, select: { payforEnabled: true } }))?.payforEnabled === false))) {
+        return NextResponse.json({ error: "Turn PayFor on before making it the main gateway." }, { status: 400 });
       }
       updateData.mainGateway = body.mainGateway;
     }

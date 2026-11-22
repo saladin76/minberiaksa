@@ -52,6 +52,13 @@ const MAIN_GATEWAY_CARDS: {
     icon: Landmark,
     tone: "bg-emerald-50 text-emerald-700",
   },
+  {
+    value: "PAYFOR",
+    name: "PayFor Ziraat Katılım",
+    get description() { return dt("بوابة زراعات كاتيليم 3D Secure. عند اختيارها تمر كل التبرعات بالبطاقة لمرة واحدة عبرها بكل العملات، ويبقى التبرع الدوري على البركة. مفيدة عند تعطل البركة."); },
+    icon: Landmark,
+    tone: "bg-amber-50 text-amber-700",
+  },
 ];
 
 export default function PaymentGatewaysPage() {
@@ -77,7 +84,7 @@ export default function PaymentGatewaysPage() {
       .get<SettingsResponse>("/api/global-settings", {timeout: 20000})
       .then((res) => {
         if (cancelled) return;
-        if (!["STRIPE", "ALBARAKA"].includes(res.data?.mainGateway || "")) throw new Error("INVALID_PAYMENT_SETTINGS");
+        if (!["STRIPE", "ALBARAKA", "PAYFOR"].includes(res.data?.mainGateway || "")) throw new Error("INVALID_PAYMENT_SETTINGS");
         setPayforEnabled(res.data?.payforEnabled !== false);
         setSaudiEnabled(res.data?.payforSaudiRoutingEnabled === true);
         setMainGateway(parseMainGateway(res.data?.mainGateway));
@@ -229,7 +236,8 @@ export default function PaymentGatewaysPage() {
                 const selected = mainGateway === gateway.value;
                 const disabled =
                   savingGateway ||
-                  (gateway.value === "ALBARAKA" && !albarakaConfigured);
+                  (gateway.value === "ALBARAKA" && !albarakaConfigured) ||
+                  (gateway.value === "PAYFOR" && !payforEnabled);
                 const Icon = gateway.icon;
                 return (
                   <Card
