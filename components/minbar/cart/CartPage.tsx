@@ -795,6 +795,15 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
                   {t("checkout")}
                 </Button>
               )}
+              {/* Phones: the total and the way on stay in view (Clarity, 22 Nov: 46% never reached the button above). */}
+              {!belowMinimum ? (
+                <div className="cart-sticky-pay">
+                  <span className="cart-sticky-total">{totalLabel}</span>
+                  <Button variant="primary" href={miaPath("checkout", locale)} aria-label={`${t("checkout")} · ${totalLabel}`} style={{ whiteSpace: "nowrap", height: 48 }}>
+                    {t("checkout")}
+                  </Button>
+                </div>
+              ) : null}
               <Link href={miaPath("projects", locale)} className="cart-add-another" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: "var(--muted)", transition: "color .15s ease" }}>
                 {t("addAnother")}
               </Link>
