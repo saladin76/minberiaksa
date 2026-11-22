@@ -1,4 +1,5 @@
 "use client";
+import { ORG } from "@/lib/minbar/org";
 import { profileHref } from "@/lib/minbar/profile-navigation";
 /* eslint-disable @next/next/no-img-element -- dynamic CMS/category images and the existing brand asset intentionally use raw img tags. */
 
@@ -403,6 +404,19 @@ export default function Header({
           />
 
           <HeaderSearch />
+
+          {/* WhatsApp on phones (owner, 2026-11-22): in the header instead of a floating button over the content. */}
+          <a
+            href={`https://wa.me/${ORG.whatsapp}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="WhatsApp"
+            aria-label="WhatsApp"
+            className="mia-circle mia-wa-head"
+            style={{ flex: "0 0 auto", display: "none", placeItems: "center", width: 40, height: 40, borderRadius: "50%", background: "#25D366", color: "#fff" }}
+          >
+            <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.76 14.03c-.24.68-1.42 1.3-1.96 1.35-.5.05-1.13.07-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.79-4.17-4.94-4.36-.14-.19-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.27-.29.58-.36.78-.36h.56c.18 0 .42-.07.66.5.24.58.82 2.01.89 2.16.07.14.12.31.02.5-.1.19-.14.31-.29.48-.14.17-.3.38-.43.51-.14.14-.29.3-.13.59.17.29.74 1.22 1.59 1.98 1.09.97 2.01 1.27 2.3 1.42.29.14.45.12.62-.07.17-.19.72-.84.91-1.13.19-.29.38-.24.64-.14.26.1 1.66.78 1.94.93.29.14.48.21.55.33.07.12.07.69-.17 1.37z" /></svg>
+          </a>
 
           {/* Cart */}
           <Link

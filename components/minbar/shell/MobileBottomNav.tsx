@@ -162,7 +162,8 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
               <span className="mia-mobile-bottom-nav__icon" aria-hidden="true">
                 <NavIcon name={item.icon} />
               </span>
-              <span className="mia-mobile-bottom-nav__label" aria-hidden="true">{ariaLabel}</span>
+              {/* Owner, 2026-11-22: home, reports and account are known by their icon alone (all languages). */}
+              {["home", "achievementVideos", "account"].includes(item.route) ? null : <span className="mia-mobile-bottom-nav__label" aria-hidden="true">{ariaLabel}</span>}
             </Link>
           );
         })}
