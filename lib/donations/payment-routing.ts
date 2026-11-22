@@ -33,7 +33,7 @@ export function decideNewCardRoute(input: { mainGateway: MainGateway; payforEnab
  const gateway = override ?? rule?.gateway ?? (trialMatched ? "PAYFOR" : baseline);
  const reason: RoutingSnapshot["reason"] = override ? "DONOR_OVERRIDE"
   : rule ? (saudiRule ? (rule.byIp && rule.byPhone ? "SA_IP_AND_PHONE" : rule.byIp ? "SA_IP" : "SA_PHONE") : "COUNTRY_RULE")
-  : trialMatched ? saIp && saPhone ? "SA_IP_AND_PHONE" : saIp ? "SA_IP" : "SA_PHONE" : baseline === "PAYFOR" ? "TRY" : "DEFAULT";
+  : trialMatched ? saIp && saPhone ? "SA_IP_AND_PHONE" : saIp ? "SA_IP" : "SA_PHONE" : baseline === "PAYFOR" && currency === "TRY" ? "TRY" : "DEFAULT"; // PayFor as main gateway is not a TRY route
  return { version: 1, gateway, reason, ...(rule ? { ruleCountry: rule.country } : {}), ipCountry, phoneCountry, trialMatched: trialMatched || (!override && saudiRule), changedGateway: gateway !== baseline, currency, at: (input.now ?? new Date()).toISOString() };
 }
 export function frozenPaymentRoute(raw: unknown): RoutingSnapshot | null {

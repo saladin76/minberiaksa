@@ -54,7 +54,7 @@ const MAIN_GATEWAY_CARDS: {
   },
   {
     value: "PAYFOR",
-    name: "PayFor Ziraat Katılım",
+    name: "Ziraat Katılım",
     get description() { return dt("بوابة زراعات كاتيليم 3D Secure. عند اختيارها تمر كل التبرعات بالبطاقة لمرة واحدة عبرها بكل العملات، ويبقى التبرع الدوري على البركة. مفيدة عند تعطل البركة."); },
     icon: Landmark,
     tone: "bg-amber-50 text-amber-700",
