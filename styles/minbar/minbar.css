@@ -5822,3 +5822,19 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
   html[data-mia-finishing="1"] .mia-scope .mia-wa-fab,
   html[data-mia-finishing="1"] .cg-launch-wrap { display: none !important; }
 }
+
+/* ── Phones, owner layout 2026-11-22 ──────────────────────────────────────────────────────────────────
+   WhatsApp moves into the header (no floating button over the content); the giving assistant becomes a small
+   labelled bar above the bottom bar; the bottom bar steps away while the page scrolls and returns when it stops,
+   like Facebook. Both use data-mia-scrolling, set by MobileBottomNav. */
+@media (max-width: 767px) {
+  .mia-wa-fab { display: none !important; }
+  .mia-head .mia-wa-head { display: grid !important; }
+  .mia-mobile-bottom-nav { transition: translate .25s ease, opacity .25s ease; }
+  html[data-mia-scrolling="1"] .mia-mobile-bottom-nav { translate: 0 140%; opacity: 0; pointer-events: none; }
+  .mia-scope .cg-launch-wrap { left: 0 !important; right: 0 !important; top: auto !important; inset-inline: 0 !important; align-items: center !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 86px) !important; }
+  .mia-scope .cg-launcher { height: 38px !important; width: auto !important; padding: 0 14px 0 6px !important; border-radius: 999px !important; font-size: 13.5px !important; }
+  .mia-scope .cg-launch-wrap .cg-launcher-label { display: inline !important; }
+  .mia-scope .cg-launcher-icon { width: 28px !important; height: 28px !important; }
+}
