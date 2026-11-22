@@ -57,6 +57,8 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
   const tHome = useTranslations("homepage");
   const tExtras = useTranslations("ProjectExtras");
   const summary = project.text.length > HERO_SUMMARY_MAX ? `${project.text.slice(0, HERO_SUMMARY_MAX - 1).trimEnd()}…` : project.text;
+  /* Clarity 2026-11-22: donors tapped the "…" over and over; the full text opens in place. */
+  const [showFullSummary, setShowFullSummary] = useState(false);
 
   const tabs = [
     { id: "about", label: t("tabAbout"), available: true },
@@ -143,7 +145,17 @@ export default function ProjectDetail({ project, updates, gallery, related, dono
 
             <div className="pd-project-summary" style={{ display: "grid", gap: 12 }}>
               <h1 style={{ margin: 0, fontSize: "clamp(27px,3vw,40px)", lineHeight: 1.32, fontWeight: 900, letterSpacing: "-.01em" }}>{project.title}</h1>
-              <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, fontWeight: 500, color: "var(--muted)" }}>{summary}</p>
+              <p style={{ margin: 0, maxWidth: "66ch", fontSize: 16.5, lineHeight: 1.95, fontWeight: 500, color: "var(--muted)" }}>
+                {showFullSummary ? project.text : summary}
+                {summary !== project.text && !showFullSummary ? (
+                  <>
+                    {" "}
+                    <button type="button" onClick={() => setShowFullSummary(true)} style={{ border: 0, background: "transparent", padding: 0, font: "inherit", fontWeight: 800, color: "var(--red, #a5243d)", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                      {tCommon("readMore")}
+                    </button>
+                  </>
+                ) : null}
+              </p>
               {project.categories.length ? (
                 <nav aria-label={tExtras("categories")} style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                   {project.categories.map((category) => (

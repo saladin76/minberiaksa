@@ -149,6 +149,7 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
               aria-label={ariaLabel}
               title={ariaLabel}
               aria-current={active ? "page" : undefined}
+              onClick={(e) => { if (active) { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
             >
               <span className="mia-mobile-bottom-nav__icon" aria-hidden="true">
                 <NavIcon name={item.icon} />

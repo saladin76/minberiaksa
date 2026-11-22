@@ -465,14 +465,14 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
           <p style={{ margin: "0 0 30px", maxWidth: "76ch", color: "rgba(255,255,255,.82)", fontSize: 15.5, lineHeight: 1.9 }}>{t("aidTypesText")}</p>
           <div id="wq-aid" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 16 }}>
             {AID_TYPES.map((aid) => (
-              <div key={aid.key} className="wq-aid-card" style={{ border: "1px solid rgba(255,255,255,.22)", borderRadius: 12, padding: "26px 18px", display: "grid", justifyItems: "center", gap: 12, textAlign: "center", background: "rgba(255,255,255,.05)", transition: "all .2s cubic-bezier(.22,.61,.36,1)" }}>
+              <a key={aid.key} href="#meter-picker" className="wq-aid-card" style={{ textDecoration: "none", color: "inherit", cursor: "pointer", border: "1px solid rgba(255,255,255,.22)", borderRadius: 12, padding: "26px 18px", display: "grid", justifyItems: "center", gap: 12, textAlign: "center", background: "rgba(255,255,255,.05)", transition: "all .2s cubic-bezier(.22,.61,.36,1)" }}>
                 <span style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(211,154,39,.18)", display: "grid", placeItems: "center", color: "var(--gold)" }}>
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     {AID_ICONS[aid.icon]}
                   </svg>
                 </span>
                 <b style={{ color: "#fff", fontSize: 15, fontWeight: 800, lineHeight: 1.5 }}>{tHome(aid.key)}</b>
-              </div>
+              </a>
             ))}
           </div>
         </div>
