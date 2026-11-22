@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { LEGACY_REDIRECTS } from "./lib/seo/legacy-redirects";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
@@ -271,6 +272,8 @@ const nextConfig: NextConfig = {
       { source: "/ar/monthly-donate", destination: "/ar/recurring-donation", permanent: true },
       { source: "/ar/donates", destination: "/ar/campaigns", permanent: true },
       { source: "/donates", destination: "/en/campaigns", permanent: true },
+      // Old ad and platform links → their pages (2026-11-21): lib/seo/legacy-redirects.ts
+      ...LEGACY_REDIRECTS,
     ];
   },
 };
