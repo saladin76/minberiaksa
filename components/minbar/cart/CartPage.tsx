@@ -799,7 +799,7 @@ export default function CartPage({ projects, categories }: { projects: MinbarPro
               {!belowMinimum ? (
                 <div className="cart-sticky-pay">
                   <span className="cart-sticky-total">{totalLabel}</span>
-                  <Button variant="primary" href={miaPath("checkout", locale)} style={{ whiteSpace: "nowrap", height: 48 }}>
+                  <Button variant="primary" href={miaPath("checkout", locale)} aria-label={`${t("checkout")} · ${totalLabel}`} style={{ whiteSpace: "nowrap", height: 48 }}>
                     {t("checkout")}
                   </Button>
                 </div>
