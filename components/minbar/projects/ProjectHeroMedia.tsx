@@ -78,7 +78,7 @@ export default function ProjectHeroMedia({ images, coverFallbacks = [], title, i
       style={{ position: "relative", display: "block", aspectRatio: "16/9", borderRadius: 14, overflow: "hidden", background: "var(--sand)", border: "1px solid var(--border)" }}
     >
       {many ? (
-        <div ref={track} className="pd-hero-track" style={{ position: "absolute", inset: 0, display: "flex", overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", scrollbarWidth: "none" }}>
+        <div ref={track} className="pd-hero-track" onClick={() => goTo((active + 1) % images.length)} style={{ position: "absolute", inset: 0, display: "flex", overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", scrollbarWidth: "none" }}>
           {images.map((src, index) => (
             <div
               key={src}

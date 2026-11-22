@@ -12,6 +12,7 @@ export default function FieldGallery({ locale }: { locale: string }) {
   const route = routeForPathname(pathname);
   const hidden = galleryHiddenOn(pathname) || (route !== "home" && route !== "projectDetail");
   const row = useRef<HTMLDivElement>(null);
+  const touchX = useRef<number | null>(null);
   const slide = (dir: 1 | -1) => { const el = row.current; if (el) el.scrollBy({ left: dir * (rtl ? -1 : 1) * el.clientWidth * 0.85, behavior: "smooth" }); };
   const [images, setImages] = useState<PublicGalleryImage[]>([]);
   const [open, setOpen] = useState<number | null>(null);
@@ -66,9 +67,9 @@ export default function FieldGallery({ locale }: { locale: string }) {
       {current && (
         <div role="dialog" aria-modal="true" aria-label={t.title} onClick={() => setOpen(null)}
           style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(5,15,25,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <figure onClick={(e) => e.stopPropagation()} style={{ margin: 0, maxWidth: "min(1200px, 100%)", textAlign: "center" }}>
+          <figure onClick={(e) => e.stopPropagation()} onTouchStart={(e) => { touchX.current = e.touches[0]?.clientX ?? null; }} onTouchEnd={(e) => { const start = touchX.current; touchX.current = null; if (start === null || images.length < 2) return; const dx = (e.changedTouches[0]?.clientX ?? start) - start; if (Math.abs(dx) > 40) step(dx < 0 === !rtl ? 1 : -1); }} style={{ margin: 0, maxWidth: "min(1200px, 100%)", textAlign: "center" }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary already serves the sized variant */}
-            <img src={galleryVariant(current.url, "full")} alt={galleryCaption(current.captions, locale)} style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: 8 }} />
+            <img src={galleryVariant(current.url, "full")} alt={galleryCaption(current.captions, locale)} onClick={() => { if (images.length > 1) step(1); }} style={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: 8, cursor: images.length > 1 ? "pointer" : "default" }} />
             {galleryCaption(current.captions, locale) && <figcaption style={{ color: "#fff", marginTop: 10, fontSize: 15 }}>{galleryCaption(current.captions, locale)}</figcaption>}
             <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 12 }}>
               {images.length > 1 && <button type="button" onClick={() => step(-1)} style={navBtn}>{t.previous}</button>}

@@ -5794,3 +5794,10 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
 @supports (-webkit-touch-callout: none) {
   .mia-scope .mia-home > section:not(.mia-hero) { content-visibility: visible; }
 }
+
+/* Clarity 2026-11-22: the hottest dead/rage taps on the home page sat just below the 40 px menu button (the thumb
+   lands a little low and hits the section underneath). The button keeps its look; its touch area grows, mostly down. */
+@media (max-width: 767px) {
+  .mia-head .mia-menu-btn { position: relative; }
+  .mia-head .mia-menu-btn::after { content: ""; position: absolute; inset: -8px -10px -18px -10px; }
+}
