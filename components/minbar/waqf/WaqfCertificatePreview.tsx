@@ -26,6 +26,7 @@ export default function WaqfCertificatePreview({
   name,
   onBehalf,
   open = false,
+  overlay = false,
 }: {
   unit: "share" | "meter";
   count: number;
@@ -34,6 +35,8 @@ export default function WaqfCertificatePreview({
   onBehalf: string;
   /** Phone only: whether the toggle button has revealed the preview. */
   open?: boolean;
+  /** Rendered inside the full-size viewer (no id, no viewer of its own). */
+  overlay?: boolean;
 }) {
   const locale = useLocale();
   const t = useTranslations("certificates");
@@ -42,6 +45,8 @@ export default function WaqfCertificatePreview({
 
   /* Rendered after mount so the server and the first client paint agree. */
   const [today, setToday] = useState("");
+  /* Clarity, 22 Nov: 63 dead taps on the preview — donors tap it to read it. A tap opens it full size. */
+  const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     try {
       setToday(new Intl.DateTimeFormat(`${locale}-u-nu-latn`, { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date()));
@@ -57,9 +62,11 @@ export default function WaqfCertificatePreview({
   return (
     <div style={{ display: "grid", gap: 10, justifyItems: "center", width: "100%" }}>
       <div
-        id="waqf-cert-preview"
+        id={overlay ? undefined : "waqf-cert-preview"}
         data-open={open ? "1" : "0"}
+        onClick={overlay ? undefined : () => setZoomed(true)}
         style={{
+          cursor: overlay ? "default" : "zoom-in",
           position: "relative",
           aspectRatio: "1 / 1.32",
           width: "100%",
@@ -135,6 +142,14 @@ export default function WaqfCertificatePreview({
       <p id="waqf-cert-preview-note" data-open={open ? "1" : "0"} style={{ margin: 0, maxWidth: 420, fontSize: 11.5, lineHeight: 1.7, color: "var(--muted)", textAlign: "center" }}>
         {t("waqfPreviewNumberNote")}
       </p>
+      {zoomed && !overlay ? (
+        <div role="dialog" aria-modal="true" aria-label={tWaqf("showCertPreview")} onClick={() => setZoomed(false)} style={{ position: "fixed", inset: 0, zIndex: 3000, background: "rgba(15,22,30,.88)", overflow: "auto", padding: "14px 10px 40px", display: "grid", justifyItems: "center", alignContent: "start", gap: 10 }}>
+          <button type="button" onClick={() => setZoomed(false)} aria-label="×" style={{ position: "sticky", top: 0, justifySelf: "end", width: 42, height: 42, borderRadius: 999, border: 0, background: "#fff", fontSize: 24, lineHeight: 1, cursor: "pointer", zIndex: 1 }}>×</button>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 420, zoom: 1.45 }}>
+            <WaqfCertificatePreview unit={unit} count={count} total={total} name={name} onBehalf={onBehalf} open overlay />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

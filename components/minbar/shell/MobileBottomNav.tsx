@@ -126,6 +126,14 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
     return () => { window.removeEventListener("scroll", onScroll); clearTimeout(timer); delete root.dataset.miaScrolling; };
   }, []);
 
+  /* Cart and checkout are a finishing flow: the bar and the floating buttons step aside there (Clarity, 22 Nov). */
+  const finishing = ["cart", "checkout"].includes(routeForPathname(pathname ?? "") ?? "");
+  useEffect(() => {
+    const root = document.documentElement;
+    if (finishing) root.dataset.miaFinishing = "1"; else delete root.dataset.miaFinishing;
+    return () => { delete root.dataset.miaFinishing; };
+  }, [finishing]);
+
   const activeRoute: MinbarRoute | null =
     current === "projectDetail" ? "projects" : current === "donationSuccess" ? "home" : current;
 
