@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { getPublicServerSession } from "@/lib/auth/public-session";
 import Header from "@/components/minbar/shell/Header";
 import MobileBottomNav from "@/components/minbar/shell/MobileBottomNav";
+import NavProgress from "@/components/minbar/shell/NavProgress";
 import MinbarFooter from "@/components/minbar/shell/Footer";
 import ConciergeLauncher from "@/components/minbar/concierge/ConciergeLauncher";
 import CartReminder from "@/components/CartReminder";
@@ -154,6 +155,7 @@ export default async function Rootlayout({
               <ScrollToTop />
               <Header signedIn={!!session?.user} isAdmin={session?.user?.role === "ADMIN"} categories={navCategories} superCategories={superCategories} />
               <MobileBottomNav signedIn={!!session?.user} />
+              <NavProgress />
               {/* No top padding here: the header renders its own spacer, sized
                   from its measured height, because that height changes with the
                   language, the back button and the viewport. */}
