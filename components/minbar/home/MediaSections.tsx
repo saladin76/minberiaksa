@@ -241,9 +241,9 @@ function ReelRail({
             {content}
           </a>
         ) : (
-          <div key={video.id} className="mia-reel" style={cardStyle}>
+          <a key={video.id} href={viewAllHref} className="mia-reel" style={{ ...cardStyle, textDecoration: "none" }}>
             {content}
-          </div>
+          </a>
         );
       })}
     </Rail>

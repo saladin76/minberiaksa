@@ -333,7 +333,7 @@ export default function Header({
             gap: 14,
           }}
         >
-          <Link href={miaPath("home", locale)} style={{ display: "flex", alignItems: "center", flex: "0 0 auto" }}>
+          <Link href={miaPath("home", locale)} onClick={(e) => { if (/^\/[a-z]{2}\/?$/.test(pathname)) { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); } }} style={{ display: "flex", alignItems: "center", flex: "0 0 auto" }}>
             <span
               style={{
                 display: "inline-flex",
