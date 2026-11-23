@@ -18,6 +18,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import { writeAuditLog } from "@/lib/audit-log";
 import { donationCampaignTitle } from "@/lib/templates/donation-projects";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * Telling the recipient of a gifted donation.
  *
@@ -50,7 +51,7 @@ function escapeHtml(value: string): string {
 
 export function formatAmount(amount: number, currency: string, locale: string): string {
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+    return new Intl.NumberFormat(withLatn(locale), { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
   } catch {
     return `${amount} ${currency}`;
   }

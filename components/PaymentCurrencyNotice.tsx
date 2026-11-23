@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { ResolvedGateway } from "@/lib/payment-gateway";
+import { withLatn } from "@/lib/i18n/latn";
 export function PaymentCurrencyNotice({ gateway, currency, amount, phone = "" }: { gateway: ResolvedGateway; currency: string; amount: number; phone?: string }) {
  const t = useTranslations("DonationDialog"), locale = useLocale();
  const enabled = gateway === "PAYFOR" && currency !== "TRY" && amount > 0;
@@ -19,6 +20,6 @@ export function PaymentCurrencyNotice({ gateway, currency, amount, phone = "" }:
   return () => { clearTimeout(timer); controller.abort(); };
  }, [enabled, key, currency, amount, phone]);
  if (!enabled) return null;
- const format = (value: number, code: string) => new Intl.NumberFormat(locale, { style: "currency", currency: code }).format(value);
+ const format = (value: number, code: string) => new Intl.NumberFormat(withLatn(locale), { style: "currency", currency: code }).format(value);
  return <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">{quote?.key === key ? t("bankChargeEstimate", { original: format(amount, currency), amount: format(quote.amount, "TRY") }) : t("bankChargeCurrency")}</p>;
 }

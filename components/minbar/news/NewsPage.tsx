@@ -10,6 +10,7 @@ import TravelBanner from "@/components/minbar/banners/TravelBanner";
 import IbadanBanner from "@/components/minbar/banners/IbadanBanner";
 import { NoResults } from "@/components/minbar/states/ContentStates";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * The newsroom  ported from `Minbar/الأخبار.dc.html`.
  *
@@ -36,7 +37,7 @@ export default function NewsPage({ items }: NewsPageProps) {
 
   /* Dates are formatted for the reader's language, so an Arabic page shows an
      Arabic month name and a Japanese page a Japanese one. */
-  const dateFormat = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" });
+  const dateFormat = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long", day: "numeric" });
 
   return (
     <div className="news-page">

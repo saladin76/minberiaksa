@@ -22,7 +22,7 @@ export default function DonorContactStatus({ userId }: { userId: string }) {
   const line = (ok: boolean, label: string, text: string) => (
     <div className="flex items-center justify-between gap-2 py-1 text-sm"><span className="text-slate-500">{label}</span><span className={ok ? "text-emerald-700" : "font-semibold text-red-700"}>{ok ? "✓ " : "⛔ "}{text}</span></div>
   );
-  const wa = !s.whatsapp.hasPhone ? dt("لا رقم هاتف") : s.whatsapp.stopped ? dt("أوقف الرسائل التسويقية") + (s.whatsapp.at ? ` (${new Date(s.whatsapp.at).toLocaleDateString("ar")})` : "") : s.whatsapp.undeliverable > 0 ? dt("الرقم لا يستقبل واتساب ({0} محاولة فاشلة)", [s.whatsapp.undeliverable]) : dt("يستقبل");
+  const wa = !s.whatsapp.hasPhone ? dt("لا رقم هاتف") : s.whatsapp.stopped ? dt("أوقف الرسائل التسويقية") + (s.whatsapp.at ? ` (${new Date(s.whatsapp.at).toLocaleDateString("ar-u-nu-latn")})` : "") : s.whatsapp.undeliverable > 0 ? dt("الرقم لا يستقبل واتساب ({0} محاولة فاشلة)", [s.whatsapp.undeliverable]) : dt("يستقبل");
   const em = !s.email.hasEmail ? dt("لا بريد") : s.email.suppressed ? dt(EMAIL_REASON[s.email.suppressed] ?? "موقوف") : dt("يستقبل");
   return (
     <section className="rounded-xl border bg-white p-4">

@@ -15,6 +15,7 @@ import { MANUAL_DOCUMENT_TEMPLATE, MANUAL_DOCUMENT_TEXT, manualDocumentTemplate 
 import { INSTITUTION_EMAIL_LOGO_PATH } from "../templates/email-assets";
 import { issuedDocumentToken, manualDocumentPdf, manualDocumentTitle, type ManualDocument } from "./manual-render";
 
+import { withLatn } from "@/lib/i18n/latn";
 export async function deliverIssuedCertificate(id: string, channel: "EMAIL" | "WHATSAPP") {
   const token = randomUUID(), now = new Date();
   const claim = await prisma.issuedCertificate.updateMany({ where: { id, OR: [{ deliveryLockUntil: null }, { deliveryLockUntil: { isSet: false } }, { deliveryLockUntil: { lt: now } }] }, data: { deliveryLock: token, deliveryLockUntil: new Date(now.getTime() + 600_000) } });
@@ -38,7 +39,7 @@ export async function deliverIssuedCertificate(id: string, channel: "EMAIL" | "W
     const origin = paymentPublicOrigin("https://minberiaksa.org");
     const pdf = await manualDocumentPdf(document, origin);
     const title = manualDocumentTitle(document);
-    const values: Record<string, string> = { "document.title": title, "document.recipientName": row.recipientName, "document.serial": row.serial, "document.date": document.kind === "waqf" ? document.certDate : document.kind === "receipt" ? document.issueDate : document.issuedDate || new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "Europe/Istanbul" }).format(row.issuedAt), "document.url": `${origin}/api/certificates/issued/${row.id}?token=${issuedDocumentToken(row.id)}` };
+    const values: Record<string, string> = { "document.title": title, "document.recipientName": row.recipientName, "document.serial": row.serial, "document.date": document.kind === "waqf" ? document.certDate : document.kind === "receipt" ? document.issueDate : document.issuedDate || new Intl.DateTimeFormat(withLatn(locale), { dateStyle: "long", timeZone: "Europe/Istanbul" }).format(row.issuedAt), "document.url": `${origin}/api/certificates/issued/${row.id}?token=${issuedDocumentToken(row.id)}` };
     const body = manualDocumentTemplate(locale).replace(/\{\{([a-zA-Z.]+)\}\}/g, (_, key: string) => values[key] ?? "");
     state[channel] = { status: "SENDING", at: new Date().toISOString() }; await save();
     if (channel === "WHATSAPP") {

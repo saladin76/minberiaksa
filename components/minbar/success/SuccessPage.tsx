@@ -14,6 +14,7 @@ import Confetti from "./Confetti";
 import DocumentsPanel from "./DocumentsPanel";
 import type { VerseBlock } from "@/lib/minbar/quran";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * Donation received  ported from `Minbar/نجاح التبرع.dc.html`.
  *
@@ -78,7 +79,7 @@ export default function SuccessPage({
   const nextChargeText = (() => {
     if (!donation.nextChargeAt) return null;
     try {
-      return new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(new Date(donation.nextChargeAt));
+      return new Intl.DateTimeFormat(withLatn(locale), { dateStyle: "full" }).format(new Date(donation.nextChargeAt));
     } catch {
       return donation.nextChargeAt.slice(0, 10);
     }
@@ -113,7 +114,7 @@ export default function SuccessPage({
 
   const dateText = (() => {
     try {
-      return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short" }).format(new Date(donation.date));
+      return new Intl.DateTimeFormat(withLatn(locale), { dateStyle: "long", timeStyle: "short" }).format(new Date(donation.date));
     } catch {
       return donation.date.slice(0, 10);
     }

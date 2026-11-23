@@ -1,9 +1,10 @@
 import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * One currency formatter for the public site.
  *
- * `Intl.NumberFormat(locale, { style: "currency" })` gets the separators, the
+ * `Intl.NumberFormat(withLatn(locale), { style: "currency" })` gets the separators, the
  * decimal mark and the symbol's side right for every locale  but its choice
  * of symbol is CLDR's, and CLDR disambiguates: an Arabic or French visitor is
  * shown `US$` / `$US` for dollars and `UK£` / `£GB` for pounds, and a Turkish
@@ -40,7 +41,7 @@ export function cachedNumberFormat(locale: string, options: Intl.NumberFormatOpt
   const key = `${locale}|${JSON.stringify(options)}`;
   let formatter = FORMATTERS.get(key);
   if (!formatter) {
-    formatter = new Intl.NumberFormat(locale, options);
+    formatter = new Intl.NumberFormat(withLatn(locale), options);
     if (FORMATTERS.size > 200) FORMATTERS.clear();
     FORMATTERS.set(key, formatter);
   }

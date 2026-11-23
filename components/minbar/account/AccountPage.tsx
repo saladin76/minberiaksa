@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/minbar/money";
 import { Button } from "@/components/minbar/ds";
 import DonorLinkedIdentities from "@/components/auth/DonorLinkedIdentities";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * The donor account  ported from `Minbar/حساب المتبرع.dc.html`.
  *
@@ -135,7 +136,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
 
   const donorName = saved.name.trim() || t("dearDonor");
   const dash = "—";
-  const dateFormat = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" });
+  const dateFormat = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long", day: "numeric" });
 
   /* A past donation is shown in the currency it was actually charged in, never
      re-converted into today's selected currency: the receipt says one number
@@ -147,7 +148,7 @@ export default function AccountPage({ summary }: { summary: MinbarAccountSummary
       return `${currency} ${formatNumber(Math.round(amount))}`;
     }
   };
-  const monthFormat = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long" });
+  const monthFormat = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long" });
 
   const save = async () => {
     if (saving) return;

@@ -1,3 +1,4 @@
+import { withLatn } from "@/lib/i18n/latn";
 /** Use the payment's stored USD snapshot, never today's exchange rate. */
 export function donationUsdAmount(donation: { amountUSD?: number | null; amount: number; currency: string }): number | null {
   if (typeof donation.amountUSD === "number" && Number.isFinite(donation.amountUSD)) return donation.amountUSD;
@@ -11,6 +12,6 @@ export function formatTemplateMoney(amount: number | null | undefined, locale?: 
   if (currency) {
     try { digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2; } catch { /* default precision */ }
   }
-  try { return new Intl.NumberFormat(locale || "en", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(amount); }
+  try { return new Intl.NumberFormat(withLatn(locale) || "en", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(amount); }
   catch { return new Intl.NumberFormat("en", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(amount); }
 }

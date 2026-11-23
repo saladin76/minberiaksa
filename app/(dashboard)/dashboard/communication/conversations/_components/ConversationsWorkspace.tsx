@@ -37,10 +37,10 @@ const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 function shortTime(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso), now = new Date();
-  if (sameDay(d, now)) return d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
+  if (sameDay(d, now)) return d.toLocaleTimeString("ar-u-nu-latn", { hour: "2-digit", minute: "2-digit" });
   const y = new Date(now); y.setDate(now.getDate() - 1);
   if (sameDay(d, y)) return dt("أمس");
-  return d.toLocaleDateString("ar", { day: "numeric", month: "short" });
+  return d.toLocaleDateString("ar-u-nu-latn", { day: "numeric", month: "short" });
 }
 function Ticks({ status }: { status: string | null }) {
   const s = (status || "").toUpperCase();
@@ -282,7 +282,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
               const dayBreak = d && (!prev?.at || !sameDay(new Date(prev.at), d));
               return (
                 <div key={m.id}>
-                  {dayBreak ? <div className="my-2 text-center"><span className="rounded-md bg-white/80 px-2 py-0.5 text-[11px] text-slate-600 shadow-sm">{d!.toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "long" })}</span></div> : null}
+                  {dayBreak ? <div className="my-2 text-center"><span className="rounded-md bg-white/80 px-2 py-0.5 text-[11px] text-slate-600 shadow-sm">{d!.toLocaleDateString("ar-u-nu-latn", { weekday: "long", day: "numeric", month: "long" })}</span></div> : null}
                   {m.kind === "status" ? (
                     /FAIL|BOUNCE|ERROR/i.test(m.status || "") ? <p className="text-center text-[11px] text-red-600">⚠ {m.text || m.status}</p> : null
                   ) : (
@@ -291,7 +291,7 @@ export function ConversationsWorkspace({ currentUserId }: { currentUserId: strin
                         {m.media ? <InboxMedia conversationId={active.id} itemId={m.id} media={m.media} /> : null}
                         {m.text ? <p className="whitespace-pre-wrap break-words" dir="auto">{m.text}</p> : null}
                         <span className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-slate-500">
-                          {d ? d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }) : ""}{m.kind === "outbound" ? <Ticks status={best.get(m.id) ?? m.status} /> : null}
+                          {d ? d.toLocaleTimeString("ar-u-nu-latn", { hour: "2-digit", minute: "2-digit" }) : ""}{m.kind === "outbound" ? <Ticks status={best.get(m.id) ?? m.status} /> : null}
                         </span>
                       </div>
                     </div>)}

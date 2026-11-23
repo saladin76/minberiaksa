@@ -1,3 +1,4 @@
+import { withLatn } from "@/lib/i18n/latn";
 const ISTANBUL_TIME_ZONE = "Europe/Istanbul";
 
 const istanbulDateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -37,5 +38,5 @@ export function formatIstanbulDateKeyLabel(
   const [y, m, d] = dateKey.split("-").map(Number);
   if (!y || !m || !d) return dateKey;
   const anchor = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(anchor);
+  return new Intl.DateTimeFormat(withLatn(locale), { ...options, timeZone: "UTC" }).format(anchor);
 }

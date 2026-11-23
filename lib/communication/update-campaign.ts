@@ -11,6 +11,7 @@ import { AUDIENCE_SELECTION_MAX } from "./audience-limits";
 import { AUDIENCE_LIST_PREFIX, addDonorMembers, createAudienceList } from "./audience-list-service";
 import { createCampaign } from "./campaign-service";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * "Send this update to the people who made it happen."
  *
@@ -134,7 +135,7 @@ export function updateContextFor(source: UpdateSource, locale: string, communica
   const thumbnail = videoThumbnailFor(source.videoUrl);
   let date = source.createdAt.toISOString().slice(0, 10);
   try {
-    date = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" }).format(source.createdAt);
+    date = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long", day: "numeric" }).format(source.createdAt);
   } catch {
     /* unknown locale: ISO date */
   }

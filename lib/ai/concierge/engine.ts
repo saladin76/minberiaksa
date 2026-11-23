@@ -13,6 +13,7 @@ import { loadDonorContext, type DonorContext } from "./donor";
 import { loadConciergeSettings } from "./settings";
 import type { ConciergeSettings } from "./settings-shape";
 import { resolveTopic, pickCrossSell, rankCampaigns, rankCategories, type CatalogCampaign, type CatalogCategory } from "./recommend";
+import { withLatn } from "@/lib/i18n/latn";
 import {
   FREQUENCIES,
   type CampaignCard,
@@ -49,7 +50,7 @@ function fill(template: string | undefined, vars: Record<string, string | number
 
 function fmtUsd(locale: string, amount: number): string {
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat(withLatn(locale), { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
   } catch {
     return `$${Math.round(amount)}`;
   }

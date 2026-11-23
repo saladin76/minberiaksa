@@ -1,3 +1,4 @@
+import { withLatn } from "@/lib/i18n/latn";
 /** Date keys represent the reporting calendar, independent of browser/server
  * timezone. UTC noon is only a stable carrier for formatting that date. */
 export function calendarMonthLayout(month: string) {
@@ -16,7 +17,7 @@ const weekdayFormats = new Map<string, Intl.DateTimeFormat>();
 const fullDateFormats = new Map<string, Intl.DateTimeFormat>();
 export function calendarWeekLabels(locale: string) {
   let format = weekdayFormats.get(locale);
-  if (!format) { format = new Intl.DateTimeFormat(locale, { weekday: "short", calendar: "gregory", timeZone: "UTC" }); weekdayFormats.set(locale, format); }
+  if (!format) { format = new Intl.DateTimeFormat(withLatn(locale), { weekday: "short", calendar: "gregory", timeZone: "UTC" }); weekdayFormats.set(locale, format); }
   return Array.from({ length: 7 }, (_, i) => format.format(new Date(Date.UTC(2026, 10, 1 + i, 12))));
 }
 export function calendarDateLabel(month: string, day: number, locale: string) {
@@ -24,6 +25,6 @@ export function calendarDateLabel(month: string, day: number, locale: string) {
   const date = new Date(`${month}-${String(day).padStart(2, "0")}T12:00:00Z`);
   if (date.toISOString().slice(0, 7) !== month) return "";
   let format = fullDateFormats.get(locale);
-  if (!format) { format = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", calendar: "gregory", timeZone: "UTC" }); fullDateFormats.set(locale, format); }
+  if (!format) { format = new Intl.DateTimeFormat(withLatn(locale), { weekday: "long", day: "numeric", month: "long", year: "numeric", calendar: "gregory", timeZone: "UTC" }); fullDateFormats.set(locale, format); }
   return format.format(date);
 }
