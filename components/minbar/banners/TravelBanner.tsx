@@ -30,6 +30,8 @@ export default function TravelBanner() {
   const { format } = useMinbarMoney();
 
   const href = miaPath("projectDetail", locale, PROJECT_SLUG);
+  /* Clarity, 22 Nov: on the project page itself these links reloaded the same page; they now land on the donate box. */
+  const donateHref = `${href}#pd-aside`;
 
   return (
     <section id="friday" style={{ position: "relative", zIndex: 1, padding: "0 0 56px", color: "#10212B" }}>
@@ -66,7 +68,7 @@ export default function TravelBanner() {
             />
 
             <div className="friday-prices" style={{ position: "absolute", insetInlineEnd: 18, top: 18, zIndex: 3, display: "flex", alignItems: "stretch", gap: 8 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,.95)", boxShadow: "0 14px 34px rgba(16,33,43,.3)" }}>
+              <Link href={donateHref} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,.95)", boxShadow: "0 14px 34px rgba(16,33,43,.3)" }}>
                 <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 22, fontWeight: 900, lineHeight: 1, color: "#10212B" }}>
                   {format(SEAT_USD)}
                 </b>
@@ -75,8 +77,8 @@ export default function TravelBanner() {
                   <br />
                   {t("one")}
                 </span>
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#D39A27", boxShadow: "0 14px 34px rgba(16,33,43,.3)" }}>
+              </Link>
+              <Link href={donateHref} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#D39A27", boxShadow: "0 14px 34px rgba(16,33,43,.3)" }}>
                 <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 22, fontWeight: 900, lineHeight: 1, color: "#10212B" }}>
                   {format(BUS_USD)}
                 </b>
@@ -85,7 +87,7 @@ export default function TravelBanner() {
                   <br />
                   {t("full")}
                 </span>
-              </span>
+              </Link>
             </div>
 
             <div
@@ -112,7 +114,7 @@ export default function TravelBanner() {
 
               <div className="friday-ctas mia-campaign-banner-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
                 <Link
-                  href={href}
+                  href={donateHref}
                   className="friday-cta mia-campaign-banner-button"
                   style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 24px", borderRadius: 8, background: "#A93428", color: "#fff", fontWeight: 900, fontSize: 14.5, whiteSpace: "normal", textAlign: "center", overflowWrap: "anywhere", textDecoration: "none", boxShadow: "0 10px 26px rgba(169,52,40,.4)" }}
                 >
@@ -122,7 +124,7 @@ export default function TravelBanner() {
                   </svg>
                 </Link>
                 <Link
-                  href={href}
+                  href={donateHref}
                   className="friday-cta"
                   style={{ display: "inline-flex", alignItems: "center", gap: 10, height: 46, padding: "0 24px", borderRadius: 8, background: "rgba(255,255,255,.94)", color: "#A93428", fontWeight: 900, fontSize: 14.5, whiteSpace: "nowrap", textDecoration: "none" }}
                 >

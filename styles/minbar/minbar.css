@@ -5838,3 +5838,13 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
   .mia-scope .cg-launch-wrap .cg-launcher-label { display: inline !important; }
   .mia-scope .cg-launcher-icon { width: 28px !important; height: 28px !important; }
 }
+
+/* UI/UX batch 1 2026-11-22: cart icon touch area (dead taps), recurring frequency tabs wrap instead of running off
+   the phone, impact sector figures always sit above their unit. */
+@media (max-width: 767px) {
+  .mia-head .mia-cart { position: relative; }
+  .mia-head .mia-cart::after { content: ""; position: absolute; inset: -8px -6px -16px -6px; }
+}
+div:has(> .rc-seg) { flex-wrap: wrap; }
+.rc-seg { flex: 1 1 auto; white-space: nowrap; }
+.mia-impact-sector > span:has(> .mia-impact-sector-value) { display: grid !important; gap: 2px; }

@@ -499,7 +499,7 @@ export default function ZakatPage({
 
           <div id="masarif-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: "22px 16px" }}>
             {MASARIF.map((item, i) => (
-              <div key={item.id} className="zk-masraf" style={{ position: "relative", overflow: "hidden", padding: "22px 18px", background: "var(--deep)", borderRadius: 14, display: "grid", gap: 12, transition: "transform .2s ease, box-shadow .2s ease" }}>
+              <a key={item.id} href="#zk-amounts" className="zk-masraf" style={{ textDecoration: "none", color: "inherit", cursor: "pointer", position: "relative", overflow: "hidden", padding: "22px 18px", background: "var(--deep)", borderRadius: 14, display: "grid", gap: 12, transition: "transform .2s ease, box-shadow .2s ease" }}>
                 <span aria-hidden="true" style={{ position: "absolute", top: 10, insetInlineEnd: 14, fontSize: 34, fontWeight: 900, color: "rgba(255,255,255,.14)", lineHeight: 1 }}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
@@ -512,7 +512,7 @@ export default function ZakatPage({
                   <b style={{ fontSize: 16, color: "#fff" }}>{t(`masraf_${item.id}`)}</b>
                   <span style={{ color: "rgba(255,255,255,.82)", fontSize: 12.5, lineHeight: 1.7 }}>{t(`masrafDesc_${item.id}`)}</span>
                 </span>
-              </div>
+              </a>
             ))}
           </div>
         </div>
