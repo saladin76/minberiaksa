@@ -1,1 +1,42 @@
-[]
+[
+ {
+  "ar": "تفعيل صفحة جدولة رمضان",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/ramadan-settings/route.ts (api)"
+  ]
+ },
+ {
+  "ar": "إيقاف صفحة جدولة رمضان",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/ramadan-settings/route.ts (api)"
+  ]
+ },
+ {
+  "ar": "تغيير تاريخ 1 رمضان إلى {0}",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/ramadan-settings/route.ts (pattern)"
+  ]
+ },
+ {
+  "ar": "تحديث إعدادات جدولة رمضان",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/ramadan-settings/route.ts (api)"
+  ]
+ }
+]
