@@ -1,4 +1,5 @@
 {
+  "البوابة المختارة تتولّى التبرعات بالبطاقة. اختر واحدة فقط: البركة، أو Stripe، أو زراعات (مفيدة عند تعطّل البركة). التبرع الدوري يبقى على البركة، والليرة التركية تمر عبر PayFor عند تفعيله.": "The selected gateway handles card donations. Choose one: Albaraka, Stripe or Ziraat (useful when Albaraka is down). Recurring donations stay on Albaraka, and Turkish lira goes through PayFor when it is on.",
   "بوابة زراعات كاتيليم 3D Secure. عند اختيارها تمر كل التبرعات بالبطاقة لمرة واحدة عبرها بكل العملات، ويبقى التبرع الدوري على البركة. مفيدة عند تعطل البركة.": "Ziraat Katılım 3D Secure gateway. When selected, every one-time card donation in any currency goes through it; recurring donations stay on Albaraka. Useful when Albaraka is down.",
   "أدوات المحادثة": "Conversation tools",
   "إرفاق": "Attach",

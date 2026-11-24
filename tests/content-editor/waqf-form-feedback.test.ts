@@ -38,10 +38,10 @@ function harness() {
   let nodes: Element[] = [];
   function render() {
     cursor = 0; nodes = children(loaded.exports.default({}));
-    for (const [i, input] of nodes.filter(node => node.type === "input").entries()) (input.props.ref as { current: unknown }).current = { focus: () => focus.push(i === 0 ? "name" : "onBehalf") };
+    for (const [i, input] of nodes.filter(node => node.type === "input" && !("data-waqf-count" in (node.props ?? {}))).entries()) (input.props.ref as { current: unknown }).current = { focus: () => focus.push(i === 0 ? "name" : "onBehalf") };
   }
   const click = (label: string) => { const button = nodes.find(node => node.type === "button" && text(node).includes(label)); assert.ok(button, label); (button.props.onClick as () => void)(); render(); };
-  const fill = (index: number, value: string) => { const input = nodes.filter(node => node.type === "input")[index]; (input.props.onChange as (event: unknown) => void)({ target: { value } }); render(); };
+  const fill = (index: number, value: string) => { const input = nodes.filter(node => node.type === "input" && !("data-waqf-count" in (node.props ?? {})))[index]; (input.props.onChange as (event: unknown) => void)({ target: { value } }); render(); };
   render();
   return { click, fill, nodes: () => nodes, focus, cart, navigation };
 }
@@ -56,8 +56,8 @@ test("a missing waqf certificate name focuses the right field and clicking the e
 });
 test("the waqf self suggestion works before a donor name exists, without inventing a donor name or bypassing validation", () => {
   const h = harness(); h.click("waqf.suggestSelf");
-  assert.equal(h.nodes().filter(node => node.type === "input")[1].props.value, "waqf.selfAndLoved");
-  assert.equal(h.nodes().filter(node => node.type === "input")[0].props.value, ""); assert.equal(h.focus.at(-1), "name");
+  assert.equal(h.nodes().filter(node => node.type === "input" && !("data-waqf-count" in (node.props ?? {})))[1].props.value, "waqf.selfAndLoved");
+  assert.equal(h.nodes().filter(node => node.type === "input" && !("data-waqf-count" in (node.props ?? {})))[0].props.value, ""); assert.equal(h.focus.at(-1), "name");
   h.click("common.donateNow"); assert.equal(h.cart.length, 0);
   h.fill(0, "Fixture Endower"); h.click("common.donateNow"); assert.equal(h.cart.length, 1);
 });

@@ -37,7 +37,7 @@ function postOption(a: MinbarArticle): HomeListOption {
   return {
     id: a.id,
     title: a.title,
-    subtitle: [a.category?.name, Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" })].filter(Boolean).join(" · "),
+    subtitle: [a.category?.name, Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("ar-EG-u-nu-latn", { year: "numeric", month: "short", day: "numeric" })].filter(Boolean).join(" · "),
     image: a.cover,
     createdAt: Date.parse(a.createdAt) || undefined,
   };

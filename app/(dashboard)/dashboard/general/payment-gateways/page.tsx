@@ -229,7 +229,7 @@ export default function PaymentGatewaysPage() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {dt("البوابة المختارة تتولّى كل حالات الدفع التي لا تمر عبر PayFor. يمكن اختيار واحدة فقط، وتعمل البوابتان في نفس الحالات تمامًا.")}</p>
+              {dt("البوابة المختارة تتولّى التبرعات بالبطاقة. اختر واحدة فقط: البركة، أو Stripe، أو زراعات (مفيدة عند تعطّل البركة). التبرع الدوري يبقى على البركة، والليرة التركية تمر عبر PayFor عند تفعيله.")}</p>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {MAIN_GATEWAY_CARDS.map((gateway) => {

@@ -13,6 +13,7 @@ import { CategoryProgramme } from "@/components/minbar/categories/CategorySectio
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
 import AqsaPlan from "./AqsaPlan";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * The blessed Al-Aqsa Mosque  ported from `Minbar/المسجد الأقصى.dc.html`.
  *
@@ -338,7 +339,7 @@ export default function AqsaPage({ verse, isra, projects, category = null }: Aqs
                       /* The piece count is a plain figure, isolated so an RTL
                          paragraph cannot reorder its digits. */
                       <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: 30, fontWeight: 900, lineHeight: 1 }}>
-                        {new Intl.NumberFormat(locale).format(12000)}
+                        {new Intl.NumberFormat(withLatn(locale)).format(12000)}
                       </b>
                     )}
                     <span style={{ fontSize: 13.5, color: "var(--muted)", lineHeight: 1.7 }}>{t(fact.label)}</span>

@@ -182,7 +182,7 @@ export default function UsersManagement({ scope }: { scope: Scope }) {
     const request = ++registeredRequest.current;
     setRegisteredError(false);
     try {
-      const response = await axios.get("/api/users?scope=donors&summary=registered", { timeout: 15000 });
+      const response = await axios.get("/api/users?scope=donors&summary=registered", { timeout: 45000 }); // the count can take >15 s (UI/UX review: "unavailable")
       if (request !== registeredRequest.current) return;
       const count = response.data?.registeredDonorsTotal;
       if (!Number.isInteger(count) || count < 0) throw new Error("Invalid registered count");

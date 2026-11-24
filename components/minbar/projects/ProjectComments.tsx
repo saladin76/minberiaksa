@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { signIn, useSession } from "next-auth/react";
 import type { MinbarProjectComment } from "@/lib/minbar/projects";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * Donors' messages on a project (`Comment` rows with this `campaignId`)  the
  * list the server rendered, and a form for a signed-in visitor to add one
@@ -23,7 +24,7 @@ export default function ProjectComments({ projectId, initial }: { projectId: str
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const dateFormatter = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" });
+  const dateFormatter = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long", day: "numeric" });
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();

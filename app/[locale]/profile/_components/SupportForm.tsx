@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { MESSAGE_SUBJECTS, type MessageSubject } from "@/lib/messages/subjects";
 import { useLocale, useTranslations } from "next-intl";
 
+import { withLatn } from "@/lib/i18n/latn";
 interface PreviousMessage {
   id: string;
   subject: MessageSubject | null;
@@ -191,8 +192,7 @@ export default function SupportForm({ userId }: Props) {
                   </Badge>
                   <span className="text-xs text-gray-500 flex items-center gap-1 shrink-0">
                     <Clock className="w-3 h-3" />
-                    {new Date(m.createdAt).toLocaleDateString(
-                      locale === "ar" ? "ar-EG" : undefined,
+                    {new Date(m.createdAt).toLocaleDateString(withLatn(locale) === "ar" ? "ar-EG" : undefined,
                       { day: "numeric", month: "short", year: "numeric" }
                     )}
                   </span>

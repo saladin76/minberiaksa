@@ -240,9 +240,7 @@ export default function WaqfPage({ donorName }: WaqfPageProps) {
                   <button type="button" onClick={() => setCount((c) => Math.max(1, c - 1))} aria-label="−" className="wq-step" style={stepBtn}>
                     −
                   </button>
-                  <b style={{ minWidth: 34, display: "grid", placeItems: "center", textAlign: "center", fontSize: 15.5, fontWeight: 900, borderInline: "1px solid var(--border)", fontVariantNumeric: "tabular-nums", padding: "0 4px" }}>
-                    {formatNumber(count)}
-                  </b>
+                  <input data-waqf-count="" inputMode="numeric" aria-label={unit === "meter" ? t("meterCount") : t("shareCount")} value={count} onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, "")); setCount(Math.min(WAQF_MAX_COUNT, Math.max(1, n || 1))); }} style={{ width: 48, minWidth: 34, textAlign: "center", fontSize: 16, fontWeight: 900, border: 0, borderInline: "1px solid var(--border)", background: "transparent", fontVariantNumeric: "tabular-nums", color: "inherit" }} />
                   <button type="button" onClick={() => setCount((c) => Math.min(WAQF_MAX_COUNT, c + 1))} aria-label="+" className="wq-step" style={stepBtn}>
                     +
                   </button>

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { MinbarProjectUpdate } from "@/lib/minbar/projects";
 import ProjectVideo from "./ProjectVideo";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * One campaign update, shown the way a social post reads: the association as
  * the author, when it was posted, the text, and the photo or video from the
@@ -23,7 +24,7 @@ export default function ProjectUpdatePost({ update, projectTitle }: { update: Mi
   const long = update.text.length > FOLD_AT;
   const text = long && !open ? `${update.text.slice(0, FOLD_AT).trimEnd()}…` : update.text;
   const posted = new Date(update.createdAt);
-  const date = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" }).format(posted);
+  const date = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long", day: "numeric" }).format(posted);
 
   return (
     <article style={{ display: "grid", gap: 14, padding: 18, background: "#fff", border: "1px solid var(--border)", borderRadius: 14, boxShadow: "0 1px 2px rgba(16,33,43,.04)" }}>

@@ -49,7 +49,7 @@ function fill(template: string | undefined, vars: Record<string, string | number
 
 function fmtUsd(locale: string, amount: number): string {
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat((locale ? `${locale}-u-nu-latn` : undefined), { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
   } catch {
     return `$${Math.round(amount)}`;
   }

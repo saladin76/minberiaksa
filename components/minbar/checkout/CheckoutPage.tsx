@@ -62,6 +62,7 @@ import type { MinbarCategoryTitle } from "@/lib/minbar/category-page";
 import { CardPreview } from "./CardPreview";
 import SearchablePhoneInput from "@/components/SearchablePhoneInput";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * Donor details and payment  ported from `Minbar/بيانات الدفع.dc.html`.
  *
@@ -271,7 +272,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
     const now = new Date();
     const next = firstChargeAfterCheckout(scheduleRuleFor(planFrequency, now, tz, schedule ?? null), now, tz);
     try {
-      setNextChargeText(new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short", timeZone: tz }).format(next));
+      setNextChargeText(new Intl.DateTimeFormat(withLatn(locale), { dateStyle: "full", timeStyle: "short", timeZone: tz }).format(next));
     } catch {
       setNextChargeText(next.toISOString().slice(0, 16).replace("T", " "));
     }

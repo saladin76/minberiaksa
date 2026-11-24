@@ -38,7 +38,7 @@ export async function deliverIssuedCertificate(id: string, channel: "EMAIL" | "W
     const origin = paymentPublicOrigin("https://minberiaksa.org");
     const pdf = await manualDocumentPdf(document, origin);
     const title = manualDocumentTitle(document);
-    const values: Record<string, string> = { "document.title": title, "document.recipientName": row.recipientName, "document.serial": row.serial, "document.date": document.kind === "waqf" ? document.certDate : document.kind === "receipt" ? document.issueDate : document.issuedDate || new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "Europe/Istanbul" }).format(row.issuedAt), "document.url": `${origin}/api/certificates/issued/${row.id}?token=${issuedDocumentToken(row.id)}` };
+    const values: Record<string, string> = { "document.title": title, "document.recipientName": row.recipientName, "document.serial": row.serial, "document.date": document.kind === "waqf" ? document.certDate : document.kind === "receipt" ? document.issueDate : document.issuedDate || new Intl.DateTimeFormat((locale ? `${locale}-u-nu-latn` : undefined), { dateStyle: "long", timeZone: "Europe/Istanbul" }).format(row.issuedAt), "document.url": `${origin}/api/certificates/issued/${row.id}?token=${issuedDocumentToken(row.id)}` };
     const body = manualDocumentTemplate(locale).replace(/\{\{([a-zA-Z.]+)\}\}/g, (_, key: string) => values[key] ?? "");
     state[channel] = { status: "SENDING", at: new Date().toISOString() }; await save();
     if (channel === "WHATSAPP") {
