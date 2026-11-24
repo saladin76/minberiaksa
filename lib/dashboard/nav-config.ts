@@ -56,6 +56,14 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     ],
   },
   {
+    // Ramadan scheduling (2026-11-24): donors schedule Ramadan gifts ahead; the schedules and
+    // charge calendar join this section in phase 3.
+    get group() { return dt("جدولة رمضان"); },
+    items: [
+      { key: "monthly", get title() { return dt("إعدادات جدولة رمضان"); }, href: "/dashboard/ramadan/settings", icon: "sparkles", keywords: ["ramadan", "schedule", "رمضان", "جدولة", "صدقات"] },
+    ],
+  },
+  {
     get group() { return dt("المشاريع والتصنيفات"); },
     items: [
       { key: "campaigns", get title() { return dt("المشاريع"); }, href: "/dashboard/campaigns", icon: "heart", keywords: ["projects", "campaigns", "مشاريع"] },
