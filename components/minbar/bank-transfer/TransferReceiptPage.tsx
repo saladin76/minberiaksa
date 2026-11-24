@@ -12,6 +12,7 @@ import { MAX_RECEIPT_BYTES, RECEIPT_ACCEPT_ATTR, formatBytes, inferReceiptMime, 
 import { Button } from "@/components/minbar/ds";
 import { FailIcon, PendingIcon, SuccessIcon } from "@/components/minbar/states/StatusIcons";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * The donor's side of a bank transfer  `DONATION_LOGIC_SPEC §3`:
  *
@@ -51,7 +52,7 @@ export default function TransferReceiptPage({ claim: initial, bank, token, donor
   const [claim, setClaim] = useState<DonorClaimView>(initial);
 
   const query = token ? `?t=${encodeURIComponent(token)}` : "";
-  const dateFormat = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" });
+  const dateFormat = new Intl.DateTimeFormat(withLatn(locale), { year: "numeric", month: "long", day: "numeric" });
   const money = (amount: number, currency: string) => {
     try {
       return formatMoney(amount, currency, locale);

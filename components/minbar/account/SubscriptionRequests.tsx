@@ -5,6 +5,7 @@ import { subscriptionRequestCopy, subscriptionRequestKinds, subscriptionRequestK
 import { OPEN_REQUEST_STATUSES, requestHistory, validReduction, type RequestEvent } from "@/lib/donations/subscription-request-policy";
 import { receiptMoney } from "@/lib/templates/receipt-localization";
 
+import { withLatn } from "@/lib/i18n/latn";
 type RequestRow = { id: string; kind: string; status: string; createdAt: string; updatedAt: string; requestedAmount: number | null; currency: string; note: string; resolutionNote?: string; history?: RequestEvent[] };
 export default function SubscriptionRequests({ subscriptionId }: { subscriptionId: string }) {
   const locale = useLocale(), copy = subscriptionRequestCopy(locale), follow = subscriptionRequestFollowUp(locale);
@@ -31,7 +32,7 @@ export default function SubscriptionRequests({ subscriptionId }: { subscriptionI
     return () => abort.abort();
   }, [load]);
   const open = rows.find(row => row.kind === kind && OPEN_REQUEST_STATUSES.includes(row.status));
-  const date = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date(value));
+  const date = (value: string) => new Intl.DateTimeFormat(withLatn(locale), { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Istanbul" }).format(new Date(value));
   const mutate = async (row?: RequestRow) => {
     if (busy.current || !plan || !row && (open || kind === "AMOUNT_CHANGE" && !validReduction(Number(amount), plan.amount))) return;
     if (row && !window.confirm(follow[2] + "؟")) return;

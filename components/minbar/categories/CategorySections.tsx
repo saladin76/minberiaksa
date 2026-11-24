@@ -18,6 +18,7 @@ import { ArrowGlyph } from "@/components/minbar/home/TopSections";
 import type { CategoryPageContent } from "@/lib/minbar/category-page";
 import { CategoryCardIcon } from "./CategoryCardIcon";
 
+import { withLatn } from "@/lib/i18n/latn";
 /**
  * The parts of a category's page, as separate pieces.
  *
@@ -54,7 +55,7 @@ function StatFigure({ value, label }: { value: number; label: string }) {
   return (
     <div ref={ref as React.RefObject<HTMLDivElement>} style={{ display: "grid", gap: 4 }}>
       <b dir="ltr" style={{ unicodeBidi: "isolate", fontSize: "clamp(24px,2.4vw,32px)", fontWeight: 900, color: "var(--gold)" }}>
-        {new Intl.NumberFormat(locale).format(shown)}
+        {new Intl.NumberFormat(withLatn(locale)).format(shown)}
       </b>
       <span style={{ fontSize: 12.5, color: "rgba(255,255,255,.72)" }}>{label}</span>
     </div>

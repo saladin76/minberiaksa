@@ -284,7 +284,7 @@ export default function DashboardPage() {
       const selected = getSelectedCurrency?.() ?? "DEFAULT";
       const decimals = approximate
         ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
-        : { minimumFractionDigits: 0, maximumFractionDigits: 2 };
+        : { minimumFractionDigits: 2, maximumFractionDigits: 2 }; // "$2,834,383.30", never ".3"
       const val = typeof n === "number" ? (approximate ? Math.round(n) : n) : 0;
       if (selected === "DEFAULT") {
         const sym = DASHBOARD_DISPLAY_SYMBOLS.USD ?? "$";
@@ -2089,7 +2089,7 @@ export default function DashboardPage() {
                     {donationsLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 rotate-180" />
+                      <ChevronDown className="w-4 h-4" />
                     )}
                     {dt("عرض المزيد")}</button>
                 </div>

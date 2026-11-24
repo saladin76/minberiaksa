@@ -66,6 +66,7 @@ import ChangePasswordDialog from "./_components/ChangePasswordDialog";
 import ImpactCard, { ImpactCompact } from "./_components/ImpactCard";
 import SupportForm from "./_components/SupportForm";
 
+import { withLatn } from "@/lib/i18n/latn";
 const AccountOverview = React.lazy(() => import("@/components/minbar/account/AccountOverview"));
 
 interface DonationForProfile {
@@ -791,8 +792,7 @@ const ProfilePage = () => {
                         return (
                           <tr key={donation.id} className="hover:bg-slate-50 transition-colors">
                             <td className="py-3 px-3 text-gray-600 whitespace-nowrap">
-                              {profileDonationDate(donation)?.toLocaleDateString(
-                                locale === "ar" ? "ar-EG-u-nu-latn" : undefined,
+                              {profileDonationDate(donation)?.toLocaleDateString(withLatn(locale) === "ar" ? "ar-EG-u-nu-latn" : undefined,
                                 { day: "numeric", month: "short", year: "numeric" }
                               ) ?? "—"}
                             </td>
@@ -862,7 +862,7 @@ const ProfilePage = () => {
 
     const formatBillingDate = (iso?: string | null) =>
       iso
-        ? new Date(iso).toLocaleDateString(locale === "ar" ? "ar-EG-u-nu-latn" : undefined)
+        ? new Date(iso).toLocaleDateString(withLatn(locale) === "ar" ? "ar-EG-u-nu-latn" : undefined)
         : t("subscriptions.noDate");
 
     return (
@@ -909,7 +909,7 @@ const ProfilePage = () => {
                           <span className="text-gray-800">
                             {new Date(
                               donation.subscriptionStartedAt ?? donation.createdAt
-                            ).toLocaleDateString(locale === "ar" ? "ar-EG-u-nu-latn" : undefined)}
+                            ).toLocaleDateString(withLatn(locale) === "ar" ? "ar-EG-u-nu-latn" : undefined)}
                           </span>
                         </span>
                         <span className="text-gray-800 font-medium">

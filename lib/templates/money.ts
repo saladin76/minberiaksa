@@ -11,6 +11,6 @@ export function formatTemplateMoney(amount: number | null | undefined, locale?: 
   if (currency) {
     try { digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2; } catch { /* default precision */ }
   }
-  try { return new Intl.NumberFormat(locale || "en", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(amount); }
+  try { return new Intl.NumberFormat((locale ? `${locale}-u-nu-latn` : undefined) || "en", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(amount); }
   catch { return new Intl.NumberFormat("en", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(amount); }
 }

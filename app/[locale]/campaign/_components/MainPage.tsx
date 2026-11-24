@@ -530,8 +530,7 @@ const MainPage = ({ id, locale }: {id:string; locale?: string}) => {
                           {update.title}
                         </h3>
                         <p className="text-emerald-600 text-sm mb-4">
-                          {new Date(update.createdAt).toLocaleDateString(
-                            "ar-SA"
+                          {new Date(update.createdAt).toLocaleDateString("ar-SA-u-nu-latn"
                           )}
                         </p>
                         <div

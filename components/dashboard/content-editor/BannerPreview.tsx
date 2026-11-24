@@ -189,7 +189,7 @@ export function BannerPreview({
         <p className="text-xs text-slate-500">
           {dt("بتوقيت إسطنبول:")}{" "}
           {start
-            ? new Intl.DateTimeFormat("ar", {
+            ? new Intl.DateTimeFormat("ar-u-nu-latn", {
                 timeZone: "Europe/Istanbul",
                 dateStyle: "short",
                 timeStyle: "short",
@@ -197,7 +197,7 @@ export function BannerPreview({
             : dt("بدون بداية")}{" "}
           –{" "}
           {end
-            ? new Intl.DateTimeFormat("ar", {
+            ? new Intl.DateTimeFormat("ar-u-nu-latn", {
                 timeZone: "Europe/Istanbul",
                 dateStyle: "short",
                 timeStyle: "short",

@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { generateTickerDisplay, type TickerAmountRange, type PublicTickerEntry } from "@/lib/donations/public-ticker-display";
 
+import { withLatn } from "@/lib/i18n/latn";
 interface TickerConfig {
   enabled: boolean;
   entries?: PublicTickerEntry[];
@@ -124,16 +125,16 @@ export default function LiveDonationsGlass() {
   if (!config?.enabled) return null;
 
   const formatMoney = (amount: number, currency = "USD") => {
-    if (currency !== "USD") return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+    if (currency !== "USD") return new Intl.NumberFormat(withLatn(locale), { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
     const converted = convertToCurrency(amount);
     if (converted?.convertedValue != null && converted.currency) {
       try {
-        return new Intl.NumberFormat(locale, { style: "currency", currency: converted.currency, maximumFractionDigits: 0 }).format(converted.convertedValue);
+        return new Intl.NumberFormat(withLatn(locale), { style: "currency", currency: converted.currency, maximumFractionDigits: 0 }).format(converted.convertedValue);
       } catch {
-        return `${converted.convertedValue.toLocaleString(locale)} ${converted.currency}`;
+        return `${converted.convertedValue.toLocaleString(withLatn(locale))} ${converted.currency}`;
       }
     }
-    return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat(withLatn(locale), { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
   };
 
   return (
@@ -171,7 +172,7 @@ export default function LiveDonationsGlass() {
                     {currentDonation.categoryName ? <> {t("for")} {currentDonation.categoryName}</> : null}
                   </p>
                 </div>
-                <span className="shrink-0 whitespace-nowrap text-[10px] text-gray-500 dark:text-gray-400">{currentDonation.at ? new Intl.DateTimeFormat(locale, {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Istanbul"}).format(new Date(currentDonation.at)) : ""}</span>
+                <span className="shrink-0 whitespace-nowrap text-[10px] text-gray-500 dark:text-gray-400">{currentDonation.at ? new Intl.DateTimeFormat(withLatn(locale), {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Istanbul"}).format(new Date(currentDonation.at)) : ""}</span>
               </div>
               <div className="h-px w-full bg-gradient-to-r from-transparent via-sky-400/30 to-transparent" />
             </Card>

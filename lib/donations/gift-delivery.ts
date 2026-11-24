@@ -50,7 +50,7 @@ function escapeHtml(value: string): string {
 
 export function formatAmount(amount: number, currency: string, locale: string): string {
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+    return new Intl.NumberFormat((locale ? `${locale}-u-nu-latn` : undefined), { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
   } catch {
     return `${amount} ${currency}`;
   }

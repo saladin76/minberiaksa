@@ -134,7 +134,7 @@ export function updateContextFor(source: UpdateSource, locale: string, communica
   const thumbnail = videoThumbnailFor(source.videoUrl);
   let date = source.createdAt.toISOString().slice(0, 10);
   try {
-    date = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" }).format(source.createdAt);
+    date = new Intl.DateTimeFormat((locale ? `${locale}-u-nu-latn` : undefined), { year: "numeric", month: "long", day: "numeric" }).format(source.createdAt);
   } catch {
     /* unknown locale: ISO date */
   }
