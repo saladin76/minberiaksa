@@ -127,12 +127,13 @@ export default function MobileBottomNav({ signedIn = false }: { signedIn?: boole
   }, []);
 
   /* Cart and checkout are a finishing flow: the bar and the floating buttons step aside there (Clarity, 22 Nov). */
-  const finishing = ["cart", "checkout"].includes(routeForPathname(pathname ?? "") ?? "");
+  const finishingRoute = routeForPathname(pathname ?? "") ?? "";
+  const finishing = ["cart", "checkout"].includes(finishingRoute);
   useEffect(() => {
     const root = document.documentElement;
-    if (finishing) root.dataset.miaFinishing = "1"; else delete root.dataset.miaFinishing;
-    return () => { delete root.dataset.miaFinishing; };
-  }, [finishing]);
+    if (finishing) { root.dataset.miaFinishing = "1"; root.dataset.miaFinishingRoute = finishingRoute; } else { delete root.dataset.miaFinishing; delete root.dataset.miaFinishingRoute; }
+    return () => { delete root.dataset.miaFinishing; delete root.dataset.miaFinishingRoute; };
+  }, [finishing, finishingRoute]);
 
   const activeRoute: MinbarRoute | null =
     current === "projectDetail" ? "projects" : current === "donationSuccess" ? "home" : current;
