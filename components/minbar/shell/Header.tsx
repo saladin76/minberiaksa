@@ -586,7 +586,7 @@ export default function Header({
                   className="mia-phone-pill"
                 >
                   <GlobeIcon size={15} />
-                  <span className="mia-phone-pill__value" dir={currentLocaleMeta.direction}>{currentLocaleMeta.nativeLabel}</span>
+                  <span className="mia-phone-pill__value" dir="ltr" title={currentLocaleMeta.nativeLabel}>{locale.toUpperCase()}</span>
                   <ChevronIcon />
                 </button>
                 <button

@@ -5848,3 +5848,17 @@ html[data-mia-form="1"] .mia-scope .cg-launch-wrap { display: none !important; }
 div:has(> .rc-seg) { flex-wrap: wrap; }
 .rc-seg { flex: 1 1 auto; white-space: nowrap; }
 .mia-impact-sector > span:has(> .mia-impact-sector-value) { display: grid !important; gap: 2px; }
+
+/* ── Phones, polish 2026-11-24 ─────────────────────────────────────────────────────────────────────────
+   The giving assistant as a labelled bar: an older rule turned the draggable launcher into a 50 px circle and hid
+   its label with !important, and these selectors are stronger. The wide wrap lets taps through except on the bar.
+   Checkout has no bottom bar, so the space kept for it goes there. */
+@media (max-width: 767px) {
+  html body .mia-scope .cg-launch-wrap[data-draggable="1"] { left: 0 !important; right: 0 !important; top: auto !important; transform: none !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 86px) !important; display: flex !important; justify-content: center !important; pointer-events: none; }
+  html body .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher { pointer-events: auto; max-width: none !important; width: auto !important; height: 38px !important;
+    padding: 0 14px 0 5px !important; border-radius: 999px !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; }
+  html body .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-icon { width: 28px !important; height: 28px !important; flex-basis: 28px !important; }
+  html body .mia-scope .cg-launch-wrap[data-draggable="1"] .cg-launcher-label { display: inline !important; position: static !important; width: auto !important; height: auto !important; font-size: 13.5px; font-weight: 800; white-space: nowrap; }
+  html[data-mia-finishing-route="checkout"] .mia-scope::after { display: none; }
+}
