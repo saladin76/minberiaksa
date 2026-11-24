@@ -1,4 +1,4 @@
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 /** Date keys represent the reporting calendar, independent of browser/server
  * timezone. UTC noon is only a stable carrier for formatting that date. */
 export function calendarMonthLayout(month: string) {

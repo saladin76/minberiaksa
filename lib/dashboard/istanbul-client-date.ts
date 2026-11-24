@@ -1,4 +1,4 @@
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 const ISTANBUL_TIME_ZONE = "Europe/Istanbul";
 
 const istanbulDateKeyFormatter = new Intl.DateTimeFormat("en-CA", {

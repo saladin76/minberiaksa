@@ -11,7 +11,7 @@ import { AUDIENCE_SELECTION_MAX } from "./audience-limits";
 import { AUDIENCE_LIST_PREFIX, addDonorMembers, createAudienceList } from "./audience-list-service";
 import { createCampaign } from "./campaign-service";
 
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 /**
  * "Send this update to the people who made it happen."
  *

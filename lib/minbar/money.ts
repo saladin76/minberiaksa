@@ -1,6 +1,6 @@
 import { SUPPORTED_CURRENCY_OPTIONS } from "@/lib/supported-currencies";
 
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 /**
  * One currency formatter for the public site.
  *

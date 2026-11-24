@@ -15,7 +15,7 @@ import { MANUAL_DOCUMENT_TEMPLATE, MANUAL_DOCUMENT_TEXT, manualDocumentTemplate 
 import { INSTITUTION_EMAIL_LOGO_PATH } from "../templates/email-assets";
 import { issuedDocumentToken, manualDocumentPdf, manualDocumentTitle, type ManualDocument } from "./manual-render";
 
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 export async function deliverIssuedCertificate(id: string, channel: "EMAIL" | "WHATSAPP") {
   const token = randomUUID(), now = new Date();
   const claim = await prisma.issuedCertificate.updateMany({ where: { id, OR: [{ deliveryLockUntil: null }, { deliveryLockUntil: { isSet: false } }, { deliveryLockUntil: { lt: now } }] }, data: { deliveryLock: token, deliveryLockUntil: new Date(now.getTime() + 600_000) } });

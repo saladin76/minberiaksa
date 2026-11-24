@@ -1,4 +1,4 @@
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 /** Use the payment's stored USD snapshot, never today's exchange rate. */
 export function donationUsdAmount(donation: { amountUSD?: number | null; amount: number; currency: string }): number | null {
   if (typeof donation.amountUSD === "number" && Number.isFinite(donation.amountUSD)) return donation.amountUSD;

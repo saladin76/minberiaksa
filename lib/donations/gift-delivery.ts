@@ -18,7 +18,7 @@ import { miaPath } from "@/lib/minbar/routes";
 import { writeAuditLog } from "@/lib/audit-log";
 import { donationCampaignTitle } from "@/lib/templates/donation-projects";
 
-import { withLatn } from "@/lib/i18n/latn";
+import { withLatn } from "../i18n/latn";
 /**
  * Telling the recipient of a gifted donation.
  *
