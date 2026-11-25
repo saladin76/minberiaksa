@@ -198,27 +198,31 @@ interface SubscriptionRow {
   referral: { id: string; code: string } | null;
 }
 
-type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
+type RecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY" | "RAMADAN";
 type FrequencyFilter = "all" | RecurringFrequency;
 
+// Ramadan plans have their own dashboard section; the cadence cards stay the three checkout cadences.
 const FREQUENCIES: RecurringFrequency[] = ["DAILY", "FRIDAY", "MONTHLY"];
-const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("تبرع كل جمعة"); }, get MONTHLY() { return dt("شهري"); } };
+const FREQUENCY_LABEL_AR: Record<string, string> = { get DAILY() { return dt("يومي"); }, get FRIDAY() { return dt("تبرع كل جمعة"); }, get MONTHLY() { return dt("شهري"); }, get RAMADAN() { return dt("جدولة رمضان"); } };
 /** One hue per cadence, reused by the cards, the stacked chart and the table badges. */
 const FREQUENCY_COLOR: Record<RecurringFrequency, string> = {
   DAILY: "#2c8b5d",
   FRIDAY: "#d39a27",
   MONTHLY: "#234a60",
+  RAMADAN: "#ab422f",
 };
 const FREQUENCY_BADGE_CLASS: Record<RecurringFrequency, string> = {
   DAILY: "bg-emerald-50 text-emerald-700 border-emerald-200",
   FRIDAY: "bg-amber-50 text-amber-800 border-amber-200",
   MONTHLY: "bg-sky-50 text-sky-800 border-sky-200",
+  RAMADAN: "bg-rose-50 text-rose-800 border-rose-200",
 };
 /** How the frequency splits the per-charge amount into a monthly figure  shown in notes. */
 const FREQUENCY_SCALE_NOTE: Record<RecurringFrequency, string> = {
   get DAILY() { return dt("× ٣٠٫٤ دفعة شهريًا"); },
   get FRIDAY() { return dt("× ٤٫٣٥ دفعة شهريًا"); },
   get MONTHLY() { return dt("دفعة واحدة شهريًا"); },
+  get RAMADAN() { return dt("أيام محددة في رمضان"); },
 };
 
 function FrequencyBadge({ frequency }: { frequency?: RecurringFrequency | null }) {

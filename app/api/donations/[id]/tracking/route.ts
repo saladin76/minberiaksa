@@ -64,7 +64,7 @@ interface TrackingResponseOk {
   status: "paid";
   success: true;
   paymentInfoAvailable: true;
-  donationType: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY";
+  donationType: "ONE_TIME" | "DAILY" | "FRIDAY" | "MONTHLY" | "RAMADAN";
   paymentMethod: string;
   browserAdvancedMatching?: Record<string, string>;
 }

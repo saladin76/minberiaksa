@@ -27,12 +27,13 @@ import { exportCountryName, exportLanguageName, exportPaymentMethod, exportPayme
 export type ExportFormat = "xlsx" | "csv";
 
 /** Plan cadence as stored on `Subscription.frequency`. */
-export type ExportRecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY";
+export type ExportRecurringFrequency = "DAILY" | "FRIDAY" | "MONTHLY" | "RAMADAN";
 
 const FREQUENCY_LABEL_AR: Record<ExportRecurringFrequency, string> = {
   get DAILY() { return dt("يومي"); },
   get FRIDAY() { return dt("تبرع كل جمعة"); },
   get MONTHLY() { return dt("شهري"); },
+  get RAMADAN() { return dt("جدولة رمضان"); },
 };
 
 export interface DonationExportRow {
@@ -1292,7 +1293,7 @@ function addDetailedAnalysis(wb: ExcelJS.Workbook, input: DonationExportInput) {
     [dt("ملغي"), plans.filter(s => s.status === "CANCELLED").length, ""],
     [dt("تعذّر الخصم"), plans.filter(s => s.status === "PAYMENT_FAILED").length, ""],
     [dt("اشتراكات جديدة في الفترة"), plans.filter(s => (!input.period?.start || s.createdAt >= input.period.start) && (!input.period?.end || s.createdAt <= input.period.end)).length, dt("حسب تاريخ إنشاء الاشتراك ضمن النطاق المشمول")],
-    ...(["DAILY", "FRIDAY", "MONTHLY"] as const).map(f => [FREQUENCY_LABEL_AR[f], verified.filter(s => (s.frequency ?? "MONTHLY") === f).length, dt("اشتراكات نشطة مؤكدة")] as ExcelJS.CellValue[]),
+    ...(["DAILY", "FRIDAY", "MONTHLY", "RAMADAN"] as const).map(f => [FREQUENCY_LABEL_AR[f], verified.filter(s => (s.frequency ?? "MONTHLY") === f).length, dt("اشتراكات نشطة مؤكدة")] as ExcelJS.CellValue[]),
     [dt("متوقع شهريًا (USD)"), fmtMoney(verified.reduce((sum, s) => sum + (s.monthlyEquivalentUSD ?? 0), 0)), dt("توقع لأصل التبرع فقط؛ ليس إيرادًا محصّلًا")],
     [dt("نشط بلا قيمة USD"), verified.filter(s => s.monthlyEquivalentUSD == null).length, dt("مستبعد من توقع USD")],
     [dt("دفعات نتائج التقرير"), selectedPaid.filter(r => r.subscriptionId).length, dt("دفعات متكررة ناجحة ضمن الصفوف المصدّرة")],

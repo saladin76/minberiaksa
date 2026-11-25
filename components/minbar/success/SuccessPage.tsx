@@ -319,7 +319,7 @@ export default function SuccessPage({
                     donor needs now is the cadence and the next date. */}
                 <b style={{ fontSize: 15.5, fontWeight: 900, color: "#fff" }}>{t("recurringActivated")}</b>
                 <span style={{ color: "rgba(255,255,255,.72)", fontSize: 13.5 }}>
-                  {donation.frequency && nextChargeText
+                  {donation.frequency && donation.frequency !== "RAMADAN" && nextChargeText
                     ? tRecurring("planActiveLead", { cadence: tRecurring(cadenceKey(donation.frequency)), date: nextChargeText })
                     : t("recurringManageNote")}
                 </span>

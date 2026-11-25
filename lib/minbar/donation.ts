@@ -42,7 +42,7 @@ export interface MinbarDonationSummary {
   /** `true` when the donation was charged against a recurring plan. */
   recurring: boolean;
   /** The plan's cadence  `DAILY | FRIDAY | MONTHLY`  or `null` on a one-time gift. */
-  frequency: "DAILY" | "FRIDAY" | "MONTHLY" | null;
+  frequency: "DAILY" | "FRIDAY" | "MONTHLY" | "RAMADAN" | null;
   /** ISO  when the plan charges next; the first instalment was this donation. */
   nextChargeAt: string | null;
   /** Confirmed. A pending transfer is not shown as a completed donation. */

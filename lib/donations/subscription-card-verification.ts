@@ -33,7 +33,7 @@ export async function completeSubscriptionCardVerification(db: PrismaClient, id:
       const changed = await tx.subscription.updateMany({
         where: { id: row.subscriptionId, donorId: row.donorId, provider: "ALBARAKA", status: { not: "CANCELLED" },
           ...(row.oldPaymentCardId ? { paymentCardId: row.oldPaymentCardId } : {}), amount: row.amount, currency: row.currency,
-          ...subscriptionFrequencyWhere(row.frequency), teamSupport: row.teamSupport, coverFees: row.coverFees,
+          ...(row.frequency === "RAMADAN" ? { frequency: "RAMADAN" as const } : subscriptionFrequencyWhere(row.frequency)), teamSupport: row.teamSupport, coverFees: row.coverFees,
           ...(row.nextBillingDate ? { nextBillingDate: row.nextBillingDate } : {}),
           AND: [billingLeaseAvailable(now), { OR: [{ amountChangeLock: null }, { amountChangeLock: { isSet: false } }] },
             ...(!row.oldPaymentCardId ? [{ OR: [{ paymentCardId: null }, { paymentCardId: { isSet: false as const } }] }] : []),
