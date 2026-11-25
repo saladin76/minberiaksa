@@ -1336,6 +1336,9 @@ enum RecurringFrequency {
   DAILY
   FRIDAY
   MONTHLY
+  /// Ramadan scheduling (2026-11-24): chosen Ramadan days, charged by the
+  /// scheduler from `scheduleRule {kind:"ramadan"}`. Never a checkout cadence.
+  RAMADAN
 }
 
 enum DonationStatus {
