@@ -34,7 +34,13 @@ import { normalizeDonationCurrencyCode } from "@/lib/exchange/convert-amount-in-
 import { getDonorCountryCodeForSnapshot } from "@/lib/donations/donor-country-code";
 import { dispatchDonationPaid, dispatchEvent } from "@/lib/events/dispatch";
 import { sendDonationFailedConversions } from "@/lib/tracking/donation-conversion-server";
-import { classifyRecurringDecline, nextAttemptAfterDecline, nextChargeAfterPayment, shouldTellDonorAboutDecline } from "./recurring-schedule";
+import { classifyRecurringDecline, nextAttemptAfterDecline, nextChargeAfterPayment, ramadanAdvance, ramadanStartDateFrom, shouldTellDonorAboutDecline } from "./recurring-schedule";
+
+/** 1 Ramadan from the dashboard, read at each charge so a moon-sighting change moves the next days at once. */
+async function ramadanStartDate(): Promise<string> {
+  const row = await prisma.recurringPageSettings.findUnique({ where: { id: "ramadan" } }).catch(() => null);
+  return ramadanStartDateFrom(row?.configuration);
+}
 import { inspectRecurringBillingSafety, applyRecurringBillingSafety, deferClosedFridayWindow } from "./recurring-billing-safety";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
 
@@ -145,6 +151,15 @@ export async function chargeDueAlbarakaSubscriptions(options: { now?: Date; dryR
     orderBy: { nextBillingDate: "asc" },
     take: limit,
   });
+  // Ramadan plans: their own query, so the regular one above (and everything that relies on its
+  // shape) is unchanged. Only rows that really are RAMADAN are added, each once.
+  const ramadanRows = await prisma.subscription.findMany({
+    where: { provider: "ALBARAKA", status: "ACTIVE", frequency: "RAMADAN", paymentCardId: { not: null }, nextBillingDate: { lte: now } },
+    include: { items: true, categoryItems: true, paymentCard: true },
+    orderBy: { nextBillingDate: "asc" },
+    take: limit,
+  }).catch(() => []);
+  for (const row of Array.isArray(ramadanRows) ? ramadanRows : []) if (row?.frequency === "RAMADAN" && !due.some((d) => d.id === row.id)) due.push(row);
   summary.scanned = due.length;
 
   for (const sub of due) {
@@ -332,7 +347,8 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
   }
 
   // ── Settle ───────────────────────────────────────────────────────────────
-  const nextBillingDate = rehearsal ? due : nextChargeAfterPayment(sub, now);
+  const ramadan = !rehearsal && sub.frequency === "RAMADAN" ? ramadanAdvance(sub.scheduleRule, await ramadanStartDate(), sub.items.map((item) => item.campaignId), now) : null;
+  const nextBillingDate = rehearsal ? due : ramadan ? ramadan.nextBillingDate : nextChargeAfterPayment(sub, now);
   await prisma.$transaction(async (tx) => {
     const fresh = await tx.donation.findUnique({ where: { id: donation.id }, include: { items: true, categoryItems: true } });
     if (!fresh || fresh.paidAt) return;
@@ -361,9 +377,15 @@ async function chargeOne(sub: DueSubscription, now: Date, dryRun: boolean, rehea
     for (const item of fresh.categoryItems) {
       await tx.category.update({ where: { id: item.categoryId }, data: { currentAmount: { increment: item.amountUSD ?? item.amount } } });
     }
+    if (ramadan && !ramadan.done) {
+      // The next chosen day's amount, split over the plan's projects, is what the next run bills.
+      await tx.subscriptionItem.deleteMany({ where: { subscriptionId: sub.id } });
+      await tx.subscriptionItem.createMany({ data: ramadan.items.map((item) => ({ subscriptionId: sub.id, campaignId: item.campaignId, amount: item.amount, amountUSD: item.amount })) });
+    }
     await tx.subscription.update({
       where: { id: sub.id },
-      data: { lastBillingDate: now, nextBillingDate, chargeAttempts: 0, lastChargeError: null },
+      data: { lastBillingDate: now, nextBillingDate, chargeAttempts: 0, lastChargeError: null,
+        ...(ramadan ? (ramadan.done ? { status: "CANCELLED" as const } : { amount: ramadan.amount, amountUSD: ramadan.amount }) : {}) },
     });
   });
 

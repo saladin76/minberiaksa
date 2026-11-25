@@ -596,6 +596,8 @@ export function nextAttemptAfterDecline(
   kind: RecurringDeclineKind,
 ): Date | null {
   if (kind === "hard" || attempt >= MAX_CONSECUTIVE_DECLINES) return null;
+  // A Ramadan day is retried hourly like any plan; when the ladder runs out the plan stops (no monthly fallback).
+  if (plan.frequency === "RAMADAN") return nextRetryForPlan(plan, attempt, now);
   return nextRetryForPlan(plan, attempt, now) ?? nextChargeForPlan(plan, now);
 }
 
@@ -603,3 +605,6 @@ export function nextAttemptAfterDecline(
 export function shouldTellDonorAboutDecline(attempt: number, stopped: boolean, kind: RecurringDeclineKind): boolean {
   return kind !== "merchant" && (attempt === 1 || stopped);
 }
+
+// Ramadan plans (frequency RAMADAN): the scheduler reaches their billing step through this module.
+export { ramadanAdvance, ramadanStartDateFrom } from "./ramadan-billing";
