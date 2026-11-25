@@ -82,6 +82,17 @@ export async function POST(req: NextRequest) {
       target.searchParams.set("cardUpdate", result.ok ? "success" : "failed");
       if (result.ok) target.searchParams.set("verificationId", verificationId);
     } catch { /* No Sale call, and the old card remains the authority. */ }
+    // A Ramadan plan's first card authentication returns the donor to the Ramadan page, which
+    // re-checks the verification on the server before saying it worked.
+    try {
+      const v = await prisma.subscriptionCardVerification.findUnique({ where: { id: verificationId }, select: { frequency: true, subscriptionId: true } });
+      if (v?.frequency === "RAMADAN") {
+        const ok = target.searchParams.get("cardUpdate") === "success", back = new URL(`/${locale}/ramadan`, origin);
+        back.searchParams.set("scheduled", ok ? "success" : "failed"); back.searchParams.set("planId", v.subscriptionId);
+        if (ok) back.searchParams.set("verificationId", verificationId);
+        return NextResponse.redirect(back, 303);
+      }
+    } catch { /* the profile result page still reports it */ }
     return NextResponse.redirect(target, 303);
   }
 
