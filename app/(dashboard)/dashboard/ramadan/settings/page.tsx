@@ -8,6 +8,7 @@ import { readDashboardJson } from "@/lib/dashboard/read-json";
 import { dashDir, dt, dtMaybe } from "@/lib/dashboard/i18n";
 import { useDashboardUnsavedChanges } from "@/hooks/useDashboardUnsavedChanges";
 import type { RamadanSettings } from "@/lib/minbar/ramadan-settings";
+import { RamadanResults } from "./RamadanResults";
 import { SuggestedTeamSupportSection, type SuggestedTeamSupportPayload } from "../../campaigns/_components/SuggestedTeamSupportSection";
 
 type Document = { settings: RamadanSettings; revision: string | null; projects: { id: string; title: string }[] };
@@ -61,6 +62,7 @@ export default function RamadanSettingsPage() {
     </header>
     {error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}<Button type="button" variant="outline" className="ms-3" disabled={saving} onClick={reload}>{document ? dt("إعادة تحميل الإعدادات") : dt("إعادة المحاولة")}</Button></div> : null}
     {saved && !dirty ? <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{dt("تم الحفظ والتحقق من النسخة المحفوظة")}</p> : null}
+    <RamadanResults />
     {!document && !error ? <p role="status" className="p-8 text-center">{dt("جارٍ التحميل…")}</p> : null}
     {document && draft ? <fieldset disabled={saving} className="space-y-5">
       <Card className="space-y-3 p-5">
