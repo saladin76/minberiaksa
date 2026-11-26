@@ -36,6 +36,7 @@ export default function HomePage({
   quick,
   banners,
   signedIn,
+  ramadanSection = null,
 }: {
   /** The visible sections after the quick-donation bar, in display order. */
   sections: HomeSectionId[];
@@ -45,6 +46,8 @@ export default function HomePage({
   /** Dashboard banners, already rendered on the server, one node per slot. */
   banners: { top: ReactNode; middle: ReactNode; bottom: ReactNode };
   signedIn: boolean;
+  /** Ramadan scheduling section, only while the dashboard shows it (server-decided). */
+  ramadanSection?: ReactNode;
 }) {
   const video = useVideoModal();
 
@@ -94,6 +97,7 @@ export default function HomePage({
       <Hero onPlayIntro={video.open} />
       {/* Sticky under the header from here on  the design places it right under the hero. */}
       <QuickDonateBar config={quick.config} projects={quick.projects} />
+      {ramadanSection}
       {sections.map((id) => (
         /* Each section is its own Suspense boundary, so React hydrates it in
            its own task and yields to the browser in between. One boundary made

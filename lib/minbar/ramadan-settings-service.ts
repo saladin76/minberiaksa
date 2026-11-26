@@ -21,6 +21,25 @@ export async function publicRamadanSettings() {
   return (await readRamadanSettings()).settings;
 }
 
+/** Moves every active Ramadan plan with a card to the new 1 Ramadan (see ramadanRealign). */
+export async function realignRamadanPlans(oldStart: string, newStart: string): Promise<{ moved: number; ended: number }> {
+  const { ramadanRealign } = await import("@/lib/donations/ramadan-billing");
+  const plans = await prisma.subscription.findMany({ where: { frequency: "RAMADAN", status: "ACTIVE", paymentCardId: { not: null } }, select: { id: true, scheduleRule: true, lastBillingDate: true, items: { select: { campaignId: true } } } });
+  let moved = 0, ended = 0;
+  const now = new Date();
+  for (const plan of plans) {
+    const next = ramadanRealign(plan.scheduleRule, oldStart, newStart, plan.lastBillingDate, plan.items.map((i) => i.campaignId), now);
+    await prisma.$transaction(async (tx) => {
+      if (next.done) { await tx.subscription.update({ where: { id: plan.id }, data: { status: "CANCELLED", nextBillingDate: null } }); ended += 1; return; }
+      await tx.subscriptionItem.deleteMany({ where: { subscriptionId: plan.id } });
+      await tx.subscriptionItem.createMany({ data: next.items.map((i) => ({ subscriptionId: plan.id, campaignId: i.campaignId, amount: i.amount, amountUSD: i.amount })) });
+      await tx.subscription.update({ where: { id: plan.id }, data: { nextBillingDate: next.nextBillingDate, amount: next.amount, amountUSD: next.amount, chargeAttempts: 0 } });
+      moved += 1;
+    });
+  }
+  return { moved, ended };
+}
+
 export async function ramadanProjectOptions() {
   return prisma.campaign.findMany({ where: { AND: [{ isActive: true }, NOT_SOFT_DELETED] }, select: { id: true, title: true }, orderBy: [{ title: "asc" }, { id: "asc" }] });
 }

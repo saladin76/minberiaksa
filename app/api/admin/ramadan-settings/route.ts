@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
 import { auditActorFromDashboardSession, writeAuditLog } from "@/lib/audit-log";
 import { ramadanSettingsSchema } from "@/lib/minbar/ramadan-settings-validation";
-import { readRamadanSettings, ramadanProjectOptions, saveRamadanSettings, RamadanSettingsConflict, RamadanProjectUnavailable } from "@/lib/minbar/ramadan-settings-service";
+import { readRamadanSettings, ramadanProjectOptions, saveRamadanSettings, realignRamadanPlans, RamadanSettingsConflict, RamadanProjectUnavailable } from "@/lib/minbar/ramadan-settings-service";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
@@ -28,10 +28,11 @@ export async function PUT(request: NextRequest) {
     const before = await readRamadanSettings().catch(() => null);
     const saved = await saveRamadanSettings(body.data.settings, body.data.revision);
     const s = saved.settings;
+    const realigned = before && before.revision !== null && s.startDate !== before.settings.startDate ? await realignRamadanPlans(before.settings.startDate, s.startDate) : null;
     await writeAuditLog({ ...auditActorFromDashboardSession(session!), stream: "TEAM", action: "ramadan.settings.update", entityType: "RecurringPageSettings", entityId: "ramadan",
       messageAr: s.enabled !== before?.settings.enabled ? (s.enabled ? "تفعيل صفحة جدولة رمضان" : "إيقاف صفحة جدولة رمضان") : before && s.startDate !== before.settings.startDate ? `تغيير تاريخ 1 رمضان إلى ${s.startDate}` : "تحديث إعدادات جدولة رمضان",
       messageEn: "Updated Ramadan scheduling settings",
-      metadata: { enabled: s.enabled, hijriYear: s.hijriYear, startDate: s.startDate, previousStartDate: before?.settings.startDate ?? null, startConfirmed: s.startConfirmed, projects: s.projectIds.length } });
+      metadata: { enabled: s.enabled, hijriYear: s.hijriYear, startDate: s.startDate, previousStartDate: before?.settings.startDate ?? null, startConfirmed: s.startConfirmed, projects: s.projectIds.length, homeBanner: s.homeBanner, homeSection: s.homeSection, plansMoved: realigned?.moved ?? 0, plansEnded: realigned?.ended ?? 0 } });
     return NextResponse.json(saved, { headers });
   } catch (error) {
     const conflict = error instanceof RamadanSettingsConflict, unavailable = error instanceof RamadanProjectUnavailable;

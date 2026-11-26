@@ -13,6 +13,8 @@ export const ramadanSettingsSchema = z.object({
   byCurrency: z.record(amounts).refine(value => Object.keys(value).every(code => SUPPORTED_CURRENCY_CODES.includes(code)), "اختر عملة مدعومة للمبالغ المقترحة"),
   projectIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i).transform(id => id.toLowerCase())).refine(ids => new Set(ids).size === ids.length, "المشروع مكرر في القائمة"),
   doubleLast10: z.boolean(),
+  homeBanner: z.boolean().default(false),
+  homeSection: z.boolean().default(false),
 }).strict().superRefine((value, context) => {
   if (value.enabled && !value.projectIds.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ["projectIds"], message: "اختر مشروعًا منشورًا واحدًا على الأقل قبل تفعيل الخدمة" });
 });

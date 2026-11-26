@@ -14,6 +14,9 @@ import { readHomeLayout, resolveHomeLists, visibleSections } from "@/lib/minbar/
 import MinbarMessages from "@/components/minbar/MinbarMessages";
 import HomePage from "@/components/minbar/home/HomePage";
 import PageBanners from "@/components/minbar/banners/PageBanners";
+import { publicRamadanSettings } from "@/lib/minbar/ramadan-settings-service";
+import { RamadanHomeBanner, RamadanHomeSection } from "@/components/minbar/ramadan/RamadanHome";
+import { withLatn } from "@/lib/i18n/latn";
 
 /**
  * Namespaces this page renders, on top of the shell bundle: its own copy, the
@@ -82,10 +85,20 @@ export default async function Home({ params }: Props) {
   // dashboard's homepage layout (`lib/minbar/home-layout.ts`); its defaults are
   // the approved design. The quick-donation select lists whatever its own
   // settings allow, which may be every project.
-  const [{ quick, quickProjects, layout, lists }, session] = await Promise.all([
+  const [{ quick, quickProjects, layout, lists }, session, ramadan] = await Promise.all([
     cachedHomeData(locale),
     getPublicServerSession(),
+    publicRamadanSettings().catch(() => null),
   ]);
+  // Ramadan scheduling on the homepage: each piece has its own dashboard switch and needs the
+  // service itself switched on, so a visitor is never sent to a hidden page.
+  const showRamadanBanner = Boolean(ramadan?.enabled && ramadan.homeBanner), showRamadanSection = Boolean(ramadan?.enabled && ramadan.homeSection);
+  const ramadanProps = ramadan ? (() => {
+    const [y, m, d] = ramadan.startDate.split("-").map(Number), start = Date.UTC(y, m - 1, d);
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
+    const daysLeft = Math.ceil((start - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86_400_000);
+    return { locale, hijriYear: ramadan.hijriYear, daysLeft, startDate: ramadan.startDate, startLabel: new Intl.DateTimeFormat(withLatn(locale), { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(start)) };
+  })() : null;
 
   const organisationSchema = siteIdentitySchemas(locale);
 
@@ -98,17 +111,18 @@ export default async function Home({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organisationSchema) }}
       />
-      <MinbarMessages locale={locale} namespaces={NAMESPACES}>
+      <MinbarMessages locale={locale} namespaces={showRamadanBanner || showRamadanSection ? [...NAMESPACES, "ramadan"] : NAMESPACES}>
         <HomePage
           sections={visibleSections(layout)}
           lists={lists}
           quick={{ config: quick, projects: quickProjects }}
           banners={{
-            top: <PageBanners locale={locale} page="home" slot="top" />,
+            top: <>{showRamadanBanner && ramadanProps ? <RamadanHomeBanner {...ramadanProps} /> : null}<PageBanners locale={locale} page="home" slot="top" /></>,
             middle: <PageBanners locale={locale} page="home" slot="middle" />,
             bottom: <PageBanners locale={locale} page="home" slot="bottom" />,
           }}
           signedIn={!!session?.user}
+          ramadanSection={showRamadanSection && ramadanProps ? <RamadanHomeSection {...ramadanProps} /> : null}
         />
       </MinbarMessages>
     </>
