@@ -3568,6 +3568,12 @@
     "signInWithGoogle": "Google ile giriş yap"
   },
   "ramadan": {
+    "hadithRef": "Buhârî ve Müslim",
+    "summaryTitle": "Plan özeti",
+    "mapTitle": "Bağışların aya dağılımı",
+    "firstCharge": "İlk bağış",
+    "lastCharge": "Son bağış",
+    "completeCardHint": "Onaylamak için kart bilgilerini ve CVC'yi girin, koşulları kabul edin",
     "metaTitle": "Ramazan bağışlarını planla | Minber-i Aksâ",
     "metaDescription": "Ramazan bağışlarınızı tüm ay için önceden belirleyin; seçtiğiniz gün ve saatlerde otomatik olarak yapılsın.",
     "title": "Ramazan bağış planı",

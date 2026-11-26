@@ -3568,6 +3568,12 @@
     "signInWithGoogle": "Mit Google anmelden"
   },
   "ramadan": {
+    "hadithRef": "Bukhari and Muslim",
+    "summaryTitle": "Schedule summary",
+    "mapTitle": "Donations across the month",
+    "firstCharge": "First donation",
+    "lastCharge": "Last donation",
+    "completeCardHint": "Enter the card details and CVC and accept the terms to confirm",
     "metaTitle": "Schedule your Ramadan giving | Minber al-Aqsa",
     "metaDescription": "Set your Ramadan donations for the whole month in advance; they go out automatically on the days and at the times you choose.",
     "title": "Ramadan giving schedule",
@@ -3591,7 +3597,7 @@
     "plan_last10": "The last ten nights",
     "plan_last10_desc": "From the 21st to the 30th",
     "plan_witr": "The odd nights",
-    "plan_witr_desc": "Nights 21, 23, 25, 27 and 29",
+    "plan_witr_desc": "Nights 21, 23, 25, 27, 29",
     "plan_custom": "Choose the days myself on the calendar",
     "daysCount": "{count, plural, one {# day} other {# days}}",
     "amountTitle": "Daily amount",
