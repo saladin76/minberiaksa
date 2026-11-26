@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || !/^[a-f0-9]{24}$/i.test(body.cardId || "") || !/^\d{3,4}$/.test(body.cvc || "") || body.consent !== true) return NextResponse.json({ error: "INVALID_CARD_AUTHORIZATION" }, { status: 400, headers: noStore });
   try {
+    // Schedules whose bank card check was never finished are closed after an hour.
+    await prisma.subscription.updateMany({ where: { frequency: "RAMADAN", status: "ACTIVE", createdAt: { lt: new Date(Date.now() - 3_600_000) }, OR: [{ paymentCardId: null }, { paymentCardId: { isSet: false } }] }, data: { status: "CANCELLED" } }).catch(() => {});
     const { settings } = await readRamadanSettings();
     const admin = (session.user as { role?: string }).role === "ADMIN";
     if (!settings.enabled && !admin) return NextResponse.json({ error: "RAMADAN_SCHEDULING_CLOSED" }, { status: 403, headers: noStore });

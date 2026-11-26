@@ -28,3 +28,21 @@ export function ramadanAdvance(scheduleRule: unknown, startDate: string, fallbac
   const parts = splitAmount(next.amount, Math.max(1, projectIds.length));
   return { done: false, nextBillingDate: next.at, amount: next.amount, items: projectIds.map((campaignId, i) => ({ campaignId, amount: parts[i] })) };
 }
+
+/**
+ * Moves a plan when 1 Ramadan changes (moon sighting). Days already charged under the old date
+ * are never charged again: the last charged day is read from lastBillingDate against the old
+ * 1 Ramadan; the next remaining day is placed on the new calendar.
+ */
+export function ramadanRealign(scheduleRule: unknown, oldStart: string, newStart: string, lastBillingDate: Date | null, fallbackProjectIds: string[], now: Date): RamadanAdvance {
+  const rule = parseRamadanRule(scheduleRule);
+  if (!rule) return { done: true, nextBillingDate: null };
+  let lastDay = 0;
+  if (lastBillingDate) {
+    const local = new Date(lastBillingDate.getTime() + (rule.lng / 15) * 3_600_000), [y, m, d] = oldStart.split("-").map(Number);
+    lastDay = Math.floor((Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - Date.UTC(y, m - 1, d)) / 86_400_000) + 1;
+  }
+  const remaining = { ...(scheduleRule as object), days: rule.days.filter((day) => day.day > lastDay) };
+  if (!remaining.days.length) return { done: true, nextBillingDate: null };
+  return ramadanAdvance(remaining, newStart, fallbackProjectIds, now);
+}

@@ -13,6 +13,7 @@ export async function GET() {
   const session = await getServerSession(authOptions), denied = requireAdminOrDashboardPermission(session, "monthly");
   if (denied) return denied;
   try {
+    await prisma.subscription.updateMany({ where: { frequency: "RAMADAN", status: "ACTIVE", createdAt: { lt: new Date(Date.now() - 3_600_000) }, OR: [{ paymentCardId: null }, { paymentCardId: { isSet: false } }] }, data: { status: "CANCELLED" } }).catch(() => {});
     const rows = await prisma.subscription.findMany({ where: { frequency: "RAMADAN" }, select: { id: true, status: true, paymentCardId: true, createdAt: true, donorId: true, scheduleRule: true }, orderBy: { createdAt: "desc" }, take: 5000 });
     const plans = rows.map((r) => ({ id: r.id, status: r.status, hasCard: Boolean(r.paymentCardId), createdAt: r.createdAt, donorId: r.donorId, scheduleRule: r.scheduleRule }));
     const donations = plans.length ? await prisma.donation.findMany({ where: { subscriptionId: { in: plans.map((p) => p.id) } }, select: { subscriptionId: true, status: true, amountUSD: true } }) : [];

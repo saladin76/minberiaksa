@@ -69,6 +69,11 @@ export default function RamadanSettingsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-bold">{dt("حالة الخدمة")}</h2><span className={draft.enabled ? "rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800" : "rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700"}>{draft.enabled ? dt("مفعّلة") : dt("موقوفة")}</span></div>
         <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" checked={draft.enabled} onChange={event => set("enabled", event.target.checked)} />{dt("تفعيل صفحة جدولة رمضان للزوار")}</label>
         <p className="text-sm text-slate-500">{dt("عند الإيقاف تبقى الصفحة مخفية، وتستمر الجداول المؤكدة في السحب حسب مواعيدها.")}</p>
+        <div className="space-y-2 border-t pt-3">
+          <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" checked={draft.homeBanner} onChange={event => set("homeBanner", event.target.checked)} />{dt("إظهار بنر جدولة رمضان في الصفحة الرئيسية")}</label>
+          <label className="flex items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" checked={draft.homeSection} onChange={event => set("homeSection", event.target.checked)} />{dt("إظهار قسم جدولة رمضان في الصفحة الرئيسية")}</label>
+          <p className="text-xs text-slate-500">{dt("لا يظهران للزوار إلا والخدمة مفعّلة أيضًا.")}</p>
+        </div>
       </Card>
       <Card className="space-y-4 p-5"><h2 className="text-lg font-bold">{dt("شهر رمضان")}</h2>
         <div className="grid gap-4 sm:grid-cols-2">

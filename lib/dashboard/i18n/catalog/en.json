@@ -1,4 +1,7 @@
 {
+  "إظهار بنر جدولة رمضان في الصفحة الرئيسية": "Show the Ramadan scheduling banner on the homepage",
+  "إظهار قسم جدولة رمضان في الصفحة الرئيسية": "Show the Ramadan scheduling section on the homepage",
+  "لا يظهران للزوار إلا والخدمة مفعّلة أيضًا.": "Visitors see them only while the service is also on.",
   "نتائج جدولة رمضان": "Ramadan scheduling results",
   "تعذر تحميل نتائج جدولة رمضان": "Could not load the Ramadan scheduling results",
   "من الجداول والسحوبات الفعلية في قاعدة البيانات": "From the actual schedules and charges in the database",

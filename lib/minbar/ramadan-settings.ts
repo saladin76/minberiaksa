@@ -16,6 +16,8 @@ export type RamadanSettings = {
   byCurrency: Record<string, number[]>;
   projectIds: string[]; // ordered
   doubleLast10: boolean;
+  homeBanner: boolean; // banner on the homepage (needs `enabled` too)
+  homeSection: boolean; // section on the homepage (needs `enabled` too)
 };
 
 export const DEFAULT_RAMADAN_SETTINGS: RamadanSettings = {
@@ -27,4 +29,6 @@ export const DEFAULT_RAMADAN_SETTINGS: RamadanSettings = {
   byCurrency: {},
   projectIds: [],
   doubleLast10: true,
+  homeBanner: false,
+  homeSection: false,
 };
