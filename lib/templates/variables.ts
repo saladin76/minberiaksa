@@ -1,7 +1,7 @@
 import { donationUsdAmount, formatTemplateMoney } from "./money";
 import { prisma } from "@/lib/prisma";
 import { donationMessageLocale, donationProjectSummary, templateDonorName, type DonationProjectSource } from "./donation-projects";
-import { donationMoneyFields, receiptDate } from "./donation-money";
+import { donationMoneyFields, paymentFailureText, receiptDate } from "./donation-money";
 import { recurringFrequency, recurringFrequencyLabel, type RecurringFrequency } from "./recurring-cadence";
 
 /** ---------------- types ---------------- */
@@ -48,6 +48,9 @@ export interface TemplateDonation {
   receiptSummary?: string;
   displayDate?: string;
   status: string;
+  /** FAILED donations only: the same reason and fix the failure page shows, in the message language. */
+  failureReason?: string;
+  failureFix?: string;
   createdAt: string;
   campaignTitle: string;
   itemCount: string;
@@ -133,6 +136,9 @@ const donationSelect = {
   status: true,
   billingReason: true,
   providerTxnType: true,
+  providerProcReturnCode: true,
+  providerErrorMessage: true,
+  providerTxnResult: true,
   createdAt: true,
   items: {
     select: {
@@ -164,6 +170,9 @@ type RawDonation = DonationProjectSource & {
   providerRaw?: unknown;
   billingReason?: string | null;
   providerTxnType?: string | null;
+  providerProcReturnCode?: string | null;
+  providerErrorMessage?: string | null;
+  providerTxnResult?: string | null;
   subscription?: {status?:string;id:string;frequency:string|null;amount:number;currency:string;nextBillingDate:Date|null}|null;
 };
 
@@ -186,6 +195,7 @@ function donationToContext(d: RawDonation, locale?: string | null): TemplateDona
     currency: d.currency,
     totalAmount: formatTemplateMoney(d.totalAmount, locale || d.locale, d.currency),
     status: d.status,
+    ...(d.status === "FAILED" && typeof paymentFailureText === "function" ? paymentFailureText(locale || d.locale || "ar", d) : {}),
     createdAt: formatDate(d.createdAt),
     displayDate: receiptDate(d.createdAt, locale),
     campaignTitle: projects.campaignTitle,

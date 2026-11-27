@@ -38,5 +38,45 @@
   "sources": [
    "app/api/admin/ramadan-settings/route.ts (api)"
   ]
+ },
+ {
+  "ar": "سبب فشل الدفع بلغة المتبرع (للتبرع الفاشل فقط)",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "lib/templates/variable-catalog.ts (runtime)"
+  ]
+ },
+ {
+  "ar": "لم يوافق البنك لأن رصيد البطاقة أو حدّها لا يكفي لهذا المبلغ.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "lib/templates/variable-catalog.ts (runtime)"
+  ]
+ },
+ {
+  "ar": "ما يفعله المتبرع لإكمال تبرعه (للتبرع الفاشل فقط)",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "lib/templates/variable-catalog.ts (runtime)"
+  ]
+ },
+ {
+  "ar": "جرّب مبلغًا أقل أو بطاقة أخرى.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "lib/templates/variable-catalog.ts (runtime)"
+  ]
  }
 ]

@@ -52,6 +52,8 @@ export const VARIABLE_CATALOG: VariableGroup[] = [
     group: "التبرّعة الحالية (للأحداث التلقائية فقط)",
     entries: [
       { token: "{{donation.id}}", label: "معرّف التبرّعة", exampleValue: "65f12abc..." },
+      { token: "{{donation.failureReason}}", label: "سبب فشل الدفع بلغة المتبرع (للتبرع الفاشل فقط)", exampleValue: "لم يوافق البنك لأن رصيد البطاقة أو حدّها لا يكفي لهذا المبلغ." },
+      { token: "{{donation.failureFix}}", label: "ما يفعله المتبرع لإكمال تبرعه (للتبرع الفاشل فقط)", exampleValue: "جرّب مبلغًا أقل أو بطاقة أخرى." },
       { token: "{{donation.amount}}", label: "مبلغ المشاريع (قديم)", exampleValue: "50" },
       { token: "{{donation.projectsAmount}}", label: "مبلغ المشاريع", exampleValue: "50" },
       { token: "{{donation.teamSupport}}", label: "دعم الفريق", exampleValue: "5" },
