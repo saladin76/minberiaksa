@@ -1,3 +1,4 @@
+import { resolvePaymentError, type DonationErrorInputs } from "../donations/payment-error-catalog";
 import { formatTemplateMoney } from "./money";
 import { recurringFrequencyLabel, type RecurringFrequency } from "./recurring-cadence";
 import { metaParameterName } from "../communication/meta-parameter-name";
@@ -149,4 +150,35 @@ export function donationNotificationParameters(input: {
     if (name === "donation.amount" || name === "donation.totalAmount") values[key] = input.notificationAmount;
   }
   return values;
+}
+
+/**
+ * Why a payment failed and what to do, for donor messages ({{donation.failureReason}},
+ * {{donation.failureFix}}): the same resolution and translated texts as the failure page
+ * (DonationFailed.errors.<key>.reason / .fix), so a message never contradicts the page.
+ */
+type FailureBook = Record<string, { reason?: string; fix?: string } | undefined>;
+const failureBooks = new Map<string, FailureBook | null>();
+function failureBook(locale: string): FailureBook | null {
+  const key = /^[a-z]{2}$/.test(locale) ? locale : "en";
+  if (!failureBooks.has(key)) {
+    try {
+      // Server only, and no static node:fs import: this module is also bundled into dashboard
+      // pages that run in the browser, where it simply yields no failure text.
+      const builtin = (globalThis as { process?: { getBuiltinModule?: (id: string) => unknown } }).process?.getBuiltinModule;
+      if (typeof window !== "undefined" || typeof builtin !== "function") return null;
+      const fs = builtin("node:fs") as typeof import("node:fs"), path = builtin("node:path") as typeof import("node:path");
+      const messages = JSON.parse(fs.readFileSync(path.join(process.cwd(), "i18n", "messages", `${key}.json`), "utf8"));
+      failureBooks.set(key, (messages?.DonationFailed?.errors ?? null) as FailureBook | null);
+    } catch { failureBooks.set(key, null); }
+  }
+  return failureBooks.get(key) ?? null;
+}
+export function paymentFailureText(locale: string, input: DonationErrorInputs): { failureReason: string; failureFix: string } {
+  const { key } = resolvePaymentError(input);
+  for (const book of [failureBook(locale), failureBook("en")]) {
+    const entry = book?.[key] ?? book?.generic;
+    if (entry?.reason) return { failureReason: entry.reason, failureFix: entry.fix ?? "" };
+  }
+  return { failureReason: "", failureFix: "" };
 }
