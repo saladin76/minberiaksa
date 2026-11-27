@@ -67,6 +67,10 @@ export interface CartGiftDetails {
   channels: Array<"whatsapp" | "email">;
   /** Whether the message to the recipient mentions the amount. */
   showAmount: boolean;
+  /** Gift page only: the designed card (the server validates it). */
+  card?: { occasion: string; theme: string; accent: number; font: string; signature: string | null; anonymous: boolean };
+  /** Gift page only: ISO time to tell the recipient; absent = once paid. */
+  sendAt?: string;
 }
 
 /**
@@ -230,6 +234,8 @@ function parseGift(value: unknown): CartGiftDetails | undefined {
     message: typeof raw.message === "string" ? raw.message : "",
     channels,
     showAmount: raw.showAmount !== false,
+    ...(raw.card && typeof raw.card === "object" ? { card: raw.card as NonNullable<CartGiftDetails["card"]> } : {}),
+    ...(typeof raw.sendAt === "string" && raw.sendAt ? { sendAt: raw.sendAt } : {}),
   };
 }
 

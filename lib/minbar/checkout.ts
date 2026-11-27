@@ -117,6 +117,8 @@ export interface OrderGift {
   message: string | null;
   channels: Array<"EMAIL" | "WHATSAPP">;
   showAmount: boolean;
+  card?: { occasion: string; theme: string; accent: number; font: string; signature: string | null; anonymous: boolean };
+  sendAt?: string;
 }
 
 export interface OrderLines {
@@ -140,6 +142,8 @@ function orderGift(gift: NonNullable<MinbarCartItem["gift"]>): OrderGift {
     message: gift.message || null,
     channels: gift.channels.map((c) => (c === "email" ? ("EMAIL" as const) : ("WHATSAPP" as const))),
     showAmount: gift.showAmount,
+    ...(gift.card ? { card: gift.card } : {}),
+    ...(gift.sendAt ? { sendAt: gift.sendAt } : {}),
   };
 }
 

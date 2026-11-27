@@ -42,7 +42,7 @@ import {
 import { isAlbarakaRecurringCheckoutReady } from "@/lib/albaraka";
 import { isPayPalConfigured, isPayPalRecurringEnabled } from "@/lib/paypal";
 import { mintDonationAccessToken } from "@/lib/donations/access-token";
-import { giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
+import { giftCardData, giftLineData, parseGiftOrder, type GiftOrderInput } from "@/lib/donations/gift-order";
 import { recordConciergeEvents } from "@/lib/ai/concierge/events";
 
 /**
@@ -642,6 +642,7 @@ export async function POST(request: NextRequest) {
               amountUSD: item.amountUSD,
               ...(item.shareCount != null && item.shareCount > 0 ? { shareCount: item.shareCount } : {}),
               ...giftLineData(item.gift),
+              ...(typeof giftCardData === "function" ? giftCardData(item.gift) : {}),
             })),
           },
         }
