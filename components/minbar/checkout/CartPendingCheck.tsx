@@ -22,7 +22,8 @@ export default function CartPendingCheck() {
       .then((response) => (response.ok ? response.json() : null))
       .then((details: { paidAt?: string | null; status?: string } | null) => {
         if (!details) return;
-        if (details.paidAt || details.status === "PAID") { clearCart(); clearPendingPayment(); return; }
+        // Only a settled payment (paidAt) empties the basket: a new order already reads status "PAID".
+        if (details.paidAt) { clearCart(); clearPendingPayment(); return; }
         if (details.status === "FAILED" || details.status === "CANCELLED") clearPendingPayment();
       })
       .catch(() => { /* a network problem says nothing about the payment; keep the basket */ })

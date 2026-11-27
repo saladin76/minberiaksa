@@ -470,18 +470,23 @@ export async function POST(req: NextRequest) {
     const approved = isAlbarakaApproved(sale);
     const responseCode = sale?.ServiceResponseData?.ResponseCode ?? "";
     const responseDescription = sale?.ServiceResponseData?.ResponseDescription ?? "";
-    if (!approved && bankRequestsAuthentication(responseCode, responseDescription)) {
+    /* Owner decision (2026-11-27): an issuer refusing a 2D sale as suspicious or by policy (59, 83,
+       82, 05) is usually refusing the missing 3-D Secure. A one-time donation is then moved to 3D
+       once, with the same card, only after the bank confirms the 2D sale was not taken. */
+    const askedAuthentication = bankRequestsAuthentication(responseCode, responseDescription);
+    const issuerSoftDecline = !plan && !askedAuthentication && ["59", "83", "82", "05"].includes(responseCode);
+    if (!approved && (askedAuthentication || issuerSoftDecline)) {
       const inquiry = await albarakaInquireSale(orderId, cfg);
       if (inquiry.state === "approved") {
         await settleAlbarakaDonation(donation.id, { ...inquiry.raw, AuthCode: inquiry.authCode }, { authenticationRecovery: "confirmed-original-sale" });
         return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: true });
       }
-      if (inquiry.state === "unknown") {
+      if (inquiry.state === "unknown" && askedAuthentication) {
         await prisma.donation.updateMany({ where: donationWhereAll({ id: donation.id, providerOrderId: orderId }, donationFieldEmpty("paidAt")), data: { providerTxnResult: "PendingConfirmation", providerErrorMessage: "AUTHENTICATION_OUTCOME_UNCONFIRMED", reconciliationNextAt: new Date(Date.now() + 1_800_000) } });
         return NextResponse.json({ actionUrl: resultUrl, method: "GET", fields: {}, paid: false });
       }
       const secureConfig = albarakaConfig();
-      if (!plan && isAlbarakaConfigured(secureConfig)) {
+      if (!plan && inquiry.state !== "unknown" && isAlbarakaConfigured(secureConfig)) {
         const secureOrderId = albarakaOrderId();
         const fields = buildAlbaraka3DForm({ orderId: secureOrderId, amount, currencyCode, locale,
           returnUrl: `${origin}/api/albaraka/3d/callback?donationId=${encodeURIComponent(donation.id)}&locale=${encodeURIComponent(locale)}`,
@@ -490,7 +495,7 @@ export async function POST(req: NextRequest) {
           providerOrderId: secureOrderId, providerTxnResult: "Processing", providerErrorMessage: null,
           providerRaw: { ...(typeof donation.providerRaw === "object" && donation.providerRaw ? donation.providerRaw as object : {}),
             cardSummary: { last4: cardNo.slice(-4), brand: detectCardType(cardNo) },
-            authenticationRecovery: { from: "2D", to: "3D", previousOrderId: orderId, reason: responseDescription, bankConfirmedNoSale: true },
+            authenticationRecovery: { from: "2D", to: "3D", previousOrderId: orderId, reason: responseDescription, bankConfirmedNoSale: true, trigger: issuerSoftDecline ? "issuer-soft-decline" : "bank-requested" },
             albarakaRequest: { orderId: secureOrderId, amount, currencyCode, merchantNo: secureConfig.merchantNo, terminalNo: secureConfig.terminalNo, transactionType: "Sale", mode: "3D", createdAt: new Date().toISOString() } } as Prisma.InputJsonValue,
         } });
         if (changed.count !== 1) return NextResponse.json({ error: "Payment state changed; refresh the result" }, { status: 409 });

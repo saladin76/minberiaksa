@@ -18,7 +18,7 @@ test("the basket is held, not emptied, while a card payment is with the bank", (
   assert.match(checkout, /navigatePaymentResult\(form\.actionUrl, \(\) => holdCartForPayment\(donation\.id, donation\.accessToken\)/);
   assert.match(fs.readFileSync("components/minbar/checkout/PaymentResultWatcher.tsx", "utf8"), /payload\?\.state === "paid" \? \(\) => \{ clearCart\(\); clearPendingPayment\(\); \} : \(\) => \{\}/);
   const check = fs.readFileSync("components/minbar/checkout/CartPendingCheck.tsx", "utf8");
-  assert.match(check, /if \(details\.paidAt \|\| details\.status === "PAID"\) \{ clearCart\(\); clearPendingPayment\(\); return; \}/);
+  assert.match(check, /if \(details\.paidAt\) \{ clearCart\(\); clearPendingPayment\(\); return; \}/);
   assert.match(fs.readFileSync("app/[locale]/layout.tsx", "utf8"), /<CartPendingCheck \/>/);
 });
 
