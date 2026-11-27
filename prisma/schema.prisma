@@ -1146,6 +1146,11 @@ model DonationItem {
   giftChannels       String[]  @default([])
   /// Whether the message to the recipient mentions the amount.
   giftShowAmount     Boolean   @default(true)
+  /// Gift page (2026-11-27): the card the donor designed  occasion, theme, accent, font,
+  /// signature, anonymous. Null on gifts made elsewhere, which keep the plain certificate.
+  giftCard           Json?
+  /// When the recipient is told; null = as soon as the donation is paid.
+  giftSendAt         DateTime?
   /// Set when the recipient was told; a replayed webhook does not tell them twice.
   giftDeliveredAt    DateTime?
   /// Per-channel accepted/failed/uncertain outcomes; old records may omit it.
@@ -1221,6 +1226,9 @@ model DonationWaqfItem {
   giftChannels       String[]  @default([])
   /// false: the certificate and the messages leave out the value (the count stays).
   giftShowAmount     Boolean   @default(true)
+  /// Gift page card and delivery time, as on DonationItem (the waqf and project gift columns stay identical).
+  giftCard           Json?
+  giftSendAt         DateTime?
   giftDeliveredAt    DateTime?
   giftDeliveryState  Json?
   giftDeliveryLock   String?

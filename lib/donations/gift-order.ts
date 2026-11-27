@@ -7,6 +7,18 @@
  */
 
 export const GIFT_CHANNELS = ["EMAIL", "WHATSAPP"] as const;
+export const GIFT_OCCASIONS = ["ramadan", "eid", "baby", "wedding", "recovery", "success", "hajj", "memory", "none"] as const;
+export const GIFT_THEMES = ["dome", "night", "arabesque", "floral", "calm"] as const;
+/** The card designed on the gift page; validated here, stored on the line as `giftCard`. */
+export interface GiftCard {
+  occasion: (typeof GIFT_OCCASIONS)[number];
+  theme: (typeof GIFT_THEMES)[number];
+  accent: 0 | 1 | 2;
+  font: "naskh" | "modern";
+  signature: string | null;
+  anonymous: boolean;
+}
+const SEND_AT_MAX_DAYS = 366;
 export type GiftChannel = (typeof GIFT_CHANNELS)[number];
 
 export interface GiftOrderInput {
@@ -16,6 +28,10 @@ export interface GiftOrderInput {
   message: string | null;
   channels: GiftChannel[];
   showAmount: boolean;
+  /** Gift page only; null elsewhere. */
+  card?: GiftCard | null;
+  /** When to tell the recipient; null = once paid. */
+  sendAt?: Date | null;
 }
 
 export type GiftParseResult =
@@ -77,7 +93,32 @@ export function parseGiftOrder(raw: unknown): GiftParseResult {
   const message = str(o.message, MESSAGE_MAX) || null;
   const showAmount = o.showAmount !== false;
 
-  return { ok: true, gift: { recipientName, recipientEmail, recipientPhone, message, channels, showAmount } };
+  let card: GiftCard | null = null;
+  if (o.card != null) {
+    if (typeof o.card !== "object" || Array.isArray(o.card)) return { ok: false, error: "Invalid gift card" };
+    const c = o.card as Record<string, unknown>;
+    const occasion = (GIFT_OCCASIONS as readonly string[]).includes(String(c.occasion)) ? (c.occasion as GiftCard["occasion"]) : null;
+    const theme = (GIFT_THEMES as readonly string[]).includes(String(c.theme)) ? (c.theme as GiftCard["theme"]) : null;
+    const accent = c.accent === 0 || c.accent === 1 || c.accent === 2 ? c.accent : null;
+    const font = c.font === "naskh" || c.font === "modern" ? c.font : null;
+    if (!occasion || !theme || accent === null || !font) return { ok: false, error: "Invalid gift card" };
+    card = { occasion, theme, accent, font, signature: str(c.signature, 60) || null, anonymous: c.anonymous === true };
+  }
+
+  let sendAt: Date | null = null;
+  if (o.sendAt != null && o.sendAt !== "") {
+    const at = new Date(String(o.sendAt)), now = Date.now();
+    if (Number.isNaN(at.getTime()) || at.getTime() < now - 5 * 60_000 || at.getTime() > now + SEND_AT_MAX_DAYS * 86_400_000) return { ok: false, error: "Invalid gift delivery time" };
+    sendAt = at;
+  }
+
+  return { ok: true, gift: { recipientName, recipientEmail, recipientPhone, message, channels, showAmount, ...(card ? { card } : {}), ...(sendAt ? { sendAt } : {}) } };
+}
+
+/** The gift page's card and delivery time, for campaign lines (DonationItem) only. */
+export function giftCardData(gift: GiftOrderInput | null) {
+  if (!gift || (!gift.card && !gift.sendAt)) return {};
+  return { ...(gift.card ? { giftCard: gift.card as unknown as object } : {}), ...(gift.sendAt ? { giftSendAt: gift.sendAt } : {}) };
 }
 
 /** The Prisma column values for a parsed gift, spread into a line's `create`. */
