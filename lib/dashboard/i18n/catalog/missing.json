@@ -50,6 +50,16 @@
   ]
  },
  {
+  "ar": "الحد الأدنى حسب الإعداد",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/global-settings/route.ts (api)"
+  ]
+ },
+ {
   "ar": "سبب فشل الدفع بلغة المتبرع (للتبرع الفاشل فقط)",
   "missing": [
    "en",
