@@ -112,6 +112,7 @@ const PAYFOR_CODE_MAP: Record<string, PaymentErrorKey> = {
   "B1": "authenticationFailed", // surcharge amount not permitted
   "1A": "authenticationFailed", // Ek Müşteri Doğrulaması Gerekli  issuer wants strong customer authentication
   "5C": "doNotHonor", // transaction not supported / blocked by issuer
+  "9G": "doNotHonor", // cardholder blocked by the issuing bank
   /* PayFor MPI-stage codes, returned before the bank authorises anything. */
   V034: "authenticationFailed", // 3D User Enrollment Step Fail  card not enrolled in 3-D Secure
   V036: "processingError", // System Error
@@ -174,6 +175,21 @@ export interface DonationErrorInputs {
   providerErrorMessage?: string | null;
   providerTxnResult?: string | null;
   provider?: string | null;
+}
+
+/**
+ * Where a declined donor should go next (owner rule, 2026-11-27): try again HERE for ordinary
+ * causes; the hosted alternative only when the issuing bank itself refuses this merchant or
+ * card, so another try here would fail the same way.
+ */
+export type PaymentRetryRoute = "sameCard" | "otherCard" | "alternate";
+const ROOT_CAUSE_KEYS = new Set<PaymentErrorKey>(["fraudSuspected", "lostOrStolen", "currencyNotSupported"]);
+const ROOT_CAUSE_CODES = new Set(["03", "57", "58", "62", "82", "93", "5C", "9G"]);
+export function paymentRetryRoute(input: DonationErrorInputs): PaymentRetryRoute {
+  const code = (input.providerProcReturnCode ?? "").toString().trim();
+  const resolved = resolvePaymentError(input);
+  if (ROOT_CAUSE_KEYS.has(resolved.key) || ROOT_CAUSE_CODES.has(code)) return "alternate";
+  return resolved.retryableSameCard ? "sameCard" : "otherCard";
 }
 
 export function resolvePaymentError(input: DonationErrorInputs): ResolvedPaymentError {
