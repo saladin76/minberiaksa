@@ -3682,5 +3682,166 @@
     "failedTitle": "The schedule was not completed",
     "failedBody": "The bank did not confirm the card and nothing was charged. You can try again.",
     "failedCta": "Try again"
+  },
+  "giftPage": {
+    "metaTitle": "Gift a charity to someone you love | Minber al-Aqsa",
+    "metaDescription": "A donation in the name of someone you love, with a card designed for the occasion, sent by WhatsApp or email with a certificate in their name.",
+    "title": "Gift a charity to someone you love",
+    "stepOf": "Step {n} of 4 · {name}",
+    "stepsLabel": "Gift steps",
+    "steps": {
+      "value": "Value",
+      "occasion": "Occasion",
+      "card": "Card",
+      "send": "Delivery"
+    },
+    "back": "Back",
+    "next": "Next",
+    "payAndSend": "Continue to payment",
+    "heroTitle": "A donation in their name, and a card that lasts",
+    "heroSub": "Start with the value, then the occasion and the card",
+    "modeFree": "I choose the amount",
+    "modePackage": "Ready gift",
+    "hintFree": "Choose the gift's value, then the project it goes to.",
+    "hintPackage": "A gift with a set value and impact; you can choose how many.",
+    "otherAmount": "Other amount (USD)",
+    "goesTo": "The gift goes to",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "occasionTitle": "What is the occasion?",
+    "occasionSub": "We suggest a design and a message for it; you can change both",
+    "occasions": {
+      "ramadan": {
+        "label": "Ramadan",
+        "head": "Ramadan Kareem",
+        "msg1": "I gave this charity for you this Ramadan. May Allah accept our good deeds.",
+        "msg2": "May Allah fill your Ramadan with light and accept your fasting and prayers."
+      },
+      "eid": {
+        "label": "Eid",
+        "head": "Eid Mubarak",
+        "msg1": "Eid Mubarak! I gave a charity for you this Eid; may all your days be joyful.",
+        "msg2": "May Allah accept from us and from you, and bring it back with blessings."
+      },
+      "baby": {
+        "label": "New baby",
+        "head": "Congratulations on the baby",
+        "msg1": "May you be blessed in the gift you were given, thank the Giver, and see the child grow in goodness.",
+        "msg2": "May Allah make the child the joy of your eyes and raise them well."
+      },
+      "wedding": {
+        "label": "Wedding",
+        "head": "Barakallahu lakuma",
+        "msg1": "May Allah bless you both and unite you in goodness.",
+        "msg2": "May Allah fill your home with love and mercy."
+      },
+      "recovery": {
+        "label": "Recovery",
+        "head": "Get well soon",
+        "msg1": "No harm, a purification, God willing. I gave a charity for your quick recovery.",
+        "msg2": "I ask Allah the Almighty, Lord of the Mighty Throne, to cure you."
+      },
+      "success": {
+        "label": "Success",
+        "head": "Congratulations",
+        "msg1": "Congratulations on your success! I gave a charity in thanks to Allah, and to greater successes.",
+        "msg2": "May Allah grant you success and make your knowledge of benefit to you and to others."
+      },
+      "hajj": {
+        "label": "Hajj & Umrah",
+        "head": "May Allah accept it",
+        "msg1": "May your Hajj be accepted, your efforts rewarded and your sins forgiven.",
+        "msg2": "May Allah accept your worship and bring you back safely."
+      },
+      "memory": {
+        "label": "In memory",
+        "head": "Ongoing charity",
+        "msg1": "O Allah, forgive and have mercy on them, and make this charity a light for them.",
+        "msg2": "O Allah, make their grave a garden of Paradise and grant them the reward of this charity."
+      },
+      "none": {
+        "label": "No occasion",
+        "head": "A gift of goodness",
+        "msg1": "I wanted to gift you the reward of this charity; may Allah accept it from us both.",
+        "msg2": "Because you are dear to me, I gave a charity whose reward lasts."
+      }
+    },
+    "cardTitle": "Design the card",
+    "front": "Front",
+    "backSide": "Back",
+    "sidesLabel": "Card sides",
+    "themesLabel": "Card design",
+    "themes": {
+      "dome": "Dome",
+      "night": "Crescent",
+      "arabesque": "Arabesque",
+      "floral": "Floral",
+      "calm": "Calm"
+    },
+    "color": "Color",
+    "colorN": "Color {n}",
+    "font": "Font",
+    "fontNaskh": "Naskh",
+    "fontModern": "Modern",
+    "readyMessage": "A ready message for the occasion",
+    "writeMessage": "Or write your own",
+    "toWhom": "To whom?",
+    "namePlaceholder": "Name",
+    "recipientN": "Recipient {n}",
+    "remove": "Remove",
+    "addRecipient": "+ Gift another person with the same card",
+    "signature": "Signature",
+    "signaturePlaceholder": "e.g. your son Ahmad",
+    "showAmount": "Show the gift's value on the card and in the message",
+    "sendTitle": "How and when should it arrive?",
+    "chooseChannels": "Choose one way or both",
+    "channelsLabel": "Delivery methods",
+    "whatsapp": "WhatsApp",
+    "whatsappNote": "A message with a link to the card",
+    "email": "Email",
+    "emailNote": "With the card and the certificate",
+    "whatsappNumber": "WhatsApp number with country code",
+    "emailLabel": "Email",
+    "whenTitle": "When should it arrive?",
+    "whenLabel": "Delivery time",
+    "whenNow": "As soon as I pay",
+    "whenDate": "On a date and time I choose",
+    "date": "Date",
+    "time": "Time",
+    "whenNote": "In your own time ({zone})",
+    "anonymous": "Gift as \"A well-wisher\"",
+    "anonymousNote": "Your name and signature are not shown",
+    "anonymousName": "A well-wisher",
+    "review": {
+      "occasion": "Occasion",
+      "gift": "Gift",
+      "to": "To",
+      "delivery": "Delivery",
+      "each": "Per person"
+    },
+    "totalFor": "Total for {n} people",
+    "giftValue": "Gift value",
+    "cardKicker": "A gift of goodness from Minber al-Aqsa",
+    "memoryKicker": "To Allah we belong and to Him we return",
+    "cardTo": "To: {name}",
+    "cardFrom": "From: {name}",
+    "aboutGift": "About this gift",
+    "valueLine": "Value: {amount}",
+    "backNote": "It reaches the project in full; they receive a message and a certificate in their name.",
+    "backNumber": "The gift number is issued once it is complete",
+    "giftFor": "A donation to {project}",
+    "recipientFallback": "Recipient's name",
+    "andOthers": "{name} and {n} others",
+    "seal": "Minber",
+    "preview": "Admin preview: the page is hidden from visitors until it is enabled in the dashboard.",
+    "notConfigured": "No gift projects are set yet. Choose them in the dashboard → Gift page.",
+    "errors": {
+      "amount": "Choose the gift's value",
+      "name": "Write the recipient's name",
+      "channel": "Choose WhatsApp, email or both",
+      "phone": "{name}'s WhatsApp number is not valid; include the country code",
+      "email": "{name}'s email address is not valid",
+      "date": "Choose a time at least 5 minutes from now and within a year"
+    }
   }
 }
