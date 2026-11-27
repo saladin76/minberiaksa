@@ -2074,6 +2074,9 @@ model GlobalSettings {
   /// exactly as given (1 TL, 1 EGP). Read as `=== true`. Shape in
   /// `lib/minbar/donation-amount.ts`.
   allowAnyAmount       Boolean  @default(false)
+  /// Minimum donation (2026-11-27): { usd, byCurrency: { TRY: 300, … } }; null = 1 USD.
+  /// Ignored while allowAnyAmount is on. Waqf fixed prices and team support are exempt.
+  minDonation          Json?
   /// The donation concierge's switches and team notes: launcher on/off, the
   /// teaser bubble, model on/off, transcripts, attribution window, notes the
   /// model may use. Shape and defaults in `lib/ai/concierge/settings.ts`.

@@ -38,6 +38,34 @@ export function minDonationInCurrency(code: string, rate: number | null): number
   return raw >= 10 ? Math.ceil(raw) : Math.ceil(raw * 100) / 100;
 }
 
+/** The admin's floor: a base in USD plus fixed figures for chosen currencies. */
+export interface MinDonationConfig { usd: number; byCurrency: Record<string, number> }
+export const DEFAULT_MIN_DONATION: MinDonationConfig = { usd: MIN_DONATION_USD, byCurrency: {} };
+const money2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Stored value → config; anything malformed falls back to the 1 USD default. */
+export function parseMinDonation(value: unknown): MinDonationConfig {
+  if (!value || typeof value !== "object") return { ...DEFAULT_MIN_DONATION, byCurrency: {} };
+  const raw = value as { usd?: unknown; byCurrency?: unknown };
+  const usd = typeof raw.usd === "number" && Number.isFinite(raw.usd) && raw.usd > 0 && raw.usd <= 100_000 ? money2(raw.usd) : MIN_DONATION_USD;
+  const byCurrency: Record<string, number> = {};
+  if (raw.byCurrency && typeof raw.byCurrency === "object") {
+    for (const [code, amount] of Object.entries(raw.byCurrency as Record<string, unknown>)) {
+      if (/^[A-Z]{3}$/.test(code) && code !== "USD" && typeof amount === "number" && Number.isFinite(amount) && amount > 0 && amount <= 10_000_000) byCurrency[code] = money2(amount);
+    }
+  }
+  return { usd, byCurrency };
+}
+
+/** The smallest figure in `code`: the admin's fixed figure, else the USD base at `rate`. */
+export function minDonationFor(code: string, rate: number | null, config: MinDonationConfig = DEFAULT_MIN_DONATION): number {
+  const fixed = config.byCurrency[code];
+  if (fixed) return fixed;
+  if (code === "USD" || !(rate && rate > 0)) return config.usd;
+  const raw = config.usd * rate;
+  return raw >= 10 ? Math.ceil(raw) : Math.ceil(raw * 100) / 100;
+}
+
 /** A positive `local` block worth keeping on a line, or undefined. */
 export function parseLocalAmount(value: unknown): LocalAmount | undefined {
   if (!value || typeof value !== "object") return undefined;

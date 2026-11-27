@@ -5,6 +5,7 @@ import axios from "axios";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   AlertTriangle,
@@ -76,6 +77,10 @@ export default function PaymentGatewaysPage() {
   const [albarakaUseOOS, setAlbarakaUseOOS] = useState(false);
   const [allowAnyAmount, setAllowAnyAmount] = useState(false);
   const [savingAnyAmount, setSavingAnyAmount] = useState(false);
+  // Minimum donation: a USD base and fixed figures for chosen currencies.
+  const [minUsd, setMinUsd] = useState("1");
+  const [minRows, setMinRows] = useState<{ code: string; amount: string }[]>([]);
+  const [savingMin, setSavingMin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +97,9 @@ export default function PaymentGatewaysPage() {
         setAlbarakaRecurringReady(res.data?.albarakaRecurringReady === true);
         setAlbarakaUseOOS(res.data?.albarakaUseOOS === true);
         setAllowAnyAmount(res.data?.allowAnyAmount === true);
+        const min = (res.data as { minDonation?: { usd?: number; byCurrency?: Record<string, number> } })?.minDonation;
+        setMinUsd(String(min?.usd ?? 1));
+        setMinRows(Object.entries(min?.byCurrency ?? {}).map(([code, amount]) => ({ code, amount: String(amount) })));
       })
       .catch(() => {
         if (cancelled) return;
@@ -198,6 +206,19 @@ export default function PaymentGatewaysPage() {
     } finally {
       setSavingAnyAmount(false);
     }
+  };
+
+  const saveMinDonation = async () => {
+    const usd = Number(minUsd);
+    const rows = minRows.filter((r) => r.code.trim() && r.amount.trim());
+    if (!(usd > 0) || rows.some((r) => !/^[A-Z]{3}$/.test(r.code.trim().toUpperCase()) || !(Number(r.amount) > 0))) { toast.error(dt("أدخل مبالغ صحيحة أكبر من صفر ورموز عملات من ثلاثة أحرف")); return; }
+    setSavingMin(true);
+    try {
+      const byCurrency = Object.fromEntries(rows.map((r) => [r.code.trim().toUpperCase(), Number(r.amount)]));
+      await axios.put("/api/global-settings", { minDonation: { usd, byCurrency } });
+      toast.success(dt("تم حفظ الحد الأدنى للتبرع"));
+    } catch (e) { toast.error(errorMessage(e, dt("تعذّر حفظ الإعداد"))); }
+    finally { setSavingMin(false); }
   };
 
   const mainGatewayName =
@@ -343,6 +364,25 @@ export default function PaymentGatewaysPage() {
                     disabled={savingAnyAmount}
                     onCheckedChange={handleToggleAnyAmount}
                   />
+                </div>
+              </div>
+            </Card>
+            <Card className={allowAnyAmount ? "p-5 sm:p-6 opacity-60" : "p-5 sm:p-6"}>
+              <h3 className="text-base font-semibold text-gray-900">{dt("الحد الأدنى للتبرع")}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{allowAnyAmount ? dt("لا يسري الآن لأن خيار \"أي مبلغ\" مفعّل.") : dt("يرى المتبرع تنبيهًا إن أدخل أقل منه، ويرفض الخادم الطلب. لا يسري على التبرعات الدورية، ولا على المشاريع بالأسهم، ولا على الأوقاف بسعرها الثابت، ولا على دعم الفريق.")}</p>
+              <div className="mt-4 grid gap-3 sm:max-w-md">
+                <label className="flex items-center justify-between gap-3 text-sm">{dt("الحد الأساسي بالدولار")}<input type="number" min={0.01} step="0.01" dir="ltr" className="w-32 rounded-lg border p-2" value={minUsd} onChange={(e) => setMinUsd(e.target.value)} /></label>
+                <p className="text-xs text-muted-foreground">{dt("يُحوَّل تلقائيًا لأي عملة بسعر الصرف، إلا العملات التي تحدد لها مبلغًا ثابتًا هنا:")}</p>
+                {minRows.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input aria-label={dt("رمز العملة")} placeholder="TRY" maxLength={3} dir="ltr" className="w-24 rounded-lg border p-2 uppercase" value={row.code} onChange={(e) => setMinRows((rs) => rs.map((r, j) => j === i ? { ...r, code: e.target.value.toUpperCase() } : r))} />
+                    <input aria-label={dt("أقل مبلغ بهذه العملة")} type="number" min={0.01} step="0.01" dir="ltr" className="w-32 rounded-lg border p-2" value={row.amount} onChange={(e) => setMinRows((rs) => rs.map((r, j) => j === i ? { ...r, amount: e.target.value } : r))} />
+                    <Button type="button" variant="ghost" onClick={() => setMinRows((rs) => rs.filter((_, j) => j !== i))}>{dt("إزالة")}</Button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setMinRows((rs) => [...rs, { code: "", amount: "" }])}>{dt("إضافة عملة")}</Button>
+                  <Button type="button" disabled={savingMin} onClick={() => void saveMinDonation()}>{savingMin ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}{dt("حفظ الحد الأدنى")}</Button>
                 </div>
               </div>
             </Card>

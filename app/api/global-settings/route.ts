@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { requireAdminOrDashboardPermission } from "@/lib/dashboard/api-auth";
+import { parseMinDonation } from "@/lib/minbar/donation-amount";
 import {
   parseSuggestedTeamSupport,
   validateSuggestedTeamSupportBody,
@@ -27,7 +28,7 @@ export async function GET() {
   try {
     const settings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, payforSaudiRoutingEnabled: true, mainGateway: true, allowAnyAmount: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, payforSaudiRoutingEnabled: true, mainGateway: true, allowAnyAmount: true, minDonation: true },
     });
     const albaraka = albaraka2DConfig();
     return NextResponse.json({
@@ -43,6 +44,7 @@ export async function GET() {
       mainGateway: parseMainGateway(settings?.mainGateway),
       // Off: every donation line is at least $1. On: any amount, as given.
       allowAnyAmount: settings?.allowAnyAmount === true,
+      minDonation: parseMinDonation(settings?.minDonation),
       // Neither flag is a secret; the checkout dialogs need them to decide whether
       // to render our own card form (Albaraka signs the card fields into the MAC,
       // so with the bank's hosted page turned on we must not collect them).
@@ -91,7 +93,7 @@ export async function PUT(request: NextRequest) {
       const denied = requireAdminOrDashboardPermission(session, "campaigns");
       if (denied) return denied;
     }
-    if (body.payforEnabled !== undefined || body.payforSaudiRoutingEnabled !== undefined || body.mainGateway !== undefined || body.allowAnyAmount !== undefined) {
+    if (body.payforEnabled !== undefined || body.payforSaudiRoutingEnabled !== undefined || body.mainGateway !== undefined || body.allowAnyAmount !== undefined || body.minDonation !== undefined) {
       const denied = requireAdminOrDashboardPermission(session, "generalSettings");
       if (denied) return denied;
     }
@@ -149,6 +151,16 @@ export async function PUT(request: NextRequest) {
       updateData.allowAnyAmount = body.allowAnyAmount;
     }
 
+    if (body.minDonation !== undefined) {
+      const raw = body.minDonation as { usd?: unknown; byCurrency?: unknown } | null;
+      const parsed = parseMinDonation(raw);
+      const sentCodes = raw && typeof raw.byCurrency === "object" && raw.byCurrency ? Object.keys(raw.byCurrency as object) : [];
+      if (!raw || typeof raw.usd !== "number" || parsed.usd !== Math.round(raw.usd * 100) / 100 || sentCodes.length !== Object.keys(parsed.byCurrency).length) {
+        return NextResponse.json({ error: "minDonation must be { usd > 0, byCurrency: { CODE: amount > 0 } }" }, { status: 400 });
+      }
+      updateData.minDonation = JSON.parse(JSON.stringify(parsed)); // plain JSON for the Json column
+    }
+
     if (body.mainGateway !== undefined) {
       if (!isMainGateway(body.mainGateway)) {
         return NextResponse.json(
@@ -179,7 +191,7 @@ export async function PUT(request: NextRequest) {
     const saved = await prisma.globalSettings.update({
       where: { id: existing.id },
       data: updateData,
-      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, payforSaudiRoutingEnabled: true, mainGateway: true, allowAnyAmount: true },
+      select: { suggestedTeamSupport: true, teamSupportEnabled: true, cartUpsell: true, payforEnabled: true, payforSaudiRoutingEnabled: true, mainGateway: true, allowAnyAmount: true, minDonation: true },
     });
 
     // Gateway settings decide where every new donation's money goes, so each
@@ -190,13 +202,15 @@ export async function PUT(request: NextRequest) {
     const afterPayfor = saved.payforEnabled ?? true;
     const beforeAnyAmount = existing.allowAnyAmount === true;
     const afterAnyAmount = saved.allowAnyAmount === true;
-    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor || beforeAnyAmount !== afterAnyAmount || existing.payforSaudiRoutingEnabled !== saved.payforSaudiRoutingEnabled)) {
+    const beforeMin = JSON.stringify(parseMinDonation(existing.minDonation)), afterMin = JSON.stringify(parseMinDonation(saved.minDonation));
+    if (session && (beforeGateway !== afterGateway || beforePayfor !== afterPayfor || beforeAnyAmount !== afterAnyAmount || beforeMin !== afterMin || existing.payforSaudiRoutingEnabled !== saved.payforSaudiRoutingEnabled)) {
       const actor = auditActorFromDashboardSession(session);
       const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) || null : null;
       const parts: string[] = [];
       if (existing.payforSaudiRoutingEnabled !== saved.payforSaudiRoutingEnabled) parts.push(`توجيه السعودية إلى PayFor: ${saved.payforSaudiRoutingEnabled === true}`);
       if (beforeGateway !== afterGateway) parts.push(`البوابة الرئيسية من ${beforeGateway} إلى ${afterGateway}`);
       if (beforePayfor !== afterPayfor) parts.push(`PayFor ${afterPayfor ? "مفعّل" : "معطّل"} (كان ${beforePayfor ? "مفعّلًا" : "معطّلًا"})`);
+      if (beforeMin !== afterMin) { const m = parseMinDonation(saved.minDonation); parts.push(`الحد الأدنى للتبرع: ${m.usd} USD${Object.keys(m.byCurrency).length ? " · " + Object.entries(m.byCurrency).map(([c, a]) => `${a} ${c}`).join("، ") : ""}`); }
       if (beforeAnyAmount !== afterAnyAmount) parts.push(`مبلغ التبرع: ${afterAnyAmount ? "أي مبلغ بعملة المتبرع" : "حد أدنى دولار واحد"}`);
       await writeAuditLog({
         ...actor,
@@ -228,6 +242,7 @@ export async function PUT(request: NextRequest) {
       payforSaudiRoutingEnabled: saved.payforSaudiRoutingEnabled === true,
       mainGateway: parseMainGateway(saved.mainGateway),
       allowAnyAmount: saved.allowAnyAmount === true,
+      minDonation: parseMinDonation(saved.minDonation),
     });
   } catch (e) {
     console.error("Error updating global settings:", e);
