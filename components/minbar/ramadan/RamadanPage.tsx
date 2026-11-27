@@ -93,12 +93,24 @@ export default function RamadanPage({ locale, signedIn, preview, settings, proje
       const response = await fetch("/api/ramadan/plans", { method: "POST", signal: AbortSignal.timeout(25000), headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ days: sorted.map((n) => ({ day: n, amount: amountFor(n) })), slot: draft.slot, timezone: tz, projectIds: draft.projectIds, intent: draft.intent, onBehalf: draft.onBehalf, remind: draft.remind, cardId: id, cvc, consent: true, locale }) });
       const data = await response.json();
+      // This donor's schedule was already confirmed and paid moments ago (a repeated confirmation).
+      if (response.status === 409 && data?.error === "RAMADAN_PLAN_EXISTS") { setCvc(""); setBusy(false); setDone("success"); window.scrollTo({ top: 0 }); return; }
       if (!response.ok || typeof data.donationId !== "string") throw new Error(data?.error || "PLAN");
       // The plan's 1 USD first instalment, through the ordinary Albaraka checkout (3D + Sale).
       const pay = await fetch("/api/albaraka/3d/initiate", { method: "POST", signal: AbortSignal.timeout(25000), headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ donationId: data.donationId, savedCardId: id, card: { cvv: cvc }, locale, securityMode: "3D" }) });
-      const bank = await pay.json();
-      if (!pay.ok || typeof bank.actionUrl !== "string" || !bank.fields || bank.method === "GET" || new URL(bank.actionUrl, window.location.origin).protocol !== "https:") throw new Error(bank?.code || bank?.error || "PLAN");
+      const bank = await pay.json().catch(() => ({}));
+      /* The bank may charge the 1 USD directly (2D) and answer at once: the payment is already
+         settled (or declined) here, so it must never be shown as an error that invites a second try. */
+      if (pay.ok && bank.method === "GET" && typeof bank.actionUrl === "string") {
+        setCvc("");
+        if (bank.paid === true) { setBusy(false); setDone("success"); window.scrollTo({ top: 0 }); return; }
+        const result = new URL(bank.actionUrl, window.location.origin);
+        if (result.origin !== window.location.origin) throw new Error("PLAN");
+        window.location.href = result.href; // the result page gives the bank's reason
+        return;
+      }
+      if (!pay.ok || typeof bank.actionUrl !== "string" || !bank.fields || new URL(bank.actionUrl, window.location.origin).protocol !== "https:") throw new Error(bank?.code || bank?.error || "PLAN");
       const form = document.createElement("form"); form.method = "POST"; form.action = bank.actionUrl; form.style.display = "none"; form.setAttribute("data-clarity-mask", "True");
       for (const [name, value] of Object.entries(bank.fields)) { const input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = String(value); form.appendChild(input); }
       setCvc(""); document.body.appendChild(form); form.submit();
