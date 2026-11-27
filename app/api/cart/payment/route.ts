@@ -29,7 +29,7 @@ import { BANK_TRANSFER_PROVIDER } from "@/lib/donations/bank-transfer-shared";
 import { listBankAccounts } from "@/lib/minbar/cms";
 import { getUsdBaseRatesForServer } from "@/lib/exchange/rates-service";
 import { WAQF_MAX_COUNT, WAQF_UNIT_PRICE_USD, isWaqfUnitKey } from "@/lib/minbar/waqf";
-import { MIN_DONATION_USD, MIN_DONATION_USD_TOLERANCE, parseLocalAmount } from "@/lib/minbar/donation-amount";
+import { MIN_DONATION_USD_TOLERANCE, parseLocalAmount, parseMinDonation } from "@/lib/minbar/donation-amount";
 import {
   consentSnapshotFor,
   firstChargeAfterCheckout,
@@ -347,7 +347,7 @@ export async function POST(request: NextRequest) {
        step turned off nothing is added whatever the request says. */
     const teamSupportSettings = await prisma.globalSettings.findFirst({
       orderBy: { createdAt: "asc" },
-      select: { teamSupportEnabled: true, allowAnyAmount: true },
+      select: { teamSupportEnabled: true, allowAnyAmount: true, minDonation: true },
     });
     const teamSupportAllowed = teamSupportSettings?.teamSupportEnabled !== false;
 
@@ -389,7 +389,12 @@ export async function POST(request: NextRequest) {
       /* Off (the default), every donation line is worth at least a dollar;
          the basket and checkout say so first, this is the server's half. */
       const allowAnyAmount = teamSupportSettings?.allowAnyAmount === true;
-      for (const line of [...items, ...categoryItems]) {
+      // The admin's floor: a fixed figure for the charge currency when set, else the USD base.
+      const minDonation = typeof parseMinDonation === "function" ? parseMinDonation(teamSupportSettings?.minDonation) : { usd: 1, byCurrency: {} as Record<string, number> };
+      const fixedMin = minDonation.byCurrency[chargeCode];
+      // Exempt from the floor (owner, 2026-11-27): recurring lines (daily, Friday, monthly) and
+      // share lines, whose price per share is set on the project (e.g. a meal at 8 USD).
+      for (const [lineIndex, line] of [...items, ...categoryItems].entries()) {
         /* Given in the charge currency: charged as given. Given in another one
            (the donor switched currency since): that figure, converted. */
         const local = parseLocalAmount(line.local);
@@ -401,9 +406,9 @@ export async function POST(request: NextRequest) {
               ? toCharge(local.amount / localRate)
               : toCharge(line.amount);
         const usdValue = line.amount / usdToCharge;
-        if (!allowAnyAmount && usdValue < MIN_DONATION_USD * MIN_DONATION_USD_TOLERANCE) {
+        if (!allowAnyAmount && lineFrequencies[lineIndex] === "once" && !(line as { shareCount?: number | null }).shareCount && (fixedMin ? line.amount < fixedMin * MIN_DONATION_USD_TOLERANCE : usdValue < minDonation.usd * MIN_DONATION_USD_TOLERANCE)) {
           return NextResponse.json(
-            { error: "Each donation must be at least 1 USD or its equivalent", code: "BELOW_MINIMUM" },
+            { error: `Each donation must be at least ${fixedMin ? `${fixedMin} ${chargeCode}` : `${minDonation.usd} USD or its equivalent`}`, code: "BELOW_MINIMUM", minimum: fixedMin ? { amount: fixedMin, currency: chargeCode } : { amount: minDonation.usd, currency: "USD" } },
             { status: 400 }
           );
         }

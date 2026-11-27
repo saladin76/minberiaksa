@@ -40,6 +40,16 @@
   ]
  },
  {
+  "ar": "الحد الأدنى للتبرع: {0} USD{1}",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/global-settings/route.ts (pattern)"
+  ]
+ },
+ {
   "ar": "سبب فشل الدفع بلغة المتبرع (للتبرع الفاشل فقط)",
   "missing": [
    "en",

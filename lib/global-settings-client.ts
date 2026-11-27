@@ -13,6 +13,7 @@ import {
 } from "./campaign/suggested-team-support";
 import { parseMainGateway, type MainGateway } from "./payment-gateway";
 import { parseCartUpsell, type CartUpsellConfig } from "./minbar/cart-upsell";
+import { parseMinDonation, type MinDonationConfig } from "./minbar/donation-amount";
 
 export type GlobalSettings = {
   suggestedTeamSupport: SuggestedTeamSupportConfig;
@@ -40,6 +41,8 @@ export type GlobalSettings = {
    * positive amount in the donor's currency, exactly as given.
    */
   allowAnyAmount: boolean;
+  /** The floor while allowAnyAmount is off: a USD base and fixed figures per currency. */
+  minDonation: MinDonationConfig;
 };
 
 let cached: GlobalSettings | null = null;
@@ -79,6 +82,7 @@ export async function fetchGlobalSettings(
             albarakaConfigured?: unknown;
             albarakaRecurringReady?: unknown;
             allowAnyAmount?: unknown;
+            minDonation?: unknown;
           }
         | null;
       const parsed: GlobalSettings = {
@@ -96,6 +100,7 @@ export async function fetchGlobalSettings(
         albarakaConfigured: data?.albarakaConfigured === true,
         albarakaRecurringReady: data?.albarakaRecurringReady === true,
         allowAnyAmount: data?.allowAnyAmount === true,
+        minDonation: parseMinDonation(data?.minDonation),
       };
       cached = parsed;
       return parsed;
