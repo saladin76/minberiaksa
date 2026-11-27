@@ -3568,6 +3568,7 @@
     "signInWithGoogle": "Masuk dengan Google"
   },
   "ramadan": {
+    "dollarNotice": "To verify your card we charge only $1 now, counted as a donation to the same projects. Your scheduled donations start in Ramadan as you chose.",
     "homeBadge": "Ramadan {year} · starts in {days, plural, one {# day} other {# days}}",
     "homeBadgeNow": "Ramadan {year}",
     "homeBannerTitle": "Schedule your giving for all of Ramadan",
@@ -3661,7 +3662,7 @@
     "signInToConfirm": "Sign in to confirm the schedule",
     "cardTitle": "Donation card",
     "cardHint": "Your bank will confirm the card with a code by text message. Nothing is charged now; charges start on your first chosen day.",
-    "consent": "I agree to be charged a total of {total} over {count} days of Ramadan, each on its date, and I can stop the schedule from my account.",
+    "consent": "I agree to a $1 charge now to verify my card, then to my scheduled donations ({count} days, {total} in total) being charged to this card on their days.",
     "errorGeneric": "We could not complete the schedule. Check the card details and try again.",
     "errorProjects": "One of the chosen projects is no longer available. Please review your projects.",
     "barCaption": "{count, plural, one {# day} other {# days}} · total",

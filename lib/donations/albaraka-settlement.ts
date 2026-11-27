@@ -166,7 +166,9 @@ export async function settleAlbarakaDonation(
           data: {
             ...(activated ? {status: "ACTIVE", provider: "ALBARAKA"} : {}),
             lastBillingDate: plan.lastBillingDate && plan.lastBillingDate > paidAt ? plan.lastBillingDate : paidAt,
-            nextBillingDate: initial ? firstChargeForPlan(plan, paidAt) : nextChargeAfterPayment(plan, paidAt),
+            // A Ramadan plan's days come from its own calendar (set when it was created); its 1 USD
+            // first instalment proves the card and never moves them.
+            ...(plan.frequency === "RAMADAN" ? {} : { nextBillingDate: initial ? firstChargeForPlan(plan, paidAt) : nextChargeAfterPayment(plan, paidAt) }),
             chargeAttempts: 0,
             lastChargeError: null,
           },

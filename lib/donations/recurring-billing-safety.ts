@@ -19,6 +19,9 @@ export const ORDINARY_PAYMENT_WHERE = {
 /** Pure policy shared by charging and the deployment audit. */
 export function recurringBillingDecision(plan: BillingSafetyPlan, proof: Proof, now: Date): BillingSafetyDecision {
   if (!plan.nextBillingDate || !Number.isFinite(plan.nextBillingDate.getTime()) || !Number.isFinite(proof.paidAt.getTime()) || proof.paidAt.getTime() > now.getTime() + 300_000) return { state: "hold", reason: "RECURRING_DATE_REVIEW_REQUIRED" };
+  // Ramadan plans: the settled 1 USD first instalment is the proof; their days and amounts come from
+  // the Ramadan calendar (ramadanAdvance), not the weekly/monthly rules below.
+  if (plan.frequency === "RAMADAN") return { state: "ready" };
   if (plan.frequency !== null && !isRecurringFrequency(plan.frequency)) return { state: "hold", reason: "RECURRING_FREQUENCY_REVIEW_REQUIRED" };
   if (plan.timezone && !normalizeTimezone(plan.timezone, "")) return { state: "hold", reason: "RECURRING_TIMEZONE_REVIEW_REQUIRED" };
   if (plan.scheduleRule != null) {
