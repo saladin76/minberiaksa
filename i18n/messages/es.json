@@ -3255,7 +3255,8 @@
     "emailCta": "Ver el proyecto",
     "whatsappBody": "{recipientName}, {donorName} ha donado en tu nombre al proyecto «{project}» a través de Minbar Al-Aqsa.",
     "whatsappAmount": "Importe de la donación: {amount}.",
-    "anonymousDonor": "Un benefactor"
+    "anonymousDonor": "Un benefactor",
+    "emailOpenCta": "Open your gift"
   },
   "Concierge": {
     "title": "Ayúdame a elegir cómo donar",
@@ -3685,31 +3686,24 @@
   },
   "giftPage": {
     "metaTitle": "Gift a charity to someone you love | Minber al-Aqsa",
-    "metaDescription": "A donation in the name of someone you love, with a card designed for the occasion, sent by WhatsApp or email with a certificate in their name.",
+    "metaDescription": "A donation in the name of someone you love, with the intention you choose and a designed card sent by WhatsApp or email, with a certificate in their name.",
     "title": "Gift a charity to someone you love",
+    "badge": "Gifts",
+    "heroTitle": "A donation in their name, and a card that lasts",
+    "heroSub": "For a joy, a prayer for recovery, or an ongoing charity for a loved one who passed: choose the intention and value, we suggest the right gift, then you design its card and it reaches them with a message and a certificate in their name.",
     "stepOf": "Step {n} of 4 · {name}",
     "stepsLabel": "Gift steps",
     "steps": {
-      "value": "Value",
-      "occasion": "Occasion",
+      "intention": "Intention",
+      "gift": "Gift",
       "card": "Card",
       "send": "Delivery"
     },
     "back": "Back",
     "next": "Next",
     "payAndSend": "Continue to payment",
-    "heroTitle": "A donation in their name, and a card that lasts",
-    "heroSub": "Start with the value, then the occasion and the card",
-    "modeFree": "I choose the amount",
-    "modePackage": "Ready gift",
-    "hintFree": "Choose the gift's value, then the project it goes to.",
-    "hintPackage": "A gift with a set value and impact; you can choose how many.",
-    "otherAmount": "Other amount (USD)",
-    "goesTo": "The gift goes to",
-    "decrease": "Decrease",
-    "increase": "Increase",
-    "occasionTitle": "What is the occasion?",
-    "occasionSub": "We suggest a design and a message for it; you can change both",
+    "intentionTitle": "What is your intention?",
+    "intentionSub": "Choose your intention and the gift's value; we then suggest the right gift.",
     "occasions": {
       "ramadan": {
         "label": "Ramadan",
@@ -3736,7 +3730,7 @@
         "msg2": "May Allah fill your home with love and mercy."
       },
       "recovery": {
-        "label": "Recovery",
+        "label": "For recovery",
         "head": "Get well soon",
         "msg1": "No harm, a purification, God willing. I gave a charity for your quick recovery.",
         "msg2": "I ask Allah the Almighty, Lord of the Mighty Throne, to cure you."
@@ -3754,19 +3748,44 @@
         "msg2": "May Allah accept your worship and bring you back safely."
       },
       "memory": {
-        "label": "In memory",
+        "label": "For a loved one who passed",
         "head": "Ongoing charity",
         "msg1": "O Allah, forgive and have mercy on them, and make this charity a light for them.",
         "msg2": "O Allah, make their grave a garden of Paradise and grant them the reward of this charity."
       },
       "none": {
-        "label": "No occasion",
+        "label": "With love and appreciation",
         "head": "A gift of goodness",
         "msg1": "I wanted to gift you the reward of this charity; may Allah accept it from us both.",
         "msg2": "Because you are dear to me, I gave a charity whose reward lasts."
       }
     },
+    "valueTitle": "Gift value",
+    "otherValue": "Other value (USD)",
+    "giftTitle": "Choose the gift",
+    "suggestedFor": "Best for {intention}",
+    "otherGifts": "Other gifts",
+    "allGifts": "Gifts",
+    "waqfShare": "Waqf share",
+    "waqfShareNote": "In the endowments of Jerusalem; its reward continues as long as the waqf",
+    "waqfMeter": "Waqf metre",
+    "waqfMeterNote": "A full metre in an endowment in Jerusalem",
+    "perShare": "share",
+    "perMeter": "metre",
+    "badgeWaqf": "Waqf certificate",
+    "badgeGift": "Gift certificate",
+    "openName": "A donation at the value you choose",
+    "openNote": "Spent where the need is greatest",
+    "openShort": "A donation in their name",
+    "pickGift": "Choose the gift",
+    "waqfAdjusted": "Waqf comes in shares and metres: your {value} becomes {total} ({count} {unit}), and the certificate is issued for that number.",
     "cardTitle": "Design the card",
+    "tabsLabel": "Customisation",
+    "tabs": {
+      "design": "Design",
+      "text": "Text",
+      "names": "Names"
+    },
     "front": "Front",
     "backSide": "Back",
     "sidesLabel": "Card sides",
@@ -3774,16 +3793,38 @@
     "themes": {
       "dome": "Dome",
       "night": "Crescent",
+      "ivory": "Ivory",
       "arabesque": "Arabesque",
       "floral": "Floral",
       "calm": "Calm"
     },
-    "color": "Color",
-    "colorN": "Color {n}",
+    "color": "Colour",
+    "colorN": "Colour {n}",
+    "layout": "Layout",
+    "layouts": {
+      "classic": "Classic",
+      "center": "Centred",
+      "minimal": "Simple"
+    },
+    "pattern": "Background pattern",
+    "showLogo": "Minber al-Aqsa logo",
+    "showSeal": "Minber gold seal",
+    "headlineTitle": "Headline",
+    "headlineOwn": "My own headline",
+    "headlinePlaceholder": "e.g. To my dear mother",
     "font": "Font",
-    "fontNaskh": "Naskh",
-    "fontModern": "Modern",
-    "readyMessage": "A ready message for the occasion",
+    "fonts": {
+      "naskh": "Naskh",
+      "ruqaa": "Ruqaa",
+      "modern": "Modern"
+    },
+    "size": "Size",
+    "sizes": {
+      "s": "Small",
+      "m": "Medium",
+      "l": "Large"
+    },
+    "readyMessage": "A ready message for the intention",
     "writeMessage": "Or write your own",
     "toWhom": "To whom?",
     "namePlaceholder": "Name",
@@ -3792,7 +3833,7 @@
     "addRecipient": "+ Gift another person with the same card",
     "signature": "Signature",
     "signaturePlaceholder": "e.g. your son Ahmad",
-    "showAmount": "Show the gift's value on the card and in the message",
+    "showAmount": "Show the gift's value on the back of the card and in the message",
     "sendTitle": "How and when should it arrive?",
     "chooseChannels": "Choose one way or both",
     "channelsLabel": "Delivery methods",
@@ -3813,7 +3854,7 @@
     "anonymousNote": "Your name and signature are not shown",
     "anonymousName": "A well-wisher",
     "review": {
-      "occasion": "Occasion",
+      "intention": "Intention",
       "gift": "Gift",
       "to": "To",
       "delivery": "Delivery",
@@ -3823,25 +3864,38 @@
     "giftValue": "Gift value",
     "cardKicker": "A gift of goodness from Minber al-Aqsa",
     "memoryKicker": "To Allah we belong and to Him we return",
-    "cardTo": "To: {name}",
-    "cardFrom": "From: {name}",
+    "cardTo": "To:",
+    "cardFrom": "From:",
+    "cardWishes": "With sincere prayers",
     "aboutGift": "About this gift",
     "valueLine": "Value: {amount}",
-    "backNote": "It reaches the project in full; they receive a message and a certificate in their name.",
+    "backNote": "It reaches its purpose in full; they receive a message and a gift certificate in their name.",
+    "backNoteWaqf": "A waqf in their name in Jerusalem, its reward continuing for them; they receive the waqf certificate in their name.",
     "backNumber": "The gift number is issued once it is complete",
-    "giftFor": "A donation to {project}",
     "recipientFallback": "Recipient's name",
     "andOthers": "{name} and {n} others",
-    "seal": "Minber",
+    "logoAlt": "Minbar al-Aqsa Association",
+    "sealAlt": "Minber al-Aqsa seal",
     "preview": "Admin preview: the page is hidden from visitors until it is enabled in the dashboard.",
-    "notConfigured": "No gift projects are set yet. Choose them in the dashboard → Gift page.",
+    "notConfigured": "The page's gifts are not set yet. Add them in the dashboard → Gift page settings.",
+    "openMetaTitle": "You have a gift | Minber al-Aqsa",
+    "openHello": "{name}, you have a gift",
+    "openFrom": "{name} gave a donation in your name through Minber al-Aqsa",
+    "openButton": "Open the gift",
+    "openCert": "Your gift certificate",
+    "openCertWaqf": "Your waqf certificate",
+    "openProject": "See its impact",
+    "openGiftBack": "Give a gift too",
+    "openNotYet": "Your gift is on its way and will reach you on time.",
     "errors": {
       "amount": "Choose the gift's value",
+      "gift": "Choose the gift",
       "name": "Write the recipient's name",
       "channel": "Choose WhatsApp, email or both",
       "phone": "{name}'s WhatsApp number is not valid; include the country code",
       "email": "{name}'s email address is not valid",
-      "date": "Choose a time at least 5 minutes from now and within a year"
+      "date": "Choose a time at least 5 minutes from now and within a year",
+      "generic": "The gift could not be added to the basket. Check the details and try again."
     }
   }
 }

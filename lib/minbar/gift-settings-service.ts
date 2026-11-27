@@ -26,7 +26,7 @@ export async function giftProjectOptions() {
 }
 
 export async function saveGiftSettings(settings: GiftSettings, revision: string | null) {
-  const used = [...settings.projectIds, ...settings.packages.map(p => p.projectId)];
+  const used = [...settings.impactGifts.map(g => g.projectId), ...(settings.openProjectId ? [settings.openProjectId] : [])];
   if (used.length) {
     const available = new Set((await giftProjectOptions()).map(project => project.id.toLowerCase()));
     if (used.some(id => !available.has(id))) throw new GiftProjectUnavailable();

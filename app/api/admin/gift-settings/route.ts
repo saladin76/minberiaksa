@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest) {
     await writeAuditLog({ ...auditActorFromDashboardSession(session!), stream: "TEAM", action: "gift.settings.update", entityType: "RecurringPageSettings", entityId: "gift",
       messageAr: s.enabled !== before?.settings.enabled ? (s.enabled ? "تفعيل صفحة الإهداء" : "إيقاف صفحة الإهداء") : "تحديث إعدادات صفحة الإهداء",
       messageEn: "Updated gift page settings",
-      metadata: { enabled: s.enabled, amounts: s.amounts, projects: s.projectIds.length, packages: s.packages.length } });
+      metadata: { enabled: s.enabled, amounts: s.amounts, waqf: s.waqf, impactGifts: s.impactGifts.length, open: Boolean(s.openProjectId) } });
     return NextResponse.json(saved, { headers });
   } catch (error) {
     const conflict = error instanceof GiftSettingsConflict, unavailable = error instanceof GiftProjectUnavailable;

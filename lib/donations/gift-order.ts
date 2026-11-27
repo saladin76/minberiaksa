@@ -8,15 +8,24 @@
 
 export const GIFT_CHANNELS = ["EMAIL", "WHATSAPP"] as const;
 export const GIFT_OCCASIONS = ["ramadan", "eid", "baby", "wedding", "recovery", "success", "hajj", "memory", "none"] as const;
-export const GIFT_THEMES = ["dome", "night", "arabesque", "floral", "calm"] as const;
+export const GIFT_THEMES = ["dome", "night", "ivory", "arabesque", "floral", "calm"] as const;
+export const GIFT_FONTS = ["naskh", "ruqaa", "modern"] as const;
+export const GIFT_LAYOUTS = ["classic", "center", "minimal"] as const;
 /** The card designed on the gift page; validated here, stored on the line as `giftCard`. */
 export interface GiftCard {
   occasion: (typeof GIFT_OCCASIONS)[number];
   theme: (typeof GIFT_THEMES)[number];
   accent: 0 | 1 | 2;
-  font: "naskh" | "modern";
+  font: (typeof GIFT_FONTS)[number];
   signature: string | null;
   anonymous: boolean;
+  /** Added with the gift catalog; absent on older cards (classic layout, pattern, logo and seal on). */
+  layout?: (typeof GIFT_LAYOUTS)[number];
+  pattern?: boolean;
+  size?: "s" | "m" | "l";
+  headline?: string | null;
+  showLogo?: boolean;
+  showSeal?: boolean;
 }
 const SEND_AT_MAX_DAYS = 366;
 export type GiftChannel = (typeof GIFT_CHANNELS)[number];
@@ -100,9 +109,17 @@ export function parseGiftOrder(raw: unknown): GiftParseResult {
     const occasion = (GIFT_OCCASIONS as readonly string[]).includes(String(c.occasion)) ? (c.occasion as GiftCard["occasion"]) : null;
     const theme = (GIFT_THEMES as readonly string[]).includes(String(c.theme)) ? (c.theme as GiftCard["theme"]) : null;
     const accent = c.accent === 0 || c.accent === 1 || c.accent === 2 ? c.accent : null;
-    const font = c.font === "naskh" || c.font === "modern" ? c.font : null;
+    const font = (GIFT_FONTS as readonly string[]).includes(String(c.font)) ? (c.font as GiftCard["font"]) : null;
     if (!occasion || !theme || accent === null || !font) return { ok: false, error: "Invalid gift card" };
-    card = { occasion, theme, accent, font, signature: str(c.signature, 60) || null, anonymous: c.anonymous === true };
+    // The catalog's extra choices are stored only when sent, so older cards keep their exact shape.
+    const extra: Partial<GiftCard> = {};
+    if ((GIFT_LAYOUTS as readonly string[]).includes(String(c.layout))) extra.layout = c.layout as GiftCard["layout"];
+    if (c.size === "s" || c.size === "m" || c.size === "l") extra.size = c.size;
+    if (typeof c.pattern === "boolean") extra.pattern = c.pattern;
+    if (typeof c.showLogo === "boolean") extra.showLogo = c.showLogo;
+    if (typeof c.showSeal === "boolean") extra.showSeal = c.showSeal;
+    if (str(c.headline, 40)) extra.headline = str(c.headline, 40);
+    card = { occasion, theme, accent, font, signature: str(c.signature, 60) || null, anonymous: c.anonymous === true, ...extra };
   }
 
   let sendAt: Date | null = null;
