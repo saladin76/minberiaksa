@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
     if (!isAlbarakaConfigured(albarakaConfig()) || !isAlbarakaRecurringEnabled(albarakaRecurringConfig())) return NextResponse.json({ error: "BANK_AUTHENTICATION_UNAVAILABLE" }, { status: 503, headers: noStore });
     const card = await prisma.creditCard.findFirst({ where: { id: body.cardId, userId: session.user.id }, select: { id: true, expiryDate: true } });
     if (!card || isStoredCardExpired(card.expiryDate)) return NextResponse.json({ error: "CARD_UNAVAILABLE" }, { status: 400, headers: noStore });
+    // A repeated confirmation never creates (and charges) a second schedule.
+    const recent = await prisma.subscription.findFirst({ where: { donorId: session.user.id, frequency: "RAMADAN", status: "ACTIVE", lastBillingDate: { gt: new Date(0) }, createdAt: { gt: new Date(Date.now() - 1_800_000) } }, select: { id: true } });
+    if (recent) return NextResponse.json({ error: "RAMADAN_PLAN_EXISTS", planId: recent.id }, { status: 409, headers: noStore });
 
     /* Owner decision (2026-11-27): the card is proven by a real 1 USD 3D payment now, counted as a
        donation to the same projects, exactly as a Friday plan proves its card with its first

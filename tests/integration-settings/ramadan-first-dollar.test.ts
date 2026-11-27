@@ -24,3 +24,14 @@ test("the plan's first instalment is a 1 USD donation paid through the ordinary 
   assert.match(fs.readFileSync("components/minbar/ramadan/RamadanPage.tsx", "utf8"), /fetch\("\/api\/albaraka\/3d\/initiate"/);
   assert.match(fs.readFileSync("lib/donations/albaraka-settlement.ts", "utf8"), /plan\.frequency === "RAMADAN" \? \{\} : \{ nextBillingDate:/);
 });
+
+test("a direct (2D) first instalment is not reported as a failure, and a paid schedule is not created twice", () => {
+  const page = fs.readFileSync("components/minbar/ramadan/RamadanPage.tsx", "utf8");
+  assert.match(page, /pay\.ok && bank\.method === "GET"/);
+  assert.match(page, /bank\.paid === true\) \{ setBusy\(false\); setDone\("success"\)/);
+  assert.match(page, /RAMADAN_PLAN_EXISTS/);
+  assert.doesNotMatch(page, /bank\.method === "GET" \|\| new URL/);
+  const route = fs.readFileSync("app/api/ramadan/plans/route.ts", "utf8");
+  assert.match(route, /error: "RAMADAN_PLAN_EXISTS"/);
+  assert.match(route, /lastBillingDate: \{ gt: new Date\(0\) \}/);
+});
