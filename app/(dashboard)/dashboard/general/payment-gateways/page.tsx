@@ -190,8 +190,8 @@ export default function PaymentGatewaysPage() {
     if (loading || loadError) return;
     const reason = confirmPaymentChange(
       next
-        ? dt("إلغاء حد الدولار الواحد في الموقع. قد تفرض البوابة أو البنك حدودًا مستقلة على مبلغ الدفع.")
-        : dt("حد أدنى دولار واحد: لن تقبل السلة وصفحة الدفع أي تبرع تقل قيمته عن دولار واحد (أو ما يعادله بعملة المتبرع).")
+        ? dt("إيقاف الحد الأدنى: يُقبل أي مبلغ في الموقع. قد تفرض البوابة أو البنك حدودًا مستقلة على مبلغ الدفع.")
+        : dt("تفعيل الحد الأدنى: لن تقبل السلة وصفحة الدفع تبرعًا لمرة واحدة أقل من المبلغ المحدد في هذا القسم.")
     );
     if (reason === null) return;
     const prev = allowAnyAmount;
@@ -199,7 +199,7 @@ export default function PaymentGatewaysPage() {
     setSavingAnyAmount(true);
     try {
       await axios.put("/api/global-settings", { allowAnyAmount: next, reason });
-      toast.success(next ? dt("أصبح بإمكان المتبرعين التبرع بأي مبلغ") : dt("أصبح الحد الأدنى للتبرع دولارًا واحدًا"));
+      toast.success(next ? dt("أصبح بإمكان المتبرعين التبرع بأي مبلغ") : dt("تم تفعيل الحد الأدنى للتبرع"));
     } catch (e) {
       setAllowAnyAmount(prev);
       toast.error(errorMessage(e, dt("تعذّر حفظ الإعداد")));
@@ -337,54 +337,45 @@ export default function PaymentGatewaysPage() {
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-gray-900">{dt("مبلغ التبرع")}</h2>
+            {/* One card: the minimum donation, switched on or off, and its figures (owner, 2026-11-27). */}
             <Card className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <div className="rounded-full bg-sky-50 p-2 text-sky-700">
-                    <Coins className="w-5 h-5" />
-                  </div>
+                  <div className="rounded-full bg-sky-50 p-2 text-sky-700"><Coins className="w-5 h-5" /></div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900">
-                      {dt("السماح بمبالغ أقل من دولار واحد")}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {allowAnyAmount
-                        ? dt("مفعّل: يُلغى حد الدولار الواحد في الموقع، مع بقاء ضوابط المبلغ والعملة لدى البوابة والبنك.")
-                        : dt("معطّل: الحد الأدنى لكل تبرع دولار واحد أو ما يعادله بالعملة المختارة عند إنشاء الطلب. يطلب الموقع رفع المبالغ الأقل من هذا الحد.")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {dt("عملة العرض هي العملة المختارة للتبرع. قد يُرسل طلب البنك بعملة مختلفة حسب البوابة؛ وتوضح تفاصيل العملية المبلغ والعملة المرسلين فعليًا. المعادل بالدولار للمحاسبة، ولا يسري حد الدولار الواحد على الأوقاف ذات السعر الثابت.")}</p>
+                    <h3 className="text-base font-semibold text-gray-900">{dt("الحد الأدنى للتبرع")}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{allowAnyAmount ? dt("معطّل: يُقبل أي مبلغ.") : dt("مفعّل: لا يُقبل تبرع لمرة واحدة أقل من المبلغ المحدد هنا، ويرى المتبرع تنبيهًا بعملته.")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {savingAnyAmount && (
-                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                  )}
-                  <Switch
-                    checked={allowAnyAmount}
-                    disabled={savingAnyAmount}
-                    onCheckedChange={handleToggleAnyAmount}
-                  />
+                  {savingAnyAmount && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                  <Switch aria-label={dt("تفعيل الحد الأدنى للتبرع")} checked={!allowAnyAmount} disabled={savingAnyAmount} onCheckedChange={(on) => handleToggleAnyAmount(!on)} />
                 </div>
               </div>
-            </Card>
-            <Card className={allowAnyAmount ? "p-5 sm:p-6 opacity-60" : "p-5 sm:p-6"}>
-              <h3 className="text-base font-semibold text-gray-900">{dt("الحد الأدنى للتبرع")}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{allowAnyAmount ? dt("لا يسري الآن لأن خيار \"أي مبلغ\" مفعّل.") : dt("يرى المتبرع تنبيهًا إن أدخل أقل منه، ويرفض الخادم الطلب. لا يسري على التبرعات الدورية، ولا على المشاريع بالأسهم، ولا على الأوقاف بسعرها الثابت، ولا على دعم الفريق.")}</p>
-              <div className="mt-4 grid gap-3 sm:max-w-md">
-                <label className="flex items-center justify-between gap-3 text-sm">{dt("الحد الأساسي بالدولار")}<input type="number" min={0.01} step="0.01" dir="ltr" className="w-32 rounded-lg border p-2" value={minUsd} onChange={(e) => setMinUsd(e.target.value)} /></label>
-                <p className="text-xs text-muted-foreground">{dt("يُحوَّل تلقائيًا لأي عملة بسعر الصرف، إلا العملات التي تحدد لها مبلغًا ثابتًا هنا:")}</p>
-                {minRows.map((row, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input aria-label={dt("رمز العملة")} placeholder="TRY" maxLength={3} dir="ltr" className="w-24 rounded-lg border p-2 uppercase" value={row.code} onChange={(e) => setMinRows((rs) => rs.map((r, j) => j === i ? { ...r, code: e.target.value.toUpperCase() } : r))} />
-                    <input aria-label={dt("أقل مبلغ بهذه العملة")} type="number" min={0.01} step="0.01" dir="ltr" className="w-32 rounded-lg border p-2" value={row.amount} onChange={(e) => setMinRows((rs) => rs.map((r, j) => j === i ? { ...r, amount: e.target.value } : r))} />
-                    <Button type="button" variant="ghost" onClick={() => setMinRows((rs) => rs.filter((_, j) => j !== i))}>{dt("إزالة")}</Button>
+              {!allowAnyAmount ? (
+                <div className="mt-5 space-y-4 border-t pt-5">
+                  <label className="flex flex-wrap items-center gap-3 text-sm font-medium text-gray-900">
+                    {dt("أقل مبلغ بالدولار")}
+                    <span className="flex items-center rounded-lg border bg-white" dir="ltr"><span className="px-2 text-gray-500">$</span><input type="number" min={0.01} step="0.01" className="w-24 rounded-e-lg p-2 outline-none" value={minUsd} onChange={(e) => setMinUsd(e.target.value)} /></span>
+                    <span className="text-xs font-normal text-muted-foreground">{dt("ويُحوَّل تلقائيًا لكل عملة بسعر الصرف.")}</span>
+                  </label>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-900">{dt("مبلغ ثابت لعملات محددة")} <span className="text-xs font-normal text-muted-foreground">{dt("(اختياري، بدل التحويل بسعر الصرف)")}</span></p>
+                    {minRows.map((row, i) => (
+                      <div key={i} className="flex items-center gap-2" dir="ltr">
+                        <input aria-label={dt("رمز العملة")} placeholder="TRY" maxLength={3} className="w-20 rounded-lg border p-2 uppercase" value={row.code} onChange={(e) => setMinRows((rs) => rs.map((r, j) => j === i ? { ...r, code: e.target.value.toUpperCase() } : r))} />
+                        <input aria-label={dt("أقل مبلغ بهذه العملة")} placeholder="300" type="number" min={0.01} step="0.01" className="w-28 rounded-lg border p-2" value={row.amount} onChange={(e) => setMinRows((rs) => rs.map((r, j) => j === i ? { ...r, amount: e.target.value } : r))} />
+                        <Button type="button" variant="ghost" onClick={() => setMinRows((rs) => rs.filter((_, j) => j !== i))}>{dt("إزالة")}</Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={() => setMinRows((rs) => [...rs, { code: "", amount: "" }])}>{dt("+ إضافة عملة")}</Button>
                   </div>
-                ))}
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setMinRows((rs) => [...rs, { code: "", amount: "" }])}>{dt("إضافة عملة")}</Button>
-                  <Button type="button" disabled={savingMin} onClick={() => void saveMinDonation()}>{savingMin ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}{dt("حفظ الحد الأدنى")}</Button>
+                  <div className="flex items-center justify-between gap-3 border-t pt-4">
+                    <p className="text-xs text-muted-foreground">{dt("لا يسري على: التبرعات الدورية، والمشاريع بالأسهم، والأوقاف بسعرها الثابت، ودعم الفريق.")}</p>
+                    <Button type="button" disabled={savingMin} onClick={() => void saveMinDonation()}>{savingMin ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}{dt("حفظ")}</Button>
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </Card>
           </section>
 

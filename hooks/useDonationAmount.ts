@@ -6,11 +6,12 @@ import { useMinbarMoney } from "@/hooks/useMinbarMoney";
 import { fetchGlobalSettings, getCachedGlobalSettings } from "@/lib/global-settings-client";
 import { formatMoney } from "@/lib/minbar/money";
 import {
-  MIN_DONATION_USD,
+  DEFAULT_MIN_DONATION,
   healLegacyLocalRows,
   lineLocal,
-  minDonationInCurrency,
+  minDonationFor,
   type LocalAmount,
+  type MinDonationConfig,
 } from "@/lib/minbar/donation-amount";
 import type { MinbarCartItem } from "@/lib/minbar/cart";
 
@@ -32,11 +33,13 @@ export function useDonationAmount() {
   const locale = useLocale();
   const { code, rate, format, formatLocal } = useMinbarMoney();
   const [allowAny, setAllowAny] = useState<boolean>(() => getCachedGlobalSettings()?.allowAnyAmount ?? false);
+  // The admin's floor (payment gateways page): a USD base and fixed figures per currency.
+  const [minCfg, setMinCfg] = useState<MinDonationConfig>(() => getCachedGlobalSettings()?.minDonation ?? DEFAULT_MIN_DONATION);
 
   useEffect(() => {
     let live = true;
     fetchGlobalSettings().then((settings) => {
-      if (live && settings) setAllowAny(settings.allowAnyAmount);
+      if (live && settings) { setAllowAny(settings.allowAnyAmount); if (settings.minDonation) setMinCfg(settings.minDonation); }
     });
     return () => {
       live = false;
@@ -70,16 +73,21 @@ export function useDonationAmount() {
     [code, format, formatLocal]
   );
 
-  const minLocal = allowAny ? null : minDonationInCurrency(code, rate);
-  const minLabel = minLocal == null ? "" : inLocal ? formatLocal(minLocal) : format(MIN_DONATION_USD);
+  const fixedMin = minCfg.byCurrency[code];
+  const minLocal = allowAny ? null : minDonationFor(code, rate, minCfg);
+  const minLabel = minLocal == null ? "" : inLocal || fixedMin ? formatLocal(minLocal) : format(minCfg.usd);
 
+  /* The floor applies to one-time gifts of a free amount only (owner, 2026-11-27):
+     recurring gifts and share projects (price per share set on the project) are exempt. */
   const tooSmall = useCallback(
-    (usd: number, local?: LocalAmount) => {
+    (usd: number, local?: LocalAmount, opts?: { frequency?: string | null; shares?: boolean }) => {
       if (allowAny || !(usd > 0)) return false;
-      if (local && minLocal != null && local.currency === code) return local.amount < minLocal;
-      return usd < MIN_DONATION_USD - 1e-6;
+      if (opts?.shares || (opts?.frequency && opts.frequency !== "once")) return false;
+      if (local && minLocal != null && local.currency === code) return local.amount < minLocal - 1e-6;
+      if (fixedMin && inLocal) return usd * (rate as number) < fixedMin - 1e-6;
+      return usd < minCfg.usd - 1e-6;
     },
-    [allowAny, minLocal, code]
+    [allowAny, minLocal, code, fixedMin, inLocal, rate, minCfg.usd]
   );
 
   /** A line's amount in the visitor's currency, exact when it was given in it. */
@@ -107,6 +115,8 @@ export function useDonationAmount() {
   const lineTooSmall = useCallback(
     (item: Line & Pick<MinbarCartItem, "waqf">) => {
       if (item.waqf) return false;
+      const row = item as { freqKey?: string | null; shareCount?: number | null };
+      if ((row.freqKey && row.freqKey !== "once") || row.shareCount) return false;
       const local = lineLocal(item);
       // A legacy row in another currency has no USD value to check here.
       if (local && !item.local && local.currency !== code) return false;

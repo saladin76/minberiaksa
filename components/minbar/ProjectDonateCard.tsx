@@ -132,11 +132,12 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
   });
 
   /* Nothing picked, or (with the $1 floor on) less than the floor. */
-  const belowMinimum = amount > 0 && tooSmall(amount, given.local);
+  // The frequency is chosen in the dialog: a recurring gift may be any amount, so the floor is checked on confirm.
+  const belowMinimum = amount > 0 && tooSmall(amount, given.local, { shares: Boolean(shares) });
   const missingAmount = nudge > 0 && (!(amount > 0) || belowMinimum);
 
   const openDialog = () => {
-    if (!(amount > 0) || belowMinimum) {
+    if (!(amount > 0)) {
       setNudge((n) => n + 1);
       return;
     }
@@ -146,6 +147,7 @@ export default function ProjectDonateCard({ project, width, tag }: ProjectDonate
   const closeDialog = useCallback(() => setDialogOpen(false), []);
 
   const onConfirm = (freq: CartFreqKey, intent: GiveIntent, origin: HTMLElement) => {
+    if (freq === "once" && belowMinimum) { setDialogOpen(false); setNudge((n) => n + 1); return; }
     const from = origin.getBoundingClientRect();
     addToCart({
       projectId: project.slug,

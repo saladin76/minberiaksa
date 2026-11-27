@@ -211,7 +211,7 @@ export async function PUT(request: NextRequest) {
       if (beforeGateway !== afterGateway) parts.push(`البوابة الرئيسية من ${beforeGateway} إلى ${afterGateway}`);
       if (beforePayfor !== afterPayfor) parts.push(`PayFor ${afterPayfor ? "مفعّل" : "معطّل"} (كان ${beforePayfor ? "مفعّلًا" : "معطّلًا"})`);
       if (beforeMin !== afterMin) { const m = parseMinDonation(saved.minDonation); parts.push(`الحد الأدنى للتبرع: ${m.usd} USD${Object.keys(m.byCurrency).length ? " · " + Object.entries(m.byCurrency).map(([c, a]) => `${a} ${c}`).join("، ") : ""}`); }
-      if (beforeAnyAmount !== afterAnyAmount) parts.push(`مبلغ التبرع: ${afterAnyAmount ? "أي مبلغ بعملة المتبرع" : "حد أدنى دولار واحد"}`);
+      if (beforeAnyAmount !== afterAnyAmount) parts.push(`مبلغ التبرع: ${afterAnyAmount ? "أي مبلغ بعملة المتبرع" : "الحد الأدنى حسب الإعداد"}`);
       await writeAuditLog({
         ...actor,
         stream: "TEAM",

@@ -103,7 +103,7 @@ export default function DonationPanel({ project, donorCount = 0, preview = false
     ? formatLocal(given.local.amount, { maximumFractionDigits: 2 })
     : format(amount, { maximumFractionDigits: 2 });
   /* With the $1 floor on, less than a dollar is refused here and said so. */
-  const belowMinimum = amount > 0 && tooSmall(amount, given.local);
+  const belowMinimum = amount > 0 && tooSmall(amount, given.local, { frequency: freq, shares: Boolean(shares) });
   const [minHint, setMinHint] = useState(false);
   const hasFinancials = project.goal != null && project.goal > 0;
   const pct = hasFinancials ? Math.min((project.raised / (project.goal as number)) * 100, 100) : 0;
