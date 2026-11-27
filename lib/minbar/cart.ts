@@ -361,6 +361,38 @@ export function clearCart(): void {
   writeTeamSupportRecurring(null);
 }
 
+// ── Payment in progress ─────────────────────────────────────────────────────
+//
+// A card payment no longer empties the basket before the bank (donors who came
+// back from the bank page, or opened the basket from the header, found it empty
+// and stopped). The basket is held under the order instead; CartPendingCheck
+// asks the server about that order on the next page load and empties it only
+// once the order is paid, so the same basket is never paid twice.
+
+export const CART_PENDING_KEY = "mia_cart_pending_payment";
+const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+type PendingPayment = { donationId: string; token?: string | null; at: number };
+
+export function holdCartForPayment(donationId: string, token?: string | null): void {
+  if (!isBrowser() || !/^[a-f\d]{24}$/i.test(donationId)) return;
+  try { window.localStorage.setItem(CART_PENDING_KEY, JSON.stringify({ donationId, token: token ?? null, at: Date.now() } satisfies PendingPayment)); }
+  catch { /* private mode: the basket simply stays */ }
+}
+
+export function readPendingPayment(): PendingPayment | null {
+  if (!isBrowser()) return null;
+  try {
+    const value = JSON.parse(window.localStorage.getItem(CART_PENDING_KEY) || "null") as PendingPayment | null;
+    if (!value || !/^[a-f\d]{24}$/i.test(value.donationId) || Date.now() - Number(value.at) > PENDING_TTL_MS) { window.localStorage.removeItem(CART_PENDING_KEY); return null; }
+    return value;
+  } catch { return null; }
+}
+
+export function clearPendingPayment(): void {
+  if (!isBrowser()) return;
+  try { window.localStorage.removeItem(CART_PENDING_KEY); } catch { /* nothing to clear */ }
+}
+
 // ── Last card attempt ────────────────────────────────────────────────────────
 //
 // The basket is emptied before the donor is handed to a bank's 3-D Secure page

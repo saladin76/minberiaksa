@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { albarakaResultPath, navigatePaymentResult } from "@/lib/minbar/payment-handoff";
-import { clearCart } from "@/lib/minbar/cart";
+import { clearCart, clearPendingPayment } from "@/lib/minbar/cart";
 
 /** Read-only checks; never retries initiation or calls a payment provider. */
 export default function PaymentResultWatcher({ donationId, locale, token }: { donationId: string; locale: string; token?: string | null }) {
@@ -23,7 +23,8 @@ export default function PaymentResultWatcher({ donationId, locale, token }: { do
         if (response.status === 401 || response.status === 403 || response.status === 404) return;
         const payload = response.ok ? await response.json() : null;
         if (!cancelled && (payload?.state === "paid" || payload?.state === "failed")) {
-          navigatePaymentResult(result, clearCart, url => window.location.replace(url));
+          // Only a paid order empties the basket; a decline keeps it for another try.
+        navigatePaymentResult(result, payload?.state === "paid" ? () => { clearCart(); clearPendingPayment(); } : () => {}, url => window.location.replace(url));
           return;
         }
       } catch { /* A network interruption is not a bank decline. */ }

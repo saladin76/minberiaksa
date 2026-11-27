@@ -53,7 +53,7 @@ import {
 } from "@/lib/minbar/checkout";
 import { firstChargeAfterCheckout, frequencyOfOrderType, scheduleRuleFor } from "@/lib/donations/recurring-schedule";
 import { withDonationToken } from "@/lib/donations/access-token-link";
-import { clearCart, readTeamSupport, readTeamSupportLocal, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
+import { clearCart, holdCartForPayment, readTeamSupport, readTeamSupportLocal, readTeamSupportRecurring, rememberCheckoutAttempt, teamSupportIsRecurring } from "@/lib/minbar/cart";
 import { fetchGlobalSettings } from "@/lib/global-settings-client";
 import { useReferralCode } from "@/hooks/useReferralCode";
 import { resolveGateway, type MainGateway } from "@/lib/payment-gateway";
@@ -485,7 +485,7 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
            the bank rails: the order exists, and a donor coming back from
            PayPal must not find it ready to be paid again. */
         const approveUrl = await startPayPalPayment(donation.id, locale, donation.accessToken);
-        clearCart();
+        holdCartForPayment(donation.id, donation.accessToken);
         window.location.assign(approveUrl);
         return;
       }
@@ -550,17 +550,16 @@ export default function CheckoutPage({ projects, projectAliases, categories, ban
             }
           : gateway === "PAYFOR" ? { Cvv2: cardCvc } : {};
 
-      /* The basket is cleared before the redirect: the order now exists on the
-         server, and a donor returning from the bank must not find it still
-         sitting in their basket ready to be paid twice. */
-      /* Kept aside under this order, so a declined donor can retry the same
-         basket from the failure page. */
-      navigatePaymentResult(form.actionUrl, clearCart, () => submitGatewayForm(form, browserFields));
+      /* The basket is held under this order, not emptied: a donor who comes back
+         from the bank page, or is declined, still finds it. CartPendingCheck
+         empties it once the server says this order is paid, so it is never paid twice. */
+      navigatePaymentResult(form.actionUrl, () => holdCartForPayment(donation.id, donation.accessToken), () => submitGatewayForm(form, browserFields));
     } catch (cause) {
       // A lost response, a server error after capture, or a handoff problem is
       // not a decline. Read this SAME order instead of allowing a new checkout.
       if (bankResult && needsPaymentResultCheck(cause instanceof OrderRejectedError ? cause.status : undefined, cause instanceof OrderRejectedError ? cause.code : undefined)) {
-        navigatePaymentResult(bankResult, clearCart, url => window.location.assign(url));
+        const held = new URL(bankResult, window.location.origin).searchParams;
+        navigatePaymentResult(bankResult, () => holdCartForPayment(held.get("donationId") ?? "", held.get("t")), url => window.location.assign(url));
         return;
       }
       console.error("[checkout] payment could not complete");
