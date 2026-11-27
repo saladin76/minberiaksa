@@ -697,6 +697,7 @@ export async function POST(request: NextRequest) {
               donorName: line.donorName,
               onBehalf: line.onBehalf,
               ...giftLineData(line.gift),
+              ...(typeof giftCardData === "function" ? giftCardData(line.gift) : {}),
             })),
           },
         }

@@ -1,23 +1,40 @@
 /**
  * The gift page settings (dashboard → صفحة الإهداء). Kept in the RecurringPageSettings collection
- * under the key "gift", beside Ramadan's, with the same revision guard. Amounts and package prices
- * are USD. A package is a fixed-value gift on one project (e.g. "water for a family" at 50 USD);
- * its name and note are the project's own, in the visitor's language.
+ * under the key "gift", with the same revision guard as Ramadan's. Amounts are USD.
+ *
+ * The page is a catalog, not a list of projects: waqf gifts (share / metre, at the waqf page's own
+ * prices, with the waqf certificate in the recipient's name), "impact" gifts the team names and
+ * describes (each spent on one project), and an open gift at the donor's own value. Every value the
+ * donor is offered comes from here; nothing is priced in the page itself.
  */
-export const GIFT_PACKAGE_ICONS = ["water", "meal", "basket", "book", "waqf", "gift", "heart"] as const;
+import type { GIFT_OCCASIONS } from "@/lib/donations/gift-order";
+
+export const GIFT_PACKAGE_ICONS = ["water", "meal", "basket", "book", "waqf", "gift", "heart", "orphan"] as const;
 export type GiftPackageIcon = (typeof GIFT_PACKAGE_ICONS)[number];
-export type GiftPackage = { projectId: string; price: number; icon: GiftPackageIcon };
+export type GiftIntention = (typeof GIFT_OCCASIONS)[number];
+export type GiftText = { ar: string; en: string; tr: string };
+
+export type ImpactGift = {
+  id: string; // stable key, a-z0-9-
+  projectId: string;
+  icon: GiftPackageIcon;
+  name: GiftText;
+  note: GiftText;
+  intentions: GiftIntention[]; // suggested first for these intentions
+};
 
 export type GiftSettings = {
   enabled: boolean;
-  amounts: number[]; // USD presets for "I choose the amount"
-  projectIds: string[]; // projects the free amount can go to, ordered
-  packages: GiftPackage[]; // ready gifts, ordered
+  amounts: number[]; // suggested values, USD
+  waqf: { share: boolean; meter: boolean; intentions: GiftIntention[] };
+  impactGifts: ImpactGift[];
+  openProjectId: string | null; // where "a donation at your value" goes; null hides it
 };
 
 export const DEFAULT_GIFT_SETTINGS: GiftSettings = {
   enabled: false,
-  amounts: [25, 50, 100, 250, 500, 1000],
-  projectIds: [],
-  packages: [],
+  amounts: [],
+  waqf: { share: true, meter: true, intentions: ["memory"] },
+  impactGifts: [],
+  openProjectId: null,
 };

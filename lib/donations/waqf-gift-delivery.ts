@@ -42,7 +42,8 @@ export async function deliverWaqfGifts(donationId: string, options: { approvalBl
     select: { paidAt: true, accessToken: true, currency: true, donor: { select: { name: true } } },
   });
   if (!donation?.paidAt) return result;
-  const lines = await prisma.donationWaqfItem.findMany({ where: { donationId, giftRecipientName: { not: null }, AND: [giftNotDelivered] } });
+  // A gift the donor scheduled waits for its time (giftSendAt); the cron sweep sends it then.
+  const lines = await prisma.donationWaqfItem.findMany({ where: { donationId, giftRecipientName: { not: null }, AND: [giftNotDelivered, { OR: [{ giftSendAt: null }, { giftSendAt: { isSet: false } }, { giftSendAt: { lte: new Date() } }] }] } });
   const approvalBlocked = (raw: unknown) => {
     const state = readGiftDeliveryState(raw).WHATSAPP;
     return state?.status === "FAILED" && state.reason === "GIFT_TEMPLATE_APPROVAL_REQUIRED";
@@ -82,6 +83,10 @@ export async function deliverWaqfGifts(donationId: string, options: { approvalBl
       const recipientName = line.giftRecipientName || "";
       const giftToken = giftCertificateToken(waqfGiftScope(line.id), donationId, donation.accessToken);
       const certificateUrl = giftToken ? base + "/api/gifts/waqf/" + line.id + "/certificate?giftToken=" + giftToken : "";
+      // A gift from the gift page opens as its card (envelope page), which links the certificate.
+      const openUrl = giftToken && line.giftCard ? base + "/" + locale + "/gift/open/w/" + line.id + "?t=" + giftToken : "";
+      const linkUrl = openUrl || certificateUrl;
+      const mail = openUrl ? { ...m, emailCta: m.emailOpenCta || m.emailCta } : m;
       const vars = { recipientName, donorName, project: waqfGiftTitle(locale, line.unit, line.count), amount: formatAmount(line.amount, donation.currency, locale) };
       for (const channel of line.giftChannels) {
         if (options.approvalBlockedOnly && channel !== "WHATSAPP") continue;
@@ -97,7 +102,7 @@ export async function deliverWaqfGifts(donationId: string, options: { approvalBl
             const cert = docs.waqf.find((c) => c.waqfItem.id === line.id);
             if (!cert) throw new Error("WAQF_CERTIFICATE_UNAVAILABLE");
             const pdf = await generateWaqfPdf(cert, base);
-            const body = giftEmailHtml(m, vars, line.giftShowAmount, line.giftMessage, pageUrl);
+            const body = giftEmailHtml(mail, vars, line.giftShowAmount, line.giftMessage, openUrl || pageUrl);
             const archived = await createDeliveryRecord({ channel: "EMAIL", origin: "TRIGGER", purpose: "TRANSACTIONAL",
               senderId: routed.sender.id, recipientEmail: line.giftRecipientEmail, recipientName, locale, renderedSubject: fill(m.emailSubject, vars),
               renderedBody: body, variables: { giftWaqfItemId: line.id }, status: "RENDERED" });
@@ -118,12 +123,12 @@ export async function deliverWaqfGifts(donationId: string, options: { approvalBl
           } else {
             if (!line.giftRecipientPhone) throw new Error("GIFT_RECIPIENT_PHONE_MISSING");
             if (!certificateUrl) throw new Error("GIFT_CERTIFICATE_LINK_UNAVAILABLE");
-            const text = [fill(m.whatsappBody, vars), line.giftShowAmount ? fill(m.whatsappAmount, vars) : "", line.giftMessage || "", certificateUrl, pageUrl].filter(Boolean).join("\n\n");
+            const text = [fill(m.whatsappBody, vars), line.giftShowAmount ? fill(m.whatsappAmount, vars) : "", line.giftMessage || "", linkUrl, pageUrl].filter(Boolean).join("\n\n");
             state[channel] = { status: "SENDING", at: new Date().toISOString() }; await save();
             providerStarted = true;
             const sent = await sendGiftWhatsapp({ phone: line.giftRecipientPhone, name: recipientName, locale, body: text, itemId: line.id,
-              sender: routed.sender, values: { "1": recipientName, "2": donorName, "3": vars.project, "4": line.giftShowAmount ? vars.amount : "—", "5": line.giftMessage || "—", "6": certificateUrl,
-                "gift.recipientName": recipientName, "gift.donorName": donorName, "gift.project": vars.project, "gift.message": line.giftMessage || "—", "gift.amount": line.giftShowAmount ? vars.amount : "—", "gift.certificateUrl": certificateUrl } });
+              sender: routed.sender, values: { "1": recipientName, "2": donorName, "3": vars.project, "4": line.giftShowAmount ? vars.amount : "—", "5": line.giftMessage || "—", "6": linkUrl,
+                "gift.recipientName": recipientName, "gift.donorName": donorName, "gift.project": vars.project, "gift.message": line.giftMessage || "—", "gift.amount": line.giftShowAmount ? vars.amount : "—", "gift.certificateUrl": linkUrl } });
             if (!sent.ok) { providerStarted = sent.uncertain === true; throw new Error(sent.reason); }
             state[channel] = { status: "SENT", at: new Date().toISOString(), providerMessageId: sent.providerMessageId }; await save();
             result.whatsappSent++;

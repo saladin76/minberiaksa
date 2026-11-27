@@ -3324,7 +3324,8 @@
     "emailCta": "Projeyi görün",
     "whatsappBody": "{recipientName}, {donorName} Minber-i Aksa aracılığıyla “{project}” projesine sizin adınıza bağış yaptı.",
     "whatsappAmount": "Bağış tutarı: {amount}.",
-    "anonymousDonor": "Bir hayırsever"
+    "anonymousDonor": "Bir hayırsever",
+    "emailOpenCta": "Hediyeni aç"
   },
   "Concierge": {
     "title": "Nasıl bağış yapacağımı seçmeme yardım et",
@@ -3685,31 +3686,24 @@
   },
   "giftPage": {
     "metaTitle": "Sevdiğinize bir sadaka hediye edin | Minber-i Aksa",
-    "metaDescription": "Sevdiğiniz kişi adına bir bağış; vesileye özel tasarlanmış bir kart, WhatsApp veya e-posta ile ve onun adına bir sertifikayla.",
+    "metaDescription": "Sevdiğiniz kişi adına, seçtiğiniz niyetle ve tasarlanmış bir kartla bir bağış; WhatsApp veya e-posta ile, onun adına bir sertifikayla.",
     "title": "Sevdiğinize sadaka hediye edin",
+    "badge": "Hediye",
+    "heroTitle": "Onun adına bir sadaka, kalıcı bir kart",
+    "heroSub": "Bir sevinç, şifa duası ya da vefat eden bir sevdiğiniz için sadaka-i cariye: niyeti ve tutarı seçin, size en uygun hediyeyi önerelim; kartını tasarlayın, ona bir mesaj ve adına bir sertifikayla ulaşsın.",
     "stepOf": "Adım {n} / 4 · {name}",
     "stepsLabel": "Hediye adımları",
     "steps": {
-      "value": "Tutar",
-      "occasion": "Vesile",
+      "intention": "Niyet",
+      "gift": "Hediye",
       "card": "Kart",
       "send": "Gönderim"
     },
     "back": "Geri",
     "next": "İleri",
     "payAndSend": "Ödemeye geç",
-    "heroTitle": "Onun adına bir sadaka, kalıcı bir kart",
-    "heroSub": "Tutarla başlayın, sonra vesile ve kart",
-    "modeFree": "Tutarı ben belirlerim",
-    "modePackage": "Hazır hediye",
-    "hintFree": "Hediyenin tutarını, sonra gideceği projeyi seçin.",
-    "hintPackage": "Tutarı ve etkisi belli bir hediye; adedini seçebilirsiniz.",
-    "otherAmount": "Başka tutar (USD)",
-    "goesTo": "Hediye şuraya gider",
-    "decrease": "Azalt",
-    "increase": "Artır",
-    "occasionTitle": "Vesile nedir?",
-    "occasionSub": "Bir tasarım ve mesaj öneriyoruz; ikisini de değiştirebilirsiniz",
+    "intentionTitle": "Niyetiniz nedir?",
+    "intentionSub": "Niyetinizi ve hediyenin tutarını seçin; ardından en uygun hediyeyi önerelim.",
     "occasions": {
       "ramadan": {
         "label": "Ramazan",
@@ -3736,7 +3730,7 @@
         "msg2": "Allah yuvanızı sevgi ve merhametle doldursun."
       },
       "recovery": {
-        "label": "Şifa",
+        "label": "Şifa niyetiyle",
         "head": "Geçmiş olsun",
         "msg1": "Geçmiş olsun, inşallah arınma vesilesidir. Acil şifan için bir sadaka verdim.",
         "msg2": "Yüce Arş'ın Rabbi olan Allah'tan sana şifa vermesini dilerim."
@@ -3754,19 +3748,44 @@
         "msg2": "Allah ibadetini kabul etsin, seni sağ salim döndürsün."
       },
       "memory": {
-        "label": "Merhum için",
+        "label": "Vefat eden bir sevdiğim için",
         "head": "Sadaka-i cariye",
         "msg1": "Allah'ım onu bağışla ve ona rahmet et; bu sadakayı kabrine nur eyle.",
         "msg2": "Allah'ım kabrini cennet bahçelerinden bir bahçe eyle, bu sadakanın sevabını ona ulaştır."
       },
       "none": {
-        "label": "Vesilesiz",
+        "label": "Sevgi ve takdirle",
         "head": "Hayır hediyesi",
         "msg1": "Bu sadakanın sevabını sana hediye etmek istedim; Allah ikimizden de kabul etsin.",
         "msg2": "Benim için değerli olduğun için, sevabı kalıcı bir sadaka hediye ettim."
       }
     },
+    "valueTitle": "Hediye tutarı",
+    "otherValue": "Başka tutar (USD)",
+    "giftTitle": "Hediyeyi seçin",
+    "suggestedFor": "{intention} için en uygun",
+    "otherGifts": "Diğer hediyeler",
+    "allGifts": "Hediyeler",
+    "waqfShare": "Vakıf hissesi",
+    "waqfShareNote": "Kudüs vakıflarında; vakıf durdukça sevabı devam eder",
+    "waqfMeter": "Vakıf metresi",
+    "waqfMeterNote": "Kudüs'te bir vakıfta tam bir metre",
+    "perShare": "hisse",
+    "perMeter": "metre",
+    "badgeWaqf": "Vakıf sertifikası",
+    "badgeGift": "Hediye sertifikası",
+    "openName": "Seçtiğiniz tutarda sadaka",
+    "openNote": "İhtiyacın en çok olduğu yere harcanır",
+    "openShort": "Onun adına sadaka",
+    "pickGift": "Hediyeyi seçin",
+    "waqfAdjusted": "Vakıf hisse ve metre ile olur: {value} tutarınız {total} oldu ({count} {unit}); sertifika bu sayıyla düzenlenir.",
     "cardTitle": "Kartı tasarlayın",
+    "tabsLabel": "Özelleştirme",
+    "tabs": {
+      "design": "Tasarım",
+      "text": "Metin",
+      "names": "İsimler"
+    },
     "front": "Ön yüz",
     "backSide": "Arka yüz",
     "sidesLabel": "Kartın yüzleri",
@@ -3774,16 +3793,38 @@
     "themes": {
       "dome": "Kubbe",
       "night": "Hilal",
+      "ivory": "Fildişi",
       "arabesque": "Motif",
       "floral": "Çiçek",
       "calm": "Sade"
     },
     "color": "Renk",
     "colorN": "Renk {n}",
+    "layout": "Düzen",
+    "layouts": {
+      "classic": "Klasik",
+      "center": "Ortalı",
+      "minimal": "Sade"
+    },
+    "pattern": "Arka plan deseni",
+    "showLogo": "Minber-i Aksa logosu",
+    "showSeal": "Minber altın mührü",
+    "headlineTitle": "Başlık",
+    "headlineOwn": "Kendi başlığım",
+    "headlinePlaceholder": "Örn: Canım anneme",
     "font": "Yazı",
-    "fontNaskh": "Nesih",
-    "fontModern": "Modern",
-    "readyMessage": "Vesileye uygun hazır mesaj",
+    "fonts": {
+      "naskh": "Nesih",
+      "ruqaa": "Rika",
+      "modern": "Modern"
+    },
+    "size": "Boyut",
+    "sizes": {
+      "s": "Küçük",
+      "m": "Orta",
+      "l": "Büyük"
+    },
+    "readyMessage": "Niyete uygun hazır mesaj",
     "writeMessage": "Ya da kendi mesajınızı yazın",
     "toWhom": "Kime?",
     "namePlaceholder": "İsim",
@@ -3792,7 +3833,7 @@
     "addRecipient": "+ Aynı kartla başka birine hediye et",
     "signature": "İmza",
     "signaturePlaceholder": "Örn: oğlun Ahmet",
-    "showAmount": "Hediyenin tutarını kartta ve mesajda göster",
+    "showAmount": "Hediyenin tutarını kartın arkasında ve mesajda göster",
     "sendTitle": "Nasıl ve ne zaman ulaşsın?",
     "chooseChannels": "Bir yol ya da ikisini seçin",
     "channelsLabel": "Gönderim yolları",
@@ -3813,7 +3854,7 @@
     "anonymousNote": "Adınız ve imzanız görünmez",
     "anonymousName": "Bir hayırsever",
     "review": {
-      "occasion": "Vesile",
+      "intention": "Niyet",
       "gift": "Hediye",
       "to": "Kime",
       "delivery": "Gönderim",
@@ -3823,25 +3864,38 @@
     "giftValue": "Hediye tutarı",
     "cardKicker": "Minber-i Aksa'dan bir hayır hediyesi",
     "memoryKicker": "Biz Allah'a aitiz ve O'na döneceğiz",
-    "cardTo": "Kime: {name}",
-    "cardFrom": "Kimden: {name}",
+    "cardTo": "Kime:",
+    "cardFrom": "Kimden:",
+    "cardWishes": "Samimi dualarla",
     "aboutGift": "Bu hediye hakkında",
     "valueLine": "Tutarı: {amount}",
-    "backNote": "Projeye eksiksiz ulaşır; alıcıya bir mesaj ve adına bir sertifika gider.",
+    "backNote": "Amacına eksiksiz ulaşır; alıcıya bir mesaj ve adına bir hediye sertifikası gider.",
+    "backNoteWaqf": "Kudüs'te onun adına bir vakıf; sevabı ona akmaya devam eder ve adına vakıf sertifikası gider.",
     "backNumber": "Hediye numarası tamamlandıktan sonra verilir",
-    "giftFor": "{project} için bağış",
     "recipientFallback": "Alıcının adı",
     "andOthers": "{name} ve {n} kişi daha",
-    "seal": "Minber",
+    "logoAlt": "Minber-i Aksa Derneği",
+    "sealAlt": "Minber-i Aksa mührü",
     "preview": "Yönetici önizlemesi: sayfa panelden etkinleştirilene kadar ziyaretçilere gizlidir.",
-    "notConfigured": "Henüz hediye projesi seçilmedi. Panelden seçin → Hediye sayfası.",
+    "notConfigured": "Sayfanın hediyeleri henüz ayarlanmadı. Panelden ekleyin → Hediye sayfası ayarları.",
+    "openMetaTitle": "Bir hediyeniz var | Minber-i Aksa",
+    "openHello": "{name}, bir hediyeniz var",
+    "openFrom": "{name} Minber-i Aksa aracılığıyla sizin adınıza bağış yaptı",
+    "openButton": "Hediyeyi aç",
+    "openCert": "Adınıza hediye sertifikası",
+    "openCertWaqf": "Adınıza vakıf sertifikası",
+    "openProject": "Etkisini görün",
+    "openGiftBack": "Siz de hediye edin",
+    "openNotYet": "Hediyeniz yolda, zamanında ulaşacak.",
     "errors": {
       "amount": "Hediyenin tutarını seçin",
+      "gift": "Hediyeyi seçin",
       "name": "Alıcının adını yazın",
       "channel": "WhatsApp, e-posta ya da ikisini seçin",
       "phone": "{name} için WhatsApp numarası geçersiz; ülke koduyla yazın",
       "email": "{name} için e-posta adresi geçersiz",
-      "date": "En az 5 dakika sonrası ve bir yıl içinde bir zaman seçin"
+      "date": "En az 5 dakika sonrası ve bir yıl içinde bir zaman seçin",
+      "generic": "Hediye sepete eklenemedi. Bilgileri kontrol edip tekrar deneyin."
     }
   }
 }

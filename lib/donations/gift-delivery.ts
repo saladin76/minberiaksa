@@ -105,7 +105,8 @@ async function deliverProjectGifts(donationId: string, options: { approvalBlocke
   });
   if (!donation?.paidAt) return result;
   const lines = await prisma.donationItem.findMany({
-    where: { donationId, giftRecipientName: { not: null }, AND: [giftNotDelivered] },
+    // A gift the donor scheduled waits for its time (giftSendAt); the cron sweep sends it then.
+    where: { donationId, giftRecipientName: { not: null }, AND: [giftNotDelivered, { OR: [{ giftSendAt: null }, { giftSendAt: { isSet: false } }, { giftSendAt: { lte: new Date() } }] }] },
     include: { campaign: { select: { title: true, slug: true, translations: { select: { locale: true, title: true } } } } },
   });
   const approvalBlocked = (raw: unknown) => {
@@ -147,6 +148,10 @@ async function deliverProjectGifts(donationId: string, options: { approvalBlocke
       const projectUrl = line.campaign.slug ? base + miaPath("projectDetail", locale, line.campaign.slug) : base + miaPath("projects", locale);
       const giftToken = giftCertificateToken(line.id, donationId, donation.accessToken);
       const certificateUrl = giftToken ? base + "/api/gifts/" + line.id + "/certificate?giftToken=" + giftToken : "";
+      // A gift from the gift page opens as its card (envelope page), which links the certificate.
+      const openUrl = giftToken && line.giftCard ? base + "/" + locale + "/gift/open/p/" + line.id + "?t=" + giftToken : "";
+      const linkUrl = openUrl || certificateUrl;
+      const mail = openUrl ? { ...m, emailCta: m.emailOpenCta || m.emailCta } : m;
       const vars = { recipientName, donorName, project: donationCampaignTitle(line.campaign, locale), amount: formatAmount(line.amount, donation.currency, locale) };
       for (const channel of line.giftChannels) {
         if (options.approvalBlockedOnly && channel !== "WHATSAPP") continue;
@@ -162,12 +167,12 @@ async function deliverProjectGifts(donationId: string, options: { approvalBlocke
             const pdf = await generateThanksPdf({ ...docs, thanks: { ...docs.thanks, donorName: recipientName } }, base);
             const archived = await createDeliveryRecord({ channel: "EMAIL", origin: "TRIGGER", purpose: "TRANSACTIONAL",
               senderId: routed.sender.id, recipientEmail: line.giftRecipientEmail, recipientName, locale, renderedSubject: fill(m.emailSubject, vars),
-              renderedBody: giftEmailHtml(m, vars, line.giftShowAmount, line.giftMessage, projectUrl), variables: { giftItemId: line.id }, status: "RENDERED" });
+              renderedBody: giftEmailHtml(mail, vars, line.giftShowAmount, line.giftMessage, openUrl || projectUrl), variables: { giftItemId: line.id }, status: "RENDERED" });
             if (!archived.ok) throw new Error("ARCHIVE_FAILED");
             state[channel] = { status: "SENDING", at: new Date().toISOString() }; await save();
             providerStarted = true;
             const sent = await sendEmailMessage({ to: line.giftRecipientEmail, subject: fill(m.emailSubject, vars),
-              html: automaticEmailHtml(giftEmailHtml(m, vars, line.giftShowAmount, line.giftMessage, projectUrl), locale),
+              html: automaticEmailHtml(giftEmailHtml(mail, vars, line.giftShowAmount, line.giftMessage, openUrl || projectUrl), locale),
               senderEmail: routed.sender.senderEmail, purpose: "TRANSACTIONAL", locale,
               attachments: [{ filename: pdf.filename, content: pdf.pdf.toString("base64"), contentType: "application/pdf" }] });
             if (!sent.ok) {
@@ -181,12 +186,12 @@ async function deliverProjectGifts(donationId: string, options: { approvalBlocke
           } else {
             if (!line.giftRecipientPhone) throw new Error("GIFT_RECIPIENT_PHONE_MISSING");
             if (!certificateUrl) throw new Error("GIFT_CERTIFICATE_LINK_UNAVAILABLE");
-            const body = [fill(m.whatsappBody, vars), line.giftShowAmount ? fill(m.whatsappAmount, vars) : "", line.giftMessage || "", certificateUrl, projectUrl].filter(Boolean).join("\n\n");
+            const body = [fill(m.whatsappBody, vars), line.giftShowAmount ? fill(m.whatsappAmount, vars) : "", line.giftMessage || "", linkUrl, projectUrl].filter(Boolean).join("\n\n");
             state[channel] = { status: "SENDING", at: new Date().toISOString() }; await save();
             providerStarted = true;
             const sent = await sendGiftWhatsapp({ phone: line.giftRecipientPhone, name: recipientName, locale, body, itemId: line.id,
-              sender: routed.sender, values: { "1": recipientName, "2": donorName, "3": vars.project, "4": line.giftShowAmount ? vars.amount : "—", "5": line.giftMessage || "—", "6": certificateUrl,
-                "gift.recipientName": recipientName, "gift.donorName": donorName, "gift.project": vars.project, "gift.message": line.giftMessage || "—", "gift.amount": line.giftShowAmount ? vars.amount : "—", "gift.certificateUrl": certificateUrl } });
+              sender: routed.sender, values: { "1": recipientName, "2": donorName, "3": vars.project, "4": line.giftShowAmount ? vars.amount : "—", "5": line.giftMessage || "—", "6": linkUrl,
+                "gift.recipientName": recipientName, "gift.donorName": donorName, "gift.project": vars.project, "gift.message": line.giftMessage || "—", "gift.amount": line.giftShowAmount ? vars.amount : "—", "gift.certificateUrl": linkUrl } });
             if (!sent.ok) { providerStarted = sent.uncertain === true; throw new Error(sent.reason); }
             state[channel] = { status: "SENT", at: new Date().toISOString(), providerMessageId: sent.providerMessageId }; await save();
             result.whatsappSent++;

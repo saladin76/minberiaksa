@@ -20,6 +20,96 @@
   ]
  },
  {
+  "ar": "يتيم",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "العيد",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "مولود",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "زواج",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "بنية الشفاء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "نجاح",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "حج وعمرة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "عن روح فقيد",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "محبةً وتقديرًا",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
   "ar": "تعذر تحميل إعدادات صفحة الإهداء",
   "missing": [
    "en",
@@ -52,7 +142,7 @@
   ]
  },
  {
-  "ar": "المبالغ والمشاريع والهدايا الجاهزة التي يختار منها المتبرع عند إهداء صدقة",
+  "ar": "القيم المقترحة وهدايا الوقف وهدايا الأثر التي يختار منها المتبرع عند الإهداء",
   "missing": [
    "en",
    "tr"
@@ -92,7 +182,7 @@
   ]
  },
  {
-  "ar": "بالدولار، مفصولة بفواصل (حتى ثمانية)",
+  "ar": "القيم المقترحة",
   "missing": [
    "en",
    "tr"
@@ -102,7 +192,7 @@
   ]
  },
  {
-  "ar": "مشاريع «أحدد المبلغ»",
+  "ar": "تظهر في الخطوة الأولى بجانب «قيمة أخرى»، بالدولار.",
   "missing": [
    "en",
    "tr"
@@ -112,7 +202,7 @@
   ]
  },
  {
-  "ar": "يختار المتبرع منها المشروع الذي تذهب إليه هديته.",
+  "ar": "بالدولار، مفصولة بفواصل (حتى ثماني قيم)",
   "missing": [
    "en",
    "tr"
@@ -122,7 +212,7 @@
   ]
  },
  {
-  "ar": "بدون مشاريع هنا تظهر الهدايا الجاهزة فقط",
+  "ar": "هدايا الوقف",
   "missing": [
    "en",
    "tr"
@@ -132,7 +222,7 @@
   ]
  },
  {
-  "ar": "الهدايا الجاهزة",
+  "ar": "بأسعار صفحة الوقف نفسها، ويستلم المُهدى إليه شهادة الوقف باسمه.",
   "missing": [
    "en",
    "tr"
@@ -142,7 +232,7 @@
   ]
  },
  {
-  "ar": "هدية بقيمة ثابتة على مشروع، يظهر اسمها ووصفها من المشروع نفسه بلغة الزائر.",
+  "ar": "سهم وقفي",
   "missing": [
    "en",
    "tr"
@@ -152,7 +242,7 @@
   ]
  },
  {
-  "ar": "السعر بالدولار",
+  "ar": "متر وقفي",
   "missing": [
    "en",
    "tr"
@@ -162,7 +252,77 @@
   ]
  },
  {
-  "ar": "إضافة هدية جاهزة",
+  "ar": "تُقترح أولًا لهذه النيات",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "هدايا الأثر",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "لكل هدية اسم ووصف قصير يظهران للمتبرع بلغته، ومشروع تُصرف فيه، ونيات تُقترح لها أولًا. قيمتها يختارها المتبرع من القيم المقترحة أو يكتبها.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "هدية جديدة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "إضافة هدية أثر",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "صدقة بالقيمة التي يختارها المتبرع",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "هدية أخيرة في القائمة بلا اسم مشروع ظاهر؛ اختر المشروع الذي تُصرف فيه، أو اتركها فارغة لإخفائها.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "بدون (مخفية)",
   "missing": [
    "en",
    "tr"
