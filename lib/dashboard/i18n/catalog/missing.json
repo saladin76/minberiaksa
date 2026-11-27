@@ -1,5 +1,207 @@
 [
  {
+  "ar": "وجبة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "سلة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "تعذر تحميل إعدادات صفحة الإهداء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx",
+   "app/api/admin/gift-settings/route.ts (api)"
+  ]
+ },
+ {
+  "ar": "تعذر حفظ إعدادات صفحة الإهداء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx",
+   "app/api/admin/gift-settings/route.ts (api)"
+  ]
+ },
+ {
+  "ar": "إعدادات صفحة الإهداء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "المبالغ والمشاريع والهدايا الجاهزة التي يختار منها المتبرع عند إهداء صدقة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "حالة الصفحة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "تفعيل صفحة الإهداء للزوار",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "عند الإيقاف تبقى الصفحة مخفية عن الزوار، ويراها المسؤولون فقط للمعاينة.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "بالدولار، مفصولة بفواصل (حتى ثمانية)",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "مشاريع «أحدد المبلغ»",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "يختار المتبرع منها المشروع الذي تذهب إليه هديته.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "بدون مشاريع هنا تظهر الهدايا الجاهزة فقط",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "الهدايا الجاهزة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "هدية بقيمة ثابتة على مشروع، يظهر اسمها ووصفها من المشروع نفسه بلغة الزائر.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "السعر بالدولار",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "إضافة هدية جاهزة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "تفعيل صفحة الإهداء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/gift-settings/route.ts (api)"
+  ]
+ },
+ {
+  "ar": "إيقاف صفحة الإهداء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/gift-settings/route.ts (api)"
+  ]
+ },
+ {
+  "ar": "تحديث إعدادات صفحة الإهداء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/api/admin/gift-settings/route.ts (api)"
+  ]
+ },
+ {
   "ar": "تفعيل صفحة جدولة رمضان",
   "missing": [
    "en",

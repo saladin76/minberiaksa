@@ -61,6 +61,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
     get group() { return dt("جدولة رمضان"); },
     items: [
       { key: "monthly", get title() { return dt("إعدادات جدولة رمضان"); }, href: "/dashboard/ramadan/settings", icon: "sparkles", keywords: ["ramadan", "schedule", "رمضان", "جدولة", "صدقات"] },
+      { key: "monthly", get title() { return dt("إعدادات صفحة الإهداء"); }, href: "/dashboard/gift/settings", icon: "sparkles", keywords: ["gift", "gifts", "إهداء", "هدية", "الإهداء"] },
     ],
   },
   {

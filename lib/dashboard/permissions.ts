@@ -103,6 +103,7 @@ const PATH_RULES: { prefix: string; key: DashboardPermissionKey }[] = [
   { prefix: "/dashboard/monthly", key: "monthly" },
   { prefix: "/dashboard/subscription-requests", key: "monthly" },
   { prefix: "/dashboard/ramadan", key: "monthly" },
+  { prefix: "/dashboard/gift", key: "monthly" },
   { prefix: "/dashboard/link-generator", key: "referrals" },
   { prefix: "/dashboard/referrals", key: "referrals" },
   { prefix: "/dashboard/bank-transfers", key: "bankTransfers" },
