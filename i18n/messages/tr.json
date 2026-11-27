@@ -3568,6 +3568,7 @@
     "signInWithGoogle": "Google ile giriş yap"
   },
   "ramadan": {
+    "dollarNotice": "Kartınızı doğrulamak için şimdi yalnızca 1 $ çekilir ve aynı projelere bağış olarak sayılır. Planladığınız bağışlar seçtiğiniz gibi Ramazan'da başlar.",
     "homeBadge": "Ramazan {year} · {days} gün sonra başlıyor",
     "homeBadgeNow": "Ramazan {year}",
     "homeBannerTitle": "Ramazan bağışlarınızı şimdiden",
@@ -3661,7 +3662,7 @@
     "signInToConfirm": "Planı onaylamak için giriş yapın",
     "cardTitle": "Bağış kartı",
     "cardHint": "Bankanız kartı SMS koduyla doğrular. Şimdi hiçbir tutar çekilmez; çekimler seçtiğiniz ilk günde başlar.",
-    "consent": "Ramazan'ın {count} gününde, her biri kendi tarihinde toplam {total} çekilmesini onaylıyorum; planı hesabımdan durdurabilirim.",
+    "consent": "Kartımı doğrulamak için şimdi 1 $ çekilmesini, ardından planlı bağışlarımın ({count} gün, toplam {total}) günlerinde bu karttan çekilmesini kabul ediyorum.",
     "errorGeneric": "Plan tamamlanamadı. Kart bilgilerini kontrol edip tekrar deneyin.",
     "errorProjects": "Seçilen projelerden biri artık mevcut değil. Lütfen projelerinizi gözden geçirin.",
     "barCaption": "{count} gün · toplam",

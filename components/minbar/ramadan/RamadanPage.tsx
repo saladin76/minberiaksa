@@ -93,9 +93,14 @@ export default function RamadanPage({ locale, signedIn, preview, settings, proje
       const response = await fetch("/api/ramadan/plans", { method: "POST", signal: AbortSignal.timeout(25000), headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ days: sorted.map((n) => ({ day: n, amount: amountFor(n) })), slot: draft.slot, timezone: tz, projectIds: draft.projectIds, intent: draft.intent, onBehalf: draft.onBehalf, remind: draft.remind, cardId: id, cvc, consent: true, locale }) });
       const data = await response.json();
-      if (!response.ok || data.verificationOnly !== true || typeof data.actionUrl !== "string" || !data.fields || new URL(data.actionUrl).protocol !== "https:") throw new Error(data?.error || "PLAN");
-      const form = document.createElement("form"); form.method = "POST"; form.action = data.actionUrl; form.style.display = "none"; form.setAttribute("data-clarity-mask", "True");
-      for (const [name, value] of Object.entries(data.fields)) { const input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = String(value); form.appendChild(input); }
+      if (!response.ok || typeof data.donationId !== "string") throw new Error(data?.error || "PLAN");
+      // The plan's 1 USD first instalment, through the ordinary Albaraka checkout (3D + Sale).
+      const pay = await fetch("/api/albaraka/3d/initiate", { method: "POST", signal: AbortSignal.timeout(25000), headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ donationId: data.donationId, savedCardId: id, card: { cvv: cvc }, locale, securityMode: "3D" }) });
+      const bank = await pay.json();
+      if (!pay.ok || typeof bank.actionUrl !== "string" || !bank.fields || bank.method === "GET" || new URL(bank.actionUrl, window.location.origin).protocol !== "https:") throw new Error(bank?.code || bank?.error || "PLAN");
+      const form = document.createElement("form"); form.method = "POST"; form.action = bank.actionUrl; form.style.display = "none"; form.setAttribute("data-clarity-mask", "True");
+      for (const [name, value] of Object.entries(bank.fields)) { const input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = String(value); form.appendChild(input); }
       setCvc(""); document.body.appendChild(form); form.submit();
     } catch (e) { setError(e instanceof Error && e.message === "PROJECT_NOT_OFFERED" ? t("errorProjects") : t("errorGeneric")); setCvc(""); setBusy(false); }
   }
@@ -117,6 +122,7 @@ export default function RamadanPage({ locale, signedIn, preview, settings, proje
             </> : null}
             <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>CVC<input dir="ltr" type="password" inputMode="numeric" autoComplete="cc-csc" value={cvc} onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))} disabled={busy} style={{ minHeight: 48, padding: "0 12px", borderRadius: 12, border: `1.5px solid ${LINE}`, font: "inherit", fontSize: 16, maxWidth: 140 }} /></label>
             <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, lineHeight: 1.8, cursor: "pointer" }}><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: 20, height: 20, marginTop: 3, accentColor: RED }} />{t("consent", { total: money(total), count: sorted.length })}</label>
+            <p style={{ margin: 0, padding: "10px 12px", borderRadius: 12, background: "#FBEEDC", color: "#6E4410", fontSize: 13, lineHeight: 1.8 }}>{t("dollarNotice")}</p>
             {error ? <p role="alert" style={{ margin: 0, color: "#B42318", fontSize: 13.5 }}>{error}</p> : null}
   </>;
   const canConfirm = !busy && consent && sorted.length > 0 && cvc.length >= 3 && (Boolean(cardId) || (number.length >= 13 && expiry.length === 5 && Boolean(holder.trim())));
