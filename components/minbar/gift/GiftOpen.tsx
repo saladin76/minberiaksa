@@ -23,11 +23,13 @@ export default function GiftOpen({ locale, waiting, card, recipient, giver, mess
           <section style={{ textAlign: "center", padding: "48px 20px", borderRadius: 24, background: "#fff" }}><h1 style={{ margin: 0, fontSize: 22 }}>{t("openNotYet")}</h1></section>
         ) : !open ? (
           <section style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, textAlign: "center" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/minbar/assets/logo-horizontal.png" alt={t("logoAlt")} style={{ height: 40, width: "auto" }} />
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900 }}>{t("openHello", { name: recipient })}</h1>
             <p style={{ margin: 0, fontSize: 16, lineHeight: 1.9, color: MUTED }}>{t("openFrom", { name: giver })}</p>
             <button type="button" onClick={() => setOpen(true)} aria-label={t("openButton")} style={{ position: "relative", width: "100%", maxWidth: 360, aspectRatio: "4 / 3", border: 0, borderRadius: 22, cursor: "pointer", background: "radial-gradient(130% 120% at 85% 0%, #AB422F 0%, #7A2419 70%)", boxShadow: "inset 0 0 0 8px #F6D08B55, 0 30px 60px -30px rgba(42,12,8,.75)", overflow: "hidden" }}>
               <svg aria-hidden="true" viewBox="0 0 360 270" width="100%" height="100%" style={{ position: "absolute", inset: 0 }}><path d="M0 0 L180 140 L360 0" fill="none" stroke="#F6D08B" strokeWidth="2" opacity=".8" /><path d="M0 270 L150 120 M360 270 L210 120" fill="none" stroke="#F6D08B" strokeWidth="1.2" opacity=".45" /></svg>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/minbar/assets/cert-seal-alpha.png" alt="" width={88} height={88} style={{ position: "absolute", left: "50%", top: "52%", transform: "translate(-50%, -50%)", filter: "drop-shadow(0 6px 12px rgba(0,0,0,.35))" }} />
             </button>
             <button type="button" onClick={() => setOpen(true)} style={{ ...button, border: 0, background: RED, color: "#fff", width: "100%", maxWidth: 360 }}>{t("openButton")}</button>

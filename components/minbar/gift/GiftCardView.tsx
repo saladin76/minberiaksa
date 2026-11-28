@@ -24,7 +24,9 @@ export default function GiftCardView({ height, card, head, to, message, giftName
   const layout = card.layout ?? "classic", minimal = layout === "minimal", center = layout !== "classic";
   const fam = FONTS[card.font] ?? SERIF, px = SIZES[card.size ?? "m"];
   const showLogo = card.showLogo !== false, showSeal = card.showSeal !== false, pattern = card.pattern !== false && !minimal;
+  // eslint-disable-next-line @next/next/no-img-element
   const logo = showLogo ? <img src={GIFT_LOGO_SRC} alt={labels.logo} style={{ display: "block", height: 30, width: "auto", filter: look.dark ? "brightness(0) invert(1)" : "none" }} /> : null;
+  // eslint-disable-next-line @next/next/no-img-element
   const seal = (w: number) => (showSeal ? <img src={GIFT_SEAL_SRC} alt={labels.seal} width={w} height={w} style={{ display: "block", width: w, height: w, objectFit: "contain", filter: "drop-shadow(0 4px 8px rgba(0,0,0,.25))" }} /> : null);
   const rule: CSSProperties = { flex: "1 1 auto", maxWidth: 70, height: 1, background: gold, opacity: 0.7 };
   const id = "gc" + card.theme + accent;

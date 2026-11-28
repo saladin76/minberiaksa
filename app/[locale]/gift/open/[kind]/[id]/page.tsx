@@ -59,6 +59,7 @@ export default async function GiftOpenPage({ params, searchParams }: Props) {
   const amount = new Intl.NumberFormat(locale + "-u-nu-latn", { style: "currency", currency: line.donation.currency || "USD", maximumFractionDigits: 2 }).format(line.amount);
   return (
     <MinbarMessages locale={locale} namespaces={["giftPage"] as const}>
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@400;700&display=swap" />
       <GiftOpen locale={locale} waiting={Boolean(waiting)} card={card} recipient={line.giftRecipientName ?? ""} giver={giver} message={line.giftMessage ?? ""} giftName={view.title}
         amount={line.giftShowAmount ? amount : null} waqf={kind === "w"} certificateUrl={view.certificatePath} projectUrl={view.projectUrl} giftUrl={"/" + locale + "/gift"} />
