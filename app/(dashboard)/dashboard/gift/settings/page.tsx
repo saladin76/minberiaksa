@@ -16,6 +16,13 @@ const INTENTIONS: { id: GiftIntention; label: string }[] = [
   { id: "ramadan", label: "رمضان" }, { id: "eid", label: "العيد" }, { id: "baby", label: "مولود" }, { id: "wedding", label: "زواج" }, { id: "recovery", label: "بنية الشفاء" },
   { id: "success", label: "نجاح" }, { id: "hajj", label: "حج وعمرة" }, { id: "memory", label: "عن روح فقيد" }, { id: "none", label: "محبةً وتقديرًا" },
 ];
+const SUGGESTED_GIFTS: ImpactGift[] = [
+  { id: "water", projectId: "", icon: "water", name: { ar: "سقيا ماء", en: "Water for a family", tr: "Su ikramı" }, note: { ar: "مياه صالحة للشرب لأسرة محتاجة", en: "Clean drinking water for a family in need", tr: "İhtiyaç sahibi bir aileye temiz içme suyu" }, intentions: ["baby", "recovery", "none"] },
+  { id: "iftar", projectId: "", icon: "meal", name: { ar: "إفطار صائمين", en: "Iftar for fasting people", tr: "Oruçlulara iftar" }, note: { ar: "وجبات إفطار للصائمين", en: "Iftar meals for those fasting", tr: "Oruç tutanlara iftar yemeği" }, intentions: ["ramadan", "hajj"] },
+  { id: "basket", projectId: "", icon: "basket", name: { ar: "سلة غذائية", en: "Food basket", tr: "Gıda kolisi" }, note: { ar: "سلة غذائية لأسرة محتاجة", en: "A food basket for a family in need", tr: "İhtiyaç sahibi bir aileye gıda kolisi" }, intentions: ["eid", "wedding"] },
+  { id: "student", projectId: "", icon: "book", name: { ar: "كفالة طالب تحفيظ", en: "Sponsor a Quran student", tr: "Hafızlık öğrencisine destek" }, note: { ar: "لطالب في مراكز تحفيظ القرآن بالقدس", en: "For a student in Quran memorisation centres in Jerusalem", tr: "Kudüs'teki hafızlık merkezlerinde bir öğrenciye" }, intentions: ["success"] },
+  { id: "orphan", projectId: "", icon: "orphan", name: { ar: "كفالة يتيم", en: "Sponsor an orphan", tr: "Yetim sponsorluğu" }, note: { ar: "كفالة ليتيم محتاج", en: "Sponsorship for an orphan in need", tr: "İhtiyaç sahibi bir yetime destek" }, intentions: ["eid", "recovery"] },
+];
 const emptyGift = (): ImpactGift => ({ id: "g" + Date.now().toString(36), projectId: "", icon: "gift", name: { ar: "", en: "", tr: "" }, note: { ar: "", en: "", tr: "" }, intentions: [] });
 
 function IntentionPicker({ value, onChange }: { value: GiftIntention[]; onChange: (next: GiftIntention[]) => void }) {
@@ -34,7 +41,12 @@ export default function GiftSettingsPage() {
     const controller = new AbortController(); request.current = controller;
     setDocument(null); setDraft(null); setError("");
     void readDashboardJson<Document>(endpoint, controller.signal).then(data => {
-      if (!controller.signal.aborted) { setDocument(data); setDraft(structuredClone(data.settings)); setAmountsText(data.settings.amounts.join(", ")); }
+      if (!controller.signal.aborted) {
+        setDocument(data);
+        const draft = structuredClone(data.settings);
+        if (!draft.impactGifts.length) draft.impactGifts = structuredClone(SUGGESTED_GIFTS); // ready names; a project for each, then save
+        setDraft(draft); setAmountsText(data.settings.amounts.join(", "));
+      }
     }).catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? dtMaybe(error.message) : dt("تعذر تحميل إعدادات صفحة الإهداء")); });
     return () => controller.abort();
   }, [attempt]);
@@ -97,6 +109,7 @@ export default function GiftSettingsPage() {
       </Card>
       <Card className="space-y-4 p-5"><h2 className="text-lg font-bold">{dt("هدايا الأثر")}</h2>
         <p className="text-sm text-slate-500">{dt("لكل هدية اسم ووصف قصير يظهران للمتبرع بلغته، ومشروع تُصرف فيه، ونيات تُقترح لها أولًا. قيمتها يختارها المتبرع من القيم المقترحة أو يكتبها.")}</p>
+        {document.settings.impactGifts.length === 0 && draft.impactGifts.length ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{dt("هذه هدايا الأثر المقترحة بأسمائها. اختر لكل هدية المشروع الذي تُصرف فيه ثم احفظ، أو احذف ما لا تريده. لا تظهر للزوار قبل الحفظ.")}</p> : null}
         {draft.impactGifts.map((g, index) => <div key={g.id} className="space-y-3 rounded-xl border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><b className="text-sm">{g.name.ar || dt("هدية جديدة")}</b><div className="flex gap-1">
             <Button size="icon" variant="ghost" type="button" disabled={index === 0} aria-label={dt("تقديم")} onClick={() => moveGift(index, -1)}><ArrowUp className="h-4 w-4" /></Button>

@@ -110,6 +110,86 @@
   ]
  },
  {
+  "ar": "سقيا ماء",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "مياه صالحة للشرب لأسرة محتاجة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "إفطار صائمين",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "وجبات إفطار للصائمين",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "سلة غذائية لأسرة محتاجة",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "كفالة طالب تحفيظ",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "لطالب في مراكز تحفيظ القرآن بالقدس",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
+  "ar": "كفالة ليتيم محتاج",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx (runtime)"
+  ]
+ },
+ {
   "ar": "تعذر تحميل إعدادات صفحة الإهداء",
   "missing": [
    "en",
@@ -273,6 +353,16 @@
  },
  {
   "ar": "لكل هدية اسم ووصف قصير يظهران للمتبرع بلغته، ومشروع تُصرف فيه، ونيات تُقترح لها أولًا. قيمتها يختارها المتبرع من القيم المقترحة أو يكتبها.",
+  "missing": [
+   "en",
+   "tr"
+  ],
+  "sources": [
+   "app/(dashboard)/dashboard/gift/settings/page.tsx"
+  ]
+ },
+ {
+  "ar": "هذه هدايا الأثر المقترحة بأسمائها. اختر لكل هدية المشروع الذي تُصرف فيه ثم احفظ، أو احذف ما لا تريده. لا تظهر للزوار قبل الحفظ.",
   "missing": [
    "en",
    "tr"
