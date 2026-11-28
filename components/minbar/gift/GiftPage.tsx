@@ -61,13 +61,30 @@ export default function GiftPage({ locale, preview, catalog }: { locale: string;
   const [wa, setWa] = useState(true), [mail, setMail] = useState(false);
   const [when, setWhen] = useState<"now" | "date">("now"), [date, setDate] = useState(""), [time, setTime] = useState("09:00");
   const [zone, setZone] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const [navLift, setNavLift] = useState(0);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)"), onChange = () => setWide(mq.matches);
     onChange(); mq.addEventListener("change", onChange);
     try { setZone(Intl.DateTimeFormat().resolvedOptions().timeZone || ""); } catch { /* unknown */ }
     setDate(localDateInput(new Date(Date.now() + 86_400_000)));
-    return () => mq.removeEventListener("change", onChange);
+    /* The site's mobile navigation is fixed at the bottom of the screen; the gift bar rests on top
+       of it. Measured, not guessed, so it follows the navigation whatever its height. */
+    const measure = () => {
+      let lift = 0;
+      for (const el of Array.from(document.body.querySelectorAll<HTMLElement>("nav, footer, div, aside"))) {
+        if (el.dataset.giftBar) continue;
+        const style = getComputedStyle(el);
+        if (style.position !== "fixed" || style.display === "none" || style.visibility === "hidden") continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.height > 0 && rect.height < 160 && rect.width >= window.innerWidth * 0.6 && Math.abs(rect.bottom - window.innerHeight) < 24) lift = Math.max(lift, Math.ceil(window.innerHeight - rect.top));
+      }
+      setNavLift(lift);
+    };
+    measure();
+    const timer = window.setTimeout(measure, 800);
+    window.addEventListener("resize", measure);
+    return () => { mq.removeEventListener("change", onChange); window.clearTimeout(timer); window.removeEventListener("resize", measure); };
   }, []);
   useEffect(() => { setError(""); }, [step]);
 
@@ -378,13 +395,13 @@ export default function GiftPage({ locale, preview, catalog }: { locale: string;
         </div>
         {stepBar}
       </header>
-      <div style={{ padding: "16px 16px 130px", display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ padding: `16px 16px ${130 + navLift}px`, display: "flex", flexDirection: "column", gap: 14 }}>
         {previewNote}
         {step === 4 ? <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 16, background: look.bg[accent], color: look.ink }}><span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}><b style={{ fontSize: 14 }}>{head} · {to}</b><span style={{ fontSize: 12, opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{giftName}</span></span><b style={{ marginInlineStart: "auto", fontSize: 15 }}>{money(total)}</b></div> : null}
         {body}
         {errorBox}
       </div>
-      <div style={{ position: "fixed", insetInline: 0, bottom: 0, zIndex: 50, boxShadow: "0 -10px 30px -18px rgba(90,26,16,.35)", padding: "12px 16px calc(14px + env(safe-area-inset-bottom))", background: "rgba(255,255,255,.97)", borderTop: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 12 }}>
+      <div data-gift-bar="1" style={{ position: "fixed", insetInline: 0, bottom: navLift, zIndex: 50, boxShadow: "0 -10px 30px -18px rgba(90,26,16,.35)", padding: navLift ? "12px 16px" : "12px 16px calc(14px + env(safe-area-inset-bottom))", background: "rgba(255,255,255,.97)", borderTop: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flex: "1 1 auto" }}>{totalBox(false)}</div>
         {nextButton}
       </div>
