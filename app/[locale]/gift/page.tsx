@@ -43,6 +43,7 @@ export default async function Gift({ params }: Props) {
   return (
     <MinbarMessages locale={locale} namespaces={NAMESPACES}>
       {/* The card's naskh and ruqaa faces; the page falls back to the site font if they cannot load. */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@400;700&display=swap" />
       <GiftPage locale={locale} preview={!settings.enabled} catalog={catalog} />
     </MinbarMessages>
